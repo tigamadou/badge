@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(OPERATOR)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  OPERATOR
+}
+
+model Event {
+  id       String  @id @default(cuid())
+  title    String
+  location String
+  date     String
+  logo     String?
+}
+
+model Team {
+  id            String         @id @default(cuid())
+  name          String
+  color         String
+  registrations Registration[]
+}
+
+model Registration {
+  id               String             @id
+  email            String
+  lastName         String
+  firstName        String
+  structure        String
+  photo            String?
+  idDocumentType   String
+  idDocumentNumber String
+  idDocument       String?
+  status           RegistrationStatus @default(PENDING)
+  teamId           String
+  team             Team               @relation(fields: [teamId], references: [id])
+  createdAt        DateTime           @default(now())
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

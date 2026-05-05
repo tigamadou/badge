@@ -1,0 +1,130 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
+interface Registration {
+  id: string;
+  lastName: string;
+  firstName: string;
+  email: string;
+  structure: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
+  team: { name: string; color: string };
+}
+
+export default function RegistrationsPage() {
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [teamFilter, setTeamFilter] = useState<string>("");
+
+  async function fetchRegistrations() {
+    const res = await fetch("/api/registrations");
+    setRegistrations(await res.json());
+  }
+
+  useEffect(() => { fetchRegistrations(); }, []);
+
+  async function updateStatus(id: string, status: string) {
+    await fetch(`/api/registrations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    fetchRegistrations();
+  }
+
+  const filtered = registrations.filter((r) => {
+    if (statusFilter && r.status !== statusFilter) return false;
+    if (teamFilter && r.team.name !== teamFilter) return false;
+    return true;
+  });
+
+  const teamNames = [...new Set(registrations.map((r) => r.team.name))];
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Inscriptions</h1>
+        <Link href="/admin/registrations/new">
+          <Button>Nouvelle inscription</Button>
+        </Link>
+      </div>
+
+      <div className="flex gap-4 mb-4">
+        <select
+          className="px-3 py-2 border rounded text-sm"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">Tous les statuts</option>
+          <option value="PENDING">En attente</option>
+          <option value="APPROVED">Validé</option>
+          <option value="REJECTED">Rejeté</option>
+        </select>
+        <select
+          className="px-3 py-2 border rounded text-sm"
+          value={teamFilter}
+          onChange={(e) => setTeamFilter(e.target.value)}
+        >
+          <option value="">Toutes les équipes</option>
+          {teamNames.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-lg shadow">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-gray-50">
+              <th className="text-left px-4 py-3">Nom</th>
+              <th className="text-left px-4 py-3">Structure</th>
+              <th className="text-left px-4 py-3">Équipe</th>
+              <th className="text-left px-4 py-3">Statut</th>
+              <th className="text-right px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((reg) => (
+              <tr key={reg.id} className="border-b hover:bg-gray-50">
+                <td className="px-4 py-3">
+                  <Link href={`/admin/registrations/${reg.id}`} className="text-blue-600 hover:underline font-medium">
+                    {reg.lastName} {reg.firstName}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">{reg.structure}</td>
+                <td className="px-4 py-3">
+                  <span className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: reg.team.color }} />
+                    {reg.team.name}
+                  </span>
+                </td>
+                <td className="px-4 py-3"><StatusBadge status={reg.status} /></td>
+                <td className="px-4 py-3 text-right space-x-2">
+                  {reg.status === "APPROVED" && (
+                    <Link href={`/badge-preview/${reg.id}`} target="_blank">
+                      <Button variant="secondary">Voir badge</Button>
+                    </Link>
+                  )}
+                  {reg.status === "PENDING" && (
+                    <>
+                      <Button variant="primary" onClick={() => updateStatus(reg.id, "APPROVED")}>Valider</Button>
+                      <Button variant="danger" onClick={() => updateStatus(reg.id, "REJECTED")}>Rejeter</Button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filtered.length === 0 && (
+          <p className="text-center py-8 text-gray-500">Aucune inscription trouvée.</p>
+        )}
+      </div>
+    </div>
+  );
+}
