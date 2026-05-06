@@ -21,9 +21,9 @@ async function main() {
   }
 
   const teams = [
-    { name: "Sécurité", color: "#DC2626" },
-    { name: "Protocole", color: "#2563EB" },
-    { name: "Presse", color: "#16A34A" },
+    { name: "Sécurité", color: "#DC2626", number: 1 },
+    { name: "Protocole", color: "#2563EB", number: 2 },
+    { name: "Presse", color: "#16A34A", number: 3 },
   ];
   for (const team of teams) {
     const existing = await prisma.team.findFirst({ where: { name: team.name } });

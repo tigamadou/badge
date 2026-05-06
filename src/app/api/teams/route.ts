@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { name, color } = await req.json();
-  if (!name || !color) {
-    return NextResponse.json({ error: "Nom et couleur requis" }, { status: 400 });
+  const { name, color, number } = await req.json();
+  if (!name || !color || number === undefined) {
+    return NextResponse.json({ error: "Nom, couleur et numéro requis" }, { status: 400 });
   }
 
-  const team = await prisma.team.create({ data: { name, color } });
+  const team = await prisma.team.create({ data: { name, color, number } });
   return NextResponse.json(team, { status: 201 });
 }
