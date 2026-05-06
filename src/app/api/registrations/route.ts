@@ -44,9 +44,16 @@ export async function POST(req: NextRequest) {
   }
 
   const event = await prisma.event.findFirst();
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) {
+    return NextResponse.json({ error: "Catégorie non trouvée" }, { status: 400 });
+  }
+
+  const registrationCount = await prisma.registration.count({ where: { teamId } });
   const id = generateId({
-    eventType: 1,
+    categoryNumber: team.number,
     date: event?.date || new Date().toISOString(),
+    sequentialNumber: registrationCount + 1,
   });
 
   const registration = await prisma.registration.create({
