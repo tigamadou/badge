@@ -20,13 +20,32 @@ async function main() {
     console.log(`Super admin created: ${email}`);
   }
 
+  const defaultUsers = [
+    { email: "admin@investiture.local", name: "Administrateur", role: Role.ADMIN, password: "admin123" },
+    { email: "operateur@investiture.local", name: "Operateur", role: Role.OPERATOR, password: "oper123" },
+  ];
+  for (const user of defaultUsers) {
+    const existing = await prisma.user.findUnique({ where: { email: user.email } });
+    if (!existing) {
+      await prisma.user.create({
+        data: {
+          email: user.email,
+          password: await hash(user.password, 12),
+          name: user.name,
+          role: user.role,
+        },
+      });
+      console.log(`${user.role} created: ${user.email}`);
+    }
+  }
+
   const teams = [
     { name: "Sécurité", color: "#DC2626", number: 1 },
     { name: "Protocole", color: "#2563EB", number: 2 },
     { name: "Presse", color: "#16A34A", number: 3 },
   ];
   for (const team of teams) {
-    const existing = await prisma.team.findFirst({ where: { name: team.name } });
+    const existing = await prisma.team.findFirst({ where: { OR: [{ name: team.name }, { number: team.number }] } });
     if (!existing) {
       await prisma.team.create({ data: team });
       console.log(`Team created: ${team.name}`);
