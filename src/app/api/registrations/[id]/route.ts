@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendStatusNotification } from "@/lib/mail";
+import { sendStatusNotification, sendBadgePrintedNotification } from "@/lib/mail";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -32,23 +32,48 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const data = await req.json();
 
+  // If marking as printed, add timestamp
+  if (data.badgePrinted === true) {
+    data.badgePrintedAt = new Date();
+  }
+
   const registration = await prisma.registration.update({
     where: { id },
     data,
     include: { team: true },
   });
 
-  // Envoyer un email si le statut a changé
+  // Send status notification if status changed
   if (data.status && (data.status === "APPROVED" || data.status === "REJECTED")) {
     try {
       await sendStatusNotification(
         registration.email,
         `${registration.firstName} ${registration.lastName}`,
-        data.status,
-        registration.id
+        data.status
       );
     } catch (e) {
       console.error("Failed to send status notification:", e);
+    }
+  }
+
+  // Send badge printed notification
+  if (data.badgePrinted === true) {
+    const event = await prisma.event.findFirst();
+    if (!event?.contactEmail || !event?.contactPhone) {
+      return NextResponse.json(
+        { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres de l'événement avant de confirmer l'impression." },
+        { status: 400 }
+      );
+    }
+    try {
+      await sendBadgePrintedNotification(
+        registration.email,
+        `${registration.firstName} ${registration.lastName}`,
+        event.contactEmail,
+        event.contactPhone
+      );
+    } catch (e) {
+      console.error("Failed to send badge printed notification:", e);
     }
   }
 

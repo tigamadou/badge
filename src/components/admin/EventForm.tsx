@@ -9,6 +9,8 @@ interface EventData {
   location: string;
   date: string;
   logo: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
 }
 
 interface EventFormProps {
@@ -23,6 +25,8 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
   const [logo, setLogo] = useState(initialData.logo);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [contactEmail, setContactEmail] = useState(initialData.contactEmail || "");
+  const [contactPhone, setContactPhone] = useState(initialData.contactPhone || "");
 
   async function handleLogoUpload(file: File) {
     setUploading(true);
@@ -38,7 +42,7 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await onSubmit({ title, location, date, logo });
+    await onSubmit({ title, location, date, logo, contactEmail: contactEmail || null, contactPhone: contactPhone || null });
     setLoading(false);
   }
 
@@ -60,6 +64,20 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
         />
         {uploading && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
       </div>
+      <Input
+        label="Email de contact (retrait badge)"
+        type="email"
+        value={contactEmail}
+        onChange={(e) => setContactEmail(e.target.value)}
+        placeholder="contact@example.com"
+      />
+      <Input
+        label="Téléphone de contact (retrait badge)"
+        type="tel"
+        value={contactPhone}
+        onChange={(e) => setContactPhone(e.target.value)}
+        placeholder="+229 97 00 00 00"
+      />
       <Button type="submit" disabled={loading}>
         {loading ? "Enregistrement..." : "Enregistrer"}
       </Button>

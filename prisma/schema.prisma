@@ -23,11 +23,13 @@ enum Role {
 }
 
 model Event {
-  id       String  @id @default(cuid())
-  title    String
-  location String
-  date     String
-  logo     String?
+  id           String  @id @default(cuid())
+  title        String
+  location     String
+  date         String
+  logo         String?
+  contactEmail String?
+  contactPhone String?
 }
 
 model Team {
@@ -48,6 +50,8 @@ model Registration {
   idDocumentNumber String
   idDocument       String?
   status           RegistrationStatus @default(PENDING)
+  badgePrinted     Boolean            @default(false)
+  badgePrintedAt   DateTime?
   teamId           String
   team             Team               @relation(fields: [teamId], references: [id])
   createdAt        DateTime           @default(now())

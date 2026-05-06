@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { sendBadgePrintedNotification } from "@/lib/mail";
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  const { ids } = await req.json();
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "IDs requis" }, { status: 400 });
+  }
+
+  const event = await prisma.event.findFirst();
+  if (!event?.contactEmail || !event?.contactPhone) {
+    return NextResponse.json(
+      { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres de l'événement avant de confirmer l'impression." },
+      { status: 400 }
+    );
+  }
+
+  let success = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const id of ids) {
+    try {
+      const registration = await prisma.registration.findUnique({ where: { id } });
+
+      if (!registration || registration.status !== "APPROVED" || registration.badgePrinted) {
+        skipped++;
+        continue;
+      }
+
+      await prisma.registration.update({
+        where: { id },
+        data: { badgePrinted: true, badgePrintedAt: new Date() },
+      });
+
+      try {
+        await sendBadgePrintedNotification(
+          registration.email,
+          `${registration.firstName} ${registration.lastName}`,
+          event.contactEmail,
+          event.contactPhone
+        );
+      } catch (e) {
+        console.error(`Failed to send notification for ${id}:`, e);
+      }
+
+      success++;
+    } catch {
+      errors++;
+    }
+  }
+
+  return NextResponse.json({ success, skipped, errors });
+}

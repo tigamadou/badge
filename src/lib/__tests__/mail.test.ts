@@ -22,15 +22,27 @@ describe("mail", () => {
     ).resolves.not.toThrow();
   });
 
-  it("sendStatusNotification sends approval email with badge link", async () => {
+  it("sendStatusNotification sends approval email", async () => {
     await expect(
-      sendStatusNotification("user@test.com", "Jean Dupont", "APPROVED", "abc123")
+      sendStatusNotification("user@test.com", "Jean Dupont", "APPROVED")
     ).resolves.not.toThrow();
   });
 
   it("sendStatusNotification sends rejection email", async () => {
     await expect(
-      sendStatusNotification("user@test.com", "Jean Dupont", "REJECTED", "abc123")
+      sendStatusNotification("user@test.com", "Jean Dupont", "REJECTED")
+    ).resolves.not.toThrow();
+  });
+
+  it("sendBadgePrintedNotification sends email with contact info", async () => {
+    const { sendBadgePrintedNotification } = await import("../mail");
+    await expect(
+      sendBadgePrintedNotification(
+        "user@test.com",
+        "Jean Dupont",
+        "contact@event.com",
+        "+229 97 00 00 00"
+      )
     ).resolves.not.toThrow();
   });
 });

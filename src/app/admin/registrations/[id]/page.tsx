@@ -28,6 +28,8 @@ interface Registration {
   idDocumentNumber: string;
   idDocument: string | null;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  badgePrinted: boolean;
+  badgePrintedAt: string | null;
   createdAt: string;
   team: { id: string; name: string; color: string };
 }
@@ -35,7 +37,7 @@ interface Registration {
 export default function RegistrationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [registration, setRegistration] = useState<Registration | null>(null);
-  const [event, setEvent] = useState<{ id: string; title: string; location: string; date: string; logo: string | null } | null>(null);
+  const [event, setEvent] = useState<{ id: string; title: string; location: string; date: string; logo: string | null; contactEmail: string | null; contactPhone: string | null } | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
 
   useEffect(() => {
@@ -54,6 +56,16 @@ export default function RegistrationDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
+    });
+    const res = await fetch(`/api/registrations/${id}`);
+    setRegistration(await res.json());
+  }
+
+  async function markAsPrinted() {
+    await fetch(`/api/registrations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ badgePrinted: true }),
     });
     const res = await fetch(`/api/registrations/${id}`);
     setRegistration(await res.json());
@@ -148,12 +160,29 @@ export default function RegistrationDetailPage() {
             </dl>
           </div>
 
-          <div className="border-t px-6 py-4 flex gap-3 justify-center">
-            {registration.status !== "APPROVED" && (
-              <Button onClick={() => updateStatus("APPROVED")}>Valider</Button>
+          <div className="border-t px-6 py-4 flex flex-col items-center gap-3">
+            <div className="flex gap-3">
+              {registration.status !== "APPROVED" && (
+                <Button onClick={() => updateStatus("APPROVED")}>Valider</Button>
+              )}
+              {registration.status !== "REJECTED" && (
+                <Button variant="danger" onClick={() => updateStatus("REJECTED")}>Rejeter</Button>
+              )}
+            </div>
+            {registration.status === "APPROVED" && !registration.badgePrinted && event?.contactEmail && event?.contactPhone && (
+              <Button variant="secondary" onClick={markAsPrinted}>
+                Marquer comme imprimé
+              </Button>
             )}
-            {registration.status !== "REJECTED" && (
-              <Button variant="danger" onClick={() => updateStatus("REJECTED")}>Rejeter</Button>
+            {registration.status === "APPROVED" && !registration.badgePrinted && (!event?.contactEmail || !event?.contactPhone) && (
+              <p className="text-sm text-amber-600">
+                Configurez l&apos;email et le téléphone de contact dans les <Link href="/admin/event" className="underline">paramètres de l&apos;événement</Link> pour pouvoir confirmer l&apos;impression.
+              </p>
+            )}
+            {registration.badgePrinted && registration.badgePrintedAt && (
+              <p className="text-sm text-green-600">
+                Badge imprimé le {new Date(registration.badgePrintedAt).toLocaleDateString("fr-FR")}
+              </p>
             )}
           </div>
         </div>

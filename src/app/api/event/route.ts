@@ -14,17 +14,17 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { title, location, date, logo } = await req.json();
+  const { title, location, date, logo, contactEmail, contactPhone } = await req.json();
 
   const existing = await prisma.event.findFirst();
   if (!existing) {
-    const event = await prisma.event.create({ data: { title, location, date, logo } });
+    const event = await prisma.event.create({ data: { title, location, date, logo, contactEmail, contactPhone } });
     return NextResponse.json(event);
   }
 
   const event = await prisma.event.update({
     where: { id: existing.id },
-    data: { title, location, date, logo },
+    data: { title, location, date, logo, contactEmail, contactPhone },
   });
   return NextResponse.json(event);
 }

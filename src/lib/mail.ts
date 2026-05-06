@@ -31,12 +31,9 @@ export async function sendRegistrationConfirmation(
 export async function sendStatusNotification(
   to: string,
   fullName: string,
-  status: "APPROVED" | "REJECTED",
-  registrationId: string
+  status: "APPROVED" | "REJECTED"
 ): Promise<void> {
   const transporter = getTransporter();
-
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
   if (status === "APPROVED") {
     await transporter.sendMail({
@@ -47,8 +44,7 @@ export async function sendStatusNotification(
         <h2>Inscription validée</h2>
         <p>Bonjour ${fullName},</p>
         <p>Votre inscription a été <strong>validée</strong>.</p>
-        <p>Vous pouvez consulter et télécharger votre badge ici :</p>
-        <p><a href="${baseUrl}/badge/${registrationId}">Voir mon badge</a></p>
+        <p>Vous recevrez un email lorsque votre badge sera prêt à être retiré.</p>
       `,
     });
   } else {
@@ -64,4 +60,30 @@ export async function sendStatusNotification(
       `,
     });
   }
+}
+
+export async function sendBadgePrintedNotification(
+  to: string,
+  fullName: string,
+  contactEmail: string,
+  contactPhone: string
+): Promise<void> {
+  const transporter = getTransporter();
+
+  await transporter.sendMail({
+    from: FROM,
+    to,
+    subject: "Badge prêt — Cérémonie d'investiture",
+    html: `
+      <h2>Votre badge est prêt</h2>
+      <p>Bonjour ${fullName},</p>
+      <p>Votre badge a été imprimé et est prêt à être retiré.</p>
+      <p>Pour le retrait, veuillez vous présenter <strong>muni(e) de votre pièce d'identité</strong> (celle fournie lors de votre inscription).</p>
+      <p>Pour toute question concernant le retrait, vous pouvez nous contacter :</p>
+      <ul>
+        <li>Email : <a href="mailto:${contactEmail}">${contactEmail}</a></li>
+        <li>Téléphone : ${contactPhone}</li>
+      </ul>
+    `,
+  });
 }
