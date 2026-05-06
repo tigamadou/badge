@@ -36,6 +36,7 @@ model Team {
   id            String         @id @default(cuid())
   name          String
   color         String
+  number        Int            @unique
   registrations Registration[]
 }
 
@@ -52,6 +53,7 @@ model Registration {
   status           RegistrationStatus @default(PENDING)
   badgePrinted     Boolean            @default(false)
   badgePrintedAt   DateTime?
+  allAccessGranted Boolean            @default(false)
   teamId           String
   team             Team               @relation(fields: [teamId], references: [id])
   createdAt        DateTime           @default(now())
