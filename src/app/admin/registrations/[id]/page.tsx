@@ -169,8 +169,23 @@ export default function RegistrationDetailPage() {
                 <dt className="text-gray-500">Date</dt>
                 <dd>{new Date(registration.createdAt).toLocaleDateString("fr-FR")}</dd>
               </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-500">Pièce d'identité</dt>
+                <dd>{registration.idDocumentType} — N° {registration.idDocumentNumber}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-500">Fichier</dt>
+                <dd>
+                  {registration.idDocument ? (
+                    <a href={`/api/files/${registration.idDocument}`} target="_blank" rel="noopener noreferrer">
+                      <img src={`/api/files/${registration.idDocument}`} alt="Document d'identité" className="w-full  hover:opacity-90 max-w-40 object-contain" />
+                    </a>
+                  ) : "Aucun"}
+                </dd>
+              </div>
             </dl>
           </div>
+   
 
           <div className="border-t px-6 py-4 flex flex-col items-center gap-3">
             <div className="flex gap-3">
@@ -207,36 +222,7 @@ export default function RegistrationDetailPage() {
           </div>
         </div>
 
-        {/* Colonne centrale : Pièce d'identité */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Pièce d&apos;identité</h2>
-          <p className="text-sm text-gray-500 mb-3">
-            {registration.idDocumentType} — N° {registration.idDocumentNumber}
-          </p>
-          {registration.idDocument ? (
-            <a href={`/api/files/${registration.idDocument}`} target="_blank" rel="noopener noreferrer">
-              {registration.idDocument.endsWith(".pdf") ? (
-                <div className="w-full aspect-[3/4] rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100">
-                  <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                  </svg>
-                  <span className="text-gray-500 text-sm font-medium">Document PDF</span>
-                  <span className="text-gray-400 text-xs mt-1">Cliquer pour ouvrir</span>
-                </div>
-              ) : (
-                <img
-                  src={`/api/files/${registration.idDocument}`}
-                  alt="Document d'identité"
-                  className="w-full rounded-lg border hover:opacity-90"
-                />
-              )}
-            </a>
-          ) : (
-            <div className="w-full aspect-[3/4] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-              <span className="text-gray-400 text-sm">Aucun document fourni</span>
-            </div>
-          )}
-        </div>
+     
 
         {/* Colonne droite : Badge */}
         {registration.status === "APPROVED" && qrCodeDataUrl && (

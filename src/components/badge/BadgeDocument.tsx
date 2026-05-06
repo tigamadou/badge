@@ -21,31 +21,44 @@ const styles = StyleSheet.create({
     height: BADGE_HEIGHT,
     backgroundColor: "#FFFFFF",
     fontFamily: "Helvetica",
+    position: "relative",
+  },
+  container: {
+    flexDirection: "column",
+    flexGrow: 1,
+    zIndex: 1,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   // En-tete blanc
   headerContainer: {
-    height: BADGE_HEIGHT * 0.38,
+    height: BADGE_HEIGHT * 0.45,
     flexDirection: "column",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
-    paddingHorizontal: 15,
     paddingTop: 10,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 100,
+
+    height: 100,
     objectFit: "contain",
-    marginBottom: 6,
+   
   },
   eventTitle: {
-    fontSize: 10,
+    fontSize: 16,
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
     lineHeight: 1.3,
     color: "#1a3a7c",
+    maxWidth: BADGE_WIDTH * 0.8,
+
   },
   eventDate: {
-    fontSize: 9,
+    fontSize: 12,
     textAlign: "center",
     marginTop: 4,
     color: "#4a6fa5",
@@ -54,6 +67,9 @@ const styles = StyleSheet.create({
   centralZone: {
     flexGrow: 1,
     flexDirection: "column",
+    position: "relative",
+    display: "flex",
+    zIndex: 2,
   },
   categoryBanner: {
     paddingVertical: 12,
@@ -66,11 +82,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     textTransform: "uppercase",
     letterSpacing: 3,
+    
   },
   contentRow: {
     flexDirection: "row",
     flexGrow: 1,
-    paddingBottom: 8,
   },
   idVertical: {
     width: 22,
@@ -78,7 +94,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   idText: {
-    fontSize: 7,
+    fontSize: 12,
     transform: "rotate(-90deg)",
     width: 120,
     textAlign: "center",
@@ -98,42 +114,49 @@ const styles = StyleSheet.create({
   },
   personInfo: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: 10,
+    paddingTop: 0,
   },
   fullName: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
   },
   separator: {
-    width: 40,
+    width: 100,
     height: 1,
     backgroundColor: "#FFFFFF",
     marginVertical: 6,
   },
   structure: {
-    fontSize: 10,
+    fontSize: 14,
     color: "#FFFFFF",
+    textTransform: "uppercase",
+    fontWeight: "bold",
   },
   qrCodeContainer: {
-    alignItems: "flex-end",
-    paddingRight: 10,
-    paddingBottom: 10,
+    position: "absolute",
+    bottom: 30,
+    right: 10,
+    zIndex: 2,
   },
   qrCode: {
-    width: 55,
-    height: 55,
+    width: 65,
+    height: 65,
+    zIndex: 5,
   },
   // Bande ALL ACCESS
   allAccessBanner: {
-    height: 45,
     backgroundColor: "#DC2626",
     justifyContent: "center",
-    alignItems: "center",
+    alignItems: "flex-start",
+    paddingLeft: 10,
+    zIndex: 1,
+    paddingVertical: 10,
   },
   allAccessText: {
-    fontSize: 24,
+    fontSize: 26,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
     letterSpacing: 3,
@@ -155,60 +178,61 @@ export function BadgeDocument({
   return (
     <Document>
       <Page size={{ width: BADGE_WIDTH, height: BADGE_HEIGHT }} style={styles.page}>
-        {/* En-tete blanc : Logo + Titre + Date */}
-        <View style={styles.headerContainer}>
-          {event.logo && <Image src={event.logo} style={styles.logo} />}
-          <Text style={styles.eventTitle}>{event.title}</Text>
-          <Text style={styles.eventDate}>
-            {event.location}, le {event.date}
-          </Text>
+        <View style={styles.container}>
+          <View style={styles.headerContainer}>
+            {event.logo && <Image src={event.logo} style={styles.logo} />}
+            <Text style={styles.eventTitle}>{event.title}</Text>
+            <Text style={styles.eventDate}>
+              {event.location}, le {event.date}
+            </Text>
+          </View>
+
+          <View style={[styles.centralZone, { backgroundColor: team.color }]}>
+            <View style={styles.categoryBanner}>
+              <Text style={styles.categoryName}>{team.name}</Text>
+            </View>
+
+
+            <View style={styles.contentRow}>
+              <View style={styles.idVertical}>
+                <Text style={styles.idText}>{registration.id}</Text>
+              </View>
+
+              <View style={styles.photoContainer}>
+                {registration.photo ? (
+                  <Image src={registration.photo} style={styles.photo} />
+                ) : (
+                  <Text style={{ fontSize: 8, color: "#666" }}>PHOTO</Text>
+                )}
+              </View>
+
+              <View style={styles.personInfo}>
+                <Text style={styles.fullName}>
+                  {registration.firstName}
+                </Text>
+                <Text style={styles.fullName}>
+                  {registration.lastName}
+                </Text>
+                <View style={styles.separator} />
+                <Text style={styles.structure}>{registration.structure}</Text>
+              </View>
+              {/* QR Code en bas a droite */}
+            
+            </View>
+          
+            {/* Bande ALL ACCESS (conditionnelle) */}
+            {allAccessGranted && (
+              <View style={styles.allAccessBanner}>
+                <Text style={styles.allAccessText}>ALL ACCESS</Text>
+              </View>
+            )}
+            
+          </View>
+          
+        <View style={styles.qrCodeContainer}>
+          <Image src={qrCodeDataUrl} style={styles.qrCode} />
         </View>
-
-        {/* Zone centrale coloree */}
-        <View style={[styles.centralZone, { backgroundColor: team.color }]}>
-          {/* Nom de la categorie */}
-          <View style={styles.categoryBanner}>
-            <Text style={styles.categoryName}>{team.name}</Text>
-          </View>
-
-          {/* Contenu : ID + Photo + Infos */}
-          <View style={styles.contentRow}>
-            {/* ID vertical */}
-            <View style={styles.idVertical}>
-              <Text style={styles.idText}>{registration.id}</Text>
-            </View>
-
-            {/* Photo */}
-            <View style={styles.photoContainer}>
-              {registration.photo ? (
-                <Image src={registration.photo} style={styles.photo} />
-              ) : (
-                <Text style={{ fontSize: 8, color: "#666" }}>PHOTO</Text>
-              )}
-            </View>
-
-            {/* Nom + Structure */}
-            <View style={styles.personInfo}>
-              <Text style={styles.fullName}>
-                {registration.firstName[0]}. {registration.lastName}
-              </Text>
-              <View style={styles.separator} />
-              <Text style={styles.structure}>{registration.structure}</Text>
-            </View>
-          </View>
-
-          {/* QR Code en bas a droite */}
-          <View style={styles.qrCodeContainer}>
-            <Image src={qrCodeDataUrl} style={styles.qrCode} />
-          </View>
         </View>
-
-        {/* Bande ALL ACCESS (conditionnelle) */}
-        {allAccessGranted && (
-          <View style={styles.allAccessBanner}>
-            <Text style={styles.allAccessText}>ALL ACCESS</Text>
-          </View>
-        )}
       </Page>
     </Document>
   );
