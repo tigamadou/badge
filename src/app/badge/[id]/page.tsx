@@ -39,6 +39,7 @@ export default function BadgePage() {
     structure: string;
     photo: string | null;
     status: string;
+    allAccessGranted: boolean;
     team: { name: string; color: string };
   };
   const evt = data.event as unknown as { title: string; location: string; date: string };
@@ -54,10 +55,11 @@ export default function BadgePage() {
     idDocumentNumber: "",
     idDocument: "",
     teamId: "",
-    status: reg.status as "approved",
+    status: reg.status as "APPROVED",
+    allAccessGranted: reg.allAccessGranted,
   };
 
-  const team = { id: "", name: reg.team.name, color: reg.team.color };
+  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0 };
   const event = { id: "", title: evt.title, location: evt.location, date: evt.date, logo: "" };
 
   if (!qrCodeDataUrl) return <p className="text-center mt-20">Génération du badge...</p>;
@@ -65,9 +67,9 @@ export default function BadgePage() {
   return (
     <div className="max-w-md mx-auto mt-10 text-center">
       <h1 className="text-xl font-bold mb-6">Votre badge</h1>
-      <BadgePreview registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} />
+      <BadgePreview registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} allAccessGranted={reg.allAccessGranted} />
       <div className="mt-4">
-        <BadgeDownload registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} />
+        <BadgeDownload registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} allAccessGranted={reg.allAccessGranted} />
       </div>
     </div>
   );

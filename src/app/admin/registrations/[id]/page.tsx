@@ -30,8 +30,9 @@ interface Registration {
   status: "PENDING" | "APPROVED" | "REJECTED";
   badgePrinted: boolean;
   badgePrintedAt: string | null;
+  allAccessGranted: boolean;
   createdAt: string;
-  team: { id: string; name: string; color: string };
+  team: { id: string; name: string; color: string; number: number };
 }
 
 export default function RegistrationDetailPage() {
@@ -56,6 +57,16 @@ export default function RegistrationDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
+    });
+    const res = await fetch(`/api/registrations/${id}`);
+    setRegistration(await res.json());
+  }
+
+  async function toggleAllAccess() {
+    await fetch(`/api/registrations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allAccessGranted: !registration!.allAccessGranted }),
     });
     const res = await fetch(`/api/registrations/${id}`);
     setRegistration(await res.json());
@@ -93,6 +104,7 @@ export default function RegistrationDetailPage() {
     idDocument: registration.idDocument || "",
     teamId: registration.team.id,
     status: registration.status,
+    allAccessGranted: registration.allAccessGranted,
   };
 
   return (
@@ -169,6 +181,14 @@ export default function RegistrationDetailPage() {
                 <Button variant="danger" onClick={() => updateStatus("REJECTED")}>Rejeter</Button>
               )}
             </div>
+            {registration.status === "APPROVED" && !registration.badgePrinted && (
+              <Button
+                variant={registration.allAccessGranted ? "danger" : "secondary"}
+                onClick={toggleAllAccess}
+              >
+                {registration.allAccessGranted ? "Désactiver ALL ACCESS" : "Activer ALL ACCESS"}
+              </Button>
+            )}
             {registration.status === "APPROVED" && !registration.badgePrinted && event?.contactEmail && event?.contactPhone && (
               <Button variant="secondary" onClick={markAsPrinted}>
                 Marquer comme imprimé
@@ -236,6 +256,7 @@ export default function RegistrationDetailPage() {
               team={registration.team}
               event={badgeEvent}
               qrCodeDataUrl={qrCodeDataUrl}
+              allAccessGranted={registration.allAccessGranted}
             />
             <div className="mt-4">
               <BadgeDownload
@@ -243,6 +264,7 @@ export default function RegistrationDetailPage() {
                 team={registration.team}
                 event={badgeEvent}
                 qrCodeDataUrl={qrCodeDataUrl}
+                allAccessGranted={registration.allAccessGranted}
               />
             </div>
           </div>

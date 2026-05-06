@@ -22,63 +22,58 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     fontFamily: "Helvetica",
   },
+  // En-tete blanc
   headerContainer: {
+    height: BADGE_HEIGHT * 0.38,
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 15,
-    paddingTop: 15,
-    paddingBottom: 15,
-    height: BADGE_HEIGHT * 0.5,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    paddingTop: 15,
-  },
-  qrCode: {
-    width: 70,
-    height: 70,
+    paddingTop: 10,
   },
   logo: {
-    width: 70,
-    height: 70,
+    width: 80,
+    height: 80,
     objectFit: "contain",
-  },
-  eventInfo: {
-    alignItems: "center",
-    paddingHorizontal: 15,
-    paddingTop: 8,
+    marginBottom: 6,
   },
   eventTitle: {
     fontSize: 10,
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
     lineHeight: 1.3,
+    color: "#1a3a7c",
   },
   eventDate: {
     fontSize: 9,
     textAlign: "center",
     marginTop: 4,
+    color: "#4a6fa5",
   },
+  // Zone centrale coloree
   centralZone: {
-    flexDirection: "row",
-    marginTop: 10,
     flexGrow: 1,
-  },
-  centralZoneContainer: {
     flexDirection: "column",
-    flexGrow: 1,
-    height: BADGE_HEIGHT * 0.5,
   },
-  centralZoneContent: {
+  categoryBanner: {
+    paddingVertical: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  categoryName: {
+    fontSize: 26,
+    fontFamily: "Helvetica-Bold",
+    color: "#FFFFFF",
+    textTransform: "uppercase",
+    letterSpacing: 3,
+  },
+  contentRow: {
     flexDirection: "row",
     flexGrow: 1,
+    paddingBottom: 8,
   },
   idVertical: {
-    width: 20,
+    width: 22,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -91,26 +86,23 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     width: 90,
-    height: 100,
+    height: 105,
     backgroundColor: "#CCCCCC",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: -50,
   },
   photo: {
     width: 90,
-    height: 100,
+    height: 105,
     objectFit: "cover",
-
   },
   personInfo: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 10,
-    backgroundColor: "red",
   },
   fullName: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
   },
@@ -124,22 +116,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#FFFFFF",
   },
-  teamBanner: {
-    height: 60,
+  qrCodeContainer: {
+    alignItems: "flex-end",
+    paddingRight: 10,
+    paddingBottom: 10,
+  },
+  qrCode: {
+    width: 55,
+    height: 55,
+  },
+  // Bande ALL ACCESS
+  allAccessBanner: {
+    height: 45,
+    backgroundColor: "#DC2626",
     justifyContent: "center",
     alignItems: "center",
   },
-  teamName: {
-    fontSize: 22,
+  allAccessText: {
+    fontSize: 24,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
-    textTransform: "uppercase",
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
 });
 
 interface BadgeDocumentProps extends BadgeProps {
   qrCodeDataUrl: string;
+  allAccessGranted?: boolean;
 }
 
 export function BadgeDocument({
@@ -147,56 +150,65 @@ export function BadgeDocument({
   team,
   event,
   qrCodeDataUrl,
+  allAccessGranted = false,
 }: BadgeDocumentProps) {
   return (
     <Document>
       <Page size={{ width: BADGE_WIDTH, height: BADGE_HEIGHT }} style={styles.page}>
-        {/* En-tête : QR code + Logo */}
+        {/* En-tete blanc : Logo + Titre + Date */}
         <View style={styles.headerContainer}>
-          <View style={styles.header}>
-            {event.logo && <Image src={event.logo} style={styles.logo} />}
-            <View style={styles.eventInfo}>
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              <Text style={styles.eventDate}>
-                {event.location}, le {event.date}
-              </Text>
-            </View>
-          </View>
-          <Image src={qrCodeDataUrl} style={styles.qrCode} />
+          {event.logo && <Image src={event.logo} style={styles.logo} />}
+          <Text style={styles.eventTitle}>{event.title}</Text>
+          <Text style={styles.eventDate}>
+            {event.location}, le {event.date}
+          </Text>
         </View>
-        <View style={[styles.centralZoneContainer, { backgroundColor: team.color }]}>
-          <View style={[styles.centralZone]}>
+
+        {/* Zone centrale coloree */}
+        <View style={[styles.centralZone, { backgroundColor: team.color }]}>
+          {/* Nom de la categorie */}
+          <View style={styles.categoryBanner}>
+            <Text style={styles.categoryName}>{team.name}</Text>
+          </View>
+
+          {/* Contenu : ID + Photo + Infos */}
+          <View style={styles.contentRow}>
             {/* ID vertical */}
             <View style={styles.idVertical}>
               <Text style={styles.idText}>{registration.id}</Text>
             </View>
-            <View style={styles.centralZoneContent}>
-              {/* Photo */}
-              <View style={styles.photoContainer}>
-                {registration.photo ? (
-                  <Image src={registration.photo} style={styles.photo} />
-                ) : (
-                  <Text style={{ fontSize: 8, color: "#666" }}>PHOTO</Text>
-                )}
-              </View>
 
-              {/* Nom + Structure */}
-              <View style={styles.personInfo}>
-                <View style={styles.personInfoContent}>
-                  <Text style={styles.fullName}>{registration.lastName} {registration.firstName}</Text>
-                </View>
-                <View style={styles.separator} />
-                <Text style={styles.structure}>{registration.structure}</Text>
-              </View>
+            {/* Photo */}
+            <View style={styles.photoContainer}>
+              {registration.photo ? (
+                <Image src={registration.photo} style={styles.photo} />
+              ) : (
+                <Text style={{ fontSize: 8, color: "#666" }}>PHOTO</Text>
+              )}
+            </View>
 
+            {/* Nom + Structure */}
+            <View style={styles.personInfo}>
+              <Text style={styles.fullName}>
+                {registration.firstName[0]}. {registration.lastName}
+              </Text>
+              <View style={styles.separator} />
+              <Text style={styles.structure}>{registration.structure}</Text>
             </View>
           </View>
 
-          {/* Bandeau équipe */}
-          <View style={[styles.teamBanner, { backgroundColor: team.color }]}>
-            <Text style={styles.teamName}>{team.name}</Text>
+          {/* QR Code en bas a droite */}
+          <View style={styles.qrCodeContainer}>
+            <Image src={qrCodeDataUrl} style={styles.qrCode} />
           </View>
         </View>
+
+        {/* Bande ALL ACCESS (conditionnelle) */}
+        {allAccessGranted && (
+          <View style={styles.allAccessBanner}>
+            <Text style={styles.allAccessText}>ALL ACCESS</Text>
+          </View>
+        )}
       </Page>
     </Document>
   );

@@ -12,7 +12,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", minRole: "OPERATOR" },
   { href: "/admin/registrations", label: "Inscriptions", minRole: "OPERATOR" },
-  { href: "/admin/teams", label: "Équipes", minRole: "ADMIN" },
+  { href: "/admin/categories", label: "Catégories", minRole: "ADMIN" },
   { href: "/admin/event", label: "Événement", minRole: "ADMIN" },
   { href: "/admin/users", label: "Utilisateurs", minRole: "SUPER_ADMIN" },
 ];

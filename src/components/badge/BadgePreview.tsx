@@ -7,6 +7,7 @@ import type { BadgeProps } from "@/types";
 
 interface BadgePreviewProps extends BadgeProps {
   qrCodeDataUrl: string;
+  allAccessGranted?: boolean;
 }
 
 export function BadgePreview({
@@ -14,6 +15,7 @@ export function BadgePreview({
   team,
   event,
   qrCodeDataUrl,
+  allAccessGranted = false,
 }: BadgePreviewProps) {
   return (
     <PDFViewer width="100%" height={600} showToolbar={false}>
@@ -22,6 +24,7 @@ export function BadgePreview({
         team={team}
         event={event}
         qrCodeDataUrl={qrCodeDataUrl}
+        allAccessGranted={allAccessGranted}
       />
     </PDFViewer>
   );

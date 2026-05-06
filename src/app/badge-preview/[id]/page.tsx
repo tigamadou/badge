@@ -41,6 +41,7 @@ export default function BadgePreviewPage() {
     structure: string;
     photo: string | null;
     status: string;
+    allAccessGranted: boolean;
     team: { name: string; color: string };
   };
   const evt = data.event as unknown as {
@@ -62,9 +63,10 @@ export default function BadgePreviewPage() {
     idDocument: "",
     teamId: "",
     status: reg.status as "APPROVED",
+    allAccessGranted: reg.allAccessGranted,
   };
 
-  const team = { id: "", name: reg.team.name, color: reg.team.color };
+  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0 };
   const event = {
     id: "",
     title: evt.title,
@@ -85,6 +87,7 @@ export default function BadgePreviewPage() {
           team={team}
           event={event}
           qrCodeDataUrl={qrCodeDataUrl}
+          allAccessGranted={reg.allAccessGranted}
         />
       </div>
       <p className="mt-4 text-sm text-gray-500">

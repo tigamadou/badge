@@ -7,6 +7,7 @@ import type { BadgeProps } from "@/types";
 
 interface BadgeDownloadProps extends BadgeProps {
   qrCodeDataUrl: string;
+  allAccessGranted?: boolean;
 }
 
 export function BadgeDownload({
@@ -14,6 +15,7 @@ export function BadgeDownload({
   team,
   event,
   qrCodeDataUrl,
+  allAccessGranted = false,
 }: BadgeDownloadProps) {
   const fileName = `badge-${registration.lastName}-${registration.firstName}-${registration.id}.pdf`.replace(/\s+/g, "-");
 
@@ -25,6 +27,7 @@ export function BadgeDownload({
           team={team}
           event={event}
           qrCodeDataUrl={qrCodeDataUrl}
+          allAccessGranted={allAccessGranted}
         />
       }
       fileName={fileName}

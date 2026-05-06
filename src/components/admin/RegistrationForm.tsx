@@ -52,7 +52,7 @@ export function RegistrationForm({
       <Input label="Email" name="email" type="email" required />
       <Input label="Structure / Organisation" name="structure" required />
       <Select
-        label="Équipe"
+        label="Catégorie"
         name="teamId"
         options={teams.map((t) => ({ value: t.id, label: t.name }))}
         required

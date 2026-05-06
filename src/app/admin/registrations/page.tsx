@@ -124,7 +124,7 @@ export default function RegistrationsPage() {
           value={teamFilter}
           onChange={(e) => setTeamFilter(e.target.value)}
         >
-          <option value="">Toutes les équipes</option>
+          <option value="">Toutes les catégories</option>
           {teamNames.map((name) => (
             <option key={name} value={name}>{name}</option>
           ))}
@@ -165,7 +165,7 @@ export default function RegistrationsPage() {
               </th>
               <th className="text-left px-4 py-3">Nom</th>
               <th className="text-left px-4 py-3">Structure</th>
-              <th className="text-left px-4 py-3">Équipe</th>
+              <th className="text-left px-4 py-3">Catégorie</th>
               <th className="text-left px-4 py-3">Statut</th>
               <th className="text-left px-4 py-3">Badge</th>
               <th className="text-right px-4 py-3">Actions</th>
