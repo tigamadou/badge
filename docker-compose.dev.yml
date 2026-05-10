@@ -9,7 +9,9 @@ services:
       - .:/app
       - /app/node_modules
     env_file:
-      - .env
+      - docker/compose.dev.env
+      - path: .env
+        required: false
     depends_on:
       mysql:
         condition: service_healthy
