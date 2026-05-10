@@ -8,13 +8,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(OPERATOR)
-  createdAt DateTime @default(now())
-  scanLogs  ScanLog[]
+  id                String    @id @default(cuid())
+  email             String    @unique
+  password          String
+  name              String
+  role              Role      @default(OPERATOR)
+  inviteToken       String?   @unique
+  inviteTokenExpiry DateTime?
+  createdAt         DateTime  @default(now())
+  scanLogs          ScanLog[]
 }
 
 enum Role {

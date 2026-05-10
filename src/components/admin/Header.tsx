@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
 interface HeaderProps {
@@ -24,7 +25,10 @@ export function Header({ userName, userRole, onMenuToggle }: HeaderProps) {
       <div className="hidden md:block" />
       <div className="flex items-center gap-4">
         <span className="text-sm text-slate-600">
-          {userName} <span className="text-xs text-slate-400">({userRole})</span>
+          <Link href="/admin/profile" className="text-indigo-600 hover:text-indigo-700 transition-colors">
+            {userName}
+          </Link>{" "}
+          <span className="text-xs text-slate-400">({userRole})</span>
         </span>
         <Button variant="secondary" onClick={() => signOut({ callbackUrl: "/login" })}>
           Déconnexion

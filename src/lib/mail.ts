@@ -135,6 +135,33 @@ export async function sendStatusNotification(
   }
 }
 
+export async function sendUserInvitation(
+  to: string,
+  userName: string,
+  setupUrl: string
+): Promise<void> {
+  const transporter = await getTransporter();
+  const from = await getMailFrom();
+  const { title, logoUrl } = await getEventInfo();
+
+  const body = `
+    <p style="margin:0 0 16px;">Bonjour <strong>${userName}</strong>,</p>
+    <p style="margin:0 0 16px;">Vous avez été invité(e) à rejoindre la plateforme <strong>${title}</strong>.</p>
+    <p style="margin:0 0 24px;">Cliquez sur le bouton ci-dessous pour configurer votre mot de passe et activer votre compte :</p>
+    <p style="margin:0 0 24px;text-align:center;">
+      <a href="${setupUrl}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Configurer mon mot de passe</a>
+    </p>
+    <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 48 heures.</p>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: `Invitation — ${title}`,
+    html: buildEmail(body, title, logoUrl),
+  });
+}
+
 export async function sendBadgePrintedNotification(
   to: string,
   fullName: string,

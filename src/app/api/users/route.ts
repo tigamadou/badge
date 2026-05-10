@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import crypto from "crypto";
+import { sendUserInvitation } from "@/lib/mail";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -23,8 +25,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { email, password, name, role } = await req.json();
-  if (!email || !password || !name || !role) {
+  const { email, name, role } = await req.json();
+  if (!email || !name || !role) {
     return NextResponse.json({ error: "Tous les champs sont requis" }, { status: 400 });
   }
 
@@ -33,14 +35,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
   }
 
+  const inviteToken = crypto.randomUUID();
+  const inviteTokenExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const tempPassword = await hash(crypto.randomUUID(), 12);
+
   const user = await prisma.user.create({
     data: {
       email,
-      password: await hash(password, 12),
+      password: tempPassword,
       name,
       role,
+      inviteToken,
+      inviteTokenExpiry,
     },
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "http://localhost:3000";
+  const setupUrl = `${baseUrl}/setup-password?token=${inviteToken}`;
+  sendUserInvitation(email, name, setupUrl).catch(console.error);
+
   return NextResponse.json(user, { status: 201 });
 }

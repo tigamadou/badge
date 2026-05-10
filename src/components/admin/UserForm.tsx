@@ -38,11 +38,10 @@ export function UserForm({ initialData, onSubmit, onCancel }: UserFormProps) {
       <Input label="Nom" value={name} onChange={(e) => setName(e.target.value)} required />
       <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <Input
-        label={initialData ? "Nouveau mot de passe (laisser vide pour ne pas changer)" : "Mot de passe"}
+        label={initialData ? "Nouveau mot de passe (laisser vide pour ne pas changer)" : "Mot de passe (optionnel — un email d'invitation sera envoyé)"}
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        required={!initialData}
       />
       <Select label="Rôle" options={roleOptions} value={role} onChange={(e) => setRole(e.target.value)} />
       <div className="flex gap-3">
