@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   eventDate: {
     fontSize: 10,
-    marginTop: 4,
+    marginTop: 8,
     color: "#4a6fa5",
   },
   // Ligne de separation
@@ -146,7 +146,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     justifyContent: "center",
     alignItems: "center",
-    height: 120,
   },
   categoryName: {
     fontSize: 26,
@@ -217,13 +216,16 @@ export function BadgeDocument({
 
           {/* Bande ALL ACCESS (conditionnelle) */}
           {allAccessGranted && (
-            <View style={styles.allAccessBanner}>
-              <Text style={styles.allAccessText}>ALL ACCESS</Text>
-            </View>
+            <>
+              <View style={styles.allAccessBanner}>
+                <Text style={styles.allAccessText}>ALL ACCESS</Text>
+              </View>
+            </>
+            
           )}
 
           {/* Bande categorie/equipe tout en bas */}
-          <View style={[styles.categoryBanner, { backgroundColor: team.color }]}>
+          <View style={[styles.categoryBanner, { backgroundColor: team.color, height: allAccessGranted ? 80 : 120 }]}>
             <Text style={styles.categoryName}>{team.name}</Text>
           </View>
         </View>
