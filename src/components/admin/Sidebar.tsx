@@ -12,10 +12,12 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", minRole: "OPERATOR" },
   { href: "/admin/registrations", label: "Inscriptions", minRole: "OPERATOR" },
+  { href: "/admin/badges", label: "Badges", minRole: "OPERATOR" },
   { href: "/scan", label: "Scanner", minRole: "OPERATOR" },
   { href: "/admin/scan-history", label: "Historique Scans", minRole: "OPERATOR" },
   { href: "/admin/categories", label: "Catégories", minRole: "ADMIN" },
   { href: "/admin/event", label: "Événement", minRole: "ADMIN" },
+  { href: "/admin/settings", label: "Paramètres", minRole: "ADMIN" },
   { href: "/admin/users", label: "Utilisateurs", minRole: "SUPER_ADMIN" },
 ];
 

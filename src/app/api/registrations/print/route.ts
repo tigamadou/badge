@@ -16,10 +16,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "IDs requis" }, { status: 400 });
   }
 
-  const event = await prisma.event.findFirst();
-  if (!event?.contactEmail || !event?.contactPhone) {
+  const settings = await prisma.settings.findFirst();
+  if (!settings?.contactEmail || !settings?.contactPhone) {
     return NextResponse.json(
-      { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres de l'événement avant de confirmer l'impression." },
+      { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres avant de confirmer l'impression." },
       { status: 400 }
     );
   }
@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
         await sendBadgePrintedNotification(
           registration.email,
           `${registration.firstName} ${registration.lastName}`,
-          event.contactEmail,
-          event.contactPhone
+          settings.contactEmail,
+          settings.contactPhone
         );
       } catch (e) {
         console.error(`Failed to send notification for ${id}:`, e);

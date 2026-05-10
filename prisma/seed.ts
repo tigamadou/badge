@@ -63,6 +63,21 @@ async function main() {
     });
     console.log("Default event created");
   }
+
+  const existingSettings = await prisma.settings.findFirst();
+  if (!existingSettings) {
+    await prisma.settings.create({
+      data: {
+        smtpHost: "mailpit",
+        smtpPort: 1025,
+        smtpFrom: "noreply@investiture.local",
+        smtpSecure: false,
+        contactEmail: "contact@investiture.local",
+        contactPhone: "+229 97 00 00 00",
+      },
+    });
+    console.log("Default settings created (Mailpit SMTP)");
+  }
 }
 
 main()

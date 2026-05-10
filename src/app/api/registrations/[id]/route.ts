@@ -58,10 +58,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Send badge printed notification
   if (data.badgePrinted === true) {
-    const event = await prisma.event.findFirst();
-    if (!event?.contactEmail || !event?.contactPhone) {
+    const settings = await prisma.settings.findFirst();
+    if (!settings?.contactEmail || !settings?.contactPhone) {
       return NextResponse.json(
-        { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres de l'événement avant de confirmer l'impression." },
+        { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres avant de confirmer l'impression." },
         { status: 400 }
       );
     }
@@ -69,8 +69,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await sendBadgePrintedNotification(
         registration.email,
         `${registration.firstName} ${registration.lastName}`,
-        event.contactEmail,
-        event.contactPhone
+        settings.contactEmail,
+        settings.contactPhone
       );
     } catch (e) {
       console.error("Failed to send badge printed notification:", e);

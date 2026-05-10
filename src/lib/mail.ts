@@ -1,6 +1,15 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/prisma";
 
-function getTransporter() {
+async function getTransporter() {
+  const settings = await prisma.settings.findFirst();
+  if (settings?.smtpHost) {
+    return nodemailer.createTransport({
+      host: settings.smtpHost,
+      port: settings.smtpPort,
+      secure: settings.smtpSecure,
+    });
+  }
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
@@ -8,15 +17,20 @@ function getTransporter() {
   });
 }
 
-const FROM = process.env.SMTP_FROM || "noreply@investiture.local";
+async function getMailFrom(): Promise<string> {
+  const settings = await prisma.settings.findFirst();
+  if (settings?.smtpFrom) return settings.smtpFrom;
+  return process.env.SMTP_FROM || "noreply@investiture.local";
+}
 
 export async function sendRegistrationConfirmation(
   to: string,
   fullName: string
 ): Promise<void> {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
+  const from = await getMailFrom();
   await transporter.sendMail({
-    from: FROM,
+    from,
     to,
     subject: "Confirmation d'inscription — Cérémonie d'investiture",
     html: `
@@ -33,11 +47,12 @@ export async function sendStatusNotification(
   fullName: string,
   status: "APPROVED" | "REJECTED"
 ): Promise<void> {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
+  const from = await getMailFrom();
 
   if (status === "APPROVED") {
     await transporter.sendMail({
-      from: FROM,
+      from,
       to,
       subject: "Inscription validée — Cérémonie d'investiture",
       html: `
@@ -49,7 +64,7 @@ export async function sendStatusNotification(
     });
   } else {
     await transporter.sendMail({
-      from: FROM,
+      from,
       to,
       subject: "Inscription rejetée — Cérémonie d'investiture",
       html: `
@@ -68,10 +83,11 @@ export async function sendBadgePrintedNotification(
   contactEmail: string,
   contactPhone: string
 ): Promise<void> {
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
+  const from = await getMailFrom();
 
   await transporter.sendMail({
-    from: FROM,
+    from,
     to,
     subject: "Badge prêt — Cérémonie d'investiture",
     html: `

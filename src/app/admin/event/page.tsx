@@ -8,8 +8,6 @@ interface EventData {
   location: string;
   date: string;
   logo: string | null;
-  contactEmail: string | null;
-  contactPhone: string | null;
 }
 
 export default function EventPage() {
