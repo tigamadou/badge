@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-build prod prod-down prod-build test lint typecheck build logs
+.PHONY: dev dev-down dev-build prod prod-down prod-build test lint typecheck build logs upload
 
 # Développement
 dev:
@@ -52,3 +52,7 @@ db-generate:
 db-reset:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db push --force-reset
 	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
+
+# Déploiement
+upload:
+	rsync -avz --exclude='node_modules' --exclude='.next' --exclude='uploads' ./ root@173.212.217.54:~/investiture/

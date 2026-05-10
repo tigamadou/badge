@@ -14,7 +14,6 @@ interface UserFormProps {
 const roleOptions = [
   { value: "OPERATOR", label: "Opérateur" },
   { value: "ADMIN", label: "Admin" },
-  { value: "SUPER_ADMIN", label: "Super Admin" },
 ];
 
 export function UserForm({ initialData, onSubmit, onCancel }: UserFormProps) {

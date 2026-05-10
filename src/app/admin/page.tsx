@@ -45,8 +45,8 @@ export default async function DashboardPage() {
   let operators = 0;
   if (isAdmin) {
     [totalUsers, admins, operators] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } } }),
+      prisma.user.count({ where: { role: { not: "SUPER_ADMIN" } } }),
+      prisma.user.count({ where: { role: "ADMIN" } }),
       prisma.user.count({ where: { role: "OPERATOR" } }),
     ]);
   }
