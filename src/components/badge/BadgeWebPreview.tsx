@@ -17,109 +17,105 @@ export function BadgeWebPreview({
 }: BadgeWebPreviewProps) {
   return (
     <div
-      className="relative bg-white font-sans overflow-hidden"
+      className="relative bg-white font-sans overflow-hidden flex flex-col"
       style={{ width: "283px", height: "397px" }}
     >
-      {/* En-tete blanc : Logo + Titre + Date */}
-      <div
-        className="flex flex-col items-center justify-center px-4"
-        style={{ height: allAccessGranted ? "35%" : "38%" }}
-      >
+      {/* En-tete : logo a gauche, titre + date a droite */}
+      <div className="flex items-center px-4 pt-4 pb-2">
         {event.logo && (
           <img
             src={event.logo}
             alt="Logo"
-            className="object-contain mb-1"
-            style={{ width: 80, height: 80 }}
+            className="object-contain mr-2"
+            style={{ width: 60, height: 60 }}
           />
         )}
-        <p className="text-[10px] font-bold text-center leading-tight" style={{ color: "#1a3a7c" }}>
-          {event.title}
-        </p>
-        <p className="text-[9px] mt-1 text-center" style={{ color: "#4a6fa5" }}>
-          {event.location}, le {event.date}
-        </p>
+        <div className="flex-1">
+          <p
+            className="text-[10px] font-bold leading-tight"
+            style={{ color: "#1a3a7c" }}
+          >
+            {event.title}
+          </p>
+          <p className="text-[8px] mt-1" style={{ color: "#4a6fa5" }}>
+            {event.location}, le {event.date}
+          </p>
+        </div>
       </div>
 
-      {/* Zone centrale coloree */}
-      <div
-        className="flex flex-col"
-        style={{
-          backgroundColor: team.color,
-          height: allAccessGranted ? "53%" : "62%",
-        }}
-      >
-        {/* Nom de la categorie */}
-        <div className="py-3 flex items-center justify-center">
-          <span className="text-[26px] font-bold text-white uppercase tracking-widest">
-            {team.name}
-          </span>
-        </div>
+      {/* Ligne de separation bleue */}
+      <div className="mx-4 mb-3" style={{ height: 2, backgroundColor: "#1a3a7c" }} />
 
-        {/* Contenu : ID + Photo + Infos */}
-        <div className="flex flex-1">
-          {/* ID vertical */}
-          <div className="flex items-center justify-center" style={{ width: 22 }}>
-            <span
-              className="text-[7px] text-white text-center"
-              style={{
-                transform: "rotate(-90deg)",
-                width: 120,
-                display: "block",
-              }}
-            >
-              {registration.id}
-            </span>
-          </div>
-
-          {/* Photo */}
+      {/* Zone contenu blanche */}
+      <div className="px-4 flex-1">
+        {/* Photo | QR Code | ID vertical */}
+        <div className="flex items-center mb-3">
           <div
-            className="bg-gray-300 flex items-center justify-center"
-            style={{ width: 90, height: 105 }}
+            className="bg-gray-300 flex items-center justify-center flex-shrink-0"
+            style={{ width: 80, height: 95 }}
           >
             {registration.photo ? (
               <img
                 src={registration.photo}
                 alt="Photo"
                 className="object-cover"
-                style={{ width: 90, height: 105 }}
+                style={{ width: 80, height: 95 }}
               />
             ) : (
               <span className="text-[8px] text-gray-500">PHOTO</span>
             )}
           </div>
 
-          {/* Nom + Structure */}
-          <div className="flex-1 flex flex-col justify-center px-3">
-            <p className="text-[13px] font-bold text-white">
-              {registration.firstName[0]}. {registration.lastName}
-            </p>
-            <div className="w-10 h-px bg-white my-1.5" />
-            <p className="text-[10px] text-white">{registration.structure}</p>
+          <div className="flex-1 flex items-center justify-center">
+            <img
+              src={qrCodeDataUrl}
+              alt="QR Code"
+              style={{ width: 65, height: 65 }}
+            />
+          </div>
+
+          <div className="flex items-center justify-center" style={{ width: 22 }}>
+            <span
+              className="text-[10px] font-bold text-black text-center"
+              style={{
+                transform: "rotate(-90deg)",
+                width: 100,
+                display: "block",
+              }}
+            >
+              {registration.id}
+            </span>
           </div>
         </div>
 
-        {/* QR Code en bas a droite */}
-        <div className="flex justify-end pr-2 pb-2">
-          <img
-            src={qrCodeDataUrl}
-            alt="QR Code"
-            style={{ width: 55, height: 55 }}
-          />
-        </div>
+        {/* Nom et structure */}
+        <p className="text-[14px] font-bold text-black">
+          {registration.firstName} {registration.lastName.toUpperCase()}
+        </p>
+        <p className="text-[10px] text-gray-700">{registration.structure}</p>
       </div>
 
-      {/* Bande ALL ACCESS */}
+      {/* Bande ALL ACCESS (conditionnelle) */}
       {allAccessGranted && (
         <div
           className="flex items-center justify-center"
-          style={{ height: "12%", backgroundColor: "#DC2626" }}
+          style={{ backgroundColor: "#DC2626", paddingTop: 10, paddingBottom: 10 }}
         >
-          <span className="text-[24px] font-bold text-white tracking-widest">
+          <span className="text-[20px] font-bold text-white tracking-widest">
             ALL ACCESS
           </span>
         </div>
       )}
+
+      {/* Bande categorie/equipe tout en bas */}
+      <div
+        className="flex items-center justify-center"
+        style={{ backgroundColor: team.color, paddingTop: 14, paddingBottom: 14 }}
+      >
+        <span className="text-[20px] font-bold text-white uppercase tracking-widest">
+          {team.name}
+        </span>
+      </div>
     </div>
   );
 }

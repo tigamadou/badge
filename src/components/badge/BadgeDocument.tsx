@@ -26,139 +26,133 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "column",
     flexGrow: 1,
-    zIndex: 1,
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
-  // En-tete blanc
+  // En-tete : logo a gauche, texte a droite
   headerContainer: {
-    height: BADGE_HEIGHT * 0.45,
-    flexDirection: "column",
-    justifyContent: "flex-start",
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 10,
+    paddingHorizontal: 30,
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   logo: {
-    width: 100,
-
-    height: 100,
+    width: 60,
+    height: 60,
     objectFit: "contain",
-   
+    marginRight: 20,
+  },
+  headerTextContainer: {
+    flex: 1,
+    flexDirection: "column",
   },
   eventTitle: {
-    fontSize: 16,
-    fontFamily: "Helvetica-Bold",
-    textAlign: "center",
+    fontSize: 10,
+    fontFamily: "Helvetica",
     lineHeight: 1.3,
     color: "#1a3a7c",
-    maxWidth: BADGE_WIDTH * 0.8,
-
+    fontWeight: "600",
+    paddingRight: 10,
   },
   eventDate: {
-    fontSize: 12,
-    textAlign: "center",
+    fontSize: 10,
     marginTop: 4,
     color: "#4a6fa5",
   },
-  // Zone centrale coloree
-  centralZone: {
-    flexGrow: 1,
-    flexDirection: "column",
-    position: "relative",
-    display: "flex",
-    zIndex: 2,
+  // Ligne de separation
+  separatorLine: {
+    height: 1,
+    backgroundColor: "#1a3a7c",
+    marginHorizontal: 30,
+    marginBottom: 20,
   },
-  categoryBanner: {
-    paddingVertical: 12,
+  // Zone contenu (blanche)
+  contentArea: {
+    flexGrow: 1,
+    paddingHorizontal: 30,
+
+  },
+  // Ligne photo / QR / ID
+  contentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  photoContainer: {
+    width: 80,
+    height: 89,
+    backgroundColor: "#CCCCCC",
     justifyContent: "center",
     alignItems: "center",
+  },
+  photo: {
+    width: 80,
+    height: 89,
+    objectFit: "cover",
+  },
+  qrCodeContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  qrCode: {
+    width: 60,
+    height: 60,
+  },
+  idVertical: {
+    width: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  idText: {
+    fontSize: 13,
+    fontFamily: "Helvetica",
+    fontWeight: "500",
+    transform: "rotate(-90deg)",
+    width: 130,
+    textAlign: "center",
+    color: "#000000",
+  },
+  // Nom et structure
+  fullName: {
+    fontSize: 15,
+    fontFamily: "Helvetica",
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 2,
+  },
+  structure: {
+    fontSize: 12,
+    color: "#333333",
+  },
+  // Spacer pour pousser les bandes en bas
+  spacer: {
+    flexGrow: 1,
+  },
+  // Bande ALL ACCESS
+  allAccessBanner: {
+    backgroundColor: "#DC2626",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  allAccessText: {
+    fontSize: 26,
+    fontFamily: "Helvetica-Bold",
+    color: "#FFFFFF",
+    letterSpacing: 3,
+  },
+  // Bande categorie/equipe en bas
+  categoryBanner: {
+    paddingVertical: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    height: 120,
   },
   categoryName: {
     fontSize: 26,
     fontFamily: "Helvetica-Bold",
     color: "#FFFFFF",
     textTransform: "uppercase",
-    letterSpacing: 3,
-    
-  },
-  contentRow: {
-    flexDirection: "row",
-    flexGrow: 1,
-  },
-  idVertical: {
-    width: 22,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  idText: {
-    fontSize: 12,
-    transform: "rotate(-90deg)",
-    width: 120,
-    textAlign: "center",
-    color: "#FFFFFF",
-  },
-  photoContainer: {
-    width: 90,
-    height: 105,
-    backgroundColor: "#CCCCCC",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  photo: {
-    width: 90,
-    height: 105,
-    objectFit: "cover",
-  },
-  personInfo: {
-    flex: 1,
-    justifyContent: "flex-start",
-    paddingHorizontal: 10,
-    paddingTop: 0,
-  },
-  fullName: {
-    fontSize: 14,
-    fontFamily: "Helvetica-Bold",
-    color: "#FFFFFF",
-  },
-  separator: {
-    width: 100,
-    height: 1,
-    backgroundColor: "#FFFFFF",
-    marginVertical: 6,
-  },
-  structure: {
-    fontSize: 14,
-    color: "#FFFFFF",
-    textTransform: "uppercase",
-    fontWeight: "bold",
-  },
-  qrCodeContainer: {
-    position: "absolute",
-    bottom: 30,
-    right: 10,
-    zIndex: 2,
-  },
-  qrCode: {
-    width: 65,
-    height: 65,
-    zIndex: 5,
-  },
-  // Bande ALL ACCESS
-  allAccessBanner: {
-    backgroundColor: "#DC2626",
-    justifyContent: "center",
-    alignItems: "flex-start",
-    paddingLeft: 10,
-    zIndex: 1,
-    paddingVertical: 10,
-  },
-  allAccessText: {
-    fontSize: 26,
-    fontFamily: "Helvetica-Bold",
-    color: "#FFFFFF",
     letterSpacing: 3,
   },
 });
@@ -179,25 +173,24 @@ export function BadgeDocument({
     <Document>
       <Page size={{ width: BADGE_WIDTH, height: BADGE_HEIGHT }} style={styles.page}>
         <View style={styles.container}>
+          {/* En-tete : logo a gauche, titre + date a droite */}
           <View style={styles.headerContainer}>
             {event.logo && <Image src={event.logo} style={styles.logo} />}
-            <Text style={styles.eventTitle}>{event.title}</Text>
-            <Text style={styles.eventDate}>
-              {event.location}, le {event.date}
-            </Text>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.eventTitle}>{event.title}</Text>
+              <Text style={styles.eventDate}>
+                {event.location}, le {event.date}
+              </Text>
+            </View>
           </View>
 
-          <View style={[styles.centralZone, { backgroundColor: team.color }]}>
-            <View style={styles.categoryBanner}>
-              <Text style={styles.categoryName}>{team.name}</Text>
-            </View>
+          {/* Ligne de separation bleue */}
+          <View style={styles.separatorLine} />
 
-
+          {/* Zone contenu blanche */}
+          <View style={styles.contentArea}>
+            {/* Photo | QR Code | ID vertical */}
             <View style={styles.contentRow}>
-              <View style={styles.idVertical}>
-                <Text style={styles.idText}>{registration.id}</Text>
-              </View>
-
               <View style={styles.photoContainer}>
                 {registration.photo ? (
                   <Image src={registration.photo} style={styles.photo} />
@@ -206,32 +199,33 @@ export function BadgeDocument({
                 )}
               </View>
 
-              <View style={styles.personInfo}>
-                <Text style={styles.fullName}>
-                  {registration.firstName}
-                </Text>
-                <Text style={styles.fullName}>
-                  {registration.lastName}
-                </Text>
-                <View style={styles.separator} />
-                <Text style={styles.structure}>{registration.structure}</Text>
+              <View style={styles.qrCodeContainer}>
+                <Image src={qrCodeDataUrl} style={styles.qrCode} />
               </View>
-              {/* QR Code en bas a droite */}
-            
+
+              <View style={styles.idVertical}>
+                <Text style={styles.idText}>{registration.id}</Text>
+              </View>
             </View>
-          
-            {/* Bande ALL ACCESS (conditionnelle) */}
-            {allAccessGranted && (
-              <View style={styles.allAccessBanner}>
-                <Text style={styles.allAccessText}>ALL ACCESS</Text>
-              </View>
-            )}
-            
+
+            {/* Nom et structure */}
+            <Text style={styles.fullName}>
+              {registration.firstName} {registration.lastName.toUpperCase()}
+            </Text>
+            <Text style={styles.structure}>{registration.structure}</Text>
           </View>
-          
-        <View style={styles.qrCodeContainer}>
-          <Image src={qrCodeDataUrl} style={styles.qrCode} />
-        </View>
+
+          {/* Bande ALL ACCESS (conditionnelle) */}
+          {allAccessGranted && (
+            <View style={styles.allAccessBanner}>
+              <Text style={styles.allAccessText}>ALL ACCESS</Text>
+            </View>
+          )}
+
+          {/* Bande categorie/equipe tout en bas */}
+          <View style={[styles.categoryBanner, { backgroundColor: team.color }]}>
+            <Text style={styles.categoryName}>{team.name}</Text>
+          </View>
         </View>
       </Page>
     </Document>
