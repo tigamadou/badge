@@ -83,11 +83,11 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Paramètres</h1>
+      <h1 className="text-xl font-semibold text-slate-900 mb-6">Paramètres</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6 max-w-lg">
         {/* Configuration SMTP */}
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
           <h2 className="text-lg font-semibold">Configuration SMTP</h2>
 
           <Input
@@ -151,7 +151,7 @@ export default function SettingsPage() {
             )}
 
             {testResult && (
-              <p className={`mt-2 text-sm ${testResult.success ? "text-green-600" : "text-red-600"}`}>
+              <p className={`mt-2 text-sm ${testResult.success ? "text-emerald-600" : "text-rose-600"}`}>
                 {testResult.message}
               </p>
             )}
@@ -159,7 +159,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Informations de contact */}
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
           <h2 className="text-lg font-semibold">Informations de contact</h2>
 
           <Input
@@ -176,7 +176,7 @@ export default function SettingsPage() {
             onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
             placeholder="+229 97 00 00 00"
           />
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Ces informations seront incluses dans les emails envoyés aux inscrits.
           </p>
         </div>
@@ -186,7 +186,7 @@ export default function SettingsPage() {
             {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>
           {saved && (
-            <span className="text-sm text-green-600">Modifications enregistrées.</span>
+            <span className="text-sm text-emerald-600">Modifications enregistrées.</span>
           )}
         </div>
       </form>

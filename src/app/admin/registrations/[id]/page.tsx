@@ -46,10 +46,10 @@ export default function RegistrationDetailPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Détail de l&apos;inscription</h1>
+      <h1 className="text-xl font-semibold text-slate-900 mb-6">Détail de l&apos;inscription</h1>
 
       <div className="max-w-xl">
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           {/* En-tête avec couleur de l'équipe */}
           <div className="h-24 relative" style={{ backgroundColor: registration.team.color }}>
             <div className="absolute -bottom-16 left-1/2 -translate-x-1/2">
@@ -62,8 +62,8 @@ export default function RegistrationDetailPage() {
                   />
                 </a>
               ) : (
-                <div className="w-32 h-32 rounded-full border-4 border-white shadow-md bg-gray-200 flex items-center justify-center">
-                  <span className="text-3xl text-gray-400">
+                <div className="w-32 h-32 rounded-full border-4 border-white shadow-md bg-slate-200 flex items-center justify-center">
+                  <span className="text-3xl text-slate-400">
                     {registration.firstName[0]}{registration.lastName[0]}
                   </span>
                 </div>
@@ -73,7 +73,7 @@ export default function RegistrationDetailPage() {
 
           <div className="pt-20 pb-6 px-6 text-center">
             <h2 className="text-xl font-bold">{registration.firstName} {registration.lastName}</h2>
-            <p className="text-gray-500 text-sm mt-1">{registration.structure}</p>
+            <p className="text-slate-500 text-sm mt-1">{registration.structure}</p>
             <div className="mt-2 flex items-center justify-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: registration.team.color }} />
               <span className="text-sm font-medium">{registration.team.name}</span>
@@ -83,34 +83,34 @@ export default function RegistrationDetailPage() {
             </div>
           </div>
 
-          <div className="border-t px-6 py-4">
+          <div className="border-t border-slate-100 px-6 py-4">
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <dt className="text-gray-500">Email</dt>
+                <dt className="text-slate-500">Email</dt>
                 <dd className="text-right">{registration.email}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Type de document</dt>
+                <dt className="text-slate-500">Type de document</dt>
                 <dd>{registration.idDocumentType}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">N° document</dt>
+                <dt className="text-slate-500">N° document</dt>
                 <dd className="font-mono">{registration.idDocumentNumber}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">ID inscription</dt>
+                <dt className="text-slate-500">ID inscription</dt>
                 <dd className="font-mono text-xs">{registration.id}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Date</dt>
+                <dt className="text-slate-500">Date</dt>
                 <dd>{new Date(registration.createdAt).toLocaleDateString("fr-FR")}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Pièce d&apos;identité</dt>
+                <dt className="text-slate-500">Pièce d&apos;identité</dt>
                 <dd>{registration.idDocumentType} — N° {registration.idDocumentNumber}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-500">Fichier</dt>
+                <dt className="text-slate-500">Fichier</dt>
                 <dd>
                   {registration.idDocument ? (
                     <a href={`/api/files/${registration.idDocument}`} target="_blank" rel="noopener noreferrer">
@@ -122,7 +122,7 @@ export default function RegistrationDetailPage() {
             </dl>
           </div>
 
-          <div className="border-t px-6 py-4 flex flex-col items-center gap-3">
+          <div className="border-t border-slate-100 px-6 py-4 flex flex-col items-center gap-3">
             <div className="flex gap-3">
               {registration.status !== "APPROVED" && (
                 <Button onClick={() => updateStatus("APPROVED")}>Valider</Button>
@@ -132,7 +132,7 @@ export default function RegistrationDetailPage() {
               )}
             </div>
             {registration.status === "APPROVED" && (
-              <Link href="/admin/badges" className="text-sm text-blue-600 hover:underline">
+              <Link href="/admin/badges" className="text-sm text-indigo-600 hover:text-indigo-700">
                 Voir le badge dans la page Badges
               </Link>
             )}

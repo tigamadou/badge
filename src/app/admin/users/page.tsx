@@ -57,18 +57,18 @@ export default function UsersPage() {
   const roleLabels: Record<string, string> = {
     SUPER_ADMIN: "Super Admin",
     ADMIN: "Admin",
-    OPERATOR: "Opérateur",
+    OPERATOR: "Operateur",
   };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Utilisateurs</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Utilisateurs</h1>
         <Button onClick={() => setShowForm(true)}>Nouvel utilisateur</Button>
       </div>
 
       {(showForm || editingUser) && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
           <UserForm
             initialData={editingUser || undefined}
             onSubmit={editingUser ? handleEdit : handleCreate}
@@ -77,30 +77,50 @@ export default function UsersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left px-4 py-3">Nom</th>
-              <th className="text-left px-4 py-3">Email</th>
-              <th className="text-left px-4 py-3">Rôle</th>
-              <th className="text-right px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{user.name}</td>
-                <td className="px-4 py-3">{user.email}</td>
-                <td className="px-4 py-3">{roleLabels[user.role] || user.role}</td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
-                  <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
-                </td>
+      <div className="bg-white rounded-xl border border-slate-200">
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/50">
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Nom</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Email</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Role</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 font-medium">{user.name}</td>
+                  <td className="px-4 py-3">{user.email}</td>
+                  <td className="px-4 py-3">{roleLabels[user.role] || user.role}</td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
+                    <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-3 p-4">
+          {users.map((user) => (
+            <div key={user.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-slate-700">{user.name}</span>
+                <span className="text-xs text-slate-500 bg-slate-50/50 px-2 py-1 rounded-xl">{roleLabels[user.role] || user.role}</span>
+              </div>
+              <div className="text-sm text-slate-500">{user.email}</div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
+                <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Modal
@@ -111,7 +131,7 @@ export default function UsersPage() {
         confirmLabel="Supprimer"
         confirmVariant="danger"
       >
-        <p>Cette action est irréversible.</p>
+        <p>Cette action est irreversible.</p>
       </Modal>
     </div>
   );

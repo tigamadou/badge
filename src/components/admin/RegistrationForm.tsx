@@ -65,11 +65,11 @@ export function RegistrationForm({
       />
       <Input label="Numéro du document d'identité" name="idDocumentNumber" required />
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Document d&apos;identité (scan ou photo)</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Document d&apos;identité (scan ou photo)</label>
         <input type="file" name="idDocument" accept="image/*,.pdf" className="text-sm" required />
       </div>
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Photo d&apos;identité</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Photo d&apos;identité</label>
         <input type="file" name="photo" accept="image/*" className="text-sm" />
       </div>
       {captchaWidget}

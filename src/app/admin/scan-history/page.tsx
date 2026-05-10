@@ -37,7 +37,7 @@ export default function ScanHistoryPage() {
   useEffect(() => {
     fetch("/api/users")
       .then((r) => r.json())
-      .then((data) => setOperators(data));
+      .then((data) => { if (Array.isArray(data)) setOperators(data); });
   }, []);
 
   const fetchScanLogs = useCallback(async () => {
@@ -81,13 +81,13 @@ export default function ScanHistoryPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Historique des scans</h1>
-        <span className="text-sm text-gray-500">{total} scan{total > 1 ? "s" : ""}</span>
+        <h1 className="text-xl font-semibold text-slate-900">Historique des scans</h1>
+        <span className="text-sm text-slate-500">{total} scan{total > 1 ? "s" : ""}</span>
       </div>
 
       <div className="flex flex-wrap gap-4 mb-4">
         <select
-          className="px-3 py-2 border rounded text-sm"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={operatorId}
           onChange={(e) => setOperatorId(e.target.value)}
         >
@@ -102,30 +102,30 @@ export default function ScanHistoryPage() {
         <input
           type="text"
           placeholder="Rechercher un participant..."
-          className="px-3 py-2 border rounded text-sm"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <input
           type="date"
-          className="px-3 py-2 border rounded text-sm"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
         />
 
         <input
           type="date"
-          className="px-3 py-2 border rounded text-sm"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      <div className="hidden md:block bg-white rounded-xl border border-slate-200">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-gray-50">
+            <tr className="border-b border-slate-100 bg-slate-50/50">
               <th className="text-left px-4 py-3">Date/Heure</th>
               <th className="text-left px-4 py-3">Operateur</th>
               <th className="text-left px-4 py-3">Participant</th>
@@ -135,13 +135,13 @@ export default function ScanHistoryPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-gray-500">
+                <td colSpan={4} className="text-center py-8 text-slate-500">
                   Chargement...
                 </td>
               </tr>
             ) : (
               scanLogs.map((log) => (
-                <tr key={log.id} className="border-b hover:bg-gray-50">
+                <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3">{formatDate(log.scannedAt)}</td>
                   <td className="px-4 py-3">{log.user.name}</td>
                   <td className="px-4 py-3 font-medium">
@@ -162,24 +162,54 @@ export default function ScanHistoryPage() {
           </tbody>
         </table>
         {!loading && scanLogs.length === 0 && (
-          <p className="text-center py-8 text-gray-500">Aucun scan trouve.</p>
+          <p className="text-center py-8 text-slate-500">Aucun scan trouve.</p>
+        )}
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <p className="text-center py-8 text-slate-500">Chargement...</p>
+        ) : scanLogs.length === 0 ? (
+          <p className="text-center py-8 text-slate-500">Aucun scan trouve.</p>
+        ) : (
+          scanLogs.map((log) => (
+            <div key={log.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <span className="font-medium text-slate-900">
+                  {log.registration.lastName.toUpperCase()} {log.registration.firstName}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full inline-block"
+                    style={{ backgroundColor: log.registration.team.color }}
+                  />
+                  {log.registration.team.name}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>{formatDate(log.scannedAt)}</span>
+                <span>{log.user.name}</span>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 mt-4">
           <button
-            className="px-4 py-2 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="px-4 py-2 text-sm border border-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
             Precedent
           </button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-slate-600">
             Page {page} sur {totalPages}
           </span>
           <button
-            className="px-4 py-2 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="px-4 py-2 text-sm border border-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >

@@ -34,11 +34,11 @@ export default function EventPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Configuration de l&apos;événement</h1>
+      <h1 className="text-xl font-semibold text-slate-900 mb-6">Configuration de l&apos;événement</h1>
       {saved && (
-        <p className="text-sm text-green-600 mb-4">Modifications enregistrées.</p>
+        <p className="text-sm text-emerald-600 mb-4">Modifications enregistrées.</p>
       )}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <EventForm initialData={event} onSubmit={handleSubmit} />
       </div>
     </div>

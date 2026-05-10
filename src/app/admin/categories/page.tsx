@@ -57,12 +57,12 @@ export default function CategoriesPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Catégories</h1>
-        <Button onClick={() => setShowForm(true)}>Nouvelle catégorie</Button>
+        <h1 className="text-xl font-semibold text-slate-900">Categories</h1>
+        <Button onClick={() => setShowForm(true)}>Nouvelle categorie</Button>
       </div>
 
       {(showForm || editingTeam) && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
           <TeamForm
             initialData={editingTeam || undefined}
             onSubmit={editingTeam ? handleEdit : handleCreate}
@@ -71,45 +71,70 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left px-4 py-3">Couleur</th>
-              <th className="text-left px-4 py-3">Numéro</th>
-              <th className="text-left px-4 py-3">Nom</th>
-              <th className="text-left px-4 py-3">Inscriptions</th>
-              <th className="text-right px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teams.map((team) => (
-              <tr key={team.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
-                </td>
-                <td className="px-4 py-3 font-mono">{team.number}</td>
-                <td className="px-4 py-3 font-medium">{team.name}</td>
-                <td className="px-4 py-3">{team._count.registrations}</td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
-                  <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
-                </td>
+      <div className="bg-white rounded-xl border border-slate-200">
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/50">
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Couleur</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Numero</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Nom</th>
+                <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Inscriptions</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {teams.map((team) => (
+                <tr key={team.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
+                  </td>
+                  <td className="px-4 py-3 font-mono">{team.number}</td>
+                  <td className="px-4 py-3 font-medium">{team.name}</td>
+                  <td className="px-4 py-3">{team._count.registrations}</td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
+                    <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-3 p-4">
+          {teams.map((team) => (
+            <div key={team.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
+                  <span className="font-medium text-slate-700">{team.name}</span>
+                </div>
+                <span className="font-mono text-slate-500 text-sm">#{team.number}</span>
+              </div>
+              <div className="text-sm text-slate-500">
+                {team._count.registrations} inscription(s)
+              </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
+                <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Modal
         open={!!deleteId}
-        title="Supprimer la catégorie ?"
+        title="Supprimer la categorie ?"
         onConfirm={handleDelete}
         onCancel={() => setDeleteId(null)}
         confirmLabel="Supprimer"
         confirmVariant="danger"
       >
-        <p>Cette action est irréversible.</p>
+        <p>Cette action est irreversible.</p>
       </Modal>
     </div>
   );

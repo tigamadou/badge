@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
 interface ScanResult {
@@ -34,6 +35,7 @@ export default function ScanPageClient() {
   const [cameraStarted, setCameraStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const html5QrcodeRef = useRef<any>(null);
   const isProcessingRef = useRef(false);
@@ -201,20 +203,90 @@ export default function ScanPageClient() {
 
   return (
     <>
+      {/* Top bar with menu */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-slate-900 h-14 flex items-center justify-between px-4">
+        <h1 className="text-white font-semibold">Scanner</h1>
+        <div className="flex items-center gap-3">
+          {operator && (
+            <span className="text-sm text-slate-400 hidden sm:inline">
+              {operator.name}
+            </span>
+          )}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="text-slate-300 hover:text-white transition-colors"
+            aria-label="Menu"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Menu overlay */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm" />
+          <div className="relative flex flex-col items-center justify-center h-full px-6">
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors"
+              aria-label="Fermer le menu"
+            >
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <nav className="space-y-2 w-full max-w-xs">
+              <Link
+                href="/admin"
+                className="block px-4 py-3 rounded-xl text-center text-base text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/admin/registrations"
+                className="block px-4 py-3 rounded-xl text-center text-base text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Inscriptions
+              </Link>
+              <Link
+                href="/admin/badges"
+                className="block px-4 py-3 rounded-xl text-center text-base text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Badges
+              </Link>
+              <div
+                className="block px-4 py-3 rounded-xl text-center text-base bg-indigo-500/20 text-indigo-400 font-medium"
+              >
+                Scanner
+              </div>
+              <Link
+                href="/admin/scan-history"
+                className="block px-4 py-3 rounded-xl text-center text-base text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Historique Scans
+              </Link>
+            </nav>
+          </div>
+        </div>
+      )}
+
       {/* Prompt: user must tap to authorize camera */}
       {showPrompt && (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-white text-black p-4">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 pt-14 p-4">
           <div className="w-full max-w-md mt-8 space-y-6">
-            <h1 className="text-2xl font-bold text-center">Scanner Badge</h1>
+            <h2 className="text-xl font-semibold text-slate-900 text-center">Scanner Badge</h2>
             {operator && (
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-slate-500">
                 Operateur :{" "}
-                <span className="font-medium text-gray-700">
+                <span className="font-medium text-slate-700">
                   {operator.name}
                 </span>
               </p>
             )}
-            <p className="text-center text-gray-600 text-sm leading-relaxed">
+            <p className="text-center text-slate-500 text-sm leading-relaxed">
               Pour scanner les QR codes, nous avons besoin d&apos;acceder a la
               camera. Apres avoir appuye sur le bouton ci-dessous, votre
               navigateur affichera une demande d&apos;autorisation — acceptez-la
@@ -223,7 +295,7 @@ export default function ScanPageClient() {
             <button
               type="button"
               onClick={startCameraFromUserGesture}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-lg rounded-xl transition-colors"
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-lg rounded-xl transition-colors"
             >
               Autoriser la camera et scanner
             </button>
@@ -234,8 +306,8 @@ export default function ScanPageClient() {
       {/* Result view */}
       {showResults && (
         <div
-          className={`min-h-screen flex flex-col items-center p-4 ${
-            error ? "bg-red-600" : valid ? "bg-green-600" : "bg-red-600"
+          className={`min-h-screen flex flex-col items-center pt-14 p-4 ${
+            error ? "bg-rose-600" : valid ? "bg-emerald-600" : "bg-rose-600"
           }`}
         >
           <div className="w-full max-w-md mt-8">
@@ -243,38 +315,38 @@ export default function ScanPageClient() {
               <p className="text-5xl font-bold text-white mb-2">
                 {error ? "\u2717" : valid ? "\u2713" : "\u2717"}
               </p>
-              <h1 className="text-2xl font-bold text-white">
+              <h2 className="text-2xl font-semibold text-white">
                 {error
                   ? "Erreur"
                   : valid
                     ? "Badge valide"
                     : "Badge non valide"}
-              </h1>
+              </h2>
               {error && (
                 <p className="text-white/90 mt-2 text-lg">{error}</p>
               )}
             </div>
 
             {reg && (
-              <div className="bg-white rounded-2xl shadow-xl p-6 space-y-4">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
                 {reg.photo && (
                   <div className="flex justify-center">
                     <img
                       src={`/api/files/${reg.photo}`}
                       alt={`${reg.firstName} ${reg.lastName}`}
-                      className="w-28 h-28 rounded-full object-cover border-4 border-gray-200"
+                      className="w-28 h-28 rounded-full object-cover border-4 border-slate-200"
                     />
                   </div>
                 )}
 
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h3 className="text-2xl font-semibold text-slate-900">
                     {reg.lastName.toUpperCase()} {reg.firstName}
-                  </h2>
+                  </h3>
                 </div>
 
                 {reg.structure && (
-                  <p className="text-center text-gray-600 text-lg">
+                  <p className="text-center text-slate-500 text-lg">
                     {reg.structure}
                   </p>
                 )}
@@ -284,14 +356,14 @@ export default function ScanPageClient() {
                     className="inline-block w-4 h-4 rounded-full"
                     style={{ backgroundColor: reg.team.color }}
                   />
-                  <span className="text-gray-800 font-medium">
+                  <span className="text-slate-700 font-medium">
                     {reg.team.name}
                   </span>
                 </div>
 
                 {reg.allAccessGranted && (
                   <div className="text-center">
-                    <span className="inline-block px-4 py-1 bg-red-100 text-red-700 font-bold text-sm rounded-full uppercase tracking-wide">
+                    <span className="inline-block px-4 py-1 bg-rose-50 text-rose-700 font-bold text-sm rounded-full uppercase tracking-wide">
                       All Access
                     </span>
                   </div>
@@ -301,12 +373,12 @@ export default function ScanPageClient() {
                   <StatusBadge status={reg.status} />
                 </div>
 
-                <p className="text-center text-xs text-gray-400 font-mono">
+                <p className="text-center text-xs text-slate-400 font-mono">
                   ID: {reg.id}
                 </p>
 
                 {scanResult?.scanLog && (
-                  <p className="text-center text-xs text-gray-400">
+                  <p className="text-center text-xs text-slate-400">
                     Scanne le{" "}
                     {new Date(scanResult.scanLog.scannedAt).toLocaleString(
                       "fr-FR",
@@ -328,18 +400,18 @@ export default function ScanPageClient() {
 
       {/* Scanner view — the div#qr-reader MUST stay in the DOM while camera is active */}
       <div
-        className={`min-h-screen flex flex-col items-center justify-center bg-white text-black p-4 ${
+        className={`min-h-screen flex flex-col items-center justify-center bg-slate-50 pt-14 p-4 ${
           showScanner ? "" : "hidden"
         }`}
       >
         <div className="w-full max-w-md mt-8">
-          <h1 className="text-2xl font-bold text-center mb-6">
+          <h2 className="text-xl font-semibold text-slate-900 text-center mb-6">
             Scanner Badge
-          </h1>
+          </h2>
           {operator && (
-            <p className="text-center text-sm text-gray-500 mb-4">
+            <p className="text-center text-sm text-slate-500 mb-4">
               Operateur :{" "}
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-slate-700">
                 {operator.name}
               </span>
             </p>
@@ -347,8 +419,8 @@ export default function ScanPageClient() {
 
           {loading && (
             <div className="flex flex-col items-center mb-4">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-transparent" />
-              <p className="text-sm text-gray-500 mt-2">Verification...</p>
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-300 border-t-transparent" />
+              <p className="text-sm text-slate-500 mt-2">Verification...</p>
             </div>
           )}
 
@@ -356,17 +428,17 @@ export default function ScanPageClient() {
             <div id={SCANNER_ID} className="w-full min-h-[300px]" />
           </div>
 
-          <p className="text-center text-gray-400 mt-6 text-sm">
+          <p className="text-center text-slate-400 mt-6 text-sm">
             Placez le QR code du badge devant la camera
           </p>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-100 rounded-xl text-center">
-              <p className="text-red-600">{error}</p>
+            <div className="mt-4 p-4 bg-rose-50 rounded-xl text-center border border-rose-200">
+              <p className="text-rose-600">{error}</p>
               <button
                 type="button"
                 onClick={resetScanner}
-                className="mt-3 px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+                className="mt-3 px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors text-sm"
               >
                 Reessayer
               </button>

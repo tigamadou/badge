@@ -93,9 +93,9 @@ export default function BadgeDetailPage() {
   if (registration.status !== "APPROVED") {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-4">Badge non disponible</h1>
-        <p className="text-gray-500 mb-4">Cette inscription n&apos;est pas encore validée.</p>
-        <Link href="/admin/badges" className="text-blue-600 hover:underline">Retour aux badges</Link>
+        <h1 className="text-xl font-semibold text-slate-900 mb-4">Badge non disponible</h1>
+        <p className="text-slate-500 mb-4">Cette inscription n&apos;est pas encore validée.</p>
+        <Link href="/admin/badges" className="text-indigo-600 hover:text-indigo-700">Retour aux badges</Link>
       </div>
     );
   }
@@ -126,10 +126,10 @@ export default function BadgeDetailPage() {
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/admin/badges" className="text-gray-500 hover:text-gray-700">
+        <Link href="/admin/badges" className="text-slate-500 hover:text-slate-700">
           &larr; Badges
         </Link>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-xl font-semibold text-slate-900">
           Badge de {registration.firstName} {registration.lastName}
         </h1>
       </div>
@@ -138,7 +138,7 @@ export default function BadgeDetailPage() {
         {/* Colonne gauche : Infos + Actions */}
         <div className="space-y-6">
           {/* Infos */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <div className="h-3" style={{ backgroundColor: registration.team.color }} />
             <div className="p-6">
               <div className="flex items-center gap-4 mb-4">
@@ -146,56 +146,56 @@ export default function BadgeDetailPage() {
                   <img
                     src={`/api/files/${registration.photo}`}
                     alt={`${registration.firstName} ${registration.lastName}`}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-slate-200"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-xl text-gray-400">
+                  <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center">
+                    <span className="text-xl text-slate-400">
                       {registration.firstName[0]}{registration.lastName[0]}
                     </span>
                   </div>
                 )}
                 <div>
                   <h2 className="text-lg font-bold">{registration.firstName} {registration.lastName}</h2>
-                  <p className="text-gray-500 text-sm">{registration.structure}</p>
+                  <p className="text-slate-500 text-sm">{registration.structure}</p>
                 </div>
               </div>
 
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Catégorie</dt>
+                  <dt className="text-slate-500">Catégorie</dt>
                   <dd className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: registration.team.color }} />
                     {registration.team.name}
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Email</dt>
+                  <dt className="text-slate-500">Email</dt>
                   <dd>{registration.email}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">ID</dt>
+                  <dt className="text-slate-500">ID</dt>
                   <dd className="font-mono text-xs">{registration.id}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Statut impression</dt>
+                  <dt className="text-slate-500">Statut impression</dt>
                   <dd>
                     {registration.badgePrinted ? (
-                      <span className="text-green-600 font-medium">
+                      <span className="text-emerald-600 font-medium">
                         Imprimé le {new Date(registration.badgePrintedAt!).toLocaleDateString("fr-FR")}
                       </span>
                     ) : (
-                      <span className="text-orange-500">Non imprimé</span>
+                      <span className="text-amber-500">Non imprimé</span>
                     )}
                   </dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">ALL ACCESS</dt>
+                  <dt className="text-slate-500">ALL ACCESS</dt>
                   <dd>
                     {registration.allAccessGranted ? (
-                      <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded">OUI</span>
+                      <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">OUI</span>
                     ) : (
-                      <span className="text-gray-400">Non</span>
+                      <span className="text-slate-400">Non</span>
                     )}
                   </dd>
                 </div>
@@ -204,8 +204,8 @@ export default function BadgeDetailPage() {
           </div>
 
           {/* Actions */}
-          <div className="bg-white rounded-lg shadow p-6 space-y-3">
-            <h3 className="font-semibold text-sm text-gray-700 mb-2">Actions</h3>
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+            <h3 className="font-semibold text-sm text-slate-700 mb-2">Actions</h3>
             <div className="flex flex-col gap-2 justify-between items-center">
               {!registration.badgePrinted && (
                 <Button
@@ -243,7 +243,7 @@ export default function BadgeDetailPage() {
 
               <Link
                 href={`/admin/registrations/${registration.id}`}
-                className="block text-sm text-gray-500 hover:underline"
+                className="block text-sm text-indigo-600 hover:text-indigo-700"
               >
                 Voir l&apos;inscription
               </Link>
@@ -258,7 +258,7 @@ export default function BadgeDetailPage() {
 
         {/* Colonne droite : Aperçu du badge */}
         {qrCodeDataUrl && (
-          <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
+          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6">
             <h2 className="text-lg font-semibold mb-4">Aperçu du badge</h2>
             <BadgePreview
               registration={badgeRegistration}
@@ -279,7 +279,7 @@ export default function BadgeDetailPage() {
         confirmLabel="Confirmer"
         confirmVariant={registration.allAccessGranted ? "danger" : "primary"}
       >
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-600">
           {registration.allAccessGranted
             ? `Voulez-vous vraiment désactiver le ALL ACCESS pour ${registration.firstName} ${registration.lastName} ? Le badge sera mis à jour.`
             : `Voulez-vous vraiment activer le ALL ACCESS pour ${registration.firstName} ${registration.lastName} ? Le badge sera mis à jour.`}
@@ -294,7 +294,7 @@ export default function BadgeDetailPage() {
         confirmLabel="Confirmer l'impression"
         confirmVariant="primary"
       >
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-600">
           Voulez-vous vraiment marquer le badge de {registration.firstName} {registration.lastName} comme imprimé ?
           Un email de notification sera envoyé à {registration.email}.
         </p>

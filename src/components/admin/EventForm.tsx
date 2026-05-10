@@ -48,7 +48,7 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
       <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} required />
       <Input label="Date" value={date} onChange={(e) => setDate(e.target.value)} required />
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Logo</label>
+        <label className="block text-sm font-medium text-slate-700 mb-1">Logo</label>
         {logo && (
           <img src={`/api/files/${logo}`} alt="Logo" className="h-16 mb-2 object-contain" />
         )}
@@ -58,7 +58,7 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
           onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
           className="text-sm"
         />
-        {uploading && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
+        {uploading && <p className="text-sm text-slate-500 mt-1">Upload en cours...</p>}
       </div>
       <Button type="submit" disabled={loading}>
         {loading ? "Enregistrement..." : "Enregistrer"}

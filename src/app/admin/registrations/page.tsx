@@ -56,22 +56,22 @@ export default function RegistrationsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Inscriptions</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Inscriptions</h1>
         <Link href="/admin/registrations/new">
           <Button>Nouvelle inscription</Button>
         </Link>
       </div>
 
-      <div className="flex gap-4 mb-4 flex-wrap">
+      <div className="flex gap-3 mb-4 flex-wrap">
         <input
           type="text"
-          className="px-3 py-2 border rounded text-sm w-64"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           placeholder="Rechercher par nom, email, structure..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="px-3 py-2 border rounded text-sm"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -81,7 +81,7 @@ export default function RegistrationsPage() {
           <option value="REJECTED">Rejeté</option>
         </select>
         <select
-          className="px-3 py-2 border rounded text-sm"
+          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           value={teamFilter}
           onChange={(e) => setTeamFilter(e.target.value)}
         >
@@ -92,30 +92,31 @@ export default function RegistrationsPage() {
         </select>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-slate-200">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-gray-50">
-              <th className="text-left px-4 py-3">Nom</th>
-              <th className="text-left px-4 py-3">Structure</th>
-              <th className="text-left px-4 py-3">Catégorie</th>
-              <th className="text-left px-4 py-3">Statut</th>
-              <th className="text-right px-4 py-3">Actions</th>
+            <tr className="border-b border-slate-100 bg-slate-50/50">
+              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Nom</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Structure</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Catégorie</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Statut</th>
+              <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((reg) => (
-              <tr key={reg.id} className="border-b hover:bg-gray-50">
+              <tr key={reg.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                 <td className="px-4 py-3">
-                  <Link href={`/admin/registrations/${reg.id}`} className="text-blue-600 hover:underline font-medium">
+                  <Link href={`/admin/registrations/${reg.id}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
                     {reg.lastName} {reg.firstName}
                   </Link>
                 </td>
-                <td className="px-4 py-3">{reg.structure}</td>
+                <td className="px-4 py-3 text-slate-600">{reg.structure}</td>
                 <td className="px-4 py-3">
                   <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: reg.team.color }} />
-                    {reg.team.name}
+                    <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: reg.team.color }} />
+                    <span className="text-slate-600">{reg.team.name}</span>
                   </span>
                 </td>
                 <td className="px-4 py-3"><StatusBadge status={reg.status} /></td>
@@ -132,7 +133,37 @@ export default function RegistrationsPage() {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <p className="text-center py-8 text-gray-500">Aucune inscription trouvée.</p>
+          <p className="text-center py-8 text-slate-400">Aucune inscription trouvée.</p>
+        )}
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {filtered.map((reg) => (
+          <div key={reg.id} className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-start justify-between mb-3">
+              <Link href={`/admin/registrations/${reg.id}`} className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
+                {reg.lastName} {reg.firstName}
+              </Link>
+              <StatusBadge status={reg.status} />
+            </div>
+            <div className="space-y-1.5 text-sm text-slate-500">
+              <p>{reg.structure}</p>
+              <p className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: reg.team.color }} />
+                {reg.team.name}
+              </p>
+            </div>
+            {reg.status === "PENDING" && (
+              <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
+                <Button variant="primary" onClick={() => updateStatus(reg.id, "APPROVED")} className="flex-1">Valider</Button>
+                <Button variant="danger" onClick={() => updateStatus(reg.id, "REJECTED")} className="flex-1">Rejeter</Button>
+              </div>
+            )}
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-center py-8 text-slate-400">Aucune inscription trouvée.</p>
         )}
       </div>
     </div>
