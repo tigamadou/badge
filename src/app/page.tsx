@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReCAPTCHA from "react-google-recaptcha";
 import { RegistrationForm } from "@/components/admin/RegistrationForm";
+import { formatEventDate } from "@/lib/format-date";
 
 interface EventInfo {
   title: string;
@@ -113,7 +114,7 @@ export default function Home() {
         <h1 className="text-xl font-bold text-center mb-2">Inscription</h1>
         {event && (
           <p className="text-sm text-gray-500 text-center mb-6">
-            {event.title} — {event.location}, {event.date}
+            {event.title} — {event.location}, {formatEventDate(event.date)}
           </p>
         )}
         {error && <p className="text-sm text-red-500 mb-4">{error}</p>}

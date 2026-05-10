@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { formatEventDate } from "@/lib/format-date";
 
 const BadgePreview = dynamic(
   () => import("@/components/badge/BadgePreview").then((m) => m.BadgePreview),
@@ -60,7 +61,7 @@ export default function BadgePage() {
   };
 
   const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0 };
-  const event = { id: "", title: evt.title, location: evt.location, date: evt.date, logo: "" };
+  const event = { id: "", title: evt.title, location: evt.location, date: formatEventDate(evt.date), logo: "" };
 
   if (!qrCodeDataUrl) return <p className="text-center mt-20">Génération du badge...</p>;
 

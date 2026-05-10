@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 30,
     paddingTop: 16,
-    paddingBottom: 20,
+    paddingBottom: 14,
   },
   logo: {
     width: 60,
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#1a3a7c",
     marginHorizontal: 30,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   // Zone contenu (blanche)
   contentArea: {
@@ -79,14 +79,14 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     width: 80,
-    height: 89,
+    height: 103,
     backgroundColor: "#CCCCCC",
     justifyContent: "center",
     alignItems: "center",
   },
   photo: {
     width: 80,
-    height: 89,
+    height: 103,
     objectFit: "cover",
   },
   qrCodeContainer: {

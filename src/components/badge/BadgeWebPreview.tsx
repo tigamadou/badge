@@ -52,14 +52,14 @@ export function BadgeWebPreview({
         <div className="flex items-center mb-3">
           <div
             className="bg-gray-300 flex items-center justify-center flex-shrink-0"
-            style={{ width: 80, height: 95 }}
+            style={{ width: 80, height: 103 }}
           >
             {registration.photo ? (
               <img
                 src={registration.photo}
                 alt="Photo"
                 className="object-cover"
-                style={{ width: 80, height: 95 }}
+                style={{ width: 80, height: 103 }}
               />
             ) : (
               <span className="text-[8px] text-gray-500">PHOTO</span>

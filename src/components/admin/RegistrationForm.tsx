@@ -23,7 +23,7 @@ interface RegistrationFormProps {
   captchaWidget?: React.ReactNode;
 }
 
-const PHOTO_RATIO = 9 / 10; // 80:89 ≈ 9:10
+const PHOTO_RATIO = 35 / 45; // 35×45mm - standard photo d'identité
 const RATIO_TOLERANCE = 0.05;
 
 function validatePhotoRatio(file: File): Promise<boolean> {
@@ -71,7 +71,7 @@ export function RegistrationForm({
     if (photoFile && photoFile.size > 0) {
       const valid = await validatePhotoRatio(photoFile);
       if (!valid) {
-        setPhotoError("La photo doit avoir un ratio 9:10 (ex. 450×500px, 900×1000px).");
+        setPhotoError("La photo doit avoir un ratio 35:45 (ex. 350×450px, 700×900px).");
         return;
       }
     }
@@ -135,7 +135,7 @@ export function RegistrationForm({
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-1">Photo d&apos;identité</label>
-        <p className="text-xs text-slate-500 mb-1">Format recommandé : ratio 9:10 (ex. 450×500px, 900×1000px)</p>
+        <p className="text-xs text-slate-500 mb-1">Format recommandé : ratio 35:45 (ex. 350×450px, 700×900px)</p>
         <input
           ref={photoInputRef}
           type="file"

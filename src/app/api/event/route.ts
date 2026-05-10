@@ -15,16 +15,17 @@ export async function PUT(req: NextRequest) {
   }
 
   const { title, location, date, logo } = await req.json();
+  const dateValue = new Date(date);
 
   const existing = await prisma.event.findFirst();
   if (!existing) {
-    const event = await prisma.event.create({ data: { title, location, date, logo } });
+    const event = await prisma.event.create({ data: { title, location, date: dateValue, logo } });
     return NextResponse.json(event);
   }
 
   const event = await prisma.event.update({
     where: { id: existing.id },
-    data: { title, location, date, logo },
+    data: { title, location, date: dateValue, logo },
   });
   return NextResponse.json(event);
 }

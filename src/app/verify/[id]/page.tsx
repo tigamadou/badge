@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { formatEventDate } from "@/lib/format-date";
 
 interface VerifyData {
   valid: boolean;
@@ -72,7 +73,7 @@ export default function VerifyPage() {
 
         {data.event && (
           <p className="text-xs text-gray-400 mt-4">
-            {data.event.title} — {data.event.location}, {data.event.date}
+            {data.event.title} — {data.event.location}, {formatEventDate(data.event.date)}
           </p>
         )}
 

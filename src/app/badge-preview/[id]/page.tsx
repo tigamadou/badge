@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BadgeWebPreview } from "@/components/badge/BadgeWebPreview";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { formatEventDate } from "@/lib/format-date";
 
 export default function BadgePreviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,7 +72,7 @@ export default function BadgePreviewPage() {
     id: "",
     title: evt.title,
     location: evt.location,
-    date: evt.date,
+    date: formatEventDate(evt.date),
     logo: evt.logo || "",
   };
 

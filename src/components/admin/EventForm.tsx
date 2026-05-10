@@ -16,10 +16,15 @@ interface EventFormProps {
   onSubmit: (data: EventData) => Promise<void>;
 }
 
+function toInputDate(date: string): string {
+  if (!date) return "";
+  return new Date(date).toISOString().split("T")[0];
+}
+
 export function EventForm({ initialData, onSubmit }: EventFormProps) {
   const [title, setTitle] = useState(initialData.title);
   const [location, setLocation] = useState(initialData.location);
-  const [date, setDate] = useState(initialData.date);
+  const [date, setDate] = useState(toInputDate(initialData.date));
   const [logo, setLogo] = useState(initialData.logo);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,7 +51,7 @@ export function EventForm({ initialData, onSubmit }: EventFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
       <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
       <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} required />
-      <Input label="Date" value={date} onChange={(e) => setDate(e.target.value)} required />
+      <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-1">Logo</label>
         {logo && (

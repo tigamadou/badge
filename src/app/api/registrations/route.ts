@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const registrationCount = await prisma.registration.count({ where: { teamId } });
   const id = generateId({
     categoryNumber: team.number,
-    date: event?.date || new Date().toISOString(),
+    date: event?.date ? event.date.toISOString() : new Date().toISOString(),
     sequentialNumber: registrationCount + 1,
   });
 

@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { formatEventDate } from "@/lib/format-date";
 
 const BadgePreview = dynamic(
   () => import("@/components/badge/BadgePreview").then((m) => m.BadgePreview),
@@ -104,7 +105,7 @@ export default function BadgeDetailPage() {
     id: event.id,
     title: event.title,
     location: event.location,
-    date: event.date,
+    date: formatEventDate(event.date),
     logo: event.logo ? `/api/files/${event.logo}` : "",
   };
 

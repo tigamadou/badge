@@ -26,10 +26,10 @@ enum Role {
 }
 
 model Event {
-  id       String  @id @default(cuid())
+  id       String   @id @default(cuid())
   title    String
   location String
-  date     String
+  date     DateTime
   logo     String?
 }
 

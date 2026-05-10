@@ -58,7 +58,7 @@ async function main() {
       data: {
         title: "Cérémonie d'investiture du Président de la République",
         location: "Porto-Novo",
-        date: "2026-05-24",
+        date: new Date("2026-05-24"),
       },
     });
     console.log("Default event created");
