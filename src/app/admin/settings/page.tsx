@@ -8,6 +8,8 @@ interface Settings {
   smtpHost: string;
   smtpPort: number;
   smtpFrom: string;
+  smtpUser: string;
+  smtpPassword: string;
   smtpSecure: boolean;
   contactEmail: string;
   contactPhone: string;
@@ -17,6 +19,8 @@ const defaultSettings: Settings = {
   smtpHost: "",
   smtpPort: 587,
   smtpFrom: "",
+  smtpUser: "",
+  smtpPassword: "",
   smtpSecure: false,
   contactEmail: "",
   contactPhone: "",
@@ -109,6 +113,19 @@ export default function SettingsPage() {
             value={settings.smtpFrom}
             onChange={(e) => setSettings({ ...settings, smtpFrom: e.target.value })}
             placeholder="noreply@example.com"
+          />
+          <Input
+            label="Utilisateur SMTP"
+            value={settings.smtpUser}
+            onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })}
+            placeholder="user@example.com"
+          />
+          <Input
+            label="Mot de passe SMTP"
+            type="password"
+            value={settings.smtpPassword}
+            onChange={(e) => setSettings({ ...settings, smtpPassword: e.target.value })}
+            placeholder="••••••••"
           />
           <label className="flex items-center gap-2 cursor-pointer">
             <input

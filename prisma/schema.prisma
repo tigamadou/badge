@@ -111,6 +111,8 @@ model Settings {
   smtpHost     String  @default("")
   smtpPort     Int     @default(587)
   smtpFrom     String  @default("")
+  smtpUser     String  @default("")
+  smtpPassword String  @default("")
   smtpSecure   Boolean @default(false)
   contactEmail String  @default("")
   contactPhone String  @default("")

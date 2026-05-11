@@ -66,17 +66,22 @@ async function main() {
 
   const existingSettings = await prisma.settings.findFirst();
   if (!existingSettings) {
+    const useEnvSmtp = !!(process.env.SMTP_HOST && process.env.SMTP_HOST !== "mailpit");
     await prisma.settings.create({
       data: {
-        smtpHost: "mailpit",
-        smtpPort: 1025,
-        smtpFrom: "noreply@investiture.local",
-        smtpSecure: false,
+        smtpHost: process.env.SMTP_HOST || "mailpit",
+        smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 1025,
+        smtpFrom: process.env.SMTP_FROM || "noreply@investiture.local",
+        smtpUser: process.env.SMTP_USER || "",
+        smtpPassword: process.env.SMTP_PASSWORD || "",
+        smtpSecure: useEnvSmtp,
         contactEmail: "contact@investiture.local",
         contactPhone: "+229 97 00 00 00",
       },
     });
-    console.log("Default settings created (Mailpit SMTP)");
+    console.log(useEnvSmtp
+      ? `Settings created with env SMTP (${process.env.SMTP_HOST})`
+      : "Default settings created (Mailpit SMTP)");
   }
 }
 

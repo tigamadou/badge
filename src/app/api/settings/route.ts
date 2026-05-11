@@ -16,12 +16,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { smtpHost, smtpPort, smtpFrom, smtpSecure, contactEmail, contactPhone } = await req.json();
+  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone } = await req.json();
 
   const existing = await prisma.settings.findFirst();
   if (!existing) {
     const settings = await prisma.settings.create({
-      data: { smtpHost, smtpPort, smtpFrom, smtpSecure, contactEmail, contactPhone },
+      data: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone },
     });
     await logActivity({
       type: "SETTINGS_UPDATED",
@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest) {
 
   const settings = await prisma.settings.update({
     where: { id: existing.id },
-    data: { smtpHost, smtpPort, smtpFrom, smtpSecure, contactEmail, contactPhone },
+    data: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone },
   });
 
   await logActivity({
@@ -66,6 +66,9 @@ export async function POST(req: NextRequest) {
       host: settings.smtpHost,
       port: settings.smtpPort,
       secure: settings.smtpSecure,
+      ...(settings.smtpUser && settings.smtpPassword
+        ? { auth: { user: settings.smtpUser, pass: settings.smtpPassword } }
+        : {}),
     });
 
     await transporter.sendMail({

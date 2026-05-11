@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-build prod prod-down prod-build prod-logs prod-seed test lint typecheck build logs upload deploy
+.PHONY: dev dev-down dev-build dev-restart prod prod-down prod-build prod-logs prod-seed prod-db-reset test lint typecheck build logs upload deploy
 
 # Développement
 dev:
@@ -9,6 +9,9 @@ dev-build:
 
 dev-down:
 	docker compose -f docker-compose.dev.yml down
+
+dev-restart:
+	docker compose -f docker-compose.dev.yml down && docker compose -f docker-compose.dev.yml up -d
 
 # Production
 prod:
@@ -25,6 +28,13 @@ prod-logs:
 
 prod-seed:
 	docker exec investiture-app npx prisma db seed
+
+prod-db-reset:
+	@echo "WARNING: This will ERASE all production data!"
+	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
+	docker exec investiture-app prisma db push --force-reset
+	docker exec investiture-app npx prisma db seed
+	@echo "Production database reset and seeded."
 
 # Commandes dans le conteneur dev
 test:
