@@ -8,16 +8,14 @@ La base de donnees MySQL 8 est geree via Prisma ORM. Le schema est defini dans `
 
 ```
 User ──┐
-       ├──> ScanLog <──┐
-       │                │
-       │          Registration ──> Team
-       │
+       └──> ActivityLog
+                         Registration ──> Team
+
 Event (independant)
 Settings (independant)
 ```
 
-- Un `User` peut avoir plusieurs `ScanLog`
-- Une `Registration` peut avoir plusieurs `ScanLog`
+- Un `User` peut avoir plusieurs `ActivityLog`
 - Une `Registration` appartient a un `Team`
 - Un `Team` peut avoir plusieurs `Registration`
 - `Event` et `Settings` sont des entites independantes (pas de FK)
@@ -39,7 +37,7 @@ Comptes des operateurs et administrateurs.
 | inviteTokenExpiry | DateTime? | -- | Expiration du token (48h) |
 | createdAt | DateTime | default: now() | Date de creation |
 
-Relations : `scanLogs` (ScanLog[])
+Relations : `activityLogs` (ActivityLog[])
 
 ### Event
 
@@ -88,7 +86,7 @@ Inscriptions des participants.
 | teamId | String | FK -> Team.id | Categorie du participant |
 | createdAt | DateTime | default: now() | Date d'inscription |
 
-Relations : `team` (Team), `scanLogs` (ScanLog[])
+Relations : `team` (Team)
 
 #### Format de l'identifiant
 
@@ -102,18 +100,22 @@ L'ID est genere selon le format : `[numCategorie][AAMMJJ][XX][numCategorie][NNN]
 
 Exemple : `1260524381003` -- categorie 1, date 26/05/24, aleatoire 38, categorie 1, inscription n.003.
 
-### ScanLog
+### ActivityLog
 
-Journal des scans QR aux points de controle.
+Journal de toutes les actions effectuees dans l'application.
 
 | Champ | Type | Contraintes | Description |
 |-------|------|-------------|-------------|
 | id | String | PK, cuid | Identifiant unique |
-| registrationId | String | FK -> Registration.id | Inscription scannee |
-| userId | String | FK -> User.id | Operateur qui a scanne |
-| scannedAt | DateTime | default: now() | Date et heure du scan |
+| type | ActivityType | enum | Type d'action |
+| userId | String? | FK -> User.id (onDelete: SetNull) | Utilisateur ayant effectue l'action |
+| targetId | String? | -- | ID de la ressource concernee |
+| details | JSON? | -- | Contexte lisible de l'action |
+| createdAt | DateTime | default: now() | Date et heure |
 
-Relations : `registration` (Registration), `user` (User)
+Index : `type`, `userId`, `createdAt`
+
+Relations : `user` (User?)
 
 ### Settings
 
@@ -147,6 +149,18 @@ APPROVED  -- Approuvee
 REJECTED  -- Rejetee
 ```
 
+### ActivityType
+
+```
+REGISTRATION_CREATED, REGISTRATION_APPROVED, REGISTRATION_REJECTED,
+REGISTRATION_UPDATED, REGISTRATION_DELETED,
+BADGE_PRINTED, BADGE_BATCH_PRINTED, BADGE_ALL_ACCESS_TOGGLED,
+BADGE_EXPORTED, BADGE_BATCH_EXPORTED, BADGE_SCANNED,
+USER_CREATED, USER_UPDATED, USER_DELETED, USER_PASSWORD_SET, USER_LOGIN,
+CATEGORY_CREATED, CATEGORY_UPDATED, CATEGORY_DELETED,
+EVENT_UPDATED, SETTINGS_UPDATED
+```
+
 ## Migrations
 
 | Migration | Description |
@@ -154,6 +168,7 @@ REJECTED  -- Rejetee
 | `20260506000431_init` | Schema initial : User, Event, Team, Registration |
 | `20260506053858_add_scan_log` | Ajout de la table ScanLog |
 | `20260506100000_add_team_number_and_all_access` | Ajout du champ `number` sur Team et `allAccessGranted` sur Registration |
+| (db push) | Suppression de ScanLog, ajout de ActivityLog avec enum ActivityType |
 
 ## Donnees initiales (seed)
 

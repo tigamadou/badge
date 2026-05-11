@@ -19,7 +19,9 @@
     "@prisma/client": "^6.6.0",
     "@react-pdf/renderer": "^4.5.1",
     "bcryptjs": "^2.4.3",
+    "file-saver": "^2.0.5",
     "html5-qrcode": "^2.3.8",
+    "jszip": "^3.10.1",
     "next": "16.2.4",
     "next-auth": "^4.24.11",
     "nodemailer": "^6.10.1",
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.4",
     "@types/bcryptjs": "^2.4.6",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.17",
     "@types/qrcode": "^1.5.6",

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendBadgePrintedNotification } from "@/lib/mail";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -58,6 +59,12 @@ export async function POST(req: NextRequest) {
       errors++;
     }
   }
+
+  await logActivity({
+    type: "BADGE_BATCH_PRINTED",
+    userId: session.user.id,
+    details: { count: success, skipped, errors, totalRequested: ids.length },
+  });
 
   return NextResponse.json({ success, skipped, errors });
 }

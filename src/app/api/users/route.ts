@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import crypto from "crypto";
 import { sendUserInvitation } from "@/lib/mail";
+import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -55,6 +56,13 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "http://localhost:3000";
   const setupUrl = `${baseUrl}/setup-password?token=${inviteToken}`;
   sendUserInvitation(email, name, setupUrl).catch(console.error);
+
+  await logActivity({
+    type: "USER_CREATED",
+    userId: session.user.id,
+    targetId: user.id,
+    details: { userName: name, userEmail: email, userRole: role },
+  });
 
   return NextResponse.json(user, { status: 201 });
 }

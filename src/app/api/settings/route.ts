@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import nodemailer from "nodemailer";
+import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const settings = await prisma.settings.findFirst();
@@ -22,6 +23,11 @@ export async function PUT(req: NextRequest) {
     const settings = await prisma.settings.create({
       data: { smtpHost, smtpPort, smtpFrom, smtpSecure, contactEmail, contactPhone },
     });
+    await logActivity({
+      type: "SETTINGS_UPDATED",
+      userId: session.user.id,
+      details: { changes: "SMTP et contact" },
+    });
     return NextResponse.json(settings);
   }
 
@@ -29,6 +35,13 @@ export async function PUT(req: NextRequest) {
     where: { id: existing.id },
     data: { smtpHost, smtpPort, smtpFrom, smtpSecure, contactEmail, contactPhone },
   });
+
+  await logActivity({
+    type: "SETTINGS_UPDATED",
+    userId: session.user.id,
+    details: { changes: "SMTP et contact" },
+  });
+
   return NextResponse.json(settings);
 }
 

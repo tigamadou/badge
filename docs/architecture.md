@@ -35,7 +35,7 @@ src/
       users/                # CRUD utilisateurs
       teams/                # CRUD categories
       scan/                 # Enregistrement de scans
-      scan-logs/            # Historique des scans
+      activity-logs/        # Journal d'activite
       event/                # Configuration evenement
       settings/             # Parametres SMTP/contact
       upload/               # Upload de fichiers
@@ -51,7 +51,7 @@ src/
       teams/                # (ancien, redirige vers categories)
       event/                # Configuration evenement
       settings/             # Parametres systeme
-      scan-history/         # Historique des scans
+      activity-logs/        # Journal d'activite
       profile/              # Profil personnel
     scan/                   # Page scanner QR
     register/               # Page succes inscription
@@ -66,6 +66,7 @@ src/
     badge/                  # Composants badge (BadgeDocument, BadgePreview, BadgeDownload, BadgeWebPreview)
   lib/
     prisma.ts               # Client Prisma (singleton)
+    activity-log.ts         # Journalisation des actions
     auth.ts                 # Configuration NextAuth
     mail.ts                 # Envoi d'emails (nodemailer)
     storage.ts              # Stockage fichiers local

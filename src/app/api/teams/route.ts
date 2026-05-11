@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const teams = await prisma.team.findMany({
@@ -23,5 +24,13 @@ export async function POST(req: NextRequest) {
   }
 
   const team = await prisma.team.create({ data: { name, color, number } });
+
+  await logActivity({
+    type: "CATEGORY_CREATED",
+    userId: session.user.id,
+    targetId: team.id,
+    details: { categoryName: name, color, number },
+  });
+
   return NextResponse.json(team, { status: 201 });
 }

@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
+import { logActivity } from "./activity-log";
 
 const ROLE_HIERARCHY: Record<string, number> = {
   OPERATOR: 1,
@@ -41,6 +42,18 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  events: {
+    async signIn({ user }) {
+      if (user?.id) {
+        await logActivity({
+          type: "USER_LOGIN",
+          userId: user.id,
+          targetId: user.id,
+          details: { userEmail: user.email },
+        });
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

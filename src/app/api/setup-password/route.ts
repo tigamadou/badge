@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: NextRequest) {
   const { token, password } = await req.json();
@@ -22,5 +23,12 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ message: "Mot de passe configuré avec succès" });
+  await logActivity({
+    type: "USER_PASSWORD_SET",
+    userId: user.id,
+    targetId: user.id,
+    details: { userName: user.name, userEmail: user.email },
+  });
+
+  return NextResponse.json({ message: "Mot de passe configure avec succes" });
 }

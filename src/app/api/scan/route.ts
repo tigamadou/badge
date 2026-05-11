@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !checkRole(session.user.role, "OPERATOR")) {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return NextResponse.json({ error: "Acces refuse" }, { status: 403 });
   }
 
   const { registrationId } = await req.json();
@@ -24,10 +25,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ valid: false, error: "Badge inconnu" }, { status: 404 });
   }
 
-  const scanLog = await prisma.scanLog.create({
-    data: {
-      registrationId: registration.id,
-      userId: session.user.id,
+  await logActivity({
+    type: "BADGE_SCANNED",
+    userId: session.user.id,
+    targetId: registration.id,
+    details: {
+      registrationName: `${registration.firstName} ${registration.lastName}`,
+      structure: registration.structure,
+      teamName: registration.team.name,
+      teamColor: registration.team.color,
+      status: registration.status,
     },
   });
 
@@ -47,8 +54,8 @@ export async function POST(req: NextRequest) {
       },
     },
     scanLog: {
-      id: scanLog.id,
-      scannedAt: scanLog.scannedAt,
+      id: "activity-log",
+      scannedAt: new Date().toISOString(),
     },
   });
 }

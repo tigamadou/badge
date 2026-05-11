@@ -31,27 +31,11 @@ Informations affichees :
 - Identifiant du badge
 - Heure du scan
 
-Chaque scan est automatiquement enregistre dans l'historique avec l'identite de l'operateur.
+Chaque scan est automatiquement enregistre dans le journal d'activite avec l'identite de l'operateur.
 
 ## Historique des scans
 
-Accessible via le menu "Historique des scans".
-
-### Consulter l'historique
-
-La page affiche la liste des scans effectues avec :
-- Date et heure du scan
-- Nom de l'operateur
-- Nom du participant scanne
-- Categorie du participant
-
-### Filtrer l'historique
-
-- **Par operateur** : selectionner un operateur dans le menu deroulant
-- **Par participant** : rechercher par nom ou structure
-- **Par dates** : definir une date de debut et/ou de fin
-
-La liste est paginee (20 entrees par page). Utiliser les boutons Precedent / Suivant pour naviguer.
+L'historique des scans est consultable depuis le [Journal d'activite](journal-activite.md) en filtrant par type "Scans" (accessible aux administrateurs).
 
 ## Verification publique
 

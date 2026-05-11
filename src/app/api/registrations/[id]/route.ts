@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendStatusNotification, sendBadgePrintedNotification } from "@/lib/mail";
+import { logActivity } from "@/lib/activity-log";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -32,6 +33,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const data = await req.json();
 
+  const previous = await prisma.registration.findUnique({ where: { id }, include: { team: true } });
+
   // If marking as printed, add timestamp
   if (data.badgePrinted === true) {
     data.badgePrintedAt = new Date();
@@ -42,6 +45,43 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data,
     include: { team: true },
   });
+
+  const regName = `${registration.firstName} ${registration.lastName}`;
+
+  // Log activity based on what changed
+  if (data.status === "APPROVED" || data.status === "REJECTED") {
+    await logActivity({
+      type: data.status === "APPROVED" ? "REGISTRATION_APPROVED" : "REGISTRATION_REJECTED",
+      userId: session.user.id,
+      targetId: id,
+      details: {
+        registrationName: regName,
+        previousStatus: previous?.status,
+        newStatus: data.status,
+      },
+    });
+  } else if (data.badgePrinted === true) {
+    await logActivity({
+      type: "BADGE_PRINTED",
+      userId: session.user.id,
+      targetId: id,
+      details: { registrationName: regName, teamName: registration.team.name },
+    });
+  } else if (data.allAccessGranted !== undefined) {
+    await logActivity({
+      type: "BADGE_ALL_ACCESS_TOGGLED",
+      userId: session.user.id,
+      targetId: id,
+      details: { registrationName: regName, allAccessGranted: data.allAccessGranted },
+    });
+  } else {
+    await logActivity({
+      type: "REGISTRATION_UPDATED",
+      userId: session.user.id,
+      targetId: id,
+      details: { registrationName: regName },
+    });
+  }
 
   // Send status notification if status changed
   if (data.status && (data.status === "APPROVED" || data.status === "REJECTED")) {
@@ -87,6 +127,20 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { id } = await params;
+  const registration = await prisma.registration.findUnique({ where: { id }, include: { team: true } });
   await prisma.registration.delete({ where: { id } });
+
+  if (registration) {
+    await logActivity({
+      type: "REGISTRATION_DELETED",
+      userId: session.user.id,
+      targetId: id,
+      details: {
+        registrationName: `${registration.firstName} ${registration.lastName}`,
+        teamName: registration.team.name,
+      },
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

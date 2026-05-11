@@ -45,24 +45,9 @@ Le systeme permet aux operateurs de scanner les QR codes des badges aux points d
 - Menu de navigation avec liens vers les autres sections
 - Gestion d'erreur si la camera n'est pas accessible
 
-## Historique des scans (`/admin/scan-history`)
+## Historique des scans
 
-### Acces
-
-- **Role requis** : OPERATOR
-- **Route** : `/admin/scan-history`
-
-### Fonctionnalites
-
-- Liste paginee (20 entrees par page)
-- Colonnes : date/heure, operateur, participant, categorie
-- Filtres :
-  - Par operateur (menu deroulant)
-  - Par nom ou structure du participant (recherche textuelle)
-  - Par plage de dates (date debut / date fin)
-- Statistique : nombre total de scans
-- Pagination : boutons Precedent / Suivant
-- Vue responsive : tableau sur desktop, cartes sur mobile
+Les scans sont enregistres dans le journal d'activite (type `BADGE_SCANNED`). L'historique est consultable depuis la page "Journal d'activite" (`/admin/activity-logs`) en filtrant par type "Scans". Voir [Journal d'activite](journal-activite.md).
 
 ## Verification publique (`/verify/[id]`)
 
@@ -89,8 +74,8 @@ L'API `GET /api/verify/[id]` retourne les donnees sans authentification.
 | `src/app/scan/page.tsx` | Page scanner (entry point) |
 | `src/app/scan/ScanPageClient.tsx` | Composant scanner client-side |
 | `src/app/scan/ScanDynamic.tsx` | Chargement dynamique (pas de SSR) |
-| `src/app/admin/scan-history/page.tsx` | Page historique des scans |
+| `src/app/admin/activity-logs/page.tsx` | Page journal d'activite (filtre scan) |
 | `src/app/verify/[id]/page.tsx` | Page verification publique |
 | `src/app/api/scan/route.ts` | Endpoint enregistrement scan |
-| `src/app/api/scan-logs/route.ts` | Endpoint historique scans |
+| `src/app/api/activity-logs/route.ts` | Endpoint journal d'activite |
 | `src/app/api/verify/[id]/route.ts` | Endpoint verification publique |

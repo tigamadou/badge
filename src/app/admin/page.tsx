@@ -35,9 +35,9 @@ export default async function DashboardPage() {
     prisma.registration.count({ where: { status: "APPROVED", badgePrinted: true } }),
     prisma.registration.count({ where: { status: "APPROVED", badgePrinted: false } }),
     prisma.registration.count({ where: { allAccessGranted: true } }),
-    prisma.scanLog.count(),
-    prisma.scanLog.count({ where: { scannedAt: { gte: today } } }),
-    prisma.scanLog.groupBy({ by: ["registrationId"] }).then((g) => g.length),
+    prisma.activityLog.count({ where: { type: "BADGE_SCANNED" } }),
+    prisma.activityLog.count({ where: { type: "BADGE_SCANNED", createdAt: { gte: today } } }),
+    prisma.activityLog.findMany({ where: { type: "BADGE_SCANNED" }, select: { targetId: true }, distinct: ["targetId"] }).then((g) => g.length),
   ]);
 
   let totalUsers = 0;

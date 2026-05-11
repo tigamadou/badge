@@ -8,15 +8,15 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
+  id                String        @id @default(cuid())
+  email             String        @unique
   password          String
   name              String
-  role              Role      @default(OPERATOR)
-  inviteToken       String?   @unique
+  role              Role          @default(OPERATOR)
+  inviteToken       String?       @unique
   inviteTokenExpiry DateTime?
-  createdAt         DateTime  @default(now())
-  scanLogs          ScanLog[]
+  createdAt         DateTime      @default(now())
+  activityLogs      ActivityLog[]
 }
 
 enum Role {
@@ -58,22 +58,52 @@ model Registration {
   teamId           String
   team             Team               @relation(fields: [teamId], references: [id])
   createdAt        DateTime           @default(now())
-  scanLogs         ScanLog[]
-}
-
-model ScanLog {
-  id             String       @id @default(cuid())
-  registrationId String
-  registration   Registration @relation(fields: [registrationId], references: [id])
-  userId         String
-  user           User         @relation(fields: [userId], references: [id])
-  scannedAt      DateTime     @default(now())
 }
 
 enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model ActivityLog {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  targetId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?      @db.Text
+  createdAt DateTime     @default(now())
+
+  @@index([type])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  REGISTRATION_CREATED
+  REGISTRATION_APPROVED
+  REGISTRATION_REJECTED
+  REGISTRATION_UPDATED
+  REGISTRATION_DELETED
+  BADGE_PRINTED
+  BADGE_BATCH_PRINTED
+  BADGE_ALL_ACCESS_TOGGLED
+  BADGE_EXPORTED
+  BADGE_BATCH_EXPORTED
+  BADGE_SCANNED
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_PASSWORD_SET
+  USER_LOGIN
+  CATEGORY_CREATED
+  CATEGORY_UPDATED
+  CATEGORY_DELETED
+  EVENT_UPDATED
+  SETTINGS_UPDATED
 }
 
 model Settings {

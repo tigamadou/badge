@@ -15,7 +15,8 @@ Systeme de gestion de badges pour la ceremonie d'investiture du President de la 
 - [Inscriptions](api/inscriptions.md) -- CRUD inscriptions, impression batch
 - [Utilisateurs](api/utilisateurs.md) -- Gestion des comptes (SUPER_ADMIN)
 - [Categories](api/categories.md) -- Gestion des categories
-- [Scan](api/scan.md) -- Scan QR et historique
+- [Scan](api/scan.md) -- Scan QR
+- [Journal d'activite](api/journal-activite.md) -- Logs d'activite
 - [Evenement](api/evenement.md) -- Configuration de l'evenement
 - [Parametres](api/parametres.md) -- SMTP et contact
 - [Fichiers](api/fichiers.md) -- Upload et telechargement
@@ -29,7 +30,9 @@ Systeme de gestion de badges pour la ceremonie d'investiture du President de la 
 - [Gestion des categories](features/gestion-categories.md)
 - [Configuration de l'evenement](features/configuration-evenement.md)
 - [Badges](features/badges.md)
+- [Export badges PDF](features/export-badges-pdf.md)
 - [Scan QR](features/scan-qr.md)
+- [Journal d'activite](features/journal-activite.md)
 - [Notifications email](features/notifications-email.md)
 - [Parametres systeme](features/parametres-systeme.md)
 
@@ -41,6 +44,7 @@ Systeme de gestion de badges pour la ceremonie d'investiture du President de la 
 - [Inscriptions](guide-utilisateur/inscriptions.md)
 - [Badges](guide-utilisateur/badges.md)
 - [Scanner QR](guide-utilisateur/scanner.md)
+- [Journal d'activite](guide-utilisateur/journal-activite.md)
 - [Categories](guide-utilisateur/categories.md)
 - [Evenement](guide-utilisateur/evenement.md)
 - [Utilisateurs](guide-utilisateur/utilisateurs.md)

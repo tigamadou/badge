@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateId } from "@/lib/generate-id";
 import { sendRegistrationConfirmation } from "@/lib/mail";
+import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -66,6 +67,18 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("Failed to send confirmation email:", e);
   }
+
+  await logActivity({
+    type: "REGISTRATION_CREATED",
+    userId: session?.user?.id,
+    targetId: registration.id,
+    details: {
+      registrationName: `${firstName} ${lastName}`,
+      structure,
+      teamName: team.name,
+      source: session?.user ? "admin" : "public",
+    },
+  });
 
   return NextResponse.json(registration, { status: 201 });
 }
