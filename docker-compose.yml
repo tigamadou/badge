@@ -1,12 +1,29 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: investiture-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+      - phpmyadmin
+    restart: unless-stopped
+
   app:
+    container_name: investiture-app
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     env_file:
-      - .env
+      - .env.production
     volumes:
       - uploads_data:/app/uploads
     depends_on:
@@ -14,13 +31,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  mysql:
-    image: mysql:8
+  phpmyadmin:
+    container_name: investiture-pma
+    image: phpmyadmin:5
+    expose:
+      - "80"
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mysql:
+    container_name: investiture-db
+    image: mysql:8
+    env_file:
+      - .env.production
+    environment:
       MYSQL_DATABASE: investiture
     volumes:
       - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
@@ -31,3 +66,5 @@ services:
 volumes:
   mysql_data:
   uploads_data:
+  caddy_data:
+  caddy_config:

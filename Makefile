@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-build prod prod-down prod-build test lint typecheck build logs upload
+.PHONY: dev dev-down dev-build prod prod-down prod-build prod-logs prod-seed test lint typecheck build logs upload deploy
 
 # Développement
 dev:
@@ -12,13 +12,19 @@ dev-down:
 
 # Production
 prod:
-	docker compose up
+	docker compose up -d
 
 prod-build:
-	docker compose up --build
+	docker compose down && docker compose up --build -d
 
 prod-down:
 	docker compose down
+
+prod-logs:
+	docker compose logs -f
+
+prod-seed:
+	docker exec investiture-app npx prisma db seed
 
 # Commandes dans le conteneur dev
 test:
@@ -56,3 +62,6 @@ db-reset:
 # Déploiement
 upload:
 	rsync -avz --exclude='node_modules' --exclude='.next' --exclude='uploads' ./ root@173.212.217.54:~/investiture/
+
+deploy: upload
+	ssh root@173.212.217.54 "cd ~/investiture && make prod-build"

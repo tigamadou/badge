@@ -7,7 +7,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
 
   try {
     const { body, contentType } = await getFile(key);
-    return new NextResponse(body, {
+    return new NextResponse(new Uint8Array(body), {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600",

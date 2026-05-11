@@ -1,10 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function SetupPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-6 text-center">
+          <p className="text-slate-500">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <SetupPasswordContent />
+    </Suspense>
+  );
+}
+
+function SetupPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 

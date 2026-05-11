@@ -1,0 +1,7 @@
+00229.net {
+	reverse_proxy app:3000
+}
+
+pma.00229.net {
+	reverse_proxy phpmyadmin:80
+}
