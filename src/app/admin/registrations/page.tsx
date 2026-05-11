@@ -31,15 +31,6 @@ export default function RegistrationsPage() {
     fetchRegistrations();
   }, []);
 
-  async function updateStatus(id: string, status: string) {
-    await fetch(`/api/registrations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    fetchRegistrations();
-  }
-
   const filtered = registrations.filter((r) => {
     if (statusFilter && r.status !== statusFilter) return false;
     if (teamFilter && r.team.name !== teamFilter) return false;
@@ -120,13 +111,10 @@ export default function RegistrationsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3"><StatusBadge status={reg.status} /></td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  {reg.status === "PENDING" && (
-                    <>
-                      <Button variant="primary" onClick={() => updateStatus(reg.id, "APPROVED")}>Valider</Button>
-                      <Button variant="danger" onClick={() => updateStatus(reg.id, "REJECTED")}>Rejeter</Button>
-                    </>
-                  )}
+                <td className="px-4 py-3 text-right">
+                  <Link href={`/admin/registrations/${reg.id}`}>
+                    <Button variant="secondary">Détails</Button>
+                  </Link>
                 </td>
               </tr>
             ))}
@@ -154,12 +142,11 @@ export default function RegistrationsPage() {
                 {reg.team.name}
               </p>
             </div>
-            {reg.status === "PENDING" && (
-              <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                <Button variant="primary" onClick={() => updateStatus(reg.id, "APPROVED")} className="flex-1">Valider</Button>
-                <Button variant="danger" onClick={() => updateStatus(reg.id, "REJECTED")} className="flex-1">Rejeter</Button>
-              </div>
-            )}
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <Link href={`/admin/registrations/${reg.id}`}>
+                <Button variant="secondary" className="w-full">Détails</Button>
+              </Link>
+            </div>
           </div>
         ))}
         {filtered.length === 0 && (

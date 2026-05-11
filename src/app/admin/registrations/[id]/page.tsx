@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 
 interface Registration {
   id: string;
@@ -27,6 +28,7 @@ interface Registration {
 export default function RegistrationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [registration, setRegistration] = useState<Registration | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"APPROVED" | "REJECTED" | null>(null);
 
   useEffect(() => {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then(setRegistration);
@@ -40,13 +42,21 @@ export default function RegistrationDetailPage() {
     });
     const res = await fetch(`/api/registrations/${id}`);
     setRegistration(await res.json());
+    setConfirmAction(null);
   }
 
   if (!registration) return <p>Chargement...</p>;
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-slate-900 mb-6">Détail de l&apos;inscription</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/admin/registrations" className="text-slate-400 hover:text-slate-600 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+        </Link>
+        <h1 className="text-xl font-semibold text-slate-900">Détail de l&apos;inscription</h1>
+      </div>
 
       <div className="max-w-xl">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -125,10 +135,10 @@ export default function RegistrationDetailPage() {
           <div className="border-t border-slate-100 px-6 py-4 flex flex-col items-center gap-3">
             <div className="flex gap-3">
               {registration.status !== "APPROVED" && (
-                <Button onClick={() => updateStatus("APPROVED")}>Valider</Button>
+                <Button onClick={() => setConfirmAction("APPROVED")}>Valider</Button>
               )}
               {registration.status !== "REJECTED" && (
-                <Button variant="danger" onClick={() => updateStatus("REJECTED")}>Rejeter</Button>
+                <Button variant="danger" onClick={() => setConfirmAction("REJECTED")}>Rejeter</Button>
               )}
             </div>
             {registration.status === "APPROVED" && (
@@ -139,6 +149,21 @@ export default function RegistrationDetailPage() {
           </div>
         </div>
       </div>
+
+      <Modal
+        open={confirmAction !== null}
+        title={confirmAction === "APPROVED" ? "Confirmer la validation" : "Confirmer le rejet"}
+        confirmLabel={confirmAction === "APPROVED" ? "Valider" : "Rejeter"}
+        confirmVariant={confirmAction === "APPROVED" ? "primary" : "danger"}
+        onConfirm={() => confirmAction && updateStatus(confirmAction)}
+        onCancel={() => setConfirmAction(null)}
+      >
+        <p className="text-sm text-slate-600">
+          {confirmAction === "APPROVED"
+            ? `Voulez-vous valider l'inscription de ${registration.firstName} ${registration.lastName} ?`
+            : `Voulez-vous rejeter l'inscription de ${registration.firstName} ${registration.lastName} ?`}
+        </p>
+      </Modal>
     </div>
   );
 }

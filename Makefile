@@ -27,13 +27,13 @@ prod-logs:
 	docker compose logs -f
 
 prod-seed:
-	docker exec investiture-app npx prisma db seed
+	docker exec investiture-app npx --yes tsx prisma/seed.ts
 
 prod-db-reset:
 	@echo "WARNING: This will ERASE all production data!"
 	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
 	docker exec investiture-app prisma db push --force-reset
-	docker exec investiture-app npx prisma db seed
+	docker exec investiture-app npx --yes tsx prisma/seed.ts
 	@echo "Production database reset and seeded."
 
 # Commandes dans le conteneur dev
