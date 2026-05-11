@@ -52,7 +52,7 @@ L'application attend que MySQL soit operationnel (healthcheck) avant de demarrer
 
 ### Configuration Caddy
 
-Le fichier `Caddyfile` a la racine configure le reverse proxy. Par defaut, il est configure pour le domaine `00229.net`.
+Le fichier `Caddyfile` a la racine configure le reverse proxy. Par defaut, il est configure pour le domaine `badge.bj`.
 
 ## Deploiement Docker (developpement)
 

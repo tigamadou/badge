@@ -1,7 +1,7 @@
-00229.net {
+badge.bj {
 	reverse_proxy app:3000
 }
 
-pma.00229.net {
+pma.badge.bj {
 	reverse_proxy phpmyadmin:80
 }
