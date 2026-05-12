@@ -56,6 +56,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     );
   }
 
+  // Vérifier si l'email est bloqué
+  const blocked = await prisma.blockedEmail.findUnique({ where: { email: registration.email } });
+  if (blocked) {
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
+  }
+
   const data = await req.json();
   const { lastName, firstName, email, structure, teamId, idDocumentType, idDocumentNumber, photo, idDocument } = data;
 
@@ -82,6 +88,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       rejectionDetails: null,
     },
     include: { team: true },
+  });
+
+  // Créer un snapshot de la ressoumission
+  await prisma.submissionSnapshot.create({
+    data: {
+      registrationId: registration.id,
+      lastName,
+      firstName,
+      email,
+      structure,
+      teamId,
+      idDocumentType,
+      idDocumentNumber,
+      photo,
+      idDocument,
+    },
   });
 
   await logActivity({

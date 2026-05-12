@@ -14,6 +14,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ to
     return NextResponse.json({ error: "Lien invalide" }, { status: 404 });
   }
 
+  // Vérifier si l'email est bloqué
+  const blocked = await prisma.blockedEmail.findUnique({ where: { email: registration.email } });
+  if (blocked) {
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
+  }
+
   const newToken = randomUUID();
   await prisma.registration.update({
     where: { id: registration.id },

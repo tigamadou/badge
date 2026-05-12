@@ -21,6 +21,10 @@ export default function Home() {
   const [event, setEvent] = useState<EventInfo | null>(null);
   const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
   const [recaptchaSiteKey, setRecaptchaSiteKey] = useState("");
+  const [canResend, setCanResend] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   useEffect(() => {
     fetch("/api/event")
@@ -43,6 +47,8 @@ export default function Home() {
       return;
     }
     setError("");
+    setCanResend(false);
+    setResent(false);
 
     const photoFile = formData.get("photo") as File | null;
     const idDocumentFile = formData.get("idDocument") as File | null;
@@ -96,12 +102,29 @@ export default function Home() {
     if (!res.ok) {
       const data = await res.json();
       setError(data.error || "Erreur lors de l'inscription");
+      if (data.canResend) {
+        setCanResend(true);
+        setResendEmail(data.email);
+      } else {
+        setCanResend(false);
+      }
       captchaRef.current?.reset();
       setCaptchaToken(null);
       return;
     }
 
     router.push("/register/success");
+  }
+
+  async function handleResendEditLink() {
+    setResending(true);
+    await fetch("/api/registrations/resend-edit-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: resendEmail }),
+    });
+    setResending(false);
+    setResent(true);
   }
 
   return (
@@ -122,7 +145,24 @@ export default function Home() {
             {event.title} — {event.location}, {formatEventDate(event.date)}
           </p>
         )}
-        {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+        {error && (
+          <div className="mb-4">
+            <p className="text-sm text-red-500">{error}</p>
+            {canResend && !resent && (
+              <button
+                type="button"
+                onClick={handleResendEditLink}
+                disabled={resending}
+                className="mt-2 text-sm text-indigo-600 hover:text-indigo-700 underline"
+              >
+                {resending ? "Envoi en cours..." : "Recevoir un lien de modification"}
+              </button>
+            )}
+            {resent && (
+              <p className="mt-2 text-sm text-green-600">Un lien vous a été envoyé par email.</p>
+            )}
+          </div>
+        )}
         <RegistrationForm
           onSubmit={handleSubmit}
           submitLabel="S'inscrire"

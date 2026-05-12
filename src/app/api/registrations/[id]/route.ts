@@ -15,14 +15,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const registration = await prisma.registration.findUnique({
     where: { id },
-    include: { team: true },
+    include: { team: true, snapshots: { orderBy: { createdAt: "desc" } } },
   });
 
   if (!registration) {
     return NextResponse.json({ error: "Inscription non trouvée" }, { status: 404 });
   }
 
-  return NextResponse.json(registration);
+  const blocked = await prisma.blockedEmail.findUnique({ where: { email: registration.email } });
+
+  return NextResponse.json({ ...registration, emailBlocked: !!blocked });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

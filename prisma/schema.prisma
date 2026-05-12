@@ -62,6 +62,32 @@ model Registration {
   teamId            String
   team              Team               @relation(fields: [teamId], references: [id])
   createdAt         DateTime           @default(now())
+  snapshots         SubmissionSnapshot[]
+}
+
+model SubmissionSnapshot {
+  id               String       @id @default(cuid())
+  registrationId   String
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  lastName         String
+  firstName        String
+  email            String
+  structure        String
+  teamId           String
+  idDocumentType   String
+  idDocumentNumber String
+  photo            String?
+  idDocument       String?
+  createdAt        DateTime     @default(now())
+
+  @@index([registrationId])
+}
+
+model BlockedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
 }
 
 enum RegistrationStatus {
