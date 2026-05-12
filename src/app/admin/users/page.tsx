@@ -15,6 +15,7 @@ interface User {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [contactsConfigured, setContactsConfigured] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -24,7 +25,16 @@ export default function UsersPage() {
     setUsers(await res.json());
   }
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    fetchUsers();
+    fetch("/api/settings").then((r) => r.json()).then((settings) => {
+      if (settings) {
+        setContactsConfigured(!!(settings.contactEmail && settings.contactPhone && settings.websiteUrl));
+      } else {
+        setContactsConfigured(false);
+      }
+    });
+  }, []);
 
   async function handleCreate(data: { email: string; name: string; role: string; password?: string }) {
     await fetch("/api/users", {
@@ -64,7 +74,12 @@ export default function UsersPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-semibold text-slate-900">Utilisateurs</h1>
-        <Button onClick={() => setShowForm(true)}>Nouvel utilisateur</Button>
+        <div className="flex items-center gap-3">
+          {!contactsConfigured && (
+            <span className="text-xs text-amber-600">Contacts non configurés</span>
+          )}
+          <Button onClick={() => setShowForm(true)} disabled={!contactsConfigured}>Nouvel utilisateur</Button>
+        </div>
       </div>
 
       {(showForm || editingUser) && (

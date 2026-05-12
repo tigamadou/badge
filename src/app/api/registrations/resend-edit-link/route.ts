@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
-import { sendEditLinkEmail } from "@/lib/mail";
+import { sendEditLinkEmail, getContactInfo, areContactsConfigured } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json();
 
   if (!email) {
     return NextResponse.json({ error: "Email requis" }, { status: 400 });
+  }
+
+  const contacts = await getContactInfo();
+  if (!areContactsConfigured(contacts)) {
+    return NextResponse.json(
+      { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+      { status: 400 }
+    );
   }
 
   // Vérifier si l'email est bloqué

@@ -11,10 +11,35 @@ const ROLE_HIERARCHY: Record<string, number> = {
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const userRole = session?.user?.role || "OPERATOR";
+  const userId = session?.user?.id;
   const isAdmin = (ROLE_HIERARCHY[userRole] || 0) >= ROLE_HIERARCHY.ADMIN;
+  const isOperator = userRole === "OPERATOR";
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // Opérateur : uniquement ses propres stats de scannage
+  if (isOperator) {
+    const [myTotalScans, myScansToday, myUniqueScanned] = await Promise.all([
+      prisma.activityLog.count({ where: { type: "BADGE_SCANNED", userId } }),
+      prisma.activityLog.count({ where: { type: "BADGE_SCANNED", userId, createdAt: { gte: today } } }),
+      prisma.activityLog.findMany({ where: { type: "BADGE_SCANNED", userId }, select: { targetId: true }, distinct: ["targetId"] }).then((g) => g.length),
+    ]);
+
+    return (
+      <div className="space-y-8">
+        <h1 className="text-xl font-semibold text-slate-900">Dashboard</h1>
+        <section>
+          <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">Mes scans</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <KpiCard label="Total scans" value={myTotalScans} className="bg-slate-50 text-slate-700 border-slate-200" />
+            <KpiCard label="Aujourd&apos;hui" value={myScansToday} className="bg-indigo-50 text-indigo-700 border-indigo-200" />
+            <KpiCard label="Participants scannés" value={myUniqueScanned} className="bg-emerald-50 text-emerald-700 border-emerald-200" />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const [
     total,
@@ -81,7 +106,7 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">Scans</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <KpiCard label="Total scans" value={totalScans} className="bg-slate-50 text-slate-700 border-slate-200" />
-          <KpiCard label="Aujourd'hui" value={scansToday} className="bg-indigo-50 text-indigo-700 border-indigo-200" />
+          <KpiCard label="Aujourd&apos;hui" value={scansToday} className="bg-indigo-50 text-indigo-700 border-indigo-200" />
           <KpiCard label="Participants scannés" value={uniqueScanned} className="bg-emerald-50 text-emerald-700 border-emerald-200" />
         </div>
       </section>

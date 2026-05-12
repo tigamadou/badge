@@ -13,6 +13,7 @@ interface Settings {
   smtpSecure: boolean;
   contactEmail: string;
   contactPhone: string;
+  websiteUrl: string;
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
@@ -27,6 +28,7 @@ const defaultSettings: Settings = {
   smtpSecure: false,
   contactEmail: "",
   contactPhone: "",
+  websiteUrl: "",
   recaptchaEnabled: false,
   recaptchaSiteKey: "",
   recaptchaSecretKey: "",
@@ -94,6 +96,8 @@ export default function SettingsPage() {
     }
   }
 
+  const contactsReady = !!(settings.contactEmail && settings.contactPhone && settings.websiteUrl);
+
   if (loading) return <p>Chargement...</p>;
 
   return (
@@ -153,9 +157,13 @@ export default function SettingsPage() {
               type="button"
               variant="secondary"
               onClick={() => { setShowTestForm(!showTestForm); setTestResult(null); }}
+              disabled={!contactsReady}
             >
               Tester la configuration
             </Button>
+            {!contactsReady && (
+              <p className="mt-1 text-xs text-amber-600">Configurez d&apos;abord les informations de contact ci-dessous.</p>
+            )}
 
             {showTestForm && (
               <div className="mt-3 flex items-end gap-3">
@@ -204,8 +212,15 @@ export default function SettingsPage() {
             onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
             placeholder="+229 97 00 00 00"
           />
+          <Input
+            label="URL du site web"
+            type="url"
+            value={settings.websiteUrl}
+            onChange={(e) => setSettings({ ...settings, websiteUrl: e.target.value })}
+            placeholder="https://example.com"
+          />
           <p className="text-sm text-slate-500">
-            Ces informations seront incluses dans les emails envoyés aux inscrits.
+            Ces informations seront incluses dans les emails envoyés aux inscrits. Les trois champs doivent être remplis pour pouvoir envoyer des emails.
           </p>
         </div>
 

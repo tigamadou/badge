@@ -56,6 +56,8 @@ interface Registration {
 export default function RegistrationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [registration, setRegistration] = useState<Registration | null>(null);
+  const [contactsConfigured, setContactsConfigured] = useState(true);
+  const [userRole, setUserRole] = useState("");
   const [confirmAction, setConfirmAction] = useState<"APPROVED" | "REJECTED" | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [rejectionDetails, setRejectionDetails] = useState("");
@@ -66,6 +68,16 @@ export default function RegistrationDetailPage() {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then((data) => {
       setRegistration(data);
       setEmailBlocked(data.emailBlocked || false);
+    });
+    fetch("/api/settings").then((r) => r.json()).then((settings) => {
+      if (settings) {
+        setContactsConfigured(!!(settings.contactEmail && settings.contactPhone && settings.websiteUrl));
+      } else {
+        setContactsConfigured(false);
+      }
+    });
+    fetch("/api/auth/session").then((r) => r.json()).then((session) => {
+      if (session?.user?.role) setUserRole(session.user.role);
     });
   }, [id]);
 
@@ -248,14 +260,20 @@ export default function RegistrationDetailPage() {
         </div>
 
         {/* Colonne droite — Actions */}
+        {userRole !== "SUPER_ADMIN" && (
         <div className="w-full lg:w-72 space-y-4">
           {/* Actions de statut */}
           {registration.status === "PENDING" && (
             <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
               <p className="text-sm font-medium text-slate-700">Actions</p>
+              {!contactsConfigured && (
+                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <p>Veuillez configurer les informations de contact dans les <Link href="/admin/settings" className="underline font-medium">paramètres</Link> avant de pouvoir valider ou rejeter.</p>
+                </div>
+              )}
               <div className="flex flex-col gap-2">
-                <Button onClick={() => setConfirmAction("APPROVED")}>Valider</Button>
-                <Button variant="danger" onClick={() => setConfirmAction("REJECTED")}>Rejeter</Button>
+                <Button onClick={() => setConfirmAction("APPROVED")} disabled={!contactsConfigured}>Valider</Button>
+                <Button variant="danger" onClick={() => setConfirmAction("REJECTED")} disabled={!contactsConfigured}>Rejeter</Button>
               </div>
             </div>
           )}
@@ -315,6 +333,7 @@ export default function RegistrationDetailPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Modal de validation */}

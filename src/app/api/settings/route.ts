@@ -4,6 +4,7 @@ import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import nodemailer from "nodemailer";
 import { logActivity } from "@/lib/activity-log";
+import { getContactInfo, areContactsConfigured } from "@/lib/mail";
 
 export async function GET() {
   const settings = await prisma.settings.findFirst();
@@ -21,13 +22,13 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone,
+  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone, websiteUrl,
     recaptchaEnabled, recaptchaSiteKey, recaptchaSecretKey } = body;
 
   // Seul le SUPER_ADMIN peut modifier les paramètres reCAPTCHA
   const isSuperAdmin = checkRole(session.user.role, "SUPER_ADMIN");
 
-  const baseData = { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone };
+  const baseData = { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone, websiteUrl };
   const data = isSuperAdmin
     ? { ...baseData, recaptchaEnabled, recaptchaSiteKey, recaptchaSecretKey }
     : baseData;
@@ -70,6 +71,14 @@ export async function POST(req: NextRequest) {
     if (!settings || !settings.smtpHost) {
       return NextResponse.json(
         { error: "Aucune configuration SMTP trouvée. Enregistrez d'abord vos paramètres SMTP." },
+        { status: 400 }
+      );
+    }
+
+    const contacts = await getContactInfo();
+    if (!areContactsConfigured(contacts)) {
+      return NextResponse.json(
+        { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
         { status: 400 }
       );
     }

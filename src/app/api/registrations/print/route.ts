@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendBadgePrintedNotification } from "@/lib/mail";
+import { sendBadgePrintedNotification, getContactInfo, areContactsConfigured } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!session?.user || !checkRole(session.user.role, "ADMIN")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
+  // SUPER_ADMIN ne peut pas marquer les badges comme imprimés
+  if (session.user.role === "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Les super administrateurs ne peuvent pas effectuer cette action." }, { status: 403 });
   }
 
   const { ids } = await req.json();
@@ -17,10 +22,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "IDs requis" }, { status: 400 });
   }
 
-  const settings = await prisma.settings.findFirst();
-  if (!settings?.contactEmail || !settings?.contactPhone) {
+  const contacts = await getContactInfo();
+  if (!areContactsConfigured(contacts)) {
     return NextResponse.json(
-      { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres avant de confirmer l'impression." },
+      { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
       { status: 400 }
     );
   }
@@ -47,8 +52,8 @@ export async function POST(req: NextRequest) {
         await sendBadgePrintedNotification(
           registration.email,
           `${registration.firstName} ${registration.lastName}`,
-          settings.contactEmail,
-          settings.contactPhone
+          contacts!.contactEmail,
+          contacts!.contactPhone
         );
       } catch (e) {
         console.error(`Failed to send notification for ${id}:`, e);

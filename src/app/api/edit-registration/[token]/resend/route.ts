@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { randomUUID } from "crypto";
-import { sendEditLinkEmail } from "@/lib/mail";
+import { sendEditLinkEmail, getContactInfo, areContactsConfigured } from "@/lib/mail";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+
+  const contacts = await getContactInfo();
+  if (!areContactsConfigured(contacts)) {
+    return NextResponse.json(
+      { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+      { status: 400 }
+    );
+  }
 
   const registration = await prisma.registration.findUnique({
     where: { editToken: token },

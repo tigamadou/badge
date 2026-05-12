@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateId } from "@/lib/generate-id";
 import { sendRegistrationConfirmation } from "@/lib/mail";
@@ -8,7 +8,7 @@ import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!session?.user || !checkRole(session.user.role, "ADMIN")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendStatusNotification, sendBadgePrintedNotification } from "@/lib/mail";
+import { sendStatusNotification, sendBadgePrintedNotification, getContactInfo, areContactsConfigured } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
 import { randomUUID } from "crypto";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!session?.user || !checkRole(session.user.role, "ADMIN")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
@@ -29,17 +29,35 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!session?.user || !checkRole(session.user.role, "ADMIN")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
   const { id } = await params;
   const data = await req.json();
 
+  // SUPER_ADMIN ne peut pas agir sur les inscriptions (validation, rejet, badge)
+  if (data.status || data.badgePrinted !== undefined || data.allAccessGranted !== undefined) {
+    if (checkRole(session.user.role, "SUPER_ADMIN") && session.user.role === "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Les super administrateurs ne peuvent pas effectuer cette action." }, { status: 403 });
+    }
+  }
+
   const previous = await prisma.registration.findUnique({ where: { id }, include: { team: true } });
 
   if (data.status === "APPROVED" && previous?.status === "REJECTED") {
     return NextResponse.json({ error: "Une inscription rejetée ne peut pas être validée" }, { status: 400 });
+  }
+
+  // Vérifier contacts configurés avant toute action email
+  if (data.status === "APPROVED" || data.status === "REJECTED" || data.badgePrinted === true) {
+    const contacts = await getContactInfo();
+    if (!areContactsConfigured(contacts)) {
+      return NextResponse.json(
+        { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+        { status: 400 }
+      );
+    }
   }
 
   // If marking as printed, add timestamp
@@ -115,19 +133,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Send badge printed notification
   if (data.badgePrinted === true) {
-    const settings = await prisma.settings.findFirst();
-    if (!settings?.contactEmail || !settings?.contactPhone) {
-      return NextResponse.json(
-        { error: "Veuillez configurer l'email et le téléphone de contact dans les paramètres avant de confirmer l'impression." },
-        { status: 400 }
-      );
-    }
+    const contacts = await getContactInfo();
     try {
       await sendBadgePrintedNotification(
         registration.email,
         `${registration.firstName} ${registration.lastName}`,
-        settings.contactEmail,
-        settings.contactPhone
+        contacts!.contactEmail,
+        contacts!.contactPhone
       );
     } catch (e) {
       console.error("Failed to send badge printed notification:", e);
@@ -139,11 +151,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  if (!session?.user || !checkRole(session.user.role, "ADMIN")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
   const { id } = await params;
+
+  // SUPER_ADMIN ne peut pas supprimer d'inscriptions
+  if (session.user.role === "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Les super administrateurs ne peuvent pas effectuer cette action." }, { status: 403 });
+  }
+
   const registration = await prisma.registration.findUnique({ where: { id }, include: { team: true } });
   await prisma.registration.delete({ where: { id } });
 

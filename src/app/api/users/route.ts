@@ -4,7 +4,7 @@ import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import crypto from "crypto";
-import { sendUserInvitation } from "@/lib/mail";
+import { sendUserInvitation, getContactInfo, areContactsConfigured } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return NextResponse.json({ error: "Cet email est déjà utilisé" }, { status: 409 });
+  }
+
+  const contacts = await getContactInfo();
+  if (!areContactsConfigured(contacts)) {
+    return NextResponse.json(
+      { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+      { status: 400 }
+    );
   }
 
   const inviteToken = crypto.randomUUID();

@@ -49,6 +49,7 @@ export default function BadgeDetailPage() {
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [event, setEvent] = useState<EventData | null>(null);
   const [hasContact, setHasContact] = useState(false);
+  const [userRole, setUserRole] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
   const [showAllAccessModal, setShowAllAccessModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -57,7 +58,10 @@ export default function BadgeDetailPage() {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then(setRegistration);
     fetch("/api/event").then((r) => r.json()).then(setEvent);
     fetch("/api/settings").then((r) => r.json()).then((s) => {
-      setHasContact(Boolean(s?.contactEmail && s?.contactPhone));
+      setHasContact(Boolean(s?.contactEmail && s?.contactPhone && s?.websiteUrl));
+    });
+    fetch("/api/auth/session").then((r) => r.json()).then((session) => {
+      if (session?.user?.role) setUserRole(session.user.role);
     });
   }, [id]);
 
@@ -207,6 +211,7 @@ export default function BadgeDetailPage() {
           {/* Actions */}
           <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
             <h3 className="font-semibold text-sm text-slate-700 mb-2">Actions</h3>
+            {userRole !== "SUPER_ADMIN" && (
             <div className="flex flex-col gap-2 justify-between items-center">
               {!registration.badgePrinted && (
                 <Button
@@ -222,6 +227,8 @@ export default function BadgeDetailPage() {
                 </Button>
               )}
             </div>
+            )}
+            {userRole !== "SUPER_ADMIN" && (
             <div className="mt-4">
               {!hasContact && !registration.badgePrinted && (
                 <p className="text-sm text-amber-600">
@@ -231,6 +238,7 @@ export default function BadgeDetailPage() {
                 </p>
               )}
             </div>
+            )}
             <div className="flex flex-col gap-2 justify-between items-center">
               {qrCodeDataUrl && (
                 <BadgeDownload
@@ -249,11 +257,6 @@ export default function BadgeDetailPage() {
                 Voir l&apos;inscription
               </Link>
             </div>
-
-            
-
-            
-
           </div>
         </div>
 

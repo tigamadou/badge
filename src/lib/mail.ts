@@ -1,6 +1,27 @@
 import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 
+interface ContactInfo {
+  contactEmail: string;
+  contactPhone: string;
+  websiteUrl: string;
+}
+
+export async function getContactInfo(): Promise<ContactInfo | null> {
+  const settings = await prisma.settings.findFirst();
+  if (!settings) return null;
+  return {
+    contactEmail: settings.contactEmail,
+    contactPhone: settings.contactPhone,
+    websiteUrl: settings.websiteUrl,
+  };
+}
+
+export function areContactsConfigured(contacts: ContactInfo | null): boolean {
+  if (!contacts) return false;
+  return !!(contacts.contactEmail && contacts.contactPhone && contacts.websiteUrl);
+}
+
 async function getTransporter() {
   const settings = await prisma.settings.findFirst();
   if (settings?.smtpHost) {
@@ -38,10 +59,20 @@ async function getEventInfo(): Promise<{ title: string; logoUrl: string }> {
   };
 }
 
-function buildEmail(body: string, eventTitle: string, logoUrl: string): string {
+function buildEmail(body: string, eventTitle: string, logoUrl: string, contacts?: ContactInfo | null): string {
   const logoBlock = logoUrl
     ? `<img src="${logoUrl}" alt="${eventTitle}" style="max-height:64px;max-width:200px;margin-bottom:16px;" />`
     : "";
+
+  const footerContent = areContactsConfigured(contacts ?? null)
+    ? `<p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">
+  <a href="mailto:${contacts!.contactEmail}" style="color:#94a3b8;text-decoration:none;">${contacts!.contactEmail}</a>
+</p>
+<p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">${contacts!.contactPhone}</p>
+<p style="margin:0;color:#94a3b8;font-size:12px;">
+  <a href="${contacts!.websiteUrl}" style="color:#94a3b8;text-decoration:none;">${contacts!.websiteUrl}</a>
+</p>`
+    : `<p style="margin:0;color:#94a3b8;font-size:12px;">${eventTitle}</p>`;
 
   return `
 <!DOCTYPE html>
@@ -72,7 +103,7 @@ function buildEmail(body: string, eventTitle: string, logoUrl: string): string {
           <!-- Footer -->
           <tr>
             <td align="center" style="padding:20px 28px;border-top:1px solid #e2e8f0;">
-              <p style="margin:0;color:#94a3b8;font-size:12px;">${eventTitle}</p>
+              ${footerContent}
             </td>
           </tr>
         </table>
@@ -116,6 +147,7 @@ export async function sendStatusNotification(
   const transporter = await getTransporter();
   const from = await getMailFrom();
   const { title, logoUrl } = await getEventInfo();
+  const contacts = await getContactInfo();
 
   if (status === "APPROVED") {
     const body = `
@@ -127,7 +159,7 @@ export async function sendStatusNotification(
       from,
       to,
       subject: `Inscription validée — ${title}`,
-      html: buildEmail(body, title, logoUrl),
+      html: buildEmail(body, title, logoUrl, contacts),
     });
   } else {
     const reasonBlock = rejectionReason
@@ -157,7 +189,7 @@ export async function sendStatusNotification(
       from,
       to,
       subject: `Inscription rejetée — ${title}`,
-      html: buildEmail(body, title, logoUrl),
+      html: buildEmail(body, title, logoUrl, contacts),
     });
   }
 }
@@ -170,6 +202,7 @@ export async function sendUserInvitation(
   const transporter = await getTransporter();
   const from = await getMailFrom();
   const { title, logoUrl } = await getEventInfo();
+  const contacts = await getContactInfo();
 
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${userName}</strong>,</p>
@@ -185,7 +218,7 @@ export async function sendUserInvitation(
     from,
     to,
     subject: `Invitation — ${title}`,
-    html: buildEmail(body, title, logoUrl),
+    html: buildEmail(body, title, logoUrl, contacts),
   });
 }
 
@@ -197,6 +230,7 @@ export async function sendEditLinkEmail(
   const transporter = await getTransporter();
   const from = await getMailFrom();
   const { title, logoUrl } = await getEventInfo();
+  const contacts = await getContactInfo();
   const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "http://localhost:3000";
 
   const body = `
@@ -212,7 +246,7 @@ export async function sendEditLinkEmail(
     from,
     to,
     subject: `Modifier votre inscription — ${title}`,
-    html: buildEmail(body, title, logoUrl),
+    html: buildEmail(body, title, logoUrl, contacts),
   });
 }
 
@@ -225,6 +259,7 @@ export async function sendBadgePrintedNotification(
   const transporter = await getTransporter();
   const from = await getMailFrom();
   const { title, logoUrl } = await getEventInfo();
+  const contacts = await getContactInfo();
 
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
@@ -247,6 +282,6 @@ export async function sendBadgePrintedNotification(
     from,
     to,
     subject: `Badge prêt — ${title}`,
-    html: buildEmail(body, title, logoUrl),
+    html: buildEmail(body, title, logoUrl, contacts),
   });
 }
