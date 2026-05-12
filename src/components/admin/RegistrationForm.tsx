@@ -50,6 +50,7 @@ export function RegistrationForm({
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [idDocError, setIdDocError] = useState<string | null>(null);
   const [photoFileName, setPhotoFileName] = useState<string | null>(null);
   const [idDocFileName, setIdDocFileName] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -64,9 +65,16 @@ export function RegistrationForm({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPhotoError(null);
+    setIdDocError(null);
 
     const formData = new FormData(e.currentTarget);
+    const idDocFile = formData.get("idDocument") as File | null;
     const photoFile = formData.get("photo") as File | null;
+
+    if (!idDocFile || idDocFile.size === 0) {
+      setIdDocError("Le document d'identité est obligatoire.");
+      return;
+    }
 
     if (!photoFile || photoFile.size === 0) {
       setPhotoError("La photo d'identité est obligatoire.");
@@ -113,7 +121,6 @@ export function RegistrationForm({
           name="idDocument"
           accept="image/*,.pdf"
           className="hidden"
-          required
           onChange={(e) => setIdDocFileName(e.target.files?.[0]?.name || null)}
         />
         <button
@@ -137,6 +144,7 @@ export function RegistrationForm({
             </span>
           )}
         </button>
+        {idDocError && <p className="text-xs text-red-600 mt-1">{idDocError}</p>}
       </div>
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-1">Photo d&apos;identité</label>
@@ -147,7 +155,6 @@ export function RegistrationForm({
           name="photo"
           accept="image/*"
           className="hidden"
-          required
           onChange={(e) => {
             setPhotoError(null);
             setPhotoFileName(e.target.files?.[0]?.name || null);
