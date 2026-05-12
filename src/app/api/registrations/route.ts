@@ -27,20 +27,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
   }
 
-  // Vérifier si c'est un appel public (pas de session) => vérifier CAPTCHA
+  // Vérifier si c'est un appel public (pas de session) => vérifier CAPTCHA si activé
   const session = await getServerSession(authOptions);
   if (!session?.user) {
-    if (!captchaToken) {
-      return NextResponse.json({ error: "CAPTCHA requis" }, { status: 400 });
-    }
-    const captchaRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
-    });
-    const captchaData = await captchaRes.json();
-    if (!captchaData.success) {
-      return NextResponse.json({ error: "CAPTCHA invalide" }, { status: 400 });
+    const settings = await prisma.settings.findFirst();
+    if (settings?.recaptchaEnabled) {
+      if (!captchaToken) {
+        return NextResponse.json({ error: "CAPTCHA requis" }, { status: 400 });
+      }
+      const captchaRes = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `secret=${settings.recaptchaSecretKey}&response=${captchaToken}`,
+      });
+      const captchaData = await captchaRes.json();
+      if (!captchaData.success) {
+        return NextResponse.json({ error: "CAPTCHA invalide" }, { status: 400 });
+      }
     }
   }
 

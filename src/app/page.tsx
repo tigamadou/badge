@@ -19,15 +19,26 @@ export default function Home() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [event, setEvent] = useState<EventInfo | null>(null);
+  const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
+  const [recaptchaSiteKey, setRecaptchaSiteKey] = useState("");
 
   useEffect(() => {
     fetch("/api/event")
       .then((r) => r.json())
       .then(setEvent);
+
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((settings) => {
+        if (settings) {
+          setRecaptchaEnabled(settings.recaptchaEnabled || false);
+          setRecaptchaSiteKey(settings.recaptchaSiteKey || "");
+        }
+      });
   }, []);
 
   async function handleSubmit(formData: FormData) {
-    if (!captchaToken) {
+    if (recaptchaEnabled && !captchaToken) {
       setError("Veuillez compléter le CAPTCHA");
       return;
     }
@@ -44,8 +55,11 @@ export default function Home() {
       teamId: formData.get("teamId") as string,
       idDocumentType: formData.get("idDocumentType") as string,
       idDocumentNumber: formData.get("idDocumentNumber") as string,
-      captchaToken,
     };
+
+    if (captchaToken) {
+      body.captchaToken = captchaToken;
+    }
 
     const res = await fetch("/api/registrations", {
       method: "POST",
@@ -122,13 +136,15 @@ export default function Home() {
           onSubmit={handleSubmit}
           submitLabel="S'inscrire"
           captchaWidget={
-            <div className="mb-4">
-              <ReCAPTCHA
-                ref={captchaRef}
-                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"}
-                onChange={(token) => setCaptchaToken(token)}
-              />
-            </div>
+            recaptchaEnabled && recaptchaSiteKey ? (
+              <div className="mb-4">
+                <ReCAPTCHA
+                  ref={captchaRef}
+                  sitekey={recaptchaSiteKey}
+                  onChange={(token) => setCaptchaToken(token)}
+                />
+              </div>
+            ) : undefined
           }
         />
       </div>

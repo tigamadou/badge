@@ -107,13 +107,16 @@ enum ActivityType {
 }
 
 model Settings {
-  id           String  @id @default(cuid())
-  smtpHost     String  @default("")
-  smtpPort     Int     @default(587)
-  smtpFrom     String  @default("")
-  smtpUser     String  @default("")
-  smtpPassword String  @default("")
-  smtpSecure   Boolean @default(false)
-  contactEmail String  @default("")
-  contactPhone String  @default("")
+  id                String  @id @default(cuid())
+  smtpHost          String  @default("")
+  smtpPort          Int     @default(587)
+  smtpFrom          String  @default("")
+  smtpUser          String  @default("")
+  smtpPassword      String  @default("")
+  smtpSecure        Boolean @default(false)
+  contactEmail      String  @default("")
+  contactPhone      String  @default("")
+  recaptchaEnabled  Boolean @default(false)
+  recaptchaSiteKey  String  @default("")
+  recaptchaSecretKey String @default("")
 }

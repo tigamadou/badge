@@ -13,6 +13,9 @@ interface Settings {
   smtpSecure: boolean;
   contactEmail: string;
   contactPhone: string;
+  recaptchaEnabled: boolean;
+  recaptchaSiteKey: string;
+  recaptchaSecretKey: string;
 }
 
 const defaultSettings: Settings = {
@@ -24,6 +27,9 @@ const defaultSettings: Settings = {
   smtpSecure: false,
   contactEmail: "",
   contactPhone: "",
+  recaptchaEnabled: false,
+  recaptchaSiteKey: "",
+  recaptchaSecretKey: "",
 };
 
 export default function SettingsPage() {
@@ -31,6 +37,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const [showTestForm, setShowTestForm] = useState(false);
   const [testEmail, setTestEmail] = useState("");
@@ -38,14 +45,18 @@ export default function SettingsPage() {
   const [testLoading, setTestLoading] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data) {
-          setSettings({ ...defaultSettings, ...data });
-        }
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/settings").then((res) => res.json()),
+      fetch("/api/auth/session").then((res) => res.json()),
+    ]).then(([data, session]) => {
+      if (data) {
+        setSettings({ ...defaultSettings, ...data });
+      }
+      if (session?.user?.role === "SUPER_ADMIN") {
+        setIsSuperAdmin(true);
+      }
+      setLoading(false);
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -197,6 +208,44 @@ export default function SettingsPage() {
             Ces informations seront incluses dans les emails envoyés aux inscrits.
           </p>
         </div>
+
+        {/* Configuration reCAPTCHA — visible uniquement pour SUPER_ADMIN */}
+        {isSuperAdmin && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+            <h2 className="text-lg font-semibold">reCAPTCHA</h2>
+            <p className="text-sm text-slate-500">
+              Protège le formulaire d&apos;inscription public contre les soumissions automatisées.
+            </p>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.recaptchaEnabled}
+                onChange={(e) => setSettings({ ...settings, recaptchaEnabled: e.target.checked })}
+                className="h-4 w-4"
+              />
+              <span className="text-sm font-medium">Activer le reCAPTCHA</span>
+            </label>
+
+            {settings.recaptchaEnabled && (
+              <>
+                <Input
+                  label="Clé du site (Site Key)"
+                  value={settings.recaptchaSiteKey}
+                  onChange={(e) => setSettings({ ...settings, recaptchaSiteKey: e.target.value })}
+                  placeholder="6Lc..."
+                />
+                <Input
+                  label="Clé secrète (Secret Key)"
+                  type="password"
+                  value={settings.recaptchaSecretKey}
+                  onChange={(e) => setSettings({ ...settings, recaptchaSecretKey: e.target.value })}
+                  placeholder="6Lc..."
+                />
+              </>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center gap-4">
           <Button type="submit" disabled={saving}>

@@ -7,7 +7,11 @@ import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const settings = await prisma.settings.findFirst();
-  return NextResponse.json(settings);
+  if (!settings) return NextResponse.json(null);
+
+  // Ne jamais exposer la clé secrète recaptcha côté client
+  const { recaptchaSecretKey, ...publicSettings } = settings;
+  return NextResponse.json(publicSettings);
 }
 
 export async function PUT(req: NextRequest) {
@@ -16,30 +20,38 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone } = await req.json();
+  const body = await req.json();
+  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone,
+    recaptchaEnabled, recaptchaSiteKey, recaptchaSecretKey } = body;
+
+  // Seul le SUPER_ADMIN peut modifier les paramètres reCAPTCHA
+  const isSuperAdmin = checkRole(session.user.role, "SUPER_ADMIN");
+
+  const baseData = { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone };
+  const data = isSuperAdmin
+    ? { ...baseData, recaptchaEnabled, recaptchaSiteKey, recaptchaSecretKey }
+    : baseData;
 
   const existing = await prisma.settings.findFirst();
   if (!existing) {
-    const settings = await prisma.settings.create({
-      data: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone },
-    });
+    const settings = await prisma.settings.create({ data });
     await logActivity({
       type: "SETTINGS_UPDATED",
       userId: session.user.id,
-      details: { changes: "SMTP et contact" },
+      details: { changes: isSuperAdmin ? "SMTP, contact et reCAPTCHA" : "SMTP et contact" },
     });
     return NextResponse.json(settings);
   }
 
   const settings = await prisma.settings.update({
     where: { id: existing.id },
-    data: { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone },
+    data,
   });
 
   await logActivity({
     type: "SETTINGS_UPDATED",
     userId: session.user.id,
-    details: { changes: "SMTP et contact" },
+    details: { changes: isSuperAdmin ? "SMTP, contact et reCAPTCHA" : "SMTP et contact" },
   });
 
   return NextResponse.json(settings);
