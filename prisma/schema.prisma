@@ -57,6 +57,8 @@ model Registration {
   allAccessGranted  Boolean            @default(false)
   rejectionReason   String?
   rejectionDetails  String?            @db.Text
+  editToken          String?   @unique
+  editTokenExpiresAt DateTime?
   teamId            String
   team              Team               @relation(fields: [teamId], references: [id])
   createdAt         DateTime           @default(now())
@@ -106,6 +108,7 @@ enum ActivityType {
   CATEGORY_DELETED
   EVENT_UPDATED
   SETTINGS_UPDATED
+  REGISTRATION_RESUBMITTED
 }
 
 model Settings {
