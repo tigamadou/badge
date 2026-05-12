@@ -47,6 +47,8 @@ export default function Home() {
     const photoFile = formData.get("photo") as File | null;
     const idDocumentFile = formData.get("idDocument") as File | null;
 
+    // Upload des fichiers d'abord avec un ID temporaire
+    const tempId = crypto.randomUUID();
     const body: Record<string, string> = {
       lastName: formData.get("lastName") as string,
       firstName: formData.get("firstName") as string,
@@ -59,6 +61,30 @@ export default function Home() {
 
     if (captchaToken) {
       body.captchaToken = captchaToken;
+    }
+
+    if (photoFile && photoFile.size > 0) {
+      const uploadData = new FormData();
+      uploadData.append("file", photoFile);
+      uploadData.append("type", "photo");
+      uploadData.append("registrationId", tempId);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
+      if (uploadRes.ok) {
+        const { path } = await uploadRes.json();
+        body.photo = path;
+      }
+    }
+
+    if (idDocumentFile && idDocumentFile.size > 0) {
+      const uploadData = new FormData();
+      uploadData.append("file", idDocumentFile);
+      uploadData.append("type", "idDocument");
+      uploadData.append("registrationId", tempId);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
+      if (uploadRes.ok) {
+        const { path } = await uploadRes.json();
+        body.idDocument = path;
+      }
     }
 
     const res = await fetch("/api/registrations", {
@@ -75,46 +101,11 @@ export default function Home() {
       return;
     }
 
-    const registration = await res.json();
-    const patches: Record<string, string> = {};
-
-    if (photoFile && photoFile.size > 0) {
-      const uploadData = new FormData();
-      uploadData.append("file", photoFile);
-      uploadData.append("type", "photo");
-      uploadData.append("registrationId", registration.id);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
-      if (uploadRes.ok) {
-        const { path } = await uploadRes.json();
-        patches.photo = path;
-      }
-    }
-
-    if (idDocumentFile && idDocumentFile.size > 0) {
-      const uploadData = new FormData();
-      uploadData.append("file", idDocumentFile);
-      uploadData.append("type", "idDocument");
-      uploadData.append("registrationId", registration.id);
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: uploadData });
-      if (uploadRes.ok) {
-        const { path } = await uploadRes.json();
-        patches.idDocument = path;
-      }
-    }
-
-    if (Object.keys(patches).length > 0) {
-      await fetch(`/api/registrations/${registration.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patches),
-      });
-    }
-
     router.push("/register/success");
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12">
       <div className="w-full max-w-lg bg-white rounded-lg shadow p-8">
         {event?.logo && (
           <div className="flex justify-center mb-4">
