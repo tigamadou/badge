@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendStatusNotification, sendBadgePrintedNotification } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
+import { randomUUID } from "crypto";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -42,6 +43,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // If marking as printed, add timestamp
   if (data.badgePrinted === true) {
     data.badgePrintedAt = new Date();
+  }
+
+  // Générer un token de modification si rejet
+  if (data.status === "REJECTED") {
+    data.editToken = randomUUID();
+    data.editTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
   }
 
   const registration = await prisma.registration.update({
@@ -96,7 +103,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         `${registration.firstName} ${registration.lastName}`,
         data.status,
         data.rejectionReason,
-        data.rejectionDetails
+        data.rejectionDetails,
+        data.editToken
       );
     } catch (e) {
       console.error("Failed to send status notification:", e);

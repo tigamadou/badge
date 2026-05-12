@@ -110,7 +110,8 @@ export async function sendStatusNotification(
   fullName: string,
   status: "APPROVED" | "REJECTED",
   rejectionReason?: string,
-  rejectionDetails?: string
+  rejectionDetails?: string,
+  editToken?: string | null
 ): Promise<void> {
   const transporter = await getTransporter();
   const from = await getMailFrom();
@@ -136,11 +137,20 @@ export async function sendStatusNotification(
       ? `<p style="margin:0 0 16px;color:#64748b;font-size:14px;">${rejectionDetails}</p>`
       : "";
 
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "http://localhost:3000";
+    const editBlock = editToken
+      ? `<p style="margin:0 0 24px;text-align:center;">
+          <a href="${baseUrl}/edit-registration/${editToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Modifier et resoumettre mon inscription</a>
+        </p>
+        <p style="margin:0 0 16px;color:#64748b;font-size:13px;">Ce lien est valable 48 heures.</p>`
+      : "";
+
     const body = `
       <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
       <p style="margin:0 0 16px;">Nous sommes désolés, votre inscription a été <span style="color:#e11d48;font-weight:600;">rejetée</span>.</p>
       ${reasonBlock}
       ${detailsBlock}
+      ${editBlock}
       <p style="margin:0;">Pour plus d'informations, veuillez contacter l'organisation.</p>
     `;
     await transporter.sendMail({
@@ -175,6 +185,33 @@ export async function sendUserInvitation(
     from,
     to,
     subject: `Invitation — ${title}`,
+    html: buildEmail(body, title, logoUrl),
+  });
+}
+
+export async function sendEditLinkEmail(
+  to: string,
+  fullName: string,
+  editToken: string
+): Promise<void> {
+  const transporter = await getTransporter();
+  const from = await getMailFrom();
+  const { title, logoUrl } = await getEventInfo();
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "http://localhost:3000";
+
+  const body = `
+    <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
+    <p style="margin:0 0 16px;">Voici un nouveau lien pour modifier et resoumettre votre inscription :</p>
+    <p style="margin:0 0 24px;text-align:center;">
+      <a href="${baseUrl}/edit-registration/${editToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Modifier mon inscription</a>
+    </p>
+    <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 48 heures.</p>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: `Modifier votre inscription — ${title}`,
     html: buildEmail(body, title, logoUrl),
   });
 }

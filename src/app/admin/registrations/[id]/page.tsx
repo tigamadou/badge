@@ -33,6 +33,8 @@ interface Registration {
   allAccessGranted: boolean;
   rejectionReason: string | null;
   rejectionDetails: string | null;
+  editToken: string | null;
+  editTokenExpiresAt: string | null;
   createdAt: string;
   team: { id: string; name: string; color: string; number: number };
 }
@@ -123,6 +125,25 @@ export default function RegistrationDetailPage() {
               <p className="text-sm text-rose-600">{registration.rejectionReason}</p>
               {registration.rejectionDetails && (
                 <p className="text-sm text-rose-500 mt-1">{registration.rejectionDetails}</p>
+              )}
+              {registration.editToken && (
+                <div className="mt-3 pt-3 border-t border-rose-200">
+                  <p className="text-sm text-rose-600 mb-2">
+                    Lien de modification
+                    {registration.editTokenExpiresAt && new Date(registration.editTokenExpiresAt) > new Date()
+                      ? ` (expire le ${new Date(registration.editTokenExpiresAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})`
+                      : " (expiré)"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/edit-registration/${registration.editToken}`);
+                    }}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+                  >
+                    Copier le lien
+                  </button>
+                </div>
               )}
             </div>
           )}

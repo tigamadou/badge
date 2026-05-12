@@ -16,11 +16,22 @@ const ID_DOCUMENT_TYPES = [
   { value: "PASSEPORT", label: "Passeport" },
 ];
 
+interface RegistrationDefaultValues {
+  lastName?: string;
+  firstName?: string;
+  email?: string;
+  structure?: string;
+  teamId?: string;
+  idDocumentType?: string;
+  idDocumentNumber?: string;
+}
+
 interface RegistrationFormProps {
   onSubmit: (data: FormData) => Promise<void>;
   submitLabel?: string;
   showCaptcha?: boolean;
   captchaWidget?: React.ReactNode;
+  defaultValues?: RegistrationDefaultValues;
 }
 
 const PHOTO_RATIO = 35 / 45; // 35×45mm - standard photo d'identité
@@ -46,6 +57,7 @@ export function RegistrationForm({
   onSubmit,
   submitLabel = "Soumettre",
   captchaWidget,
+  defaultValues,
 }: RegistrationFormProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
@@ -96,23 +108,25 @@ export function RegistrationForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Input label="Nom (tel que sur le document d'identité)" name="lastName" required />
-      <Input label="Prénom(s) (tel que sur le document d'identité)" name="firstName" required />
-      <Input label="Email" name="email" type="email" required />
-      <Input label="Structure / Organisation" name="structure" required />
+      <Input label="Nom (tel que sur le document d'identité)" name="lastName" required defaultValue={defaultValues?.lastName} />
+      <Input label="Prénom(s) (tel que sur le document d'identité)" name="firstName" required defaultValue={defaultValues?.firstName} />
+      <Input label="Email" name="email" type="email" required defaultValue={defaultValues?.email} />
+      <Input label="Structure / Organisation" name="structure" required defaultValue={defaultValues?.structure} />
       <Select
         label="Catégorie"
         name="teamId"
         options={teams.map((t) => ({ value: t.id, label: t.name }))}
         required
+        defaultValue={defaultValues?.teamId}
       />
       <Select
         label="Type de document d'identité"
         name="idDocumentType"
         options={ID_DOCUMENT_TYPES}
         required
+        defaultValue={defaultValues?.idDocumentType}
       />
-      <Input label="Numéro du document d'identité" name="idDocumentNumber" required />
+      <Input label="Numéro du document d'identité" name="idDocumentNumber" required defaultValue={defaultValues?.idDocumentNumber} />
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-1">Document d&apos;identité (scan ou photo)</label>
         <input
@@ -184,7 +198,7 @@ export function RegistrationForm({
         {photoError && <p className="text-xs text-red-600 mt-1">{photoError}</p>}
       </div>
       {captchaWidget}
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading} className="w-full btn-lg">
         {loading ? "Envoi en cours..." : submitLabel}
       </Button>
     </form>
