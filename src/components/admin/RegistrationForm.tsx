@@ -68,7 +68,12 @@ export function RegistrationForm({
     const formData = new FormData(e.currentTarget);
     const photoFile = formData.get("photo") as File | null;
 
-    if (photoFile && photoFile.size > 0) {
+    if (!photoFile || photoFile.size === 0) {
+      setPhotoError("La photo d'identité est obligatoire.");
+      return;
+    }
+
+    if (photoFile.size > 0) {
       const valid = await validatePhotoRatio(photoFile);
       if (!valid) {
         setPhotoError("La photo doit avoir un ratio 35:45 (ex. 350×450px, 700×900px).");
@@ -142,6 +147,7 @@ export function RegistrationForm({
           name="photo"
           accept="image/*"
           className="hidden"
+          required
           onChange={(e) => {
             setPhotoError(null);
             setPhotoFileName(e.target.files?.[0]?.name || null);
