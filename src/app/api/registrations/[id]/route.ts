@@ -35,6 +35,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const previous = await prisma.registration.findUnique({ where: { id }, include: { team: true } });
 
+  if (data.status === "APPROVED" && previous?.status === "REJECTED") {
+    return NextResponse.json({ error: "Une inscription rejetée ne peut pas être validée" }, { status: 400 });
+  }
+
   // If marking as printed, add timestamp
   if (data.badgePrinted === true) {
     data.badgePrintedAt = new Date();

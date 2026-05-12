@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { email, lastName, firstName, structure, teamId, photo, idDocumentType, idDocumentNumber, idDocument, captchaToken } = body;
 
-  if (!email || !lastName || !firstName || !structure || !teamId || !idDocumentType || !idDocumentNumber) {
-    return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
+  if (!email || !lastName || !firstName || !structure || !teamId || !idDocumentType || !idDocumentNumber || !photo || !idDocument) {
+    return NextResponse.json({ error: "Champs requis manquants (photo et pièce d'identité incluses)" }, { status: 400 });
   }
 
   // Vérifier si c'est un appel public (pas de session) => vérifier CAPTCHA si activé

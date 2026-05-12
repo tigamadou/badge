@@ -112,6 +112,9 @@ export default function RegistrationDetailPage() {
             <div className="mt-2">
               <StatusBadge status={registration.status} />
             </div>
+            <p className="text-slate-400 text-xs mt-2">
+              Inscrit le {new Date(registration.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+            </p>
           </div>
 
           {registration.status === "REJECTED" && registration.rejectionReason && (
@@ -165,10 +168,10 @@ export default function RegistrationDetailPage() {
 
           <div className="border-t border-slate-100 px-6 py-4 flex flex-col items-center gap-3">
             <div className="flex gap-3">
-              {registration.status !== "APPROVED" && (
+              {registration.status === "PENDING" && (
                 <Button onClick={() => setConfirmAction("APPROVED")}>Valider</Button>
               )}
-              {registration.status !== "REJECTED" && (
+              {registration.status === "PENDING" && (
                 <Button variant="danger" onClick={() => setConfirmAction("REJECTED")}>Rejeter</Button>
               )}
             </div>
@@ -207,6 +210,9 @@ export default function RegistrationDetailPage() {
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
             Voulez-vous rejeter l&apos;inscription de {registration.firstName} {registration.lastName} ?
+          </p>
+          <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Attention : cette action est irréversible. Une inscription rejetée ne pourra plus être validée.
           </p>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Motif du rejet</label>
