@@ -16,11 +16,14 @@ interface Registration {
   team: { name: string; color: string };
 }
 
+const PAGE_SIZE = 10;
+
 export default function RegistrationsPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [teamFilter, setTeamFilter] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   async function fetchRegistrations() {
     const res = await fetch("/api/registrations");
@@ -30,6 +33,10 @@ export default function RegistrationsPage() {
   useEffect(() => {
     fetchRegistrations();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, teamFilter, search]);
 
   const filtered = registrations.filter((r) => {
     if (statusFilter && r.status !== statusFilter) return false;
@@ -42,7 +49,18 @@ export default function RegistrationsPage() {
     return true;
   });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   const teamNames = [...new Set(registrations.map((r) => r.team.name))];
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  }
 
   return (
     <div>
@@ -91,12 +109,13 @@ export default function RegistrationsPage() {
               <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Nom</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Structure</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Catégorie</th>
+              <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Date</th>
               <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Statut</th>
               <th className="text-right px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((reg) => (
+            {paginated.map((reg) => (
               <tr key={reg.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                 <td className="px-4 py-3">
                   <Link href={`/admin/registrations/${reg.id}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
@@ -110,6 +129,7 @@ export default function RegistrationsPage() {
                     <span className="text-slate-600">{reg.team.name}</span>
                   </span>
                 </td>
+                <td className="px-4 py-3 text-slate-600">{formatDate(reg.createdAt)}</td>
                 <td className="px-4 py-3"><StatusBadge status={reg.status} /></td>
                 <td className="px-4 py-3 text-right">
                   <Link href={`/admin/registrations/${reg.id}`}>
@@ -127,7 +147,7 @@ export default function RegistrationsPage() {
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
-        {filtered.map((reg) => (
+        {paginated.map((reg) => (
           <div key={reg.id} className="bg-white rounded-xl border border-slate-200 p-4">
             <div className="flex items-start justify-between mb-3">
               <Link href={`/admin/registrations/${reg.id}`} className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
@@ -141,6 +161,7 @@ export default function RegistrationsPage() {
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: reg.team.color }} />
                 {reg.team.name}
               </p>
+              <p>{formatDate(reg.createdAt)}</p>
             </div>
             <div className="mt-3 pt-3 border-t border-slate-100">
               <Link href={`/admin/registrations/${reg.id}`}>
@@ -153,6 +174,31 @@ export default function RegistrationsPage() {
           <p className="text-center py-8 text-slate-400">Aucune inscription trouvée.</p>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-slate-500">
+            {filtered.length} résultat{filtered.length > 1 ? "s" : ""} — page {currentPage} sur {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              Précédent
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Suivant
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
