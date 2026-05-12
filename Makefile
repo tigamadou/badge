@@ -36,6 +36,9 @@ prod-db-reset:
 	docker exec investiture-app npx --yes tsx prisma/seed.ts
 	@echo "Production database reset and seeded."
 
+prod-db-push:
+	docker exec investiture-app prisma db push
+
 # Commandes dans le conteneur dev
 test:
 	docker compose -f docker-compose.dev.yml exec app yarn vitest run
