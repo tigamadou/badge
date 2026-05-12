@@ -7,6 +7,16 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 
+const REJECTION_REASONS = [
+  "Photo non conforme",
+  "Document d'identité illisible",
+  "Document d'identité expiré",
+  "Informations incorrectes",
+  "Doublon d'inscription",
+  "Catégorie non autorisée",
+  "Autre",
+];
+
 interface Registration {
   id: string;
   lastName: string;
@@ -21,6 +31,8 @@ interface Registration {
   badgePrinted: boolean;
   badgePrintedAt: string | null;
   allAccessGranted: boolean;
+  rejectionReason: string | null;
+  rejectionDetails: string | null;
   createdAt: string;
   team: { id: string; name: string; color: string; number: number };
 }
@@ -29,20 +41,29 @@ export default function RegistrationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [registration, setRegistration] = useState<Registration | null>(null);
   const [confirmAction, setConfirmAction] = useState<"APPROVED" | "REJECTED" | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionDetails, setRejectionDetails] = useState("");
 
   useEffect(() => {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then(setRegistration);
   }, [id]);
 
   async function updateStatus(status: string) {
+    const body: Record<string, string> = { status };
+    if (status === "REJECTED") {
+      body.rejectionReason = rejectionReason;
+      body.rejectionDetails = rejectionDetails;
+    }
     await fetch(`/api/registrations/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     const res = await fetch(`/api/registrations/${id}`);
     setRegistration(await res.json());
     setConfirmAction(null);
+    setRejectionReason("");
+    setRejectionDetails("");
   }
 
   if (!registration) return <p>Chargement...</p>;
@@ -92,6 +113,16 @@ export default function RegistrationDetailPage() {
               <StatusBadge status={registration.status} />
             </div>
           </div>
+
+          {registration.status === "REJECTED" && registration.rejectionReason && (
+            <div className="border-t border-slate-100 px-6 py-4 bg-rose-50">
+              <p className="text-sm font-medium text-rose-700 mb-1">Motif du rejet</p>
+              <p className="text-sm text-rose-600">{registration.rejectionReason}</p>
+              {registration.rejectionDetails && (
+                <p className="text-sm text-rose-500 mt-1">{registration.rejectionDetails}</p>
+              )}
+            </div>
+          )}
 
           <div className="border-t border-slate-100 px-6 py-4">
             <dl className="space-y-3 text-sm">
@@ -150,19 +181,57 @@ export default function RegistrationDetailPage() {
         </div>
       </div>
 
+      {/* Modal de validation */}
       <Modal
-        open={confirmAction !== null}
-        title={confirmAction === "APPROVED" ? "Confirmer la validation" : "Confirmer le rejet"}
-        confirmLabel={confirmAction === "APPROVED" ? "Valider" : "Rejeter"}
-        confirmVariant={confirmAction === "APPROVED" ? "primary" : "danger"}
-        onConfirm={() => confirmAction && updateStatus(confirmAction)}
+        open={confirmAction === "APPROVED"}
+        title="Confirmer la validation"
+        confirmLabel="Valider"
+        confirmVariant="primary"
+        onConfirm={() => updateStatus("APPROVED")}
         onCancel={() => setConfirmAction(null)}
       >
         <p className="text-sm text-slate-600">
-          {confirmAction === "APPROVED"
-            ? `Voulez-vous valider l'inscription de ${registration.firstName} ${registration.lastName} ?`
-            : `Voulez-vous rejeter l'inscription de ${registration.firstName} ${registration.lastName} ?`}
+          Voulez-vous valider l&apos;inscription de {registration.firstName} {registration.lastName} ?
         </p>
+      </Modal>
+
+      {/* Modal de rejet avec motif */}
+      <Modal
+        open={confirmAction === "REJECTED"}
+        title="Confirmer le rejet"
+        confirmLabel="Rejeter"
+        confirmVariant="danger"
+        onConfirm={() => updateStatus("REJECTED")}
+        onCancel={() => { setConfirmAction(null); setRejectionReason(""); setRejectionDetails(""); }}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Voulez-vous rejeter l&apos;inscription de {registration.firstName} {registration.lastName} ?
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Motif du rejet</label>
+            <select
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Sélectionner un motif...</option>
+              {REJECTION_REASONS.map((reason) => (
+                <option key={reason} value={reason}>{reason}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Détails (optionnel)</label>
+            <textarea
+              value={rejectionDetails}
+              onChange={(e) => setRejectionDetails(e.target.value)}
+              rows={3}
+              placeholder="Précisions supplémentaires..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+            />
+          </div>
+        </div>
       </Modal>
     </div>
   );

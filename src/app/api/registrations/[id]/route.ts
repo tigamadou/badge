@@ -58,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         registrationName: regName,
         previousStatus: previous?.status,
         newStatus: data.status,
+        ...(data.status === "REJECTED" && data.rejectionReason ? { rejectionReason: data.rejectionReason } : {}),
       },
     });
   } else if (data.badgePrinted === true) {
@@ -89,7 +90,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await sendStatusNotification(
         registration.email,
         `${registration.firstName} ${registration.lastName}`,
-        data.status
+        data.status,
+        data.rejectionReason,
+        data.rejectionDetails
       );
     } catch (e) {
       console.error("Failed to send status notification:", e);

@@ -54,10 +54,12 @@ model Registration {
   status           RegistrationStatus @default(PENDING)
   badgePrinted     Boolean            @default(false)
   badgePrintedAt   DateTime?
-  allAccessGranted Boolean            @default(false)
-  teamId           String
-  team             Team               @relation(fields: [teamId], references: [id])
-  createdAt        DateTime           @default(now())
+  allAccessGranted  Boolean            @default(false)
+  rejectionReason   String?
+  rejectionDetails  String?            @db.Text
+  teamId            String
+  team              Team               @relation(fields: [teamId], references: [id])
+  createdAt         DateTime           @default(now())
 }
 
 enum RegistrationStatus {

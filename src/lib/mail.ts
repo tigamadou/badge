@@ -108,7 +108,9 @@ export async function sendRegistrationConfirmation(
 export async function sendStatusNotification(
   to: string,
   fullName: string,
-  status: "APPROVED" | "REJECTED"
+  status: "APPROVED" | "REJECTED",
+  rejectionReason?: string,
+  rejectionDetails?: string
 ): Promise<void> {
   const transporter = await getTransporter();
   const from = await getMailFrom();
@@ -127,9 +129,18 @@ export async function sendStatusNotification(
       html: buildEmail(body, title, logoUrl),
     });
   } else {
+    const reasonBlock = rejectionReason
+      ? `<p style="margin:0 0 8px;"><strong>Motif :</strong> ${rejectionReason}</p>`
+      : "";
+    const detailsBlock = rejectionDetails
+      ? `<p style="margin:0 0 16px;color:#64748b;font-size:14px;">${rejectionDetails}</p>`
+      : "";
+
     const body = `
       <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
       <p style="margin:0 0 16px;">Nous sommes désolés, votre inscription a été <span style="color:#e11d48;font-weight:600;">rejetée</span>.</p>
+      ${reasonBlock}
+      ${detailsBlock}
       <p style="margin:0;">Pour plus d'informations, veuillez contacter l'organisation.</p>
     `;
     await transporter.sendMail({
