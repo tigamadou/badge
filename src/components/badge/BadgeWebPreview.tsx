@@ -110,9 +110,17 @@ export function BadgeWebPreview({
       {/* Bande categorie/equipe tout en bas */}
       <div
         className="flex items-center justify-center"
-        style={{ backgroundColor: team.color, paddingTop: 14, paddingBottom: 14 }}
+        style={{
+          backgroundColor: team.neutralBadge ? "#FFFFFF" : team.color,
+          paddingTop: 14,
+          paddingBottom: 14,
+          ...(team.neutralBadge ? { borderTop: "1px solid #E2E8F0" } : {}),
+        }}
       >
-        <span className="text-[20px] font-bold text-white uppercase tracking-widest">
+        <span
+          className="text-[20px] font-bold uppercase tracking-widest"
+          style={{ color: team.neutralBadge ? team.color : "#FFFFFF" }}
+        >
           {team.name}
         </span>
       </div>

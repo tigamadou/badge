@@ -8,8 +8,19 @@ import {
   Text,
   Image,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 import type { BadgeProps } from "@/types";
+
+Font.register({
+  family: "Montserrat",
+  fonts: [
+    { src: "https://fonts.gstatic.com/s/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Ew-.ttf", fontWeight: 400 },
+    { src: "https://fonts.gstatic.com/s/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtZ6Ew-.ttf", fontWeight: 500 },
+    { src: "https://fonts.gstatic.com/s/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCu170w-.ttf", fontWeight: 600 },
+    { src: "https://fonts.gstatic.com/s/montserrat/v29/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCuM70w-.ttf", fontWeight: 700 },
+  ],
+});
 
 // Dimensions en points (1mm = 2.835pt)
 const BADGE_WIDTH = 100 * 2.835; // ~283.5pt
@@ -20,7 +31,7 @@ const styles = StyleSheet.create({
     width: BADGE_WIDTH,
     height: BADGE_HEIGHT,
     backgroundColor: "#FFFFFF",
-    fontFamily: "Helvetica",
+    fontFamily: "Montserrat",
     position: "relative",
   },
   container: {
@@ -47,7 +58,7 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontSize: 10,
-    fontFamily: "Helvetica",
+    fontFamily: "Montserrat",
     lineHeight: 1.3,
     color: "#1a3a7c",
     fontWeight: "600",
@@ -105,7 +116,7 @@ const styles = StyleSheet.create({
   },
   idText: {
     fontSize: 13,
-    fontFamily: "Helvetica",
+    fontFamily: "Montserrat",
     fontWeight: "500",
     transform: "rotate(-90deg)",
     width: 130,
@@ -115,7 +126,7 @@ const styles = StyleSheet.create({
   // Nom et structure
   fullName: {
     fontSize: 15,
-    fontFamily: "Helvetica",
+    fontFamily: "Montserrat",
     fontWeight: "600",
     color: "#000000",
     marginBottom: 2,
@@ -137,7 +148,8 @@ const styles = StyleSheet.create({
   },
   allAccessText: {
     fontSize: 26,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: "#FFFFFF",
     letterSpacing: 3,
   },
@@ -149,7 +161,8 @@ const styles = StyleSheet.create({
   },
   categoryName: {
     fontSize: 26,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Montserrat",
+    fontWeight: 700,
     color: "#FFFFFF",
     textTransform: "uppercase",
     letterSpacing: 3,
@@ -225,8 +238,12 @@ export function BadgeDocument({
           )}
 
           {/* Bande categorie/equipe tout en bas */}
-          <View style={[styles.categoryBanner, { backgroundColor: team.color, height: allAccessGranted ? 80 : 120 }]}>
-            <Text style={styles.categoryName}>{team.name}</Text>
+          <View style={[styles.categoryBanner, {
+            backgroundColor: team.neutralBadge ? "#FFFFFF" : team.color,
+            height: allAccessGranted ? 80 : 120,
+            ...(team.neutralBadge ? { borderTopWidth: 1, borderTopColor: "#E2E8F0" } : {}),
+          }]}>
+            <Text style={[styles.categoryName, team.neutralBadge ? { color: team.color } : {}]}>{team.name}</Text>
           </View>
         </View>
       </Page>

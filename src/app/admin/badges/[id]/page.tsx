@@ -33,7 +33,7 @@ interface Registration {
   badgePrintedAt: string | null;
   allAccessGranted: boolean;
   createdAt: string;
-  team: { id: string; name: string; color: string; number: number };
+  team: { id: string; name: string; color: string; number: number; neutralBadge: boolean };
 }
 
 interface EventData {

@@ -39,6 +39,7 @@ model Team {
   name          String
   color         String
   number        Int            @unique
+  neutralBadge  Boolean        @default(false)
   registrations Registration[]
 }
 

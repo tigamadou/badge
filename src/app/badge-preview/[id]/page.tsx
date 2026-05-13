@@ -43,7 +43,7 @@ export default function BadgePreviewPage() {
     photo: string | null;
     status: string;
     allAccessGranted: boolean;
-    team: { name: string; color: string };
+    team: { name: string; color: string; neutralBadge?: boolean };
   };
   const evt = data.event as unknown as {
     title: string;
@@ -67,7 +67,7 @@ export default function BadgePreviewPage() {
     allAccessGranted: reg.allAccessGranted,
   };
 
-  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0 };
+  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0, neutralBadge: reg.team.neutralBadge ?? false };
   const event = {
     id: "",
     title: evt.title,

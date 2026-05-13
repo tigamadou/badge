@@ -21,7 +21,7 @@ interface RegistrationData {
   idDocument: string | null;
   status: string;
   allAccessGranted: boolean;
-  team: { id: string; name: string; color: string; number: number };
+  team: { id: string; name: string; color: string; number: number; neutralBadge: boolean };
 }
 
 interface EventData {

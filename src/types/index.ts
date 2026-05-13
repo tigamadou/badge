@@ -11,6 +11,7 @@ export interface Team {
   name: string;
   color: string;
   number: number;
+  neutralBadge: boolean;
 }
 
 export type RegistrationStatus = "PENDING" | "APPROVED" | "REJECTED";

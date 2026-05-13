@@ -41,7 +41,7 @@ export default function BadgePage() {
     photo: string | null;
     status: string;
     allAccessGranted: boolean;
-    team: { name: string; color: string };
+    team: { name: string; color: string; neutralBadge?: boolean };
   };
   const evt = data.event as unknown as { title: string; location: string; date: string };
 
@@ -60,7 +60,7 @@ export default function BadgePage() {
     allAccessGranted: reg.allAccessGranted,
   };
 
-  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0 };
+  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0, neutralBadge: reg.team.neutralBadge ?? false };
   const event = { id: "", title: evt.title, location: evt.location, date: formatEventDate(evt.date), logo: "" };
 
   if (!qrCodeDataUrl) return <p className="text-center mt-20">Génération du badge...</p>;
