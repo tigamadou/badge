@@ -26,6 +26,7 @@ export function BadgePreview({
           team={team}
           event={event}
           qrCodeDataUrl={qrCodeDataUrl}
+          allAccessGranted={allAccessGranted}
         />
       ) : (
         <BadgeDocument

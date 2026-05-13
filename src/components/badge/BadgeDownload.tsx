@@ -28,6 +28,7 @@ export function BadgeDownload({
       team={team}
       event={event}
       qrCodeDataUrl={qrCodeDataUrl}
+      allAccessGranted={allAccessGranted}
     />
   ) : (
     <BadgeDocument

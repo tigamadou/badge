@@ -91,6 +91,19 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: "center",
   },
+  allAccessBanner: {
+    backgroundColor: "#DC2626",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  allAccessText: {
+    fontSize: 26,
+    fontFamily: "Montserrat",
+    fontWeight: 700,
+    color: "#FFFFFF",
+    letterSpacing: 3,
+  },
   categoryBanner: {
     paddingVertical: 16,
     justifyContent: "center",
@@ -111,6 +124,7 @@ interface BadgeDocumentAnonymousProps {
   team: Team;
   event: EventInfo;
   qrCodeDataUrl: string;
+  allAccessGranted?: boolean;
 }
 
 export function BadgeDocumentAnonymous({
@@ -118,6 +132,7 @@ export function BadgeDocumentAnonymous({
   team,
   event,
   qrCodeDataUrl,
+  allAccessGranted = false,
 }: BadgeDocumentAnonymousProps) {
   return (
     <Document>
@@ -143,10 +158,17 @@ export function BadgeDocumentAnonymous({
             <Text style={styles.idText}>{registrationId}</Text>
           </View>
 
+          {/* Bande ALL ACCESS (conditionnelle) */}
+          {allAccessGranted && (
+            <View style={styles.allAccessBanner}>
+              <Text style={styles.allAccessText}>ALL ACCESS</Text>
+            </View>
+          )}
+
           {/* Bande categorie en bas */}
           <View style={[styles.categoryBanner, {
             backgroundColor: team.neutralBadge ? "#FFFFFF" : team.color,
-            height: 120,
+            height: allAccessGranted ? 80 : 120,
             ...(team.neutralBadge ? { borderTopWidth: 1, borderTopColor: "#E2E8F0" } : {}),
           }]}>
             <Text style={[styles.categoryName, team.neutralBadge ? { color: team.color } : {}]}>{team.name}</Text>

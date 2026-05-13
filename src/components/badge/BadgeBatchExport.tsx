@@ -87,6 +87,7 @@ export function BadgeBatchExport({ registrations, event, label }: BadgeBatchExpo
             team={reg.team}
             event={badgeEvent}
             qrCodeDataUrl={qrCodeDataUrl}
+            allAccessGranted={reg.allAccessGranted}
           />
         ) : (
           <BadgeDocument
