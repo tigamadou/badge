@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   allAccessBanner: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#C00707",
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 12,

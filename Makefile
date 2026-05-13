@@ -77,4 +77,4 @@ upload:
 	rsync -avz --exclude='node_modules' --exclude='.next' --exclude='uploads' ./ root@173.212.217.54:~/investiture/
 
 deploy: upload
-	ssh root@173.212.217.54 "cd ~/investiture && make prod-build && make prod-push"
+	ssh root@173.212.217.54 "cd ~/investiture && make prod-build"
