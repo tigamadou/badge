@@ -11,6 +11,7 @@ import {
   Font,
 } from "@react-pdf/renderer";
 import type { BadgeProps } from "@/types";
+import { formatBadgeName } from "@/lib/format-badge-name";
 
 Font.register({
   family: "Montserrat",
@@ -225,7 +226,7 @@ export function BadgeDocument({
 
             {/* Nom et structure */}
             <Text style={styles.fullName}>
-              {registration.firstName} {registration.lastName.toUpperCase()}
+              {formatBadgeName(registration.firstName, registration.lastName)}
             </Text>
             <Text style={styles.structure}>{registration.structure}</Text>
           </View>

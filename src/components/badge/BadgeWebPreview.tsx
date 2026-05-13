@@ -2,6 +2,7 @@
 "use client";
 
 import type { BadgeProps } from "@/types";
+import { formatBadgeName } from "@/lib/format-badge-name";
 
 interface BadgeWebPreviewProps extends BadgeProps {
   qrCodeDataUrl: string;
@@ -90,7 +91,7 @@ export function BadgeWebPreview({
 
         {/* Nom et structure */}
         <p className="text-[14px] font-bold text-black">
-          {registration.firstName} {registration.lastName.toUpperCase()}
+          {formatBadgeName(registration.firstName, registration.lastName)}
         </p>
         <p className="text-[10px] text-gray-700">{registration.structure}</p>
       </div>
