@@ -8,7 +8,7 @@ import { logActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !checkRole(session.user.role, "ADMIN")) {
+  if (!session?.user || !checkRole(session.user.role, "MODERATEUR")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 

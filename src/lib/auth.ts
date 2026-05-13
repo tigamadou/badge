@@ -6,8 +6,9 @@ import { logActivity } from "./activity-log";
 
 const ROLE_HIERARCHY: Record<string, number> = {
   OPERATOR: 1,
-  ADMIN: 2,
-  SUPER_ADMIN: 3,
+  MODERATEUR: 2,
+  ADMIN: 3,
+  SUPER_ADMIN: 4,
 };
 
 export function checkRole(userRole: string, requiredRole: string): boolean {

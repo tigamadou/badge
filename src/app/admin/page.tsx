@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 
 const ROLE_HIERARCHY: Record<string, number> = {
   OPERATOR: 1,
-  ADMIN: 2,
-  SUPER_ADMIN: 3,
+  MODERATEUR: 2,
+  ADMIN: 3,
+  SUPER_ADMIN: 4,
 };
 
 export default async function DashboardPage() {

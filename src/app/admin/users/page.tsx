@@ -67,7 +67,8 @@ export default function UsersPage() {
   const roleLabels: Record<string, string> = {
     SUPER_ADMIN: "Super Admin",
     ADMIN: "Admin",
-    OPERATOR: "Operateur",
+    MODERATEUR: "Modérateur",
+    OPERATOR: "Opérateur",
   };
 
   return (

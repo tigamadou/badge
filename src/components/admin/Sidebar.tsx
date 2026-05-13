@@ -11,10 +11,10 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/admin", label: "Dashboard", minRole: "OPERATOR" },
-  { href: "/admin/registrations", label: "Inscriptions", minRole: "ADMIN" },
-  { href: "/admin/badges", label: "Badges", minRole: "ADMIN" },
+  { href: "/admin/registrations", label: "Inscriptions", minRole: "MODERATEUR" },
+  { href: "/admin/badges", label: "Badges", minRole: "MODERATEUR" },
   { href: "/scan", label: "Scanner", minRole: "OPERATOR" },
-  { href: "/admin/categories", label: "Catégories", minRole: "ADMIN" },
+  { href: "/admin/categories", label: "Catégories", minRole: "MODERATEUR" },
   { href: "/admin/event", label: "Événement", minRole: "ADMIN" },
   { href: "/admin/settings", label: "Paramètres", minRole: "ADMIN" },
   { href: "/admin/users", label: "Utilisateurs", minRole: "SUPER_ADMIN" },
@@ -23,8 +23,9 @@ const navItems: NavItem[] = [
 
 const ROLE_HIERARCHY: Record<string, number> = {
   OPERATOR: 1,
-  ADMIN: 2,
-  SUPER_ADMIN: 3,
+  MODERATEUR: 2,
+  ADMIN: 3,
+  SUPER_ADMIN: 4,
 };
 
 interface SidebarProps {

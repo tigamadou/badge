@@ -22,6 +22,7 @@ async function main() {
 
   const defaultUsers = [
     { email: "admin@investiture.local", name: "Administrateur", role: Role.ADMIN, password: "admin123" },
+    { email: "moderateur@investiture.local", name: "Moderateur", role: Role.MODERATEUR, password: "modo123" },
     { email: "operateur@investiture.local", name: "Operateur", role: Role.OPERATOR, password: "oper123" },
   ];
   for (const user of defaultUsers) {
