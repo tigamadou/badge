@@ -53,6 +53,20 @@ interface Registration {
   }[];
 }
 
+interface DuplicateMatch {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  idDocumentNumber: string;
+  idDocumentType: string;
+  structure: string;
+  status: string;
+  createdAt: string;
+  team: { id: string; name: string; color: string };
+  matchReasons: string[];
+}
+
 export default function RegistrationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [registration, setRegistration] = useState<Registration | null>(null);
@@ -65,12 +79,21 @@ export default function RegistrationDetailPage() {
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [sendingEditLink, setSendingEditLink] = useState(false);
   const [editLinkSent, setEditLinkSent] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [duplicatesLoading, setDuplicatesLoading] = useState(true);
+  const [confirmEditLink, setConfirmEditLink] = useState(false);
 
   useEffect(() => {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then((data) => {
       setRegistration(data);
       setEmailBlocked(data.emailBlocked || false);
     });
+    fetch(`/api/registrations/${id}/duplicates`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setDuplicates(data);
+      })
+      .finally(() => setDuplicatesLoading(false));
     fetch("/api/settings").then((r) => r.json()).then((settings) => {
       if (settings) {
         setContactsConfigured(!!(settings.contactEmail && settings.contactPhone));
@@ -139,6 +162,33 @@ export default function RegistrationDetailPage() {
         </Link>
         <h1 className="text-xl font-semibold text-slate-900">Détail de l&apos;inscription</h1>
       </div>
+
+      {!duplicatesLoading && duplicates.length > 0 && (
+        <div className={`mb-4 rounded-xl border px-4 py-3 ${
+          duplicates.length >= 3
+            ? "bg-rose-50 border-rose-200"
+            : duplicates.length === 2
+              ? "bg-orange-50 border-orange-200"
+              : "bg-amber-50 border-amber-200"
+        }`}>
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 flex-shrink-0 ${
+              duplicates.length >= 3 ? "text-rose-500" : duplicates.length === 2 ? "text-orange-500" : "text-amber-500"
+            }`} viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <p className={`text-sm font-medium ${
+              duplicates.length >= 3 ? "text-rose-700" : duplicates.length === 2 ? "text-orange-700" : "text-amber-700"
+            }`}>
+              {duplicates.length >= 3
+                ? `Attention : ${duplicates.length} inscriptions similaires détectées — risque élevé de doublon`
+                : duplicates.length === 2
+                  ? `${duplicates.length} inscriptions similaires détectées — doublon possible`
+                  : "1 inscription similaire détectée — vérification recommandée"}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-6 flex-col lg:flex-row">
         {/* Colonne gauche — Informations */}
@@ -308,7 +358,7 @@ export default function RegistrationDetailPage() {
                   ) : (
                     <Button
                       variant="secondary"
-                      onClick={sendEditLink}
+                      onClick={() => setConfirmEditLink(true)}
                       disabled={sendingEditLink}
                     >
                       {sendingEditLink ? "Envoi..." : "Envoyer un lien de modification"}
@@ -370,6 +420,64 @@ export default function RegistrationDetailPage() {
           )}
         </div>
         )}
+
+        {/* Colonne doublons */}
+        {!duplicatesLoading && duplicates.length > 0 && (
+          <div className="w-full lg:w-80 space-y-3">
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <p className="text-sm font-medium text-slate-700 mb-3">
+                Inscriptions similaires ({duplicates.length})
+              </p>
+              <div className="space-y-3">
+                {duplicates.map((dup) => (
+                  <Link
+                    key={dup.id}
+                    href={`/admin/registrations/${dup.id}`}
+                    className="block border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-900">
+                        {dup.firstName} {dup.lastName}
+                      </span>
+                      <StatusBadge status={dup.status as "PENDING" | "APPROVED" | "REJECTED"} />
+                    </div>
+                    <dl className="space-y-1 text-xs text-slate-500">
+                      <div className="flex justify-between">
+                        <dt>Email</dt>
+                        <dd className="text-right truncate ml-2">{dup.email}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt>N° document</dt>
+                        <dd className="font-mono">{dup.idDocumentNumber}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt>Structure</dt>
+                        <dd className="text-right truncate ml-2">{dup.structure}</dd>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <dt>Équipe</dt>
+                        <dd className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dup.team.color }} />
+                          <span>{dup.team.name}</span>
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {dup.matchReasons.map((reason) => (
+                        <span
+                          key={reason}
+                          className="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700"
+                        >
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal de validation */}
@@ -425,6 +533,28 @@ export default function RegistrationDetailPage() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
             />
           </div>
+        </div>
+      </Modal>
+
+      {/* Modal de confirmation d'envoi du lien de modification */}
+      <Modal
+        open={confirmEditLink}
+        title="Envoyer un lien de modification"
+        confirmLabel="Envoyer"
+        confirmVariant="primary"
+        onConfirm={async () => {
+          setConfirmEditLink(false);
+          await sendEditLink();
+        }}
+        onCancel={() => setConfirmEditLink(false)}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Voulez-vous envoyer un lien de modification à <strong>{registration.firstName} {registration.lastName}</strong> ({registration.email}) ?
+          </p>
+          <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            L&apos;inscrit recevra un email lui permettant de modifier son inscription. Une fois modifiée, l&apos;inscription repassera automatiquement en attente de validation.
+          </p>
         </div>
       </Modal>
 

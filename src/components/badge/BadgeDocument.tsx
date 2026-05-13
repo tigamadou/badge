@@ -30,9 +30,12 @@ const styles = StyleSheet.create({
   page: {
     width: BADGE_WIDTH,
     height: BADGE_HEIGHT,
+    maxWidth: BADGE_WIDTH,
+    maxHeight: BADGE_HEIGHT,
     backgroundColor: "#FFFFFF",
     fontFamily: "Montserrat",
     position: "relative",
+    overflow: "hidden",
   },
   container: {
     flexDirection: "column",
