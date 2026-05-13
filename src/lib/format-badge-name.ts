@@ -1,4 +1,5 @@
 const MAX_BADGE_NAME_LENGTH = 18;
+const MAX_BADGE_STRUCTURE_LENGTH = 30;
 
 export function formatBadgeName(firstName: string, lastName: string): string {
   const upperLastName = lastName.toUpperCase();
@@ -18,4 +19,11 @@ export function formatBadgeName(firstName: string, lastName: string): string {
 
   // Edge case: lastName alone is too long or leaves no room for firstName
   return upperLastName.substring(0, MAX_BADGE_NAME_LENGTH);
+}
+
+export function formatBadgeStructure(structure: string): string {
+  if (structure.length <= MAX_BADGE_STRUCTURE_LENGTH) {
+    return structure;
+  }
+  return structure.substring(0, MAX_BADGE_STRUCTURE_LENGTH - 1) + ".";
 }

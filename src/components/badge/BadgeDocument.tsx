@@ -11,7 +11,7 @@ import {
   Font,
 } from "@react-pdf/renderer";
 import type { BadgeProps } from "@/types";
-import { formatBadgeName } from "@/lib/format-badge-name";
+import { formatBadgeName, formatBadgeStructure } from "@/lib/format-badge-name";
 
 Font.register({
   family: "Montserrat",
@@ -228,7 +228,7 @@ export function BadgeDocument({
             <Text style={styles.fullName}>
               {formatBadgeName(registration.firstName, registration.lastName)}
             </Text>
-            <Text style={styles.structure}>{registration.structure}</Text>
+            <Text style={styles.structure}>{formatBadgeStructure(registration.structure)}</Text>
           </View>
 
           {/* Bande ALL ACCESS (conditionnelle) */}

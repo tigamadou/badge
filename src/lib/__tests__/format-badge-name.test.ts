@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatBadgeName } from "../format-badge-name";
+import { formatBadgeName, formatBadgeStructure } from "../format-badge-name";
 
 describe("formatBadgeName", () => {
   it("returns full name when within 18 characters", () => {
@@ -33,5 +33,23 @@ describe("formatBadgeName", () => {
 
   it("uppercases the lastName", () => {
     expect(formatBadgeName("Jean", "dupont")).toBe("Jean DUPONT");
+  });
+});
+
+describe("formatBadgeStructure", () => {
+  it("returns structure as-is when within 30 characters", () => {
+    expect(formatBadgeStructure("Ministère de la Santé")).toBe("Ministère de la Santé");
+  });
+
+  it("truncates with a dot when exceeding 30 characters", () => {
+    const long = "Ministère de l'Enseignement Supérieur et de la Recherche";
+    const result = formatBadgeStructure(long);
+    expect(result.length).toBe(30);
+    expect(result.endsWith(".")).toBe(true);
+  });
+
+  it("returns structure as-is when exactly 30 characters", () => {
+    const exact = "A".repeat(30);
+    expect(formatBadgeStructure(exact)).toBe(exact);
   });
 });
