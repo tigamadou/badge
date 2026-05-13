@@ -58,7 +58,7 @@ export default function BadgeDetailPage() {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then(setRegistration);
     fetch("/api/event").then((r) => r.json()).then(setEvent);
     fetch("/api/settings").then((r) => r.json()).then((s) => {
-      setHasContact(Boolean(s?.contactEmail && s?.contactPhone && s?.websiteUrl));
+      setHasContact(Boolean(s?.contactEmail && s?.contactPhone));
     });
     fetch("/api/auth/session").then((r) => r.json()).then((session) => {
       if (session?.user?.role) setUserRole(session.user.role);

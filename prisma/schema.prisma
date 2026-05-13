@@ -147,7 +147,6 @@ model Settings {
   smtpSecure        Boolean @default(false)
   contactEmail      String  @default("")
   contactPhone      String  @default("")
-  websiteUrl        String  @default("")
   recaptchaEnabled  Boolean @default(false)
   recaptchaSiteKey  String  @default("")
   recaptchaSecretKey String @default("")

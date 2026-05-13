@@ -9,7 +9,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ to
   const contacts = await getContactInfo();
   if (!areContactsConfigured(contacts)) {
     return NextResponse.json(
-      { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+      { error: "Veuillez configurer les informations de contact (email, téléphone) dans les paramètres." },
       { status: 400 }
     );
   }
@@ -18,7 +18,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ to
     where: { editToken: token },
   });
 
-  if (!registration || registration.status !== "REJECTED") {
+  if (!registration || (registration.status !== "REJECTED" && registration.status !== "APPROVED")) {
     return NextResponse.json({ error: "Lien invalide" }, { status: 404 });
   }
 

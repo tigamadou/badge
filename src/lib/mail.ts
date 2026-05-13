@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 interface ContactInfo {
   contactEmail: string;
   contactPhone: string;
-  websiteUrl: string;
 }
 
 export async function getContactInfo(): Promise<ContactInfo | null> {
@@ -13,13 +12,12 @@ export async function getContactInfo(): Promise<ContactInfo | null> {
   return {
     contactEmail: settings.contactEmail,
     contactPhone: settings.contactPhone,
-    websiteUrl: settings.websiteUrl,
   };
 }
 
 export function areContactsConfigured(contacts: ContactInfo | null): boolean {
   if (!contacts) return false;
-  return !!(contacts.contactEmail && contacts.contactPhone && contacts.websiteUrl);
+  return !!(contacts.contactEmail && contacts.contactPhone);
 }
 
 async function getTransporter() {
@@ -68,10 +66,7 @@ function buildEmail(body: string, eventTitle: string, logoUrl: string, contacts?
     ? `<p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">
   <a href="mailto:${contacts!.contactEmail}" style="color:#94a3b8;text-decoration:none;">${contacts!.contactEmail}</a>
 </p>
-<p style="margin:0 0 4px;color:#94a3b8;font-size:12px;">${contacts!.contactPhone}</p>
-<p style="margin:0;color:#94a3b8;font-size:12px;">
-  <a href="${contacts!.websiteUrl}" style="color:#94a3b8;text-decoration:none;">${contacts!.websiteUrl}</a>
-</p>`
+<p style="margin:0;color:#94a3b8;font-size:12px;">${contacts!.contactPhone}</p>`
     : `<p style="margin:0;color:#94a3b8;font-size:12px;">${eventTitle}</p>`;
 
   return `

@@ -156,16 +156,21 @@ export default function EditRegistrationPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
       <div className="w-full max-w-lg bg-white rounded-lg shadow p-8">
         <h1 className="text-xl font-bold text-center mb-2">Modifier mon inscription</h1>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6">
-          <p className="text-sm text-amber-700 font-medium mb-1">Votre inscription a été rejetée</p>
-          {registration.rejectionReason && (
+        {registration.rejectionReason ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-6">
+            <p className="text-sm text-amber-700 font-medium mb-1">Votre inscription a été rejetée</p>
             <p className="text-sm text-amber-600">Motif : {registration.rejectionReason}</p>
-          )}
-          {registration.rejectionDetails && (
-            <p className="text-sm text-amber-600">{registration.rejectionDetails}</p>
-          )}
-          <p className="text-sm text-amber-600 mt-2">Veuillez corriger les informations ci-dessous et resoumettre votre inscription.</p>
-        </div>
+            {registration.rejectionDetails && (
+              <p className="text-sm text-amber-600">{registration.rejectionDetails}</p>
+            )}
+            <p className="text-sm text-amber-600 mt-2">Veuillez corriger les informations ci-dessous et resoumettre votre inscription.</p>
+          </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6">
+            <p className="text-sm text-blue-700 font-medium mb-1">Modifier mon inscription</p>
+            <p className="text-sm text-blue-600">Modifiez les informations ci-dessous et resoumettez votre inscription. Elle sera de nouveau soumise à validation.</p>
+          </div>
+        )}
         {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
         <RegistrationForm
           onSubmit={handleSubmit}

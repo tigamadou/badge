@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendStatusNotification, sendBadgePrintedNotification, getContactInfo, areContactsConfigured } from "@/lib/mail";
+import { sendStatusNotification, sendBadgePrintedNotification, sendEditLinkEmail, getContactInfo, areContactsConfigured } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
 import { randomUUID } from "crypto";
 
@@ -36,6 +36,51 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const data = await req.json();
 
+  // Action: envoyer un lien de modification pour une inscription validée
+  if (data.action === "send-edit-link") {
+    const registration = await prisma.registration.findUnique({ where: { id } });
+    if (!registration || registration.status !== "APPROVED") {
+      return NextResponse.json({ error: "Action non autorisée" }, { status: 400 });
+    }
+
+    const contacts = await getContactInfo();
+    if (!areContactsConfigured(contacts)) {
+      return NextResponse.json(
+        { error: "Veuillez configurer les informations de contact (email, téléphone) dans les paramètres." },
+        { status: 400 }
+      );
+    }
+
+    const editToken = randomUUID();
+    const editTokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+    const updated = await prisma.registration.update({
+      where: { id },
+      data: { editToken, editTokenExpiresAt },
+      include: { team: true },
+    });
+
+    try {
+      await sendEditLinkEmail(
+        updated.email,
+        `${updated.firstName} ${updated.lastName}`,
+        editToken
+      );
+    } catch (e) {
+      console.error("Failed to send edit link email:", e);
+      return NextResponse.json({ error: "Erreur lors de l'envoi de l'email" }, { status: 500 });
+    }
+
+    await logActivity({
+      type: "EDIT_LINK_SENT",
+      userId: session.user.id,
+      targetId: id,
+      details: { registrationName: `${updated.firstName} ${updated.lastName}` },
+    });
+
+    return NextResponse.json(updated);
+  }
+
   // SUPER_ADMIN ne peut pas agir sur les inscriptions (validation, rejet, badge)
   if (data.status || data.badgePrinted !== undefined || data.allAccessGranted !== undefined) {
     if (checkRole(session.user.role, "SUPER_ADMIN") && session.user.role === "SUPER_ADMIN") {
@@ -54,7 +99,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const contacts = await getContactInfo();
     if (!areContactsConfigured(contacts)) {
       return NextResponse.json(
-        { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+        { error: "Veuillez configurer les informations de contact (email, téléphone) dans les paramètres." },
         { status: 400 }
       );
     }

@@ -22,13 +22,13 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone, websiteUrl,
+  const { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone,
     recaptchaEnabled, recaptchaSiteKey, recaptchaSecretKey } = body;
 
   // Seul le SUPER_ADMIN peut modifier les paramètres reCAPTCHA
   const isSuperAdmin = checkRole(session.user.role, "SUPER_ADMIN");
 
-  const baseData = { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone, websiteUrl };
+  const baseData = { smtpHost, smtpPort, smtpFrom, smtpUser, smtpPassword, smtpSecure, contactEmail, contactPhone };
   const data = isSuperAdmin
     ? { ...baseData, recaptchaEnabled, recaptchaSiteKey, recaptchaSecretKey }
     : baseData;
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const contacts = await getContactInfo();
     if (!areContactsConfigured(contacts)) {
       return NextResponse.json(
-        { error: "Veuillez configurer les informations de contact (email, téléphone, site web) dans les paramètres." },
+        { error: "Veuillez configurer les informations de contact (email, téléphone) dans les paramètres." },
         { status: 400 }
       );
     }

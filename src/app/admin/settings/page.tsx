@@ -13,7 +13,6 @@ interface Settings {
   smtpSecure: boolean;
   contactEmail: string;
   contactPhone: string;
-  websiteUrl: string;
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
@@ -28,7 +27,6 @@ const defaultSettings: Settings = {
   smtpSecure: false,
   contactEmail: "",
   contactPhone: "",
-  websiteUrl: "",
   recaptchaEnabled: false,
   recaptchaSiteKey: "",
   recaptchaSecretKey: "",
@@ -96,7 +94,7 @@ export default function SettingsPage() {
     }
   }
 
-  const contactsReady = !!(settings.contactEmail && settings.contactPhone && settings.websiteUrl);
+  const contactsReady = !!(settings.contactEmail && settings.contactPhone);
 
   if (loading) return <p>Chargement...</p>;
 
@@ -212,15 +210,8 @@ export default function SettingsPage() {
             onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value })}
             placeholder="+229 97 00 00 00"
           />
-          <Input
-            label="URL du site web"
-            type="url"
-            value={settings.websiteUrl}
-            onChange={(e) => setSettings({ ...settings, websiteUrl: e.target.value })}
-            placeholder="https://example.com"
-          />
           <p className="text-sm text-slate-500">
-            Ces informations seront incluses dans les emails envoyés aux inscrits. Les trois champs doivent être remplis pour pouvoir envoyer des emails.
+            Ces informations seront incluses dans les emails envoyés aux inscrits. Les deux champs doivent être remplis pour pouvoir envoyer des emails.
           </p>
         </div>
 

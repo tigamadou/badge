@@ -63,6 +63,8 @@ export default function RegistrationDetailPage() {
   const [rejectionDetails, setRejectionDetails] = useState("");
   const [emailBlocked, setEmailBlocked] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [sendingEditLink, setSendingEditLink] = useState(false);
+  const [editLinkSent, setEditLinkSent] = useState(false);
 
   useEffect(() => {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then((data) => {
@@ -71,7 +73,7 @@ export default function RegistrationDetailPage() {
     });
     fetch("/api/settings").then((r) => r.json()).then((settings) => {
       if (settings) {
-        setContactsConfigured(!!(settings.contactEmail && settings.contactPhone && settings.websiteUrl));
+        setContactsConfigured(!!(settings.contactEmail && settings.contactPhone));
       } else {
         setContactsConfigured(false);
       }
@@ -90,6 +92,21 @@ export default function RegistrationDetailPage() {
   async function unblockEmail() {
     await fetch(`/api/registrations/${id}/block-email`, { method: "DELETE" });
     setEmailBlocked(false);
+  }
+
+  async function sendEditLink() {
+    setSendingEditLink(true);
+    const res = await fetch(`/api/registrations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send-edit-link" }),
+    });
+    setSendingEditLink(false);
+    if (res.ok) {
+      setEditLinkSent(true);
+      const updated = await fetch(`/api/registrations/${id}`);
+      setRegistration(await updated.json());
+    }
   }
 
   async function updateStatus(status: string) {
@@ -279,10 +296,29 @@ export default function RegistrationDetailPage() {
           )}
 
           {registration.status === "APPROVED" && (
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <Link href="/admin/badges" className="text-sm text-indigo-600 hover:text-indigo-700">
+            <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+              <Link href="/admin/badges" className="text-sm text-indigo-600 hover:text-indigo-700 block">
                 Voir le badge dans la page Badges
               </Link>
+              {contactsConfigured && (
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-sm font-medium text-slate-700 mb-2">Modification</p>
+                  {editLinkSent ? (
+                    <p className="text-sm text-emerald-600">Lien de modification envoyé.</p>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={sendEditLink}
+                      disabled={sendingEditLink}
+                    >
+                      {sendingEditLink ? "Envoi..." : "Envoyer un lien de modification"}
+                    </Button>
+                  )}
+                  <p className="text-xs text-slate-500 mt-2">
+                    L&apos;inscrit pourra modifier son inscription. Elle repassera en attente de validation.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

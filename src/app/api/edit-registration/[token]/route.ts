@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     include: { team: true },
   });
 
-  if (!registration || registration.status !== "REJECTED") {
+  if (!registration || (registration.status !== "REJECTED" && registration.status !== "APPROVED")) {
     return NextResponse.json({ error: "Lien invalide" }, { status: 404 });
   }
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     where: { editToken: token },
   });
 
-  if (!registration || registration.status !== "REJECTED") {
+  if (!registration || (registration.status !== "REJECTED" && registration.status !== "APPROVED")) {
     return NextResponse.json({ error: "Lien invalide" }, { status: 404 });
   }
 
@@ -86,6 +86,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       editTokenExpiresAt: null,
       rejectionReason: null,
       rejectionDetails: null,
+      badgePrinted: false,
+      badgePrintedAt: null,
     },
     include: { team: true },
   });

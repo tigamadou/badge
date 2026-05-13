@@ -29,7 +29,7 @@ export default function UsersPage() {
     fetchUsers();
     fetch("/api/settings").then((r) => r.json()).then((settings) => {
       if (settings) {
-        setContactsConfigured(!!(settings.contactEmail && settings.contactPhone && settings.websiteUrl));
+        setContactsConfigured(!!(settings.contactEmail && settings.contactPhone));
       } else {
         setContactsConfigured(false);
       }
