@@ -22,12 +22,10 @@ describe("formatBadgeName", () => {
     expect(formatBadgeName("Marie Claire", "Duval")).toBe("Marie Claire DUVAL");
   });
 
-  it("shortens all first names if needed", () => {
-    // "Jean François Alain KOUASSI-BARRY" = 33 > 20
-    // All shortened: "J. F. A. KOUASSI-BARRY" = 22 > 20 (best effort)
-    const result = formatBadgeName("Jean François Alain", "Kouassi-Barry");
-    expect(result).toContain("KOUASSI-BARRY");
-    expect(result).toBe("J. F. A. KOUASSI-BARRY");
+  it("drops initials when all abbreviated still too long", () => {
+    // "Jean François Alain KOUASSI-BARRY" → all abbreviated: "J. F. A. KOUASSI-BARRY" = 22 > 20
+    // Drop rightmost: "J. F. KOUASSI-BARRY" = 19 <= 20 ✓
+    expect(formatBadgeName("Jean François Alain", "Kouassi-Barry")).toBe("J. F. KOUASSI-BARRY");
   });
 
   it("handles single firstName that fits", () => {
@@ -43,6 +41,23 @@ describe("formatBadgeName", () => {
   it("always keeps lastName fully visible", () => {
     const result = formatBadgeName("Jean François Alain", "Dupond");
     expect(result.endsWith("DUPOND")).toBe(true);
+  });
+
+  it("returns only lastName when initials still too long", () => {
+    // lastName 19 chars → "J. " + 19 = 22 > 20, drop initial → lastName alone
+    expect(formatBadgeName("Jean", "Abcdefghijklmnopqrs")).toBe("ABCDEFGHIJKLMNOPQRS");
+  });
+
+  it("truncates lastName as last resort when it exceeds 20", () => {
+    expect(formatBadgeName("Jean", "Abcdefghijklmnopqrstu")).toBe("ABCDEFGHIJKLMNOPQRST");
+  });
+
+  it("handles empty firstName", () => {
+    expect(formatBadgeName("", "Dupont")).toBe("DUPONT");
+  });
+
+  it("handles whitespace-only firstName", () => {
+    expect(formatBadgeName("   ", "Dupont")).toBe("DUPONT");
   });
 });
 
