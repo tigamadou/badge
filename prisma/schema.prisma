@@ -138,6 +138,7 @@ enum ActivityType {
   EVENT_UPDATED
   SETTINGS_UPDATED
   REGISTRATION_RESUBMITTED
+  EDIT_LINK_SENT
 }
 
 model Settings {
