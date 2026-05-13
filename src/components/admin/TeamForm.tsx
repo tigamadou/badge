@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 interface TeamFormProps {
-  initialData?: { id: string; name: string; color: string; number?: number; neutralBadge?: boolean };
-  onSubmit: (data: { name: string; color: string; number: number; neutralBadge: boolean }) => Promise<void>;
+  initialData?: { id: string; name: string; color: string; number?: number; neutralBadge?: boolean; anonymous?: boolean };
+  onSubmit: (data: { name: string; color: string; number: number; neutralBadge: boolean; anonymous: boolean }) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -15,12 +15,13 @@ export function TeamForm({ initialData, onSubmit, onCancel }: TeamFormProps) {
   const [color, setColor] = useState(initialData?.color || "#1a3a7c");
   const [number, setNumber] = useState(initialData?.number ?? 1);
   const [neutralBadge, setNeutralBadge] = useState(initialData?.neutralBadge ?? false);
+  const [anonymous, setAnonymous] = useState(initialData?.anonymous ?? false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    await onSubmit({ name, color, number, neutralBadge });
+    await onSubmit({ name, color, number, neutralBadge, anonymous });
     setLoading(false);
   }
 
@@ -51,6 +52,15 @@ export function TeamForm({ initialData, onSubmit, onCancel }: TeamFormProps) {
           className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
         />
         <span className="text-sm text-slate-700">Badge neutre (fond blanc, couleur sur le texte)</span>
+      </label>
+      <label className="flex items-center gap-2 mb-4 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={anonymous}
+          onChange={(e) => setAnonymous(e.target.checked)}
+          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+        />
+        <span className="text-sm text-slate-700">Catégorie anonyme (badge sans informations personnelles, invisible sur le formulaire public)</span>
       </label>
       <div className="flex gap-3">
         <Button type="submit" disabled={loading}>

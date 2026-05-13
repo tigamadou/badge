@@ -25,7 +25,7 @@ interface Registration {
   badgePrintedAt: string | null;
   allAccessGranted: boolean;
   createdAt: string;
-  team: { id: string; name: string; color: string; number: number; neutralBadge: boolean };
+  team: { id: string; name: string; color: string; number: number; neutralBadge: boolean; anonymous: boolean };
 }
 
 interface Team {

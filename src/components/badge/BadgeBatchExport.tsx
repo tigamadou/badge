@@ -5,6 +5,7 @@ import { pdf } from "@react-pdf/renderer";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { BadgeDocument } from "./BadgeDocument";
+import { BadgeDocumentAnonymous } from "./BadgeDocumentAnonymous";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { formatEventDate } from "@/lib/format-date";
 import type { EventInfo } from "@/types";
@@ -21,7 +22,7 @@ interface RegistrationData {
   idDocument: string | null;
   status: string;
   allAccessGranted: boolean;
-  team: { id: string; name: string; color: string; number: number; neutralBadge: boolean };
+  team: { id: string; name: string; color: string; number: number; neutralBadge: boolean; anonymous: boolean };
 }
 
 interface EventData {
@@ -80,7 +81,14 @@ export function BadgeBatchExport({ registrations, event, label }: BadgeBatchExpo
           allAccessGranted: reg.allAccessGranted,
         };
 
-        const blob = await pdf(
+        const badgeComponent = reg.team.anonymous ? (
+          <BadgeDocumentAnonymous
+            registrationId={reg.id}
+            team={reg.team}
+            event={badgeEvent}
+            qrCodeDataUrl={qrCodeDataUrl}
+          />
+        ) : (
           <BadgeDocument
             registration={badgeRegistration}
             team={reg.team}
@@ -88,9 +96,13 @@ export function BadgeBatchExport({ registrations, event, label }: BadgeBatchExpo
             qrCodeDataUrl={qrCodeDataUrl}
             allAccessGranted={reg.allAccessGranted}
           />
-        ).toBlob();
+        );
 
-        const fileName = `badge-${reg.lastName}-${reg.firstName}-${reg.id}.pdf`.replace(/\s+/g, "-");
+        const blob = await pdf(badgeComponent).toBlob();
+
+        const fileName = reg.team.anonymous
+          ? `badge-${reg.id}.pdf`
+          : `badge-${reg.lastName}-${reg.firstName}-${reg.id}.pdf`.replace(/\s+/g, "-");
         zip.file(fileName, blob);
       } catch (err) {
         console.error(`Erreur generation badge ${reg.id}:`, err);

@@ -49,32 +49,54 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { email, lastName, firstName, structure, teamId, photo, idDocumentType, idDocumentNumber, idDocument, captchaToken } = body;
 
-  // Vérifier si l'email est bloqué
-  const blocked = await prisma.blockedEmail.findUnique({ where: { email } });
-  if (blocked) {
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
+  if (!teamId) {
+    return NextResponse.json({ error: "Catégorie requise" }, { status: 400 });
   }
 
-  // Vérifier si une inscription existe déjà pour cet email
-  const existing = await prisma.registration.findFirst({ where: { email } });
-  if (existing) {
-    if (existing.status === "PENDING") {
-      return NextResponse.json({ error: "Une inscription est déjà en cours de traitement pour cette adresse email." }, { status: 409 });
-    }
-    if (existing.status === "APPROVED") {
-      return NextResponse.json({ error: "Une inscription validée existe déjà pour cette adresse email." }, { status: 409 });
-    }
-    if (existing.status === "REJECTED") {
-      return NextResponse.json({ error: "Votre inscription a été rejetée. Vous pouvez demander un lien pour la modifier.", canResend: true, email }, { status: 409 });
-    }
+  const team = await prisma.team.findUnique({ where: { id: teamId } });
+  if (!team) {
+    return NextResponse.json({ error: "Catégorie non trouvée" }, { status: 400 });
   }
 
-  if (!email || !lastName || !firstName || !structure || !teamId || !idDocumentType || !idDocumentNumber || !photo || !idDocument) {
-    return NextResponse.json({ error: "Champs requis manquants (photo et pièce d'identité incluses)" }, { status: 400 });
-  }
-
-  // Vérifier si c'est un appel public (pas de session) => vérifier CAPTCHA si activé
   const session = await getServerSession(authOptions);
+
+  // Les catégories anonymes ne sont accessibles qu'aux utilisateurs authentifiés
+  if (team.anonymous) {
+    if (!session?.user || !checkRole(session.user.role, "MODERATEUR")) {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    }
+  }
+
+  // Pour les catégories NON anonymes, tous les champs sont requis
+  if (!team.anonymous) {
+    if (!email || !lastName || !firstName || !structure || !idDocumentType || !idDocumentNumber || !photo || !idDocument) {
+      return NextResponse.json({ error: "Champs requis manquants (photo et pièce d'identité incluses)" }, { status: 400 });
+    }
+
+    // Vérifier si l'email est bloqué
+    if (email) {
+      const blocked = await prisma.blockedEmail.findUnique({ where: { email } });
+      if (blocked) {
+        return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
+      }
+    }
+
+    // Vérifier si une inscription existe déjà pour cet email
+    const existing = await prisma.registration.findFirst({ where: { email } });
+    if (existing) {
+      if (existing.status === "PENDING") {
+        return NextResponse.json({ error: "Une inscription est déjà en cours de traitement pour cette adresse email." }, { status: 409 });
+      }
+      if (existing.status === "APPROVED") {
+        return NextResponse.json({ error: "Une inscription validée existe déjà pour cette adresse email." }, { status: 409 });
+      }
+      if (existing.status === "REJECTED") {
+        return NextResponse.json({ error: "Votre inscription a été rejetée. Vous pouvez demander un lien pour la modifier.", canResend: true, email }, { status: 409 });
+      }
+    }
+  }
+
+  // Vérifier CAPTCHA pour les appels publics (pas de session)
   if (!session?.user) {
     const settings = await prisma.settings.findFirst();
     if (settings?.recaptchaEnabled) {
@@ -94,10 +116,6 @@ export async function POST(req: NextRequest) {
   }
 
   const event = await prisma.event.findFirst();
-  const team = await prisma.team.findUnique({ where: { id: teamId } });
-  if (!team) {
-    return NextResponse.json({ error: "Catégorie non trouvée" }, { status: 400 });
-  }
 
   const registrationCount = await prisma.registration.count({ where: { teamId } });
   const id = generateId({
@@ -107,7 +125,19 @@ export async function POST(req: NextRequest) {
   });
 
   const registration = await prisma.registration.create({
-    data: { id, email, lastName, firstName, structure, teamId, photo, idDocumentType, idDocumentNumber, idDocument },
+    data: {
+      id,
+      email: email || "",
+      lastName: lastName || "",
+      firstName: firstName || "",
+      structure: structure || "",
+      teamId,
+      photo: photo || null,
+      idDocumentType: idDocumentType || "",
+      idDocumentNumber: idDocumentNumber || "",
+      idDocument: idDocument || null,
+      ...(team.anonymous && { status: "APPROVED" }),
+    },
     include: { team: true },
   });
 
@@ -115,22 +145,25 @@ export async function POST(req: NextRequest) {
   await prisma.submissionSnapshot.create({
     data: {
       registrationId: registration.id,
-      lastName,
-      firstName,
-      email,
-      structure,
+      lastName: lastName || "",
+      firstName: firstName || "",
+      email: email || "",
+      structure: structure || "",
       teamId,
-      idDocumentType,
-      idDocumentNumber,
+      idDocumentType: idDocumentType || "",
+      idDocumentNumber: idDocumentNumber || "",
       photo: photo || null,
       idDocument: idDocument || null,
     },
   });
 
-  try {
-    await sendRegistrationConfirmation(email, `${firstName} ${lastName}`);
-  } catch (e) {
-    console.error("Failed to send confirmation email:", e);
+  // Ne pas envoyer d'email pour les catégories anonymes
+  if (!team.anonymous && email) {
+    try {
+      await sendRegistrationConfirmation(email, `${firstName} ${lastName}`);
+    } catch (e) {
+      console.error("Failed to send confirmation email:", e);
+    }
   }
 
   await logActivity({
@@ -138,10 +171,11 @@ export async function POST(req: NextRequest) {
     userId: session?.user?.id,
     targetId: registration.id,
     details: {
-      registrationName: `${firstName} ${lastName}`,
-      structure,
+      registrationName: team.anonymous ? "(anonyme)" : `${firstName} ${lastName}`,
+      structure: structure || "",
       teamName: team.name,
       source: session?.user ? "admin" : "public",
+      anonymous: team.anonymous,
     },
   });
 

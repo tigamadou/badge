@@ -15,7 +15,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const team = await prisma.team.update({
     where: { id },
-    data: { name: data.name, color: data.color },
+    data: {
+      name: data.name,
+      color: data.color,
+      ...(data.neutralBadge !== undefined && { neutralBadge: data.neutralBadge }),
+      ...(data.anonymous !== undefined && { anonymous: data.anonymous }),
+    },
   });
 
   await logActivity({

@@ -11,6 +11,7 @@ interface Team {
   name: string;
   color: string;
   number: number;
+  anonymous?: boolean;
   _count: { registrations: number };
 }
 
@@ -121,7 +122,14 @@ export default function CategoriesPage() {
                       <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
                     </td>
                     <td className="px-4 py-3 font-mono">{team.number}</td>
-                    <td className="px-4 py-3 font-medium">{team.name}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {team.name}
+                      {team.anonymous && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                          Anonyme
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">{team._count.registrations}</td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
@@ -146,7 +154,14 @@ export default function CategoriesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
-                    <span className="font-medium text-slate-700">{team.name}</span>
+                    <span className="font-medium text-slate-700">
+                      {team.name}
+                      {team.anonymous && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                          Anonyme
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <span className="font-mono text-slate-500 text-sm">#{team.number}</span>
                 </div>

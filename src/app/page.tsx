@@ -166,6 +166,7 @@ export default function Home() {
         <RegistrationForm
           onSubmit={handleSubmit}
           submitLabel="S'inscrire"
+          excludeAnonymousTeams={true}
           captchaWidget={
             recaptchaEnabled && recaptchaSiteKey ? (
               <div className="mb-4">

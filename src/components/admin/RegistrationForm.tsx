@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 interface Team {
   id: string;
   name: string;
+  anonymous?: boolean;
 }
 
 const ID_DOCUMENT_TYPES = [
@@ -32,6 +33,7 @@ interface RegistrationFormProps {
   showCaptcha?: boolean;
   captchaWidget?: React.ReactNode;
   defaultValues?: RegistrationDefaultValues;
+  excludeAnonymousTeams?: boolean;
 }
 
 const PHOTO_RATIO = 35 / 45; // 35×45mm - standard photo d'identité
@@ -58,6 +60,7 @@ export function RegistrationForm({
   submitLabel = "Soumettre",
   captchaWidget,
   defaultValues,
+  excludeAnonymousTeams = false,
 }: RegistrationFormProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,12 +70,20 @@ export function RegistrationForm({
   const [idDocFileName, setIdDocFileName] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const idDocInputRef = useRef<HTMLInputElement>(null);
+  const [selectedTeamAnonymous, setSelectedTeamAnonymous] = useState(false);
 
   useEffect(() => {
-    fetch("/api/teams")
+    const params = new URLSearchParams();
+    if (excludeAnonymousTeams) params.set("excludeAnonymous", "true");
+    fetch(`/api/teams?${params.toString()}`)
       .then((r) => r.json())
-      .then(setTeams);
-  }, []);
+      .then((data) => setTeams(data.data || data));
+  }, [excludeAnonymousTeams]);
+
+  function handleTeamChange(teamId: string) {
+    const team = teams.find((t) => t.id === teamId);
+    setSelectedTeamAnonymous(team?.anonymous ?? false);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -80,24 +91,27 @@ export function RegistrationForm({
     setIdDocError(null);
 
     const formData = new FormData(e.currentTarget);
-    const idDocFile = formData.get("idDocument") as File | null;
-    const photoFile = formData.get("photo") as File | null;
 
-    if (!idDocFile || idDocFile.size === 0) {
-      setIdDocError("Le document d'identité est obligatoire.");
-      return;
-    }
+    if (!selectedTeamAnonymous) {
+      const idDocFile = formData.get("idDocument") as File | null;
+      const photoFile = formData.get("photo") as File | null;
 
-    if (!photoFile || photoFile.size === 0) {
-      setPhotoError("La photo d'identité est obligatoire.");
-      return;
-    }
-
-    if (photoFile.size > 0) {
-      const valid = await validatePhotoRatio(photoFile);
-      if (!valid) {
-        setPhotoError("La photo doit avoir un ratio 35:45 (ex. 350×450px, 700×900px).");
+      if (!idDocFile || idDocFile.size === 0) {
+        setIdDocError("Le document d'identité est obligatoire.");
         return;
+      }
+
+      if (!photoFile || photoFile.size === 0) {
+        setPhotoError("La photo d'identité est obligatoire.");
+        return;
+      }
+
+      if (photoFile.size > 0) {
+        const valid = await validatePhotoRatio(photoFile);
+        if (!valid) {
+          setPhotoError("La photo doit avoir un ratio 35:45 (ex. 350×450px, 700×900px).");
+          return;
+        }
       }
     }
 
@@ -108,25 +122,26 @@ export function RegistrationForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Input label="Nom (tel que sur le document d'identité)" name="lastName" required defaultValue={defaultValues?.lastName} />
-      <Input label="Prénom(s) (tel que sur le document d'identité)" name="firstName" required defaultValue={defaultValues?.firstName} />
-      <Input label="Email" name="email" type="email" required defaultValue={defaultValues?.email} />
-      <Input label="Structure / Organisation" name="structure" required defaultValue={defaultValues?.structure} />
+      <Input label="Nom (tel que sur le document d'identité)" name="lastName" required={!selectedTeamAnonymous} defaultValue={defaultValues?.lastName} />
+      <Input label="Prénom(s) (tel que sur le document d'identité)" name="firstName" required={!selectedTeamAnonymous} defaultValue={defaultValues?.firstName} />
+      <Input label="Email" name="email" type="email" required={!selectedTeamAnonymous} defaultValue={defaultValues?.email} />
+      <Input label="Structure / Organisation" name="structure" required={!selectedTeamAnonymous} defaultValue={defaultValues?.structure} />
       <Select
         label="Catégorie"
         name="teamId"
         options={teams.map((t) => ({ value: t.id, label: t.name }))}
         required
         defaultValue={defaultValues?.teamId}
+        onChange={(e) => handleTeamChange(e.target.value)}
       />
       <Select
         label="Type de document d'identité"
         name="idDocumentType"
         options={ID_DOCUMENT_TYPES}
-        required
+        required={!selectedTeamAnonymous}
         defaultValue={defaultValues?.idDocumentType}
       />
-      <Input label="Numéro du document d'identité" name="idDocumentNumber" required defaultValue={defaultValues?.idDocumentNumber} />
+      <Input label="Numéro du document d'identité" name="idDocumentNumber" required={!selectedTeamAnonymous} defaultValue={defaultValues?.idDocumentNumber} />
       <div className="mb-4">
         <label className="block text-sm font-medium text-slate-700 mb-1">Document d&apos;identité (scan ou photo)</label>
         <input
