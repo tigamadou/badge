@@ -37,19 +37,19 @@ describe("formatBadgeName", () => {
 });
 
 describe("formatBadgeStructure", () => {
-  it("returns structure as-is when within 30 characters", () => {
+  it("returns structure as-is when within 28 characters", () => {
     expect(formatBadgeStructure("Ministère de la Santé")).toBe("Ministère de la Santé");
   });
 
-  it("truncates with a dot when exceeding 30 characters", () => {
+  it("truncates with ... when exceeding 28 characters", () => {
     const long = "Ministère de l'Enseignement Supérieur et de la Recherche";
     const result = formatBadgeStructure(long);
-    expect(result.length).toBe(30);
-    expect(result.endsWith(".")).toBe(true);
+    expect(result.length).toBe(31); // 28 + "..."
+    expect(result.endsWith("...")).toBe(true);
   });
 
-  it("returns structure as-is when exactly 30 characters", () => {
-    const exact = "A".repeat(30);
+  it("returns structure as-is when exactly 28 characters", () => {
+    const exact = "A".repeat(28);
     expect(formatBadgeStructure(exact)).toBe(exact);
   });
 });
