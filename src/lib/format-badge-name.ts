@@ -1,24 +1,28 @@
-const MAX_BADGE_NAME_LENGTH = 18;
+const MAX_BADGE_NAME_LENGTH = 20;
 const MAX_BADGE_STRUCTURE_LENGTH = 28;
 
 export function formatBadgeName(firstName: string, lastName: string): string {
   const upperLastName = lastName.toUpperCase();
-  const fullName = `${firstName} ${upperLastName}`;
+  const parts = firstName.split(" ").filter(Boolean);
 
-  if (fullName.length <= MAX_BADGE_NAME_LENGTH) {
-    return fullName;
+  const buildName = (nameParts: string[]) =>
+    `${nameParts.join(" ")} ${upperLastName}`;
+
+  if (buildName(parts).length <= MAX_BADGE_NAME_LENGTH) {
+    return buildName(parts);
   }
 
-  // Space + lastName must always be visible
-  const availableForFirstName = MAX_BADGE_NAME_LENGTH - 1 - upperLastName.length;
-
-  if (availableForFirstName >= 2) {
-    // Truncate firstName and add "."
-    return `${firstName.substring(0, availableForFirstName - 1)}. ${upperLastName}`;
+  // Progressively shorten first names from right to left
+  const shortened = [...parts];
+  for (let i = shortened.length - 1; i >= 0; i--) {
+    shortened[i] = `${shortened[i][0]}.`;
+    if (buildName(shortened).length <= MAX_BADGE_NAME_LENGTH) {
+      return buildName(shortened);
+    }
   }
 
-  // Edge case: lastName alone is too long or leaves no room for firstName
-  return upperLastName.substring(0, MAX_BADGE_NAME_LENGTH);
+  // All first names are shortened but still too long — return as-is (best effort)
+  return buildName(shortened);
 }
 
 export function formatBadgeStructure(structure: string): string {

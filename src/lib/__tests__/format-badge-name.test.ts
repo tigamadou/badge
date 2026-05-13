@@ -2,37 +2,47 @@ import { describe, it, expect } from "vitest";
 import { formatBadgeName, formatBadgeStructure } from "../format-badge-name";
 
 describe("formatBadgeName", () => {
-  it("returns full name when within 18 characters", () => {
+  it("returns full name when within 20 characters", () => {
     expect(formatBadgeName("Jean", "Dupont")).toBe("Jean DUPONT");
-  });
-
-  it("returns full name when exactly 18 characters", () => {
-    // "Mamadou DIALLO_BA" = 18 chars (not over limit, but let's test boundary)
-    // "Ali KOUASSI_BARRY" = 17 chars → under limit
-    expect(formatBadgeName("Ali", "Kouassi_Barry")).toBe("Ali KOUASSI_BARRY");
-  });
-
-  it("truncates firstName when full name exceeds 18 characters", () => {
-    // "Jean-Baptiste KOUASSI" = 21 chars
-    const result = formatBadgeName("Jean-Baptiste", "Kouassi");
-    expect(result.length).toBeLessThanOrEqual(18);
-    expect(result).toContain("KOUASSI");
-    expect(result).toMatch(/^J.*\. KOUASSI$/);
-  });
-
-  it("always keeps lastName fully visible", () => {
-    const result = formatBadgeName("Jean-Baptiste", "Kouassi");
-    expect(result.endsWith("KOUASSI")).toBe(true);
-  });
-
-  it("handles very long lastName that fills all 18 characters", () => {
-    // lastName alone = "ABCDEFGHIJKLMNOPQR" = 18 chars
-    const result = formatBadgeName("Jean", "abcdefghijklmnopqr");
-    expect(result.length).toBeLessThanOrEqual(18);
   });
 
   it("uppercases the lastName", () => {
     expect(formatBadgeName("Jean", "dupont")).toBe("Jean DUPONT");
+  });
+
+  it("shortens rightmost first names first", () => {
+    // "Jean François Alain DUPOND" = 26 chars > 20
+    // Step 1: "Jean François A. DUPOND" = 23 > 20
+    // Step 2: "Jean F. A. DUPOND" = 17 <= 20 ✓
+    expect(formatBadgeName("Jean François Alain", "Dupond")).toBe("Jean F. A. DUPOND");
+  });
+
+  it("shortens only as many names as needed", () => {
+    // "Marie Claire DUVAL" = 18 <= 20 → no shortening
+    expect(formatBadgeName("Marie Claire", "Duval")).toBe("Marie Claire DUVAL");
+  });
+
+  it("shortens all first names if needed", () => {
+    // "Jean François Alain KOUASSI-BARRY" = 33 > 20
+    // All shortened: "J. F. A. KOUASSI-BARRY" = 22 > 20 (best effort)
+    const result = formatBadgeName("Jean François Alain", "Kouassi-Barry");
+    expect(result).toContain("KOUASSI-BARRY");
+    expect(result).toBe("J. F. A. KOUASSI-BARRY");
+  });
+
+  it("handles single firstName that fits", () => {
+    expect(formatBadgeName("Ali", "Ba")).toBe("Ali BA");
+  });
+
+  it("shortens single firstName when too long", () => {
+    // "Jean-Baptiste KOUASSI-DIALLO" = 28 > 20
+    // Shortened: "J. KOUASSI-DIALLO" = 17 <= 20 ✓
+    expect(formatBadgeName("Jean-Baptiste", "Kouassi-Diallo")).toBe("J. KOUASSI-DIALLO");
+  });
+
+  it("always keeps lastName fully visible", () => {
+    const result = formatBadgeName("Jean François Alain", "Dupond");
+    expect(result.endsWith("DUPOND")).toBe(true);
   });
 });
 
