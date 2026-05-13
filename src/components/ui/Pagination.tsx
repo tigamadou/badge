@@ -71,7 +71,7 @@ export function Pagination({
           className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
             page <= 1
               ? "opacity-50 cursor-not-allowed text-slate-600"
-              : "text-slate-600 hover:bg-slate-100"
+              : "text-slate-600 hover:bg-slate-100 cursor-pointer"
           }`}
           aria-label="Page précédente"
         >
@@ -93,8 +93,8 @@ export function Pagination({
               onClick={() => onPageChange(p)}
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 p === page
-                  ? "bg-indigo-600 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-indigo-600 text-white cursor-pointer"
+                  : "text-slate-600 hover:bg-slate-100 cursor-pointer"
               }`}
               aria-current={p === page ? "page" : undefined}
             >
@@ -110,7 +110,7 @@ export function Pagination({
           className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
             page >= totalPages
               ? "opacity-50 cursor-not-allowed text-slate-600"
-              : "text-slate-600 hover:bg-slate-100"
+              : "text-slate-600 hover:bg-slate-100 cursor-pointer"
           }`}
           aria-label="Page suivante"
         >
