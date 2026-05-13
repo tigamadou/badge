@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { UserForm } from "@/components/admin/UserForm";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface User {
   id: string;
@@ -15,18 +16,37 @@ interface User {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+
   const [contactsConfigured, setContactsConfigured] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  async function fetchUsers() {
-    const res = await fetch("/api/users");
-    setUsers(await res.json());
-  }
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(pageSize));
+
+    const res = await fetch(`/api/users?${params.toString()}`);
+    const data = await res.json();
+    setUsers(data.data);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setLoading(false);
+  }, [page, pageSize]);
 
   useEffect(() => {
     fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((settings) => {
       if (settings) {
         setContactsConfigured(!!(settings.contactEmail && settings.contactPhone));
@@ -59,7 +79,9 @@ export default function UsersPage() {
 
   async function handleDelete() {
     if (!deleteId) return;
+    setDeleting(true);
     await fetch(`/api/users/${deleteId}`, { method: "DELETE" });
+    setDeleting(false);
     setDeleteId(null);
     fetchUsers();
   }
@@ -67,8 +89,8 @@ export default function UsersPage() {
   const roleLabels: Record<string, string> = {
     SUPER_ADMIN: "Super Admin",
     ADMIN: "Admin",
-    MODERATEUR: "Modérateur",
-    OPERATOR: "Opérateur",
+    MODERATEUR: "Moderateur",
+    OPERATOR: "Operateur",
   };
 
   return (
@@ -77,7 +99,7 @@ export default function UsersPage() {
         <h1 className="text-xl font-semibold text-slate-900">Utilisateurs</h1>
         <div className="flex items-center gap-3">
           {!contactsConfigured && (
-            <span className="text-xs text-amber-600">Contacts non configurés</span>
+            <span className="text-xs text-amber-600">Contacts non configures</span>
           )}
           <Button onClick={() => setShowForm(true)} disabled={!contactsConfigured}>Nouvel utilisateur</Button>
         </div>
@@ -106,45 +128,73 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{user.name}</td>
-                  <td className="px-4 py-3">{user.email}</td>
-                  <td className="px-4 py-3">{roleLabels[user.role] || user.role}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
-                    <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-8 text-slate-500">Chargement...</td>
                 </tr>
-              ))}
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-8 text-slate-400">Aucun utilisateur trouve.</td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3 font-medium">{user.name}</td>
+                    <td className="px-4 py-3">{user.email}</td>
+                    <td className="px-4 py-3">{roleLabels[user.role] || user.role}</td>
+                    <td className="px-4 py-3 text-right space-x-2">
+                      <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
+                      <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Mobile cards */}
         <div className="md:hidden space-y-3 p-4">
-          {users.map((user) => (
-            <div key={user.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-slate-700">{user.name}</span>
-                <span className="text-xs text-slate-500 bg-slate-50/50 px-2 py-1 rounded-xl">{roleLabels[user.role] || user.role}</span>
+          {loading ? (
+            <p className="text-center py-8 text-slate-500">Chargement...</p>
+          ) : users.length === 0 ? (
+            <p className="text-center py-8 text-slate-400">Aucun utilisateur trouve.</p>
+          ) : (
+            users.map((user) => (
+              <div key={user.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-700">{user.name}</span>
+                  <span className="text-xs text-slate-500 bg-slate-50/50 px-2 py-1 rounded-xl">{roleLabels[user.role] || user.role}</span>
+                </div>
+                <div className="text-sm text-slate-500">{user.email}</div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
+                  <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
+                </div>
               </div>
-              <div className="text-sm text-slate-500">{user.email}</div>
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => setEditingUser(user)}>Modifier</Button>
-                <Button variant="danger" onClick={() => setDeleteId(user.id)}>Supprimer</Button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-4">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        />
       </div>
 
       <Modal
         open={!!deleteId}
         title="Supprimer l'utilisateur ?"
         onConfirm={handleDelete}
-        onCancel={() => setDeleteId(null)}
-        confirmLabel="Supprimer"
+        onCancel={() => { if (!deleting) setDeleteId(null); }}
+        confirmLabel={deleting ? "Suppression..." : "Supprimer"}
         confirmVariant="danger"
       >
         <p>Cette action est irreversible.</p>

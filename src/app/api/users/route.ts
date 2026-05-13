@@ -7,18 +7,30 @@ import crypto from "crypto";
 import { sendUserInvitation, getContactInfo, areContactsConfigured } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !checkRole(session.user.role, "SUPER_ADMIN")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const users = await prisma.user.findMany({
-    where: { role: { not: "SUPER_ADMIN" } },
-    select: { id: true, email: true, name: true, role: true, createdAt: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(users);
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+
+  const where = { role: { not: "SUPER_ADMIN" } } as const;
+
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ]);
+
+  return NextResponse.json({ data: users, total, page, totalPages: Math.ceil(total / limit) });
 }
 
 export async function POST(req: NextRequest) {

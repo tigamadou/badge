@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TeamForm } from "@/components/admin/TeamForm";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface Team {
   id: string;
@@ -15,16 +16,34 @@ interface Team {
 
 export default function CategoriesPage() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [loading, setLoading] = useState(false);
+
   const [showForm, setShowForm] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  async function fetchTeams() {
-    const res = await fetch("/api/teams");
-    setTeams(await res.json());
-  }
+  const fetchTeams = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(pageSize));
 
-  useEffect(() => { fetchTeams(); }, []);
+    const res = await fetch(`/api/teams?${params.toString()}`);
+    const data = await res.json();
+    setTeams(data.data);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    setLoading(false);
+  }, [page, pageSize]);
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
 
   async function handleCreate(data: { name: string; color: string; number: number }) {
     await fetch("/api/teams", {
@@ -49,7 +68,9 @@ export default function CategoriesPage() {
 
   async function handleDelete() {
     if (!deleteId) return;
+    setDeleting(true);
     await fetch(`/api/teams/${deleteId}`, { method: "DELETE" });
+    setDeleting(false);
     setDeleteId(null);
     fetchTeams();
   }
@@ -85,53 +106,81 @@ export default function CategoriesPage() {
               </tr>
             </thead>
             <tbody>
-              {teams.map((team) => (
-                <tr key={team.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
-                  </td>
-                  <td className="px-4 py-3 font-mono">{team.number}</td>
-                  <td className="px-4 py-3 font-medium">{team.name}</td>
-                  <td className="px-4 py-3">{team._count.registrations}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
-                    <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-slate-500">Chargement...</td>
                 </tr>
-              ))}
+              ) : teams.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-slate-400">Aucune categorie trouvee.</td>
+                </tr>
+              ) : (
+                teams.map((team) => (
+                  <tr key={team.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
+                    </td>
+                    <td className="px-4 py-3 font-mono">{team.number}</td>
+                    <td className="px-4 py-3 font-medium">{team.name}</td>
+                    <td className="px-4 py-3">{team._count.registrations}</td>
+                    <td className="px-4 py-3 text-right space-x-2">
+                      <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
+                      <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Mobile cards */}
         <div className="md:hidden space-y-3 p-4">
-          {teams.map((team) => (
-            <div key={team.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
-                  <span className="font-medium text-slate-700">{team.name}</span>
+          {loading ? (
+            <p className="text-center py-8 text-slate-500">Chargement...</p>
+          ) : teams.length === 0 ? (
+            <p className="text-center py-8 text-slate-400">Aucune categorie trouvee.</p>
+          ) : (
+            teams.map((team) => (
+              <div key={team.id} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded" style={{ backgroundColor: team.color }} />
+                    <span className="font-medium text-slate-700">{team.name}</span>
+                  </div>
+                  <span className="font-mono text-slate-500 text-sm">#{team.number}</span>
                 </div>
-                <span className="font-mono text-slate-500 text-sm">#{team.number}</span>
+                <div className="text-sm text-slate-500">
+                  {team._count.registrations} inscription(s)
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
+                  <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
+                </div>
               </div>
-              <div className="text-sm text-slate-500">
-                {team._count.registrations} inscription(s)
-              </div>
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={() => setEditingTeam(team)}>Modifier</Button>
-                <Button variant="danger" onClick={() => setDeleteId(team.id)}>Supprimer</Button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-4">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        />
       </div>
 
       <Modal
         open={!!deleteId}
         title="Supprimer la categorie ?"
         onConfirm={handleDelete}
-        onCancel={() => setDeleteId(null)}
-        confirmLabel="Supprimer"
+        onCancel={() => { if (!deleting) setDeleteId(null); }}
+        confirmLabel={deleting ? "Suppression..." : "Supprimer"}
         confirmVariant="danger"
       >
         <p>Cette action est irreversible.</p>

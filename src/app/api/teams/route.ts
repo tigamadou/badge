@@ -4,12 +4,22 @@ import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
-export async function GET() {
-  const teams = await prisma.team.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { registrations: true } } },
-  });
-  return NextResponse.json(teams);
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+
+  const [total, teams] = await Promise.all([
+    prisma.team.count(),
+    prisma.team.findMany({
+      orderBy: { name: "asc" },
+      include: { _count: { select: { registrations: true } } },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ]);
+
+  return NextResponse.json({ data: teams, total, page, totalPages: Math.ceil(total / limit) });
 }
 
 export async function POST(req: NextRequest) {

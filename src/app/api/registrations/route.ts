@@ -6,17 +6,43 @@ import { generateId } from "@/lib/generate-id";
 import { sendRegistrationConfirmation } from "@/lib/mail";
 import { logActivity } from "@/lib/activity-log";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !checkRole(session.user.role, "MODERATEUR")) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const registrations = await prisma.registration.findMany({
-    include: { team: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(registrations);
+  const { searchParams } = new URL(req.url);
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+  const status = searchParams.get("status");
+  const teamId = searchParams.get("teamId");
+  const search = searchParams.get("search");
+
+  const where: Record<string, unknown> = {};
+  if (status) where.status = status;
+  if (teamId) where.teamId = teamId;
+  if (search) {
+    where.OR = [
+      { lastName: { contains: search } },
+      { firstName: { contains: search } },
+      { email: { contains: search } },
+      { structure: { contains: search } },
+    ];
+  }
+
+  const [total, registrations] = await Promise.all([
+    prisma.registration.count({ where }),
+    prisma.registration.findMany({
+      where,
+      include: { team: true },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+  ]);
+
+  return NextResponse.json({ data: registrations, total, page, totalPages: Math.ceil(total / limit) });
 }
 
 export async function POST(req: NextRequest) {

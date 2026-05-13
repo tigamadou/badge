@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface ActivityLog {
   id: string;
@@ -274,6 +275,7 @@ export default function ActivityLogsPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
 
@@ -284,12 +286,13 @@ export default function ActivityLogsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const limit = 30;
-
   useEffect(() => {
-    fetch("/api/users")
+    fetch("/api/users?limit=100")
       .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setUsers(data); });
+      .then((res) => {
+        if (res.data && Array.isArray(res.data)) setUsers(res.data);
+        else if (Array.isArray(res)) setUsers(res);
+      });
   }, []);
 
   const fetchLogs = useCallback(async () => {
@@ -301,7 +304,7 @@ export default function ActivityLogsPage() {
     if (dateFrom) params.set("startDate", dateFrom);
     if (dateTo) params.set("endDate", dateTo);
     params.set("page", String(page));
-    params.set("limit", String(limit));
+    params.set("limit", String(pageSize));
 
     const res = await fetch(`/api/activity-logs?${params.toString()}`);
     const data = await res.json();
@@ -309,7 +312,7 @@ export default function ActivityLogsPage() {
     setTotal(data.total);
     setTotalPages(data.totalPages);
     setLoading(false);
-  }, [typeFilter, userFilter, search, dateFrom, dateTo, page]);
+  }, [typeFilter, userFilter, search, dateFrom, dateTo, page, pageSize]);
 
   useEffect(() => {
     fetchLogs();
@@ -446,27 +449,16 @@ export default function ActivityLogsPage() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-4 mt-4">
-          <button
-            className="px-4 py-2 text-sm border border-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Precedent
-          </button>
-          <span className="text-sm text-slate-600">
-            Page {page} sur {totalPages}
-          </span>
-          <button
-            className="px-4 py-2 text-sm border border-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Suivant
-          </button>
-        </div>
-      )}
+      <div className="mt-4">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        />
+      </div>
 
       {/* Modale detail */}
       {selectedLog && (
