@@ -52,29 +52,50 @@ const TYPE_LABELS: Record<string, string> = {
   SETTINGS_UPDATED: "Parametres modifies",
 };
 
-const TYPE_COLORS: Record<string, string> = {
-  REGISTRATION_CREATED: "bg-emerald-100 text-emerald-700",
-  REGISTRATION_APPROVED: "bg-emerald-100 text-emerald-700",
-  REGISTRATION_REJECTED: "bg-emerald-100 text-emerald-700",
-  REGISTRATION_UPDATED: "bg-emerald-100 text-emerald-700",
-  REGISTRATION_DELETED: "bg-emerald-100 text-emerald-700",
-  BADGE_PRINTED: "bg-purple-100 text-purple-700",
-  BADGE_BATCH_PRINTED: "bg-purple-100 text-purple-700",
-  BADGE_ALL_ACCESS_TOGGLED: "bg-purple-100 text-purple-700",
-  BADGE_EXPORTED: "bg-purple-100 text-purple-700",
-  BADGE_BATCH_EXPORTED: "bg-purple-100 text-purple-700",
-  BADGE_SCANNED: "bg-blue-100 text-blue-700",
-  USER_CREATED: "bg-orange-100 text-orange-700",
-  USER_UPDATED: "bg-orange-100 text-orange-700",
-  USER_DELETED: "bg-orange-100 text-orange-700",
-  USER_PASSWORD_SET: "bg-orange-100 text-orange-700",
-  USER_LOGIN: "bg-orange-100 text-orange-700",
-  CATEGORY_CREATED: "bg-slate-100 text-slate-700",
-  CATEGORY_UPDATED: "bg-slate-100 text-slate-700",
-  CATEGORY_DELETED: "bg-slate-100 text-slate-700",
-  EVENT_UPDATED: "bg-slate-100 text-slate-700",
-  SETTINGS_UPDATED: "bg-slate-100 text-slate-700",
+const GROUP_BORDERS: Record<string, string> = {
+  REGISTRATION: "border-l-2 border-emerald-500",
+  BADGE: "border-l-2 border-purple-500",
+  USER: "border-l-2 border-orange-500",
+  CATEGORY: "border-l-2 border-slate-400",
+  CONFIG: "border-l-2 border-slate-400",
 };
+
+const ACTION_COLORS: Record<string, string> = {
+  REGISTRATION_CREATED: "text-emerald-700",
+  REGISTRATION_APPROVED: "text-emerald-700",
+  REGISTRATION_REJECTED: "text-rose-700",
+  REGISTRATION_UPDATED: "text-amber-700",
+  REGISTRATION_DELETED: "text-rose-700",
+  REGISTRATION_RESUBMITTED: "text-amber-700",
+  BADGE_PRINTED: "text-emerald-700",
+  BADGE_BATCH_PRINTED: "text-emerald-700",
+  BADGE_ALL_ACCESS_TOGGLED: "text-amber-700",
+  BADGE_EXPORTED: "text-slate-600",
+  BADGE_BATCH_EXPORTED: "text-slate-600",
+  BADGE_SCANNED: "text-slate-600",
+  USER_CREATED: "text-emerald-700",
+  USER_UPDATED: "text-amber-700",
+  USER_DELETED: "text-rose-700",
+  USER_PASSWORD_SET: "text-amber-700",
+  USER_LOGIN: "text-slate-600",
+  CATEGORY_CREATED: "text-emerald-700",
+  CATEGORY_UPDATED: "text-amber-700",
+  CATEGORY_DELETED: "text-rose-700",
+  EVENT_UPDATED: "text-amber-700",
+  SETTINGS_UPDATED: "text-amber-700",
+};
+
+function getTypeColor(type: string): string {
+  const group = type.startsWith("BADGE_SCANNED") ? "BADGE"
+    : type.startsWith("REGISTRATION_") ? "REGISTRATION"
+    : type.startsWith("BADGE_") ? "BADGE"
+    : type.startsWith("USER_") ? "USER"
+    : type.startsWith("CATEGORY_") ? "CATEGORY"
+    : "CONFIG";
+  const border = GROUP_BORDERS[group] || "";
+  const textColor = ACTION_COLORS[type] || "text-slate-600";
+  return `${textColor} ${border}`;
+}
 
 function getDescription(log: ActivityLog): string {
   const d = log.details;
@@ -175,7 +196,7 @@ function DetailPanel({ log, onClose }: { log: ActivityLog; onClose: () => void }
         <div className="p-5 space-y-4">
           {/* Type et date */}
           <div className="flex items-center justify-between">
-            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${TYPE_COLORS[log.type] || "bg-slate-100 text-slate-700"}`}>
+            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getTypeColor(log.type)}`}>
               {TYPE_LABELS[log.type] || log.type}
             </span>
             <span className="text-sm text-slate-500">{formatDate(log.createdAt)}</span>
@@ -381,7 +402,7 @@ export default function ActivityLogsPage() {
                 >
                   <td className="px-4 py-3 whitespace-nowrap">{formatDate(log.createdAt)}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[log.type] || "bg-slate-100 text-slate-700"}`}>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(log.type)}`}>
                       {TYPE_LABELS[log.type] || log.type}
                     </span>
                   </td>
@@ -409,7 +430,7 @@ export default function ActivityLogsPage() {
               onClick={() => setSelectedLog(log)}
             >
               <div className="flex justify-between items-start">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[log.type] || "bg-slate-100 text-slate-700"}`}>
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getTypeColor(log.type)}`}>
                   {TYPE_LABELS[log.type] || log.type}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(log.createdAt)}</span>
