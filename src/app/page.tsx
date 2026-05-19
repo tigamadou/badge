@@ -21,6 +21,8 @@ export default function Home() {
   const [event, setEvent] = useState<EventInfo | null>(null);
   const [recaptchaEnabled, setRecaptchaEnabled] = useState(false);
   const [recaptchaSiteKey, setRecaptchaSiteKey] = useState("");
+  const [registrationOpen, setRegistrationOpen] = useState(true);
+  const [eventLoaded, setEventLoaded] = useState(false);
   const [canResend, setCanResend] = useState(false);
   const [resendEmail, setResendEmail] = useState("");
   const [resending, setResending] = useState(false);
@@ -29,7 +31,13 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/event")
       .then((r) => r.json())
-      .then(setEvent);
+      .then((eventData) => {
+        setEvent(eventData);
+        if (eventData) {
+          setRegistrationOpen(eventData.registrationOpen ?? true);
+        }
+        setEventLoaded(true);
+      });
 
     fetch("/api/settings")
       .then((r) => r.json())
@@ -127,6 +135,20 @@ export default function Home() {
     setResent(true);
   }
 
+  if (!eventLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <img
+            src="/icon.png"
+            alt="Logo"
+            className="h-24 w-auto object-contain animate-pulse"
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12">
       <div className="w-full max-w-lg bg-white rounded-lg shadow p-8">
@@ -145,40 +167,57 @@ export default function Home() {
             {event.title} — {event.location}, {formatEventDate(event.date)}
           </p>
         )}
-        {error && (
-          <div className="mb-4">
-            <p className="text-sm text-red-500">{error}</p>
-            {canResend && !resent && (
-              <button
-                type="button"
-                onClick={handleResendEditLink}
-                disabled={resending}
-                className="mt-2 text-sm text-indigo-600 hover:text-indigo-700 underline"
-              >
-                {resending ? "Envoi en cours..." : "Recevoir un lien de modification"}
-              </button>
-            )}
-            {resent && (
-              <p className="mt-2 text-sm text-green-600">Un lien vous a été envoyé par email.</p>
-            )}
+        {!registrationOpen ? (
+          <div className="text-center py-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+              <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">Inscriptions fermées</h2>
+            <p className="text-sm text-slate-500">
+              Les inscriptions ne sont plus ouvertes pour le moment.<br />
+              Merci de votre compréhension.
+            </p>
           </div>
-        )}
-        <RegistrationForm
-          onSubmit={handleSubmit}
-          submitLabel="S'inscrire"
-          excludeAnonymousTeams={true}
-          captchaWidget={
-            recaptchaEnabled && recaptchaSiteKey ? (
+        ) : (
+          <>
+            {error && (
               <div className="mb-4">
-                <ReCAPTCHA
-                  ref={captchaRef}
-                  sitekey={recaptchaSiteKey}
-                  onChange={(token) => setCaptchaToken(token)}
-                />
+                <p className="text-sm text-red-500">{error}</p>
+                {canResend && !resent && (
+                  <button
+                    type="button"
+                    onClick={handleResendEditLink}
+                    disabled={resending}
+                    className="mt-2 text-sm text-indigo-600 hover:text-indigo-700 underline"
+                  >
+                    {resending ? "Envoi en cours..." : "Recevoir un lien de modification"}
+                  </button>
+                )}
+                {resent && (
+                  <p className="mt-2 text-sm text-green-600">Un lien vous a été envoyé par email.</p>
+                )}
               </div>
-            ) : undefined
-          }
-        />
+            )}
+            <RegistrationForm
+              onSubmit={handleSubmit}
+              submitLabel="S'inscrire"
+              excludeAnonymousTeams={true}
+              captchaWidget={
+                recaptchaEnabled && recaptchaSiteKey ? (
+                  <div className="mb-4">
+                    <ReCAPTCHA
+                      ref={captchaRef}
+                      sitekey={recaptchaSiteKey}
+                      onChange={(token) => setCaptchaToken(token)}
+                    />
+                  </div>
+                ) : undefined
+              }
+            />
+          </>
+        )}
       </div>
     </div>
   );

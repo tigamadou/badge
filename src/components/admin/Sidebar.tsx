@@ -67,7 +67,7 @@ export function Sidebar({ userRole, mobileOpen, onClose }: SidebarProps) {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-col md:w-56 bg-slate-900 min-h-screen p-4">
-        <h2 className="text-lg font-semibold text-white mb-8 px-2">Investiture</h2>
+        <h2 className="text-lg font-semibold text-white mb-8 px-2">Badge</h2>
         {navContent}
       </aside>
 
@@ -85,7 +85,7 @@ export function Sidebar({ userRole, mobileOpen, onClose }: SidebarProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h2 className="text-2xl font-semibold text-white mb-10">Investiture</h2>
+            <h2 className="text-2xl font-semibold text-white mb-10">Badge</h2>
             <nav className="space-y-2 w-full max-w-xs">
               {visibleItems.map((item) => {
                 const isActive = pathname === item.href;

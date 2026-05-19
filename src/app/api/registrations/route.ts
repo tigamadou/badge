@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { email, lastName, firstName, structure, teamId, photo, idDocumentType, idDocumentNumber, idDocument, captchaToken } = body;
 
+  // Vérifier si les inscriptions sont ouvertes (sauf pour les admins authentifiés)
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    const event = await prisma.event.findFirst();
+    if (event && !event.registrationOpen) {
+      return NextResponse.json({ error: "Les inscriptions sont actuellement fermées." }, { status: 403 });
+    }
+  }
+
   if (!teamId) {
     return NextResponse.json({ error: "Catégorie requise" }, { status: 400 });
   }
@@ -57,8 +66,6 @@ export async function POST(req: NextRequest) {
   if (!team) {
     return NextResponse.json({ error: "Catégorie non trouvée" }, { status: 400 });
   }
-
-  const session = await getServerSession(authOptions);
 
   // Les catégories anonymes ne sont accessibles qu'aux utilisateurs authentifiés
   if (team.anonymous) {

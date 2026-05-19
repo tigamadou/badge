@@ -15,17 +15,24 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
-  const { title, location, date, logo } = await req.json();
+  const { title, location, date, logo, registrationOpen } = await req.json();
   const dateValue = new Date(date);
+
+  // Seul le SUPER_ADMIN peut modifier l'ouverture des inscriptions
+  const isSuperAdmin = checkRole(session.user.role, "SUPER_ADMIN");
+  const baseData = { title, location, date: dateValue, logo };
+  const data = isSuperAdmin && registrationOpen !== undefined
+    ? { ...baseData, registrationOpen }
+    : baseData;
 
   const existing = await prisma.event.findFirst();
   let event;
   if (!existing) {
-    event = await prisma.event.create({ data: { title, location, date: dateValue, logo } });
+    event = await prisma.event.create({ data });
   } else {
     event = await prisma.event.update({
       where: { id: existing.id },
-      data: { title, location, date: dateValue, logo },
+      data,
     });
   }
 

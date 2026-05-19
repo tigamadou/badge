@@ -27,11 +27,12 @@ enum Role {
 }
 
 model Event {
-  id       String   @id @default(cuid())
-  title    String
-  location String
-  date     DateTime
-  logo     String?
+  id               String   @id @default(cuid())
+  title            String
+  location         String
+  date             DateTime
+  logo             String?
+  registrationOpen Boolean  @default(true)
 }
 
 model Team {
