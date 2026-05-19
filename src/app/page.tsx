@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import ReCAPTCHA from "react-google-recaptcha";
 import { RegistrationForm } from "@/components/admin/RegistrationForm";
 import { formatEventDate } from "@/lib/format-date";
-import Image from "next/image";
 
 interface EventInfo {
   title: string;
