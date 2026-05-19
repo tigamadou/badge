@@ -152,6 +152,8 @@ export default function RegistrationDetailPage() {
 
   if (!registration) return <p>Chargement...</p>;
 
+  const isAnonymous = !registration.lastName && !registration.firstName;
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
@@ -163,7 +165,7 @@ export default function RegistrationDetailPage() {
         <h1 className="text-xl font-semibold text-slate-900">Détail de l&apos;inscription</h1>
       </div>
 
-      {!duplicatesLoading && duplicates.length > 0 && (
+      {!isAnonymous && !duplicatesLoading && duplicates.length > 0 && (
         <div className={`mb-4 rounded-xl border px-4 py-3 ${
           duplicates.length >= 3
             ? "bg-rose-50 border-rose-200"
@@ -350,11 +352,20 @@ export default function RegistrationDetailPage() {
               <Link href="/admin/badges" className="text-sm text-indigo-600 hover:text-indigo-700 block">
                 Voir le badge dans la page Badges
               </Link>
-              {contactsConfigured && (
+              {!isAnonymous && contactsConfigured && (
                 <div className="border-t border-slate-100 pt-3">
                   <p className="text-sm font-medium text-slate-700 mb-2">Modification</p>
                   {editLinkSent ? (
-                    <p className="text-sm text-emerald-600">Lien de modification envoyé.</p>
+                    <div>
+                      <p className="text-sm text-emerald-600 mb-2">Lien de modification envoyé.</p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => { setEditLinkSent(false); setConfirmEditLink(true); }}
+                        disabled={sendingEditLink}
+                      >
+                        Renvoyer le lien
+                      </Button>
+                    </div>
                   ) : (
                     <Button
                       variant="secondary"
@@ -373,23 +384,51 @@ export default function RegistrationDetailPage() {
           )}
 
           {/* Lien de modification (rejetée + non bloquée) */}
-          {registration.status === "REJECTED" && registration.editToken && !emailBlocked && (
+          {!isAnonymous && registration.status === "REJECTED" && !emailBlocked && (
             <div className="bg-white rounded-xl border border-slate-200 p-4">
               <p className="text-sm font-medium text-slate-700 mb-2">Lien de modification</p>
-              <p className="text-xs text-slate-500 mb-3">
-                {registration.editTokenExpiresAt && new Date(registration.editTokenExpiresAt) > new Date()
-                  ? `Expire le ${new Date(registration.editTokenExpiresAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`
-                  : "Expiré"}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/edit-registration/${registration.editToken}`);
-                }}
-                className="text-xs text-indigo-600 hover:text-indigo-700 underline"
-              >
-                Copier le lien
-              </button>
+              {registration.editToken && (
+                <>
+                  <p className="text-xs text-slate-500 mb-3">
+                    {registration.editTokenExpiresAt && new Date(registration.editTokenExpiresAt) > new Date()
+                      ? `Expire le ${new Date(registration.editTokenExpiresAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                      : "Expiré"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/edit-registration/${registration.editToken}`);
+                    }}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+                  >
+                    Copier le lien
+                  </button>
+                </>
+              )}
+              {contactsConfigured && (
+                <div className={registration.editToken ? "mt-3 pt-3 border-t border-slate-100" : ""}>
+                  {editLinkSent ? (
+                    <div>
+                      <p className="text-sm text-emerald-600 mb-2">Lien renvoyé.</p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => { setEditLinkSent(false); setConfirmEditLink(true); }}
+                        disabled={sendingEditLink}
+                      >
+                        Renvoyer à nouveau
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setConfirmEditLink(true)}
+                      disabled={sendingEditLink}
+                    >
+                      {sendingEditLink ? "Envoi..." : "Renvoyer le lien de modification"}
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -422,7 +461,7 @@ export default function RegistrationDetailPage() {
         )}
 
         {/* Colonne doublons */}
-        {!duplicatesLoading && duplicates.length > 0 && (
+        {!isAnonymous && !duplicatesLoading && duplicates.length > 0 && (
           <div className="w-full lg:w-80 space-y-3">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
               <p className="text-sm font-medium text-slate-700 mb-3">

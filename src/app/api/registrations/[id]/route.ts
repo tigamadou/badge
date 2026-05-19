@@ -36,10 +36,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const data = await req.json();
 
-  // Action: envoyer un lien de modification pour une inscription validée
+  // Action: envoyer un lien de modification pour une inscription validée ou rejetée
   if (data.action === "send-edit-link") {
     const registration = await prisma.registration.findUnique({ where: { id } });
-    if (!registration || registration.status !== "APPROVED") {
+    if (!registration || (registration.status !== "APPROVED" && registration.status !== "REJECTED")) {
       return NextResponse.json({ error: "Action non autorisée" }, { status: 400 });
     }
 

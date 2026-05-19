@@ -146,7 +146,9 @@ export default function RegistrationsPage() {
                 <tr key={reg.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <Link href={`/admin/registrations/${reg.id}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
-                      {reg.lastName} {reg.firstName}
+                      {reg.lastName || reg.firstName
+                        ? `${reg.lastName} ${reg.firstName}`.trim()
+                        : `Inscription #${reg.id}`}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-slate-600">{reg.structure}</td>
@@ -181,7 +183,9 @@ export default function RegistrationsPage() {
             <div key={reg.id} className="bg-white rounded-xl border border-slate-200 p-4">
               <div className="flex items-start justify-between mb-3">
                 <Link href={`/admin/registrations/${reg.id}`} className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
-                  {reg.lastName} {reg.firstName}
+                  {reg.lastName || reg.firstName
+                    ? `${reg.lastName} ${reg.firstName}`.trim()
+                    : `Inscription #${reg.id}`}
                 </Link>
                 <StatusBadge status={reg.status} />
               </div>
