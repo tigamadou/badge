@@ -3,10 +3,12 @@
 
 import { PDFViewer } from "@react-pdf/renderer";
 import { BadgeDocument } from "./BadgeDocument";
+import { BadgeDocumentAnonymous } from "./BadgeDocumentAnonymous";
 import type { BadgeProps } from "@/types";
 
 interface BadgePreviewProps extends BadgeProps {
   qrCodeDataUrl: string;
+  allAccessGranted?: boolean;
 }
 
 export function BadgePreview({
@@ -14,15 +16,27 @@ export function BadgePreview({
   team,
   event,
   qrCodeDataUrl,
+  allAccessGranted = false,
 }: BadgePreviewProps) {
   return (
     <PDFViewer width="100%" height={600} showToolbar={false}>
-      <BadgeDocument
-        registration={registration}
-        team={team}
-        event={event}
-        qrCodeDataUrl={qrCodeDataUrl}
-      />
+      {team.anonymous ? (
+        <BadgeDocumentAnonymous
+          registrationId={registration.id}
+          team={team}
+          event={event}
+          qrCodeDataUrl={qrCodeDataUrl}
+          allAccessGranted={allAccessGranted}
+        />
+      ) : (
+        <BadgeDocument
+          registration={registration}
+          team={team}
+          event={event}
+          qrCodeDataUrl={qrCodeDataUrl}
+          allAccessGranted={allAccessGranted}
+        />
+      )}
     </PDFViewer>
   );
 }

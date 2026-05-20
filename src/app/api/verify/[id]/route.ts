@@ -24,6 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       structure: registration.structure,
       photo: registration.photo,
       status: registration.status,
+      allAccessGranted: registration.allAccessGranted,
       team: {
         name: registration.team.name,
         color: registration.team.color,

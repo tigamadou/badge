@@ -65,8 +65,8 @@ export default function NewRegistrationPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Nouvelle inscription</h1>
-      <div className="bg-white rounded-lg shadow p-6 max-w-lg">
+      <h1 className="text-xl font-semibold text-slate-900 mb-6">Nouvelle inscription</h1>
+      <div className="bg-white rounded-xl border border-slate-200 p-6 max-w-lg">
         <RegistrationForm onSubmit={handleSubmit} submitLabel="Créer l'inscription" />
       </div>
     </div>

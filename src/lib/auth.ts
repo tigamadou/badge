@@ -2,11 +2,13 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "./prisma";
+import { logActivity } from "./activity-log";
 
 const ROLE_HIERARCHY: Record<string, number> = {
   OPERATOR: 1,
-  ADMIN: 2,
-  SUPER_ADMIN: 3,
+  MODERATEUR: 2,
+  ADMIN: 3,
+  SUPER_ADMIN: 4,
 };
 
 export function checkRole(userRole: string, requiredRole: string): boolean {
@@ -41,10 +43,22 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  events: {
+    async signIn({ user }) {
+      if (user?.id) {
+        await logActivity({
+          type: "USER_LOGIN",
+          userId: user.id,
+          targetId: user.id,
+          details: { userEmail: user.email },
+        });
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role: string }).role;
+        token.role = (user as unknown as { role: string }).role;
         token.id = user.id;
       }
       return token;

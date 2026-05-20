@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions, checkRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import { logActivity } from "@/lib/activity-log";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -24,6 +25,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data: updateData,
     select: { id: true, email: true, name: true, role: true, createdAt: true },
   });
+
+  await logActivity({
+    type: "USER_UPDATED",
+    userId: session.user.id,
+    targetId: id,
+    details: { userName: user.name, userEmail: user.email, userRole: user.role },
+  });
+
   return NextResponse.json(user);
 }
 
@@ -39,6 +48,17 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Impossible de supprimer votre propre compte" }, { status: 400 });
   }
 
+  const user = await prisma.user.findUnique({ where: { id }, select: { name: true, email: true, role: true } });
   await prisma.user.delete({ where: { id } });
+
+  if (user) {
+    await logActivity({
+      type: "USER_DELETED",
+      userId: session.user.id,
+      targetId: id,
+      details: { userName: user.name, userEmail: user.email, userRole: user.role },
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

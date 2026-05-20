@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { BadgeWebPreview } from "@/components/badge/BadgeWebPreview";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { formatEventDate } from "@/lib/format-date";
 
 export default function BadgePreviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,7 +42,8 @@ export default function BadgePreviewPage() {
     structure: string;
     photo: string | null;
     status: string;
-    team: { name: string; color: string };
+    allAccessGranted: boolean;
+    team: { name: string; color: string; neutralBadge?: boolean; anonymous?: boolean };
   };
   const evt = data.event as unknown as {
     title: string;
@@ -62,14 +64,15 @@ export default function BadgePreviewPage() {
     idDocument: "",
     teamId: "",
     status: reg.status as "APPROVED",
+    allAccessGranted: reg.allAccessGranted,
   };
 
-  const team = { id: "", name: reg.team.name, color: reg.team.color };
+  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0, neutralBadge: reg.team.neutralBadge ?? false, anonymous: reg.team.anonymous ?? false };
   const event = {
     id: "",
     title: evt.title,
     location: evt.location,
-    date: evt.date,
+    date: formatEventDate(evt.date),
     logo: evt.logo || "",
   };
 
@@ -85,6 +88,7 @@ export default function BadgePreviewPage() {
           team={team}
           event={event}
           qrCodeDataUrl={qrCodeDataUrl}
+          allAccessGranted={reg.allAccessGranted}
         />
       </div>
       <p className="mt-4 text-sm text-gray-500">

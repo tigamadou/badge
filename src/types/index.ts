@@ -10,6 +10,9 @@ export interface Team {
   id: string;
   name: string;
   color: string;
+  number: number;
+  neutralBadge: boolean;
+  anonymous: boolean;
 }
 
 export type RegistrationStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -26,6 +29,7 @@ export interface Registration {
   idDocument: string;
   teamId: string;
   status: RegistrationStatus;
+  allAccessGranted: boolean;
 }
 
 export interface BadgeProps {

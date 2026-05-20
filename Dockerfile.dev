@@ -5,6 +5,12 @@ WORKDIR /app
 RUN apk add --no-cache bash git
 RUN corepack enable
 
+# Install deps first (layer cache), then copy sources so prisma/schema.prisma exists for generate.
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN yarn install --frozen-lockfile || yarn install
+
+COPY . .
+
 EXPOSE 3000
 
-CMD ["sh", "-c", "yarn install && npx prisma generate && yarn dev"]
+CMD ["sh", "-c", "yarn install && yarn prisma generate && yarn dev"]

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { formatEventDate } from "@/lib/format-date";
 
 const BadgePreview = dynamic(
   () => import("@/components/badge/BadgePreview").then((m) => m.BadgePreview),
@@ -39,7 +40,8 @@ export default function BadgePage() {
     structure: string;
     photo: string | null;
     status: string;
-    team: { name: string; color: string };
+    allAccessGranted: boolean;
+    team: { name: string; color: string; neutralBadge?: boolean; anonymous?: boolean };
   };
   const evt = data.event as unknown as { title: string; location: string; date: string };
 
@@ -54,20 +56,21 @@ export default function BadgePage() {
     idDocumentNumber: "",
     idDocument: "",
     teamId: "",
-    status: reg.status as "approved",
+    status: reg.status as "APPROVED",
+    allAccessGranted: reg.allAccessGranted,
   };
 
-  const team = { id: "", name: reg.team.name, color: reg.team.color };
-  const event = { id: "", title: evt.title, location: evt.location, date: evt.date, logo: "" };
+  const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0, neutralBadge: reg.team.neutralBadge ?? false, anonymous: reg.team.anonymous ?? false };
+  const event = { id: "", title: evt.title, location: evt.location, date: formatEventDate(evt.date), logo: "" };
 
   if (!qrCodeDataUrl) return <p className="text-center mt-20">Génération du badge...</p>;
 
   return (
     <div className="max-w-md mx-auto mt-10 text-center">
       <h1 className="text-xl font-bold mb-6">Votre badge</h1>
-      <BadgePreview registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} />
+      <BadgePreview registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} allAccessGranted={reg.allAccessGranted} />
       <div className="mt-4">
-        <BadgeDownload registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} />
+        <BadgeDownload registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} allAccessGranted={reg.allAccessGranted} />
       </div>
     </div>
   );

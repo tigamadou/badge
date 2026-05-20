@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,6 +36,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-sm bg-white rounded-lg shadow p-8">
+        <div className="flex justify-center mb-6">
+          <Image src="/logo.png" alt="Logo" width={120} height={120} className="h-20 w-auto object-contain" />
+        </div>
         <h1 className="text-xl font-bold text-center mb-6">Connexion</h1>
         <form onSubmit={handleSubmit}>
           <Input

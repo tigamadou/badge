@@ -8,32 +8,40 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      Role     @default(OPERATOR)
-  createdAt DateTime @default(now())
+  id                String        @id @default(cuid())
+  email             String        @unique
+  password          String
+  name              String
+  role              Role          @default(OPERATOR)
+  inviteToken       String?       @unique
+  inviteTokenExpiry DateTime?
+  createdAt         DateTime      @default(now())
+  activityLogs      ActivityLog[]
 }
 
 enum Role {
   SUPER_ADMIN
   ADMIN
+  MODERATEUR
   OPERATOR
 }
 
 model Event {
-  id       String  @id @default(cuid())
-  title    String
-  location String
-  date     String
-  logo     String?
+  id               String   @id @default(cuid())
+  title            String
+  location         String
+  date             DateTime
+  logo             String?
+  registrationOpen Boolean  @default(true)
 }
 
 model Team {
   id            String         @id @default(cuid())
   name          String
   color         String
+  number        Int            @unique
+  neutralBadge  Boolean        @default(false)
+  anonymous     Boolean        @default(false)
   registrations Registration[]
 }
 
@@ -48,13 +56,110 @@ model Registration {
   idDocumentNumber String
   idDocument       String?
   status           RegistrationStatus @default(PENDING)
+  badgePrinted     Boolean            @default(false)
+  badgePrintedAt   DateTime?
+  allAccessGranted  Boolean            @default(false)
+  rejectionReason   String?
+  rejectionDetails  String?            @db.Text
+  editToken          String?   @unique
+  editTokenExpiresAt DateTime?
+  teamId            String
+  team              Team               @relation(fields: [teamId], references: [id])
+  createdAt         DateTime           @default(now())
+  snapshots         SubmissionSnapshot[]
+}
+
+model SubmissionSnapshot {
+  id               String       @id @default(cuid())
+  registrationId   String
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  lastName         String
+  firstName        String
+  email            String
+  structure        String
   teamId           String
-  team             Team               @relation(fields: [teamId], references: [id])
-  createdAt        DateTime           @default(now())
+  idDocumentType   String
+  idDocumentNumber String
+  photo            String?
+  idDocument       String?
+  createdAt        DateTime     @default(now())
+
+  @@index([registrationId])
+}
+
+model BlockedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model BlockedDocument {
+  id             String   @id @default(cuid())
+  documentNumber String   @unique
+  reason         String?
+  createdAt      DateTime @default(now())
 }
 
 enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model ActivityLog {
+  id        String       @id @default(cuid())
+  type      ActivityType
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  targetId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?      @db.Text
+  createdAt DateTime     @default(now())
+
+  @@index([type])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  REGISTRATION_CREATED
+  REGISTRATION_APPROVED
+  REGISTRATION_REJECTED
+  REGISTRATION_UPDATED
+  REGISTRATION_DELETED
+  BADGE_PRINTED
+  BADGE_BATCH_PRINTED
+  BADGE_ALL_ACCESS_TOGGLED
+  BADGE_EXPORTED
+  BADGE_BATCH_EXPORTED
+  BADGE_SCANNED
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_PASSWORD_SET
+  USER_LOGIN
+  CATEGORY_CREATED
+  CATEGORY_UPDATED
+  CATEGORY_DELETED
+  EVENT_UPDATED
+  SETTINGS_UPDATED
+  REGISTRATION_RESUBMITTED
+  EDIT_LINK_SENT
+}
+
+model Settings {
+  id                String  @id @default(cuid())
+  smtpHost          String  @default("")
+  smtpPort          Int     @default(587)
+  smtpFrom          String  @default("")
+  smtpUser          String  @default("")
+  smtpPassword      String  @default("")
+  smtpSecure        Boolean @default(false)
+  contactEmail      String  @default("")
+  contactPhone      String  @default("")
+  recaptchaEnabled  Boolean @default(false)
+  recaptchaSiteKey  String  @default("")
+  recaptchaSecretKey String @default("")
 }

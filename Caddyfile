@@ -1,0 +1,7 @@
+badge.bj {
+	reverse_proxy app:3000
+}
+
+pma.badge.bj {
+	reverse_proxy phpmyadmin:80
+}
