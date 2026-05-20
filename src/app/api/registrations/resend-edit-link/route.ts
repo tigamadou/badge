@@ -18,10 +18,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Vérifier si l'email est bloqué
-  const blocked = await prisma.blockedEmail.findUnique({ where: { email } });
-  if (blocked) {
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
+  // Vérifier si l'email ou le numéro de document est bloqué (rejet silencieux)
+  const blockedEmail = await prisma.blockedEmail.findUnique({ where: { email } });
+  const regForDocCheck = await prisma.registration.findFirst({ where: { email } });
+  const blockedDoc = regForDocCheck ? await prisma.blockedDocument.findUnique({ where: { documentNumber: regForDocCheck.idDocumentNumber } }) : null;
+  if (blockedEmail || blockedDoc) {
+    return NextResponse.json({ success: true });
   }
 
   const registration = await prisma.registration.findFirst({

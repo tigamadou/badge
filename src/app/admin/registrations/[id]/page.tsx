@@ -38,6 +38,7 @@ interface Registration {
   createdAt: string;
   team: { id: string; name: string; color: string; number: number };
   emailBlocked?: boolean;
+  documentBlocked?: boolean;
   snapshots: {
     id: string;
     lastName: string;
@@ -77,6 +78,8 @@ export default function RegistrationDetailPage() {
   const [rejectionDetails, setRejectionDetails] = useState("");
   const [emailBlocked, setEmailBlocked] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [documentBlocked, setDocumentBlocked] = useState(false);
+  const [confirmBlockDocument, setConfirmBlockDocument] = useState(false);
   const [sendingEditLink, setSendingEditLink] = useState(false);
   const [editLinkSent, setEditLinkSent] = useState(false);
   const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
@@ -87,6 +90,7 @@ export default function RegistrationDetailPage() {
     fetch(`/api/registrations/${id}`).then((r) => r.json()).then((data) => {
       setRegistration(data);
       setEmailBlocked(data.emailBlocked || false);
+      setDocumentBlocked(data.documentBlocked || false);
     });
     fetch(`/api/registrations/${id}/duplicates`)
       .then((r) => r.json())
@@ -115,6 +119,17 @@ export default function RegistrationDetailPage() {
   async function unblockEmail() {
     await fetch(`/api/registrations/${id}/block-email`, { method: "DELETE" });
     setEmailBlocked(false);
+  }
+
+  async function blockDocument() {
+    await fetch(`/api/registrations/${id}/block-document`, { method: "POST" });
+    setDocumentBlocked(true);
+    setConfirmBlockDocument(false);
+  }
+
+  async function unblockDocument() {
+    await fetch(`/api/registrations/${id}/block-document`, { method: "DELETE" });
+    setDocumentBlocked(false);
   }
 
   async function sendEditLink() {
@@ -457,6 +472,32 @@ export default function RegistrationDetailPage() {
               )}
             </div>
           )}
+
+          {/* Blocage numéro de document (rejetée uniquement) */}
+          {registration.status === "REJECTED" && (
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            {documentBlocked ? (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-rose-700 font-medium">N° document bloqué</span>
+                <button
+                  type="button"
+                  onClick={unblockDocument}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+                >
+                  Débloquer
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmBlockDocument(true)}
+                className="text-sm text-rose-600 hover:text-rose-700 underline"
+              >
+                Bloquer ce N° de document
+              </button>
+            )}
+          </div>
+          )}
         </div>
         )}
 
@@ -612,6 +653,25 @@ export default function RegistrationDetailPage() {
           </p>
           <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             Cette adresse ne pourra plus soumettre ni modifier d&apos;inscription.
+          </p>
+        </div>
+      </Modal>
+
+      {/* Modal de confirmation de blocage document */}
+      <Modal
+        open={confirmBlockDocument}
+        title="Bloquer ce numéro de document"
+        confirmLabel="Bloquer"
+        confirmVariant="danger"
+        onConfirm={blockDocument}
+        onCancel={() => setConfirmBlockDocument(false)}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Voulez-vous bloquer le numéro de document <strong>{registration?.idDocumentNumber}</strong> ?
+          </p>
+          <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Ce numéro de document ne pourra plus être utilisé pour soumettre ou modifier une inscription.
           </p>
         </div>
       </Modal>

@@ -94,6 +94,13 @@ model BlockedEmail {
   createdAt DateTime @default(now())
 }
 
+model BlockedDocument {
+  id             String   @id @default(cuid())
+  documentNumber String   @unique
+  reason         String?
+  createdAt      DateTime @default(now())
+}
+
 enum RegistrationStatus {
   PENDING
   APPROVED

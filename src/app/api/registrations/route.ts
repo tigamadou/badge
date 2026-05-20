@@ -80,12 +80,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Champs requis manquants (photo et pièce d'identité incluses)" }, { status: 400 });
     }
 
-    // Vérifier si l'email est bloqué
-    if (email) {
-      const blocked = await prisma.blockedEmail.findUnique({ where: { email } });
-      if (blocked) {
-        return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
-      }
+    // Vérifier si l'email ou le numéro de document est bloqué (rejet silencieux)
+    const blockedEmail = email ? await prisma.blockedEmail.findUnique({ where: { email } }) : null;
+    const blockedDoc = idDocumentNumber ? await prisma.blockedDocument.findUnique({ where: { documentNumber: idDocumentNumber } }) : null;
+    if (blockedEmail || blockedDoc) {
+      return NextResponse.json({ id: "blocked", status: "PENDING", team: { name: team.name, color: team.color } }, { status: 201 });
     }
 
     // Vérifier si une inscription existe déjà pour cet email

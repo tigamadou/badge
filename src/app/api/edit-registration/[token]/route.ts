@@ -56,10 +56,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     );
   }
 
-  // Vérifier si l'email est bloqué
-  const blocked = await prisma.blockedEmail.findUnique({ where: { email: registration.email } });
-  if (blocked) {
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 400 });
+  // Vérifier si l'email ou le numéro de document est bloqué (rejet silencieux)
+  const blockedEmail = await prisma.blockedEmail.findUnique({ where: { email: registration.email } });
+  const blockedDoc = await prisma.blockedDocument.findUnique({ where: { documentNumber: registration.idDocumentNumber } });
+  if (blockedEmail || blockedDoc) {
+    return NextResponse.json({ id: registration.id, status: "PENDING" });
   }
 
   const data = await req.json();

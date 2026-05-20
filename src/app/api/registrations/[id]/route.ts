@@ -23,8 +23,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const blocked = await prisma.blockedEmail.findUnique({ where: { email: registration.email } });
+  const documentBlocked = await prisma.blockedDocument.findUnique({ where: { documentNumber: registration.idDocumentNumber } });
 
-  return NextResponse.json({ ...registration, emailBlocked: !!blocked });
+  return NextResponse.json({ ...registration, emailBlocked: !!blocked, documentBlocked: !!documentBlocked });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
