@@ -1,4 +1,4 @@
-.PHONY: dev dev-down dev-build dev-restart prod prod-down prod-build prod-logs prod-seed prod-db-reset test lint typecheck build logs upload deploy
+.PHONY: dev dev-down dev-build dev-restart prod prod-down prod-build prod-logs prod-seed prod-db-reset test lint typecheck build logs upload deploy download-uploads download-db
 
 # Développement
 dev:
@@ -78,3 +78,17 @@ upload:
 
 deploy: upload
 	ssh root@173.212.217.54 "cd ~/investiture && make prod-build && make prod-push"
+
+SERVER=root@173.212.217.54
+
+download-uploads:
+	@mkdir -p uploads
+	ssh $(SERVER) "docker cp investiture-app:/app/uploads /tmp/investiture-uploads"
+	rsync -avz $(SERVER):/tmp/investiture-uploads/ ./uploads/
+	ssh $(SERVER) "rm -rf /tmp/investiture-uploads"
+	@echo "Uploads téléchargés dans ./uploads/"
+
+download-db:
+	@mkdir -p backups
+	ssh $(SERVER) 'docker exec investiture-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD investiture"' > backups/investiture-$$(date +%Y%m%d-%H%M%S).sql
+	@echo "Dump sauvegardé dans ./backups/"

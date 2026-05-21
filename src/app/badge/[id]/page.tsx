@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { formatEventDate } from "@/lib/format-date";
+import { imageUrlToDataUrl } from "@/lib/image-to-dataurl";
 
 const BadgePreview = dynamic(
   () => import("@/components/badge/BadgePreview").then((m) => m.BadgePreview),
@@ -19,6 +20,7 @@ export default function BadgePage() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<{ registration: Record<string, string & { team: { name: string; color: string } }>; event: Record<string, string>; valid: boolean } | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+  const [photoDataUrl, setPhotoDataUrl] = useState("");
 
   useEffect(() => {
     fetch(`/api/verify/${id}`).then((r) => r.json()).then(setData);
@@ -27,6 +29,10 @@ export default function BadgePage() {
   useEffect(() => {
     if (data?.registration) {
       generateQRCodeDataURL(data.registration.id).then(setQrCodeDataUrl);
+      const reg = data.registration as unknown as { photo: string | null };
+      if (reg.photo) {
+        imageUrlToDataUrl(`/api/files/${reg.photo}`).then(setPhotoDataUrl).catch(() => setPhotoDataUrl(""));
+      }
     }
   }, [data]);
 
@@ -50,7 +56,7 @@ export default function BadgePage() {
     lastName: reg.lastName,
     firstName: reg.firstName,
     structure: reg.structure,
-    photo: reg.photo ? `/api/files/${reg.photo}` : "",
+    photo: photoDataUrl || (reg.photo ? `/api/files/${reg.photo}` : ""),
     email: "",
     idDocumentType: "",
     idDocumentNumber: "",

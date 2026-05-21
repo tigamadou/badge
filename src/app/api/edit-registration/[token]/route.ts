@@ -70,6 +70,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
   }
 
+  // Vérifier si une autre inscription existe déjà pour ce numéro de document
+  const existingByDoc = await prisma.registration.findFirst({
+    where: { idDocumentNumber, id: { not: registration.id } },
+  });
+  if (existingByDoc) {
+    if (existingByDoc.status === "PENDING") {
+      return NextResponse.json({ error: "Une inscription est déjà en cours de traitement pour ce numéro de document." }, { status: 409 });
+    }
+    if (existingByDoc.status === "APPROVED") {
+      return NextResponse.json({ error: "Une inscription validée existe déjà pour ce numéro de document." }, { status: 409 });
+    }
+  }
+
   const updated = await prisma.registration.update({
     where: { id: registration.id },
     data: {

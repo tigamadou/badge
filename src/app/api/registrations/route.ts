@@ -97,7 +97,31 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Une inscription validée existe déjà pour cette adresse email." }, { status: 409 });
       }
       if (existing.status === "REJECTED") {
+        const isBlocked = await prisma.blockedEmail.findUnique({ where: { email: existing.email } })
+          || await prisma.blockedDocument.findUnique({ where: { documentNumber: existing.idDocumentNumber } });
+        if (isBlocked) {
+          return NextResponse.json({ error: "Une inscription existe déjà pour cette adresse email." }, { status: 409 });
+        }
         return NextResponse.json({ error: "Votre inscription a été rejetée. Vous pouvez demander un lien pour la modifier.", canResend: true, email }, { status: 409 });
+      }
+    }
+
+    // Vérifier si une inscription existe déjà pour ce numéro de document
+    const existingByDoc = await prisma.registration.findFirst({ where: { idDocumentNumber } });
+    if (existingByDoc) {
+      if (existingByDoc.status === "PENDING") {
+        return NextResponse.json({ error: "Une inscription est déjà en cours de traitement pour ce numéro de document." }, { status: 409 });
+      }
+      if (existingByDoc.status === "APPROVED") {
+        return NextResponse.json({ error: "Une inscription validée existe déjà pour ce numéro de document." }, { status: 409 });
+      }
+      if (existingByDoc.status === "REJECTED") {
+        const isBlocked = await prisma.blockedEmail.findUnique({ where: { email: existingByDoc.email } })
+          || await prisma.blockedDocument.findUnique({ where: { documentNumber: existingByDoc.idDocumentNumber } });
+        if (isBlocked) {
+          return NextResponse.json({ error: "Une inscription existe déjà pour ce numéro de document." }, { status: 409 });
+        }
+        return NextResponse.json({ error: "Une inscription avec ce numéro de document a été rejetée. Vous pouvez demander un lien pour la modifier.", canResend: true, email }, { status: 409 });
       }
     }
   }
