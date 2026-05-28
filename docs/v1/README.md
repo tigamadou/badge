@@ -1,6 +1,6 @@
-# Documentation - Investiture
+# Documentation - Badge
 
-Systeme de gestion de badges pour la ceremonie d'investiture du President de la Republique du Benin. L'application gere l'inscription des participants, l'approbation administrative, la generation de badges PDF avec QR codes, et le controle d'acces par scan.
+Systeme generique de gestion de badges pour evenements. L'application gere l'inscription des participants, l'approbation administrative, la generation de badges PDF avec QR codes, et le controle d'acces par scan.
 
 ## Documentation technique
 

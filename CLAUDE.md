@@ -1,4 +1,4 @@
-# Instructions pour les outils IA — Investiture
+# Instructions pour les outils IA — Badge
 
 Ce fichier est la **source unique de vérité** pour tous les agents IA travaillant sur ce projet (Claude Code, Cursor, etc.). Il décrit la **méthode** à suivre pour implémenter une fonctionnalité, pas l'architecture du code (celle-ci est documentée dans `docs/`).
 

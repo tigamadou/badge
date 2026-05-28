@@ -2,7 +2,7 @@
 
 ## Description fonctionnelle
 
-L'application gere un evenement unique (la ceremonie d'investiture). Les administrateurs configurent les informations de l'evenement qui sont affichees sur la page d'inscription publique, sur les badges generes et dans les emails envoyes aux participants.
+L'application gere un evenement unique. Les administrateurs configurent les informations de l'evenement qui sont affichees sur la page d'inscription publique, sur les badges generes et dans les emails envoyes aux participants.
 
 L'ouverture ou la fermeture des inscriptions publiques est egalement controlee depuis cette page, mais reservee au super administrateur.
 

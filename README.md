@@ -1,6 +1,6 @@
-# Investiture
+# Badge
 
-Systeme de gestion de badges pour la ceremonie d'investiture du President de la Republique du Benin. L'application gere l'inscription des participants, l'approbation administrative, la generation de badges PDF avec QR codes, et le controle d'acces par scan.
+Systeme generique de gestion de badges pour evenements. L'application gere l'inscription des participants, l'approbation administrative, la generation de badges PDF avec QR codes, et le controle d'acces par scan.
 
 ## Fonctionnalites principales
 
@@ -73,7 +73,7 @@ yarn start
 ## Variables d'environnement
 
 ```env
-DATABASE_URL=mysql://root:<MOT_DE_PASSE>@mysql:3306/investiture
+DATABASE_URL=mysql://root:<MOT_DE_PASSE>@mysql:3306/badge
 NEXTAUTH_SECRET=<CLE_SECRETE>           # openssl rand -base64 32
 NEXTAUTH_URL=https://<VOTRE_DOMAINE>
 BASE_URL=https://<VOTRE_DOMAINE>        # Fallback NEXTAUTH_URL (liens dans emails)
@@ -81,7 +81,7 @@ RECAPTCHA_SITE_KEY=<CLE_SITE>           # Optionnel : peut etre configure en BDD
 RECAPTCHA_SECRET_KEY=<CLE_SECRETE>      # Optionnel : peut etre configure en BDD
 SMTP_HOST=<HOTE_SMTP>                   # Optionnel : fallback si pas en BDD
 SMTP_PORT=<PORT_SMTP>                   # Optionnel : defaut 587
-SMTP_FROM=<EMAIL_EXPEDITEUR>            # Defaut : noreply@investiture.local
+SMTP_FROM=<EMAIL_EXPEDITEUR>            # Defaut : noreply@badge.local
 SMTP_USER=<UTILISATEUR_SMTP>            # Optionnel : authentification SMTP
 SMTP_PASSWORD=<MOT_DE_PASSE_SMTP>       # Optionnel : authentification SMTP
 SEED_ADMIN_EMAIL=<EMAIL_ADMIN>

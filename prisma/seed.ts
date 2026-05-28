@@ -4,7 +4,7 @@ import { hash } from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = process.env.SEED_ADMIN_EMAIL || "admin@investiture.local";
+  const email = process.env.SEED_ADMIN_EMAIL || "admin@badge.local";
   const password = process.env.SEED_ADMIN_PASSWORD || "admin123";
 
   const existingAdmin = await prisma.user.findUnique({ where: { email } });
@@ -21,9 +21,9 @@ async function main() {
   }
 
   const defaultUsers = [
-    { email: "admin@investiture.local", name: "Administrateur", role: Role.ADMIN, password: "admin123" },
-    { email: "moderateur@investiture.local", name: "Moderateur", role: Role.MODERATEUR, password: "modo123" },
-    { email: "operateur@investiture.local", name: "Operateur", role: Role.OPERATOR, password: "oper123" },
+    { email: "admin@badge.local", name: "Administrateur", role: Role.ADMIN, password: "admin123" },
+    { email: "moderateur@badge.local", name: "Moderateur", role: Role.MODERATEUR, password: "modo123" },
+    { email: "operateur@badge.local", name: "Operateur", role: Role.OPERATOR, password: "oper123" },
   ];
   for (const user of defaultUsers) {
     const existing = await prisma.user.findUnique({ where: { email: user.email } });
@@ -57,9 +57,9 @@ async function main() {
   if (!existingEvent) {
     await prisma.event.create({
       data: {
-        title: "Cérémonie d'investiture du Président de la République",
-        location: "Porto-Novo",
-        date: new Date("2026-05-24"),
+        title: "Événement à configurer",
+        location: "",
+        date: new Date(),
       },
     });
     console.log("Default event created");
@@ -72,11 +72,11 @@ async function main() {
       data: {
         smtpHost: process.env.SMTP_HOST || "mailpit",
         smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 1025,
-        smtpFrom: process.env.SMTP_FROM || "noreply@investiture.local",
+        smtpFrom: process.env.SMTP_FROM || "noreply@badge.local",
         smtpUser: process.env.SMTP_USER || "",
         smtpPassword: process.env.SMTP_PASSWORD || "",
         smtpSecure: useEnvSmtp,
-        contactEmail: "contact@investiture.local",
+        contactEmail: "contact@badge.local",
         contactPhone: "+229 97 00 00 00",
       },
     });

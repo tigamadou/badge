@@ -27,17 +27,17 @@ prod-logs:
 	docker compose logs -f
 
 prod-seed:
-	docker exec investiture-app npx --yes tsx prisma/seed.ts
+	docker exec badge-app npx --yes tsx prisma/seed.ts
 
 prod-db-reset:
 	@echo "WARNING: This will ERASE all production data!"
 	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
-	docker exec investiture-app prisma db push --force-reset
-	docker exec investiture-app npx --yes tsx prisma/seed.ts
+	docker exec badge-app prisma db push --force-reset
+	docker exec badge-app npx --yes tsx prisma/seed.ts
 	@echo "Production database reset and seeded."
 
 prod-db-push:
-	docker exec investiture-app prisma db push
+	docker exec badge-app prisma db push
 
 # Commandes dans le conteneur dev
 test:
@@ -74,21 +74,21 @@ db-reset:
 
 # Déploiement
 upload:
-	rsync -avz --exclude='node_modules' --exclude='.next' --exclude='uploads' ./ root@173.212.217.54:~/investiture/
+	rsync -avz --exclude='node_modules' --exclude='.next' --exclude='uploads' ./ root@173.212.217.54:~/badge/
 
 deploy: upload
-	ssh root@173.212.217.54 "cd ~/investiture && make prod-build && make prod-push"
+	ssh root@173.212.217.54 "cd ~/badge && make prod-build && make prod-push"
 
 SERVER=root@173.212.217.54
 
 download-uploads:
 	@mkdir -p uploads
-	ssh $(SERVER) "docker cp investiture-app:/app/uploads /tmp/investiture-uploads"
-	rsync -avz $(SERVER):/tmp/investiture-uploads/ ./uploads/
-	ssh $(SERVER) "rm -rf /tmp/investiture-uploads"
+	ssh $(SERVER) "docker cp badge-app:/app/uploads /tmp/badge-uploads"
+	rsync -avz $(SERVER):/tmp/badge-uploads/ ./uploads/
+	ssh $(SERVER) "rm -rf /tmp/badge-uploads"
 	@echo "Uploads téléchargés dans ./uploads/"
 
 download-db:
 	@mkdir -p backups
-	ssh $(SERVER) 'docker exec investiture-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD investiture"' > backups/investiture-$$(date +%Y%m%d-%H%M%S).sql
+	ssh $(SERVER) 'docker exec badge-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD badge"' > backups/badge-$$(date +%Y%m%d-%H%M%S).sql
 	@echo "Dump sauvegardé dans ./backups/"

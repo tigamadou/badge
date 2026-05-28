@@ -1,4 +1,4 @@
-# Documentation - Investiture v2
+# Documentation - Badge v2
 
 > **Statut : en construction**
 >

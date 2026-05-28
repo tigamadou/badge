@@ -1,4 +1,4 @@
-# Documentation - Investiture
+# Documentation - Badge
 
 Cette documentation est versionnee. Chaque version majeure de l'application a
 sa propre documentation autonome.
