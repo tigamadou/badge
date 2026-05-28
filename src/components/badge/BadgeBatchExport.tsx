@@ -8,6 +8,7 @@ import { BadgeDocument } from "./BadgeDocument";
 import { BadgeDocumentAnonymous } from "./BadgeDocumentAnonymous";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { formatEventDate } from "@/lib/format-date";
+import { imageUrlToDataUrl } from "@/lib/image-to-dataurl";
 import type { EventInfo } from "@/types";
 
 interface RegistrationData {
@@ -51,12 +52,19 @@ export function BadgeBatchExport({ registrations, event, label }: BadgeBatchExpo
 
     const zip = new JSZip();
 
+    let logoDataUrl = "";
+    if (event.logo) {
+      try {
+        logoDataUrl = await imageUrlToDataUrl(`/api/files/${event.logo}`);
+      } catch { /* fallback to URL */ }
+    }
+
     const badgeEvent: EventInfo = {
       id: event.id,
       title: event.title,
       location: event.location,
       date: formatEventDate(event.date),
-      logo: event.logo ? `/api/files/${event.logo}` : "",
+      logo: logoDataUrl || (event.logo ? `/api/files/${event.logo}` : ""),
     };
 
     for (let i = 0; i < registrations.length; i++) {
@@ -66,12 +74,19 @@ export function BadgeBatchExport({ registrations, event, label }: BadgeBatchExpo
       try {
         const qrCodeDataUrl = await generateQRCodeDataURL(reg.id);
 
+        let photoDataUrl = "";
+        if (reg.photo) {
+          try {
+            photoDataUrl = await imageUrlToDataUrl(`/api/files/${reg.photo}`);
+          } catch { /* fallback to URL */ }
+        }
+
         const badgeRegistration = {
           id: reg.id,
           lastName: reg.lastName,
           firstName: reg.firstName,
           structure: reg.structure,
-          photo: reg.photo ? `/api/files/${reg.photo}` : "",
+          photo: photoDataUrl || (reg.photo ? `/api/files/${reg.photo}` : ""),
           email: reg.email,
           idDocumentType: reg.idDocumentType,
           idDocumentNumber: reg.idDocumentNumber,

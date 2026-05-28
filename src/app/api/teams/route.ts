@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nom, couleur et numéro requis" }, { status: 400 });
   }
 
+  if (number < 0 || number > 999) {
+    return NextResponse.json({ error: "Le numéro doit être entre 0 et 999" }, { status: 400 });
+  }
+
+  const existingTeam = await prisma.team.findFirst({ where: { number } });
+  if (existingTeam) {
+    return NextResponse.json({ error: "Ce numéro est déjà utilisé par une autre catégorie" }, { status: 409 });
+  }
+
   const team = await prisma.team.create({
     data: { name, color, number, neutralBadge: neutralBadge ?? false, anonymous: anonymous ?? false },
   });

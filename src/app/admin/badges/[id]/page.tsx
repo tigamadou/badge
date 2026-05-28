@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { formatEventDate } from "@/lib/format-date";
+import { imageUrlToDataUrl } from "@/lib/image-to-dataurl";
 
 const BadgePreview = dynamic(
   () => import("@/components/badge/BadgePreview").then((m) => m.BadgePreview),
@@ -51,6 +52,8 @@ export default function BadgeDetailPage() {
   const [hasContact, setHasContact] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+  const [photoDataUrl, setPhotoDataUrl] = useState("");
+  const [logoDataUrl, setLogoDataUrl] = useState("");
   const [showAllAccessModal, setShowAllAccessModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
@@ -68,8 +71,17 @@ export default function BadgeDetailPage() {
   useEffect(() => {
     if (registration) {
       generateQRCodeDataURL(registration.id).then(setQrCodeDataUrl);
+      if (registration.photo) {
+        imageUrlToDataUrl(`/api/files/${registration.photo}`).then(setPhotoDataUrl).catch(() => setPhotoDataUrl(""));
+      }
     }
   }, [registration]);
+
+  useEffect(() => {
+    if (event?.logo) {
+      imageUrlToDataUrl(`/api/files/${event.logo}`).then(setLogoDataUrl).catch(() => setLogoDataUrl(""));
+    }
+  }, [event]);
 
   async function toggleAllAccess() {
     await fetch(`/api/registrations/${id}`, {
@@ -110,7 +122,7 @@ export default function BadgeDetailPage() {
     title: event.title,
     location: event.location,
     date: formatEventDate(event.date),
-    logo: event.logo ? `/api/files/${event.logo}` : "",
+    logo: logoDataUrl || (event.logo ? `/api/files/${event.logo}` : ""),
   };
 
   const badgeRegistration = {
@@ -118,7 +130,7 @@ export default function BadgeDetailPage() {
     lastName: registration.lastName,
     firstName: registration.firstName,
     structure: registration.structure,
-    photo: registration.photo ? `/api/files/${registration.photo}` : "",
+    photo: photoDataUrl || (registration.photo ? `/api/files/${registration.photo}` : ""),
     email: registration.email,
     idDocumentType: registration.idDocumentType,
     idDocumentNumber: registration.idDocumentNumber,
