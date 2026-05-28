@@ -106,11 +106,16 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 
 ## Documentation
 
-La documentation complete est disponible dans le dossier [`docs/`](docs/README.md) :
+La documentation est versionnee. Voir l'[index](docs/README.md) pour choisir
+votre version.
 
-- [Architecture technique](docs/architecture.md)
-- [Installation et deploiement](docs/installation.md)
-- [Base de donnees](docs/base-de-donnees.md)
-- [Reference API](docs/api/README.md)
-- [Specifications par feature](docs/features/)
-- [Guide utilisateur](docs/guide-utilisateur/README.md)
+**Version courante (v1)** :
+
+- [Architecture technique](docs/v1/architecture.md)
+- [Installation et deploiement](docs/v1/installation.md)
+- [Base de donnees](docs/v1/base-de-donnees.md)
+- [Reference API](docs/v1/api/README.md)
+- [Specifications par feature](docs/v1/features/)
+- [Guide utilisateur](docs/v1/guide-utilisateur/README.md)
+
+**Prochaine version (v2)** : [en construction](docs/v2/README.md).
