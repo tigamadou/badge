@@ -2,7 +2,7 @@
 
 ## POST /api/scan
 
-Enregistre un scan de badge QR. Cree une entree dans le journal d'activite (type BADGE_SCANNED).
+Enregistre un scan de badge QR. Cree une entree dans le journal d'activite (type `BADGE_SCANNED`).
 
 - **Authentification** : requise
 - **Role minimum** : OPERATOR
@@ -14,6 +14,10 @@ Enregistre un scan de badge QR. Cree une entree dans le journal d'activite (type
   "registrationId": "1260524381003"
 }
 ```
+
+| Champ | Type | Obligatoire | Description |
+|-------|------|-------------|-------------|
+| registrationId | string | oui | Identifiant du badge decode depuis le QR code |
 
 ### Reponse (200)
 
@@ -40,19 +44,23 @@ Enregistre un scan de badge QR. Cree une entree dans le journal d'activite (type
 }
 ```
 
-Le champ `valid` indique si le badge est valide (inscription approuvee).
+- Le champ `valid` est `true` uniquement si `registration.status === "APPROVED"`. Pour `PENDING` ou `REJECTED`, la reponse est 200 avec `valid: false` et la `registration` reste detaillee.
+- `scanLog.id` retourne la chaine litterale `"activity-log"` (pas l'identifiant reel de l'entree journal).
+- `scanLog.scannedAt` est l'horodatage ISO du moment du scan, genere cote serveur.
 
 ### Comportement
 
-1. Recherche l'inscription par ID
-2. Enregistre l'action dans le journal d'activite (type `BADGE_SCANNED`)
-3. Retourne les informations de l'inscription
+1. Verifie la session et le role minimum OPERATOR
+2. Recherche l'inscription par ID (`prisma.registration.findUnique`) avec la categorie en jointure
+3. Enregistre l'action dans le journal d'activite (type `BADGE_SCANNED`) avec : nom complet, structure, nom et couleur de la categorie, statut de l'inscription
+4. Retourne les informations de l'inscription, le champ `valid` reflete le statut
 
 ### Erreurs
 
-| Code | Cas |
-|------|-----|
-| 400 | registrationId manquant |
-| 404 | Inscription non trouvee |
+| Code | Reponse | Cas |
+|------|---------|-----|
+| 400 | `{ "error": "registrationId requis" }` | `registrationId` absent du corps |
+| 403 | `{ "error": "Acces refuse" }` | Session absente ou role inferieur a OPERATOR |
+| 404 | `{ "valid": false, "error": "Badge inconnu" }` | Aucune inscription ne correspond a `registrationId` |
 
 L'historique des scans est consultable via `GET /api/activity-logs?type=scan`. Voir [Journal d'activite](journal-activite.md).

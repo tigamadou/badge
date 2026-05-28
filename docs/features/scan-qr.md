@@ -9,24 +9,37 @@ Le systeme permet aux operateurs de scanner les QR codes des badges aux points d
 ### Acces
 
 - **Role requis** : OPERATOR (et superieur)
-- **Protection** : middleware Next.js
+- **Protection** : middleware Next.js (authentification) + verification de role dans l'API `/api/scan`
 
 ### Fonctionnement technique
 
-- Bibliotheque : `html5-qrcode` (chargement client-side uniquement, lazy loading)
+- Bibliotheque : `html5-qrcode` (chargement client-side uniquement, lazy loading via import dynamique)
 - Le composant `ScanPageClient` est charge dynamiquement via `ScanDynamic` pour eviter les erreurs SSR
-- Demande la permission camera au navigateur
+- L'acces a la camera n'est demande qu'apres un geste utilisateur (tap sur un bouton), pour respecter les politiques des navigateurs mobiles
+- Configuration camera : facingMode `environment` (camera arriere), 10 fps, zone de detection 250x250 px
+- Apres un scan reussi, le scanner est immediatement stoppe pour eviter les declenchements en cascade (verrou `isProcessingRef`)
 
 ### Flux de scan
 
-1. L'operateur accede a `/scan`
-2. La camera s'active apres autorisation
-3. Le QR code du badge est detecte automatiquement
-4. L'application envoie `POST /api/scan` avec l'ID d'inscription
-5. Le serveur cree un `ScanLog` et retourne les informations
-6. Le resultat s'affiche a l'ecran :
-   - **Fond vert** : badge valide (inscription approuvee)
-   - **Fond rouge** : badge invalide (inscription non trouvee ou non approuvee)
+1. L'operateur accede a `/scan` (authentification requise)
+2. Un ecran d'accueil invite a appuyer sur le bouton **« Autoriser la camera et scanner »**
+3. Le navigateur affiche la demande d'autorisation camera ; en cas de refus, un message d'erreur explicite s'affiche
+4. La camera s'active et le QR code du badge est detecte automatiquement
+5. L'application envoie `POST /api/scan` avec l'identifiant decode (`registrationId`)
+6. Le serveur enregistre un `ActivityLog` de type `BADGE_SCANNED` puis retourne les informations de l'inscription
+7. Le resultat s'affiche en plein ecran :
+   - **Fond vert** + croix verte : badge valide (inscription `APPROVED`)
+   - **Fond rouge** + croix rouge : badge invalide (inscription `PENDING`, `REJECTED`, ou identifiant inconnu)
+8. Un bouton **« Scanner un autre badge »** relance le scanner
+
+### Gestion des erreurs camera
+
+| Cas | Message affiche |
+|-----|-----------------|
+| Permission camera refusee | « Acces a la camera refuse. Veuillez autoriser l'acces dans les parametres du navigateur. » |
+| Camera occupee par une autre application | « Impossible de demarrer la camera. Verifiez que la camera n'est pas utilisee par une autre application. » |
+| Erreur reseau lors du POST `/api/scan` | « Erreur de connexion au serveur » |
+| Badge inconnu (404) ou non approuve | Le message d'erreur retourne par l'API s'affiche en plein ecran rouge |
 
 ### Informations affichees
 
@@ -41,8 +54,13 @@ Le systeme permet aux operateurs de scanner les QR codes des badges aux points d
 
 ### Interface
 
-- Nom de l'operateur affiche dans le header
-- Menu de navigation avec liens vers les autres sections
+- Barre superieure fixe avec titre « Scanner » et nom de l'operateur connecte
+- Bouton menu (icone hamburger) qui ouvre un overlay plein ecran avec liens vers :
+  - Dashboard (`/admin`)
+  - Inscriptions (`/admin/registrations`)
+  - Badges (`/admin/badges`)
+  - Scanner (page courante, mise en evidence)
+  - Historique Scans (`/admin/scan-history`)
 - Gestion d'erreur si la camera n'est pas accessible
 
 ## Historique des scans

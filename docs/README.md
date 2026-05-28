@@ -28,6 +28,7 @@ Systeme de gestion de badges pour la ceremonie d'investiture du President de la 
 - [Gestion des inscriptions](features/gestion-inscriptions.md)
 - [Gestion des utilisateurs](features/gestion-utilisateurs.md)
 - [Gestion des categories](features/gestion-categories.md)
+- [Gestion des equipes](features/gestion-equipes.md) -- Dualite `/admin/teams` (page simplifiee) et `/admin/categories`
 - [Configuration de l'evenement](features/configuration-evenement.md)
 - [Badges](features/badges.md)
 - [Export badges PDF](features/export-badges-pdf.md)

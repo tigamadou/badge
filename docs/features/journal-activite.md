@@ -17,7 +17,11 @@ Les administrateurs (ADMIN+) peuvent consulter le journal, le filtrer par type d
 | userId | String? | FK -> User (onDelete: SetNull) | Utilisateur ayant effectue l'action |
 | targetId | String? | -- | ID de la ressource concernee |
 | details | JSON | -- | Contexte lisible de l'action |
+| ipAddress | String? | -- | Adresse IP du client (x-forwarded-for / x-real-ip) |
+| userAgent | Text? | -- | En-tete User-Agent du client |
 | createdAt | DateTime | default: now() | Date et heure |
+
+L'IP et le User-Agent sont captures automatiquement par `logActivity()` a partir des en-tetes HTTP (`headers()` de Next ou objet `Request` transmis).
 
 ### Enum ActivityType
 
@@ -27,6 +31,8 @@ REGISTRATION_APPROVED
 REGISTRATION_REJECTED
 REGISTRATION_UPDATED
 REGISTRATION_DELETED
+REGISTRATION_RESUBMITTED
+EDIT_LINK_SENT
 BADGE_PRINTED
 BADGE_BATCH_PRINTED
 BADGE_ALL_ACCESS_TOGGLED
@@ -45,15 +51,21 @@ EVENT_UPDATED
 SETTINGS_UPDATED
 ```
 
+Notes :
+- `REGISTRATION_RESUBMITTED` : enregistre quand un participant resoumet son inscription via le lien de modification (`POST /api/edit-registration/[token]`).
+- `EDIT_LINK_SENT` : enregistre quand un moderateur renvoie un lien de modification depuis le back-office (`PATCH /api/registrations/[id]` avec `action: "send-edit-link"`).
+
 ### Groupes de types (pour le filtre UI)
 
 | Groupe | Types |
 |--------|-------|
-| Inscriptions | REGISTRATION_* |
-| Badges | BADGE_* |
+| Inscriptions | REGISTRATION_CREATED, REGISTRATION_APPROVED, REGISTRATION_REJECTED, REGISTRATION_UPDATED, REGISTRATION_DELETED |
+| Badges | BADGE_PRINTED, BADGE_BATCH_PRINTED, BADGE_ALL_ACCESS_TOGGLED, BADGE_EXPORTED, BADGE_BATCH_EXPORTED |
 | Scans | BADGE_SCANNED |
-| Utilisateurs | USER_* |
-| Configuration | CATEGORY_*, EVENT_*, SETTINGS_* |
+| Utilisateurs | USER_CREATED, USER_UPDATED, USER_DELETED, USER_PASSWORD_SET, USER_LOGIN |
+| Configuration | CATEGORY_CREATED, CATEGORY_UPDATED, CATEGORY_DELETED, EVENT_UPDATED, SETTINGS_UPDATED |
+
+Note : les types `REGISTRATION_RESUBMITTED` et `EDIT_LINK_SENT` ne sont pas inclus dans les groupes du filtre UI (`TYPE_GROUPS` cote API). Ils restent visibles sans filtre ou en filtrant par valeur exacte.
 
 ### Exemples de details (JSON)
 
@@ -118,17 +130,18 @@ Parametres de requete :
 
 ## Page journal d'activite
 
-- Tableau avec colonnes : date/heure, type (badge colore par famille), utilisateur, description, ressource
+- Tableau avec colonnes : date/heure, type (badge colore par famille), utilisateur, description, adresse IP
 - Filtres : type (menu deroulant par groupe), utilisateur, recherche, plage de dates
-- Pagination (30 par page)
+- Pagination configurable (20 par defaut, ajustable via le composant `Pagination`)
 - Vue responsive : tableau sur desktop, cartes sur mobile
+- Clic sur une ligne ouvre une modale "Detail du log" avec : type, date, utilisateur, description, ressource (`targetId`), IP, appareil/OS/navigateur parses depuis le User-Agent, et payload JSON brut
 
-Couleurs des badges par famille :
-- Inscriptions : vert
-- Badges : violet
-- Scans : bleu
-- Utilisateurs : orange
-- Configuration : gris
+Couleurs des badges par famille (bordure gauche + texte) :
+- Inscriptions : vert (texte `text-emerald-700` ou `text-rose-700` pour rejets/suppressions)
+- Badges : violet (bordure), texte selon action
+- Scans : meme famille visuelle que Badges
+- Utilisateurs : orange (bordure), texte selon action
+- Configuration et Categories : gris
 
 ## Fonction utilitaire
 
@@ -137,13 +150,18 @@ Couleurs des badges par famille :
 ```typescript
 logActivity({
   type: ActivityType,
-  userId?: string,
-  targetId?: string,
-  details?: object,
+  userId?: string | null,
+  targetId?: string | null,
+  details?: Record<string, unknown>,
+  req?: Request | null,
 })
 ```
 
-Appelee depuis chaque route API concernee. Ne lance pas d'erreur en cas d'echec (log silencieux pour ne pas bloquer l'action principale).
+- Appelee depuis chaque route API concernee.
+- Capture automatiquement `ipAddress` (depuis `x-forwarded-for` ou `x-real-ip`) et `userAgent` :
+  - via le parametre `req` si fourni,
+  - sinon via `headers()` de Next (contexte requete uniquement).
+- Ne lance pas d'erreur en cas d'echec (log silencieux pour ne pas bloquer l'action principale, erreur ecrite via `console.error`).
 
 ## Integration par route
 
@@ -154,7 +172,9 @@ Appelee depuis chaque route API concernee. Ne lance pas d'erreur en cas d'echec 
 | PATCH /api/registrations/[id] | Autres modifications | REGISTRATION_UPDATED |
 | PATCH /api/registrations/[id] | Badge imprime | BADGE_PRINTED |
 | PATCH /api/registrations/[id] | ALL ACCESS toggle | BADGE_ALL_ACCESS_TOGGLED |
+| PATCH /api/registrations/[id] (action send-edit-link) | Renvoi lien edition | EDIT_LINK_SENT |
 | DELETE /api/registrations/[id] | Inscription supprimee | REGISTRATION_DELETED |
+| POST /api/edit-registration/[token] | Inscription resoumise par le participant | REGISTRATION_RESUBMITTED |
 | POST /api/registrations/print | Batch impression | BADGE_BATCH_PRINTED |
 | POST /api/scan | Badge scanne | BADGE_SCANNED |
 | POST /api/users | Utilisateur cree | USER_CREATED |
@@ -167,7 +187,7 @@ Appelee depuis chaque route API concernee. Ne lance pas d'erreur en cas d'echec 
 | POST /api/teams | Categorie creee | CATEGORY_CREATED |
 | PATCH /api/teams/[id] | Categorie modifiee | CATEGORY_UPDATED |
 | DELETE /api/teams/[id] | Categorie supprimee | CATEGORY_DELETED |
-| POST /api/activity-logs | Badge exporte | BADGE_EXPORTED / BADGE_BATCH_EXPORTED |
+| POST /api/activity-logs | Badge exporte (depuis le front) | BADGE_EXPORTED / BADGE_BATCH_EXPORTED |
 
 ## Suppressions
 

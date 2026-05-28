@@ -16,15 +16,18 @@ DATABASE_URL=mysql://root:<MOT_DE_PASSE>@mysql:3306/investiture
 # Authentification
 NEXTAUTH_SECRET=<CLE_SECRETE>       # Generer avec: openssl rand -base64 32
 NEXTAUTH_URL=https://<VOTRE_DOMAINE>
+BASE_URL=https://<VOTRE_DOMAINE>    # Fallback de NEXTAUTH_URL utilise dans les liens emails
 
-# reCAPTCHA v3
+# reCAPTCHA v3 (optionnel : valeurs par defaut surchargees par les Settings BDD)
 RECAPTCHA_SITE_KEY=<CLE_SITE>
 RECAPTCHA_SECRET_KEY=<CLE_SECRETE>
 
-# SMTP (valeurs par defaut, peuvent etre surcharges depuis l'interface)
+# SMTP (optionnel : surcharge par les Settings BDD)
 SMTP_HOST=<HOTE_SMTP>
-SMTP_PORT=<PORT_SMTP>
-SMTP_FROM=<EMAIL_EXPEDITEUR>
+SMTP_PORT=<PORT_SMTP>               # Defaut 587
+SMTP_FROM=<EMAIL_EXPEDITEUR>        # Defaut noreply@investiture.local
+SMTP_USER=<UTILISATEUR_SMTP>        # Authentification SMTP (optionnel)
+SMTP_PASSWORD=<MOT_DE_PASSE_SMTP>   # Authentification SMTP (optionnel)
 
 # Compte administrateur initial (seed)
 SEED_ADMIN_EMAIL=<EMAIL_ADMIN>
@@ -32,6 +35,14 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 ```
 
 Ne reutilisez jamais les valeurs par defaut en production.
+
+### Precedence des configurations
+
+Pour SMTP et reCAPTCHA, les valeurs stockees dans la table `Settings` (configurables depuis `/admin/settings`) prennent precedence sur les variables d'environnement. Les variables d'environnement servent de valeurs initiales au premier demarrage et de filet de secours si la BDD est vide.
+
+### Dependance reseau : Google Fonts (Montserrat)
+
+La generation des PDF de badge (`@react-pdf/renderer`) charge la police Montserrat depuis Google Fonts (`https://fonts.googleapis.com/`). Le serveur applicatif doit disposer d'un acces sortant vers ce domaine pour produire les PDF. En cas d'environnement hors-ligne, prevoir une mise en cache locale ou un fournisseur de police alternatif.
 
 ## Deploiement Docker (production)
 

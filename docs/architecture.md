@@ -30,25 +30,30 @@ L'application est une application web monolithique construite avec Next.js (App 
 src/
   app/
     api/                    # Routes API REST
-      auth/[...nextauth]/   # Authentification NextAuth
-      registrations/        # CRUD inscriptions + batch print
-      users/                # CRUD utilisateurs
-      teams/                # CRUD categories
+      auth/[...nextauth]/   # Authentification NextAuth (Credentials, JWT)
+      registrations/        # CRUD inscriptions, batch print, doublons, blocage
+        [id]/               # GET/PATCH/DELETE + block-email, block-document, duplicates
+        print/              # Marquage batch d'impression
+        resend-edit-link/   # Renvoi du lien d'edition (public)
+      edit-registration/    # Edition d'une inscription via token (public)
+        [token]/            # GET/POST + resend
+      users/                # CRUD utilisateurs (SUPER_ADMIN)
+      teams/                # CRUD categories (alias equipes)
       scan/                 # Enregistrement de scans
       activity-logs/        # Journal d'activite
-      event/                # Configuration evenement
-      settings/             # Parametres SMTP/contact
-      upload/               # Upload de fichiers
-      files/[...path]/      # Serving de fichiers
+      event/                # Configuration evenement (registrationOpen)
+      settings/             # Parametres SMTP/contact/reCAPTCHA
+      upload/               # Upload de fichiers (photo, idDocument, logo)
+      files/[...path]/      # Serving de fichiers (cache 1h)
       verify/[id]/          # Verification publique de badge
-      profile/              # Profil utilisateur
+      profile/              # Profil utilisateur (GET/PATCH + password)
       setup-password/       # Setup mot de passe (invitation)
     admin/                  # Pages du panneau d'administration
       registrations/        # Liste, detail, creation
       badges/               # Liste et detail badges
       users/                # Gestion utilisateurs
-      categories/           # Gestion categories
-      teams/                # (ancien, redirige vers categories)
+      categories/           # Gestion categories (page principale)
+      teams/                # Page simplifiee orpheline (meme API que categories)
       event/                # Configuration evenement
       settings/             # Parametres systeme
       activity-logs/        # Journal d'activite
@@ -58,24 +63,29 @@ src/
     login/                  # Page de connexion
     verify/[id]/            # Page verification badge
     setup-password/         # Page setup mot de passe
+    edit-registration/      # Page d'edition d'inscription via token
+      [token]/
     badge/[id]/             # Page badge (rendu)
-    badge-preview/[id]/     # Preview badge
+    badge-preview/[id]/     # Apercu web du badge
+    page.tsx                # Formulaire d'inscription public
   components/
-    ui/                     # Composants generiques (Button, Input, Modal, Table, Select, StatusBadge)
-    admin/                  # Composants admin (AdminShell, Sidebar, Header, formulaires)
-    badge/                  # Composants badge (BadgeDocument, BadgePreview, BadgeDownload, BadgeWebPreview)
+    ui/                     # Composants generiques (Button, Input, Modal, Table, Select, StatusBadge, Pagination)
+    admin/                  # AdminShell, Sidebar, Header, formulaires (RegistrationForm, TeamForm, UserForm, EventForm)
+    badge/                  # BadgeDocument, BadgeDocumentAnonymous, BadgeBatchExport, BadgePreview, BadgeDownload, BadgeWebPreview
   lib/
     prisma.ts               # Client Prisma (singleton)
-    activity-log.ts         # Journalisation des actions
-    auth.ts                 # Configuration NextAuth
-    mail.ts                 # Envoi d'emails (nodemailer)
-    storage.ts              # Stockage fichiers local
-    generate-id.ts          # Generation d'identifiants de badge
-    qrcode.ts               # Generation de QR codes
+    activity-log.ts         # logActivity({ type, userId?, targetId?, details?, req? })
+    auth.ts                 # authOptions NextAuth + checkRole(userRole, requiredRole)
+    mail.ts                 # sendRegistrationConfirmation, sendStatusNotification, sendBadgePrintedNotification, sendEditLinkEmail, getContactInfo, areContactsConfigured
+    storage.ts              # uploadFile/getFile (stockage disque local)
+    generate-id.ts          # Generation d'identifiants de badge (12 chars)
+    qrcode.ts               # generateQRCodeDataURL (200x200, error correction M)
+    format-badge-name.ts    # formatBadgeName (max 20 chars) + formatBadgeStructure (max 28)
     format-date.ts          # Formatage de dates en francais
+    image-to-dataurl.ts     # Fetch image -> base64 data URL (PDF, WebP -> PNG)
   types/
     index.ts                # Types TypeScript partages
-    next-auth.d.ts          # Extension types NextAuth (role dans session)
+    next-auth.d.ts          # Extension types NextAuth (role + id dans session)
 prisma/
   schema.prisma             # Schema de base de donnees
   seed.ts                   # Donnees initiales
@@ -100,11 +110,23 @@ Visiteur -> Page d'accueil (formulaire)
 ### Approbation d'une inscription
 
 ```
-Admin -> Liste inscriptions (/admin/registrations)
-  -> Clic Approuver/Rejeter
+Moderateur -> Liste inscriptions (/admin/registrations)
+  -> Clic Approuver / Rejeter (motif obligatoire si rejet)
   -> PATCH /api/registrations/[id] (status: APPROVED | REJECTED)
-    -> Mise a jour BDD
-    -> Envoi email de notification au participant
+    -> Mise a jour BDD + log REGISTRATION_APPROVED/REJECTED
+    -> Si REJECTED : generation automatique d'un editToken 48h
+    -> Envoi email de notification (avec lien d'edition si rejet)
+```
+
+### Edition apres rejet ou approbation
+
+```
+Participant -> Lien d'edition (email) -> /edit-registration/[token]
+  -> GET /api/edit-registration/[token] (validation token + statut)
+  -> Modifications -> POST /api/edit-registration/[token]
+    -> Snapshot historique cree
+    -> Statut remis a PENDING, editToken efface
+    -> Log REGISTRATION_RESUBMITTED
 ```
 
 ### Generation et impression de badge
@@ -139,16 +161,24 @@ Operateur -> Scanner (/scan)
 - Sessions: JWT (pas de session serveur)
 - Mots de passe: haches avec bcrypt (12 rounds)
 - Longueur minimale: 6 caracteres
+- Contenu du JWT : `id`, `email`, `name`, `role`
+- Chaque connexion reussie genere un log `USER_LOGIN`
 
 ### Controle d'acces (RBAC)
 
-Trois roles hierarchiques :
+Quatre roles hierarchiques (fonction `checkRole(userRole, requiredRole)` dans `src/lib/auth.ts`) :
 
 | Role | Niveau | Acces |
 |------|--------|-------|
-| OPERATOR | 1 | Inscriptions (lecture), badges, scanner, historique scans |
-| ADMIN | 2 | + Categories, evenement, parametres |
-| SUPER_ADMIN | 3 | + Gestion des utilisateurs |
+| OPERATOR | 1 | Scan QR uniquement + son profil + son tableau de bord limite |
+| MODERATEUR | 2 | + Inscriptions (CRUD, approbation, rejet), badges, categories, tableau de bord global |
+| ADMIN | 3 | + Configuration evenement, parametres SMTP/contact, journal d'activite |
+| SUPER_ADMIN | 4 | + Gestion des utilisateurs, ouverture/fermeture des inscriptions, cle secrete reCAPTCHA |
+
+Restrictions specifiques :
+- SUPER_ADMIN ne peut pas approuver/rejeter/supprimer une inscription ni imprimer un badge (separation des roles).
+- Ouverture/fermeture des inscriptions publiques (`registrationOpen`) : SUPER_ADMIN seul.
+- Cle secrete reCAPTCHA (`recaptchaSecretKey`) : SUPER_ADMIN seul, jamais exposee dans `GET /api/settings`.
 
 Le middleware Next.js (`src/middleware.ts`) protege les routes `/admin/*` et `/scan` en verifiant la presence d'un token JWT valide. Chaque route API verifie en plus le role minimum requis.
 
