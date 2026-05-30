@@ -51,6 +51,8 @@ Champs du formulaire :
 
 Quota inscriptions : si `event.organization.quotaMaxRegistrations` atteint, afficher "Inscriptions complètes" et bloquer la soumission.
 
+> **Périmètre du compteur de quota** : seules les inscriptions avec `status IN (PENDING, APPROVED)` comptent dans `quotaMaxRegistrations`. Les inscriptions `REJECTED` sont exclues du calcul (le rejet libère l'emplacement). Cette règle s'applique au quota org (`quotaMaxRegistrations` cumulé sur tous les events de l'org) comme au quota event si défini.
+
 ### `/e/[slug]/success`
 
 Affiche un message de confirmation contextualisé :

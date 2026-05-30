@@ -224,6 +224,24 @@ model EventSettings {
 
 **Règle de résolution** : pour une clé donnée, on parcourt `EventSettings → OrgSettings → PlatformSettings`, premier non-null gagne. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
 
+### Périmètre des overrides Settings
+
+| Clé | Platform | Org | Event |
+|---|:---:|:---:|:---:|
+| `smtpHost` | ✓ | ✓ | — |
+| `smtpPort` | ✓ | ✓ | — |
+| `smtpUser` | ✓ | ✓ | — |
+| `smtpPassword` | ✓ | ✓ | — |
+| `smtpSecure` | ✓ | ✓ | — |
+| `smtpFrom` | ✓ | ✓ | ✓ |
+| `contactEmail` | — | ✓ | ✓ |
+| `contactPhone` | — | ✓ | ✓ |
+| `recaptchaSiteKey` | ✓ | ✓ | — |
+| `recaptchaSecretKey` | ✓ | ✓ | — |
+| `recaptchaEnabled` | ✓ | ✓ | — |
+
+> **Note** : les secrets sensibles (mots de passe SMTP, secret reCAPTCHA) ne sont jamais overridables au niveau Event pour limiter la surface de fuite. Seules les clés explicitement listées dans `EventSettings` (cf. modèle Prisma plus haut) peuvent être surchargées au niveau event ; toutes les autres ne cascadent qu'Org → Platform.
+
 ### Activity log
 
 ```prisma
