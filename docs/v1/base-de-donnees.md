@@ -251,13 +251,13 @@ Le seed cree au minimum un compte SUPER_ADMIN a partir des variables d'environne
 
 ### Evenement
 
-- Titre : Ceremonie d'investiture du President de la Republique
-- Lieu : Porto-Novo
-- Date : 24 mai 2026
+- Titre : Evenement a configurer
+- Lieu : (vide)
+- Date : date du seed
 - `registrationOpen` : true
 
 ### Parametres
 
 - SMTP : mailpit (host: mailpit, port: 1025) en developpement
-- Contact : contact@investiture.local / +229 97 00 00 00
+- Contact : contact@badge.local / +229 97 00 00 00
 - reCAPTCHA : desactive par defaut

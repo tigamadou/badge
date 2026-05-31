@@ -1,91 +1,90 @@
-# Instructions pour les outils IA — Investiture
+# Instructions pour les outils IA — Badge (spécificités projet)
 
-Ce fichier est la **source unique de vérité** pour tous les agents IA travaillant sur ce projet (Claude Code, Cursor, etc.). Il décrit la **méthode** à suivre pour implémenter une fonctionnalité, pas l'architecture du code (celle-ci est documentée dans `docs/`).
+> Ce fichier contient **uniquement les spécificités du projet Badge**. La **méthode générique** (process, décomposition en agents, règles d'écriture, workflow git, gestion des plans/specs, blocage) vit dans `.claude/CLAUDE.md` — un template destiné à être externalisé dans un repo personnel. Les outils IA doivent lire **les deux fichiers** : le template (méthode) et celui-ci (spécificités).
+
+> **Activation du template** : Claude Code ne charge **pas automatiquement** `.claude/CLAUDE.md` (il ne lit que le `CLAUDE.md` racine et `~/.claude/CLAUDE.md` global). Pour activer la méthode dans Claude Code, soit symlinker `~/.claude/CLAUDE.md` vers `.claude/CLAUDE.md`, soit copier son contenu dans `~/.claude/CLAUDE.md`. Pour Cursor et AGENTS.md (qui pointent vers ce `CLAUDE.md` racine), il faudra adapter leur config pour inclure aussi le template.
 
 > `AGENTS.md` et `.cursor/rules/project.mdc` pointent vers ce fichier. Toute modification se fait ici.
 
 ---
 
-## 1. Avant toute implémentation
+## Stack technique
 
-1. **Identifier la version active** du travail (voir section 2).
-2. **Lire la documentation** de cette version : `docs/<version>/architecture.md`, `docs/<version>/base-de-donnees.md`, puis la doc de la feature concernée dans `docs/<version>/features/`.
-3. **Chercher un plan/spec** existant :
-   - `docs/<version>/features/<nom>.md`
-   - `docs/superpowers/specs/` (specs validées)
-   - `docs/superpowers/plans/` (plans d'implémentation)
-4. **Si aucune spec n'existe** pour la fonctionnalité demandée → produire une spec avant de coder (workflow : brainstorming → writing-plans → implémentation).
-5. Pour chaque modification : **identifier la doc impactée** et la mettre à jour dans le même changement.
-
----
-
-## 2. Versions de l'application
-
-Le projet est **versionné**. Chaque version majeure a sa propre documentation autonome.
-
-- **Index des versions** : `docs/README.md` (statut de chaque version)
-- **Convention** : la doc suit la version majeure de l'app (v1, v2, …)
-- **Statuts possibles** :
-  - **Production** — version déployée ; modifications conservatrices uniquement
-  - **En construction** — refontes autorisées dans le périmètre de la spec ; toute évolution documentée dans la version cible
-  - **Archivée** — lecture seule, ne jamais modifier
-
-Si la version n'est pas explicite dans la demande de l'utilisateur, **demander avant de coder**.
-
-### Règles multi-versions
-
-- Une PR ne touche jamais simultanément plusieurs versions de doc sans validation explicite
-- Avant de créer/modifier une feature, vérifier si elle existe déjà dans une autre version (éviter les divergences non intentionnelles)
-- Si une feature est reprise ou refondue dans une nouvelle version → la lier explicitement à la version précédente dans la nouvelle spec
-- Créer une nouvelle version (vX) → suivre la même structure de dossier que la dernière version stable
+| Composant | Technologie |
+|-----------|-------------|
+| Framework | Next.js 16 (App Router) |
+| Runtime | Node.js 22+ |
+| UI | React 19 + Tailwind CSS 4 |
+| Langage | TypeScript 5 |
+| ORM | Prisma 6 |
+| BDD | MySQL 8 |
+| Auth | NextAuth.js (Credentials, JWT) |
+| PDF | @react-pdf/renderer 4 |
+| QR Code | qrcode + html5-qrcode |
+| Email | nodemailer |
+| Hash mot de passe | bcryptjs (12 rounds) |
+| CAPTCHA | react-google-recaptcha v3 |
+| Tests | Vitest 4 |
+| Package manager | Yarn via Corepack |
+| Conteneurs | Docker (dev + prod), reverse proxy Caddy |
 
 ---
 
-## 3. Sources de vérité
+## Versionnement de la documentation
+
+Le projet est **versionné**. Voir `docs/README.md` pour la convention, les statuts (Production / En construction / Archivée) et les règles multi-versions. Si la version active n'est pas explicite dans la demande, **demander avant de coder**.
+
+Versions actuelles :
+- **v1** — Production (déployée)
+- **v2** — En construction (refonte SaaS multi-organisation)
+- **v3** — En conception (extension v2 : politique de tests + CI, stockage S3, déploiement Kamal — chantiers post-MVP)
+
+---
+
+## Sources de vérité (par sujet)
 
 | Sujet | Source |
 |-------|--------|
 | Index doc versionnée | `docs/README.md` |
-| Architecture de la version active | `docs/<version>/architecture.md` |
+| Architecture, RBAC, garde-fous métier de la version active | `docs/<version>/architecture.md` |
 | Modèle de données | `prisma/schema.prisma` (autorité finale, partagé entre versions) |
 | Routes API | `docs/<version>/api/` + lecture directe de `src/app/api/` |
-| Règles métier (RBAC, statuts, séparation des rôles) | `docs/<version>/architecture.md` + `src/lib/auth.ts` |
 | Spécifications par feature | `docs/<version>/features/<nom>.md` |
+| Installation, environnement, commandes | `docs/<version>/installation.md` (ou `features/deploiement-*.md` pour v2) |
+| Specs (ADR — capture du *pourquoi*) | `docs/<version>/specs/` |
+| Plans d'implémentation (tracker en tête) | `docs/<version>/plans/` |
 | Guide utilisateur | `docs/<version>/guide-utilisateur/` |
 
 **En cas de conflit doc ↔ code → le code fait foi**, et il faut mettre à jour la doc dans le même changement.
 
 ---
 
-## 4. Règles d'écriture de code
+## Helpers réutilisables (`src/lib/`)
 
-- **YAGNI** : pas d'abstraction sans 2-3 usages réels, pas de feature flag prématuré, pas de gestion d'erreur pour un cas qui ne peut pas arriver.
-- **Pas de commentaires inutiles** : les noms d'identifiants doivent suffire ; commenter uniquement le *pourquoi* non évident (workaround, contrainte cachée, invariant subtil).
-- **Validation aux frontières uniquement** : input utilisateur, API externe. Faire confiance au code interne.
-- **Réutiliser avant de créer** : chercher dans `src/lib/` avant d'introduire un helper (`activity-log`, `auth`, `mail`, `prisma`, `storage`, `qrcode`, `format-*`, `generate-id`, `image-to-dataurl`).
+Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
+
+- **`auth.ts`** — helpers d'autorisation :
+  - v2 : `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`, `getEffectiveEventRoles`, `loadUserContext`, `assertNotLastOwner`, `assertNotLastSuperAdmin`
+  - v1 : `checkRole(userRole, requiredRole)`
+- **`activity-log.ts`** — audit via `logActivity({ type, userId?, targetId?, orgId?, eventId?, details?, req? })`. Tout nouveau type d'action → ajouter un `ActivityType` au schéma Prisma.
+- **`mail.ts`** — envoi d'emails. v2 multi-tenant via `resolveTransporter(ctx)` qui résout le SMTP en cascade `Event → Org → Platform`. v1 mono-event.
+- **`settings.ts`** (v2) — `resolveSettings(eventId?, orgId?)` cascade Event → Org → Platform, premier non-null gagne. `resolvePublicSettings(...)` masque les secrets.
+- **`prisma.ts`** — client Prisma singleton.
+- **`storage.ts`** — abstraction upload/get/delete fichiers (local d'abord, S3 plus tard).
+- **`qrcode.ts`**, **`generate-id.ts`**, **`format-badge-name.ts`**, **`format-date.ts`**, **`image-to-dataurl.ts`** — utilitaires divers.
+
+---
+
+## Règles d'écriture spécifiques
+
 - **Server Components par défaut** ; ajouter `"use client"` uniquement quand l'interactivité l'exige.
-- **Toute action sensible doit logger** via `logActivity()` (`src/lib/activity-log.ts`). Ajouter un nouvel `ActivityType` au schéma Prisma si nécessaire.
-- **Toute route API doit vérifier le rôle** via `checkRole()` (`src/lib/auth.ts`) avant l'action.
-- **Ne jamais exposer dans une réponse API** : `recaptchaSecretKey`, `smtpPassword`, hash bcrypt, tokens d'invitation ou d'édition non hashés.
-- **Pas de demi-implémentation** : si une fonctionnalité ne peut pas être terminée, s'arrêter et expliquer plutôt que livrer du code partiel sans le signaler.
+- **Toute action sensible doit logger** via `logActivity()` (`src/lib/activity-log.ts`).
+- **Toute route API doit vérifier le rôle/permission** via les helpers de `src/lib/auth.ts` avant l'action.
+- **Ne jamais exposer dans une réponse API** : hash bcrypt, `smtpPassword`, `recaptchaSecretKey`, tokens d'invitation ou d'édition non hashés.
 
 ---
 
-## 5. Tests et vérification avant "fini"
-
-Avant de déclarer une tâche terminée :
-
-1. `make lint` — passe sans warning
-2. `make typecheck` — passe
-3. `make test` — passe (Vitest pour la logique pure, dans `src/lib/__tests__/`)
-4. Pour les changements UI : **tester effectivement dans le navigateur** (golden path + cas limites). Ne pas affirmer "ça marche" sans vérification visuelle.
-5. Pas de mock de Prisma pour des règles métier critiques — utiliser une base de test ou un test d'intégration.
-
-**L'évidence vient avant l'affirmation** : exécuter la commande puis rapporter son résultat, jamais l'inverse.
-
----
-
-## 6. Conventions de langue
+## Conventions de langue
 
 | Type de contenu | Langue | Accents |
 |-----------------|--------|---------|
@@ -97,54 +96,27 @@ Avant de déclarer une tâche terminée :
 
 ---
 
-## 7. Workflow Git
+## Garde-fous métier
 
-- Branche principale : `development`
-- 1 PR = 1 changement cohérent (pas de refactor non lié glissé dans une feature)
-- Messages de commit en français ASCII, style conventional commits : `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`
-- **Pas de mention de co-auteur IA** dans les commits : ne jamais ajouter de `Co-Authored-By: Claude …`, `Generated with …`, ni aucune signature d'outil IA. Le message reste neutre.
+- **Mot de passe** : bcryptjs avec **12 rounds**, longueur minimale **6 caractères**.
+- **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
+- **Soft delete partout** (`archived: bool` + `archivedAt: DateTime?`). Hard delete = action staff explicite.
+- **RBAC — séparation des rôles (v1 uniquement)** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **En v2**, cette restriction n'existe plus : `SUPER_ADMIN` est au sommet de `StaffRole` (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`) avec tous les droits sans restriction, y compris les actions métier (avec audit `staffActor=true`). Voir `docs/v2/features/multi-tenancy-rbac.md`.
+- **Rendu PDF des badges** : utilise Montserrat via Google Fonts (`https://fonts.googleapis.com/`) — préserver l'accès sortant à ce domaine.
+
+---
+
+## Workflow Git — valeurs projet
+
+- **Branche principale** : `development`
 - **Avant tout commit** : `make lint && make typecheck && make test`
-- **Interdit sans demande explicite de l'utilisateur** :
-  - `git push --force` (surtout sur `development` ou `main`)
-  - `git reset --hard`, `git clean -f`, `git checkout .`
-  - `git commit --no-verify` (ne jamais contourner les hooks)
-  - Suppression de branches
-- **Ne jamais commit** de fichiers contenant des secrets (`.env`, `.env.production`).
+- Messages de commit en **français ASCII**, style conventional commits.
+
+Le reste des règles git (pas d'initiative de commit, pas de co-auteur IA, interdits) vit dans `CLAUDE.template.md`.
 
 ---
 
-## 8. Garde-fous spécifiques au projet
-
-- **Modifier `prisma/schema.prisma`** → générer une migration (`prisma migrate dev`) **et** mettre à jour `docs/<version>/base-de-donnees.md`.
-- **Ajouter une route API** → la documenter dans `docs/<version>/api/`.
-- **Ajouter ou modifier une feature** → mettre à jour ou créer `docs/<version>/features/<nom>.md`.
-- **RBAC — séparation des rôles** : `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. Toujours respecter cette séparation.
-- **Uploads** : taille max 5 Mo, types autorisés JPEG / PNG / WebP / PDF uniquement.
-- **Authentification** : mots de passe hashés avec **bcryptjs (12 rounds)**, longueur minimale 6 caractères.
-- **Rendu PDF des badges** : utilise Montserrat via Google Fonts → préserver l'accès sortant à `fonts.googleapis.com`.
-
----
-
-## 9. Actions à risque — toujours demander avant
-
-- `make prod-db-reset`, `make db-reset`, toute commande avec `--force-reset`
-- Suppression de fichiers dans `uploads/`
-- Modification de `.env`, `.env.production`, `Caddyfile`, `docker-compose.yml`, `Dockerfile`
-- Déploiement : `make deploy`, `make upload`
-- Toute commande SSH sur le serveur de production
-
----
-
-## 10. Quand vous bloquez
-
-- **Pas de contournement** : ne pas skip un hook, désactiver un test, mocker pour faire passer, ou supprimer une vérification pour "faire avancer".
-- Diagnostiquer la **cause racine** avant de proposer un correctif.
-- Si la cause est ambiguë → demander à l'utilisateur.
-- Si une commande échoue de façon répétée → s'arrêter et expliquer, ne pas boucler.
-
----
-
-## 11. Environnement d'exécution
+## Environnement d'exécution
 
 Les commandes `make` tournent dans le **conteneur Docker de développement**. Pour qu'elles fonctionnent :
 
@@ -152,19 +124,32 @@ Les commandes `make` tournent dans le **conteneur Docker de développement**. Po
 make dev    # démarre les conteneurs (à faire une fois)
 ```
 
-Services disponibles : `app` (3000), `mysql` (3306), `phpmyadmin` (8080), `mailpit` (8025).
+Services disponibles :
 
-Voir `docs/<version>/installation.md` pour les détails.
+| Service | Port | Description |
+|---------|------|-------------|
+| `app` | 3000 | Next.js avec hot reload |
+| `mysql` | 3306 | Base de données |
+| `phpmyadmin` | 8080 | Interface admin BDD |
+| `mailpit` | 8025 | Capture d'emails |
+
+Commandes principales :
+
+| Commande | Description |
+|----------|-------------|
+| `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
+| `make dev` / `make dev-down` / `make logs` | Cycle dev local |
+| `make db-push` / `make db-seed` / `make db-studio` | Schéma Prisma + seed + Prisma Studio |
+| `make db-reset` | **Reset BDD dev (destructif — demander avant)** |
+
+Voir `docs/<version>/installation.md` pour la liste complète.
 
 ---
 
-## 12. Références rapides
+## Actions à risque — toujours demander avant
 
-- `docs/README.md` — index des versions de documentation
-- `docs/<version>/architecture.md` — architecture de la version
-- `docs/<version>/base-de-donnees.md` — modèle de données
-- `docs/<version>/installation.md` — installation et déploiement
-- `docs/<version>/api/` — référence API
-- `docs/<version>/features/` — spécifications par feature
-- `docs/<version>/guide-utilisateur/` — guide utilisateur
-- `Makefile` — commandes principales
+- `make prod-db-reset`, `make db-reset`, toute commande avec `--force-reset`
+- Suppression de fichiers dans `uploads/`
+- Modification de `.env`, `.env.production`, `Caddyfile`, `docker-compose*.yml`, `Dockerfile*`
+- Déploiement : `make deploy`, `make upload`
+- Toute commande SSH sur le serveur de production

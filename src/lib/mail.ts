@@ -45,14 +45,14 @@ async function getTransporter() {
 async function getMailFrom(): Promise<string> {
   const settings = await prisma.settings.findFirst();
   if (settings?.smtpFrom) return settings.smtpFrom;
-  return process.env.SMTP_FROM || "noreply@investiture.local";
+  return process.env.SMTP_FROM || "noreply@badge.local";
 }
 
 async function getEventInfo(): Promise<{ title: string; logoUrl: string }> {
   const event = await prisma.event.findFirst();
   const baseUrl = process.env.NEXTAUTH_URL || process.env.BASE_URL || "http://localhost:3000";
   return {
-    title: event?.title || "Cérémonie d'investiture",
+    title: event?.title || "Événement",
     logoUrl: event?.logo ? `${baseUrl}/api/files/${event.logo}` : "",
   };
 }

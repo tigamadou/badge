@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     await transporter.sendMail({
       from: settings.smtpFrom,
       to: testEmail,
-      subject: "Test SMTP — Investiture",
+      subject: "Test SMTP — Badge",
       html: "<p>La configuration SMTP fonctionne correctement.</p>",
     });
 

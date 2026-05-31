@@ -1,6 +1,6 @@
 # Guide utilisateur
 
-Ce guide est destine aux operateurs, moderateurs et administrateurs qui utilisent l'application Investiture au quotidien.
+Ce guide est destine aux operateurs, moderateurs et administrateurs qui utilisent l'application Badge au quotidien.
 
 ## Roles et permissions
 

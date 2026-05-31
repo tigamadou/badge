@@ -1,7 +1,7 @@
 services:
   caddy:
     image: caddy:2-alpine
-    container_name: investiture-caddy
+    container_name: badge-caddy
     ports:
       - "80:80"
       - "443:443"
@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   app:
-    container_name: investiture-app
+    container_name: badge-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   phpmyadmin:
-    container_name: investiture-pma
+    container_name: badge-pma
     image: phpmyadmin:5
     expose:
       - "80"
@@ -46,12 +46,12 @@ services:
     restart: unless-stopped
 
   mysql:
-    container_name: investiture-db
+    container_name: badge-db
     image: mysql:8
     env_file:
       - .env.production
     environment:
-      MYSQL_DATABASE: investiture
+      MYSQL_DATABASE: badge
     volumes:
       - mysql_data:/var/lib/mysql
     ports:

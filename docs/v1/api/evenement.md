@@ -11,8 +11,8 @@ Retourne les informations de l'evenement.
 ```json
 {
   "id": "clxxx...",
-  "title": "Ceremonie d'investiture du President de la Republique",
-  "location": "Porto-Novo",
+  "title": "Conference annuelle",
+  "location": "Cotonou",
   "date": "2026-05-24T00:00:00.000Z",
   "logo": "logos/logo-event.png",
   "registrationOpen": true
@@ -44,8 +44,8 @@ Cree ou met a jour l'evenement (upsert). Un seul evenement existe dans le system
 
 ```json
 {
-  "title": "Ceremonie d'investiture du President de la Republique",
-  "location": "Porto-Novo",
+  "title": "Conference annuelle",
+  "location": "Cotonou",
   "date": "2026-05-24",
   "logo": "logos/logo-event.png",
   "registrationOpen": true

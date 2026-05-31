@@ -74,7 +74,7 @@ La configuration est lue en priorite depuis la table `Settings` en base de donne
 |-----------|---------------|--------------------------|
 | Serveur | smtpHost | SMTP_HOST |
 | Port | smtpPort | SMTP_PORT |
-| Expediteur | smtpFrom | SMTP_FROM (defaut: `noreply@investiture.local`) |
+| Expediteur | smtpFrom | SMTP_FROM (defaut: `noreply@badge.local`) |
 | Utilisateur | smtpUser | SMTP_USER |
 | Mot de passe | smtpPassword | SMTP_PASSWORD |
 | TLS | smtpSecure | -- (defaut: false) |

@@ -11,7 +11,7 @@ Creer un fichier `.env` a la racine du projet :
 
 ```env
 # Base de donnees
-DATABASE_URL=mysql://root:<MOT_DE_PASSE>@mysql:3306/investiture
+DATABASE_URL=mysql://root:<MOT_DE_PASSE>@mysql:3306/badge
 
 # Authentification
 NEXTAUTH_SECRET=<CLE_SECRETE>       # Generer avec: openssl rand -base64 32
@@ -25,7 +25,7 @@ RECAPTCHA_SECRET_KEY=<CLE_SECRETE>
 # SMTP (optionnel : surcharge par les Settings BDD)
 SMTP_HOST=<HOTE_SMTP>
 SMTP_PORT=<PORT_SMTP>               # Defaut 587
-SMTP_FROM=<EMAIL_EXPEDITEUR>        # Defaut noreply@investiture.local
+SMTP_FROM=<EMAIL_EXPEDITEUR>        # Defaut noreply@badge.local
 SMTP_USER=<UTILISATEUR_SMTP>        # Authentification SMTP (optionnel)
 SMTP_PASSWORD=<MOT_DE_PASSE_SMTP>   # Authentification SMTP (optionnel)
 
