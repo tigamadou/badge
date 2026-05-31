@@ -29,29 +29,37 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
-| 18 | [ ] | -- | -- |
-| 19 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Preflight OK : branche feat/v2-implementation, schema Prisma sync, settings.test 9/9 vert, UPLOAD_TOKEN_SECRET ajoute au .env (et .env.production.example sous Task 2). |
+| 1 | [x] | 2026-05-31 | storage.ts etendu (eventPhotoKey, eventIdDocumentKey, isAllowedMime, assertWithinSizeLimit, deleteFile, safeFilename anti-traversal). 13 tests storage. Commit `eeba058`. |
+| 2 | [x] | 2026-05-31 | upload-token.ts HMAC SHA256 + base64url + timingSafeEqual + validation runtime de la shape du payload. 6 tests. .env.production.example mis a jour. Commit `902c722`. |
+| 3 | [x] | 2026-05-31 | rate-limit.ts in-memory IP+route, 10/min, retryAfterMs. Tests extractClientIp ajoutes. Header comment des 3 limitations MVP. 9 tests. Commit `0836371`. |
+| 4 | [x] | 2026-05-31 | recaptcha.ts (skip si disabled, MISSING_TOKEN/LOW_SCORE/REJECTED/NETWORK, seuil 0.5). 5 tests. Commit `761389e`. |
+| 5 | [x] | 2026-05-31 | public-event.ts : loadPublicEventBySlug + loadEventByIdForVerify + PublicEventError. 6 tests. **Non commit** (regle no-implicit-commits depuis Task 5). |
+| 6 | [x] | 2026-05-31 | validators/registration.ts : Zod publicRegistrationSchema + editRegistrationSchema + ID_DOC_TYPES. Migration vers `.pipe(z.email(...))` (Zod 4). 8 tests. Non commit. |
+| 7 | [x] | 2026-05-31 | /api/upload rewrite public scope event:<slug>, mime/size/quota/token. 7 tests + afterEach cleanup uploads/events. Brise l'ancien caller v1 edit-registration (Task 16 le remplace). Non commit. |
+| 8 | [x] | 2026-05-31 | GET /api/public/events/[slug] (event + categories + public settings). 3 tests. Non commit. |
+| 9 | [x] | 2026-05-31 | POST /api/public/events/[slug]/registrations : rate-limit, recaptcha (getPlatformRecaptcha), blocklists, quota (PENDING+APPROVED), tokens, generateId+collision retry, log REGISTRATION_CREATED, sendRegistrationConfirmation. **Stub `sendRegistrationConfirmation` ajoute dans mail.ts**. 10 tests. Deviation regex `\d{13}` (plan disait `\d{12}`). Non commit. |
+| 10 | [x] | 2026-05-31 | GET /api/public/verify/[badgeId] + page /verify/[badgeId] + composant BadgeVerifyView. Masque identite si Category.anonymous. Log BADGE_SCANNED. 5 tests. Non commit. |
+| 11 | [x] | 2026-05-31 | GET + POST /api/public/edit-registration/[token]. Snapshot avant update. Status -> PENDING + clear editToken/rejectionReason. Log REGISTRATION_RESUBMITTED. 6 tests + afterEach fs cleanup. Non commit. |
+| 12 | [x] | 2026-05-31 | POST /api/public/edit-registration/[token]/resend : cooldown 60s par registration + anti-enumeration (200 si token inconnu). Exporte `resetEditResendCooldownForTests`. 3 tests. Non commit. |
+| 13 | [x] | 2026-05-31 | PublicEventLayout (header logo + contact + footer) + closed.tsx (ClosedView). Substituts `formatEventDate` pour `formatDate`. Non commit. |
+| 14 | [x] | 2026-05-31 | FileUploadField + PublicRegistrationForm (Client Components, upload 2-phases, Zod safeParse, recaptcha gating, translateServerCode). Non commit. |
+| 15 | [x] | 2026-05-31 | Page /e/[slug] + /e/[slug]/success. Bug-fix plan : recaptcha via `getPlatformPublicRecaptcha()` (pas via resolvePublicSettings). Refactor try/catch JSX en helper tagge pour satisfaire ESLint react-hooks/error-boundaries. Non commit. |
+| 16 | [x] | 2026-05-31 | EditRegistrationForm + page /edit-registration/[token] (rewrite v1) + /edit-registration/expired (Suspense boundary pour useSearchParams). Meme fix recaptcha que Task 15. Non commit. |
+| 17 | [x] | 2026-05-31 | public-e2e.test.ts : register -> reject -> edit -> approve -> verify ; resend sur token expire. 2 tests. Non commit. |
+| 18 | [x] | 2026-05-31 | docs/v2/api/public.md cree (205 lignes), docs/v2/architecture.md section "Etat au lot D" ajoutee, docs/v2/features/inscription-publique.md avec note Statut. Non commit. |
+| 19 | [x] | 2026-05-31 | Verification finale : 483/483 tests verts (52 fichiers, +83 nouveaux Plan v2-05), make lint 0 erreurs, make typecheck 0 erreurs. Step 19.3 (smoke navigateur) reporte a l'utilisateur. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 0.
+**Derniere session** : 2026-05-31 - Plan v2-05 entierement implemente (Tasks 0-19 = [x]). Execution via subagent-driven-development sequentiel (skill officielle), avec spec-review + code-quality-review sur les tasks critiques (1, 2, 3, 5). **Commits arretes a partir de Task 5** suite a la regle projet : un agent ne commit que sur demande explicite utilisateur. Tasks 0-4 commitees (4 commits : `eeba058`, `902c722`, `0836371`, `761389e`). Tasks 5-19 stagees mais NON commitees, en attente de la decision de l'utilisateur sur le decoupage des commits.
+
+Fixes/decisions livrees pendant Plan v2-05 :
+- `src/lib/mail.ts` : stub `sendRegistrationConfirmation` ajoute (Task 9). Les autres stubs (`sendStatusNotification`, `sendBadgePrintedNotification`, `sendEditLinkEmail`) existaient deja depuis Plan v2-04.
+- `.env.production.example` : `UPLOAD_TOKEN_SECRET` documente avec hint `openssl rand -base64 32`.
+- Bug du plan corrige (Tasks 9, 11, 15, 16) : recaptcha doit etre lu via `getPlatformPublicRecaptcha()` / `getPlatformRecaptcha()` et non via `resolvePublicSettings()` qui ne contient que `{contactEmail, contactPhone}`.
+- Bug du plan corrige (Task 9) : la regex du badge ID etait `\d{12}` dans le plan, en realite 13 caracteres (1+6+2+1+3).
+- Test cooldown pollution (Task 12) : ajout d'un `resetEditResendCooldownForTests()` exporte pour reset le Map module-level entre tests.
+
+**Prochaine etape** : commit (sur demande utilisateur — decoupage possible : un commit par lot logique helpers/API/UI/docs, ou un commit unique "Plan v2-05"). Smoke navigateur (Step 19.3) a executer en local. Puis Plan v2-06 (vraies notifications email, remplace les stubs).
 
 **Note 2026-05-31** : suppression d'`OrgSettings` (fusionne dans `Organization`). Contact lu directement depuis `Organization.contactEmail`/`Organization.contactPhone` via la cascade `Event > Organization > Platform`. Fallback logo : `Event.logo` -> `Organization.logo` -> logo plateforme. Tous les setups de test `prisma.orgSettings.deleteMany()` / `prisma.orgSettings.create(...)` disparaissent ; tout contact ou logo cote org est pose via `prisma.organization.update`.
 
