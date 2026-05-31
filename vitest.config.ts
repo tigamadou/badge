@@ -11,5 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Tests partagent une base MySQL unique avec deleteMany() en beforeEach.
+    // L'exécution séquentielle évite les collisions inter-fichiers.
+    fileParallelism: false,
   },
 });
