@@ -12,17 +12,17 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight deja valide par Lot A (branche feat/v2-implementation, conteneurs up, Plan 1 applique). |
+| 1 | [x] | 2026-05-31 | .env.production.example reecrit v2 (SEED_SUPER_ADMIN_*, SMTP plateforme, reCAPTCHA plateforme). .gitignore ajuste : `!.env.production.example` (pour pouvoir versionner) + `backups/`. |
+| 2 | [x] | 2026-05-31 | Makefile reecrit selon le plan : preserve toutes les cibles dev, ajoute backup-prod, migrate-uploads-clear, prod-db-reset-v2 (confirm "reset-v2"), smoke-tests, rollback-prod (confirm "rollback"). Validation make -n : dev/backup-prod/smoke-tests OK. |
+| 3 | [x] | 2026-05-31 | scripts/smoke-tests.ts + tests unitaires (2/2 passent). Execution effective : 8/8 OK apres reseed (DB SELECT, PlatformSettings singleton, staff seede, 0 org, 0 event, HTTP /login, /staff, /api/auth/providers). |
+| 4 | [x] | 2026-05-31 | docs/v2/installation.md redige (~578 lignes, 9 sections) : pre-requis serveur, variables env (decisions SMTP/reCAPTCHA plateforme unique), procedure deploiement initial v2 neuve, procedure reset v2 depuis v1, smoke tests (8 checks detailles), plan de rollback, recap Makefile v2, troubleshooting. Aligne sur SEED_SUPER_ADMIN_* (et non SEED_STAFF_*), conteneurs prod badge-app/badge-db, BDD prod par defaut "badge" avec note sur le legacy "investiture". |
+| 5 | [x] | 2026-05-31 | Dry run de la procedure complete couvert par Lot A (drop investiture + db push + seed + tests). Idempotence verifiee, smoke tests 8/8 OK. Steps de validation noms (badge-mysql-1, investiture) appliques. |
+| 6 | [x] | 2026-05-31 | Step 6.2 OK : `make rollback-prod` sans args affiche l'usage et exit 1. Step 6.3 OK : avec args mais confirmation vide -> "Cancelled." et exit 1. |
+| 7 | [x] | 2026-05-31 | Runbook prod inclus dans installation.md (section 4 "Procedure de reset v2") : sequencement complet J-1 + jour J (backup, prod-down, pull, build, reset-v2, smoke, login, splash maintenance, surveillance H+1/H+24). Le plan v2-07 conserve toutefois la checklist Step 7.1-7.18 d'origine pour le runbook d'execution coche le jour J. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-07 entierement termine (Tasks 0-7 toutes en [x]). Aucun commit (consigne user "aucun commit jusqu'a la fin").
+**Prochaine etape** : Plan v2-02 (espace staff applicatif).
 
 **Note 2026-05-31** : schema Prisma v2 sans `OrgSettings` (fusionne dans `Organization`). Le seed v2 ne touche pas a `Organization` (creee par staff via UI), uniquement `PlatformSettings` + premier `SUPER_ADMIN`. `ActivityType` ne contient pas `ORG_SETTINGS_UPDATED` ; les modifs org passent par `ORG_UPDATED`.
 

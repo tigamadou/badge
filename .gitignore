@@ -32,12 +32,16 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.production.example
 
 # Claude Code (preferences personnelles, non partagees)
 .claude/settings.local.json
 
 # uploads
 /uploads
+
+# Badge v2 - backups locaux (mysqldump + uploads.tar.gz)
+backups/
 
 # vercel
 .vercel
