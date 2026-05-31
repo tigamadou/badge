@@ -1,8 +1,10 @@
 # Inscription publique scopée
 
+> **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé. Le contact public (`contactEmail`, `contactPhone`) et le `logo` d'une organisation vivent désormais directement sur `Organization`. La cascade de résolution traverse `Event → Organization → Platform` (plus `OrgSettings` au milieu).
+
 ## Description fonctionnelle
 
-L'inscription publique permet à un participant non authentifié de s'inscrire à un événement via un formulaire web, en accédant à l'URL `https://badge.app/e/[slug]`. La page est entièrement contextualisée par l'événement : logo, titre, catégories, contact public. Le contact est résolu en cascade `Event → Org → Platform`. Le reCAPTCHA et l'expéditeur SMTP sont uniques au niveau plateforme (décisions 2026-05-31, cf. `multi-tenancy-rbac.md`) — `getPlatformRecaptcha()` et `getPlatformSmtp()` lisent directement `PlatformSettings`.
+L'inscription publique permet à un participant non authentifié de s'inscrire à un événement via un formulaire web, en accédant à l'URL `https://badge.app/e/[slug]`. La page est entièrement contextualisée par l'événement : logo, titre, catégories, contact public. Le contact est résolu en cascade `Event → Organization → Platform` (lecture directe de `Organization.contactEmail` / `Organization.contactPhone`). Le reCAPTCHA et l'expéditeur SMTP sont uniques au niveau plateforme (décisions 2026-05-31, cf. `multi-tenancy-rbac.md`) — `getPlatformRecaptcha()` et `getPlatformSmtp()` lisent directement `PlatformSettings`.
 
 Cette feature couvre aussi les flux post-inscription côté participant :
 
@@ -119,9 +121,9 @@ POST   /api/upload?context=event:[slug]                → upload sans auth, ret
 
 Layout commun pour `/e/*` et `/verify/*` et `/edit-registration/*` :
 
-- Logo event (résolu depuis `event.logo` via `/api/files/[...path]`)
+- Logo event : `event.logo` si défini, sinon fallback `event.organization.logo` ; rendu via `/api/files/[...path]`
 - Titre event + date + lieu
-- Footer : contact résolu (email + tél) + mentions "Propulsé par Badge"
+- Footer : contact résolu en cascade (`contactEmail`, `contactPhone`) + lien `website` cliquable si `event.organization.website` est défini + mention "Propulsé par Badge"
 
 ### `PublicRegistrationForm` (Client Component)
 
@@ -144,14 +146,14 @@ Comme `PublicRegistrationForm` mais avec donnée initiale, et avec un encart "Vo
 Quand on rend `/e/[slug]`, le résolveur charge :
 
 ```
-1. EventSettings (table) — override pour le contact
-2. OrgSettings (table) — override pour le contact
-3. PlatformSettings (table) — défaut pour le contact + source unique SMTP/reCAPTCHA
+1. EventSettings (table)            — override pour le contact
+2. Organization (champs directs)    — override pour le contact (ex-OrgSettings, supprimé en v2)
+3. PlatformSettings (table)         — défaut pour le contact + source unique SMTP/reCAPTCHA
 ```
 
 Pour le contact (cascadable) : premier non-null gagne. Les clés publiques exposées :
 
-- `contactEmail`, `contactPhone` (footer) — cascade Event → Org → Platform
+- `contactEmail`, `contactPhone` (footer) — cascade Event → Organization → Platform (lecture directe `Organization.contactEmail` / `Organization.contactPhone`, plus de table `OrgSettings`)
 - `recaptchaEnabled`, `recaptchaSiteKey` (formulaire) — **lus directement depuis `PlatformSettings`** via `getPlatformPublicRecaptcha()` ; pas de cascade. Une seule clé Google partagée pour tous les events. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun event.
 
 L'expéditeur SMTP (`smtpFrom`) **n'est pas cascadé** : il est lu directement depuis `PlatformSettings` via `getPlatformSmtp()` (décision 2026-05-31). Tous les emails de confirmation, rejet, badge imprimé, etc. partent avec la même identité d'expéditeur plateforme, quel que soit l'événement.

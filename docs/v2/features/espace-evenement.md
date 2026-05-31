@@ -145,7 +145,7 @@ CRUD des `Category` de cet event — **ADMIN uniquement** :
 - Titre, lieu, date, logo
 - Slug (lecture seule, modification par staff uniquement)
 - Toggle `registrationOpen`
-- Section "EventSettings" (override OrgSettings) :
+- Section "EventSettings" (override des champs contact de `Organization`) :
   - contactEmail / contactPhone override
 - Section "Blocages" :
   - Lien vers `/admin/[orgId]/events/[eventId]/blocked-emails`

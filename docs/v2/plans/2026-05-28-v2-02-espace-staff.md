@@ -5,6 +5,8 @@
 > **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les parametres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) ne vivent **que** sur `PlatformSettings`. Aucun override possible cote `OrgSettings` ou `EventSettings`. Cette decision **renforce le role de l'espace staff** : `/staff/settings` reste **la seule UI** pour configurer et tester le SMTP. Les UIs Test SMTP cote Org et Event disparaissent (voir Plans 03/04). Cote tests de ce plan, la signature `sendSmtpTest({ to, orgId?, eventId? })` peut continuer a recevoir `orgId/eventId` pour contextualiser le **branding** du message de test, mais le **transport SMTP utilise reste toujours celui de `PlatformSettings`** : les tests ne doivent pas supposer que `sendSmtpTest` resout un SMTP different selon l'org ou l'event. Aucune autre task de ce plan n'est impactee (les setups `PlatformSettings` avec tous les champs SMTP restent valides puisque c'est la source unique).
 >
 > **Mise a jour 2026-05-31 — decision reCAPTCHA organisation uniquement** : les parametres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) ne vivent **que** sur `OrgSettings`. Ils **disparaissent de `PlatformSettings`**. Consequences pour ce plan : la page `/staff/settings` ne contient **plus** de section "reCAPTCHA par defaut" (uniquement SMTP + test SMTP) ; le composant `PlatformSettingsForm` ne gere plus aucun champ reCAPTCHA ; la route `GET /api/staff/settings` ne retourne plus `recaptchaEnabled`, `recaptchaSiteKey` ni `recaptchaSecretKeySet` (ces champs n'existent plus dans le modele Prisma) ; la route `PATCH /api/staff/settings` n'accepte plus ces champs cote schema Zod, et un test de defense en profondeur verifie le rejet (HTTP 400) si un client legacy envoie un champ reCAPTCHA ; l'audit `PLATFORM_SETTINGS_UPDATED` ne contient plus de boolean `recaptchaSecretKeyChanged` ; les setups `PlatformSettings` dans les tests n'incluent plus les champs reCAPTCHA. La configuration reCAPTCHA par organisation est traitee dans le Plan 03 (espace organisation).
+>
+> **Mise a jour 2026-05-31 — enrichissement Organization, suppression d'OrgSettings** : le modele `Organization` v2 est enrichi avec les infos administratives (`legalName?`, `addressLine1?`, `addressLine2?`, `postalCode?`, `city?`, `country?`, `taxId?`, `website?`, `logo?`, `contactEmail?`, `contactPhone?`) en plus de `name`, `slug` et des quotas. Le modele `OrgSettings` est **supprime** (fusionne dans `Organization`). Consequences pour ce plan : la page `/staff/organizations/[orgId]` peut editer toutes les infos admin (incluant `slug` et quotas, reserves staff) ; la route `POST /api/staff/organizations` accepte ces champs en option lors de l'onboarding ; la route `PATCH /api/staff/organizations/[orgId]` (STAFF_ADMIN) peut editer **tous** les champs `Organization` (y compris `slug` + quotas, reserves staff) ; l'audit utilise `ORG_UPDATED` (et non `ORG_SETTINGS_UPDATED` qui disparait du filtre `ActivityFilters`) ; tout setup de test qui crearait une `OrgSettings` est retire ou remplace par un `prisma.organization.update`.
 
 **Goal:** Implementer le back-office plateforme de Badge v2 (`/staff/*`) : dashboard plateforme, gestion des organisations (creation, archivage, restauration, suppression hard), gestion globale des utilisateurs (creation avec invitation, reset password, archivage, changement de role staff), parametres plateforme (PlatformSettings SMTP + reCAPTCHA + test SMTP), journal d'activite global filtre, et page publique `/setup-password` pour les invitations.
 
@@ -49,6 +51,8 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Derniere session** : aucune, plan jamais commence.
 **Prochaine etape** : Task 1.
+
+**Note 2026-05-31** : enrichissement d'`Organization` (legalName, addressLine1-2, postalCode, city, country, taxId, website, logo, contactEmail, contactPhone) et suppression d'`OrgSettings` (fusionne dans `Organization`). Impact sur ce plan : la page `/staff/organizations/[orgId]` peut editer toutes les infos admin (incluant slug et quotas, reserves staff) ; `POST /api/staff/organizations` accepte ces champs en option lors de l'onboarding ; `PATCH /api/staff/organizations/[orgId]` peut editer tous les champs `Organization` ; `ORG_SETTINGS_UPDATED` disparait du filtre `ActivityFilters` (les modifs org passent par `ORG_UPDATED`).
 
 ---
 
@@ -1273,6 +1277,17 @@ async function nextAvailableSlug(base: string): Promise<string> {
 const createOrgSchema = z.object({
   name: z.string().min(1).max(120),
   slug: z.string().min(2).max(60).regex(SLUG_RE).optional(),
+  legalName: z.string().min(1).max(180).nullable().optional(),
+  addressLine1: z.string().min(1).max(180).nullable().optional(),
+  addressLine2: z.string().min(1).max(180).nullable().optional(),
+  postalCode: z.string().min(1).max(20).nullable().optional(),
+  city: z.string().min(1).max(120).nullable().optional(),
+  country: z.string().min(2).max(60).nullable().optional(),
+  taxId: z.string().min(1).max(60).nullable().optional(),
+  website: z.string().url().max(200).nullable().optional(),
+  logo: z.string().max(500).nullable().optional(),
+  contactEmail: z.string().email().nullable().optional(),
+  contactPhone: z.string().min(3).max(40).nullable().optional(),
   quotaMaxEvents: z.number().int().positive().nullable().optional(),
   quotaMaxRegistrations: z.number().int().positive().nullable().optional(),
   quotaMaxStorageMB: z.number().int().positive().nullable().optional(),
@@ -1291,8 +1306,26 @@ export const POST = withStaffAuth(
       );
     }
 
-    const { name, slug, quotaMaxEvents, quotaMaxRegistrations, quotaMaxStorageMB, ownerEmail, ownerName } =
-      parsed.data;
+    const {
+      name,
+      slug,
+      legalName,
+      addressLine1,
+      addressLine2,
+      postalCode,
+      city,
+      country,
+      taxId,
+      website,
+      logo,
+      contactEmail,
+      contactPhone,
+      quotaMaxEvents,
+      quotaMaxRegistrations,
+      quotaMaxStorageMB,
+      ownerEmail,
+      ownerName,
+    } = parsed.data;
 
     const baseSlug = slug ?? slugifyName(name);
     const finalSlug = await nextAvailableSlug(baseSlug);
@@ -1302,6 +1335,17 @@ export const POST = withStaffAuth(
         data: {
           name,
           slug: finalSlug,
+          legalName: legalName ?? null,
+          addressLine1: addressLine1 ?? null,
+          addressLine2: addressLine2 ?? null,
+          postalCode: postalCode ?? null,
+          city: city ?? null,
+          country: country ?? null,
+          taxId: taxId ?? null,
+          website: website ?? null,
+          logo: logo ?? null,
+          contactEmail: contactEmail ?? null,
+          contactPhone: contactPhone ?? null,
           quotaMaxEvents: quotaMaxEvents ?? null,
           quotaMaxRegistrations: quotaMaxRegistrations ?? null,
           quotaMaxStorageMB: quotaMaxStorageMB ?? null,
@@ -1595,7 +1639,7 @@ git commit -m "feat(staff): creation organisation avec OWNER initial (wizard 2 e
 - Create: `src/app/staff/organizations/[orgId]/edit/page.tsx`
 - Modify: `src/lib/__tests__/api-staff.test.ts` (ajout tests)
 
-> `PATCH` STAFF_ADMIN : nom, slug, quotas. Audit `ORG_UPDATED`. `archive`/`restore` STAFF_ADMIN : set `archived` + `archivedAt`, audit `ORG_ARCHIVED` / `ORG_RESTORED`. `DELETE` STAFF_ADMIN : hard delete avec cascade Prisma + double confirmation cote UI (header `x-confirm: delete-<slug>`).
+> `PATCH` STAFF_ADMIN : nom, slug, infos admin (`legalName`, `addressLine1-2`, `postalCode`, `city`, `country`, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone`) et quotas. `slug` + quotas restent reserves staff. Audit `ORG_UPDATED`. `archive`/`restore` STAFF_ADMIN : set `archived` + `archivedAt`, audit `ORG_ARCHIVED` / `ORG_RESTORED`. `DELETE` STAFF_ADMIN : hard delete avec cascade Prisma + double confirmation cote UI (header `x-confirm: delete-<slug>`).
 
 - [ ] **Step 7.1: Ajouter `ORG_DELETED` au schema Prisma (si absent)**
 
@@ -1841,6 +1885,17 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const patchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   slug: z.string().min(2).max(60).regex(SLUG_RE).optional(),
+  legalName: z.string().min(1).max(180).nullable().optional(),
+  addressLine1: z.string().min(1).max(180).nullable().optional(),
+  addressLine2: z.string().min(1).max(180).nullable().optional(),
+  postalCode: z.string().min(1).max(20).nullable().optional(),
+  city: z.string().min(1).max(120).nullable().optional(),
+  country: z.string().min(2).max(60).nullable().optional(),
+  taxId: z.string().min(1).max(60).nullable().optional(),
+  website: z.string().url().max(200).nullable().optional(),
+  logo: z.string().max(500).nullable().optional(),
+  contactEmail: z.string().email().nullable().optional(),
+  contactPhone: z.string().min(3).max(40).nullable().optional(),
   quotaMaxEvents: z.number().int().positive().nullable().optional(),
   quotaMaxRegistrations: z.number().int().positive().nullable().optional(),
   quotaMaxStorageMB: z.number().int().positive().nullable().optional(),
@@ -4549,7 +4604,6 @@ const TYPES = [
   "MEMBERSHIP_REMOVED",
   "MEMBERSHIP_ROLE_CHANGED",
   "PLATFORM_SETTINGS_UPDATED",
-  "ORG_SETTINGS_UPDATED",
 ];
 
 export function ActivityFilters() {

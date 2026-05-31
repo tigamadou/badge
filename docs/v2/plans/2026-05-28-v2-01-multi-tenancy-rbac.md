@@ -4,6 +4,8 @@
 
 > **Mise à jour 2026-05-31 — reCAPTCHA plateforme uniquement** : décision corrigée le même jour (une première formulation parlait à tort de "reCAPTCHA org-only"). Les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) vivent **exclusivement** dans `PlatformSettings`, avec defaults non-nullables (`false`, `""`, `""`). Aucun champ reCAPTCHA dans `OrgSettings` ni `EventSettings`, et aucun override possible. La lecture se fait directement via `getPlatformRecaptcha()` (et `getPlatformPublicRecaptcha()` pour les Server Components publics, qui masque `recaptchaSecretKey`), sur le même modèle que `getPlatformSmtp()`. Les sections Task 1 (schéma Prisma : `OrgSettings` perd les champs `recaptcha*`), Task 5 (résolveur settings : `ResolvedSettings` ne contient plus de champs reCAPTCHA, ajout de `getPlatformRecaptcha()` / `getPlatformPublicRecaptcha()`) ont été ajustées en conséquence.
 
+> **Mise à jour 2026-05-31 — Enrichissement d'`Organization` et suppression d'`OrgSettings`** : suite à la décision de design du 2026-05-31, le modèle `Organization` est enrichi avec les informations administratives (`legalName`, `addressLine1`, `addressLine2`, `postalCode`, `city`, `country`, `taxId`, `website`, `logo`) et de contact public (`contactEmail`, `contactPhone`). Le modèle `OrgSettings` est **supprimé** : ses deux champs (`contactEmail`, `contactPhone`) sont fusionnés dans `Organization`. La cascade contact lit désormais directement `event.organization.contactEmail` / `event.organization.contactPhone` (plus de jointure `event.organization.settings`). L'activity log utilise `ORG_UPDATED` (le type `ORG_SETTINGS_UPDATED` disparaît). Les sections Task 1 (schéma Prisma) et Task 5 (résolveur settings + tests + implémentation) ont été ajustées pour refléter cette décision. La spec source [docs/v2/features/multi-tenancy-rbac.md](../../v2/features/multi-tenancy-rbac.md) est la référence.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the multi-tenant foundation of Badge v2: Prisma schema (User/Org/Event/Memberships/Settings/ActivityLog), authorization helpers, settings cascade resolver, and the Next.js middleware that scopes requests by tenant.
@@ -42,6 +44,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 **Notes** :
 - 2026-05-31 — Mise à jour du plan suite à la décision SMTP plateforme uniquement (voir note en tête). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma `OrgSettings` / `EventSettings`), Task 5 (résolveur settings + tests + type `ResolvedSettings` + nouvelle fonction `getPlatformSmtp()`).
 - 2026-05-31 — Mise à jour du plan suite à la décision reCAPTCHA plateforme uniquement (corrige une première formulation erronée "reCAPTCHA org-only" du même jour). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma : retrait des champs `recaptcha*` d'`OrgSettings`, `PlatformSettings` conserve les 3 champs reCAPTCHA), Task 5 (résolveur settings : `ResolvedSettings` ne contient plus de champs reCAPTCHA, ajout de `getPlatformRecaptcha()` et `getPlatformPublicRecaptcha()` sur le même modèle que `getPlatformSmtp()`, tests adaptés).
+- 2026-05-31 — Mise à jour du plan suite à la décision d'enrichissement d'`Organization` (legalName, adresse structurée, taxId, website, logo, contact) et suppression du modèle `OrgSettings`. La cascade contact lit directement `Organization`. Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma : enrichissement d'`Organization`, suppression complète du modèle `OrgSettings`, type `ORG_SETTINGS_UPDATED` retiré au profit de `ORG_UPDATED`), Task 5 (tests + implémentation `resolveSettings` : remplacement des `prisma.orgSettings.*` par `prisma.organization.*`, lecture directe de `contactEmail`/`contactPhone` depuis `Organization`).
 
 ---
 
@@ -148,7 +151,25 @@ enum StaffRole {
 model Organization {
   id                       String   @id @default(cuid())
   name                     String
+  legalName                String?
   slug                     String   @unique
+
+  // Adresse postale structuree
+  addressLine1             String?
+  addressLine2             String?
+  postalCode               String?
+  city                     String?
+  country                  String?
+
+  // Administratif
+  taxId                    String?
+  website                  String?
+  logo                     String?
+
+  // Contact public (anciennement OrgSettings - fusionne 2026-05-31)
+  contactEmail             String?
+  contactPhone             String?
+
   archived                 Boolean  @default(false)
   archivedAt               DateTime?
   createdAt                DateTime @default(now())
@@ -159,7 +180,6 @@ model Organization {
 
   memberships              OrgMembership[]
   events                   Event[]
-  settings                 OrgSettings?
   categoryTemplates        CategoryTemplate[]
 }
 
@@ -361,18 +381,9 @@ model PlatformSettings {
   recaptchaSecretKey String  @default("")
 }
 
-model OrgSettings {
-  id           String       @id @default(cuid())
-  orgId        String       @unique
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-
-  // Note (2026-05-31) : pas de champs SMTP ici. Le SMTP est exclusivement
-  // configure au niveau PlatformSettings (decision de design SMTP plateforme uniquement).
-  // Note (2026-05-31) : pas de champs reCAPTCHA ici non plus. Meme logique que
-  // le SMTP : reCAPTCHA est exclusivement configure au niveau PlatformSettings.
-  contactEmail String?
-  contactPhone String?
-}
+// Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs
+// (contactEmail, contactPhone) ont ete fusionnes dans Organization. La cascade
+// contact lit desormais directement event.organization.contactEmail.
 
 model EventSettings {
   id           String  @id @default(cuid())
@@ -448,7 +459,6 @@ enum ActivityType {
   MEMBERSHIP_REMOVED
   MEMBERSHIP_ROLE_CHANGED
   PLATFORM_SETTINGS_UPDATED
-  ORG_SETTINGS_UPDATED
   EVENT_SETTINGS_UPDATED
   EDIT_LINK_SENT
 }
@@ -947,7 +957,6 @@ import {
 describe("resolveSettings", () => {
   beforeEach(async () => {
     await prisma.eventSettings.deleteMany();
-    await prisma.orgSettings.deleteMany();
     await prisma.event.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.platformSettings.deleteMany();
@@ -993,18 +1002,16 @@ describe("resolveSettings", () => {
   });
 
   it("org contactEmail override wins over platform", async () => {
-    const org = await prisma.organization.create({ data: { name: "O", slug: "o" } });
-    await prisma.orgSettings.create({
-      data: { orgId: org.id, contactEmail: "org@x" },
+    const org = await prisma.organization.create({
+      data: { name: "O", slug: "o", contactEmail: "org@x" },
     });
     const s = await resolveSettings(undefined, org.id);
     expect(s.contactEmail).toBe("org@x");
   });
 
   it("event contactEmail override wins over org", async () => {
-    const org = await prisma.organization.create({ data: { name: "O", slug: "o2" } });
-    await prisma.orgSettings.create({
-      data: { orgId: org.id, contactEmail: "org@x" },
+    const org = await prisma.organization.create({
+      data: { name: "O", slug: "o2", contactEmail: "org@x" },
     });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: "e2", location: "L", date: new Date() },
@@ -1166,18 +1173,23 @@ export async function resolveSettings(
     event = await prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
   }
 
+  // Note (2026-05-31) : OrgSettings supprime. Le contact org est lu directement
+  // depuis Organization (contactEmail, contactPhone fusionnes dans le modele).
   const effectiveOrgId = orgId ?? event?.orgId;
-  let orgSettings: Awaited<ReturnType<typeof prisma.orgSettings.findUnique>> = null;
+  let organization: { contactEmail: string | null; contactPhone: string | null } | null = null;
   if (effectiveOrgId) {
-    orgSettings = await prisma.orgSettings.findUnique({ where: { orgId: effectiveOrgId } });
+    organization = await prisma.organization.findUnique({
+      where: { id: effectiveOrgId },
+      select: { contactEmail: true, contactPhone: true },
+    });
   }
 
   // Cascade Event > Org pour le contact uniquement.
   // SMTP et reCAPTCHA ne sont PAS cascades (lecture directe via getPlatformSmtp() /
   // getPlatformRecaptcha()).
   return {
-    contactEmail: pick(eventSettings?.contactEmail, orgSettings?.contactEmail) ?? "",
-    contactPhone: pick(eventSettings?.contactPhone, orgSettings?.contactPhone) ?? "",
+    contactEmail: pick(eventSettings?.contactEmail, organization?.contactEmail) ?? "",
+    contactPhone: pick(eventSettings?.contactPhone, organization?.contactPhone) ?? "",
   };
 }
 
@@ -1916,7 +1928,6 @@ describe("v2 RBAC integration", () => {
     await prisma.eventMembership.deleteMany();
     await prisma.orgMembership.deleteMany();
     await prisma.eventSettings.deleteMany();
-    await prisma.orgSettings.deleteMany();
     await prisma.event.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.user.deleteMany();

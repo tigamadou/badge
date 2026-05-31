@@ -1,11 +1,13 @@
 # Notifications email multi-tenant
 
+> **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé. Le contact public (`contactEmail`, `contactPhone`) et le `logo` d'une organisation sont lus directement sur `Organization`. La cascade de résolution du branding contextuel traverse `EventSettings → Organization → PlatformSettings`.
+
 ## Description fonctionnelle
 
 L'application envoie des emails transactionnels aux participants et aux utilisateurs. En v2 :
 
 - **Configuration SMTP (connexion + expéditeur) = plateforme uniquement** (décision 2026-05-31). Hôte, port, user, password, secure et `smtpFrom` sont lus directement depuis `PlatformSettings` ; aucune cascade Org/Event. Tous les emails partent avec la même identité d'expéditeur (ex. `Badge <noreply@badge.local>`).
-- **Branding contextuel** (logo, coordonnées de contact) résolu en cascade `EventSettings → OrgSettings → PlatformSettings`. Les emails affichent toujours le bon logo et le bon contact selon le contexte (event ou org), même si l'expéditeur SMTP est unique.
+- **Branding contextuel** (logo, coordonnées de contact) résolu en cascade `EventSettings → Organization → PlatformSettings` (lecture directe des champs `Organization.contactEmail`, `Organization.contactPhone`, `Organization.logo` — plus de table `OrgSettings`). Les emails affichent toujours le bon logo et le bon contact selon le contexte (event ou org), même si l'expéditeur SMTP est unique.
 - Les templates sont contextualisés par l'événement ou l'organisation source.
 
 Tous les emails utilisateurs sont en français avec accents complets.
@@ -15,7 +17,7 @@ Tous les emails utilisateurs sont en français avec accents complets.
 Inclus :
 
 - Lecture directe de la config SMTP depuis `PlatformSettings` (via `getPlatformSmtp()`)
-- Résolveur du branding contextuel (logo, contact) en cascade Event → Org → Platform
+- Résolveur du branding contextuel (logo, contact) en cascade Event → Organization → Platform
 - Templates HTML pour tous les emails (avec branding event/org)
 - Refonte de `src/lib/mail.ts` (signatures avec contexte `eventId` ou `orgId`)
 - Tests Vitest sur la composition des emails et la résolution du branding
@@ -57,20 +59,22 @@ Le résolveur (`src/lib/mail.ts → resolveTransporter()`) prend en argument un 
 type ResolvedTransport = {
   transporter: Transporter;  // nodemailer (configuré depuis PlatformSettings)
   from: string;              // expéditeur unique plateforme
-  contactEmail: string;      // résolu en cascade Event → Org → Platform
+  contactEmail: string;      // résolu en cascade Event → Organization → Platform
   contactPhone: string;
   eventTitle?: string;       // si eventId fourni
   orgName?: string;          // si orgId fourni
-  logoUrl?: string;          // si eventId fourni et logo non null
+  orgWebsite?: string;       // si orgId connu et Organization.website non null
+  logoUrl?: string;          // Event.logo si fourni, sinon fallback Organization.logo si orgId connu
 };
 ```
 
 Algorithme :
 
 1. Charger la config SMTP via `getPlatformSmtp()` (lecture directe `PlatformSettings`, **pas** de cascade)
-2. Charger le branding contextuel en cascade : `resolveSettings(eventId, orgId)` pour `contactEmail` / `contactPhone`, plus `Event.logo` et `Event.title` / `Organization.name` si applicable
-3. Construire le `transporter` nodemailer avec host/port/secure/user/password de la plateforme
-4. `from` = `PlatformSettings.smtpFrom` (ex. `"Badge <noreply@badge.local>"`) — **identique pour tous les emails**, quel que soit le contexte. Le branding contextuel (logo, contact) reste affiché dans le corps de l'email.
+2. Charger le branding contextuel en cascade `EventSettings → Organization → PlatformSettings` : `resolveSettings(eventId, orgId)` pour `contactEmail` / `contactPhone` (lus directement sur `Organization.contactEmail` / `Organization.contactPhone` — plus de table `OrgSettings`), plus `Event.title` / `Organization.name` / `Organization.website` si applicables
+3. Résoudre le logo : `Event.logo` si défini, sinon fallback `Organization.logo` si `orgId` est connu (déduit de l'event ou fourni directement), sinon aucun logo contextuel (le template utilisera le logo Badge générique)
+4. Construire le `transporter` nodemailer avec host/port/secure/user/password de la plateforme
+5. `from` = `PlatformSettings.smtpFrom` (ex. `"Badge <noreply@badge.local>"`) — **identique pour tous les emails**, quel que soit le contexte. Le branding contextuel (logo, contact, website) reste affiché dans le corps de l'email.
 
 **Cas particulier — User Invitation** :
 
@@ -84,7 +88,7 @@ Tous les templates sont rendus en HTML inline (compatibles clients mail). Struct
 
 ```
 ┌──────────────────────────────────────────┐
-│ [Logo event si dispo] ou [Logo Badge]    │
+│ [Logo event ou logo org] ou [Logo Badge] │
 │                                          │
 │  Titre de l'email                        │
 │                                          │
@@ -92,6 +96,7 @@ Tous les templates sont rendus en HTML inline (compatibles clients mail). Struct
 │                                          │
 │ ─────────────────────────────────────── │
 │ Contact : [contactEmail] / [contactPhone]│
+│ [Site : orgWebsite si défini]            │
 │ [Nom org ou event]                       │
 └──────────────────────────────────────────┘
 ```
@@ -106,7 +111,8 @@ Implémentation : helper `buildEmail({ title, body, ctx: ResolvedTransport })` (
 | `{{eventDate}}` | `event.date` formatée en français |
 | `{{eventLocation}}` | `event.location` |
 | `{{orgName}}` | `event.organization.name` ou directement org |
-| `{{contactEmail}}` / `{{contactPhone}}` | settings résolus |
+| `{{orgWebsite}}` | `event.organization.website` ou directement org (optionnel — affiché dans le footer si défini) |
+| `{{contactEmail}}` / `{{contactPhone}}` | branding résolu en cascade `EventSettings → Organization → PlatformSettings` |
 | `{{firstName}}` / `{{lastName}}` | inscription |
 | `{{badgeId}}` | inscription |
 | `{{editLink}}` | `https://[host]/edit-registration/[token]` |
@@ -192,8 +198,9 @@ Gestion des erreurs :
 
 - `resolveTransporter()` utilise toujours la config SMTP de `PlatformSettings`, quel que soit le contexte (eventId, orgId, ou aucun)
 - `from` = `PlatformSettings.smtpFrom` dans les trois cas (pas de variation par org/event)
-- `resolveTransporter(eventId)` cascade le branding (logo, contact) Event → Org → Platform — pas le SMTP
-- `buildEmail()` injecte le logo event si fourni, sinon logo Badge
+- `resolveTransporter(eventId)` cascade le branding (logo, contact) Event → Organization → Platform — pas le SMTP. Les champs contact sont lus directement sur `Organization.contactEmail` / `Organization.contactPhone` (pas de table `OrgSettings`).
+- `buildEmail()` injecte le logo event si fourni, sinon le logo `Organization.logo` si `orgId` est connu, sinon le logo Badge générique
+- Le footer affiche `Organization.website` quand il est défini (lien cliquable)
 - Variables `{{eventTitle}}` etc. résolues correctement
 - Anti-XSS : variables HTML-escaped (les valeurs viennent de la BDD mais sécurisons quand même)
 - `sendUserInvitation(userId, { orgId, role: 'MANAGER' })` envoie un email contextualisé org (logo + contact org) avec le libellé `MANAGER`, expéditeur SMTP plateforme

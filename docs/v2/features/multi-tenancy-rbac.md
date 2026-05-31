@@ -14,7 +14,7 @@ Cette feature pose les fondations de tout le reste : modèle de données tenant,
 
 Inclus :
 
-- Modèles Prisma : `User`, `Organization`, `Event`, `OrgMembership`, `EventMembership`, `OrgSettings`, `EventSettings`, `PlatformSettings`, `CategoryTemplate`, `Category` (ex-`Team`)
+- Modèles Prisma : `User`, `Organization`, `Event`, `OrgMembership`, `EventMembership`, `EventSettings`, `PlatformSettings`, `CategoryTemplate`, `Category` (ex-`Team`). Note : `OrgSettings` n'existe plus en v2 (fusionné dans `Organization`, décision 2026-05-31).
 - Enums : `StaffRole`, `OrgRole`, `EventRole`
 - Helpers d'autorisation (`src/lib/auth.ts`)
 - Middleware Next.js de scoping (`src/middleware.ts`)
@@ -70,19 +70,41 @@ enum StaffRole {
 ```prisma
 model Organization {
   id                       String   @id @default(cuid())
-  name                     String
-  slug                     String   @unique
-  archived                 Boolean  @default(false)
-  archivedAt               DateTime?
-  createdAt                DateTime @default(now())
 
+  // Identite
+  name                     String                          // nom commercial / d'usage
+  legalName                String?                         // nom legal si different de name
+  slug                     String   @unique               // /e/[slug] indirectement via events
+
+  // Adresse postale structuree
+  addressLine1             String?
+  addressLine2             String?
+  postalCode               String?
+  city                     String?
+  country                  String?                         // ISO-3166-1 alpha-2 recommande (FR, CI, SN...)
+
+  // Identification administrative
+  taxId                    String?                         // SIRET (FR), IFU (CI/SN/BJ), VAT/EIN... format libre
+  website                  String?                         // URL https://...
+  logo                     String?                         // uploads/org-assets/[orgId]/logo.*
+
+  // Contact public (affiche dans emails et footer pages publiques)
+  contactEmail             String?
+  contactPhone             String?
+
+  // Quotas (staff uniquement)
   quotaMaxEvents           Int?
   quotaMaxRegistrations    Int?
   quotaMaxStorageMB        Int?
 
+  // Etat
+  archived                 Boolean  @default(false)
+  archivedAt               DateTime?
+  createdAt                DateTime @default(now())
+
+  // Relations
   memberships              OrgMembership[]
   events                   Event[]
-  settings                 OrgSettings?
   categoryTemplates        CategoryTemplate[]
 }
 
@@ -204,15 +226,6 @@ model PlatformSettings {
   recaptchaSecretKey String  @default("")
 }
 
-model OrgSettings {
-  id                 String       @id @default(cuid())
-  orgId              String       @unique
-  organization       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-
-  contactEmail       String?
-  contactPhone       String?
-}
-
 model EventSettings {
   id           String  @id @default(cuid())
   eventId      String  @unique
@@ -223,11 +236,11 @@ model EventSettings {
 }
 ```
 
-**Règle de résolution** : pour une clé cascadable donnée, on parcourt `EventSettings → OrgSettings → PlatformSettings`, premier non-null gagne. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
+**Règle de résolution** : pour une clé cascadable (contact uniquement), on parcourt `EventSettings → Organization → PlatformSettings`, premier non-null gagne. `OrgSettings` **n'existe plus en v2** (décision 2026-05-31) — les champs contact ex-`OrgSettings` ont fusionné dans `Organization` (cf. modèle ci-dessus). Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
 
 **SMTP = plateforme uniquement** (décision 2026-05-31) : les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun override possible au niveau Org ou Event. Le branding contextuel non-SMTP (logo via `Event.logo`, `contactEmail`, `contactPhone`) reste cascadé : les emails affichent toujours le bon logo et contact selon le contexte, mais partent tous avec la même identité d'expéditeur plateforme.
 
-**reCAPTCHA = plateforme uniquement** (décision 2026-05-31, même logique que SMTP) : les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun champ reCAPTCHA dans `OrgSettings` ni `EventSettings`. La plateforme Badge porte une seule clé Google reCAPTCHA partagée par tous les events de toutes les organisations clientes. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun formulaire public.
+**reCAPTCHA = plateforme uniquement** (décision 2026-05-31, même logique que SMTP) : les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun champ reCAPTCHA dans `Organization` ni `EventSettings`. La plateforme Badge porte une seule clé Google reCAPTCHA partagée par tous les events de toutes les organisations clientes. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun formulaire public.
 
 ### Périmètre des overrides Settings
 
@@ -239,8 +252,8 @@ model EventSettings {
 | `smtpPassword` | ✓ | — | — |
 | `smtpSecure` | ✓ | — | — |
 | `smtpFrom` | ✓ | — | — |
-| `contactEmail` | — | ✓ | ✓ |
-| `contactPhone` | — | ✓ | ✓ |
+| `contactEmail` | — | ✓ (champ `Organization.contactEmail`) | ✓ |
+| `contactPhone` | — | ✓ (champ `Organization.contactPhone`) | ✓ |
 | `recaptchaSiteKey` | ✓ | — | — |
 | `recaptchaSecretKey` | ✓ | — | — |
 | `recaptchaEnabled` | ✓ | — | — |
@@ -277,7 +290,7 @@ Les `ActivityType` héritent de v1 (REGISTRATION_*, BADGE_*, USER_*, etc.) plus 
 - `ORG_CREATED`, `ORG_UPDATED`, `ORG_ARCHIVED`, `ORG_RESTORED`
 - `EVENT_CREATED`, `EVENT_ARCHIVED`, `EVENT_RESTORED`, `EVENT_REGISTRATION_OPENED`, `EVENT_REGISTRATION_CLOSED`
 - `MEMBERSHIP_ADDED`, `MEMBERSHIP_REMOVED`, `MEMBERSHIP_ROLE_CHANGED`
-- `PLATFORM_SETTINGS_UPDATED`, `ORG_SETTINGS_UPDATED`, `EVENT_SETTINGS_UPDATED`
+- `PLATFORM_SETTINGS_UPDATED`, `EVENT_SETTINGS_UPDATED` (l'ancien `ORG_SETTINGS_UPDATED` disparaît — toute modification d'infos administratives de l'org passe par `ORG_UPDATED`)
 - `CATEGORY_TEMPLATE_CREATED`, `CATEGORY_TEMPLATE_UPDATED`, `CATEGORY_TEMPLATE_DELETED`
 
 ## Matrice des permissions par rôle
@@ -307,15 +320,14 @@ Cette matrice est la **source de vérité** : les helpers d'autorisation (`requi
 
 | Action organisation | OWNER | MANAGER | AUDITOR |
 |---|:---:|:---:|:---:|
-| Lire les infos org, settings (hors secrets), quotas | ✓ | ✓ | ✓ |
+| Lire les infos org (identité, adresse, taxId, website, logo, contact), quotas | ✓ | ✓ | ✓ |
 | Lire l'activity log de l'org | ✓ | ✓ | ✓ |
 | Lire la liste des events et des membres | ✓ | ✓ | ✓ |
 | Créer un event | ✓ | ✓ | — |
 | Archiver / restaurer un event de l'org | ✓ | ✓ | — |
 | Inviter / retirer des membres event (sur events de l'org) | ✓ | ✓ | — |
 | Gérer les `CategoryTemplate` de l'org | ✓ | ✓ | — |
-| Modifier `OrgSettings` (reCAPTCHA, contact) | ✓ | — | — |
-| Modifier le nom, le logo de l'org | ✓ | — | — |
+| Modifier les infos administratives de l'org (nom, legalName, adresse, taxId, website, logo, contact public) | ✓ | — | — |
 | Archiver / restaurer l'org | ✓ | — | — |
 | Inviter / retirer / changer rôle de membres org | ✓ | — | — |
 
@@ -491,15 +503,16 @@ Le middleware Next.js intercepte chaque requête sur les routes protégées :
 ## Résolveur de settings (`src/lib/settings.ts`)
 
 ```typescript
-// Cascade : Event → Org → Platform, premier non-null gagne
+// Cascade : EventSettings → Organization → PlatformSettings, premier non-null gagne
 // Ne couvre PAS les champs SMTP ni reCAPTCHA, qui sont lus directement depuis PlatformSettings.
+// OrgSettings a ete supprime en v2 : la cascade lit directement Organization.contactEmail/Phone.
 async function resolveSettings(
   eventId?: string,
   orgId?: string,
 ): Promise<ResolvedSettings>;
 
 type ResolvedSettings = {
-  // Cascade Event → Org → Platform pour le contact
+  // Cascade EventSettings → Organization → PlatformSettings pour le contact
   contactEmail: string;
   contactPhone: string;
 };

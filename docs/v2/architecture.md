@@ -44,14 +44,14 @@ Badge v2 conserve le socle technique de la v1 (Next.js monolithe + Prisma/MySQL 
        ▼                                            ▼
 ┌──────────────────────────────────┐  ┌──────────────────────────────────┐
 │ ORGANIZATION                      │  │ EVENT                            │
-│   slug, quotas, archived          │1▶│   slug global, archived          │
-│   ├─ OrgSettings                  │ N│   ├─ EventSettings (override)    │
-│   ├─ CategoryTemplates            │  │   ├─ Categories                  │
-│   └─ Memberships                  │  │   ├─ Registrations               │
-│      (OWNER / MANAGER / AUDITOR)  │  │   ├─ BlockedEmails/Documents     │
-└──────────────────────────────────┘  │   └─ Memberships                 │
-                                       │      (ADMIN / OPERATOR /         │
-                                       │       PRINTER / VIEWER)          │
+│   identite (name, legalName,      │1▶│   slug global, archived          │
+│     slug), adresse, taxId,        │ N│   ├─ EventSettings (override)    │
+│     website, logo, contact,       │  │   ├─ Categories                  │
+│     quotas, archived              │  │   ├─ Registrations               │
+│   ├─ CategoryTemplates            │  │   ├─ BlockedEmails/Documents     │
+│   └─ Memberships                  │  │   └─ Memberships                 │
+│      (OWNER / MANAGER / AUDITOR)  │  │      (ADMIN / OPERATOR /         │
+└──────────────────────────────────┘  │       PRINTER / VIEWER)          │
                                        └──────────────────────────────────┘
 ```
 

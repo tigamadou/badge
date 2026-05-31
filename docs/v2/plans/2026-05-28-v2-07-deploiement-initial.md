@@ -1,6 +1,8 @@
 # Reset & déploiement initial — Implementation Plan
 
 > **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les variables `PLATFORM_SMTP_*` deviennent la **seule** source SMTP de la plateforme. Aucun fallback ni override possible cote `OrgSettings` ou `EventSettings` : tous les emails (inscription, confirmation, rejet, invitations staff, tests SMTP) partent via le SMTP plateforme et avec `PLATFORM_SMTP_FROM` comme expediteur. Le seed `PlatformSettings` reste inchange (il continue d'inclure tous les champs SMTP), mais le tableau des variables critiques (section ci-dessous) est mis a jour pour refleter cette decision.
+>
+> **Mise a jour 2026-05-31 — schema Prisma v2 sans `OrgSettings`** : le modele `OrgSettings` est **supprime** (fusionne dans `Organization`, qui porte maintenant `legalName?`, `addressLine1?`, `addressLine2?`, `postalCode?`, `city?`, `country?`, `taxId?`, `website?`, `logo?`, `contactEmail?`, `contactPhone?` en plus de `name`, `slug` et des quotas). La table `OrgSettings` **disparait** de toute liste de tables du schema v2. Le seed v2 reste minimal et ne touche **pas** a `Organization` (creee par staff via UI) : il seed uniquement `PlatformSettings` + le premier `SUPER_ADMIN`. Cote `ActivityType`, **aucun** `ORG_SETTINGS_UPDATED` n'est livre par le schema v2 ; toute modification d'organisation (infos admin incluses) passe par `ORG_UPDATED`.
 
 ## Progression
 
@@ -21,6 +23,8 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Derniere session** : aucune, plan jamais commence.
 **Prochaine etape** : Task 1.
+
+**Note 2026-05-31** : schema Prisma v2 sans `OrgSettings` (fusionne dans `Organization`). Le seed v2 ne touche pas a `Organization` (creee par staff via UI), uniquement `PlatformSettings` + premier `SUPER_ADMIN`. `ActivityType` ne contient pas `ORG_SETTINGS_UPDATED` ; les modifs org passent par `ORG_UPDATED`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

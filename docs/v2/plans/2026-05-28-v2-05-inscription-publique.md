@@ -3,6 +3,8 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les setups `PlatformSettings` de ce plan (lignes ~825-826, 1329-1330, 1492-1493, 2164-2165, 3395-3396), qui posent tous les champs SMTP sur le singleton, **restent valides** : `PlatformSettings` conserve l'ensemble des champs SMTP en tant que source unique. Precision : le resolveur de l'expediteur ne consulte plus que `PlatformSettings.smtpFrom` ; tous les emails d'inscription, de confirmation et de rejet partent avec la **meme identite plateforme**. Le **branding contextuel** (logo de l'event, contacts org/event, libelles) reste resolu via la cascade `Event > Org > Platform` -- seul le transport SMTP et le `smtpFrom` sont figes au niveau plateforme. Aucune assertion de ce plan ne verifie un `smtpFrom` specifique a un event ; rien a corriger de ce cote.
+>
+> **Mise a jour 2026-05-31 — suppression d'OrgSettings** : le modele `OrgSettings` est **supprime** (fusionne dans `Organization`). Les infos contact (`contactEmail`, `contactPhone`) sont desormais lues directement depuis `Organization.contactEmail` / `Organization.contactPhone` via la cascade `Event > Organization > Platform`. **Fallback logo** : si `Event.logo` est null, utiliser `Organization.logo` (si present), puis le logo plateforme en dernier recours. Impact sur ce plan : tous les `await prisma.orgSettings.deleteMany()` (setups de test) doivent **disparaitre** ; si un test pose un contact ou un logo cote org, il ecrit directement sur `Organization` via `prisma.organization.update({ where: { id: orgId }, data: { contactEmail, contactPhone, logo } })`. `resolvePublicSettings(eventId)` (Plan 1) doit refleter cette nouvelle cascade.
 
 **Goal:** Implement the full unauthenticated public surface of Badge v2: the contextualised registration page (`/e/[slug]`), the success page, the badge verification page (`/verify/[badgeId]`), the post-rejection edit flow (`/edit-registration/[token]`), and all backing public API routes. Every page resolves its branding, contact and reCAPTCHA settings via the cascade `Platform > Org > Event`, scopes uploads to the event, enforces blocklists and per-event registration quotas, and rate-limits public traffic.
 
@@ -50,6 +52,8 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Derniere session** : aucune, plan jamais commence.
 **Prochaine etape** : Task 0.
+
+**Note 2026-05-31** : suppression d'`OrgSettings` (fusionne dans `Organization`). Contact lu directement depuis `Organization.contactEmail`/`Organization.contactPhone` via la cascade `Event > Organization > Platform`. Fallback logo : `Event.logo` -> `Organization.logo` -> logo plateforme. Tous les setups de test `prisma.orgSettings.deleteMany()` / `prisma.orgSettings.create(...)` disparaissent ; tout contact ou logo cote org est pose via `prisma.organization.update`.
 
 ---
 
@@ -1486,7 +1490,6 @@ async function setup({
   await prisma.blockedDocument.deleteMany();
   await prisma.category.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.orgSettings.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.platformSettings.deleteMany();
   await prisma.platformSettings.create({
@@ -3389,7 +3392,6 @@ beforeEach(async () => {
   await prisma.registration.deleteMany();
   await prisma.category.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.orgSettings.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.platformSettings.deleteMany();
   await prisma.platformSettings.create({

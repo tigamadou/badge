@@ -1,5 +1,7 @@
 # Espace Staff applicatif
 
+> **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé. Toutes les infos administratives d'une organisation (`legalName`, adresse postale, `taxId`, `website`, `logo`) et son contact public (`contactEmail`, `contactPhone`) vivent désormais directement sur `Organization`. Le staff édite tous ces champs depuis `/staff/organizations/[orgId]` (le slug et les quotas restent exclusifs staff).
+
 ## Description fonctionnelle
 
 L'espace staff (`/staff/*`) est le back-office de la plateforme, accessible uniquement aux utilisateurs ayant `isStaff=true`. La hiérarchie staff est linéaire : `SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`. Il permet :
@@ -46,7 +48,7 @@ KPI globaux (lecture pour tous staffs) :
 
 Liste paginée des organisations avec :
 
-- Colonnes : nom, slug, OWNERs (avatars), nombre d'events, nombre d'inscriptions, archived (filtre)
+- Colonnes : nom, slug, OWNERs (avatars), nombre d'events, nombre d'inscriptions, archived (filtre). Colonnes secondaires optionnelles affichables : `legalName`, `taxId`.
 - Recherche par nom/slug
 - Action création (`STAFF_ADMIN` ou `SUPER_ADMIN`)
 - Action **suppression définitive** (hard delete) : `SUPER_ADMIN` uniquement, avec confirmation forte (re-saisie du slug de l'org)
@@ -55,10 +57,10 @@ Liste paginée des organisations avec :
 
 Détail d'une organisation, avec onglets :
 
-- **Vue d'ensemble** : métriques, quotas (consommé / limite), liste events récents — lecture pour tous staffs
+- **Vue d'ensemble** : métriques, quotas (consommé / limite), liste events récents, ainsi qu'un récapitulatif des infos administratives de l'org (identité `name`/`legalName`, adresse postale, `taxId`, `website`, `logo`, contact public `contactEmail`/`contactPhone`) — lecture pour tous staffs
 - **Membres** : OWNERs de l'org — lecture pour tous staffs ; inviter un OWNER réservé à `STAFF_ADMIN` ou `SUPER_ADMIN`
 - **Quotas** : édition `STAFF_ADMIN` ou `SUPER_ADMIN` — `quotaMaxEvents`, `quotaMaxRegistrations`, `quotaMaxStorageMB`
-- **Paramètres** : édition du nom et du slug par `STAFF_ADMIN` ou `SUPER_ADMIN` ; archivage / désarchivage par `STAFF_ADMIN` ou `SUPER_ADMIN` ; bouton rouge **"Supprimer définitivement"** réservé à `SUPER_ADMIN` (hard delete, confirmation forte par re-saisie du slug)
+- **Paramètres** : édition par `STAFF_ADMIN` ou `SUPER_ADMIN` de **tous** les champs `Organization` — identité (`name`, `legalName`, `slug` — le slug reste exclusif staff), adresse postale (`addressLine1`, `addressLine2`, `postalCode`, `city`, `country`), administratif (`taxId`, `website`, `logo`), contact public (`contactEmail`, `contactPhone`). Archivage / désarchivage par `STAFF_ADMIN` ou `SUPER_ADMIN` ; bouton rouge **"Supprimer définitivement"** réservé à `SUPER_ADMIN` (hard delete, confirmation forte par re-saisie du slug)
 - **Activité** : `ActivityLog` filtré sur cette org — lecture pour tous staffs
 
 Bouton **"Entrer dans l'organisation"** (visible à tous staffs) → redirige `/admin/[orgId]` avec bandeau d'avertissement.
@@ -134,9 +136,9 @@ Le rôle requis est indiqué pour chaque route. La hiérarchie est inclusive : `
 
 ```
 GET    /api/staff/organizations                          → tout staff (lecture)
-POST   /api/staff/organizations                          → STAFF_ADMIN + SUPER_ADMIN
+POST   /api/staff/organizations                          → STAFF_ADMIN + SUPER_ADMIN. Body : name + slug (obligatoires) ; legalName, adresse (addressLine1/2, postalCode, city, country), taxId, website, logo, contactEmail, contactPhone, quotaMaxEvents, quotaMaxRegistrations, quotaMaxStorageMB optionnels lors de l'onboarding.
 GET    /api/staff/organizations/[orgId]                  → tout staff (lecture)
-PATCH  /api/staff/organizations/[orgId]                  → STAFF_ADMIN + SUPER_ADMIN (nom, slug, quotas)
+PATCH  /api/staff/organizations/[orgId]                  → STAFF_ADMIN + SUPER_ADMIN (tous les champs Organization : name, legalName, slug, addressLine1/2, postalCode, city, country, taxId, website, logo, contactEmail, contactPhone, quotaMaxEvents, quotaMaxRegistrations, quotaMaxStorageMB)
 POST   /api/staff/organizations/[orgId]/archive          → STAFF_ADMIN + SUPER_ADMIN
 POST   /api/staff/organizations/[orgId]/restore          → STAFF_ADMIN + SUPER_ADMIN
 DELETE /api/staff/organizations/[orgId]                  → SUPER_ADMIN uniquement (hard delete, confirmation forte)

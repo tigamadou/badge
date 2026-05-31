@@ -12,6 +12,8 @@
 
 > **Mise à jour 2026-05-31 — Décision de design SMTP plateforme uniquement.** Les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) vivent **uniquement** dans `PlatformSettings`. Il n'y a plus de cascade SMTP ni de champs SMTP sur `OrgSettings`/`EventSettings`. Seul le **branding** contextuel (logo via `Event.logo`, `contactEmail`, `contactPhone`) reste résolu en cascade `Event → Org → Platform`. Le `from` est toujours celui de la plateforme, éventuellement labellisé avec le nom de l'org ou de l'event pour l'expéditeur affiché. Voir `docs/v2/features/notifications-email.md` (source de vérité) pour la justification complète. Les tasks 2 et 10 ci-dessous ont été adaptées en conséquence.
 
+> **Mise à jour 2026-05-31 — Suppression d'`OrgSettings` (fusionné dans `Organization`).** `resolveTransporter` et `loadBrandingContext` lisent désormais le contact et le logo d'organisation **directement** depuis `Organization.contactEmail`, `Organization.contactPhone` et `Organization.logo` (plus de jointure `settings: { select: { ... } }` sur `Organization` ni de lecture `org.settings.contactEmail`). Fallback logo email : si `Event.logo` est null, utiliser `Organization.logo` (si présent). Impact Task 2 : les setups de test `await prisma.orgSettings.deleteMany()` et `prisma.orgSettings.create({ data: { orgId, contactEmail, contactPhone } })` sont remplacés par un `prisma.organization.update({ where: { id: orgId }, data: { contactEmail, contactPhone } })` (le contact est posé directement à la création/mise à jour de l'`Organization`). Toute jointure `settings` sur `Organization` dans le code de `loadBrandingContext` disparaît — accès direct aux champs. Option (non bloquante ici) : `website` peut être cité dans le footer des templates email.
+
 ---
 
 ## Progression
@@ -41,6 +43,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Notes** :
 - **2026-05-31** — Decision de design : SMTP plateforme uniquement (pas de cascade). Les champs SMTP sont retires de `OrgSettings`/`EventSettings`. Tasks 2 et 10 adaptees (resolveTransporter lit directement `PlatformSettings` via `getPlatformSmtp()` ; le branding contextuel reste cascade Event -> Org -> Platform). Voir spec `docs/v2/features/notifications-email.md`.
+- **2026-05-31** — Suppression d'`OrgSettings` (fusionne dans `Organization`). `resolveTransporter`/`loadBrandingContext` (Task 2) lisent le contact et le logo d'org directement sur `Organization.contactEmail`/`contactPhone`/`logo`. Fallback logo email : `Event.logo` -> `Organization.logo`. Les setups de test `prisma.orgSettings.deleteMany()` / `prisma.orgSettings.create(...)` sont remplaces par `prisma.organization.update({ data: { contactEmail, contactPhone } })`. Toute jointure `settings: { select: { ... } }` sur `Organization` disparait. Option : citer `website` dans le footer des templates.
 
 ---
 
@@ -78,7 +81,7 @@ Expected: `On branch feat/v2-sass`, working tree clean ou seuls les fichiers de 
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/settings.test.ts src/lib/__tests__/activity-log.test.ts
 ```
 
-Expected: tests Plan 1 passent. Ce plan dépend de `resolveSettings()`, `logActivity()`, du schéma v2 (User, Registration, Event, Organization, PlatformSettings, OrgSettings, EventSettings).
+Expected: tests Plan 1 passent. Ce plan dépend de `resolveSettings()`, `logActivity()`, du schéma v2 (User, Registration, Event, Organization, PlatformSettings, EventSettings).
 
 - [ ] **Step 0.3: Confirm nodemailer présent**
 
@@ -245,7 +248,6 @@ import { resolveTransporter } from "@/lib/mail";
 
 async function resetSettings() {
   await prisma.eventSettings.deleteMany();
-  await prisma.orgSettings.deleteMany();
   await prisma.event.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.platformSettings.deleteMany();
@@ -281,9 +283,13 @@ describe("resolveTransporter", () => {
   });
 
   it("labels platform from with org name when orgId provided", async () => {
-    const org = await prisma.organization.create({ data: { name: "Org Acme", slug: "acme" } });
-    await prisma.orgSettings.create({
-      data: { orgId: org.id, contactEmail: "c@acme.com", contactPhone: "+225 0101" },
+    const org = await prisma.organization.create({
+      data: {
+        name: "Org Acme",
+        slug: "acme",
+        contactEmail: "c@acme.com",
+        contactPhone: "+225 0101",
+      },
     });
     const r = await resolveTransporter({ orgId: org.id });
     // L'adresse reste celle de PlatformSettings ; seul le label affiche change
@@ -392,14 +398,16 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
         title: true,
         logo: true,
         orgId: true,
-        organization: { select: { name: true } },
+        organization: { select: { name: true, logo: true } },
       },
     });
     if (event) {
+      // Fallback logo email : Event.logo -> Organization.logo (cascade definie 2026-05-31).
+      const logoKey = event.logo ?? event.organization.logo ?? null;
       return {
         eventTitle: event.title,
         orgName: event.organization.name,
-        logoUrl: event.logo ? `${baseUrl}/api/files/${event.logo}` : undefined,
+        logoUrl: logoKey ? `${baseUrl}/api/files/${logoKey}` : undefined,
         resolvedOrgId: event.orgId,
         fromLabel: event.title,
       };
@@ -409,11 +417,12 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
   if (ctx.orgId) {
     const org = await prisma.organization.findUnique({
       where: { id: ctx.orgId },
-      select: { name: true },
+      select: { name: true, logo: true },
     });
     if (org) {
       return {
         orgName: org.name,
+        logoUrl: org.logo ? `${baseUrl}/api/files/${org.logo}` : undefined,
         fromLabel: org.name,
         resolvedOrgId: ctx.orgId,
       };

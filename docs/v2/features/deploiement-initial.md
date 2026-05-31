@@ -1,5 +1,7 @@
 # Reset & déploiement initial v2
 
+> **Note 2026-05-31** — Le modèle `OrgSettings` est **supprimé** : ses champs cascadables (`contactEmail`, `contactPhone`, `badgeTemplateId`) sont fusionnés dans le modèle `Organization`, qui porte désormais aussi les infos administratives (`legalName`, adresse structurée, `taxId`, `website`, `logo`). La cascade Settings reste `Event → Organization → Platform`. Cette spec et le schéma listé ci-dessous reflètent ce changement.
+
 ## Description fonctionnelle
 
 La v2 part d'une base de données vide : pas de migration depuis v1. La prod existante (BDD `badge` + uploads) est **réinitialisée complètement** lors du déploiement v2. Cette sous-spec décrit la procédure de reset, le seed initial, les variables d'environnement et les tests de fumée.
@@ -27,7 +29,7 @@ Le schéma est intégralement remplacé. Aucune migration incrémentale depuis v
 Tables présentes dans le schéma v2 :
 
 - `User` (avec `isStaff`, `staffRole`, `archived`)
-- `Organization` (avec quotas, `archived`)
+- `Organization` (avec infos administratives — `legalName`, adresse structurée, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone`, `badgeTemplateId` — quotas, `archived`)
 - `OrgMembership` (User × Org × OrgRole)
 - `Event` (avec `orgId`, `slug` global unique, `archived`)
 - `EventMembership` (User × Event × EventRole)
@@ -38,11 +40,12 @@ Tables présentes dans le schéma v2 :
 - `BlockedEmail` (scope event)
 - `BlockedDocument` (scope event)
 - `PlatformSettings` (singleton)
-- `OrgSettings` (par org)
 - `EventSettings` (par event)
 - `ActivityLog` (avec `orgId`, `eventId`, `staffActor`)
 
-Enums : `StaffRole`, `OrgRole`, `EventRole`, `RegistrationStatus`, `ActivityType` (étendu).
+> Le modèle `OrgSettings` n'existe plus en v2 (fusion dans `Organization` — décision 2026-05-31). Seuls `PlatformSettings` (singleton) et `EventSettings` (par event) subsistent comme tables de settings dédiées.
+
+Enums : `StaffRole`, `OrgRole`, `EventRole`, `RegistrationStatus`, `ActivityType` (étendu). L'`ActivityType` v2 ne comporte **pas** de `ORG_SETTINGS_UPDATED` (le modèle `OrgSettings` n'existe plus) : toute modification d'une organisation, y compris ses infos administratives et ses champs de contact ex-`OrgSettings`, passe par `ORG_UPDATED`.
 
 L'ancien enum `Role` v1 (SUPER_ADMIN, ADMIN, MODERATEUR, OPERATOR) **disparaît**. Note : le nom `SUPER_ADMIN` réapparaît en v2 dans l'enum `StaffRole` avec une sémantique différente — il désigne le sommet de la hiérarchie staff applicatif (sans la restriction v1 sur les actions métier).
 
