@@ -12,6 +12,33 @@
 
 ---
 
+## Progression
+
+> **Convention** : avant chaque session, lire ce bloc pour reprendre la ou on s'etait arrete. Apres chaque task validee (tests verts + criteres d'acceptation OK), passer `[ ]` a `[x]` et dater. En cas d'interruption mi-task, passer a `[~]`, dater, et noter precisement l'etat (step en cours, fichiers touches, prochaine etape). Si une task est abandonnee : passer a `[-]` avec la raison dans les notes.
+
+Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
+
+| Task | Statut | Date | Notes |
+|------|--------|------|-------|
+| 0 | [ ] | -- | -- |
+| 1 | [ ] | -- | -- |
+| 2 | [ ] | -- | -- |
+| 3 | [ ] | -- | -- |
+| 4 | [ ] | -- | -- |
+| 5 | [ ] | -- | -- |
+| 6 | [ ] | -- | -- |
+| 7 | [ ] | -- | -- |
+| 8 | [ ] | -- | -- |
+| 9 | [ ] | -- | -- |
+| 10 | [ ] | -- | -- |
+| 11 | [ ] | -- | -- |
+| 12 | [ ] | -- | -- |
+
+**Derniere session** : aucune, plan jamais commence.
+**Prochaine etape** : Task 1.
+
+---
+
 ## File Structure
 
 **Files to create:**
@@ -1982,7 +2009,7 @@ Expected: une série de commits `feat(v2): ...` correspondant aux Tasks 1 à 10.
 ```markdown
 ## État d'implémentation
 
-Plan 6 implémenté (`docs/superpowers/plans/2026-05-28-v2-06-notifications-email.md`). Module `src/lib/mail.ts` réécrit, suite Vitest dans `src/lib/__tests__/mail.test.ts` et `src/lib/__tests__/mail-helpers.test.ts`. Les routes API qui consomment ces fonctions sont mises à jour dans les plans 2 à 5.
+Plan 6 implémenté (`docs/v2/plans/2026-05-28-v2-06-notifications-email.md`). Module `src/lib/mail.ts` réécrit, suite Vitest dans `src/lib/__tests__/mail.test.ts` et `src/lib/__tests__/mail-helpers.test.ts`. Les routes API qui consomment ces fonctions sont mises à jour dans les plans 2 à 5.
 ```
 
 - [ ] **Step 12.2: Commit**

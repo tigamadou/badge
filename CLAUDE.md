@@ -12,8 +12,8 @@ Ce fichier est la **source unique de vérité** pour la **méthode de travail** 
 2. **Lire la documentation** de cette version : `docs/<version>/architecture.md`, `docs/<version>/base-de-donnees.md` (si présent), puis la doc de la feature concernée dans `docs/<version>/features/`.
 3. **Chercher un plan/spec** existant :
    - `docs/<version>/features/<nom>.md`
-   - `docs/superpowers/specs/` (specs validées)
-   - `docs/superpowers/plans/` (plans d'implémentation)
+   - `docs/<version>/specs/` (specs validées : capture du *pourquoi* du design)
+   - `docs/<version>/plans/` (plans d'implémentation : tracker de progression en tête, cf. § 1 point 7)
 4. **Si aucune spec n'existe** pour la fonctionnalité demandée → produire une spec avant de coder (workflow : brainstorming → writing-plans → implémentation).
 5. **Décomposer et déléguer aux agents.** Pour chaque changement non trivial, **évaluer explicitement** le mode d'exécution **avant** de coder et l'annoncer à l'utilisateur. Cinq modes possibles, du plus léger au plus structurant :
 
@@ -33,6 +33,10 @@ Ce fichier est la **source unique de vérité** pour la **méthode de travail** 
 
    L'agent principal reste responsable de la cohérence globale, de la mise à jour de la doc et du respect des règles de ce fichier. Les agents délégués doivent recevoir un brief auto-suffisant (chemins absolus, contexte, critères d'acceptation, livrable attendu).
 6. Pour chaque modification : **identifier la doc impactée** et la mettre à jour dans le même changement.
+7. **Conservation et suivi des plans d'implémentation** : les plans et les specs vivent désormais **dans la version concernée**, sous `docs/<version>/plans/` et `docs/<version>/specs/`. Les deux sont **conservés indéfiniment**, même après implémentation complète. Ne **jamais** supprimer un plan ou une spec sans demande explicite et explicite de l'utilisateur.
+   - **Plans** (`docs/<version>/plans/`) : décrivent *comment* implémenter une feature (tâches, ordre, fichiers touchés, tests TDD). Chaque plan contient en tête une section `## Progression` avec une table par task (statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned), date et notes.
+   - **Specs** (`docs/<version>/specs/`) : ADR (Architecture Decision Record) — capturent le *pourquoi* du design, les options envisagées, les arbitrages. Le code et `docs/<version>/architecture.md` documentent le *quoi* et le *comment* actuels ; la spec documente le *pourquoi* historique.
+   - **Workflow tracker** : avant chaque session, lire la section `## Progression` du plan concerné pour savoir où on s'était arrêté. Après chaque task validée (tests verts + critères d'acceptation OK), mettre à jour le statut à `[x]` et dater. En cas d'interruption mi-task, passer à `[~]`, dater, et noter précisément l'état (step en cours, fichiers touchés, prochaine étape). En cas d'abandon, passer à `[-]` et noter la raison dans la spec correspondante.
 
 ---
 

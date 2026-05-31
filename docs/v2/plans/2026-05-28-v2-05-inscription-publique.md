@@ -17,6 +17,40 @@
 
 ---
 
+## Progression
+
+> **Convention** : avant chaque session, lire ce bloc pour reprendre la ou on s'etait arrete. Apres chaque task validee (tests verts + criteres d'acceptation OK), passer `[ ]` a `[x]` et dater. En cas d'interruption mi-task, passer a `[~]`, dater, et noter precisement l'etat (step en cours, fichiers touches, prochaine etape). Si une task est abandonnee : passer a `[-]` avec la raison dans les notes.
+
+Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
+
+| Task | Statut | Date | Notes |
+|------|--------|------|-------|
+| 0 | [ ] | -- | -- |
+| 1 | [ ] | -- | -- |
+| 2 | [ ] | -- | -- |
+| 3 | [ ] | -- | -- |
+| 4 | [ ] | -- | -- |
+| 5 | [ ] | -- | -- |
+| 6 | [ ] | -- | -- |
+| 7 | [ ] | -- | -- |
+| 8 | [ ] | -- | -- |
+| 9 | [ ] | -- | -- |
+| 10 | [ ] | -- | -- |
+| 11 | [ ] | -- | -- |
+| 12 | [ ] | -- | -- |
+| 13 | [ ] | -- | -- |
+| 14 | [ ] | -- | -- |
+| 15 | [ ] | -- | -- |
+| 16 | [ ] | -- | -- |
+| 17 | [ ] | -- | -- |
+| 18 | [ ] | -- | -- |
+| 19 | [ ] | -- | -- |
+
+**Derniere session** : aucune, plan jamais commence.
+**Prochaine etape** : Task 0.
+
+---
+
 ## File Structure
 
 **Files to create:**
