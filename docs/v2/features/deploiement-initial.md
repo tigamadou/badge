@@ -44,11 +44,11 @@ Tables présentes dans le schéma v2 :
 
 Enums : `StaffRole`, `OrgRole`, `EventRole`, `RegistrationStatus`, `ActivityType` (étendu).
 
-L'ancien enum `Role` (SUPER_ADMIN, ADMIN, MODERATEUR, OPERATOR) **disparaît**.
+L'ancien enum `Role` v1 (SUPER_ADMIN, ADMIN, MODERATEUR, OPERATOR) **disparaît**. Note : le nom `SUPER_ADMIN` réapparaît en v2 dans l'enum `StaffRole` avec une sémantique différente — il désigne le sommet de la hiérarchie staff applicatif (sans la restriction v1 sur les actions métier).
 
 ## Seed initial (`prisma/seed.ts` v2)
 
-Le seed crée uniquement un **premier utilisateur staff** ; aucune org, aucun event ne sont seedés. Le staff onboard ses clients ensuite via l'UI.
+Le seed crée uniquement un **premier utilisateur SUPER_ADMIN** ; aucune org, aucun event ne sont seedés. Le SUPER_ADMIN onboard ensuite les autres staff et les clients via l'UI.
 
 ```typescript
 async function main() {
@@ -67,21 +67,21 @@ async function main() {
     update: {},
   });
 
-  // 2. Premier user STAFF_ADMIN
-  const email = process.env.SEED_STAFF_EMAIL || 'admin@badge.local';
-  const password = process.env.SEED_STAFF_PASSWORD || 'admin123';
+  // 2. Premier user SUPER_ADMIN
+  const email = process.env.SEED_SUPER_ADMIN_EMAIL || 'admin@badge.local';
+  const password = process.env.SEED_SUPER_ADMIN_PASSWORD || 'admin123';
   const existing = await prisma.user.findUnique({ where: { email } });
   if (!existing) {
     await prisma.user.create({
       data: {
         email,
         password: await hash(password, 12),
-        name: 'Staff Admin',
+        name: 'Super Admin',
         isStaff: true,
-        staffRole: 'STAFF_ADMIN',
+        staffRole: 'SUPER_ADMIN',
       },
     });
-    console.log(`STAFF_ADMIN créé : ${email}`);
+    console.log(`SUPER_ADMIN créé : ${email}`);
   }
 }
 ```
@@ -113,11 +113,11 @@ PLATFORM_SMTP_USER=<user>
 PLATFORM_SMTP_PASSWORD=<password>
 PLATFORM_SMTP_SECURE=true|false
 
-SEED_STAFF_EMAIL=<email>            # premier STAFF_ADMIN
-SEED_STAFF_PASSWORD=<password>      # à changer immédiatement après login
+SEED_SUPER_ADMIN_EMAIL=<email>      # premier SUPER_ADMIN
+SEED_SUPER_ADMIN_PASSWORD=<password> # à changer immédiatement après login
 ```
 
-Les anciennes `SMTP_*` et `SEED_ADMIN_*` sont remplacées par les variantes `PLATFORM_SMTP_*` et `SEED_STAFF_*`.
+Les anciennes `SMTP_*` et `SEED_ADMIN_*` sont remplacées par les variantes `PLATFORM_SMTP_*` et `SEED_SUPER_ADMIN_*`.
 
 ## Procédure de déploiement (downtime maintenance)
 
@@ -141,8 +141,8 @@ Les anciennes `SMTP_*` et `SEED_ADMIN_*` sont remplacées par les variantes `PLA
     $ make prod
 [9] Smoke tests
     $ make smoke-tests
-[10] Première connexion STAFF_ADMIN
-    - Login avec SEED_STAFF_EMAIL / SEED_STAFF_PASSWORD
+[10] Première connexion SUPER_ADMIN
+    - Login avec SEED_SUPER_ADMIN_EMAIL / SEED_SUPER_ADMIN_PASSWORD
     - Changer immédiatement le mot de passe via /profile
 [11] Désactiver le splash maintenance
 ```
@@ -162,9 +162,11 @@ async function main() {
   const ps = await prisma.platformSettings.findUnique({ where: { id: 'singleton' } });
   if (!ps) throw new Error('PlatformSettings manquant');
 
-  // 3. Au moins un staff
-  const staff = await prisma.user.findFirst({ where: { isStaff: true } });
-  if (!staff) throw new Error('Aucun staff seedé');
+  // 3. Au moins un SUPER_ADMIN
+  const superAdmin = await prisma.user.findFirst({
+    where: { isStaff: true, staffRole: 'SUPER_ADMIN' },
+  });
+  if (!superAdmin) throw new Error('Aucun SUPER_ADMIN seedé');
 
   // 4. App répond
   const res = await fetch(`${process.env.BASE_URL}/login`);
@@ -207,11 +209,12 @@ Le backup est conservé au minimum 30 jours.
 2. La BDD ne contient que `PlatformSettings` + 1 `User` staff après seed.
 3. Aucun fichier dans `uploads/`.
 4. `/login` charge correctement.
-5. STAFF_ADMIN peut se connecter avec les seeds env vars.
+5. Le SUPER_ADMIN seedé peut se connecter avec les variables d'env `SEED_SUPER_ADMIN_*`.
 6. `/staff` est accessible après login staff.
 7. `/admin/[orgId]` retourne 404 (aucun orgId valide).
 8. Les smoke tests passent.
 9. Le backup pré-v2 existe et est utilisable pour rollback.
+10. La base contient exactement 1 user `SUPER_ADMIN` après seed initial.
 
 ## Dépendances
 

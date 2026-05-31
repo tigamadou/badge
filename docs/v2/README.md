@@ -8,10 +8,10 @@ Badge v2 transforme l'application mono-événement v1 en SaaS B2B multi-organisa
 
 | Concept | Description |
 |---|---|
-| **Staff applicatif** | 3 rôles (STAFF_ADMIN, STAFF_SUPPORT, STAFF_OBSERVER), accès global à toutes les organisations |
-| **Organisation** | Client B2B, géré par un ou plusieurs OWNERs. Possède des events, settings (override plateforme), templates de catégories, quotas |
-| **Événement** | Appartient à une organisation. Possède des catégories, inscriptions, badges, settings (override org). Membres ADMIN/OPERATOR par événement |
-| **Multi-rôle natif** | Un user peut être OWNER de plusieurs orgs, ADMIN d'un event, OPERATOR d'un autre |
+| **Staff applicatif** | 4 rôles linéaires (SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER), accès global à toutes les organisations |
+| **Organisation** | Client B2B, géré par OWNER (gestion complète), MANAGER (events + membres event), AUDITOR (lecture seule). Possède des events, settings (override plateforme), templates de catégories, quotas |
+| **Événement** | Appartient à une organisation. Possède des catégories, inscriptions, badges, settings (override org). 4 rôles par événement : ADMIN, OPERATOR, PRINTER (impression badge), VIEWER (vue agrégée) |
+| **Multi-rôle natif** | Un user peut être OWNER de plusieurs orgs, MANAGER d'une autre, ADMIN d'un event, OPERATOR d'un autre |
 | **Cascade settings** | `PlatformSettings → OrgSettings → EventSettings`, premier non-null gagne |
 | **URLs publiques** | `/e/[slug]` (slug global unique), `/verify/[id]`, `/edit-registration/[token]` |
 | **Pas de billing** | Facturation hors-app, quotas configurés par le staff sur chaque org |
@@ -33,8 +33,8 @@ Badge v2 transforme l'application mono-événement v1 en SaaS B2B multi-organisa
 |---|---|---|
 | 1 | [Multi-tenancy & RBAC](features/multi-tenancy-rbac.md) | Modèles Prisma, helpers d'autorisation, middleware de scoping |
 | 2 | [Espace Staff applicatif](features/espace-staff.md) | Routes `/staff/*`, création org/user, gestion plateforme |
-| 3 | [Espace Organisation (OWNER)](features/espace-organisation.md) | Routes `/admin/[orgId]/*`, events, OrgSettings, templates |
-| 4 | [Espace Événement (ADMIN/OPERATOR)](features/espace-evenement.md) | Inscriptions, badges, catégories, scan, journal, members |
+| 3 | [Espace Organisation (OWNER / MANAGER / AUDITOR)](features/espace-organisation.md) | Routes `/admin/[orgId]/*`, events, OrgSettings, templates |
+| 4 | [Espace Événement (ADMIN / OPERATOR / PRINTER / VIEWER)](features/espace-evenement.md) | Inscriptions, badges, catégories, scan, journal, members |
 | 5 | [Inscription publique scopée](features/inscription-publique.md) | `/e/[slug]`, branding, cascade settings, edit-link, verify |
 | 6 | [Notifications email multi-tenant](features/notifications-email.md) | Résolveur SMTP en cascade, templates, expéditeur dynamique |
 | 7 | [Reset & déploiement initial](features/deploiement-initial.md) | Reset prod, seed staff, smoke tests, rollback |
@@ -58,7 +58,7 @@ Un plan par sous-spec, dans `docs/superpowers/plans/` :
 | Aspect | v1 | v2 |
 |---|---|---|
 | Événements | 1 seul (singleton) | N événements multi-organisation |
-| Rôles | 4 globaux (SUPER_ADMIN, ADMIN, MODERATEUR, OPERATOR) | 3 niveaux : staff (3), org (1), event (2) |
+| Rôles | 4 globaux (SUPER_ADMIN, ADMIN, MODERATEUR, OPERATOR) avec séparation forte (SUPER_ADMIN sans actions métier) | 3 niveaux : staff (4 : SUPER_ADMIN/STAFF_ADMIN/SUPPORT/OBSERVER), org (3 : OWNER/MANAGER/AUDITOR), event (4 : ADMIN/OPERATOR/PRINTER/VIEWER). Pas de séparation forte : SUPER_ADMIN v2 a tous les droits |
 | Settings | Globaux (singleton) | Cascade Platform / Org / Event |
 | Catégories | Globales (anciennement "Team") | Par event + templates au niveau org |
 | Blocages email/doc | Globaux | Par event |

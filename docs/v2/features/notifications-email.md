@@ -38,9 +38,11 @@ Exclu :
 
 | Code | Déclencheur | Destinataire |
 |---|---|---|
-| `USER_INVITATION` | Création user (staff ou OWNER ou Membership) | Nouvel utilisateur |
+| `USER_INVITATION` | Création user (staff, OrgMembership ou EventMembership) avec rôle précisé | Nouvel utilisateur |
 | `USER_PASSWORD_RESET` | Reset par staff | Utilisateur ciblé |
-| `STAFF_NEW_ORG_OWNER_INVITED` (optionnel) | Création OWNER par staff | Co-OWNERs existants |
+| `STAFF_NEW_ORG_MEMBER_INVITED` (optionnel) | Création d'un membre org (OWNER, MANAGER ou AUDITOR) par le staff | Co-OWNERs existants |
+
+> Note : pour `STAFF_NEW_ORG_MEMBER_INVITED`, seuls les co-OWNERs sont notifiés (ils restent décisionnaires sur l'organisation). Les MANAGER et AUDITOR ne sont pas destinataires pour éviter le bruit.
 
 ## Résolveur SMTP
 
@@ -67,7 +69,11 @@ Algorithme :
    - Sinon si `OrgSettings.smtpFrom` non null → `"[Org.name] <org.smtpFrom>"`
    - Sinon `PlatformSettings.smtpFrom` (ex: `"Badge <noreply@badge.local>"`)
 
-**Cas particulier — User Invitation envoyé par le staff** : pas d'eventId/orgId → utilise `PlatformSettings` directement.
+**Cas particulier — User Invitation** :
+
+- Invitation staff pure (création d'un compte sans rattachement org/event) → pas d'eventId/orgId → utilise `PlatformSettings` directement, branding générique Badge.
+- Invitation portant sur une OrgMembership (OWNER / MANAGER / AUDITOR) → utiliser le contexte `orgId` pour résoudre l'expéditeur et le branding (logo et coordonnées de l'organisation).
+- Invitation portant sur une EventMembership (ADMIN / OPERATOR / PRINTER / VIEWER) → utiliser le contexte `eventId` pour résoudre l'expéditeur et le branding (logo et coordonnées de l'événement, avec cascade vers l'organisation puis la plateforme).
 
 ## Templates
 
@@ -104,6 +110,13 @@ Implémentation : helper `buildEmail({ title, body, ctx: ResolvedTransport })` (
 | `{{setupPasswordLink}}` | `https://[host]/setup-password?token=...` |
 | `{{verifyBadgeLink}}` | `https://[host]/verify/[badgeId]` |
 | `{{rejectionReason}}` / `{{rejectionDetails}}` | inscription |
+| `{{role}}` | libellé français du rôle attribué (voir ci-dessous), déterminé au moment de l'envoi selon le membership créé |
+
+Libellés `{{role}}` :
+
+- Invitations staff : `SUPER ADMIN`, `ADMIN STAFF`, `SUPPORT STAFF`, `OBSERVATEUR STAFF`
+- Invitations org (OrgMembership) : `OWNER`, `MANAGER`, `AUDITOR`
+- Invitations event (EventMembership) : `ADMIN`, `OPÉRATEUR`, `OPÉRATEUR D'IMPRESSION`, `OBSERVATEUR`
 
 ### Exemples
 
@@ -124,12 +137,14 @@ Implémentation : helper `buildEmail({ title, body, ctx: ResolvedTransport })` (
 >
 > Bonjour {{name}},
 >
-> Un compte vous a été créé sur Badge{{#if orgName}} pour l'organisation **{{orgName}}**{{/if}}. Cliquez sur le lien ci-dessous pour définir votre mot de passe (valide 24h) :
+> Un compte vous a été créé sur Badge{{#if orgName}} pour l'organisation **{{orgName}}** en tant que **{{role}}**{{/if}}{{#if eventTitle}} pour l'événement **{{eventTitle}}** en tant que **{{role}}**{{/if}}{{#unless orgName eventTitle}} en tant que **{{role}}**{{/unless}}. Cliquez sur le lien ci-dessous pour définir votre mot de passe (valide 24h) :
 >
 > {{setupPasswordLink}}
 >
 > ─
 > L'équipe Badge
+
+Le pseudo-template ci-dessus est indicatif : adapter la syntaxe au moteur réellement utilisé, mais conserver les trois cas (org + rôle, event + rôle, ou rôle seul pour une invitation staff pure).
 
 ## Refonte de `src/lib/mail.ts`
 
@@ -140,7 +155,10 @@ async function sendRegistrationConfirmation(registrationId: string): Promise<voi
 async function sendStatusNotification(registrationId: string): Promise<void>;  // dispatche APPROVED/REJECTED
 async function sendBadgePrintedNotification(registrationId: string): Promise<void>;
 async function sendEditLinkEmail(registrationId: string): Promise<void>;
-async function sendUserInvitation(userId: string, options?: { orgId?: string }): Promise<void>;
+async function sendUserInvitation(
+  userId: string,
+  options?: { orgId?: string; eventId?: string; role?: string },
+): Promise<void>;
 async function sendPasswordResetEmail(userId: string): Promise<void>;
 async function sendSmtpTest(args: { to: string; orgId?: string; eventId?: string }): Promise<void>;
 ```
@@ -153,6 +171,12 @@ Chaque fonction :
 4. Compose le HTML via `buildEmail(...)`
 5. Envoie via `transporter.sendMail({ from, to, subject, html })`
 6. Logge un `ActivityLog` correspondant (REGISTRATION_*, USER_*, etc.) — déjà déclenché par la mutation appelante, l'envoi mail n'a pas son propre log sauf échec
+
+Cas spécifique `sendUserInvitation` :
+
+- Si `options.orgId` ou `options.eventId` est fourni, la fonction résout automatiquement le branding correspondant (`orgName`, `eventTitle`, logo, contact) et utilise la cascade SMTP appropriée.
+- Si `options.role` est fourni, la fonction résout le libellé français via une table de mapping (`OWNER → "OWNER"`, `MANAGER → "MANAGER"`, `PRINTER → "OPÉRATEUR D'IMPRESSION"`, etc.) et injecte la variable `{{role}}` dans le template.
+- Si aucune option n'est fournie, fallback sur `PlatformSettings` (branding générique Badge).
 
 Gestion des erreurs :
 
@@ -170,6 +194,8 @@ Gestion des erreurs :
 - `buildEmail()` injecte le logo event si fourni, sinon logo Badge
 - Variables `{{eventTitle}}` etc. résolues correctement
 - Anti-XSS : variables HTML-escaped (les valeurs viennent de la BDD mais sécurisons quand même)
+- `sendUserInvitation(userId, { orgId, role: 'MANAGER' })` envoie un email contextualisé org avec le libellé `MANAGER` et le branding de l'organisation
+- `sendUserInvitation(userId, { eventId, role: 'VIEWER' })` envoie un email contextualisé event avec le libellé `OBSERVATEUR` et le branding de l'événement
 
 ## Critères d'acceptation
 
@@ -181,6 +207,8 @@ Gestion des erreurs :
 6. Test SMTP envoie un email "Test SMTP — Badge" via la cascade (selon contexte org ou event).
 7. Émojis et accents français préservés (UTF-8, headers MIME).
 8. Aucun secret SMTP n'est jamais inclus dans le corps de l'email.
+9. L'email d'invitation `USER_INVITATION` mentionne explicitement le rôle attribué (staff, org ou event).
+10. L'email d'invitation utilise le branding de l'org ou de l'event correspondant (logo, contact) quand le contexte est fourni ; fallback sur le branding Badge sinon.
 
 ## Dépendances
 

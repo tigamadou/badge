@@ -29,7 +29,7 @@ Badge v2 conserve le socle technique de la v1 (Next.js monolithe + Prisma/MySQL 
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │ STAFF APPLICATIF (User.isStaff=true)                           │
-│   STAFF_ADMIN | STAFF_SUPPORT | STAFF_OBSERVER                 │
+│   SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER   │
 │   Accès global à toutes les organisations (avec audit)         │
 └────────────────────────────────────────────────────────────────┘
                               │
@@ -42,15 +42,17 @@ Badge v2 conserve le socle technique de la v1 (Next.js monolithe + Prisma/MySQL 
 └────────────────────────────────────────────────────────────────┘
        │                                            │
        ▼                                            ▼
-┌──────────────────────────┐         ┌─────────────────────────────┐
-│ ORGANIZATION              │────────▶│ EVENT                       │
-│   slug, quotas, archived  │   1:N  │   slug global, archived     │
-│   ├─ OrgSettings          │         │   ├─ EventSettings (override)│
-│   ├─ CategoryTemplates    │         │   ├─ Categories             │
-│   └─ Memberships (OWNER)  │         │   ├─ Registrations          │
-└──────────────────────────┘         │   ├─ BlockedEmails/Documents │
-                                      │   └─ Memberships (ADMIN/OP) │
-                                      └─────────────────────────────┘
+┌──────────────────────────────────┐  ┌──────────────────────────────────┐
+│ ORGANIZATION                      │  │ EVENT                            │
+│   slug, quotas, archived          │1▶│   slug global, archived          │
+│   ├─ OrgSettings                  │ N│   ├─ EventSettings (override)    │
+│   ├─ CategoryTemplates            │  │   ├─ Categories                  │
+│   └─ Memberships                  │  │   ├─ Registrations               │
+│      (OWNER / MANAGER / AUDITOR)  │  │   ├─ BlockedEmails/Documents     │
+└──────────────────────────────────┘  │   └─ Memberships                 │
+                                       │      (ADMIN / OPERATOR /         │
+                                       │       PRINTER / VIEWER)          │
+                                       └──────────────────────────────────┘
 ```
 
 Voir [Multi-tenancy & RBAC](features/multi-tenancy-rbac.md) pour le schéma Prisma complet.
@@ -112,8 +114,10 @@ src/
 
   lib/
     prisma.ts                            # Client Prisma (singleton)
-    auth.ts                              # requireStaff, requireOrgRole, requireEventRole,
-                                         #   getEffectiveEventRole, loadUserContext
+    auth.ts                              # requireStaff, requireOrgRole, requireEventPermission,
+                                         #   requireEventRole, getEffectiveEventRoles,
+                                         #   loadUserContext, assertNotLastOwner,
+                                         #   assertNotLastSuperAdmin
     settings.ts                          # resolveSettings, resolvePublicSettings (cascade)
     activity-log.ts                      # logActivity, logStaffActionOnClient
     mail.ts                              # Refonte multi-tenant
@@ -150,9 +154,9 @@ prisma/
 
 Trois niveaux résolus serveur via `lib/auth.ts` :
 
-1. **Staff** (`isStaff=true`) : hiérarchie `STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`. Helpers `requireStaff(minRole)`.
-2. **Organisation** : `OrgMembership(role=OWNER)`. Helper `requireOrgRole(userId, orgId, role)` avec bypass staff.
-3. **Événement** : `EventMembership(role=ADMIN|OPERATOR)`. Helper `requireEventRole(userId, eventId, role)` avec bypass staff + héritage OWNER → ADMIN.
+1. **Staff applicatif** (`isStaff=true`) : hiérarchie linéaire `SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`. Helper `requireStaff(minRole)`. `SUPER_ADMIN` est le seul à pouvoir promouvoir/démouvoir un `STAFF_ADMIN` ou un autre `SUPER_ADMIN`, et à effectuer un hard delete d'organisation.
+2. **Organisation** : `OrgMembership(role=OWNER|MANAGER|AUDITOR)`, hiérarchie linéaire `OWNER ⊃ MANAGER ⊃ AUDITOR`. Helper `requireOrgRole(userId, orgId, role)` avec bypass staff. Invariant : ≥ 1 `OWNER` actif par org non archivée.
+3. **Événement** : `EventMembership(role=ADMIN|OPERATOR|PRINTER|VIEWER)`, hiérarchie **partielle** (`ADMIN ⊃ OPERATOR ⊃ {PRINTER, VIEWER}` ; `PRINTER` et `VIEWER` disjoints). Helper `requireEventPermission(userId, eventId, permission)` avec bypass staff + héritage : `OWNER`/`MANAGER` de l'org parent agissent comme `ADMIN` event, `AUDITOR` comme `VIEWER` event.
 
 Defense in depth : le middleware filtre par route, chaque route API re-vérifie via les helpers.
 
@@ -166,7 +170,7 @@ Toute mutation est loguée dans `ActivityLog` :
 - `staffActor=true` si action staff sur données client
 - `ipAddress`, `userAgent`
 
-Les OWNERs voient les `staffActor=true` dans leur `/activity` (transparence).
+Les membres org (OWNER, MANAGER, AUDITOR) voient les `staffActor=true` dans leur `/activity` (transparence).
 
 ### Protection anti-bot
 
@@ -212,6 +216,10 @@ Implémentation v2 : `LocalStorage` qui écrit sur disque (`uploads/`).
 Implémentation future : `S3Storage` (sans changement du code consommateur).
 
 Contraintes : taille max 5 Mo, types JPEG/PNG/WebP/PDF. ACL via le path (vérifié dans `/api/files/[...path]`).
+
+## Dépendances externes
+
+- **Google Fonts (Montserrat)** : le rendu PDF des badges (`@react-pdf/renderer`) charge la police Montserrat depuis `https://fonts.googleapis.com/`. Le serveur applicatif doit disposer d'un accès sortant vers ce domaine pour produire les PDF. En cas d'environnement hors-ligne, prévoir une mise en cache locale ou un fournisseur de police alternatif.
 
 ## Flux de données principaux
 
