@@ -4,7 +4,14 @@
 
 **Goal:** Implement the OWNER workspace of Badge v2 (`/admin/[orgId]/*`) : dashboard, paramètres `OrgSettings`, membres OWNER, modèles de catégories, liste/création d'events (wizard 3 étapes), archive/restore, journal d'activité, et la logique de sélection d'org post-login (multi-org + bandeau staff).
 
-**Architecture:** Toutes les routes sont protégées par un wrapper `withOrgAuth` qui résout l'`orgId` depuis le path, appelle `requireOrgRole` (Plan 1) et délègue ensuite au handler. Les pages serveur (`Server Components`) consomment les routes via `fetch` côté client uniquement pour les actions ; les lectures initiales se font directement via Prisma + helpers. Les secrets (`smtpPassword`, `recaptchaSecretKey`) ne sortent jamais via les réponses API. Toute mutation produit un `logActivity({ orgId, … })` avec `staffActor` auto-calculé par Plan 1. La création d'event applique la cascade : vérification du quota → génération d'un slug global unique → copie des `CategoryTemplate` sélectionnés en `Category`.
+> **Mise à jour 2026-05-31 — SMTP plateforme uniquement** : par décision de design, les paramètres SMTP vivent **exclusivement** au niveau `PlatformSettings`. Aucun champ SMTP ni override SMTP n'existe dans `OrgSettings`. En conséquence :
+> - La Task 5 (`OrgSettings` GET/PATCH + page) est simplifiée : `OrgSettings` ne contient plus que **contact** (`contactEmail`, `contactPhone`). Les tests, le schéma Zod, la réponse GET et l'audit ont été ajustés ; un test "defense in depth" rejette (HTTP 400) tout PATCH legacy qui tenterait d'envoyer des champs SMTP.
+> - La Task 6 (`POST /api/admin/[orgId]/settings/test-smtp`) est **supprimée**. La fonction `sendSmtpTest` reste fournie par Plan 6, mais elle n'est appelée que par les routes staff (`/staff/*`). Aucune UI "Tester SMTP" n'existe côté OWNER.
+> - Sources : `docs/v2/features/espace-organisation.md` et `docs/v2/features/multi-tenancy-rbac.md` mises à jour le même jour.
+>
+> **Mise à jour 2026-05-31 — reCAPTCHA plateforme uniquement** : le reCAPTCHA suit la même logique que le SMTP : plateforme uniquement (cf. décision 2026-05-31, `multi-tenancy-rbac.md`). Retrait de toute UI/route/test reCAPTCHA dans `/admin/[orgId]/*`. `OrgSettings` ne contient désormais que `contactEmail` et `contactPhone`.
+
+**Architecture:** Toutes les routes sont protégées par un wrapper `withOrgAuth` qui résout l'`orgId` depuis le path, appelle `requireOrgRole` (Plan 1) et délègue ensuite au handler. Les pages serveur (`Server Components`) consomment les routes via `fetch` côté client uniquement pour les actions ; les lectures initiales se font directement via Prisma + helpers. `OrgSettings` ne contient aucun secret (depuis 2026-05-31 : SMTP et reCAPTCHA sont gérés au niveau `PlatformSettings` uniquement). Toute mutation produit un `logActivity({ orgId, … })` avec `staffActor` auto-calculé par Plan 1. La création d'event applique la cascade : vérification du quota → génération d'un slug global unique → copie des `CategoryTemplate` sélectionnés en `Category`.
 
 **Tech Stack:** Next.js 16 App Router (Server Components + Client Forms), Prisma 6, NextAuth 4 (session côté serveur via `getServerSession`), Zod (validation), TypeScript 5, Vitest 4. UI : composants existants `Button`, `Input`, `Select`, `Table`, `Modal`, `StatusBadge` (réutilisés depuis `src/components/ui/`).
 
@@ -12,7 +19,7 @@
 
 **Prerequisite plans:**
 - Plan 1 — Multi-tenancy & RBAC (helpers `requireOrgRole`, `requireStaff`, `loadUserContext`, `logActivity`, `resolveSettings`, `AuthError`)
-- Plan 6 — Notifications email multi-tenant (fournit `sendUserInvitation(userId, { orgId? })`, `sendSmtpTest`)
+- Plan 6 — Notifications email multi-tenant (fournit `sendUserInvitation(userId, { orgId? })` ; `sendSmtpTest` reste utilisé uniquement par les routes staff `/staff/*` — plus aucun appel depuis `/admin/[orgId]/*` depuis la décision 2026-05-31)
 
 ## Progression
 
@@ -27,8 +34,8 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 2 | [ ] | -- | -- |
 | 3 | [ ] | -- | -- |
 | 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
+| 5 | [ ] | -- | Adaptee 2026-05-31 : OrgSettings = contact uniquement (SMTP et reCAPTCHA plateforme uniquement). |
+| 6 | [-] | 2026-05-31 | Supprimee : decision "SMTP plateforme uniquement" ; aucune route test-smtp scope org. |
 | 7 | [ ] | -- | -- |
 | 8 | [ ] | -- | -- |
 | 9 | [ ] | -- | -- |
@@ -43,6 +50,10 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Derniere session** : aucune, plan jamais commence.
 **Prochaine etape** : Task 1.
+
+**Notes** :
+- 2026-05-31 : decision "SMTP plateforme uniquement". Task 5 simplifiee (OrgSettings = contact + reCAPTCHA uniquement) ; Task 6 (`test-smtp` scope org) abandonnee. Voir l'en-tete du plan pour le detail.
+- 2026-05-31 : decision "reCAPTCHA plateforme uniquement" (correction du meme jour). Task 5 re-simplifiee : OrgSettings = contact uniquement (`contactEmail`, `contactPhone`). Retrait de tout champ/UI/route/test reCAPTCHA dans `/admin/[orgId]/*`. Le test "defense in depth" du PATCH OrgSettings refuse desormais aussi tout champ reCAPTCHA (HTTP 400). Voir l'en-tete du plan pour le detail.
 
 ---
 
@@ -73,7 +84,6 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 - `src/app/select/page.tsx`
 - `src/app/api/admin/[orgId]/route.ts` (GET, PATCH)
 - `src/app/api/admin/[orgId]/settings/route.ts` (GET, PATCH)
-- `src/app/api/admin/[orgId]/settings/test-smtp/route.ts` (POST)
 - `src/app/api/admin/[orgId]/members/route.ts` (GET, POST)
 - `src/app/api/admin/[orgId]/members/[userId]/route.ts` (DELETE)
 - `src/app/api/admin/[orgId]/templates/route.ts` (GET, POST)
@@ -116,7 +126,7 @@ Expected: les 4 fichiers existent. Si l'un est absent, **STOP** : exécuter Plan
 - [ ] **Step 0.3: Verify Plan 6 helpers exist (or stub)**
 
 ```bash
-grep -l "sendUserInvitation\|sendSmtpTest" src/lib/mail.ts src/lib/email/ 2>/dev/null || true
+grep -l "sendUserInvitation" src/lib/mail.ts src/lib/email/ 2>/dev/null || true
 ```
 
 Si Plan 6 n'est pas merge, créer un stub minimal dans `src/lib/mail.ts` (à supprimer une fois Plan 6 réel) :
@@ -125,12 +135,9 @@ Si Plan 6 n'est pas merge, créer un stub minimal dans `src/lib/mail.ts` (à sup
 export async function sendUserInvitation(_userId: string, _opts?: { orgId?: string }): Promise<void> {
   console.warn("[stub] sendUserInvitation called — Plan 6 not yet implemented");
 }
-export async function sendSmtpTest(_to: string, _orgId?: string): Promise<{ messageId: string }> {
-  return { messageId: "stub-" + Date.now() };
-}
 ```
 
-> Ces stubs seront remplacés par les vraies implémentations du Plan 6. Ne pas commit le stub si Plan 6 est déjà mergé.
+> Ce stub sera remplacé par la vraie implémentation du Plan 6. Ne pas commit le stub si Plan 6 est déjà mergé. `sendSmtpTest` n'est plus stubbé ici depuis la décision 2026-05-31 : aucune route `/admin/[orgId]/*` ne l'appelle, seules les routes `/staff/*` l'utilisent (couvertes par leur propre plan).
 
 - [ ] **Step 0.4: Run existing tests**
 
@@ -914,7 +921,7 @@ git commit -m "feat(v2): PATCH /api/admin/[orgId] (nom OWNER, slug staff)"
 - Create: `src/app/admin/[orgId]/settings/page.tsx`
 - Add tests in `src/lib/__tests__/api-org.test.ts`
 
-> `GET` ne retourne **jamais** `smtpPassword` ni `recaptchaSecretKey`. `PATCH` accepte les champs nullable (null = hérite du niveau parent). Audit `ORG_SETTINGS_UPDATED`.
+> OrgSettings v2 = contact uniquement. SMTP et reCAPTCHA sont plateforme uniquement (décisions 2026-05-31). `OrgSettings` ne contient plus que **contact** (`contactEmail`, `contactPhone`). `PATCH` accepte les deux champs en nullable (null = hérite du niveau parent) et **rejette** avec HTTP 400 tout champ SMTP ou reCAPTCHA (defense in depth contre un client legacy). Audit `ORG_SETTINGS_UPDATED`.
 
 - [ ] **Step 5.1: Add failing test**
 
@@ -930,11 +937,11 @@ describe("GET /api/admin/[orgId]/settings", () => {
     vi.mocked(getServerSession).mockReset();
   });
 
-  it("does not return smtpPassword or recaptchaSecretKey", async () => {
+  it("returns only contact fields (no SMTP, no reCAPTCHA)", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
-    const org = await prisma.organization.create({ data: { name: "O", slug: "secret-o" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "contact-o" } });
     await prisma.orgSettings.create({
-      data: { orgId: org.id, smtpHost: "h", smtpPassword: "SECRET", recaptchaSecretKey: "SK" },
+      data: { orgId: org.id, contactEmail: "c@x", contactPhone: "+33123456789" },
     });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
@@ -944,9 +951,12 @@ describe("GET /api/admin/[orgId]/settings", () => {
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     const json = await res.json();
 
-    expect(json.settings.smtpHost).toBe("h");
-    expect(json.settings.smtpPassword).toBeUndefined();
-    expect(json.settings.recaptchaSecretKey).toBeUndefined();
+    expect(json.settings.contactEmail).toBe("c@x");
+    expect(json.settings.contactPhone).toBe("+33123456789");
+    // OrgSettings v2 ne contient ni SMTP ni reCAPTCHA (plateforme uniquement depuis 2026-05-31)
+    expect(json.settings.recaptchaSiteKey).toBeUndefined();
+    expect(json.settings.recaptchaEnabled).toBeUndefined();
+    expect(json.settings.smtpHost).toBeUndefined();
   });
 });
 
@@ -960,7 +970,7 @@ describe("PATCH /api/admin/[orgId]/settings", () => {
     vi.mocked(getServerSession).mockReset();
   });
 
-  it("creates OrgSettings if missing and applies override", async () => {
+  it("creates OrgSettings if missing and applies contact override", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "p-o" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
@@ -969,34 +979,63 @@ describe("PATCH /api/admin/[orgId]/settings", () => {
     const { PATCH } = await import("@/app/api/admin/[orgId]/settings/route");
     const req = new NextRequest(`http://localhost/api/admin/${org.id}/settings`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpHost: "smtp.example.com", contactEmail: "c@x" }),
+      body: JSON.stringify({ contactEmail: "c@x", contactPhone: "+33123456789" }),
       headers: { "content-type": "application/json" },
     });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(200);
 
     const settings = await prisma.orgSettings.findUnique({ where: { orgId: org.id } });
-    expect(settings?.smtpHost).toBe("smtp.example.com");
     expect(settings?.contactEmail).toBe("c@x");
+    expect(settings?.contactPhone).toBe("+33123456789");
   });
 
   it("null value resets override (cascade fallback)", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "p-o2" } });
-    await prisma.orgSettings.create({ data: { orgId: org.id, smtpHost: "h" } });
+    await prisma.orgSettings.create({ data: { orgId: org.id, contactEmail: "c@x" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { PATCH } = await import("@/app/api/admin/[orgId]/settings/route");
     const req = new NextRequest(`http://localhost/api/admin/${org.id}/settings`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpHost: null }),
+      body: JSON.stringify({ contactEmail: null }),
       headers: { "content-type": "application/json" },
     });
     await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
 
     const settings = await prisma.orgSettings.findUnique({ where: { orgId: org.id } });
-    expect(settings?.smtpHost).toBeNull();
+    expect(settings?.contactEmail).toBeNull();
+  });
+
+  it("rejects legacy SMTP and reCAPTCHA fields with HTTP 400 (defense in depth)", async () => {
+    // Depuis 2026-05-31, SMTP et reCAPTCHA sont geres uniquement au niveau PlatformSettings.
+    // Un client legacy qui tenterait un PATCH avec smtpHost/smtpPassword ou recaptchaSiteKey/recaptchaSecretKey/recaptchaEnabled doit etre refuse.
+    const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "no-secrets" } });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/admin/[orgId]/settings/route");
+
+    // SMTP refuse
+    const reqSmtp = new NextRequest(`http://localhost/api/admin/${org.id}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify({ smtpHost: "smtp.example.com", smtpPassword: "secret" }),
+      headers: { "content-type": "application/json" },
+    });
+    const resSmtp = await PATCH(reqSmtp, { params: Promise.resolve({ orgId: org.id }) });
+    expect(resSmtp.status).toBe(400);
+
+    // reCAPTCHA refuse
+    const reqCaptcha = new NextRequest(`http://localhost/api/admin/${org.id}/settings`, {
+      method: "PATCH",
+      body: JSON.stringify({ recaptchaEnabled: true, recaptchaSiteKey: "sk", recaptchaSecretKey: "secret" }),
+      headers: { "content-type": "application/json" },
+    });
+    const resCaptcha = await PATCH(reqCaptcha, { params: Promise.resolve({ orgId: org.id }) });
+    expect(resCaptcha.status).toBe(400);
   });
 });
 ```
@@ -1018,37 +1057,22 @@ import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 
-const settingsPatchSchema = z.object({
-  smtpHost: z.string().nullable().optional(),
-  smtpPort: z.number().int().min(1).max(65535).nullable().optional(),
-  smtpFrom: z.string().email().nullable().optional(),
-  smtpUser: z.string().nullable().optional(),
-  smtpPassword: z.string().nullable().optional(),
-  smtpSecure: z.boolean().nullable().optional(),
-  contactEmail: z.string().email().nullable().optional(),
-  contactPhone: z.string().nullable().optional(),
-  recaptchaEnabled: z.boolean().nullable().optional(),
-  recaptchaSiteKey: z.string().nullable().optional(),
-  recaptchaSecretKey: z.string().nullable().optional(),
-});
+// Depuis 2026-05-31, SMTP et reCAPTCHA sont geres uniquement au niveau PlatformSettings.
+// OrgSettings contient uniquement contact (contactEmail, contactPhone).
+// `strict()` garantit qu'un champ SMTP ou reCAPTCHA envoye par un client legacy declenche un HTTP 400.
+const settingsPatchSchema = z
+  .object({
+    contactEmail: z.string().email().nullable().optional(),
+    contactPhone: z.string().nullable().optional(),
+  })
+  .strict();
 
 export const GET = withOrgAuth("OWNER", async (_req, { orgId }) => {
   const s = await prisma.orgSettings.findUnique({ where: { orgId } });
-  // Strip secrets unconditionally
   const safe = s
     ? {
-        smtpHost: s.smtpHost,
-        smtpPort: s.smtpPort,
-        smtpFrom: s.smtpFrom,
-        smtpSecure: s.smtpSecure,
         contactEmail: s.contactEmail,
         contactPhone: s.contactPhone,
-        recaptchaEnabled: s.recaptchaEnabled,
-        recaptchaSiteKey: s.recaptchaSiteKey,
-        // smtpUser, smtpPassword, recaptchaSecretKey never returned
-        smtpUserSet: !!s.smtpUser,
-        smtpPasswordSet: !!s.smtpPassword,
-        recaptchaSecretKeySet: !!s.recaptchaSecretKey,
       }
     : null;
   return NextResponse.json({ settings: safe ?? {} });
@@ -1068,35 +1092,21 @@ export const PATCH = withOrgAuth("OWNER", async (req, { orgId, session }) => {
     update: data,
   });
 
-  // Audit but strip secret values from details
-  const { smtpPassword, recaptchaSecretKey, ...auditable } = data;
   await logActivity({
     type: "ORG_SETTINGS_UPDATED",
     userId: session.user.id,
     orgId,
     details: {
       changedFields: Object.keys(data),
-      values: auditable,
-      smtpPasswordChanged: smtpPassword !== undefined,
-      recaptchaSecretKeyChanged: recaptchaSecretKey !== undefined,
+      values: data,
     },
     req,
   });
 
-  // Return without secrets
   return NextResponse.json({
     settings: {
-      smtpHost: updated.smtpHost,
-      smtpPort: updated.smtpPort,
-      smtpFrom: updated.smtpFrom,
-      smtpSecure: updated.smtpSecure,
       contactEmail: updated.contactEmail,
       contactPhone: updated.contactPhone,
-      recaptchaEnabled: updated.recaptchaEnabled,
-      recaptchaSiteKey: updated.recaptchaSiteKey,
-      smtpUserSet: !!updated.smtpUser,
-      smtpPasswordSet: !!updated.smtpPassword,
-      recaptchaSecretKeySet: !!updated.recaptchaSecretKey,
     },
   });
 });
@@ -1124,17 +1134,8 @@ export default async function SettingsPage({
   if (!org) throw new Error("Org not found");
 
   const safe = {
-    smtpHost: settings?.smtpHost ?? null,
-    smtpPort: settings?.smtpPort ?? null,
-    smtpFrom: settings?.smtpFrom ?? null,
-    smtpSecure: settings?.smtpSecure ?? null,
     contactEmail: settings?.contactEmail ?? null,
     contactPhone: settings?.contactPhone ?? null,
-    recaptchaEnabled: settings?.recaptchaEnabled ?? null,
-    recaptchaSiteKey: settings?.recaptchaSiteKey ?? null,
-    smtpUserSet: !!settings?.smtpUser,
-    smtpPasswordSet: !!settings?.smtpPassword,
-    recaptchaSecretKeySet: !!settings?.recaptchaSecretKey,
   };
 
   return <SettingsClient orgId={orgId} org={org} initialSettings={safe} />;
@@ -1151,17 +1152,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
 type Settings = {
-  smtpHost: string | null;
-  smtpPort: number | null;
-  smtpFrom: string | null;
-  smtpSecure: boolean | null;
   contactEmail: string | null;
   contactPhone: string | null;
-  recaptchaEnabled: boolean | null;
-  recaptchaSiteKey: string | null;
-  smtpUserSet: boolean;
-  smtpPasswordSet: boolean;
-  recaptchaSecretKeySet: boolean;
 };
 
 export function SettingsClient({
@@ -1177,7 +1169,7 @@ export function SettingsClient({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function save(patch: Partial<Settings & { smtpUser: string | null; smtpPassword: string | null; recaptchaSecretKey: string | null }>) {
+  async function save(patch: Partial<Settings>) {
     setSaving(true);
     setMsg(null);
     const res = await fetch(`/api/admin/${orgId}/settings`, {
@@ -1193,12 +1185,6 @@ export function SettingsClient({
     } else {
       setMsg("Erreur lors de l'enregistrement.");
     }
-  }
-
-  async function testSmtp() {
-    const res = await fetch(`/api/admin/${orgId}/settings/test-smtp`, { method: "POST" });
-    if (res.ok) setMsg("Email de test envoyé. Vérifiez votre boîte.");
-    else setMsg("Échec du test SMTP.");
   }
 
   return (
@@ -1221,39 +1207,6 @@ export function SettingsClient({
       </section>
 
       <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">SMTP (override)</h2>
-        <p className="text-xs text-gray-500">
-          Laissez vide pour hériter de la plateforme. Les champs sont nullable (null = héritage).
-        </p>
-        <Input
-          placeholder="smtp.example.com"
-          value={settings.smtpHost ?? ""}
-          onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value || null })}
-        />
-        <Input
-          type="number"
-          placeholder="587"
-          value={settings.smtpPort ?? ""}
-          onChange={(e) =>
-            setSettings({ ...settings, smtpPort: e.target.value ? Number(e.target.value) : null })
-          }
-        />
-        <Input
-          placeholder="noreply@exemple.fr"
-          value={settings.smtpFrom ?? ""}
-          onChange={(e) => setSettings({ ...settings, smtpFrom: e.target.value || null })}
-        />
-        <div className="flex gap-2">
-          <Button onClick={() => save(settings)} disabled={saving}>
-            Enregistrer
-          </Button>
-          <Button onClick={testSmtp} variant="secondary">
-            Tester SMTP
-          </Button>
-        </div>
-      </section>
-
-      <section className="bg-white border rounded p-4 space-y-3">
         <h2 className="font-semibold">Contact public</h2>
         <Input
           placeholder="contact@exemple.fr"
@@ -1269,6 +1222,9 @@ export function SettingsClient({
           Enregistrer
         </Button>
       </section>
+
+      {/* Note 2026-05-31 : SMTP et reCAPTCHA vivent uniquement au niveau PlatformSettings (geres par le staff).
+          Aucun formulaire SMTP, "Tester SMTP" ou reCAPTCHA n'est expose dans /admin/[orgId]/*. */}
     </div>
   );
 }
@@ -1280,59 +1236,22 @@ export function SettingsClient({
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/api-org.test.ts
 ```
 
-Expected: tests précédents + 3 nouveaux passent.
+Expected: tests précédents + 4 nouveaux passent (GET ne retourne que contact, PATCH upsert contact, PATCH null reset, PATCH refuse champs SMTP et reCAPTCHA legacy avec HTTP 400).
 
 - [ ] **Step 5.7: Commit**
 
 ```bash
 git add src/app/api/admin/[orgId]/settings src/app/admin/[orgId]/settings src/lib/__tests__/api-org.test.ts
-git commit -m "feat(v2): GET/PATCH OrgSettings (sans secrets) + page settings"
+git commit -m "feat(v2): GET/PATCH OrgSettings (contact uniquement) + page settings"
 ```
 
 ---
 
-## Task 6: `POST /api/admin/[orgId]/settings/test-smtp`
+## Task 6: `POST /api/admin/[orgId]/settings/test-smtp` — SUPPRIMEE (2026-05-31)
 
-**Files:**
-- Create: `src/app/api/admin/[orgId]/settings/test-smtp/route.ts`
-
-> Utilise `sendSmtpTest(to, orgId)` du Plan 6. Le destinataire est l'email de l'utilisateur connecté. Audit `ORG_SETTINGS_UPDATED` avec un détail `testSmtp: true`.
-
-- [ ] **Step 6.1: Create `src/app/api/admin/[orgId]/settings/test-smtp/route.ts`**
-
-```typescript
-import { NextRequest, NextResponse } from "next/server";
-import { withOrgAuth } from "@/lib/with-org-auth";
-import { sendSmtpTest } from "@/lib/mail";
-import { logActivity } from "@/lib/activity-log";
-
-export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
-  try {
-    const result = await sendSmtpTest(session.user.email, orgId);
-    await logActivity({
-      type: "ORG_SETTINGS_UPDATED",
-      userId: session.user.id,
-      orgId,
-      details: { testSmtp: true, to: session.user.email, messageId: result.messageId },
-      req,
-    });
-    return NextResponse.json({ ok: true, messageId: result.messageId });
-  } catch (err: any) {
-    return NextResponse.json({ error: "SMTP_FAILED", message: err.message }, { status: 502 });
-  }
-});
-```
-
-- [ ] **Step 6.2: Manual smoke test**
-
-Connecté en OWNER, dans `/admin/[orgId]/settings`, cliquer "Tester SMTP". Vérifier dans Mailpit (`http://localhost:8025`) qu'un email est reçu.
-
-- [ ] **Step 6.3: Commit**
-
-```bash
-git add src/app/api/admin/[orgId]/settings/test-smtp
-git commit -m "feat(v2): POST /api/admin/[orgId]/settings/test-smtp"
-```
+> **Statut** : `[-]` abandonnee. **Raison** : decision de design 2026-05-31 — le SMTP vit uniquement au niveau `PlatformSettings`. Aucun override SMTP au niveau organisation, donc aucune route "test SMTP" scope org. La fonction `sendSmtpTest` reste fournie par Plan 6, mais n'est appelee que par les routes staff (`/staff/*`, couvertes par leur propre plan). Voir l'en-tete de ce plan et `docs/v2/features/espace-organisation.md` pour le detail.
+>
+> Ne rien implementer pour cette task. Aucun fichier `src/app/api/admin/[orgId]/settings/test-smtp/route.ts` ne doit etre cree. Passer directement a la Task 7.
 
 ---
 
@@ -3753,10 +3672,10 @@ Expected: pas de warning, pas d'erreur TypeScript dans les nouveaux fichiers de 
 - [ ] **Step 17.3: Verify no secret leaks in API**
 
 ```bash
-docker compose -f docker-compose.dev.yml exec app sh -c 'grep -rn "smtpPassword\|recaptchaSecretKey" src/app/api/admin/' || true
+docker compose -f docker-compose.dev.yml exec app sh -c 'grep -rn "smtpPassword\|recaptchaSecretKey\|recaptchaSiteKey" src/app/api/admin/' || true
 ```
 
-Expected : aucune apparition dans une réponse `NextResponse.json(...)`. Seules les `details` du `logActivity` peuvent contenir `smtpPasswordChanged: true` (booléen, pas la valeur).
+Expected : aucune apparition. Depuis 2026-05-31, SMTP et reCAPTCHA sont geres uniquement au niveau `PlatformSettings` : aucun champ `smtpPassword`, `recaptchaSecretKey` ou `recaptchaSiteKey` n'existe dans `OrgSettings`, donc aucune route `/api/admin/[orgId]/*` ne doit y faire reference.
 
 - [ ] **Step 17.4: Manual exploratory test**
 
@@ -3766,7 +3685,7 @@ Parcourir, connecté en OWNER :
 - `/admin/[orgId]/events/new` — wizard 3 étapes
 - `/admin/[orgId]/members` — invite + retrait
 - `/admin/[orgId]/templates` — CRUD
-- `/admin/[orgId]/settings` — formulaire + test SMTP
+- `/admin/[orgId]/settings` — formulaire contact uniquement (aucun SMTP ni reCAPTCHA cote org depuis 2026-05-31)
 - `/admin/[orgId]/activity` — journal
 
 Connecté en STAFF_ADMIN, ouvrir la même org : vérifier le bandeau "Mode staff" en haut, et qu'au moins une action génère un `staffActor=true` visible dans le journal.
@@ -3793,7 +3712,7 @@ Plan 3 (espace organisation) terminé. Disponible :
 
 - Layout `OrgShell` + sélecteur d'org + bandeau staff
 - Routes `/admin/[orgId]/{dashboard, settings, members, templates, events, events/new, activity}`
-- API REST scope-org : settings (sans secrets), members (LAST_OWNER 409), templates, events (quota + slug unique), archive/restore, activity
+- API REST scope-org : settings (contact uniquement ; SMTP et reCAPTCHA non geres ici depuis 2026-05-31), members (LAST_OWNER 409), templates, events (quota + slug unique), archive/restore, activity
 - Wizard `EventCreationWizard` 3 étapes
 - Dispatcher post-login (`/`, `/select`)
 

@@ -1,5 +1,9 @@
 # Multi-tenancy & RBAC — Implementation Plan
 
+> **Mise à jour 2026-05-31 — SMTP plateforme uniquement** : suite à la décision de design du 2026-05-31, les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) ne vivent **que** dans `PlatformSettings`. Aucun override possible côté `OrgSettings` ni `EventSettings`. Le branding contextuel non-SMTP (`contactEmail`, `contactPhone`, logo) reste cascadé Event → Org → Platform. Les sections Task 1 (schéma Prisma), Task 5 (résolveur settings), et leur code TDD ont été ajustés pour refléter cette décision. La spec source [docs/v2/features/multi-tenancy-rbac.md](../../v2/features/multi-tenancy-rbac.md) est la référence. Le reCAPTCHA suit la même logique que le SMTP : plateforme uniquement, lu directement depuis `PlatformSettings`. Retrait des champs `recaptcha*` d'`OrgSettings`.
+
+> **Mise à jour 2026-05-31 — reCAPTCHA plateforme uniquement** : décision corrigée le même jour (une première formulation parlait à tort de "reCAPTCHA org-only"). Les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) vivent **exclusivement** dans `PlatformSettings`, avec defaults non-nullables (`false`, `""`, `""`). Aucun champ reCAPTCHA dans `OrgSettings` ni `EventSettings`, et aucun override possible. La lecture se fait directement via `getPlatformRecaptcha()` (et `getPlatformPublicRecaptcha()` pour les Server Components publics, qui masque `recaptchaSecretKey`), sur le même modèle que `getPlatformSmtp()`. Les sections Task 1 (schéma Prisma : `OrgSettings` perd les champs `recaptcha*`), Task 5 (résolveur settings : `ResolvedSettings` ne contient plus de champs reCAPTCHA, ajout de `getPlatformRecaptcha()` / `getPlatformPublicRecaptcha()`) ont été ajustées en conséquence.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the multi-tenant foundation of Badge v2: Prisma schema (User/Org/Event/Memberships/Settings/ActivityLog), authorization helpers, settings cascade resolver, and the Next.js middleware that scopes requests by tenant.
@@ -34,6 +38,10 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Derniere session** : aucune, plan jamais commence.
 **Prochaine etape** : Task 1.
+
+**Notes** :
+- 2026-05-31 — Mise à jour du plan suite à la décision SMTP plateforme uniquement (voir note en tête). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma `OrgSettings` / `EventSettings`), Task 5 (résolveur settings + tests + type `ResolvedSettings` + nouvelle fonction `getPlatformSmtp()`).
+- 2026-05-31 — Mise à jour du plan suite à la décision reCAPTCHA plateforme uniquement (corrige une première formulation erronée "reCAPTCHA org-only" du même jour). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma : retrait des champs `recaptcha*` d'`OrgSettings`, `PlatformSettings` conserve les 3 champs reCAPTCHA), Task 5 (résolveur settings : `ResolvedSettings` ne contient plus de champs reCAPTCHA, ajout de `getPlatformRecaptcha()` et `getPlatformPublicRecaptcha()` sur le même modèle que `getPlatformSmtp()`, tests adaptés).
 
 ---
 
@@ -345,27 +353,25 @@ model PlatformSettings {
   smtpUser           String  @default("")
   smtpPassword       String  @default("")
   smtpSecure         Boolean @default(false)
+  // Note (2026-05-31) : reCAPTCHA est exclusivement configure ici (PlatformSettings),
+  // meme logique que le SMTP. Aucun override Org/Event possible. Lecture via
+  // getPlatformRecaptcha() / getPlatformPublicRecaptcha().
   recaptchaEnabled   Boolean @default(false)
   recaptchaSiteKey   String  @default("")
   recaptchaSecretKey String  @default("")
 }
 
 model OrgSettings {
-  id                 String       @id @default(cuid())
-  orgId              String       @unique
-  organization       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  orgId        String       @unique
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  smtpHost           String?
-  smtpPort           Int?
-  smtpFrom           String?
-  smtpUser           String?
-  smtpPassword       String?
-  smtpSecure         Boolean?
-  contactEmail       String?
-  contactPhone       String?
-  recaptchaEnabled   Boolean?
-  recaptchaSiteKey   String?
-  recaptchaSecretKey String?
+  // Note (2026-05-31) : pas de champs SMTP ici. Le SMTP est exclusivement
+  // configure au niveau PlatformSettings (decision de design SMTP plateforme uniquement).
+  // Note (2026-05-31) : pas de champs reCAPTCHA ici non plus. Meme logique que
+  // le SMTP : reCAPTCHA est exclusivement configure au niveau PlatformSettings.
+  contactEmail String?
+  contactPhone String?
 }
 
 model EventSettings {
@@ -373,7 +379,8 @@ model EventSettings {
   eventId      String  @unique
   event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  smtpFrom     String?
+  // Note (2026-05-31) : pas de champs SMTP ici. Le SMTP est exclusivement
+  // configure au niveau PlatformSettings (decision de design SMTP plateforme uniquement).
   contactEmail String?
   contactPhone String?
 }
@@ -929,7 +936,13 @@ git commit -m "feat(v2): helpers RBAC purs (staffRoleAtLeast, hasOrgRole, effect
 ```typescript
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { resolveSettings, resolvePublicSettings } from "@/lib/settings";
+import {
+  resolveSettings,
+  resolvePublicSettings,
+  getPlatformSmtp,
+  getPlatformRecaptcha,
+  getPlatformPublicRecaptcha,
+} from "@/lib/settings";
 
 describe("resolveSettings", () => {
   beforeEach(async () => {
@@ -954,46 +967,137 @@ describe("resolveSettings", () => {
     });
   });
 
-  it("returns platform values when no org/event", async () => {
+  it("returns platform contact defaults when no org/event override", async () => {
     const s = await resolveSettings();
-    expect(s.smtpHost).toBe("platform-smtp");
-    expect(s.smtpFrom).toBe("platform@badge.local");
+    expect(s.contactEmail).toBe("");
+    expect(s.contactPhone).toBe("");
   });
 
-  it("org override wins over platform", async () => {
+  it("never exposes SMTP fields in the resolved settings", async () => {
+    const s = await resolveSettings();
+    // SMTP n'est plus cascade : il est lu directement via getPlatformSmtp()
+    expect("smtpHost" in s).toBe(false);
+    expect("smtpPort" in s).toBe(false);
+    expect("smtpFrom" in s).toBe(false);
+    expect("smtpUser" in s).toBe(false);
+    expect("smtpPassword" in s).toBe(false);
+    expect("smtpSecure" in s).toBe(false);
+  });
+
+  it("never exposes reCAPTCHA fields in the resolved settings", async () => {
+    const s = await resolveSettings();
+    // reCAPTCHA n'est plus cascade : il est lu directement via getPlatformRecaptcha()
+    expect("recaptchaEnabled" in s).toBe(false);
+    expect("recaptchaSiteKey" in s).toBe(false);
+    expect("recaptchaSecretKey" in s).toBe(false);
+  });
+
+  it("org contactEmail override wins over platform", async () => {
     const org = await prisma.organization.create({ data: { name: "O", slug: "o" } });
     await prisma.orgSettings.create({
-      data: { orgId: org.id, smtpHost: "org-smtp", smtpFrom: "org@x" },
+      data: { orgId: org.id, contactEmail: "org@x" },
     });
     const s = await resolveSettings(undefined, org.id);
-    expect(s.smtpHost).toBe("org-smtp");
-    expect(s.smtpFrom).toBe("org@x");
-    expect(s.smtpPort).toBe(587);
+    expect(s.contactEmail).toBe("org@x");
   });
 
-  it("event override wins over org", async () => {
+  it("event contactEmail override wins over org", async () => {
     const org = await prisma.organization.create({ data: { name: "O", slug: "o2" } });
     await prisma.orgSettings.create({
-      data: { orgId: org.id, smtpFrom: "org@x" },
+      data: { orgId: org.id, contactEmail: "org@x" },
     });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: "e2", location: "L", date: new Date() },
     });
     await prisma.eventSettings.create({
-      data: { eventId: event.id, smtpFrom: "event@x" },
+      data: { eventId: event.id, contactEmail: "event@x" },
     });
 
     const s = await resolveSettings(event.id);
-    expect(s.smtpFrom).toBe("event@x");
+    expect(s.contactEmail).toBe("event@x");
+  });
+});
+
+describe("getPlatformSmtp", () => {
+  beforeEach(async () => {
+    await prisma.platformSettings.deleteMany();
+    await prisma.platformSettings.create({
+      data: {
+        id: "singleton",
+        smtpHost: "platform-smtp",
+        smtpPort: 587,
+        smtpFrom: "platform@badge.local",
+        smtpUser: "u",
+        smtpPassword: "PLATFORM_PW",
+        smtpSecure: false,
+      },
+    });
+  });
+
+  it("reads SMTP directly from PlatformSettings, no cascade", async () => {
+    const smtp = await getPlatformSmtp();
+    expect(smtp.smtpHost).toBe("platform-smtp");
+    expect(smtp.smtpPort).toBe(587);
+    expect(smtp.smtpFrom).toBe("platform@badge.local");
+    expect(smtp.smtpUser).toBe("u");
+    expect(smtp.smtpPassword).toBe("PLATFORM_PW");
+    expect(smtp.smtpSecure).toBe(false);
+  });
+});
+
+describe("getPlatformRecaptcha", () => {
+  beforeEach(async () => {
+    await prisma.platformSettings.deleteMany();
+    await prisma.platformSettings.create({
+      data: {
+        id: "singleton",
+        recaptchaEnabled: true,
+        recaptchaSiteKey: "SITE_KEY",
+        recaptchaSecretKey: "SECRET_KEY",
+      },
+    });
+  });
+
+  it("reads reCAPTCHA directly from PlatformSettings, no cascade", async () => {
+    const r = await getPlatformRecaptcha();
+    expect(r.recaptchaEnabled).toBe(true);
+    expect(r.recaptchaSiteKey).toBe("SITE_KEY");
+    expect(r.recaptchaSecretKey).toBe("SECRET_KEY");
+  });
+});
+
+describe("getPlatformPublicRecaptcha", () => {
+  beforeEach(async () => {
+    await prisma.platformSettings.deleteMany();
+    await prisma.platformSettings.create({
+      data: {
+        id: "singleton",
+        recaptchaEnabled: true,
+        recaptchaSiteKey: "SITE_KEY",
+        recaptchaSecretKey: "SECRET_KEY",
+      },
+    });
+  });
+
+  it("returns enabled + site key but never the secret key", async () => {
+    const r = await getPlatformPublicRecaptcha();
+    expect(r.recaptchaEnabled).toBe(true);
+    expect(r.recaptchaSiteKey).toBe("SITE_KEY");
+    expect("recaptchaSecretKey" in r).toBe(false);
   });
 });
 
 describe("resolvePublicSettings", () => {
-  it("omits sensitive fields (smtpPassword, recaptchaSecretKey)", async () => {
+  it("never exposes SMTP nor reCAPTCHA fields", async () => {
     const s = await resolvePublicSettings();
+    // SMTP n'est pas dans ResolvedSettings, donc absent par construction
     expect("smtpPassword" in s).toBe(false);
-    expect("recaptchaSecretKey" in s).toBe(false);
     expect("smtpUser" in s).toBe(false);
+    expect("smtpHost" in s).toBe(false);
+    // reCAPTCHA non plus : lecture via getPlatformPublicRecaptcha()
+    expect("recaptchaEnabled" in s).toBe(false);
+    expect("recaptchaSiteKey" in s).toBe(false);
+    expect("recaptchaSecretKey" in s).toBe(false);
   });
 });
 ```
@@ -1011,24 +1115,38 @@ Expected: FAIL (module not found).
 ```typescript
 import { prisma } from "@/lib/prisma";
 
+// Note (2026-05-31) : ResolvedSettings ne contient ni champs SMTP ni champs reCAPTCHA.
+// Decision de design : SMTP et reCAPTCHA sont exclusivement geres au niveau
+// PlatformSettings (pas d'override Org/Event). Voir docs/v2/features/multi-tenancy-rbac.md.
+// Pour acceder au SMTP, utiliser getPlatformSmtp().
+// Pour acceder au reCAPTCHA, utiliser getPlatformRecaptcha() (avec secret) ou
+// getPlatformPublicRecaptcha() (sans secret, pour les Server Components publics).
 export type ResolvedSettings = {
+  contactEmail: string;
+  contactPhone: string;
+};
+
+export type PublicSettings = ResolvedSettings;
+
+export type PlatformSmtp = {
   smtpHost: string;
   smtpPort: number;
   smtpFrom: string;
   smtpUser: string;
   smtpPassword: string;
   smtpSecure: boolean;
-  contactEmail: string;
-  contactPhone: string;
+};
+
+export type PlatformRecaptcha = {
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
 };
 
-export type PublicSettings = Omit<
-  ResolvedSettings,
-  "smtpPassword" | "recaptchaSecretKey" | "smtpUser"
->;
+export type PublicRecaptcha = {
+  recaptchaEnabled: boolean;
+  recaptchaSiteKey: string;
+};
 
 function pick<T>(...candidates: (T | null | undefined)[]): T | undefined {
   for (const c of candidates) {
@@ -1054,25 +1172,12 @@ export async function resolveSettings(
     orgSettings = await prisma.orgSettings.findUnique({ where: { orgId: effectiveOrgId } });
   }
 
-  const platform = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
-  if (!platform) {
-    throw new Error("PlatformSettings singleton is missing. Run prisma db seed.");
-  }
-
+  // Cascade Event > Org pour le contact uniquement.
+  // SMTP et reCAPTCHA ne sont PAS cascades (lecture directe via getPlatformSmtp() /
+  // getPlatformRecaptcha()).
   return {
-    smtpHost: pick(orgSettings?.smtpHost, platform.smtpHost) ?? "",
-    smtpPort: pick(orgSettings?.smtpPort, platform.smtpPort) ?? 587,
-    smtpFrom:
-      pick(eventSettings?.smtpFrom, orgSettings?.smtpFrom, platform.smtpFrom) ?? "",
-    smtpUser: pick(orgSettings?.smtpUser, platform.smtpUser) ?? "",
-    smtpPassword: pick(orgSettings?.smtpPassword, platform.smtpPassword) ?? "",
-    smtpSecure: pick(orgSettings?.smtpSecure, platform.smtpSecure) ?? false,
     contactEmail: pick(eventSettings?.contactEmail, orgSettings?.contactEmail) ?? "",
     contactPhone: pick(eventSettings?.contactPhone, orgSettings?.contactPhone) ?? "",
-    recaptchaEnabled: pick(orgSettings?.recaptchaEnabled, platform.recaptchaEnabled) ?? false,
-    recaptchaSiteKey: pick(orgSettings?.recaptchaSiteKey, platform.recaptchaSiteKey) ?? "",
-    recaptchaSecretKey:
-      pick(orgSettings?.recaptchaSecretKey, platform.recaptchaSecretKey) ?? "",
   };
 }
 
@@ -1080,9 +1185,44 @@ export async function resolvePublicSettings(
   eventId?: string,
   orgId?: string,
 ): Promise<PublicSettings> {
-  const full = await resolveSettings(eventId, orgId);
-  const { smtpPassword, recaptchaSecretKey, smtpUser, ...pub } = full;
-  return pub;
+  return resolveSettings(eventId, orgId);
+}
+
+// Lecture directe du SMTP depuis PlatformSettings (pas de cascade).
+// Utilise par src/lib/mail.ts pour resoudre le transporter.
+export async function getPlatformSmtp(): Promise<PlatformSmtp> {
+  const platform = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+  if (!platform) {
+    throw new Error("PlatformSettings singleton is missing. Run prisma db seed.");
+  }
+  return {
+    smtpHost: platform.smtpHost,
+    smtpPort: platform.smtpPort,
+    smtpFrom: platform.smtpFrom,
+    smtpUser: platform.smtpUser,
+    smtpPassword: platform.smtpPassword,
+    smtpSecure: platform.smtpSecure,
+  };
+}
+
+// Lecture directe du reCAPTCHA depuis PlatformSettings (pas de cascade).
+// Variante "publique" pour les Server Components qui rendent du HTML cote client :
+// elle masque recaptchaSecretKey.
+export async function getPlatformRecaptcha(): Promise<PlatformRecaptcha> {
+  const platform = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+  if (!platform) {
+    throw new Error("PlatformSettings singleton is missing. Run prisma db seed.");
+  }
+  return {
+    recaptchaEnabled: platform.recaptchaEnabled,
+    recaptchaSiteKey: platform.recaptchaSiteKey,
+    recaptchaSecretKey: platform.recaptchaSecretKey,
+  };
+}
+
+export async function getPlatformPublicRecaptcha(): Promise<PublicRecaptcha> {
+  const { recaptchaEnabled, recaptchaSiteKey } = await getPlatformRecaptcha();
+  return { recaptchaEnabled, recaptchaSiteKey };
 }
 ```
 
@@ -1092,13 +1232,13 @@ export async function resolvePublicSettings(
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/settings.test.ts
 ```
 
-Expected: 4 passed.
+Expected: 9 passed.
 
 - [ ] **Step 5.5: Commit**
 
 ```bash
 git add src/lib/settings.ts src/lib/__tests__/settings.test.ts
-git commit -m "feat(v2): resolveSettings (cascade Platform > Org > Event)"
+git commit -m "feat(v2): resolveSettings (cascade contact) + getPlatformSmtp + getPlatformRecaptcha"
 ```
 
 ---

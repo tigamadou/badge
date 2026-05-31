@@ -18,7 +18,7 @@ Badge v2 conserve le socle technique de la v1 (Next.js monolithe + Prisma/MySQL 
 | Authentification | NextAuth.js (Credentials, JWT) | 4.x | JWT minimal (userId + isStaff), pas de role |
 | PDF | @react-pdf/renderer | 4.x | — |
 | QR Code | qrcode + html5-qrcode | 1.x / 2.x | — |
-| Email | nodemailer | 6.x | Résolveur multi-tenant |
+| Email | nodemailer | 6.x | SMTP plateforme unique, branding cascadé Event/Org |
 | Hachage | bcryptjs | 2.x | — |
 | CAPTCHA | react-google-recaptcha (v3) | 3.x | — |
 | Tests | Vitest | 4.x | — |
@@ -118,7 +118,8 @@ src/
                                          #   requireEventRole, getEffectiveEventRoles,
                                          #   loadUserContext, assertNotLastOwner,
                                          #   assertNotLastSuperAdmin
-    settings.ts                          # resolveSettings, resolvePublicSettings (cascade)
+    settings.ts                          # resolveSettings (cascade non-SMTP), resolvePublicSettings,
+                                         #   getPlatformSmtp (lecture directe PlatformSettings)
     activity-log.ts                      # logActivity, logStaffActionOnClient
     mail.ts                              # Refonte multi-tenant
     storage.ts                           # Abstraction (local d'abord, S3 plus tard)

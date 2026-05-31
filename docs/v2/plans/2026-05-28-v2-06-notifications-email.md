@@ -2,13 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refondre `src/lib/mail.ts` pour la v2 multi-tenant : résolveur SMTP/expéditeur en cascade `Platform → Org → Event`, templates HTML français accentués avec branding event/org, et un jeu complet de fonctions d'envoi (confirmation, statut, badge imprimé, lien d'édition, invitation utilisateur, reset mot de passe, test SMTP).
+**Goal:** Refondre `src/lib/mail.ts` pour la v2 multi-tenant : lecture SMTP directe depuis `PlatformSettings` (pas de cascade), résolveur de branding contextuel (logo, contact) en cascade `Event → Org → Platform`, templates HTML français accentués avec branding event/org, et un jeu complet de fonctions d'envoi (confirmation, statut, badge imprimé, lien d'édition, invitation utilisateur, reset mot de passe, test SMTP).
 
-**Architecture:** Une fonction centrale `resolveTransporter(ctx)` construit un objet `ResolvedTransport` (transporter nodemailer + `from` formaté + branding) à partir de `resolveSettings()` du Plan 1. Un helper `buildEmail({ title, body, ctx })` rend le HTML inline commun (header logo, footer contact). Chaque fonction publique charge l'entité (Registration/User), détermine le contexte (`eventId` ou `orgId`), résout le transport et envoie. Les variables utilisateur sont systématiquement HTML-escapées (anti-XSS). Les échecs d'envoi loggent une erreur sans casser la transaction métier appelante.
+**Architecture:** Une fonction centrale `resolveTransporter(ctx)` construit un objet `ResolvedTransport` (transporter nodemailer + `from` formaté + branding) à partir de `getPlatformSmtp()` (config SMTP plateforme uniquement) et de `resolveSettings()` du Plan 1 pour le branding (logo, contact). Un helper `buildEmail({ title, body, ctx })` rend le HTML inline commun (header logo, footer contact). Chaque fonction publique charge l'entité (Registration/User), détermine le contexte (`eventId` ou `orgId`), résout le transport et envoie. Les variables utilisateur sont systématiquement HTML-escapées (anti-XSS). Les échecs d'envoi loggent une erreur sans casser la transaction métier appelante.
 
 **Tech Stack:** nodemailer (déjà dans `package.json`), Prisma 6, TypeScript 5, Vitest 4. SMTP de dev : Mailpit (`mailpit:1025`).
 
 **Spec:** [docs/v2/features/notifications-email.md](../../v2/features/notifications-email.md)
+
+> **Mise à jour 2026-05-31 — Décision de design SMTP plateforme uniquement.** Les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) vivent **uniquement** dans `PlatformSettings`. Il n'y a plus de cascade SMTP ni de champs SMTP sur `OrgSettings`/`EventSettings`. Seul le **branding** contextuel (logo via `Event.logo`, `contactEmail`, `contactPhone`) reste résolu en cascade `Event → Org → Platform`. Le `from` est toujours celui de la plateforme, éventuellement labellisé avec le nom de l'org ou de l'event pour l'expéditeur affiché. Voir `docs/v2/features/notifications-email.md` (source de vérité) pour la justification complète. Les tasks 2 et 10 ci-dessous ont été adaptées en conséquence.
 
 ---
 
@@ -36,6 +38,9 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 **Derniere session** : aucune, plan jamais commence.
 **Prochaine etape** : Task 1.
+
+**Notes** :
+- **2026-05-31** — Decision de design : SMTP plateforme uniquement (pas de cascade). Les champs SMTP sont retires de `OrgSettings`/`EventSettings`. Tasks 2 et 10 adaptees (resolveTransporter lit directement `PlatformSettings` via `getPlatformSmtp()` ; le branding contextuel reste cascade Event -> Org -> Platform). Voir spec `docs/v2/features/notifications-email.md`.
 
 ---
 
@@ -179,6 +184,9 @@ export function escapeHtml(input: string): string {
   return input.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch] ?? ch);
 }
 
+// En v2, `smtpFrom` est toujours celui de PlatformSettings (pas de cascade SMTP).
+// Le `label` optionnel sert uniquement a habiller l'expediteur affiche avec le nom
+// de l'org ou de l'event courant (branding contextuel), sans changer l'adresse reelle.
 export function formatFromAddress(smtpFrom: string, label: string | null): string {
   if (!label) return smtpFrom;
   // si smtpFrom contient déjà un label "Name <email>", on respecte
@@ -272,40 +280,42 @@ describe("resolveTransporter", () => {
     expect(r.logoUrl).toBeUndefined();
   });
 
-  it("formats from with org label when org override", async () => {
+  it("labels platform from with org name when orgId provided", async () => {
     const org = await prisma.organization.create({ data: { name: "Org Acme", slug: "acme" } });
     await prisma.orgSettings.create({
-      data: { orgId: org.id, smtpFrom: "noreply@acme.com", contactEmail: "c@acme.com", contactPhone: "+225 0101" },
+      data: { orgId: org.id, contactEmail: "c@acme.com", contactPhone: "+225 0101" },
     });
     const r = await resolveTransporter({ orgId: org.id });
-    expect(r.from).toBe('"Org Acme" <noreply@acme.com>');
+    // L'adresse reste celle de PlatformSettings ; seul le label affiche change
+    expect(r.from).toBe('"Org Acme" <noreply@badge.local>');
     expect(r.contactEmail).toBe("c@acme.com");
     expect(r.contactPhone).toBe("+225 0101");
     expect(r.orgName).toBe("Org Acme");
   });
 
-  it("formats from with event label when event override", async () => {
+  it("labels platform from with event title when eventId provided", async () => {
     const org = await prisma.organization.create({ data: { name: "Org Acme", slug: "acme2" } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "Salon 2026", slug: "salon-2026", location: "Abidjan", date: new Date() },
     });
     await prisma.eventSettings.create({
-      data: { eventId: event.id, smtpFrom: "salon@acme.com", contactEmail: "salon@acme.com", contactPhone: "+225 0202" },
+      data: { eventId: event.id, contactEmail: "salon@acme.com", contactPhone: "+225 0202" },
     });
     const r = await resolveTransporter({ eventId: event.id });
-    expect(r.from).toBe('"Salon 2026" <salon@acme.com>');
+    // L'adresse reste celle de PlatformSettings ; seul le label affiche change
+    expect(r.from).toBe('"Salon 2026" <noreply@badge.local>');
     expect(r.eventTitle).toBe("Salon 2026");
     expect(r.orgName).toBe("Org Acme");
   });
 
-  it("falls back to platform when no override", async () => {
+  it("uses raw platform from when no context", async () => {
     const org = await prisma.organization.create({ data: { name: "Org X", slug: "x1" } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "Evt X", slug: "evt-x1", location: "L", date: new Date() },
     });
     const r = await resolveTransporter({ eventId: event.id });
-    // pas de label car la `from` vient de platform et le cascade order met platform avec from brut
-    expect(r.from).toBe("noreply@badge.local");
+    // Quand un event existe, on labellise quand meme avec son titre
+    expect(r.from).toBe('"Evt X" <noreply@badge.local>');
   });
 
   it("includes logo URL when event has logo", async () => {
@@ -344,7 +354,7 @@ Expected: FAIL — `Cannot find module '@/lib/mail'` (le v1 sera écrasé).
 ```typescript
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/prisma";
-import { resolveSettings, type ResolvedSettings } from "@/lib/settings";
+import { resolveSettings, getPlatformSmtp, type ResolvedSettings } from "@/lib/settings";
 import { buildBaseUrl, formatFromAddress } from "@/lib/mail-helpers";
 
 export type TransportContext = {
@@ -363,13 +373,15 @@ export type ResolvedTransport = {
   settings: ResolvedSettings;
 };
 
+// Branding contextuel uniquement (logo + nom event/org). En v2 le SMTP est plateforme
+// uniquement : on ne lit plus `smtpFrom` sur OrgSettings/EventSettings (champs supprimes).
+// Le `fromLabel` sert a habiller l'expediteur affiche avec le nom de l'event ou de l'org.
 async function loadBrandingContext(ctx: TransportContext): Promise<{
   eventTitle?: string;
   orgName?: string;
   logoUrl?: string;
   resolvedOrgId?: string;
   fromLabel: string | null;
-  fromOverridden: boolean;
 }> {
   const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
 
@@ -381,34 +393,15 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
         logo: true,
         orgId: true,
         organization: { select: { name: true } },
-        settings: { select: { smtpFrom: true } },
       },
     });
     if (event) {
-      const eventFromOverride = !!event.settings?.smtpFrom;
-      const orgSettings = await prisma.orgSettings.findUnique({
-        where: { orgId: event.orgId },
-        select: { smtpFrom: true },
-      });
-      const orgFromOverride = !!orgSettings?.smtpFrom;
-
-      let fromLabel: string | null = null;
-      let fromOverridden = false;
-      if (eventFromOverride) {
-        fromLabel = event.title;
-        fromOverridden = true;
-      } else if (orgFromOverride) {
-        fromLabel = event.organization.name;
-        fromOverridden = true;
-      }
-
       return {
         eventTitle: event.title,
         orgName: event.organization.name,
         logoUrl: event.logo ? `${baseUrl}/api/files/${event.logo}` : undefined,
         resolvedOrgId: event.orgId,
-        fromLabel,
-        fromOverridden,
+        fromLabel: event.title,
       };
     }
   }
@@ -416,36 +409,37 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
   if (ctx.orgId) {
     const org = await prisma.organization.findUnique({
       where: { id: ctx.orgId },
-      select: { name: true, settings: { select: { smtpFrom: true } } },
+      select: { name: true },
     });
     if (org) {
-      const orgFromOverride = !!org.settings?.smtpFrom;
       return {
         orgName: org.name,
-        fromLabel: orgFromOverride ? org.name : null,
-        fromOverridden: orgFromOverride,
+        fromLabel: org.name,
         resolvedOrgId: ctx.orgId,
       };
     }
   }
 
-  return { fromLabel: null, fromOverridden: false };
+  return { fromLabel: null };
 }
 
 export async function resolveTransporter(ctx: TransportContext): Promise<ResolvedTransport> {
+  // SMTP plateforme uniquement (pas de cascade) — voir spec notifications-email.md (2026-05-31).
+  const smtp = await getPlatformSmtp();
+  // Branding (logo, contactEmail, contactPhone) reste cascade Event -> Org -> Platform.
   const settings = await resolveSettings(ctx.eventId, ctx.orgId);
   const branding = await loadBrandingContext(ctx);
 
   const transporter = nodemailer.createTransport({
-    host: settings.smtpHost || "localhost",
-    port: settings.smtpPort || 587,
-    secure: settings.smtpSecure,
-    ...(settings.smtpUser && settings.smtpPassword
-      ? { auth: { user: settings.smtpUser, pass: settings.smtpPassword } }
+    host: smtp.smtpHost || "localhost",
+    port: smtp.smtpPort || 587,
+    secure: smtp.smtpSecure,
+    ...(smtp.smtpUser && smtp.smtpPassword
+      ? { auth: { user: smtp.smtpUser, pass: smtp.smtpPassword } }
       : {}),
   });
 
-  const from = formatFromAddress(settings.smtpFrom || "noreply@badge.local", branding.fromLabel);
+  const from = formatFromAddress(smtp.smtpFrom || "noreply@badge.local", branding.fromLabel);
 
   return {
     transporter,
@@ -472,7 +466,7 @@ Expected: 6 passed.
 
 ```bash
 git add src/lib/mail.ts src/lib/__tests__/mail.test.ts
-git commit -m "feat(v2): resolveTransporter (transporter nodemailer + from en cascade)"
+git commit -m "feat(v2): resolveTransporter (SMTP plateforme + branding contextuel cascade)"
 ```
 
 ---
@@ -1815,16 +1809,14 @@ describe("sendSmtpTest", () => {
     expect(sent[0].html).toContain("test");
   });
 
-  it("uses org context when orgId provided", async () => {
+  it("uses org context for branding when orgId provided (SMTP stays platform)", async () => {
     const org = await prisma.organization.create({ data: { name: "OrgT", slug: "test-smtp-org" } });
-    await prisma.orgSettings.create({
-      data: { orgId: org.id, smtpFrom: "test@orgt.com" },
-    });
-
+    // En v2 SMTP est plateforme uniquement : pas de smtpFrom sur OrgSettings.
+    // On verifie que le `from` est l'adresse plateforme, simplement labellisee avec le nom de l'org.
     const { transporter, sent } = mockTransport();
     const spy = vi.spyOn(mailModule, "resolveTransporter").mockResolvedValueOnce({
       transporter: transporter as any,
-      from: '"OrgT" <test@orgt.com>',
+      from: '"OrgT" <noreply@badge.local>',
       contactEmail: "",
       contactPhone: "",
       orgName: "OrgT",
@@ -1834,7 +1826,10 @@ describe("sendSmtpTest", () => {
     await mailModule.sendSmtpTest({ to: "x@y.com", orgId: org.id });
 
     expect(spy).toHaveBeenCalledWith({ orgId: org.id, eventId: undefined });
-    expect(sent[0].from).toBe('"OrgT" <test@orgt.com>');
+    // Adresse plateforme conservee, label = nom de l'org
+    expect(sent[0].from).toBe('"OrgT" <noreply@badge.local>');
+    // Le sujet/branding du message peut etre contextualise a l'org, mais l'expediteur reste plateforme
+    expect(sent[0].html).toContain("OrgT");
   });
 
   it("rejects invalid email", async () => {

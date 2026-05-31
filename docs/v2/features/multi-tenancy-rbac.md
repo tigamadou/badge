@@ -209,17 +209,8 @@ model OrgSettings {
   orgId              String       @unique
   organization       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  smtpHost           String?
-  smtpPort           Int?
-  smtpFrom           String?
-  smtpUser           String?
-  smtpPassword       String?
-  smtpSecure         Boolean?
   contactEmail       String?
   contactPhone       String?
-  recaptchaEnabled   Boolean?
-  recaptchaSiteKey   String?
-  recaptchaSecretKey String?
 }
 
 model EventSettings {
@@ -227,31 +218,34 @@ model EventSettings {
   eventId      String  @unique
   event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  smtpFrom     String?
   contactEmail String?
   contactPhone String?
 }
 ```
 
-**Règle de résolution** : pour une clé donnée, on parcourt `EventSettings → OrgSettings → PlatformSettings`, premier non-null gagne. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
+**Règle de résolution** : pour une clé cascadable donnée, on parcourt `EventSettings → OrgSettings → PlatformSettings`, premier non-null gagne. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
+
+**SMTP = plateforme uniquement** (décision 2026-05-31) : les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun override possible au niveau Org ou Event. Le branding contextuel non-SMTP (logo via `Event.logo`, `contactEmail`, `contactPhone`) reste cascadé : les emails affichent toujours le bon logo et contact selon le contexte, mais partent tous avec la même identité d'expéditeur plateforme.
+
+**reCAPTCHA = plateforme uniquement** (décision 2026-05-31, même logique que SMTP) : les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun champ reCAPTCHA dans `OrgSettings` ni `EventSettings`. La plateforme Badge porte une seule clé Google reCAPTCHA partagée par tous les events de toutes les organisations clientes. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun formulaire public.
 
 ### Périmètre des overrides Settings
 
 | Clé | Platform | Org | Event |
 |---|:---:|:---:|:---:|
-| `smtpHost` | ✓ | ✓ | — |
-| `smtpPort` | ✓ | ✓ | — |
-| `smtpUser` | ✓ | ✓ | — |
-| `smtpPassword` | ✓ | ✓ | — |
-| `smtpSecure` | ✓ | ✓ | — |
-| `smtpFrom` | ✓ | ✓ | ✓ |
+| `smtpHost` | ✓ | — | — |
+| `smtpPort` | ✓ | — | — |
+| `smtpUser` | ✓ | — | — |
+| `smtpPassword` | ✓ | — | — |
+| `smtpSecure` | ✓ | — | — |
+| `smtpFrom` | ✓ | — | — |
 | `contactEmail` | — | ✓ | ✓ |
 | `contactPhone` | — | ✓ | ✓ |
-| `recaptchaSiteKey` | ✓ | ✓ | — |
-| `recaptchaSecretKey` | ✓ | ✓ | — |
-| `recaptchaEnabled` | ✓ | ✓ | — |
+| `recaptchaSiteKey` | ✓ | — | — |
+| `recaptchaSecretKey` | ✓ | — | — |
+| `recaptchaEnabled` | ✓ | — | — |
 
-> **Note** : les secrets sensibles (mots de passe SMTP, secret reCAPTCHA) ne sont jamais overridables au niveau Event pour limiter la surface de fuite. Seules les clés explicitement listées dans `EventSettings` (cf. modèle Prisma plus haut) peuvent être surchargées au niveau event ; toutes les autres ne cascadent qu'Org → Platform.
+> **Note** : le SMTP n'est jamais overridable hors plateforme — toute configuration de connexion vit dans `PlatformSettings` uniquement. Le reCAPTCHA suit la même logique — une seule clé Google partagée, plateforme uniquement, pas d'override possible. Seules les clés explicitement listées dans `EventSettings` (cf. modèle Prisma plus haut) peuvent être surchargées au niveau event ; toutes les autres ne cascadent qu'Org → Platform pour les clés cascadables (contact uniquement).
 
 ### Activity log
 
@@ -320,13 +314,13 @@ Cette matrice est la **source de vérité** : les helpers d'autorisation (`requi
 | Archiver / restaurer un event de l'org | ✓ | ✓ | — |
 | Inviter / retirer des membres event (sur events de l'org) | ✓ | ✓ | — |
 | Gérer les `CategoryTemplate` de l'org | ✓ | ✓ | — |
-| Modifier `OrgSettings` (SMTP, reCAPTCHA, contact) | ✓ | — | — |
+| Modifier `OrgSettings` (reCAPTCHA, contact) | ✓ | — | — |
 | Modifier le nom, le logo de l'org | ✓ | — | — |
 | Archiver / restaurer l'org | ✓ | — | — |
 | Inviter / retirer / changer rôle de membres org | ✓ | — | — |
 
 Notes :
-- `MANAGER` ne touche **jamais** à la facturation (hors-app), aux secrets SMTP/reCAPTCHA, ni à l'archivage de l'org elle-même.
+- `MANAGER` ne touche **jamais** à la facturation (hors-app) ni à l'archivage de l'org elle-même. Le SMTP et le reCAPTCHA sont plateforme-only (cf. décisions 2026-05-31 dans la section Settings) — ni OWNER ni MANAGER n'y accèdent ; seul le staff configure ces paramètres.
 - `AUDITOR` est lecture seule sur **tout**, y compris l'activity log — c'est sa raison d'être (DPO, cabinet comptable, commanditaire).
 - Le slug d'org reste réservé au staff (cf. `espace-organisation.md`).
 
@@ -498,30 +492,48 @@ Le middleware Next.js intercepte chaque requête sur les routes protégées :
 
 ```typescript
 // Cascade : Event → Org → Platform, premier non-null gagne
+// Ne couvre PAS les champs SMTP ni reCAPTCHA, qui sont lus directement depuis PlatformSettings.
 async function resolveSettings(
   eventId?: string,
   orgId?: string,
 ): Promise<ResolvedSettings>;
 
 type ResolvedSettings = {
+  // Cascade Event → Org → Platform pour le contact
+  contactEmail: string;
+  contactPhone: string;
+};
+
+// Variante publique (sans secrets) pour les Server Components
+async function resolvePublicSettings(eventId?: string, orgId?: string): Promise<PublicSettings>;
+
+// Lectures directes de PlatformSettings (pas de cascade)
+async function getPlatformSmtp(): Promise<PlatformSmtp>;
+async function getPlatformRecaptcha(): Promise<PlatformRecaptcha>;
+async function getPlatformPublicRecaptcha(): Promise<PublicRecaptcha>; // sans secret, pour les Server Components publics
+
+type PlatformSmtp = {
   smtpHost: string;
   smtpPort: number;
   smtpFrom: string;
   smtpUser: string;
-  smtpPassword: string;        // jamais exposé via API
+  smtpPassword: string;  // jamais exposé via API
   smtpSecure: boolean;
-  contactEmail: string;
-  contactPhone: string;
+};
+
+type PlatformRecaptcha = {
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;  // jamais exposé via API
 };
 
-// Variante publique (sans secrets) pour les Server Components
-async function resolvePublicSettings(eventId?: string, orgId?: string): Promise<PublicSettings>;
+type PublicRecaptcha = {
+  recaptchaEnabled: boolean;
+  recaptchaSiteKey: string;
+};
 ```
 
-Quand `eventId` est fourni, `orgId` est résolu automatiquement via `event.orgId`. Si ni l'un ni l'autre, ne lit que `PlatformSettings`.
+Quand `eventId` est fourni, `orgId` est résolu automatiquement via `event.orgId`. Si ni l'un ni l'autre, ne lit que `PlatformSettings`. Le SMTP et le reCAPTCHA n'ont pas de variante "résolue" : il y a une seule source de vérité pour chacun, `PlatformSettings`.
 
 ## Activity log enrichi (`src/lib/activity-log.ts`)
 
@@ -581,7 +593,7 @@ export async function POST(req, { params }) {
 7. Un user sans aucun droit est redirigé vers `/login` (ou reçoit 403 sur les routes API).
 8. Toute mutation génère un `ActivityLog` correctement scopé (`orgId`/`eventId`).
 9. Les actions staff sur données client (`orgId IS NOT NULL`) ont `staffActor=true`.
-10. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sortent jamais des routes API publiques.
+10. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sortent jamais des routes API publiques. Les champs SMTP et reCAPTCHA ne sortent jamais des routes `/api/admin/*` ni `/api/public/*` : ils ne sont consultables qu'à travers `/api/staff/settings` (lecture sans secret) ou `/api/staff/settings` PATCH (réservé `STAFF_ADMIN`+). Seul le `recaptchaSiteKey` (clé publique) est exposé aux Server Components publics via `getPlatformPublicRecaptcha()`.
 11. Suppression du dernier `OWNER` d'une org non archivée renvoie HTTP 409 (`code=LAST_OWNER`).
 12. Suppression du dernier `SUPER_ADMIN` de la plateforme renvoie HTTP 409 (`code=LAST_SUPER_ADMIN`).
 13. Un `STAFF_ADMIN` qui tente de promouvoir un user en `STAFF_ADMIN` ou `SUPER_ADMIN` reçoit HTTP 403.

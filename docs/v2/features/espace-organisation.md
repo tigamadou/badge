@@ -6,7 +6,7 @@ L'espace organisation (`/admin/[orgId]/*`) est le tableau de bord du client B2B.
 
 Synthèse de ce qui est gérable dans cet espace :
 
-- Paramètres de l'organisation : nom (OWNER), slug (staff), `OrgSettings` = override SMTP/contact/reCAPTCHA (modification OWNER, lecture OWNER/MANAGER/AUDITOR sans secrets)
+- Paramètres de l'organisation : nom (OWNER), slug (staff), `OrgSettings` = contact public (override de la plateforme). Modification OWNER, lecture OWNER/MANAGER/AUDITOR. **Le SMTP et le reCAPTCHA sont plateforme uniquement** (décisions 2026-05-31, cf. [`multi-tenancy-rbac.md`](multi-tenancy-rbac.md)) — aucun champ SMTP ni reCAPTCHA n'est exposé ici.
 - Événements de l'org : création et archivage (OWNER ou MANAGER), lecture (tous rôles org)
 - Modèles de catégories réutilisables (`CategoryTemplate`) : CRUD (OWNER ou MANAGER), lecture (tous rôles org)
 - Membres de l'organisation : invitation, changement de rôle, retrait (OWNER uniquement)
@@ -48,21 +48,19 @@ Exclu :
 
 ### `/admin/[orgId]/settings`
 
-Lecture : OWNER, MANAGER, AUDITOR (sans les secrets : `smtpPassword`, `recaptchaSecretKey`).
+Lecture : OWNER, MANAGER, AUDITOR (sans le secret `recaptchaSecretKey`).
 Modification : OWNER uniquement (ou staff, audité).
 
-`OrgSettings` (override de `PlatformSettings`) :
+`OrgSettings` :
 
-- SMTP override (host, port, from, user, password, secure) — tous nullable, null = hérite de Platform
-- Contact public (email, téléphone) — affichés dans les emails et le footer des pages publiques
-- reCAPTCHA override (siteKey, secretKey, enabled)
+- Contact public (email, téléphone) — affichés dans les emails et le footer des pages publiques. Override du contact plateforme (cascade : Event → Org → Platform).
+
+> **Pas de section SMTP ni reCAPTCHA** : le SMTP et le reCAPTCHA sont plateforme uniquement (décisions 2026-05-31). Aucun champ SMTP, aucun champ reCAPTCHA, aucun bouton "Test SMTP" n'est exposé dans cet espace. Pour modifier ces configs, voir l'espace staff (`/staff/settings`).
 
 Section "Paramètres généraux" :
 
 - Nom de l'organisation (OWNER)
 - Slug (lecture seule, modifiable par le staff uniquement)
-
-Bouton "Tester SMTP" (OWNER) : envoie un email test depuis l'expéditeur résolu en cascade.
 
 Pour MANAGER et AUDITOR, le formulaire est affiché en mode lecture seule, sans les secrets.
 
@@ -129,9 +127,8 @@ Lecture : OWNER, MANAGER, AUDITOR (tous les rôles d'OrgMembership accèdent au 
 ```
 GET    /api/admin/[orgId]                           → infos org (OWNER, MANAGER, AUDITOR)
 PATCH  /api/admin/[orgId]                           → nom (OWNER), slug (staff uniquement)
-GET    /api/admin/[orgId]/settings                  → OrgSettings sans secrets (OWNER, MANAGER, AUDITOR)
-PATCH  /api/admin/[orgId]/settings                  → OWNER ou staff (audité)
-POST   /api/admin/[orgId]/settings/test-smtp        → OWNER
+GET    /api/admin/[orgId]/settings                  → OrgSettings (contact + reCAPTCHA sans secrets) (OWNER, MANAGER, AUDITOR)
+PATCH  /api/admin/[orgId]/settings                  → OWNER ou staff (audité). Refuse les champs SMTP (HTTP 400 si fournis).
 GET    /api/admin/[orgId]/members                   → liste OrgMembership (OWNER, MANAGER, AUDITOR)
 POST   /api/admin/[orgId]/members                   → invite ou ajoute membre avec rôle souhaité (OWNER ou staff)
 PATCH  /api/admin/[orgId]/members/[userId]          → change rôle (OWNER ; refuse si rétrogradation du dernier OWNER actif, HTTP 409 LAST_OWNER)
@@ -177,7 +174,7 @@ Dropdown affichant les orgs où l'utilisateur a une OrgMembership. Persiste le c
 5. Création event avec un template applique correctement les `Categories` (nom, color, number copiés).
 6. Suppression ou rétrogradation du dernier `OWNER` actif d'une org non archivée est refusée (HTTP 409, `code=LAST_OWNER`).
 7. Invitation d'un utilisateur déjà existant ajoute la `OrgMembership` avec le rôle choisi sans recréer le user.
-8. `OrgSettings.smtpPassword` et `recaptchaSecretKey` ne sont jamais retournés dans `GET /api/admin/[orgId]/settings`, quel que soit le rôle.
+8. Aucun champ SMTP ni reCAPTCHA n'est jamais exposé ni accepté par `GET`/`PATCH /api/admin/[orgId]/settings` (les configs SMTP et reCAPTCHA vivent dans `PlatformSettings` uniquement). Si un client legacy envoie un de ces champs en PATCH, la route renvoie HTTP 400.
 9. Toute action audit-log avec `staffActor=true` si effectuée par un staff sans `OrgMembership`.
 10. Un AUDITOR voit la liste des events et les inscriptions agrégées de l'org, mais aucun bouton d'action (création, édition, archivage, approbation) n'est rendu côté UI ; les routes mutantes correspondantes renvoient HTTP 403 si elles sont appelées directement.
 11. Un MANAGER peut créer un event (sous quota) mais reçoit HTTP 403 sur `PATCH /api/admin/[orgId]/settings`, `POST /api/admin/[orgId]/archive` et toute route de gestion des membres org.
@@ -188,4 +185,4 @@ Dropdown affichant les orgs où l'utilisateur a une OrgMembership. Persiste le c
 ## Dépendances
 
 - Spec 1 (Multi-tenancy & RBAC) : helpers d'autorisation, middleware, [matrice complète](multi-tenancy-rbac.md)
-- Spec 6 (Emails) : email d'invitation membre (OWNER / MANAGER / AUDITOR), test SMTP
+- Spec 6 (Emails) : email d'invitation membre (OWNER / MANAGER / AUDITOR). Le test SMTP n'existe qu'au niveau staff (cf. spec 2).

@@ -2,7 +2,11 @@
 
 ## Description fonctionnelle
 
-L'application envoie des emails transactionnels aux participants et aux utilisateurs. En v2, la configuration SMTP et les coordonnées de contact sont résolues en cascade `PlatformSettings → OrgSettings → EventSettings`, et les templates sont contextualisés par l'événement ou l'organisation source.
+L'application envoie des emails transactionnels aux participants et aux utilisateurs. En v2 :
+
+- **Configuration SMTP (connexion + expéditeur) = plateforme uniquement** (décision 2026-05-31). Hôte, port, user, password, secure et `smtpFrom` sont lus directement depuis `PlatformSettings` ; aucune cascade Org/Event. Tous les emails partent avec la même identité d'expéditeur (ex. `Badge <noreply@badge.local>`).
+- **Branding contextuel** (logo, coordonnées de contact) résolu en cascade `EventSettings → OrgSettings → PlatformSettings`. Les emails affichent toujours le bon logo et le bon contact selon le contexte (event ou org), même si l'expéditeur SMTP est unique.
+- Les templates sont contextualisés par l'événement ou l'organisation source.
 
 Tous les emails utilisateurs sont en français avec accents complets.
 
@@ -10,15 +14,16 @@ Tous les emails utilisateurs sont en français avec accents complets.
 
 Inclus :
 
-- Résolveur d'expéditeur (`smtpFrom`) et de SMTP pour l'envoi
+- Lecture directe de la config SMTP depuis `PlatformSettings` (via `getPlatformSmtp()`)
+- Résolveur du branding contextuel (logo, contact) en cascade Event → Org → Platform
 - Templates HTML pour tous les emails (avec branding event/org)
 - Refonte de `src/lib/mail.ts` (signatures avec contexte `eventId` ou `orgId`)
-- Tests Vitest sur la composition des emails et la résolution de l'expéditeur
+- Tests Vitest sur la composition des emails et la résolution du branding
 
 Exclu :
 
-- Configuration UI des settings (specs 2, 3, 4)
-- Test SMTP UI (specs 2, 3, 4)
+- Configuration UI des settings plateforme (spec 2)
+- Test SMTP UI (spec 2 uniquement — il n'y a pas de Test SMTP côté Org/Event)
 - Modèles de mots de passe (spec 7)
 
 ## Types d'emails
@@ -44,15 +49,15 @@ Exclu :
 
 > Note : pour `STAFF_NEW_ORG_MEMBER_INVITED`, seuls les co-OWNERs sont notifiés (ils restent décisionnaires sur l'organisation). Les MANAGER et AUDITOR ne sont pas destinataires pour éviter le bruit.
 
-## Résolveur SMTP
+## Résolveur de transporteur
 
 Le résolveur (`src/lib/mail.ts → resolveTransporter()`) prend en argument un contexte (`eventId` ou `orgId` ou rien) et retourne :
 
 ```typescript
 type ResolvedTransport = {
-  transporter: Transporter;  // nodemailer
-  from: string;              // adresse expéditeur
-  contactEmail: string;      // pour footer
+  transporter: Transporter;  // nodemailer (configuré depuis PlatformSettings)
+  from: string;              // expéditeur unique plateforme
+  contactEmail: string;      // résolu en cascade Event → Org → Platform
   contactPhone: string;
   eventTitle?: string;       // si eventId fourni
   orgName?: string;          // si orgId fourni
@@ -62,18 +67,16 @@ type ResolvedTransport = {
 
 Algorithme :
 
-1. Charger les settings en cascade (`resolveSettings(eventId, orgId)`)
-2. Construire le `transporter` nodemailer avec host/port/secure/user/password résolus
-3. `from` :
-   - Si `EventSettings.smtpFrom` non null → `"[Event.title] <event.smtpFrom>"`
-   - Sinon si `OrgSettings.smtpFrom` non null → `"[Org.name] <org.smtpFrom>"`
-   - Sinon `PlatformSettings.smtpFrom` (ex: `"Badge <noreply@badge.local>"`)
+1. Charger la config SMTP via `getPlatformSmtp()` (lecture directe `PlatformSettings`, **pas** de cascade)
+2. Charger le branding contextuel en cascade : `resolveSettings(eventId, orgId)` pour `contactEmail` / `contactPhone`, plus `Event.logo` et `Event.title` / `Organization.name` si applicable
+3. Construire le `transporter` nodemailer avec host/port/secure/user/password de la plateforme
+4. `from` = `PlatformSettings.smtpFrom` (ex. `"Badge <noreply@badge.local>"`) — **identique pour tous les emails**, quel que soit le contexte. Le branding contextuel (logo, contact) reste affiché dans le corps de l'email.
 
 **Cas particulier — User Invitation** :
 
-- Invitation staff pure (création d'un compte sans rattachement org/event) → pas d'eventId/orgId → utilise `PlatformSettings` directement, branding générique Badge.
-- Invitation portant sur une OrgMembership (OWNER / MANAGER / AUDITOR) → utiliser le contexte `orgId` pour résoudre l'expéditeur et le branding (logo et coordonnées de l'organisation).
-- Invitation portant sur une EventMembership (ADMIN / OPERATOR / PRINTER / VIEWER) → utiliser le contexte `eventId` pour résoudre l'expéditeur et le branding (logo et coordonnées de l'événement, avec cascade vers l'organisation puis la plateforme).
+- Invitation staff pure (création d'un compte sans rattachement org/event) → pas d'eventId/orgId → branding générique Badge.
+- Invitation portant sur une OrgMembership (OWNER / MANAGER / AUDITOR) → utiliser le contexte `orgId` pour résoudre le branding (logo et coordonnées de l'organisation). L'expéditeur SMTP reste celui de la plateforme.
+- Invitation portant sur une EventMembership (ADMIN / OPERATOR / PRINTER / VIEWER) → utiliser le contexte `eventId` pour résoudre le branding (logo et coordonnées de l'événement, avec cascade vers l'organisation puis la plateforme). L'expéditeur SMTP reste celui de la plateforme.
 
 ## Templates
 
@@ -187,24 +190,23 @@ Gestion des erreurs :
 
 `src/lib/__tests__/mail.test.ts` :
 
-- `resolveTransporter()` retourne PlatformSettings quand ni eventId ni orgId
-- `resolveTransporter(eventId)` cascade jusqu'à EventSettings non null
-- `from` formaté : `"[Org.name] <smtp.from>"` quand override org
-- `from` formaté : `"Badge <platform.from>"` quand pas d'override
+- `resolveTransporter()` utilise toujours la config SMTP de `PlatformSettings`, quel que soit le contexte (eventId, orgId, ou aucun)
+- `from` = `PlatformSettings.smtpFrom` dans les trois cas (pas de variation par org/event)
+- `resolveTransporter(eventId)` cascade le branding (logo, contact) Event → Org → Platform — pas le SMTP
 - `buildEmail()` injecte le logo event si fourni, sinon logo Badge
 - Variables `{{eventTitle}}` etc. résolues correctement
 - Anti-XSS : variables HTML-escaped (les valeurs viennent de la BDD mais sécurisons quand même)
-- `sendUserInvitation(userId, { orgId, role: 'MANAGER' })` envoie un email contextualisé org avec le libellé `MANAGER` et le branding de l'organisation
-- `sendUserInvitation(userId, { eventId, role: 'VIEWER' })` envoie un email contextualisé event avec le libellé `OBSERVATEUR` et le branding de l'événement
+- `sendUserInvitation(userId, { orgId, role: 'MANAGER' })` envoie un email contextualisé org (logo + contact org) avec le libellé `MANAGER`, expéditeur SMTP plateforme
+- `sendUserInvitation(userId, { eventId, role: 'VIEWER' })` envoie un email contextualisé event (logo + contact event) avec le libellé `OBSERVATEUR`, expéditeur SMTP plateforme
 
 ## Critères d'acceptation
 
-1. Email de confirmation envoyé après création inscription avec expéditeur résolu en cascade.
+1. Email de confirmation envoyé après création inscription avec expéditeur `PlatformSettings.smtpFrom` (identique pour tous les events) et branding event résolu en cascade (logo + contact).
 2. Email de rejet inclut motif + lien d'édition (`/edit-registration/[token]`).
 3. Logo event affiché dans tous les emails participants quand `event.logo` est défini.
 4. Contact (email + tél) affiché en footer si settings configurés, sinon footer minimal "Badge".
 5. Email d'invitation user contient le lien `/setup-password?token=...` (24h).
-6. Test SMTP envoie un email "Test SMTP — Badge" via la cascade (selon contexte org ou event).
+6. Test SMTP (UI staff uniquement) envoie un email "Test SMTP — Badge" via `PlatformSettings`. Aucun Test SMTP n'est exposé côté Org ou Event.
 7. Émojis et accents français préservés (UTF-8, headers MIME).
 8. Aucun secret SMTP n'est jamais inclus dans le corps de l'email.
 9. L'email d'invitation `USER_INVITATION` mentionne explicitement le rôle attribué (staff, org ou event).
@@ -212,6 +214,6 @@ Gestion des erreurs :
 
 ## Dépendances
 
-- Spec 1 : `resolveSettings()`, `ActivityLog`
+- Spec 1 : `getPlatformSmtp()`, `resolveSettings()` (cascade branding), `ActivityLog`
 - Spec 5 : route `/edit-registration/[token]`, `/verify/[badgeId]`
-- Spec 7 : `PlatformSettings` initial seedé
+- Spec 7 : `PlatformSettings` initial seedé avec config SMTP complète (host, port, from, user, password, secure) — pas de fallback Org/Event possible

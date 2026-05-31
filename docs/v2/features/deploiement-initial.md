@@ -99,9 +99,11 @@ DATABASE_URL=mysql://root:<pw>@mysql:3306/badge
 NEXTAUTH_SECRET=<openssl rand -base64 32>
 NEXTAUTH_URL=https://<domaine>
 BASE_URL=https://<domaine>           # fallback NEXTAUTH_URL pour les liens email
-NEXT_PUBLIC_RECAPTCHA_SITE_KEY=...   # (optionnel, fallback)
-RECAPTCHA_SECRET_KEY=...             # (optionnel, fallback)
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=...   # amorce PlatformSettings.recaptchaSiteKey si défini
+RECAPTCHA_SECRET_KEY=...             # amorce PlatformSettings.recaptchaSecretKey si défini
 ```
+
+> **reCAPTCHA** : la configuration vit exclusivement dans `PlatformSettings` (décision 2026-05-31, même logique que SMTP). Les variables d'env ci-dessus servent uniquement à amorcer le singleton au seed initial ; la modification ultérieure se fait via `/staff/settings`.
 
 ### Nouvelles (v2)
 

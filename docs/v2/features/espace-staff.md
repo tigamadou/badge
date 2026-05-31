@@ -100,15 +100,15 @@ Détail user : nom, email, rôle, memberships, dernier login. Actions :
 
 ### `/staff/settings`
 
-`PlatformSettings` — édition selon le rôle :
+`PlatformSettings` — édition selon le rôle. Cette page est la **seule** interface de configuration SMTP **et reCAPTCHA** de la plateforme (décisions 2026-05-31 : SMTP plateforme uniquement et reCAPTCHA plateforme uniquement, aucun override possible côté Org ou Event).
 
-- **SMTP par défaut** :
+- **SMTP (unique source pour tous les emails)** :
   - `smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpSecure` : `STAFF_ADMIN` ou `SUPER_ADMIN`
   - `smtpPassword` : `SUPER_ADMIN` uniquement
-- **reCAPTCHA par défaut** :
+- **reCAPTCHA (unique source pour tous les formulaires publics)** :
   - `recaptchaSiteKey`, `recaptchaEnabled` : `STAFF_ADMIN` ou `SUPER_ADMIN`
   - `recaptchaSecretKey` : `SUPER_ADMIN` uniquement
-- **Test SMTP** (bouton "Envoyer un email de test") : `STAFF_ADMIN` ou `SUPER_ADMIN`
+- **Test SMTP** (bouton "Envoyer un email de test") : `STAFF_ADMIN` ou `SUPER_ADMIN`. Envoie un email de test à l'adresse du staff connecté via la config SMTP plateforme.
 
 Champs sensibles (`smtpPassword`, `recaptchaSecretKey`) :
 

@@ -2,7 +2,7 @@
 
 ## Description fonctionnelle
 
-L'inscription publique permet à un participant non authentifié de s'inscrire à un événement via un formulaire web, en accédant à l'URL `https://badge.app/e/[slug]`. La page est entièrement contextualisée par l'événement : logo, titre, catégories, contact, reCAPTCHA, expéditeur SMTP — tout est résolu en cascade depuis `Event → Org → Platform`.
+L'inscription publique permet à un participant non authentifié de s'inscrire à un événement via un formulaire web, en accédant à l'URL `https://badge.app/e/[slug]`. La page est entièrement contextualisée par l'événement : logo, titre, catégories, contact public. Le contact est résolu en cascade `Event → Org → Platform`. Le reCAPTCHA et l'expéditeur SMTP sont uniques au niveau plateforme (décisions 2026-05-31, cf. `multi-tenancy-rbac.md`) — `getPlatformRecaptcha()` et `getPlatformSmtp()` lisent directement `PlatformSettings`.
 
 Cette feature couvre aussi les flux post-inscription côté participant :
 
@@ -144,26 +144,27 @@ Comme `PublicRegistrationForm` mais avec donnée initiale, et avec un encart "Vo
 Quand on rend `/e/[slug]`, le résolveur charge :
 
 ```
-1. EventSettings (table) — override
-2. OrgSettings (table) — override
-3. PlatformSettings (table) — défaut
+1. EventSettings (table) — override pour le contact
+2. OrgSettings (table) — override pour le contact
+3. PlatformSettings (table) — défaut pour le contact + source unique SMTP/reCAPTCHA
 ```
 
-Pour chaque clé : premier non-null gagne. Les clés publiques (sans secret) :
+Pour le contact (cascadable) : premier non-null gagne. Les clés publiques exposées :
 
-- `smtpFrom` (pour préparer l'expéditeur de la confirmation)
-- `contactEmail`, `contactPhone` (footer)
-- `recaptchaEnabled`, `recaptchaSiteKey` (formulaire)
+- `contactEmail`, `contactPhone` (footer) — cascade Event → Org → Platform
+- `recaptchaEnabled`, `recaptchaSiteKey` (formulaire) — **lus directement depuis `PlatformSettings`** via `getPlatformPublicRecaptcha()` ; pas de cascade. Une seule clé Google partagée pour tous les events. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun event.
+
+L'expéditeur SMTP (`smtpFrom`) **n'est pas cascadé** : il est lu directement depuis `PlatformSettings` via `getPlatformSmtp()` (décision 2026-05-31). Tous les emails de confirmation, rejet, badge imprimé, etc. partent avec la même identité d'expéditeur plateforme, quel que soit l'événement.
 
 ## Critères d'acceptation
 
 1. `/e/[slug-inexistant]` → 404 avec page d'erreur sobre.
 2. `/e/[slug-event-archived]` → page "Inscriptions fermées".
 3. `/e/[slug]` avec `registrationOpen=false` → page "Inscriptions fermées".
-4. Un participant peut s'inscrire avec reCAPTCHA activé (clé site résolue depuis settings cascade).
+4. Un participant peut s'inscrire avec reCAPTCHA activé (clé site lue depuis `PlatformSettings.recaptchaSiteKey` via `getPlatformPublicRecaptcha()`). Si la plateforme n'a pas activé reCAPTCHA, le widget est absent et le formulaire reste fonctionnel.
 5. La création échoue (HTTP 409) si email ou document est bloqué pour cet event.
 6. La création échoue (HTTP 429) si quota atteint, avec message "Inscriptions complètes".
-7. L'email de confirmation utilise l'expéditeur SMTP résolu en cascade.
+7. L'email de confirmation utilise l'expéditeur SMTP plateforme et affiche le branding event (logo, contact) résolu en cascade dans le corps et le footer.
 8. `/verify/[badgeId]` d'un badge approuvé+imprimé affiche les infos (sauf si catégorie anonyme : masque nom).
 9. `/verify/[badgeId]` d'un badge PENDING/REJECTED affiche "Badge non valide".
 10. `/edit-registration/[token]` avec token expiré redirige vers une page "Lien expiré" avec bouton "Demander un nouveau lien".
@@ -173,7 +174,7 @@ Pour chaque clé : premier non-null gagne. Les clés publiques (sans secret) :
 
 ## Sécurité
 
-- Pas d'authentification mais reCAPTCHA en option (configurable par org/event)
+- Pas d'authentification mais reCAPTCHA en option (configuré au niveau plateforme uniquement — une seule clé partagée pour tous les events)
 - Rate limit par IP sur `/api/public/*` : implémentation in-memory par instance pour MVP (table `Map<ip, { count, resetAt }>` avec fenêtre 1 minute, max 10 requêtes). Migration vers Redis si scaling horizontal.
 - Tokens éphémères pour les uploads (1h)
 - Tokens d'édition (`editToken`) : UUID v4, single-use, 48h, hashés en BDD ? Proposition : stocker en clair (consistant avec v1) mais non listables — vérifier le seuil de risque

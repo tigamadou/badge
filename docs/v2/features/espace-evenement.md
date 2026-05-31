@@ -145,13 +145,13 @@ CRUD des `Category` de cet event — **ADMIN uniquement** :
 - Titre, lieu, date, logo
 - Slug (lecture seule, modification par staff uniquement)
 - Toggle `registrationOpen`
-- Section "EventSettings" (override OrgSettings/PlatformSettings) :
-  - smtpFrom override
+- Section "EventSettings" (override OrgSettings) :
   - contactEmail / contactPhone override
-- Bouton "Tester SMTP" (résolution cascade)
 - Section "Blocages" :
   - Lien vers `/admin/[orgId]/events/[eventId]/blocked-emails`
   - Lien vers `/admin/[orgId]/events/[eventId]/blocked-documents`
+
+> **Pas de section SMTP** : le SMTP est plateforme uniquement (décision 2026-05-31). Aucun champ SMTP, aucun bouton "Test SMTP" n'est exposé dans cet espace. La config SMTP vit dans `/staff/settings` (réservé staff).
 
 ### `/admin/[orgId]/events/[eventId]/blocked-emails` et `/blocked-documents`
 
@@ -226,9 +226,8 @@ DELETE /api/admin/[orgId]/events/[eventId]/members/[membershipId]               
 ```
 GET    /api/admin/[orgId]/events/[eventId]                                                  # event.read.aggregated
 PATCH  /api/admin/[orgId]/events/[eventId]                                                  # event.update (titre, lieu, date, logo) / event.registration_toggle (registrationOpen) / event.archive
-GET    /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update (lecture admin)
-PATCH  /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update
-POST   /api/admin/[orgId]/events/[eventId]/settings/test-smtp                               # event.settings.update
+GET    /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update (lecture admin — contact uniquement)
+PATCH  /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update — refuse les champs SMTP (HTTP 400 si fournis)
 GET    /api/admin/[orgId]/events/[eventId]/blocked-emails                                   # registration.block
 POST   /api/admin/[orgId]/events/[eventId]/blocked-emails                                   # registration.block
 DELETE /api/admin/[orgId]/events/[eventId]/blocked-emails/[id]                              # registration.block

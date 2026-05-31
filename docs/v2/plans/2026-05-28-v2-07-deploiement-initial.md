@@ -1,5 +1,7 @@
 # Reset & déploiement initial — Implementation Plan
 
+> **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les variables `PLATFORM_SMTP_*` deviennent la **seule** source SMTP de la plateforme. Aucun fallback ni override possible cote `OrgSettings` ou `EventSettings` : tous les emails (inscription, confirmation, rejet, invitations staff, tests SMTP) partent via le SMTP plateforme et avec `PLATFORM_SMTP_FROM` comme expediteur. Le seed `PlatformSettings` reste inchange (il continue d'inclure tous les champs SMTP), mais le tableau des variables critiques (section ci-dessous) est mis a jour pour refleter cette decision.
+
 ## Progression
 
 > **Convention** : avant chaque session, lire ce bloc pour reprendre la ou on s'etait arrete. Apres chaque task validee (tests verts + criteres d'acceptation OK), passer `[ ]` a `[x]` et dater. En cas d'interruption mi-task, passer a `[~]`, dater, et noter precisement l'etat (step en cours, fichiers touches, prochaine etape). Si une task est abandonnee : passer a `[-]` avec la raison dans les notes.
@@ -607,7 +609,7 @@ Variables critiques v2 :
 | `MYSQL_ROOT_PASSWORD` | Mot de passe root MySQL (utilisé aussi par les backups) |
 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
 | `NEXTAUTH_URL` / `BASE_URL` | URL publique HTTPS |
-| `PLATFORM_SMTP_*` | SMTP fallback plateforme (cascade Org/Event peut surcharger) |
+| `PLATFORM_SMTP_*` | SMTP plateforme (source unique, pas d'override possible côté Org/Event) |
 | `SEED_STAFF_EMAIL` / `SEED_STAFF_PASSWORD` | Premier STAFF_ADMIN (à changer après login) |
 
 Les anciennes variables `SMTP_*` (v1) et `SEED_ADMIN_*` (v1) **ne sont plus lues**.
