@@ -253,6 +253,46 @@ Pas de changement Docker majeur ; les containers sont déjà renommés `badge-*`
 - **Index Prisma** : sur toutes les FK fréquentes (`orgId`, `eventId`, `userId`, `categoryId`).
 - **Tests** : Vitest pour la logique pure (helpers d'autorisation, résolveur settings, formatage). Pas de mock Prisma sur les règles RBAC critiques.
 
+## État au lot C (post-Plan 4 espace événement, 2026-05-31)
+
+Plan 4 (espace événement ADMIN / OPERATOR / PRINTER / VIEWER) terminé via une Agent Team de 3 implementers en parallèle (`implementer-event`, `implementer-badges-scan`, `implementer-blocked-activity`) + team-lead pour foundation et e2e. Disponible :
+
+- **Wrapper d'API `withEventAuth({ minRole, allowArchived?, requireRegistrationOpen? }, handler)`** (`src/lib/with-event-auth.ts`) : résout `orgId` + `eventId` du path, vérifie la cohérence `event.orgId === orgId` (refuse 404 sinon — pas de leak d'existence cross-org), refuse 410 si event archivé sans `allowArchived: true`, refuse 409 si event fermé et `requireRegistrationOpen: true`, applique `requireEventRole` (héritage OWNER → ADMIN + bypass staff total). 11 tests verts.
+- **Helpers purs** (`src/lib/`) : `event-quota.ts` (PENDING+APPROVED, REJECTED exclus), `edit-token.ts` (`randomBytes(32).toString("hex")` + TTL 48h), `duplicates.ts` (recherche email/idDocument/firstName+lastName scope event), `registration-csv.ts` (escape RFC 4180). 26 tests cumulés.
+- **Layouts** : `src/components/event/EventShell.tsx` (sidebar complète ADMIN/STAFF : Tableau / Inscriptions / Badges / Catégories / Membres / Paramètres / Journal / Scanner) + `EventOperatorShell.tsx` (Scanner + Profil pour OPERATOR). Aiguillage par `effectiveRole` dans `src/app/admin/[orgId]/events/[eventId]/layout.tsx`. Bandeau "Mode staff" si accès staff sans `EventMembership`.
+- **Pages** (`src/app/admin/[orgId]/events/[eventId]/`) : dashboard, registrations (liste / new / `[regId]` détail), badges (liste / `[badgeId]` détail / batch print), categories, members, settings, blocked-emails, blocked-documents, activity, scan. 14 pages au total.
+- **API REST scope-event** (`src/app/api/admin/[orgId]/events/[eventId]/`, 27 routes) :
+  - Event : GET/PATCH `/route.ts` (slug staff-only, audit `EVENT_UPDATED` + `EVENT_REGISTRATION_OPENED/CLOSED`). POST `/archive`, `/restore` (cf. Plan 3).
+  - Categories : GET/POST `/categories`, PATCH/DELETE `/categories/[id]` (PATCH `reassignToCategoryId` déplace les inscriptions avant suppression, DELETE refuse 409 `CATEGORY_HAS_REGISTRATIONS` sinon), POST `/categories/import-templates` (renumérotation 1..N en cas de collision).
+  - Members : GET/POST `/members` (invitation idempotente, `sendUserInvitation` uniquement pour nouvel utilisateur, audit `MEMBERSHIP_ADDED`), PATCH/DELETE `/members/[membershipId]`. Hierarchie partielle `ADMIN > OPERATOR ⊃ { PRINTER, VIEWER }`.
+  - Settings : GET (settings + cascade résolue Event → Org → Platform) / PATCH `/settings` (`.strict()` Zod refuse tout champ SMTP — décision 2026-05-31 : SMTP plateforme uniquement). Audit `EVENT_SETTINGS_UPDATED`.
+  - Registrations : GET (filtres `status`/`categoryId`/`q` + pagination) / POST `/registrations` (admin bypass quota avec audit `quotaBypass=true` si dépassé) ; `/registrations/[regId]` GET/PATCH (snapshot avant update via `SubmissionSnapshot`)/DELETE ; `/registrations/[regId]/{approve,reject,print,all-access,checkin,block-email,block-document,duplicates,resend-edit-link,reset-edit-token}` ; `/registrations/print` (batch ADMIN) ; `/registrations/export` (CSV avec `Content-Disposition`). `editToken` jamais exposé en sortie (sauf `reset-edit-token` ADMIN-only).
+  - Badges : la liste s'appuie sur les routes registrations filtrées `status=APPROVED`. Pas d'API badges dédiée — pages serveur consomment Prisma directement.
+  - Scan : POST `/scan/verify` (extrait `badgeId` depuis URL QR ou texte brut, refuse cross-event explicitement, log `BADGE_SCANNED`).
+  - Blocked : GET/POST `/blocked-emails` + DELETE `[id]` ; GET/POST `/blocked-documents` + DELETE `[id]` (P2002 → 409 ALREADY_BLOCKED, audit `REGISTRATION_UPDATED` avec `details.action` discriminant).
+  - Activity : GET `/activity` (ADMIN voit tout, OPERATOR filtré server-side `userId=session.user.id AND type=BADGE_SCANNED`).
+- **Composants event** (`src/components/event/`) : RegistrationActions, RegistrationTable (`useTransition` pour éviter cascading renders, filtres + recherche + pagination + export CSV), RegistrationForm (prop categories), RegistrationHistory (snapshots), RegistrationDetailPanel, CategoryForm, CategoryTable, CategoryReassignModal, CategoryImportTemplatesModal, MemberInviteForm, MemberTable, BlockedEmailsForm, BlockedDocumentsForm, EventSettingsForm, BadgeListTable, BadgeBatchPanel, QRScanner.
+- **Composants badge V2** (`src/components/badge/*V2.tsx`) : refonte des composants v1 avec prop `event` typée. `BadgeDocumentV2`, `BadgeDocumentAnonymousV2`, `BadgeBatchExportV2`, `BadgePreviewV2`, `BadgeDownloadV2`, `BadgeWebPreviewV2`. Font Montserrat préservée. QR + ALL ACCESS + neutralBadge support.
+- **Smoke e2e** (`src/lib/__tests__/event-journey.test.ts`) : 3 tests intégration : (1) OWNER hérite ADMIN, crée catégorie + registration + print, logs portent `orgId`+`eventId` sans staffActor ; (2) OPERATOR scan OK mais approve/PATCH/DELETE → 403 ; (3) staff PATCH event → log `staffActor=true`.
+
+Tests cumulés Plan v2-04 : **~110 tests verts** (11 wrapper + 26 helpers + ~70 routes/composants + 3 e2e + 1 quota bypass).
+
+Defense en profondeur :
+
+- Middleware Plan 1 (scope `/admin`, `/staff`) + `withEventAuth` route-level (orgId/eventId cohérence, archived, registrationOpen) + chaque route ADMIN re-vérifie `{ minRole: "ADMIN" }` (triple-check).
+- OPERATOR sidebar restreinte (`EventOperatorShell`) ET routes ADMIN renvoient 403 même si l'OPERATOR contourne l'UI.
+- Quota admin = bypass avec `quotaBypass=true` dans `ActivityLog.details` ; quota public (Plan 5) appliquera 429.
+- `editToken` : `randomBytes(32).toString("hex")` + TTL 48h, jamais retourné par l'API sauf `reset-edit-token` ADMIN-only.
+- Aucun secret (`smtpPassword`, `recaptchaSecretKey`, `editToken` non hashé) dans les réponses API.
+- Tests global beforeEach (`src/test-setup.ts`) reset la BDD entière en ordre FK strict avant chaque test, ce qui rend les tests Plan v2-03 et v2-04 isolés mutuellement (sans ça, les `Registration` créées par v2-04 cassaient les `prisma.category.deleteMany()` des fichiers Plan v2-03).
+
+Reste à venir :
+
+- **Task 21 (manual smoke navigateur)** : à exécuter par l'utilisateur avant la mise en prod (le plan documente la checklist détaillée, mais nous n'avons pas de browser interactif depuis ce poste).
+- Plan v2-05 (inscription publique `/e/[slug]`, `/verify/[id]`, `/edit-registration/[token]`) — partiellement superseded par Plan v2-11 (comptes participants).
+- Plan v2-06 (templates email réels — remplace les stubs `sendStatusNotification`, `sendBadgePrintedNotification`, `sendEditLinkEmail`, `sendUserInvitation`).
+- Plan v2-11 (comptes participants unifiés) + v2-12 (templates badges).
+
 ## État au lot C (post-Plan 3 espace organisation, 2026-05-31)
 
 Plan 3 (espace organisation OWNER) terminé. Disponible :

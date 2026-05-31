@@ -52,3 +52,23 @@ export async function sendSmtpTest(args: {
   }
   console.warn("[stub Plan 6] sendSmtpTest: validation OK, email NON envoye", args);
 }
+
+// Notification de changement de statut d'inscription (APPROVED/REJECTED).
+// Plan 6 enverra le template "registration-approved" ou "registration-rejected"
+// avec le branding contextuel et le motif de rejet le cas echeant.
+export async function sendStatusNotification(registrationId: string): Promise<void> {
+  console.warn("[stub Plan 6] sendStatusNotification: email NON envoye", { registrationId });
+}
+
+// Notification d'impression de badge. Plan 6 enverra un template avec lien
+// vers /verify/[id] et coordonnees de retrait.
+export async function sendBadgePrintedNotification(registrationId: string): Promise<void> {
+  console.warn("[stub Plan 6] sendBadgePrintedNotification: email NON envoye", { registrationId });
+}
+
+// Renvoi du lien d'edition d'inscription. Plan 6 regenerera l'editToken
+// (hash + expiry) avant envoi. Le stub ne touche pas a l'editToken pour
+// rester sans effet de bord sur les tests qui n'attendent pas de mutation.
+export async function sendEditLinkEmail(registrationId: string): Promise<void> {
+  console.warn("[stub Plan 6] sendEditLinkEmail: email NON envoye", { registrationId });
+}

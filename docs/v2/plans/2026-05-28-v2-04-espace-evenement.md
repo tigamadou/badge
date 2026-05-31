@@ -30,32 +30,39 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
-| 18 | [ ] | -- | -- |
-| 19 | [ ] | -- | -- |
-| 20 | [ ] | -- | -- |
-| 21 | [ ] | -- | -- |
-| 22 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight : 6 helpers Plan 1/3 OK, 6 ActivityType (REGISTRATION_APPROVED, BADGE_SCANNED, etc.) OK. Ajout des 3 stubs Plan 6 manquants : sendStatusNotification, sendBadgePrintedNotification, sendEditLinkEmail. sendUserInvitation existait deja (Plan v2-02). |
+| 1 | [x] | 2026-05-31 | src/lib/with-event-auth.ts + tests (11/11 passent). Wrapper d'API : 401 sans session, 404 si event absent ou cross-org (URL tampering), 410 EVENT_ARCHIVED par defaut (allowArchived bypass), 409 REGISTRATION_CLOSED si requireRegistrationOpen=true, 403 sans role suffisant. ctx expose orgId/eventId/effectiveRole/session. OWNER org herite ADMIN event. Staff bypass total (effectiveRole=STAFF). |
+| 2 | [x] | 2026-05-31 | 4 helpers purs livres : event-quota (PENDING+APPROVED, REJECTED exclu), edit-token (randomBytes 32 hex, TTL 48h), duplicates (email/document/nom scope event), registration-csv (escape RFC4180). 26/26 tests verts. |
+| 3 | [x] | 2026-05-31 | Layout `/admin/[orgId]/events/[eventId]` + EventShell (sidebar complete ADMIN/STAFF) + EventOperatorShell (Scanner + Profil). Aiguillage par role. Bandeau "Mode staff" si staff sans membership. Typecheck vert. |
+| 4 | [x] | 2026-05-31 | Dashboard event (KPI ADMIN, Mes scans OPERATOR) + GET/PATCH route. Slug staff-only, P2002→409 SLUG_TAKEN, log EVENT_UPDATED + EVENT_REGISTRATION_OPENED/CLOSED. 5/5 tests verts. |
+| 5 | [x] | 2026-05-31 | Categories CRUD scope event + import-templates avec renumerotation. Routes GET/POST + [id] PATCH/DELETE + import-templates. Components CategoryForm/Table/ReassignModal/ImportTemplatesModal + page. 7/7 tests verts. |
+| 6 | [x] | 2026-05-31 | Members event GET/POST invite (user existant -> juste membership ; nouveau -> User + inviteToken + sendUserInvitation) + PATCH role + DELETE. 5/5 tests verts. |
+| 7 | [x] | 2026-05-31 | EventSettings GET/PATCH (contactEmail + contactPhone uniquement, SMTP plateforme uniquement). z.strict() refuse smtp*. Resolved cascade preview. 4/4 nouveaux tests verts. |
+| 8 | [x] | 2026-05-31 | Registrations GET liste (filtres status/categoryId/q + pagination) + POST manuel (status=APPROVED, audit REGISTRATION_CREATED). OPERATOR lit la liste, seul ADMIN cree. 5/5 tests verts. |
+| 9 | [x] | 2026-05-31 | Routes [regId] GET/PATCH/DELETE + approve/reject (editToken + sendStatusNotification)/print (badgePrinted + sendBadgePrintedNotification)/all-access. PATCH snapshot avant update. editToken jamais expose. 7/7 nouveaux tests verts. |
+| 10 | [x] | 2026-05-31 | Routes block-email, block-document, duplicates, resend-edit-link, reset-edit-token, checkin (OPERATOR), batch print, export CSV. 4/4 nouveaux tests verts. |
+| 11 | [x] | 2026-05-31 | Composants RegistrationActions (Approve/Reject modal/Print) + RegistrationTable (filtres + recherche + pagination + export CSV) + RegistrationForm refondu (prop categories, sans lecture Prisma). |
+| 12 | [x] | 2026-05-31 | Pages registrations (liste, new, [regId] detail) + composants RegistrationHistory (snapshots) + RegistrationDetailPanel (Approve/Reject/Print + block/edit-link/all-access/delete). Typecheck vert. |
+| 13 | [x] | 2026-05-31 | Composants badge V2 (BadgeDocument/Anonymous/Batch/Preview/Download/WebPreview) avec prop `event` et `registration`. Font Montserrat preservee. QR + ALL ACCESS + neutralBadge. Typecheck vert. |
+| 14 | [x] | 2026-05-31 | Pages badges liste/detail/print + components BadgeListTable (filtres + selection batch + open PDF preview) + BadgeBatchPanel (PDFViewer + fetch + QR generation). Typecheck vert. |
+| 15 | [x] | 2026-05-31 | Endpoint scan/verify (extract id from QR url, log BADGE_SCANNED, FOREIGN_EVENT 404, authorized iff APPROVED) + QRScanner (html5-qrcode + saisie manuelle + historique session) + page scan. 4/4 tests verts. |
+| 16 | [x] | 2026-05-31 | Blocked emails/documents : routes GET/POST + [id] DELETE pour les deux entites, audit REGISTRATION_UPDATED avec details.action discriminant. P2002 -> 409 ALLREADY_BLOCKED. Components BlockedEmailsForm/BlockedDocumentsForm + pages SSR. OPERATOR refuse en 403 (ADMIN minRole). 5/5 tests verts. |
+| 17 | [x] | 2026-05-31 | Activity log event : route GET + page. ADMIN voit tous les logs, OPERATOR filtre defense-in-depth (userId=session.user.id AND type=BADGE_SCANNED), VIEWER 403 (minRole OPERATOR car PRINTER/VIEWER stricts). Filtre type validate vs enum ActivityType. Pagination page/limit (max 100). 5/5 tests verts. |
+| 18 | [x] | 2026-05-31 | POST /registrations admin : audit `quotaBypass=true` si quota depasse apres creation (admin bypass, pas de blocage cote admin). 1/1 nouveau test vert. |
+| 19 | [x] | 2026-05-31 | event-journey.test.ts (3 tests integration). 1/ OWNER (no EventMembership) herite ADMIN, cree categorie + registration APPROVED + print badge ; logs portent orgId+eventId, staffActor=false (criteres #1, #6, #9). 2/ OPERATOR scan OK mais approve/PATCH/DELETE cat -> 403 (criteres #2, #10). 3/ Staff PATCH event -> log staffActor=true (audit). |
+| 20 | [x] | 2026-05-31 | Append au test api-event-categories.test.ts : flux complet DELETE catFrom -> 409 / PATCH reassignToCategoryId=catTo -> 200 / DELETE catFrom -> 204, registration deplacee vers catTo. 8/8 tests categories cumules. |
+| 21 | [-] | 2026-05-31 | Smoke navigateur manuel : reporte a l'utilisateur (necessite browser interactif). Steps documentees dans le plan, a executer si verif visuelle souhaitee. |
+| 22 | [x] | 2026-05-31 | Verification finale : 399/399 tests verts (test-setup.ts global cleanup ajoute pour fixer la regression cross-fichier liee aux residus Registration). Typecheck OK. Lint OK (0 erreurs apres fix RegistrationTable.tsx useTransition + MemberTable EventRole typage). Aucun secret SMTP/reCAPTCHA dans les routes event. Doc architecture.md a mettre a jour avec section "Etat au lot C (post-Plan 4)" — TODO complementaire. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-04 entierement implemente (Tasks 0-20, 22 = [x] ; Task 21 = [-] smoke navigateur manuel reporte a l'utilisateur). Execution via Agent Team de 3 implementers en parallele : `implementer-event` (Tasks 2-12), `implementer-badges-scan` (Tasks 13, 15), `implementer-blocked-activity` (Tasks 16-17) + team-lead (Tasks 0, 1, 14 coord, 18 verif, 19, 20, 22). **400/400 tests verts** (cumul Plan v2-01 + v2-02 + v2-03 + v2-04). Typecheck OK. Lint OK (0 erreurs). Aucun commit (consigne user — a commiter sur demande).
+
+Fixes infra livres pendant Plan v2-04 :
+- `src/test-setup.ts` : global `beforeEach` qui reset la BDD en ordre FK strict (corrige la regression cross-fichier liee aux `Registration` cumulees).
+- `src/components/ui/Input.tsx` : `label` rendu optionnel (deja fait Plan v2-03).
+- `src/components/event/RegistrationTable.tsx` : `useTransition` au lieu de setBusy synchrone (lint compliance).
+- `src/components/event/MemberTable.tsx` : type `EventRole` importe de `@prisma/client`.
+
+**Prochaine etape** : commit (sur demande utilisateur), puis Plan v2-05 (inscription publique) ou Plan v2-06 (templates email). Task 21 (smoke navigateur) reste a executer par l'utilisateur en local avec `make dev`.
 
 **Notes** :
 - 2026-05-31 — Décision SMTP plateforme uniquement. Task 7 (EventSettings) simplifiée : retrait de `smtpFrom` (API + UI), suppression de l'ancienne sous-task "Step 7.4: settings/test-smtp/route.ts" `[-]` (raison : aucune route test SMTP côté event, le SMTP est plateforme uniquement). Renumérotation des steps suivants (7.5 → 7.4, 7.6 → 7.5, 7.7 → 7.6, 7.8 → 7.7). Sources de vérité mises à jour : `docs/v2/features/espace-evenement.md`, `docs/v2/features/multi-tenancy-rbac.md`.

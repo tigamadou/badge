@@ -1,0 +1,58 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { withEventAuth } from "@/lib/with-event-auth";
+import { logActivity } from "@/lib/activity-log";
+import { sendStatusNotification } from "@/lib/mail";
+import { generateEditToken } from "@/lib/edit-token";
+
+type Params = { orgId: string; eventId: string; regId: string };
+
+const schema = z.object({
+  reason: z.string().min(1).max(200),
+  details: z.string().max(2000).optional(),
+});
+
+export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+  const { regId } = (await extra.params) as Params;
+  const json = await req.json().catch(() => null);
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  const existing = await prisma.registration.findUnique({ where: { id: regId } });
+  if (!existing || existing.eventId !== eventId) {
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+  }
+
+  const { token, expiresAt } = generateEditToken();
+  await prisma.registration.update({
+    where: { id: regId },
+    data: {
+      status: "REJECTED",
+      rejectionReason: parsed.data.reason,
+      rejectionDetails: parsed.data.details ?? null,
+      editToken: token,
+      editTokenExpiresAt: expiresAt,
+    },
+  });
+
+  await logActivity({
+    type: "REGISTRATION_REJECTED",
+    userId: session.user.id,
+    orgId,
+    eventId,
+    targetId: regId,
+    details: { reason: parsed.data.reason, hasDetails: !!parsed.data.details },
+    req,
+  });
+
+  try {
+    await sendStatusNotification(regId);
+  } catch (e) {
+    console.error("[mail] sendStatusNotification failed", e);
+  }
+
+  return NextResponse.json({ ok: true });
+});

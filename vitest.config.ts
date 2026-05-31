@@ -14,5 +14,7 @@ export default defineConfig({
     // Tests partagent une base MySQL unique avec deleteMany() en beforeEach.
     // L'exécution séquentielle évite les collisions inter-fichiers.
     fileParallelism: false,
+    // Reset global de la BDD avant chaque test (ordre FK strict).
+    setupFiles: ["./src/test-setup.ts"],
   },
 });
