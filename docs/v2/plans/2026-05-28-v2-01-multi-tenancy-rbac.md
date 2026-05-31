@@ -1,5 +1,7 @@
 # Multi-tenancy & RBAC — Implementation Plan
 
+> **Mise à jour 2026-05-31 — Enrichissement des enums RBAC** : suite à l'alignement de la spec [docs/v2/features/multi-tenancy-rbac.md](../../v2/features/multi-tenancy-rbac.md) le 2026-05-31, les trois enums RBAC sont élargis pour matcher les rôles validés. `StaffRole` gagne `SUPER_ADMIN` au sommet (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`). `OrgRole` passe d'un mono-rôle `OWNER` à une hiérarchie linéaire `OWNER > MANAGER > AUDITOR`. `EventRole` passe de `{ ADMIN, OPERATOR }` à une hiérarchie partielle `ADMIN ⊃ OPERATOR ⊃ { PRINTER, VIEWER }` (PRINTER et VIEWER disjoints). Sections impactées : Task 1 (schéma Prisma : les trois enums), Task 4 (helpers purs : `STAFF_ORDER` inclut `SUPER_ADMIN`, `eventRoleAtLeast` n'a plus de sens en non-linéaire et est remplacé par une logique permission-based ; `effectiveEventRole` gère l'héritage MANAGER→ADMIN et AUDITOR→VIEWER), Task 8 (guards DB-aware : `requireOrgRole` hiérarchie OWNER>MANAGER>AUDITOR, nouveau `requireEventPermission` avec permissions atomiques, garde-fous `assertNotLastOwner` et `assertNotLastSuperAdmin`), Task 11 (intégration : un scénario par nouveau rôle). Statuts des tasks inchangés (plan non commencé). Le modèle `Registration` n'est **pas** touché par cette mise à jour — la refonte snapshots inline est sous la responsabilité du Lot D (spec v2-11).
+
 > **Mise à jour 2026-05-31 — SMTP plateforme uniquement** : suite à la décision de design du 2026-05-31, les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) ne vivent **que** dans `PlatformSettings`. Aucun override possible côté `OrgSettings` ni `EventSettings`. Le branding contextuel non-SMTP (`contactEmail`, `contactPhone`, logo) reste cascadé Event → Org → Platform. Les sections Task 1 (schéma Prisma), Task 5 (résolveur settings), et leur code TDD ont été ajustés pour refléter cette décision. La spec source [docs/v2/features/multi-tenancy-rbac.md](../../v2/features/multi-tenancy-rbac.md) est la référence. Le reCAPTCHA suit la même logique que le SMTP : plateforme uniquement, lu directement depuis `PlatformSettings`. Retrait des champs `recaptcha*` d'`OrgSettings`.
 
 > **Mise à jour 2026-05-31 — reCAPTCHA plateforme uniquement** : décision corrigée le même jour (une première formulation parlait à tort de "reCAPTCHA org-only"). Les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) vivent **exclusivement** dans `PlatformSettings`, avec defaults non-nullables (`false`, `""`, `""`). Aucun champ reCAPTCHA dans `OrgSettings` ni `EventSettings`, et aucun override possible. La lecture se fait directement via `getPlatformRecaptcha()` (et `getPlatformPublicRecaptcha()` pour les Server Components publics, qui masque `recaptchaSecretKey`), sur le même modèle que `getPlatformSmtp()`. Les sections Task 1 (schéma Prisma : `OrgSettings` perd les champs `recaptcha*`), Task 5 (résolveur settings : `ResolvedSettings` ne contient plus de champs reCAPTCHA, ajout de `getPlatformRecaptcha()` / `getPlatformPublicRecaptcha()`) ont été ajustées en conséquence.
@@ -45,6 +47,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 - 2026-05-31 — Mise à jour du plan suite à la décision SMTP plateforme uniquement (voir note en tête). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma `OrgSettings` / `EventSettings`), Task 5 (résolveur settings + tests + type `ResolvedSettings` + nouvelle fonction `getPlatformSmtp()`).
 - 2026-05-31 — Mise à jour du plan suite à la décision reCAPTCHA plateforme uniquement (corrige une première formulation erronée "reCAPTCHA org-only" du même jour). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma : retrait des champs `recaptcha*` d'`OrgSettings`, `PlatformSettings` conserve les 3 champs reCAPTCHA), Task 5 (résolveur settings : `ResolvedSettings` ne contient plus de champs reCAPTCHA, ajout de `getPlatformRecaptcha()` et `getPlatformPublicRecaptcha()` sur le même modèle que `getPlatformSmtp()`, tests adaptés).
 - 2026-05-31 — Mise à jour du plan suite à la décision d'enrichissement d'`Organization` (legalName, adresse structurée, taxId, website, logo, contact) et suppression du modèle `OrgSettings`. La cascade contact lit directement `Organization`. Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma : enrichissement d'`Organization`, suppression complète du modèle `OrgSettings`, type `ORG_SETTINGS_UPDATED` retiré au profit de `ORG_UPDATED`), Task 5 (tests + implémentation `resolveSettings` : remplacement des `prisma.orgSettings.*` par `prisma.organization.*`, lecture directe de `contactEmail`/`contactPhone` depuis `Organization`).
+- 2026-05-31 — Enrichissement des enums RBAC pour aligner sur la spec validée. `StaffRole` ajoute `SUPER_ADMIN` au sommet, `OrgRole` ajoute `MANAGER` et `AUDITOR`, `EventRole` ajoute `PRINTER` et `VIEWER` (hiérarchie partielle). Statuts des tasks inchangés (plan non commencé). Sections impactées : Task 1 (schéma Prisma : 3 enums élargis), Task 4 (helpers purs : `STAFF_ORDER` inclut `SUPER_ADMIN`, refonte `effectiveEventRole` et `hasEventPermission` pour gérer la hiérarchie partielle event + héritages MANAGER→ADMIN et AUDITOR→VIEWER), Task 8 (guards DB-aware : `requireOrgRole` couvre la hiérarchie linéaire OWNER>MANAGER>AUDITOR, nouveau `requireEventPermission` permission-based, garde-fous `assertNotLastOwner` et `assertNotLastSuperAdmin`), Task 11 (intégration : un scénario par nouveau rôle MANAGER/AUDITOR/PRINTER/VIEWER/SUPER_ADMIN). Le modèle `Registration` reste inchangé (refonte snapshots inline → Lot D, spec v2-11).
 
 ---
 
@@ -139,6 +142,12 @@ model User {
 }
 
 enum StaffRole {
+  // Hierarchie lineaire : SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER.
+  // SUPER_ADMIN au sommet (decision 2026-05-31) : tous les droits, y compris hard delete
+  // org et promotion STAFF_ADMIN / SUPER_ADMIN, et actions metier sur donnees client
+  // (avec audit staffActor=true). En v1, SUPER_ADMIN avait des restrictions metier ;
+  // cette restriction disparait en v2.
+  SUPER_ADMIN
   STAFF_ADMIN
   STAFF_SUPPORT
   STAFF_OBSERVER
@@ -197,7 +206,16 @@ model OrgMembership {
 }
 
 enum OrgRole {
+  // Hierarchie lineaire : OWNER > MANAGER > AUDITOR (decision 2026-05-31).
+  // OWNER : pleins pouvoirs sur l'org (infos administratives, archivage, membres org).
+  // MANAGER : gere les events de l'org (create/archive event, membres event,
+  //           CategoryTemplate), mais ne touche pas aux infos org ni a la facturation.
+  // AUDITOR : lecture seule sur tout, y compris activity log (DPO, commanditaire).
+  // Heritages event : OWNER et MANAGER agissent comme ADMIN event sur les events de
+  // l'org parent ; AUDITOR agit comme VIEWER event.
   OWNER
+  MANAGER
+  AUDITOR
 }
 
 // =====================================================
@@ -243,8 +261,21 @@ model EventMembership {
 }
 
 enum EventRole {
+  // Hierarchie PARTIELLE (decision 2026-05-31) : ADMIN > OPERATOR > { PRINTER, VIEWER }.
+  // PRINTER et VIEWER sont DISJOINTS : ni l'un n'inclut l'autre. Consequence :
+  // un simple "role minimum" lineaire ne suffit plus ; les checks metier s'expriment
+  // par permissions atomiques (cf. requireEventPermission dans la spec).
+  // - ADMIN     : tous les droits event.
+  // - OPERATOR  : lecture detaillee + approbations + scan + impression badge ;
+  //               ne supprime pas, ne cree pas manuellement, ne configure pas l'event.
+  // - PRINTER   : ecran d'impression badge uniquement (recherche par nom/badgeId,
+  //               impression). Pas d'acces a la liste detaillee, pas de scan.
+  // - VIEWER    : liste agregee uniquement (compteurs, noms, categorie, statut).
+  //               Pas de details personnels (email, doc, photo), pas d'impression.
   ADMIN
   OPERATOR
+  PRINTER
+  VIEWER
 }
 
 // =====================================================
@@ -776,9 +807,11 @@ Create `src/lib/__tests__/auth-helpers.test.ts`:
 import { describe, it, expect } from "vitest";
 import {
   staffRoleAtLeast,
-  eventRoleAtLeast,
+  orgRoleAtLeast,
   hasOrgRole,
   effectiveEventRole,
+  hasEventPermission,
+  type EventPermission,
 } from "@/lib/auth-helpers";
 import type { UserContext } from "@/types/auth";
 
@@ -792,6 +825,15 @@ const baseCtx = (over: Partial<UserContext> = {}): UserContext => ({
 });
 
 describe("staffRoleAtLeast", () => {
+  it("SUPER_ADMIN >= STAFF_ADMIN", () => {
+    expect(staffRoleAtLeast("SUPER_ADMIN", "STAFF_ADMIN")).toBe(true);
+  });
+  it("SUPER_ADMIN >= SUPER_ADMIN", () => {
+    expect(staffRoleAtLeast("SUPER_ADMIN", "SUPER_ADMIN")).toBe(true);
+  });
+  it("STAFF_ADMIN < SUPER_ADMIN", () => {
+    expect(staffRoleAtLeast("STAFF_ADMIN", "SUPER_ADMIN")).toBe(false);
+  });
   it("STAFF_ADMIN >= STAFF_SUPPORT", () => {
     expect(staffRoleAtLeast("STAFF_ADMIN", "STAFF_SUPPORT")).toBe(true);
   });
@@ -803,19 +845,48 @@ describe("staffRoleAtLeast", () => {
   });
 });
 
-describe("eventRoleAtLeast", () => {
-  it("ADMIN >= OPERATOR", () => {
-    expect(eventRoleAtLeast("ADMIN", "OPERATOR")).toBe(true);
+describe("orgRoleAtLeast", () => {
+  // Hierarchie lineaire OWNER > MANAGER > AUDITOR
+  it("OWNER >= MANAGER", () => {
+    expect(orgRoleAtLeast("OWNER", "MANAGER")).toBe(true);
   });
-  it("OPERATOR < ADMIN", () => {
-    expect(eventRoleAtLeast("OPERATOR", "ADMIN")).toBe(false);
+  it("MANAGER >= AUDITOR", () => {
+    expect(orgRoleAtLeast("MANAGER", "AUDITOR")).toBe(true);
+  });
+  it("AUDITOR >= AUDITOR", () => {
+    expect(orgRoleAtLeast("AUDITOR", "AUDITOR")).toBe(true);
+  });
+  it("MANAGER < OWNER", () => {
+    expect(orgRoleAtLeast("MANAGER", "OWNER")).toBe(false);
+  });
+  it("AUDITOR < MANAGER", () => {
+    expect(orgRoleAtLeast("AUDITOR", "MANAGER")).toBe(false);
   });
 });
 
 describe("hasOrgRole", () => {
-  it("returns true if membership matches", () => {
+  // hasOrgRole verifie le niveau MINIMUM (linear chain OWNER > MANAGER > AUDITOR).
+  it("returns true if membership exactly matches", () => {
     const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
     expect(hasOrgRole(ctx, "o1", "OWNER")).toBe(true);
+  });
+  it("OWNER satisfies MANAGER requirement", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
+    expect(hasOrgRole(ctx, "o1", "MANAGER")).toBe(true);
+  });
+  it("OWNER and MANAGER satisfy AUDITOR requirement", () => {
+    const ctxOwner = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
+    const ctxManager = baseCtx({ orgMemberships: [{ orgId: "o1", role: "MANAGER" }] });
+    expect(hasOrgRole(ctxOwner, "o1", "AUDITOR")).toBe(true);
+    expect(hasOrgRole(ctxManager, "o1", "AUDITOR")).toBe(true);
+  });
+  it("MANAGER does not satisfy OWNER requirement", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "MANAGER" }] });
+    expect(hasOrgRole(ctx, "o1", "OWNER")).toBe(false);
+  });
+  it("AUDITOR does not satisfy MANAGER requirement", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "AUDITOR" }] });
+    expect(hasOrgRole(ctx, "o1", "MANAGER")).toBe(false);
   });
   it("returns true for staff regardless of membership", () => {
     const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_SUPPORT" });
@@ -827,17 +898,40 @@ describe("hasOrgRole", () => {
 });
 
 describe("effectiveEventRole", () => {
+  // Hierarchie partielle event : ADMIN > OPERATOR > { PRINTER, VIEWER }.
+  // PRINTER et VIEWER sont disjoints ; on retourne le role explicite tel quel,
+  // sauf cas d'heritage staff/org (qui mappent vers STAFF, ADMIN, ou VIEWER).
   it("returns STAFF for staff user", () => {
     const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_ADMIN" });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("STAFF");
+  });
+  it("returns STAFF for SUPER_ADMIN", () => {
+    const ctx = baseCtx({ isStaff: true, staffRole: "SUPER_ADMIN" });
     expect(effectiveEventRole(ctx, "e1", "o1")).toBe("STAFF");
   });
   it("returns ADMIN when user is OWNER of parent org", () => {
     const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
     expect(effectiveEventRole(ctx, "e1", "o1")).toBe("ADMIN");
   });
+  it("returns ADMIN when user is MANAGER of parent org (heritage)", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "MANAGER" }] });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("ADMIN");
+  });
+  it("returns VIEWER when user is AUDITOR of parent org (heritage)", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "AUDITOR" }] });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("VIEWER");
+  });
   it("returns explicit EventMembership.role when present", () => {
     const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "OPERATOR" }] });
     expect(effectiveEventRole(ctx, "e1", "o1")).toBe("OPERATOR");
+  });
+  it("returns PRINTER for explicit PRINTER membership", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "PRINTER" }] });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("PRINTER");
+  });
+  it("returns VIEWER for explicit VIEWER membership", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "VIEWER" }] });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("VIEWER");
   });
   it("STAFF wins over OWNER and explicit", () => {
     const ctx = baseCtx({
@@ -850,6 +944,79 @@ describe("effectiveEventRole", () => {
   });
   it("returns null when no rights", () => {
     expect(effectiveEventRole(baseCtx(), "e1", "o1")).toBeNull();
+  });
+});
+
+describe("hasEventPermission", () => {
+  // Source de verite : matrice de permissions atomiques de la spec.
+  // Permissions testees : badge.print, event.read.detailed, event.read.aggregated,
+  // scan.check-in, registration.approve, registration.delete, event.update.
+
+  // Cas piege classique : PRINTER peut imprimer mais ne scanne pas
+  it("PRINTER can badge.print but not scan.check-in", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "PRINTER" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "badge.print")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "scan.check-in")).toBe(false);
+  });
+
+  // VIEWER : seulement lecture agregee
+  it("VIEWER can read.aggregated but not read.detailed nor badge.print", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "VIEWER" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.aggregated")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.detailed")).toBe(false);
+    expect(hasEventPermission(ctx, "e1", "o1", "badge.print")).toBe(false);
+  });
+
+  // OPERATOR : detail + approbation + impression + scan, mais pas de mutation event
+  it("OPERATOR can read.detailed, approve, badge.print, scan.check-in", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "OPERATOR" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.detailed")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "registration.approve")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "badge.print")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "scan.check-in")).toBe(true);
+  });
+  it("OPERATOR cannot delete registration nor update event", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "OPERATOR" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "registration.delete")).toBe(false);
+    expect(hasEventPermission(ctx, "e1", "o1", "event.update")).toBe(false);
+  });
+
+  // ADMIN : tout
+  it("ADMIN can do everything (sample)", () => {
+    const ctx = baseCtx({ eventMemberships: [{ eventId: "e1", role: "ADMIN" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.detailed")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "registration.delete")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "event.update")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "badge.print")).toBe(true);
+  });
+
+  // Heritage org -> event
+  it("OWNER of parent org has all event permissions", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.update")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "registration.delete")).toBe(true);
+  });
+  it("MANAGER of parent org has all event permissions (heritage symetrique a OWNER)", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "MANAGER" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.update")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "registration.delete")).toBe(true);
+  });
+  it("AUDITOR of parent org : event.read.aggregated only, refuses detailed", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "AUDITOR" }] });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.aggregated")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.detailed")).toBe(false);
+    expect(hasEventPermission(ctx, "e1", "o1", "badge.print")).toBe(false);
+  });
+
+  // Staff bypass
+  it("staff bypasses any event permission check", () => {
+    const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_OBSERVER" });
+    expect(hasEventPermission(ctx, "e1", "o1", "event.read.detailed")).toBe(true);
+    expect(hasEventPermission(ctx, "e1", "o1", "registration.delete")).toBe(true);
+  });
+
+  it("no rights returns false", () => {
+    expect(hasEventPermission(baseCtx(), "e1", "o1", "event.read.aggregated")).toBe(false);
   });
 });
 ```
@@ -868,55 +1035,124 @@ Expected: FAIL (module not found).
 import type { StaffRole, OrgRole, EventRole } from "@prisma/client";
 import type { UserContext, EffectiveEventRole } from "@/types/auth";
 
+// Hierarchie lineaire staff : SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER.
 const STAFF_ORDER: Record<StaffRole, number> = {
   STAFF_OBSERVER: 1,
   STAFF_SUPPORT: 2,
   STAFF_ADMIN: 3,
+  SUPER_ADMIN: 4,
 };
 
-const EVENT_ORDER: Record<EventRole, number> = {
-  OPERATOR: 1,
-  ADMIN: 2,
+// Hierarchie lineaire org : OWNER > MANAGER > AUDITOR (decision 2026-05-31).
+const ORG_ORDER: Record<OrgRole, number> = {
+  AUDITOR: 1,
+  MANAGER: 2,
+  OWNER: 3,
+};
+
+// Permissions atomiques event (cf. spec docs/v2/features/multi-tenancy-rbac.md).
+// La hierarchie event etant partielle (ADMIN > OPERATOR > { PRINTER, VIEWER }),
+// les checks metier s'expriment par permission et non par "role minimum".
+export type EventPermission =
+  | "event.read.aggregated"
+  | "event.read.detailed"
+  | "registration.approve"
+  | "registration.create"
+  | "registration.delete"
+  | "registration.export"
+  | "registration.block"
+  | "badge.print"
+  | "scan.check-in"
+  | "event.update"
+  | "event.archive"
+  | "event.registration_toggle"
+  | "event.settings.update"
+  | "event.categories.manage"
+  | "event.members.manage"
+  | "event.activity.read";
+
+// Roles event qui satisfont chaque permission. Source : matrice "Niveau evenement"
+// dans docs/v2/features/multi-tenancy-rbac.md. La table est exhaustive et inclut
+// l'heritage interne (OPERATOR herite des lectures, ADMIN herite de tout).
+const EVENT_PERMISSION_ROLES: Record<EventPermission, ReadonlyArray<EventRole>> = {
+  "event.read.aggregated":   ["ADMIN", "OPERATOR", "VIEWER"],
+  "event.read.detailed":     ["ADMIN", "OPERATOR"],
+  "registration.approve":    ["ADMIN", "OPERATOR"],
+  "registration.create":     ["ADMIN"],
+  "registration.delete":     ["ADMIN"],
+  "registration.export":     ["ADMIN"],
+  "registration.block":      ["ADMIN"],
+  "badge.print":             ["ADMIN", "OPERATOR", "PRINTER"],
+  "scan.check-in":           ["ADMIN", "OPERATOR"],
+  "event.update":            ["ADMIN"],
+  "event.archive":           ["ADMIN"],
+  "event.registration_toggle": ["ADMIN"],
+  "event.settings.update":   ["ADMIN"],
+  "event.categories.manage": ["ADMIN"],
+  "event.members.manage":    ["ADMIN"],
+  "event.activity.read":     ["ADMIN"],
 };
 
 export function staffRoleAtLeast(actual: StaffRole, required: StaffRole): boolean {
   return STAFF_ORDER[actual] >= STAFF_ORDER[required];
 }
 
-export function eventRoleAtLeast(actual: EventRole, required: EventRole): boolean {
-  return EVENT_ORDER[actual] >= EVENT_ORDER[required];
+export function orgRoleAtLeast(actual: OrgRole, required: OrgRole): boolean {
+  return ORG_ORDER[actual] >= ORG_ORDER[required];
 }
 
+// Verifie le niveau MINIMUM en suivant la chaine OWNER > MANAGER > AUDITOR.
+// Un OWNER satisfait MANAGER et AUDITOR ; un MANAGER satisfait AUDITOR.
 export function hasOrgRole(ctx: UserContext, orgId: string, role: OrgRole): boolean {
   if (ctx.isStaff) return true;
-  return ctx.orgMemberships.some((m) => m.orgId === orgId && m.role === role);
+  return ctx.orgMemberships.some(
+    (m) => m.orgId === orgId && orgRoleAtLeast(m.role, role),
+  );
 }
 
+// Resout le role effectif d'un user sur un event en appliquant les heritages :
+//   - staff (n'importe quel staffRole) => "STAFF"
+//   - OWNER ou MANAGER de l'org parent => "ADMIN" (heritage symetrique)
+//   - AUDITOR de l'org parent => "VIEWER" (lecture seule agregee)
+//   - sinon, EventMembership explicite si presente
+//   - null sinon
 export function effectiveEventRole(
   ctx: UserContext,
   eventId: string,
   orgId: string,
 ): EffectiveEventRole {
   if (ctx.isStaff) return "STAFF";
-  if (ctx.orgMemberships.some((m) => m.orgId === orgId && m.role === "OWNER")) {
-    return "ADMIN";
+
+  const orgMembership = ctx.orgMemberships.find((m) => m.orgId === orgId);
+  if (orgMembership) {
+    if (orgMembership.role === "OWNER" || orgMembership.role === "MANAGER") {
+      return "ADMIN";
+    }
+    if (orgMembership.role === "AUDITOR") {
+      return "VIEWER";
+    }
   }
+
   const m = ctx.eventMemberships.find((x) => x.eventId === eventId);
   return m ? m.role : null;
 }
 
-export function hasEventRole(
+// Verifie une permission atomique. Source de verite : EVENT_PERMISSION_ROLES.
+// Staff bypass. L'heritage org est resolu via effectiveEventRole.
+export function hasEventPermission(
   ctx: UserContext,
   eventId: string,
   orgId: string,
-  required: EventRole,
+  permission: EventPermission,
 ): boolean {
   const eff = effectiveEventRole(ctx, eventId, orgId);
   if (eff === "STAFF") return true;
   if (eff === null) return false;
-  return eventRoleAtLeast(eff, required);
+  return EVENT_PERMISSION_ROLES[permission].includes(eff);
 }
 ```
+
+> **Note** : `eventRoleAtLeast` n'existe plus en v2. La hierarchie event etant partielle (PRINTER et VIEWER disjoints), un simple ordre numerique est trompeur. Les contextes UI qui ont besoin d'un check "role minimum" doivent passer par `hasEventPermission` avec la permission appropriee. Pour le seul cas residuel "le user est-il au moins ADMIN ?", on peut comparer `effectiveEventRole(...) === "ADMIN" || ... === "STAFF"` explicitement.
 
 - [ ] **Step 4.4: Run tests to verify they pass**
 
@@ -924,13 +1160,13 @@ export function hasEventRole(
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/auth-helpers.test.ts
 ```
 
-Expected: 11 passed.
+Expected: tous les tests passent (staff hierarchie, org hierarchie, hasOrgRole, effectiveEventRole, hasEventPermission, y compris cas piege PRINTER vs scan).
 
 - [ ] **Step 4.5: Commit**
 
 ```bash
 git add src/lib/auth-helpers.ts src/lib/__tests__/auth-helpers.test.ts
-git commit -m "feat(v2): helpers RBAC purs (staffRoleAtLeast, hasOrgRole, effectiveEventRole)"
+git commit -m "feat(v2): helpers RBAC purs (staffRoleAtLeast, orgRoleAtLeast, hasOrgRole, effectiveEventRole, hasEventPermission)"
 ```
 
 ---
@@ -1524,27 +1760,32 @@ import {
   requireStaff,
   requireOrgRole,
   requireEventRole,
+  requireEventPermission,
   getEffectiveEventRole,
+  assertNotLastOwner,
+  assertNotLastSuperAdmin,
   AuthError,
 } from "@/lib/auth-guards";
 
 async function setupOrgEvent() {
-  const org = await prisma.organization.create({ data: { name: "O", slug: `o-${Date.now()}` } });
+  const org = await prisma.organization.create({ data: { name: "O", slug: `o-${Date.now()}-${Math.random()}` } });
   const event = await prisma.event.create({
-    data: { orgId: org.id, title: "E", slug: `e-${Date.now()}`, location: "", date: new Date() },
+    data: { orgId: org.id, title: "E", slug: `e-${Date.now()}-${Math.random()}`, location: "", date: new Date() },
   });
   return { org, event };
 }
 
+async function resetAll() {
+  await prisma.activityLog.deleteMany();
+  await prisma.eventMembership.deleteMany();
+  await prisma.orgMembership.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.event.deleteMany();
+  await prisma.organization.deleteMany();
+}
+
 describe("requireStaff", () => {
-  beforeEach(async () => {
-    await prisma.activityLog.deleteMany();
-    await prisma.eventMembership.deleteMany();
-    await prisma.orgMembership.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.organization.deleteMany();
-  });
+  beforeEach(resetAll);
 
   it("throws AuthError if user not found", async () => {
     await expect(requireStaff("missing", "STAFF_OBSERVER")).rejects.toBeInstanceOf(AuthError);
@@ -1553,6 +1794,35 @@ describe("requireStaff", () => {
   it("throws if user is not staff", async () => {
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
     await expect(requireStaff(u.id, "STAFF_OBSERVER")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  // Hierarchie SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER
+  it("requireStaff(SUPER_ADMIN) accepts a SUPER_ADMIN", async () => {
+    const u = await prisma.user.create({
+      data: { email: "sa@x", password: "x", name: "SA", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await expect(requireStaff(u.id, "SUPER_ADMIN")).resolves.toBeUndefined();
+  });
+
+  it("requireStaff(SUPER_ADMIN) rejects a STAFF_ADMIN", async () => {
+    const u = await prisma.user.create({
+      data: { email: "a@x", password: "x", name: "A", isStaff: true, staffRole: "STAFF_ADMIN" },
+    });
+    await expect(requireStaff(u.id, "SUPER_ADMIN")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("requireStaff(STAFF_ADMIN) accepts a SUPER_ADMIN", async () => {
+    const u = await prisma.user.create({
+      data: { email: "sa2@x", password: "x", name: "SA", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await expect(requireStaff(u.id, "STAFF_ADMIN")).resolves.toBeUndefined();
+  });
+
+  it("requireStaff(STAFF_ADMIN) accepts a STAFF_ADMIN", async () => {
+    const u = await prisma.user.create({
+      data: { email: "a2@x", password: "x", name: "A", isStaff: true, staffRole: "STAFF_ADMIN" },
+    });
+    await expect(requireStaff(u.id, "STAFF_ADMIN")).resolves.toBeUndefined();
   });
 
   it("passes for STAFF_ADMIN when STAFF_SUPPORT required", async () => {
@@ -1571,20 +1841,50 @@ describe("requireStaff", () => {
 });
 
 describe("requireOrgRole", () => {
-  beforeEach(async () => {
-    await prisma.activityLog.deleteMany();
-    await prisma.eventMembership.deleteMany();
-    await prisma.orgMembership.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.organization.deleteMany();
+  beforeEach(resetAll);
+
+  // Hierarchie lineaire OWNER > MANAGER > AUDITOR
+
+  it("requireOrgRole(OWNER) accepts OWNER, rejects MANAGER and AUDITOR", async () => {
+    const { org } = await setupOrgEvent();
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const mgr = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+    const aud = await prisma.user.create({ data: { email: "a@x", password: "x", name: "A" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: mgr.id, orgId: org.id, role: "MANAGER" } });
+    await prisma.orgMembership.create({ data: { userId: aud.id, orgId: org.id, role: "AUDITOR" } });
+
+    await expect(requireOrgRole(owner.id, org.id, "OWNER")).resolves.toBeUndefined();
+    await expect(requireOrgRole(mgr.id, org.id, "OWNER")).rejects.toBeInstanceOf(AuthError);
+    await expect(requireOrgRole(aud.id, org.id, "OWNER")).rejects.toBeInstanceOf(AuthError);
   });
 
-  it("passes for OWNER", async () => {
+  it("requireOrgRole(MANAGER) accepts OWNER and MANAGER, rejects AUDITOR", async () => {
     const { org } = await setupOrgEvent();
-    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
-    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
-    await expect(requireOrgRole(u.id, org.id, "OWNER")).resolves.toBeUndefined();
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const mgr = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+    const aud = await prisma.user.create({ data: { email: "a@x", password: "x", name: "A" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: mgr.id, orgId: org.id, role: "MANAGER" } });
+    await prisma.orgMembership.create({ data: { userId: aud.id, orgId: org.id, role: "AUDITOR" } });
+
+    await expect(requireOrgRole(owner.id, org.id, "MANAGER")).resolves.toBeUndefined();
+    await expect(requireOrgRole(mgr.id, org.id, "MANAGER")).resolves.toBeUndefined();
+    await expect(requireOrgRole(aud.id, org.id, "MANAGER")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("requireOrgRole(AUDITOR) accepts all three org roles", async () => {
+    const { org } = await setupOrgEvent();
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const mgr = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+    const aud = await prisma.user.create({ data: { email: "a@x", password: "x", name: "A" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: mgr.id, orgId: org.id, role: "MANAGER" } });
+    await prisma.orgMembership.create({ data: { userId: aud.id, orgId: org.id, role: "AUDITOR" } });
+
+    await expect(requireOrgRole(owner.id, org.id, "AUDITOR")).resolves.toBeUndefined();
+    await expect(requireOrgRole(mgr.id, org.id, "AUDITOR")).resolves.toBeUndefined();
+    await expect(requireOrgRole(aud.id, org.id, "AUDITOR")).resolves.toBeUndefined();
   });
 
   it("passes for staff (bypass)", async () => {
@@ -1598,25 +1898,35 @@ describe("requireOrgRole", () => {
   it("throws for non-member, non-staff", async () => {
     const { org } = await setupOrgEvent();
     const u = await prisma.user.create({ data: { email: "x@x", password: "x", name: "X" } });
-    await expect(requireOrgRole(u.id, org.id, "OWNER")).rejects.toBeInstanceOf(AuthError);
+    await expect(requireOrgRole(u.id, org.id, "AUDITOR")).rejects.toBeInstanceOf(AuthError);
   });
 });
 
 describe("requireEventRole", () => {
-  beforeEach(async () => {
-    await prisma.activityLog.deleteMany();
-    await prisma.eventMembership.deleteMany();
-    await prisma.orgMembership.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.organization.deleteMany();
-  });
+  beforeEach(resetAll);
 
-  it("passes for OWNER of parent org when ADMIN required", async () => {
+  it("passes for OWNER of parent org when ADMIN required (heritage)", async () => {
     const { org, event } = await setupOrgEvent();
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await expect(requireEventRole(u.id, event.id, "ADMIN")).resolves.toBeUndefined();
+  });
+
+  it("passes for MANAGER of parent org when ADMIN required (heritage symetrique)", async () => {
+    const { org, event } = await setupOrgEvent();
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "MANAGER" } });
+    await expect(requireEventRole(u.id, event.id, "ADMIN")).resolves.toBeUndefined();
+  });
+
+  it("AUDITOR of parent org is VIEWER on event, refused on ADMIN/OPERATOR/PRINTER", async () => {
+    const { org, event } = await setupOrgEvent();
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "AUDITOR" } });
+    await expect(requireEventRole(u.id, event.id, "VIEWER")).resolves.toBeUndefined();
+    await expect(requireEventRole(u.id, event.id, "ADMIN")).rejects.toBeInstanceOf(AuthError);
+    await expect(requireEventRole(u.id, event.id, "OPERATOR")).rejects.toBeInstanceOf(AuthError);
+    await expect(requireEventRole(u.id, event.id, "PRINTER")).rejects.toBeInstanceOf(AuthError);
   });
 
   it("passes for explicit ADMIN membership", async () => {
@@ -1626,18 +1936,17 @@ describe("requireEventRole", () => {
     await expect(requireEventRole(u.id, event.id, "ADMIN")).resolves.toBeUndefined();
   });
 
-  it("OPERATOR cannot satisfy ADMIN requirement", async () => {
-    const { event } = await setupOrgEvent();
-    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
-    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
-    await expect(requireEventRole(u.id, event.id, "ADMIN")).rejects.toBeInstanceOf(AuthError);
-  });
+  it("PRINTER refuses VIEWER and inversement (disjonction)", async () => {
+    const { event: e1 } = await setupOrgEvent();
+    const { event: e2 } = await setupOrgEvent();
+    const printer = await prisma.user.create({ data: { email: "p@x", password: "x", name: "P" } });
+    const viewer = await prisma.user.create({ data: { email: "v@x", password: "x", name: "V" } });
+    await prisma.eventMembership.create({ data: { userId: printer.id, eventId: e1.id, role: "PRINTER" } });
+    await prisma.eventMembership.create({ data: { userId: viewer.id, eventId: e2.id, role: "VIEWER" } });
 
-  it("ADMIN satisfies OPERATOR requirement", async () => {
-    const { event } = await setupOrgEvent();
-    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
-    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN" } });
-    await expect(requireEventRole(u.id, event.id, "OPERATOR")).resolves.toBeUndefined();
+    // requireEventRole strict : PRINTER ne satisfait pas VIEWER, et inversement.
+    await expect(requireEventRole(printer.id, e1.id, "VIEWER")).rejects.toBeInstanceOf(AuthError);
+    await expect(requireEventRole(viewer.id, e2.id, "PRINTER")).rejects.toBeInstanceOf(AuthError);
   });
 
   it("getEffectiveEventRole returns STAFF for staff", async () => {
@@ -1646,6 +1955,122 @@ describe("requireEventRole", () => {
       data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_OBSERVER" },
     });
     expect(await getEffectiveEventRole(s.id, event.id)).toBe("STAFF");
+  });
+});
+
+describe("requireEventPermission", () => {
+  beforeEach(resetAll);
+
+  it("badge.print accepted for ADMIN, OPERATOR, PRINTER ; refused for VIEWER", async () => {
+    const { event } = await setupOrgEvent();
+    const admin = await prisma.user.create({ data: { email: "ad@x", password: "x", name: "A" } });
+    const op = await prisma.user.create({ data: { email: "op@x", password: "x", name: "O" } });
+    const pr = await prisma.user.create({ data: { email: "pr@x", password: "x", name: "P" } });
+    const vw = await prisma.user.create({ data: { email: "vw@x", password: "x", name: "V" } });
+    await prisma.eventMembership.create({ data: { userId: admin.id, eventId: event.id, role: "ADMIN" } });
+    await prisma.eventMembership.create({ data: { userId: op.id, eventId: event.id, role: "OPERATOR" } });
+    await prisma.eventMembership.create({ data: { userId: pr.id, eventId: event.id, role: "PRINTER" } });
+    await prisma.eventMembership.create({ data: { userId: vw.id, eventId: event.id, role: "VIEWER" } });
+
+    await expect(requireEventPermission(admin.id, event.id, "badge.print")).resolves.toBeUndefined();
+    await expect(requireEventPermission(op.id, event.id, "badge.print")).resolves.toBeUndefined();
+    await expect(requireEventPermission(pr.id, event.id, "badge.print")).resolves.toBeUndefined();
+    await expect(requireEventPermission(vw.id, event.id, "badge.print")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("scan.check-in refused for PRINTER (cas piege)", async () => {
+    const { event } = await setupOrgEvent();
+    const pr = await prisma.user.create({ data: { email: "pr2@x", password: "x", name: "P" } });
+    await prisma.eventMembership.create({ data: { userId: pr.id, eventId: event.id, role: "PRINTER" } });
+    await expect(requireEventPermission(pr.id, event.id, "scan.check-in")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("event.read.aggregated accepted for ADMIN, OPERATOR, VIEWER ; refused for PRINTER", async () => {
+    const { event } = await setupOrgEvent();
+    const pr = await prisma.user.create({ data: { email: "pr3@x", password: "x", name: "P" } });
+    const vw = await prisma.user.create({ data: { email: "vw3@x", password: "x", name: "V" } });
+    await prisma.eventMembership.create({ data: { userId: pr.id, eventId: event.id, role: "PRINTER" } });
+    await prisma.eventMembership.create({ data: { userId: vw.id, eventId: event.id, role: "VIEWER" } });
+    await expect(requireEventPermission(vw.id, event.id, "event.read.aggregated")).resolves.toBeUndefined();
+    await expect(requireEventPermission(pr.id, event.id, "event.read.aggregated")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("AUDITOR of parent org : aggregated accepted, detailed refused", async () => {
+    const { org, event } = await setupOrgEvent();
+    const u = await prisma.user.create({ data: { email: "ad@x", password: "x", name: "AUD" } });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "AUDITOR" } });
+    await expect(requireEventPermission(u.id, event.id, "event.read.aggregated")).resolves.toBeUndefined();
+    await expect(requireEventPermission(u.id, event.id, "event.read.detailed")).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it("staff bypass on any permission", async () => {
+    const { event } = await setupOrgEvent();
+    const s = await prisma.user.create({
+      data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_OBSERVER" },
+    });
+    await expect(requireEventPermission(s.id, event.id, "registration.delete")).resolves.toBeUndefined();
+  });
+});
+
+describe("assertNotLastOwner", () => {
+  beforeEach(resetAll);
+
+  it("rejects if removing the last active OWNER of a non-archived org", async () => {
+    const { org } = await setupOrgEvent();
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+
+    await expect(assertNotLastOwner(org.id, owner.id)).rejects.toMatchObject({ code: "LAST_OWNER" });
+  });
+
+  it("accepts if another active OWNER remains", async () => {
+    const { org } = await setupOrgEvent();
+    const o1 = await prisma.user.create({ data: { email: "o1@x", password: "x", name: "O1" } });
+    const o2 = await prisma.user.create({ data: { email: "o2@x", password: "x", name: "O2" } });
+    await prisma.orgMembership.create({ data: { userId: o1.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: o2.id, orgId: org.id, role: "OWNER" } });
+
+    await expect(assertNotLastOwner(org.id, o1.id)).resolves.toBeUndefined();
+  });
+
+  it("MANAGER does not count as fallback (must be OWNER)", async () => {
+    const { org } = await setupOrgEvent();
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const mgr = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: mgr.id, orgId: org.id, role: "MANAGER" } });
+
+    await expect(assertNotLastOwner(org.id, owner.id)).rejects.toMatchObject({ code: "LAST_OWNER" });
+  });
+
+  it("does not block when the org itself is archived", async () => {
+    const { org } = await setupOrgEvent();
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+    await prisma.organization.update({ where: { id: org.id }, data: { archived: true } });
+
+    await expect(assertNotLastOwner(org.id, owner.id)).resolves.toBeUndefined();
+  });
+});
+
+describe("assertNotLastSuperAdmin", () => {
+  beforeEach(resetAll);
+
+  it("rejects if removing the SUPER_ADMIN of the only user holding it", async () => {
+    const u = await prisma.user.create({
+      data: { email: "sa@x", password: "x", name: "SA", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await expect(assertNotLastSuperAdmin(u.id)).rejects.toMatchObject({ code: "LAST_SUPER_ADMIN" });
+  });
+
+  it("accepts if another active SUPER_ADMIN remains", async () => {
+    const u1 = await prisma.user.create({
+      data: { email: "sa1@x", password: "x", name: "SA1", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await prisma.user.create({
+      data: { email: "sa2@x", password: "x", name: "SA2", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await expect(assertNotLastSuperAdmin(u1.id)).resolves.toBeUndefined();
   });
 });
 ```
@@ -1666,8 +2091,9 @@ import type { StaffRole, OrgRole, EventRole } from "@prisma/client";
 import {
   staffRoleAtLeast,
   hasOrgRole,
-  hasEventRole,
+  hasEventPermission,
   effectiveEventRole as effectiveEventRolePure,
+  type EventPermission,
 } from "@/lib/auth-helpers";
 import { loadUserContext } from "@/lib/user-context";
 import type { EffectiveEventRole } from "@/types/auth";
@@ -1680,8 +2106,10 @@ export class AuthError extends Error {
       | "INSUFFICIENT_STAFF_ROLE"
       | "ORG_FORBIDDEN"
       | "EVENT_FORBIDDEN"
-      | "EVENT_NOT_FOUND",
-    public httpStatus: 401 | 403 | 404 = 403,
+      | "EVENT_NOT_FOUND"
+      | "LAST_OWNER"
+      | "LAST_SUPER_ADMIN",
+    public httpStatus: 401 | 403 | 404 | 409 = 403,
     message?: string,
   ) {
     super(message ?? code);
@@ -1697,6 +2125,8 @@ export async function requireStaff(userId: string, minRole: StaffRole): Promise<
   }
 }
 
+// Hierarchie lineaire OWNER > MANAGER > AUDITOR. hasOrgRole applique le niveau minimum
+// (un OWNER satisfait MANAGER et AUDITOR ; un MANAGER satisfait AUDITOR).
 export async function requireOrgRole(
   userId: string,
   orgId: string,
@@ -1707,6 +2137,10 @@ export async function requireOrgRole(
   if (!hasOrgRole(ctx, orgId, role)) throw new AuthError("ORG_FORBIDDEN", 403);
 }
 
+// Variante "role minimum" sur event, conservee pour les contextes UI/sidebar.
+// La hierarchie event etant partielle (PRINTER et VIEWER disjoints), un user PRINTER
+// ne satisfait PAS un check VIEWER (et inversement). Pour les checks metier API,
+// preferer requireEventPermission.
 export async function requireEventRole(
   userId: string,
   eventId: string,
@@ -1719,7 +2153,38 @@ export async function requireEventRole(
     select: { orgId: true },
   });
   if (!event) throw new AuthError("EVENT_NOT_FOUND", 404);
-  if (!hasEventRole(ctx, eventId, event.orgId, role)) {
+
+  const eff = effectiveEventRolePure(ctx, eventId, event.orgId);
+  if (eff === "STAFF") return;
+  if (eff === null) throw new AuthError("EVENT_FORBIDDEN", 403);
+
+  // Verification stricte du role demande, en respectant la hierarchie partielle :
+  //   ADMIN satisfait OPERATOR, PRINTER et VIEWER (englobe tous).
+  //   OPERATOR satisfait PRINTER et VIEWER (englobe les deux sous-roles).
+  //   PRINTER ne satisfait que PRINTER.
+  //   VIEWER ne satisfait que VIEWER.
+  const satisfied =
+    eff === role ||
+    (eff === "ADMIN") ||
+    (eff === "OPERATOR" && (role === "PRINTER" || role === "VIEWER"));
+  if (!satisfied) throw new AuthError("EVENT_FORBIDDEN", 403);
+}
+
+// Check par permission atomique : source de verite pour les routes API metier.
+// Voir docs/v2/features/multi-tenancy-rbac.md > matrice "Niveau evenement".
+export async function requireEventPermission(
+  userId: string,
+  eventId: string,
+  permission: EventPermission,
+): Promise<void> {
+  const ctx = await loadUserContext(userId);
+  if (!ctx) throw new AuthError("NOT_AUTHENTICATED", 401);
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { orgId: true },
+  });
+  if (!event) throw new AuthError("EVENT_NOT_FOUND", 404);
+  if (!hasEventPermission(ctx, eventId, event.orgId, permission)) {
     throw new AuthError("EVENT_FORBIDDEN", 403);
   }
 }
@@ -1737,6 +2202,47 @@ export async function getEffectiveEventRole(
   if (!event) return null;
   return effectiveEventRolePure(ctx, eventId, event.orgId);
 }
+
+// Garde-fou : refuse l'operation si elle retirerait le dernier OWNER actif
+// d'une organisation non archivee. Ignore les users archives. Si l'org est elle-meme
+// archivee, le garde-fou ne bloque pas (l'invariant ne s'applique qu'aux orgs vivantes).
+export async function assertNotLastOwner(
+  orgId: string,
+  userIdBeingRemoved: string,
+): Promise<void> {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { archived: true },
+  });
+  if (!org || org.archived) return;
+
+  const remainingOwners = await prisma.orgMembership.count({
+    where: {
+      orgId,
+      role: "OWNER",
+      userId: { not: userIdBeingRemoved },
+      user: { archived: false },
+    },
+  });
+  if (remainingOwners === 0) {
+    throw new AuthError("LAST_OWNER", 409);
+  }
+}
+
+// Garde-fou : refuse l'operation si elle retirerait le SUPER_ADMIN au dernier user
+// qui le porte (au moins un SUPER_ADMIN actif doit exister en permanence).
+export async function assertNotLastSuperAdmin(userIdBeingChanged: string): Promise<void> {
+  const remaining = await prisma.user.count({
+    where: {
+      id: { not: userIdBeingChanged },
+      staffRole: "SUPER_ADMIN",
+      archived: false,
+    },
+  });
+  if (remaining === 0) {
+    throw new AuthError("LAST_SUPER_ADMIN", 409);
+  }
+}
 ```
 
 - [ ] **Step 8.4: Run tests to verify they pass**
@@ -1745,13 +2251,13 @@ export async function getEffectiveEventRole(
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/auth-guards.test.ts
 ```
 
-Expected: 11 passed.
+Expected: tous les tests passent (couverture hierarchie staff complete avec SUPER_ADMIN, hierarchie org OWNER/MANAGER/AUDITOR, requireEventPermission avec cas piege PRINTER vs scan, heritages org->event, garde-fous last-owner et last-super-admin).
 
 - [ ] **Step 8.5: Commit**
 
 ```bash
 git add src/lib/auth-guards.ts src/lib/__tests__/auth-guards.test.ts
-git commit -m "feat(v2): guards requireStaff/Org/Event + AuthError"
+git commit -m "feat(v2): guards requireStaff/Org/Event/EventPermission + assertNotLastOwner + assertNotLastSuperAdmin"
 ```
 
 ---
@@ -1919,7 +2425,14 @@ git commit -m "docs(v2): note d'avancement post-Plan 1 (lot A complet)"
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
-import { requireStaff, requireOrgRole, AuthError } from "@/lib/auth-guards";
+import {
+  requireStaff,
+  requireOrgRole,
+  requireEventPermission,
+  assertNotLastOwner,
+  assertNotLastSuperAdmin,
+  AuthError,
+} from "@/lib/auth-guards";
 import { loadUserContext } from "@/lib/user-context";
 
 describe("v2 RBAC integration", () => {
@@ -1933,7 +2446,7 @@ describe("v2 RBAC integration", () => {
     await prisma.user.deleteMany();
   });
 
-  it("staff can act across orgs without OrgMembership", async () => {
+  it("STAFF_ADMIN can act across orgs without OrgMembership", async () => {
     const staff = await prisma.user.create({
       data: {
         email: "s@x",
@@ -1949,6 +2462,36 @@ describe("v2 RBAC integration", () => {
     await expect(requireOrgRole(staff.id, org.id, "OWNER")).resolves.toBeUndefined();
   });
 
+  // SUPER_ADMIN : tout autorise, y compris hard delete + promotion staff
+  it("SUPER_ADMIN passes requireStaff(SUPER_ADMIN) and toutes les operations sensibles", async () => {
+    const sa = await prisma.user.create({
+      data: {
+        email: "sa@x",
+        password: await hash("pw", 12),
+        name: "SA",
+        isStaff: true,
+        staffRole: "SUPER_ADMIN",
+      },
+    });
+    const otherSa = await prisma.user.create({
+      data: { email: "sa2@x", password: "x", name: "SA2", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "int-sa" } });
+
+    await expect(requireStaff(sa.id, "SUPER_ADMIN")).resolves.toBeUndefined();
+    await expect(requireStaff(sa.id, "STAFF_ADMIN")).resolves.toBeUndefined();
+    await expect(requireOrgRole(sa.id, org.id, "OWNER")).resolves.toBeUndefined();
+    // assertNotLastSuperAdmin accepte la mutation car il reste otherSa.
+    await expect(assertNotLastSuperAdmin(sa.id)).resolves.toBeUndefined();
+  });
+
+  it("STAFF_ADMIN ne satisfait pas requireStaff(SUPER_ADMIN)", async () => {
+    const a = await prisma.user.create({
+      data: { email: "a@x", password: "x", name: "A", isStaff: true, staffRole: "STAFF_ADMIN" },
+    });
+    await expect(requireStaff(a.id, "SUPER_ADMIN")).rejects.toBeInstanceOf(AuthError);
+  });
+
   it("OWNER scoped to its org only", async () => {
     const owner = await prisma.user.create({
       data: { email: "o@x", password: await hash("pw", 12), name: "O" },
@@ -1961,6 +2504,86 @@ describe("v2 RBAC integration", () => {
     await expect(requireOrgRole(owner.id, orgB.id, "OWNER")).rejects.toMatchObject({
       code: "ORG_FORBIDDEN",
     });
+  });
+
+  // MANAGER : peut creer/archiver event, mais pas modifier les infos org (OWNER required)
+  it("MANAGER can act on events (heritage ADMIN) mais pas sur les infos org", async () => {
+    const mgr = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "int-mgr" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "int-mgr-e", location: "", date: new Date() },
+    });
+    await prisma.orgMembership.create({ data: { userId: mgr.id, orgId: org.id, role: "MANAGER" } });
+
+    // Heritage MANAGER -> ADMIN event : peut modifier l'event et supprimer une inscription.
+    await expect(requireEventPermission(mgr.id, event.id, "event.update")).resolves.toBeUndefined();
+    await expect(requireEventPermission(mgr.id, event.id, "registration.delete")).resolves.toBeUndefined();
+    // Niveau org : OWNER refuse, MANAGER accepte
+    await expect(requireOrgRole(mgr.id, org.id, "OWNER")).rejects.toMatchObject({ code: "ORG_FORBIDDEN" });
+    await expect(requireOrgRole(mgr.id, org.id, "MANAGER")).resolves.toBeUndefined();
+  });
+
+  // AUDITOR : lecture seule sur tout (org + events de l'org en vue agregee)
+  it("AUDITOR sees aggregated event data but no detail nor mutation", async () => {
+    const aud = await prisma.user.create({ data: { email: "a@x", password: "x", name: "A" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "int-aud" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "int-aud-e", location: "", date: new Date() },
+    });
+    await prisma.orgMembership.create({ data: { userId: aud.id, orgId: org.id, role: "AUDITOR" } });
+
+    await expect(requireOrgRole(aud.id, org.id, "AUDITOR")).resolves.toBeUndefined();
+    await expect(requireOrgRole(aud.id, org.id, "MANAGER")).rejects.toMatchObject({ code: "ORG_FORBIDDEN" });
+    // Heritage AUDITOR -> VIEWER event
+    await expect(requireEventPermission(aud.id, event.id, "event.read.aggregated")).resolves.toBeUndefined();
+    await expect(requireEventPermission(aud.id, event.id, "event.read.detailed")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+    await expect(requireEventPermission(aud.id, event.id, "registration.approve")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+  });
+
+  // PRINTER : peut imprimer mais pas approuver une inscription
+  it("PRINTER can print badges but cannot approve registrations", async () => {
+    const printer = await prisma.user.create({ data: { email: "p@x", password: "x", name: "P" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "int-pr" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "int-pr-e", location: "", date: new Date() },
+    });
+    await prisma.eventMembership.create({ data: { userId: printer.id, eventId: event.id, role: "PRINTER" } });
+
+    await expect(requireEventPermission(printer.id, event.id, "badge.print")).resolves.toBeUndefined();
+    await expect(requireEventPermission(printer.id, event.id, "registration.approve")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+    // Cas piege : PRINTER n'est pas autorise au scan check-in
+    await expect(requireEventPermission(printer.id, event.id, "scan.check-in")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+  });
+
+  // VIEWER : voit la vue agregee mais pas les details personnels
+  it("VIEWER sees aggregated only, no detail, no badge print", async () => {
+    const vw = await prisma.user.create({ data: { email: "v@x", password: "x", name: "V" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "int-vw" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "int-vw-e", location: "", date: new Date() },
+    });
+    await prisma.eventMembership.create({ data: { userId: vw.id, eventId: event.id, role: "VIEWER" } });
+
+    await expect(requireEventPermission(vw.id, event.id, "event.read.aggregated")).resolves.toBeUndefined();
+    await expect(requireEventPermission(vw.id, event.id, "event.read.detailed")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+    await expect(requireEventPermission(vw.id, event.id, "badge.print")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+  });
+
+  // Garde-fou : suppression du dernier OWNER refusee
+  it("assertNotLastOwner blocks removing the last active OWNER", async () => {
+    const owner = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "int-lo" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER" } });
+
+    await expect(assertNotLastOwner(org.id, owner.id)).rejects.toMatchObject({ code: "LAST_OWNER" });
+  });
+
+  // Garde-fou : suppression du dernier SUPER_ADMIN refusee
+  it("assertNotLastSuperAdmin blocks removing the SUPER_ADMIN from the only user", async () => {
+    const sa = await prisma.user.create({
+      data: { email: "sa@x", password: "x", name: "SA", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await expect(assertNotLastSuperAdmin(sa.id)).rejects.toMatchObject({ code: "LAST_SUPER_ADMIN" });
   });
 
   it("loadUserContext returns full memberships", async () => {
