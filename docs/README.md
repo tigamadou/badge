@@ -9,6 +9,7 @@ sa propre documentation autonome.
 |---------|--------|---------------|
 | **v1** | Production | [docs/v1/](v1/README.md) |
 | **v2** | En construction | [docs/v2/](v2/README.md) |
+| **v3** | En conception (extension v2) | [docs/v3/](v3/README.md) |
 
 ## Quelle version consulter ?
 
@@ -16,6 +17,9 @@ sa propre documentation autonome.
   [documentation v1](v1/README.md).
 - **Vous travaillez sur la prochaine version** : consultez la
   [documentation v2](v2/README.md) (en cours de redaction).
+- **Vous travaillez sur les chantiers post-MVP** (tests/CI, stockage S3,
+  deploiement Kamal) : consultez la [documentation v3](v3/README.md). v3
+  est une extension de v2 et suppose v2 implementee.
 
 Si vous etes un outil IA et que la version n'est pas explicite dans la demande
 de l'utilisateur, **demandez avant de coder**. Ne supposez jamais la version

@@ -37,6 +37,7 @@ Le projet est **versionné**. Voir `docs/README.md` pour la convention, les stat
 Versions actuelles :
 - **v1** — Production (déployée)
 - **v2** — En construction (refonte SaaS multi-organisation)
+- **v3** — En conception (extension v2 : politique de tests + CI, stockage S3, déploiement Kamal — chantiers post-MVP)
 
 ---
 
