@@ -17,9 +17,59 @@ sa propre documentation autonome.
 - **Vous travaillez sur la prochaine version** : consultez la
   [documentation v2](v2/README.md) (en cours de redaction).
 
+Si vous etes un outil IA et que la version n'est pas explicite dans la demande
+de l'utilisateur, **demandez avant de coder**. Ne supposez jamais la version
+active.
+
 ## Convention de versionnement
 
 La version de la documentation suit la version majeure de l'application. Les
 changements mineurs (corrections, ajouts non rupteurs) sont integres dans la
 version courante. Une nouvelle version de la doc est creee uniquement lors
 d'une refonte fonctionnelle majeure.
+
+## Statuts possibles
+
+| Statut | Signification | Regles de modification |
+|--------|---------------|------------------------|
+| **Production** | Version actuellement deployee en production. | Modifications conservatrices uniquement (corrections, clarifications, ajouts non rupteurs). Pas de refonte. |
+| **En construction** | Version en cours de redaction ou d'implementation. | Refontes autorisees dans le perimetre de la spec. Toute evolution est documentee dans la version cible. |
+| **Archivee** | Version superseded par une plus recente. | Lecture seule. Ne jamais modifier. Conservee a titre historique. |
+
+## Regles multi-versions
+
+Ces regles s'appliquent a toute personne (humaine ou agent IA) qui touche la
+documentation :
+
+- Une PR ne touche jamais simultanement plusieurs versions de doc sans
+  validation explicite de l'utilisateur. La doc d'une version evolue dans son
+  propre changement.
+- Avant de creer ou modifier une feature, verifier si elle existe deja dans
+  une autre version, pour eviter les divergences non intentionnelles entre
+  versions.
+- Si une feature est reprise ou refondue dans une nouvelle version, la lier
+  explicitement a la version precedente dans la nouvelle spec (mention
+  "evolution de [spec v(N-1)](../vN-1/features/<nom>.md)").
+- Lors de la creation d'une nouvelle version `vX`, suivre la meme structure
+  de dossier que la derniere version stable (`README.md`, `architecture.md`,
+  `installation.md`, `features/`, `api/`, `guide-utilisateur/`).
+- Le schema Prisma (`prisma/schema.prisma`) est **partage** entre versions.
+  Il evolue avec la version en construction et reste retrocompatible avec
+  la version en production tant que celle-ci est deployee.
+
+## Structure attendue d'une version
+
+Chaque version contient au minimum :
+
+```
+docs/<version>/
+  README.md                 # Index, vue d'ensemble, etat d'avancement
+  architecture.md           # Stack, structure du projet, securite, RBAC, garde-fous metier
+  base-de-donnees.md        # (optionnel) Modele de donnees detaille
+  installation.md           # (ou equivalent) Env vars, services, commandes, dependances externes
+  features/                 # Une spec par feature majeure
+  api/                      # (optionnel) Reference API
+  guide-utilisateur/        # (optionnel) Documentation utilisateur final
+```
+
+Les details exacts par version sont indiques dans son propre `README.md`.
