@@ -135,7 +135,7 @@ Neuf sous-spécifications couvrent le périmètre v2. Chacune a sa propre spec (
 | 4 | — | [Espace Événement](../features/espace-evenement.md) | Inscriptions, badges (PDF via registry), catégories, scan, journal, EventSettings (dont template badge event), members |
 | 5 | — | [Inscription publique scopée](../features/inscription-publique.md) | `/e/[slug]` (publique présentation), `/e/[slug]/register` (compte requis), `/verify/[badgeId]`, branding, cascade Settings — **partiellement superseded par v2-11** (suppression `/edit-registration/[token]`, refonte du flux d'inscription) |
 | 6 | — | [Notifications email multi-tenant](../features/notifications-email.md) | Résolveur SMTP en cascade, templates, expéditeur dynamique (étendu par v2-11 : nouveaux templates `account-verify-email`, `account-password-reset`, `registration-resubmitted`) |
-| 7 | — | [Reset & déploiement initial](../features/deploiement-initial.md) | Reset prod, seed staff + participant, smoke tests, rollback |
+| 7 | — | ~~[Reset & déploiement initial](../features/deploiement-initial.md)~~ — **abandonné 2026-05-31** | ~~Reset prod, seed staff + participant, smoke tests, rollback~~ — décision utilisateur le 2026-05-31 : la v2 ne sera pas déployée en production. L'outillage livré reste en place. |
 | 11 | [v2-11](2026-05-31-v2-11-comptes-participants.md) | [Comptes participants](../features/comptes-participants.md) | Compte unifié global, vérification email, reset password, snapshot Registration, suppression `editToken`/`SubmissionSnapshot`, refonte flux `/e/[slug]` |
 | 12 | [v2-12](2026-05-31-v2-12-templates-badges.md) | [Templates de badges multi-faces](../features/templates-badges.md) | Registry de templates React-PDF dans le code, cascade `Event → Org → Platform`, support mono-face / multi-face, preview PNG, 3 pages de sélection (event/org/staff) |
 
@@ -148,7 +148,7 @@ Lot A — Fondations
     └─ Spec 1 (multi-tenancy + RBAC) ──┐
                                        ▼
 Lot B — Auth & staff
-    ├─ Spec 7 (reset + seed)
+    ├─ Spec 7 (reset + seed)  [ABANDONNÉ 2026-05-31 — pas de déploiement prod]
     └─ Spec 2 (espace staff)
                                        ▼
 Lot C — Org & event
@@ -163,7 +163,7 @@ Lot D — Public, comptes et emails
 Lot E — Templates badges
     └─ Spec 12 (templates badges multi-faces)
                                        ▼
-[Mise en prod v2]
+[Mise en prod v2 — ABANDONNÉE 2026-05-31]
                                        ▼
 Lot F — Chantiers post-MVP (version v3)
     ├─ Spec v3-01 (stockage S3 / MinIO)

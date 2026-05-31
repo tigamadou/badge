@@ -37,7 +37,7 @@ Badge v2 transforme l'application mono-événement v1 en SaaS B2B multi-organisa
 | 4 | [Espace Événement (ADMIN / OPERATOR / PRINTER / VIEWER)](features/espace-evenement.md) | Inscriptions, badges, catégories, scan, journal, members |
 | 5 | [Inscription publique scopée](features/inscription-publique.md) | `/e/[slug]`, branding, cascade settings, edit-link, verify |
 | 6 | [Notifications email multi-tenant](features/notifications-email.md) | Résolveur SMTP en cascade, templates, expéditeur dynamique |
-| 7 | [Reset & déploiement initial](features/deploiement-initial.md) | Reset prod, seed staff, smoke tests, rollback |
+| 7 | [Reset & déploiement initial](features/deploiement-initial.md) | ~~Reset prod, seed staff, smoke tests, rollback~~ — **abandonné 2026-05-31** : la v2 ne sera pas déployée en production. L'outillage livré reste en place mais inutilisé. |
 
 ### Plans d'implémentation
 
@@ -51,7 +51,7 @@ Un plan par sous-spec, dans `docs/v2/plans/` (avec tracker de progression en tê
 | 4 | [Espace Événement](plans/2026-05-28-v2-04-espace-evenement.md) | 8 154 | 23 |
 | 5 | [Inscription publique scopée](plans/2026-05-28-v2-05-inscription-publique.md) | 3 575 | 19 |
 | 6 | [Notifications email multi-tenant](plans/2026-05-28-v2-06-notifications-email.md) | 2 017 | 12 |
-| 7 | [Reset & déploiement initial](plans/2026-05-28-v2-07-deploiement-initial.md) | 1 194 | 7 |
+| 7 | ~~[Reset & déploiement initial](plans/2026-05-28-v2-07-deploiement-initial.md)~~ — **abandonné** | 1 194 | 7 |
 
 ## Différences majeures avec la v1
 
@@ -71,10 +71,10 @@ Un plan par sous-spec, dans `docs/v2/plans/` (avec tracker de progression en tê
 - [x] Brainstorming et validation du design (2026-05-28)
 - [x] Spec maîtresse rédigée
 - [x] 7 sous-spécifications rédigées
-- [x] Plans d'implémentation (7/7 rédigés — 2026-05-29)
+- [x] Plans d'implémentation (7/7 rédigés — 2026-05-29, + 2 plans additionnels v2-11/v2-12 le 2026-05-31)
 - [ ] Implémentation
-- [ ] Smoke tests
-- [ ] Mise en production
+- [-] ~~Smoke tests~~ — abandonné le 2026-05-31 (déploiement prod annulé)
+- [-] ~~Mise en production~~ — abandonné le 2026-05-31 (décision utilisateur : pas de déploiement prod)
 
 ## Voir aussi
 

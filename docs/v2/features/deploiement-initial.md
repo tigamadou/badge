@@ -1,5 +1,7 @@
 # Reset & déploiement initial v2
 
+> **ABANDONNÉ — 2026-05-31** : décision utilisateur de ne pas déployer la v2 en production. Le plan d'implémentation associé ([`v2-07`](../plans/2026-05-28-v2-07-deploiement-initial.md)) reste documentaire et l'outillage déjà livré (Makefile prod, `scripts/smoke-tests.ts`, `.env.production.example`, `docs/v2/installation.md`) est conservé en l'état mais ne sera pas utilisé. Cette spec n'est plus une source de vérité opérationnelle.
+
 > **Note 2026-05-31** — Le modèle `OrgSettings` est **supprimé** : ses champs cascadables (`contactEmail`, `contactPhone`, `badgeTemplateId`) sont fusionnés dans le modèle `Organization`, qui porte désormais aussi les infos administratives (`legalName`, adresse structurée, `taxId`, `website`, `logo`). La cascade Settings reste `Event → Organization → Platform`. Cette spec et le schéma listé ci-dessous reflètent ce changement.
 
 ## Description fonctionnelle

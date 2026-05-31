@@ -1,5 +1,7 @@
 # Reset & déploiement initial — Implementation Plan
 
+> **ABANDONNÉ — 2026-05-31** : décision utilisateur de ne plus déployer la v2 en production. Ce plan reste documentaire (les tâches ont été exécutées et l'outillage prod livré le 2026-05-31 est conservé en l'état : `Makefile` cibles `backup-prod`/`prod-db-reset-v2`/`smoke-tests`/`migrate-uploads-clear`/`rollback-prod`, `scripts/smoke-tests.ts`, `.env.production.example`, `docs/v2/installation.md`), mais aucune mise en production n'est planifiée. Ne pas relancer ce plan tant que la décision n'est pas inversée. Les sections suivantes restent figées dans leur état du 2026-05-31.
+
 > **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les variables `PLATFORM_SMTP_*` deviennent la **seule** source SMTP de la plateforme. Aucun fallback ni override possible cote `OrgSettings` ou `EventSettings` : tous les emails (inscription, confirmation, rejet, invitations staff, tests SMTP) partent via le SMTP plateforme et avec `PLATFORM_SMTP_FROM` comme expediteur. Le seed `PlatformSettings` reste inchange (il continue d'inclure tous les champs SMTP), mais le tableau des variables critiques (section ci-dessous) est mis a jour pour refleter cette decision.
 >
 > **Mise a jour 2026-05-31 — schema Prisma v2 sans `OrgSettings`** : le modele `OrgSettings` est **supprime** (fusionne dans `Organization`, qui porte maintenant `legalName?`, `addressLine1?`, `addressLine2?`, `postalCode?`, `city?`, `country?`, `taxId?`, `website?`, `logo?`, `contactEmail?`, `contactPhone?` en plus de `name`, `slug` et des quotas). La table `OrgSettings` **disparait** de toute liste de tables du schema v2. Le seed v2 reste minimal et ne touche **pas** a `Organization` (creee par staff via UI) : il seed uniquement `PlatformSettings` + le premier `SUPER_ADMIN`. Cote `ActivityType`, **aucun** `ORG_SETTINGS_UPDATED` n'est livre par le schema v2 ; toute modification d'organisation (infos admin incluses) passe par `ORG_UPDATED`.
@@ -22,7 +24,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 7 | [x] | 2026-05-31 | Runbook prod inclus dans installation.md (section 4 "Procedure de reset v2") : sequencement complet J-1 + jour J (backup, prod-down, pull, build, reset-v2, smoke, login, splash maintenance, surveillance H+1/H+24). Le plan v2-07 conserve toutefois la checklist Step 7.1-7.18 d'origine pour le runbook d'execution coche le jour J. |
 
 **Derniere session** : 2026-05-31 - Plan v2-07 entierement termine (Tasks 0-7 toutes en [x]). Aucun commit (consigne user "aucun commit jusqu'a la fin").
-**Prochaine etape** : Plan v2-02 (espace staff applicatif).
+**Prochaine etape** : aucune — plan ABANDONNÉ le 2026-05-31 (la v2 ne sera pas déployée en production, voir encart en tête du plan). Les statuts `[x]` traduisent l'exécution effective des tâches au moment où le plan était actif ; ils ne sont pas modifiés.
 
 **Note 2026-05-31** : schema Prisma v2 sans `OrgSettings` (fusionne dans `Organization`). Le seed v2 ne touche pas a `Organization` (creee par staff via UI), uniquement `PlatformSettings` + premier `SUPER_ADMIN`. `ActivityType` ne contient pas `ORG_SETTINGS_UPDATED` ; les modifs org passent par `ORG_UPDATED`.
 
