@@ -21,7 +21,7 @@ Badge v2 transforme l'application mono-événement v1 en SaaS B2B multi-organisa
 
 ### Spec maîtresse
 
-- [Conception v2 — spec maîtresse](../superpowers/specs/2026-05-28-v2-master-design.md) — vue d'ensemble, principes, décomposition
+- [Conception v2 — spec maîtresse](specs/2026-05-28-v2-master-design.md) — vue d'ensemble, principes, décomposition
 
 ### Architecture
 
@@ -41,17 +41,17 @@ Badge v2 transforme l'application mono-événement v1 en SaaS B2B multi-organisa
 
 ### Plans d'implémentation
 
-Un plan par sous-spec, dans `docs/superpowers/plans/` :
+Un plan par sous-spec, dans `docs/v2/plans/` (avec tracker de progression en tête) :
 
 | # | Plan | Lignes | Tasks |
 |---|---|---|---|
-| 1 | [Multi-tenancy & RBAC](../superpowers/plans/2026-05-28-v2-01-multi-tenancy-rbac.md) | 1 862 | 12 |
-| 2 | [Espace Staff applicatif](../superpowers/plans/2026-05-28-v2-02-espace-staff.md) | 5 296 | 16 |
-| 3 | [Espace Organisation](../superpowers/plans/2026-05-28-v2-03-espace-organisation.md) | 3 847 | 18 |
-| 4 | [Espace Événement](../superpowers/plans/2026-05-28-v2-04-espace-evenement.md) | 8 154 | 23 |
-| 5 | [Inscription publique scopée](../superpowers/plans/2026-05-28-v2-05-inscription-publique.md) | 3 575 | 19 |
-| 6 | [Notifications email multi-tenant](../superpowers/plans/2026-05-28-v2-06-notifications-email.md) | 2 017 | 12 |
-| 7 | [Reset & déploiement initial](../superpowers/plans/2026-05-28-v2-07-deploiement-initial.md) | 1 194 | 7 |
+| 1 | [Multi-tenancy & RBAC](plans/2026-05-28-v2-01-multi-tenancy-rbac.md) | 1 862 | 12 |
+| 2 | [Espace Staff applicatif](plans/2026-05-28-v2-02-espace-staff.md) | 5 296 | 16 |
+| 3 | [Espace Organisation](plans/2026-05-28-v2-03-espace-organisation.md) | 3 847 | 18 |
+| 4 | [Espace Événement](plans/2026-05-28-v2-04-espace-evenement.md) | 8 154 | 23 |
+| 5 | [Inscription publique scopée](plans/2026-05-28-v2-05-inscription-publique.md) | 3 575 | 19 |
+| 6 | [Notifications email multi-tenant](plans/2026-05-28-v2-06-notifications-email.md) | 2 017 | 12 |
+| 7 | [Reset & déploiement initial](plans/2026-05-28-v2-07-deploiement-initial.md) | 1 194 | 7 |
 
 ## Différences majeures avec la v1
 

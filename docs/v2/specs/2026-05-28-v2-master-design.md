@@ -105,7 +105,7 @@ Lot C (org & event)       : Spec 3 (espace org) → Spec 4 (espace event)
 Lot D (public & emails)   : Spec 5 (inscription publique) + Spec 6 (emails) en parallèle
 ```
 
-Chaque sous-spec aura son propre plan d'implémentation détaillé (`docs/superpowers/plans/`).
+Chaque sous-spec aura son propre plan d'implémentation détaillé (`docs/v2/plans/`).
 
 ## Conventions transverses
 

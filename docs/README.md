@@ -68,6 +68,8 @@ docs/<version>/
   base-de-donnees.md        # (optionnel) Modele de donnees detaille
   installation.md           # (ou equivalent) Env vars, services, commandes, dependances externes
   features/                 # Une spec par feature majeure
+  specs/                    # ADR : decisions de design (capture du *pourquoi*)
+  plans/                    # Plans d'implementation avec tracker de progression en tete
   api/                      # (optionnel) Reference API
   guide-utilisateur/        # (optionnel) Documentation utilisateur final
 ```
