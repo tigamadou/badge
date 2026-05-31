@@ -253,6 +253,53 @@ Pas de changement Docker majeur ; les containers sont déjà renommés `badge-*`
 - **Index Prisma** : sur toutes les FK fréquentes (`orgId`, `eventId`, `userId`, `categoryId`).
 - **Tests** : Vitest pour la logique pure (helpers d'autorisation, résolveur settings, formatage). Pas de mock Prisma sur les règles RBAC critiques.
 
+## État au lot D (post-Plan 5 inscription publique, 2026-05-31)
+
+Plan 5 (inscription publique scopée + vérification de badge + édition après rejet) terminé. Disponible :
+
+- **Surface publique** :
+  - `/e/[slug]` (formulaire + reCAPTCHA conditionnel + upload deux-phases)
+  - `/e/[slug]/success` (confirmation contextualisée, contact résolu en cascade)
+  - `/e/[slug]/closed` (page "Inscriptions fermées" avec contact)
+  - `/verify/[badgeId]` (masquage du participant si `category.anonymous=true`, "Badge non valide" si `status != APPROVED` ou `!badgePrinted`)
+  - `/edit-registration/[token]` (formulaire pré-rempli + snapshot + repasse en `PENDING`)
+  - `/edit-registration/expired` (page de secours avec bouton "demander un nouveau lien")
+- **7 routes API publiques** (10 endpoints en comptant les méthodes) sous `/api/upload` et `/api/public/*`. Voir [`api/public.md`](api/public.md) pour le détail (paramètres, codes succès/erreur, rate-limit, logs).
+- **Helpers** (`src/lib/`) :
+  - `upload-token.ts` — HMAC SHA-256 signé, TTL 1 h, binding `(eventId, kind, storageKey)`, validation runtime de la shape du payload après `JSON.parse`.
+  - `rate-limit.ts` — Map in-memory `route:IP → { count, resetAt }`, fenêtre 1 min, 10 req max (MVP).
+  - `recaptcha.ts` — skip silencieux si `PlatformSettings.recaptchaEnabled=false`, sinon vérification serveur contre Google avec seuil score ≥ 0.5.
+  - `public-event.ts` — `loadPublicEventBySlug` (joint Organization, Categories, settings publics) + `loadEventByIdForVerify`.
+  - `validators/registration.ts` — schéma Zod partagé entre création et resoumission publique.
+- **Stockage event-scopé** : `uploads/events/<eventId>/{photos,idDocuments}/<uuid>.<ext>`. `src/lib/storage.ts` étendu avec `eventPhotoKey`, `eventIdDocumentKey`, `isAllowedMime`, `assertWithinSizeLimit`, `deleteFile`. Path traversal bloqué via `safeFilename`.
+- **Stubs Plan 6** : `sendRegistrationConfirmation` ajouté dans `src/lib/mail.ts`. Les autres stubs (`sendStatusNotification`, `sendBadgePrintedNotification`, `sendEditLinkEmail`) existaient déjà depuis Plan v2-04.
+- **Tests cumulés** : **483/483 verts** (40 baseline + ~83 nouveaux). Inclut l'e2e `public-e2e.test.ts` (parcours complet : register → reject → edit → approve → verify), tests dédiés par helper et par route, ainsi qu'un test anti-enumération sur `/resend`.
+
+Defense en profondeur :
+
+- Rate-limit IP+route 10/min, clés différenciées par route (`upload`, `public-event-get`, `public-registration:<slug>`, `public-verify`, `public-edit-get`, `public-edit-post`, `public-edit-resend`).
+- Upload token HMAC signé : binding `(eventId, kind, storageKey)` empêche le cross-event swap et le cross-kind swap (photo ↔ document). TTL 1 h. Shape validée avant utilisation.
+- Edit token : `randomBytes(32).toString("hex")` + TTL 48 h, single-use (effacé après resubmit). Cooldown 60 s par inscription sur `/resend`.
+- reCAPTCHA optionnel (plateforme uniquement, pas de cascade). Skip silencieux si désactivé, sinon vérification serveur (score ≥ 0.5, sinon `RECAPTCHA_LOW_SCORE`).
+- Anti-énumération sur `/resend` : 200 systématique même si le token est inconnu.
+- Pas de fuite de secrets : `PublicSettings = { contactEmail, contactPhone }` uniquement. La clé site reCAPTCHA est exposée via `getPlatformPublicRecaptcha()` qui n'inclut **jamais** la secret key. `editToken` jamais retourné dans les réponses API.
+
+Variable d'environnement nouvelle :
+
+- `UPLOAD_TOKEN_SECRET` (clé HMAC). Ajoutée à `.env.production.example`. Générer avec `openssl rand -base64 32`.
+
+Limitations MVP connues (à reprendre en v3) :
+
+- Rate-limit en mémoire par process (pas de Redis, ne tient pas en multi-instance).
+- `extractClientIp` lit le leftmost `x-forwarded-for` (spoofable côté client si le reverse-proxy n'est pas strict).
+- Map de rate-limit non bornée (les buckets stales ne sont reset qu'à l'accès suivant).
+- `Math.random()` dans `generateId` pour le spacer — collision retry 5 fois max.
+
+Reste à venir :
+
+- **Plan v2-06** (vraies notifications email — remplace `sendRegistrationConfirmation`, `sendStatusNotification`, `sendBadgePrintedNotification`, `sendEditLinkEmail`, `sendUserInvitation`, `sendPasswordResetEmail`, `sendSmtpTest`).
+- **Smoke navigateur manuel** (Task 19 step 19.3 du Plan v2-05) — à exécuter par l'utilisateur sur les 5 pages publiques avant mise en production.
+
 ## État au lot C (post-Plan 4 espace événement, 2026-05-31)
 
 Plan 4 (espace événement ADMIN / OPERATOR / PRINTER / VIEWER) terminé via une Agent Team de 3 implementers en parallèle (`implementer-event`, `implementer-badges-scan`, `implementer-blocked-activity`) + team-lead pour foundation et e2e. Disponible :

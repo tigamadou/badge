@@ -1,5 +1,7 @@
 # Inscription publique scopée
 
+> **Statut** : implémenté via [Plan v2-05](../plans/2026-05-28-v2-05-inscription-publique.md) le 2026-05-31. Documentation API détaillée : [`api/public.md`](../api/public.md). Les emails d'inscription (`sendRegistrationConfirmation`, `sendEditLinkEmail`, `sendStatusNotification`, `sendBadgePrintedNotification`) utilisent encore les stubs `console.warn` de `src/lib/mail.ts` en attendant le Plan v2-06.
+
 > **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé. Le contact public (`contactEmail`, `contactPhone`) et le `logo` d'une organisation vivent désormais directement sur `Organization`. La cascade de résolution traverse `Event → Organization → Platform` (plus `OrgSettings` au milieu).
 
 ## Description fonctionnelle
