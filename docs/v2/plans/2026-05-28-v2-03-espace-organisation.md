@@ -31,27 +31,28 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | Refondue 2026-05-31 : OrgSettings supprime, fusion dans Organization. Route /settings disparait, PATCH /api/admin/[orgId] gere toutes les infos administratives. |
+| 0 | [x] | 2026-05-31 | Pre-flight + nettoyage v1. Helpers Plan 1 OK, stub `sendUserInvitation` OK. Fix bloquant : `vitest.config.ts` passe en `fileParallelism: false` (16 fichiers tests partagent une BDD unique avec `deleteMany`, collisions inter-fichiers). Suppression v1 (dette documentée Lot A Task 10) : 21 routes API (`api/{activity-logs,edit-registration,event,profile,registrations,scan,settings,teams,users,verify}/*`), pages admin v1 (`app/admin/*`), `app/scan/*`, `app/verify/[id]/*`, `app/badge-preview/[id]/*`, `components/admin/EventForm.tsx`, fichiers de tests v1 morts (`auth.test.ts`, `mail.test.ts`). Composants `components/badge/*` conservés (réutilisés par v2-12). Baseline : 269/269 tests, typecheck OK, lint OK (13 warnings mineurs). |
+| 1 | [x] | 2026-05-31 | src/lib/with-org-auth.ts + tests (4/4 passent). Wrapper d'API : 401 si pas de session, 403 si pas OWNER et pas staff, 200 pour OWNER (ctx exposé), 200 pour staff sans OrgMembership. |
+| 2 | [x] | 2026-05-31 | OrgSelector (dropdown multi-org + localStorage badge.lastOrgId), StaffBanner (bandeau amber si accès staff), OrgShell (sidebar Dashboard/Événements/Membres/Modèles/Paramètres/Journal + header). Typecheck OK. |
+| 3 | [x] | 2026-05-31 | src/app/admin/[orgId]/{layout,page}.tsx + src/app/api/admin/[orgId]/route.ts (GET). Layout : redirect login si pas session, notFound si org absente, redirect /select si pas OWNER ni staff, isStaffMode si staff sans OrgMembership. Dashboard : 4 KPI (events actifs/archives/insc mois courant/quota), 5 derniers events, 10 dernieres entrees ActivityLog. GET API retourne l'org avec _count events+memberships et quotas. Typecheck OK. |
+| 4 | [x] | 2026-05-31 | PATCH /api/admin/[orgId] base (name OWNER, slug staff). 3 tests Task 4 passent. Implementation fusionnee avec Task 5 directement (schema etendu, gain de temps). |
+| 5 | [x] | 2026-05-31 | PATCH etendu : Zod .strict() rejette les champs SMTP/reCAPTCHA legacy (HTTP 400, defense in depth). OWNER_FIELDS = name/legalName/addr/postalCode/city/country/taxId/website/logo/contactEmail/contactPhone. STAFF_FIELDS = slug/quotaMax*. Log ORG_UPDATED avec changedFields. Page /admin/[orgId]/settings + SettingsClient (4 sections : Identite / Adresse / Administratif / Contact public ; slug en disabled, indication staff-only). 8/8 tests passent (3 Task 4 + 5 Task 5). |
 | 6 | [-] | 2026-05-31 | Supprimee : decision "SMTP plateforme uniquement" ; aucune route test-smtp scope org. |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
+| 7 | [x] | 2026-05-31 | Routes GET/POST members + DELETE [userId]. GET inclut lastLogin (via ActivityLog USER_LOGIN). POST cree user (avec inviteToken 24h via stub Plan 6) si email absent, sinon ajoute juste OrgMembership (sans toucher au token — corrige le comportement du stub Plan 6 qui regenere systematiquement). Idempotence : alreadyMember=true si OrgMembership existe. DELETE refuse 409 LAST_OWNER si seul OWNER. OrgMemberForm + MembersClient (tableau + bouton retirer + form invite). 12/12 tests api-org passent (3 Task 4 + 5 Task 5 + 2 Task 7 POST + 2 Task 7 DELETE). |
+| 8 | [x] | 2026-05-31 | CRUD CategoryTemplate complet : GET/POST routes + PATCH/DELETE [id] (404 si template d'une autre org). Validations Zod : color regex /^#[0-9a-fA-F]{6}$/, number int 0-999, name 1-120 chars. CategoryTemplateForm + TemplatesClient (tableau avec edition/suppression inline). Audit CATEGORY_TEMPLATE_{CREATED,UPDATED,DELETED}. 14/14 tests passent (+2 Task 8). |
+| 9 | [x] | 2026-05-31 | GET /api/admin/[orgId]/events avec filtres archived/registrationOpen (Prisma.EventWhereInput type-safe), include _count.registrations. Page liste avec tableau + bouton "Nouvel evenement" + status badges (Archive/Inscriptions ouvertes/Ferme). |
+| 10 | [x] | 2026-05-31 | slugify-event.ts (NFD + diacritiques + lowercase + alphanum + dashes) + uniqueEventSlug (suffixage -2/-3 global). 7/7 tests slugify passent. POST /api/admin/[orgId]/events : quota check 409 QUOTA_EXCEEDED, slug global unique, copie CategoryTemplate -> Category (renumerotation 1..N pour unicite), manualCategories optionnel, audit EVENT_CREATED. 4/4 tests POST events passent. 25 tests api-org+slugify cumules. |
+| 11 | [x] | 2026-05-31 | EventCreationWizard 3 etapes (Infos / Categories / Recap) + page /admin/[orgId]/events/new. Slug suggere automatiquement depuis titre (modifiable), mode template (cases a cocher des CategoryTemplate) ou manual (categories ajoutees a la volee). Gestion erreurs QUOTA_EXCEEDED / SLUG_TAKEN avec messages utilisateurs. Redirige vers /events/[eventId]/settings (Plan 4 livrera cette page). |
+| 12 | [x] | 2026-05-31 | Routes POST archive/restore. Archive : archived=true + archivedAt=now + registrationOpen=false. Restore : archived=false + archivedAt=null. 404 si l'event appartient a une autre org (scope check explicite). Audit EVENT_ARCHIVED / EVENT_RESTORED. 2/2 tests passent. |
+| 13 | [x] | 2026-05-31 | GET /api/admin/[orgId]/activity (filtres type/from/to/eventId/userId + pagination cursor take=50, max 200). Page /admin/[orgId]/activity affiche les 100 dernieres entrees scope org avec badge "staff" pour les actions staff. Typage Prisma.ActivityLogWhereInput + Prisma.DateTimeFilter. |
+| 14 | [x] | 2026-05-31 | src/app/select/page.tsx (Server Component). Liste les orgs OWNER + entree "Espace staff applicatif" si staff. Cas degeneres : redirect /admin/[orgId] si 1 seule org non-staff, redirect /profile?message=no-org si 0 org non-staff. |
+| 15 | [x] | 2026-05-31 | src/lib/org-redirect.ts + tests (8/8). Logique pure : null ctx -> /login ; staff sans hint -> /staff ; staff avec hint -> /admin/[hint] ; client sans org -> /profile?message=no-org ; client avec hint valide -> /admin/[hint] ; client mono-org -> /admin/[onlyOrgId] ; client multi-org sans hint valide -> /select. src/app/page.tsx remplace computeStaffRedirect (Plan v2-02) par resolveHomeRedirect (plus complet). src/lib/staff-redirect.ts + son test supprimes (superseded). |
+| 16 | [x] | 2026-05-31 | owner-journey.test.ts (integration via Prisma + fetch + mock `sendUserInvitation`). Test 1 : OWNER cree event "Conf 2026" -> invite Bob (sendUserInvitation appele 1x) -> archive event ; verifie ActivityLog contient EVENT_CREATED, MEMBERSHIP_ADDED, USER_CREATED, EVENT_ARCHIVED, tous staffActor=false. Test 2 : staff PATCH org -> ORG_UPDATED staffActor=true. 2/2 passent. |
+| 17 | [x] | 2026-05-31 | Verification finale : 303/303 tests verts (26 fichiers), typecheck OK, lint OK (0 erreurs, 13 warnings mineurs sur badge components). Aucun secret SMTP/reCAPTCHA dans /api/admin/. Aucune reference residuelle OrgSettings (sauf 2 commentaires documentaires de migration). 9 routes API admin + 7 pages admin livrees, conformes a la spec. Doc architecture.md mise a jour avec section "Etat au lot C (post-Plan 3)". Fix infra : composant Input rendu compatible label optionnel (le pattern v2 utilise placeholder seul). |
+| 18 | [~] | 2026-05-31 | EN ATTENTE Plan 6 (Lot D). Aucun marqueur `TODO: wired up by Plan 6` / `STUB_PLAN_6` dans le code (verification OK). Les stubs dans src/lib/mail.ts (sendUserInvitation, sendPasswordResetEmail, sendSmtpTest) restent en place et NE PEUVENT PAS etre supprimes tant que Plan v2-06 n'a pas fourni les vraies impls. Task a re-executer apres merge Plan v2-06. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-03 entierement implemente (Tasks 0-17 toutes en [x] ; Task 6 [-] supprimee 2026-05-31). Task 18 marquee [~] : depend du merge Plan v2-06 (Lot D) qui fournira les vraies impls email pour remplacer les stubs `sendUserInvitation`/`sendSmtpTest`/`sendPasswordResetEmail` dans `src/lib/mail.ts`. 303/303 tests verts (26 fichiers), typecheck OK, lint OK (0 erreurs, 13 warnings mineurs sur badge components a conserver pour v2-12). Aucun commit (consigne user "continue sans commit").
+**Prochaine etape** : Lot C suite -> Plan v2-04 (espace evenement `/admin/[orgId]/events/[eventId]/*`).
 
 **Notes** :
 - 2026-05-31 : decision "SMTP plateforme uniquement". Task 5 simplifiee (OrgSettings = contact + reCAPTCHA uniquement) ; Task 6 (`test-smtp` scope org) abandonnee. Voir l'en-tete du plan pour le detail.

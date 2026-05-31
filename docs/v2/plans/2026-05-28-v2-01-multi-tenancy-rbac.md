@@ -41,7 +41,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 12 | [x] | 2026-05-31 | Full suite : 123/131 passent. Les 8 fails sont dans 2 fichiers v1 obsoletes (auth.test.ts v1 sur checkRole, mail.test.ts v1 sur prisma.settings) - cohérent avec Task 10 (Plans 2-5 nettoient). Idempotence vérifiée (DROP investiture + push + seed + 96/96 tests v2 verts). Step 12.3 (git log) skippé : commit final en fin de Lot A. |
 
 **Derniere session** : 2026-05-31 - Lot A complet (Tasks 0-12). 96 tests v2 verts (user-context, auth-helpers, auth-guards, settings, activity-log, integration). 8 fails dans 2 fichiers v1 obsoletes (auth.test.ts, mail.test.ts) - attendus, nettoyes par Plans 2-5.
-**Prochaine etape** : Lot B (Plan v2-07 reset + Plan v2-02 espace staff).
+**Prochaine etape** : Lot B Plan v2-02 espace staff (terminé). ~~Plan v2-07 reset~~ — **abandonné 2026-05-31** : pas de déploiement prod planifié. Suite : Lot C Plan v2-03 espace organisation (terminé 2026-05-31). Prochaine : Plan v2-04 espace événement.
 
 > **Note conteneurs** : les conteneurs docker-compose s'appellent `badge-mysql-1`, `badge-app-1`, etc. (avec suffixe `-1`), pas `badge-db` / `badge-app`. Les commandes `docker exec badge-db ...` du plan doivent etre adaptees a `docker exec badge-mysql-1 ...`.
 

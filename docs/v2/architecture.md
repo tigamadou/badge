@@ -253,6 +253,30 @@ Pas de changement Docker majeur ; les containers sont déjà renommés `badge-*`
 - **Index Prisma** : sur toutes les FK fréquentes (`orgId`, `eventId`, `userId`, `categoryId`).
 - **Tests** : Vitest pour la logique pure (helpers d'autorisation, résolveur settings, formatage). Pas de mock Prisma sur les règles RBAC critiques.
 
+## État au lot C (post-Plan 3 espace organisation, 2026-05-31)
+
+Plan 3 (espace organisation OWNER) terminé. Disponible :
+
+- Wrapper d'API `withOrgAuth(role, handler)` (`src/lib/with-org-auth.ts`) qui résout l'`orgId` depuis le path, appelle `requireOrgRole`, et passe `{ orgId, session }` au handler. Réutilisé par toutes les routes scope-org.
+- Layout `OrgShell` (`src/components/admin/`) — sidebar (Dashboard / Événements / Membres / Modèles catégories / Paramètres / Journal), header avec `OrgSelector` (dropdown multi-org + persistance `localStorage` `badge.lastOrgId`) et `StaffBanner` (bandeau "Mode staff" si accès via `isStaff` sans `OrgMembership`).
+- Pages `/admin/[orgId]/{dashboard, settings, members, templates, events, events/new, activity}` (Server Components). `/admin/[orgId]/events/[eventId]/*` est laissé au Plan 4.
+- API REST scope-org :
+  - `GET / PATCH /api/admin/[orgId]` — l'`OrgSettings` ayant été fusionné dans `Organization` (2026-05-31), le `PATCH` accepte tous les champs administratifs (`name`, `legalName`, adresse complète, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone` pour OWNER ; `slug`, `quotaMax*` pour staff uniquement). Schéma Zod `.strict()` qui rejette tout champ SMTP / reCAPTCHA legacy (défense en profondeur — secrets vivent dans `PlatformSettings` uniquement). Audit `ORG_UPDATED`.
+  - `GET / POST /api/admin/[orgId]/members` + `DELETE [userId]` — invitation idempotente (alreadyMember=200 si déjà membre), `sendUserInvitation` appelé uniquement pour nouvel utilisateur, garde-fou `LAST_OWNER` 409 sur le dernier OWNER. Audit `MEMBERSHIP_ADDED` / `MEMBERSHIP_REMOVED` / `USER_CREATED`.
+  - `GET / POST / PATCH / DELETE /api/admin/[orgId]/templates[/[id]]` — CRUD `CategoryTemplate`. Validations : `color` regex `/^#[0-9a-fA-F]{6}$/`, `number` 0-999.
+  - `GET / POST /api/admin/[orgId]/events` — `GET` filtré (`archived`, `registrationOpen`, `_count.registrations`). `POST` applique quota (`409 QUOTA_EXCEEDED`), alloue slug global unique (`uniqueEventSlug` via `src/lib/slugify-event.ts` avec suffixage `-2`/`-3`...), copie `CategoryTemplate` sélectionnés en `Category` avec renumérotation `1..N`, `registrationOpen=false` par défaut. Audit `EVENT_CREATED`.
+  - `POST /api/admin/[orgId]/events/[eventId]/{archive,restore}` — `archived` + `archivedAt`, force `registrationOpen=false` à l'archive. Scope-check `404` si event hors org. Audit `EVENT_ARCHIVED` / `EVENT_RESTORED`.
+  - `GET /api/admin/[orgId]/activity` — filtres `type` / `from` / `to` / `eventId` / `userId`, pagination cursor `take=50` (max 200), include user.
+- Wizard `EventCreationWizard` 3 étapes (`src/components/admin/`) : (1) Infos + slug suggéré modifiable, (2) Catégories (mode template ou manuel), (3) Récap + soumission.
+- Dispatcher post-login `resolveHomeRedirect(ctx, lastOrgIdHint)` (`src/lib/org-redirect.ts` + tests 8/8) : null → `/login` ; staff sans hint → `/staff` ; staff avec hint → `/admin/[hint]` ; client sans org → `/profile?message=no-org` ; client avec hint valide → `/admin/[hint]` ; client mono-org → `/admin/[onlyOrgId]` ; client multi-org → `/select`. Page `/` (`src/app/page.tsx`) appelle `resolveHomeRedirect(ctx, null)` (le `lastOrgId` localStorage n'est pas lu côté serveur ; `OrgSelector` côté client navigue entre orgs). `src/lib/staff-redirect.ts` (Plan 2) supprimé (superseded).
+- Page `/select` : liste les orgs OWNER + entrée "Espace staff" si `isStaff`. Cas dégénérés gérés (mono-org → redirect direct, zéro org non-staff → `/profile?message=no-org`).
+- Tests : 303 tests Vitest verts (Plan 1 + 2 + 3). Le bloc d'intégration `owner-journey.test.ts` (2 tests) couvre le golden path OWNER (création event → invitation OWNER → archive) + un test "staff acting on org → `staffActor=true`".
+
+Dette résiduelle :
+
+- Les stubs Plan 6 (`sendUserInvitation`, `sendSmtpTest`, `sendPasswordResetEmail` dans `src/lib/mail.ts`) restent en place ; Plan v2-06 (Lot D) les remplacera par les vraies implémentations email. La Task 18 (vérification "aucun stub Plan 6 résiduel") est en attente du Plan v2-06.
+- `/admin/[orgId]/events/[eventId]/*` (page event-admin et ses routes) sera livré par le Plan v2-04 (espace événement).
+
 ## État au lot B (post-Plan 2 espace staff, 2026-05-31)
 
 Plan 2 (espace staff applicatif) terminé. Disponible :
