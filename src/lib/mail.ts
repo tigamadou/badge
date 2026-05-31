@@ -53,6 +53,12 @@ export async function sendSmtpTest(args: {
   console.warn("[stub Plan 6] sendSmtpTest: validation OK, email NON envoye", args);
 }
 
+// Notification de creation d'inscription (statut PENDING).
+// Plan 6 enverra un template avec libelle "registration-received".
+export async function sendRegistrationConfirmation(registrationId: string): Promise<void> {
+  console.warn("[stub Plan 6] sendRegistrationConfirmation: email NON envoye", { registrationId });
+}
+
 // Notification de changement de statut d'inscription (APPROVED/REJECTED).
 // Plan 6 enverra le template "registration-approved" ou "registration-rejected"
 // avec le branding contextuel et le motif de rejet le cas echeant.
