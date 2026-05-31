@@ -252,3 +252,60 @@ Pas de changement Docker majeur ; les containers sont déjà renommés `badge-*`
 - **IDs** : cuid (cohérent v1) sauf `Registration.id` qui reste 12 chars personnalisé (pour les badges).
 - **Index Prisma** : sur toutes les FK fréquentes (`orgId`, `eventId`, `userId`, `categoryId`).
 - **Tests** : Vitest pour la logique pure (helpers d'autorisation, résolveur settings, formatage). Pas de mock Prisma sur les règles RBAC critiques.
+
+## État au lot B (post-Plan 2 espace staff, 2026-05-31)
+
+Plan 2 (espace staff applicatif) terminé. Disponible :
+
+- **Auth wrapper** : `withStaffAuth(handler, { minRole? })` (`src/lib/with-staff-auth.ts`) protège toutes les routes `/api/staff/*`.
+- **Dispatcher post-login** : `computeStaffRedirect(ctx)` (`src/lib/staff-redirect.ts`) — `staff → /staff`, single-org → `/admin/[orgId]`, multi/event → `/select`, sinon `/profile`. Branchée dans `src/app/page.tsx`.
+- **Layout `/staff/*`** : `StaffShell` (`src/components/staff/StaffShell.tsx`) + `src/app/staff/layout.tsx` (auth check + dispatch). Sidebar : Dashboard / Organisations / Utilisateurs / Paramètres / Journal. Badge de niveau staff visible (`SUPER_ADMIN/STAFF_ADMIN/STAFF_SUPPORT/STAFF_OBSERVER`).
+- **Dashboard `/staff`** : KPI plateforme (orgs actives/archivées, events actifs, inscriptions cumulées, top 5 orgs du mois, 10 dernières entrées ActivityLog).
+- **Organisations** :
+  - `GET /api/staff/organizations` (paginé, filtres `q`/`archived`)
+  - `POST` (STAFF_ADMIN+, crée org + OWNER avec inviteToken via stub `sendUserInvitation`)
+  - `GET/PATCH/DELETE /api/staff/organizations/[orgId]` — DELETE = SUPER_ADMIN only avec confirmation slug
+  - `POST archive/restore`
+  - Pages `/staff/organizations`, `/staff/organizations/new`, `/staff/organizations/[orgId]`
+- **Utilisateurs** :
+  - `GET/POST /api/staff/users` (filtres search/type/archived, règles strictes de création staff selon rôle créateur)
+  - `GET/PATCH/DELETE /api/staff/users/[userId]` — PATCH avec garde-fou `assertNotLastSuperAdmin` (HTTP 409 LAST_SUPER_ADMIN)
+  - `POST /api/staff/users/[userId]/reset-password` (régénère inviteToken)
+  - Pages `/staff/users`, `/staff/users/new`, `/staff/users/[userId]`
+- **PlatformSettings** :
+  - `GET /api/staff/settings` (sans secrets, expose booléens `*Set`)
+  - `PATCH` (Zod strict, secrets jamais dans `details` d'audit, `smtpPassword=""` préserve l'ancien)
+  - `POST /api/staff/settings/test-smtp` (body `to` ou session fallback)
+  - Page `/staff/settings` + `PlatformSettingsForm` + `TestSmtpForm`. Section reCAPTCHA INCLUSE.
+- **ActivityLog** :
+  - `GET /api/staff/activity` (filtres type/orgId/eventId/userId/staffActor/from/to/page/pageSize)
+  - Page `/staff/activity` Server Component avec form GET.
+- **Setup password public** :
+  - `POST /api/auth/setup-password` (route publique, anti-énumération sur token invalide/expiré/user archivé)
+  - Page `/setup-password?token=...` + `SetupPasswordForm`. Hash bcrypt 12 rounds, log `USER_PASSWORD_SET`.
+
+**Tests Vitest** : 240+ tests verts (cumul Lots A + B). Couverture API staff complète + cas piège PRINTER/scan, héritages MANAGER/AUDITOR, garde-fous LAST_OWNER / LAST_SUPER_ADMIN, secrets jamais exposés.
+
+**Dette en attente** :
+- Stubs `sendUserInvitation` / `sendPasswordResetEmail` / `sendSmtpTest` dans `src/lib/mail.ts` → seront remplacés par les vraies implémentations du Plan v2-06 (Lot D). Task 15 du plan v2-02 ne peut pas être exécutée tant que Plan 6 n'a pas mergé.
+- Routes v1 cassées dans `src/app/api/{teams,registrations,scan,users,settings,event,activity-logs}/*` et pages `src/app/admin/{layout,page}.tsx` (importent encore `checkRole` / `Role` v1) → seront supprimées ou réécrites par Plans v2-03/04/05.
+
+## État au lot A (post-Plan 1, 2026-05-31)
+
+Plan 1 (multi-tenancy & RBAC) terminé. Les fondations sont en place :
+
+- Schéma Prisma v2 + seed `SUPER_ADMIN` (`investiture` DB, 14 tables)
+- Types : `next-auth.d.ts` (JWT minimal `userId` + `isStaff`), `auth.ts` (`SessionUser`, `UserContext`, `OrgMembershipLite`, `EventMembershipLite`, `EffectiveEventRole`)
+- Helpers : `loadUserContext`, `auth-helpers.ts` (purs : `staffRoleAtLeast`, `orgRoleAtLeast`, `hasOrgRole`, `effectiveEventRole`, `hasEventPermission` avec matrice `EVENT_PERMISSION_ROLES` à 16 permissions), `auth-guards.ts` (DB-aware : `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`, `getEffectiveEventRole`, `assertNotLastOwner`, `assertNotLastSuperAdmin`)
+- `settings.ts` : cascade contact `Event → Organization → Platform` + lectures directes `getPlatformSmtp` / `getPlatformRecaptcha` / `getPlatformPublicRecaptcha`
+- `activity-log.ts` v2 : auto-dérive `orgId` depuis `eventId`, marque `staffActor=true` sur action staff vs données client
+- `auth.ts` : `authOptions` NextAuth Credentials, JWT minimal, log `USER_LOGIN`
+- `middleware.ts` : scope-aware (`/admin`, `/staff`, `/profile` + isStaff)
+- Tests : 85+ tests Vitest verts (user-context, auth-helpers, auth-guards, settings, activity-log)
+
+Les routes API et pages héritées de la v1 (`src/app/api/**/*.ts`, `src/app/admin/**/*.tsx`) ne compilent plus à ce stade — elles importent `checkRole` / `Role` v1 qui n'existent plus. Elles seront supprimées ou réécrites par les plans 2 à 5 :
+
+- 20+ fichiers dans `src/app/api/` référencent `@/lib/auth` (ancien export `checkRole`)
+- `src/app/admin/layout.tsx`, `src/app/admin/page.tsx`, `src/app/api/activity-logs/route.ts` référencent le `Role` enum v1
+
+`yarn tsc --noEmit` retourne donc de nombreuses erreurs au sortir du Lot A : c'est attendu et acceptable. Les imports `@/lib/auth` continuent de pointer vers le nouveau fichier (qui exporte uniquement `authOptions`), donc `checkRole` est resolved comme undefined → erreur de typage propre, non un crash module-resolution.

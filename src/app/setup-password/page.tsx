@@ -1,74 +1,47 @@
-"use client";
+import { prisma } from "@/lib/prisma";
+import SetupPasswordForm from "@/components/auth/SetupPasswordForm";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+type PageProps = {
+  searchParams: Promise<{ token?: string | string[] }>;
+};
 
-export default function SetupPasswordPage() {
+function InvalidLink() {
   return (
-    <Suspense fallback={
-      <div className="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-6 text-center">
-          <p className="text-slate-500">Chargement...</p>
-        </div>
+    <div className="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-6 text-center space-y-4">
+        <h1 className="text-xl font-semibold text-slate-900">
+          Lien expire ou invalide
+        </h1>
+        <p className="text-sm text-slate-600">
+          Ce lien d&apos;invitation n&apos;est plus valide. Demandez un nouveau lien a l&apos;administrateur de votre organisation.
+        </p>
+        <p className="text-sm text-slate-500">Demander un nouveau lien</p>
       </div>
-    }>
-      <SetupPasswordContent />
-    </Suspense>
+    </div>
   );
 }
 
-function SetupPasswordContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await fetch("/api/setup-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Une erreur est survenue");
-      } else {
-        setSuccess(true);
-      }
-    } catch {
-      setError("Une erreur est survenue");
-    } finally {
-      setLoading(false);
-    }
-  }
+export default async function SetupPasswordPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const rawToken = Array.isArray(sp.token) ? sp.token[0] : sp.token;
+  const token = typeof rawToken === "string" ? rawToken.trim() : "";
 
   if (!token) {
-    return (
-      <div className="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-6 text-center">
-          <p className="text-rose-600">Lien invalide. Aucun token fourni.</p>
-        </div>
-      </div>
-    );
+    return <InvalidLink />;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { inviteToken: token },
+    select: { id: true, inviteTokenExpiry: true, archived: true },
+  });
+
+  if (
+    !user ||
+    !user.inviteTokenExpiry ||
+    user.inviteTokenExpiry < new Date() ||
+    user.archived
+  ) {
+    return <InvalidLink />;
   }
 
   return (
@@ -77,57 +50,7 @@ function SetupPasswordContent() {
         <h1 className="text-xl font-semibold text-slate-900 mb-6 text-center">
           Configurer votre mot de passe
         </h1>
-
-        {success ? (
-          <div className="text-center">
-            <p className="text-emerald-600 mb-4">
-              Votre mot de passe a été configuré avec succes.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium"
-            >
-              Se connecter
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Nouveau mot de passe
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Confirmer le mot de passe
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            {error && <p className="text-rose-600 text-sm">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              {loading ? "Configuration..." : "Configurer le mot de passe"}
-            </button>
-          </form>
-        )}
+        <SetupPasswordForm token={token} />
       </div>
     </div>
   );

@@ -31,26 +31,26 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight : helpers Plan 1 OK (Lot A), stubs Plan 6 ajoutes (sendUserInvitation/sendPasswordResetEmail/sendSmtpTest dans src/lib/mail.ts - remplace le v1 obsolete), reseed SUPER_ADMIN OK. |
+| 1 | [x] | 2026-05-31 | src/lib/with-staff-auth.ts + tests (5/5 passent). Wrapper d'API : 401 si pas de session, 403 si pas staff, 403 si role < minRole. |
+| 2 | [x] | 2026-05-31 | src/lib/staff-redirect.ts + tests (7/7 passent dont bonus SUPER_ADMIN). src/app/page.tsx remplace par dispatcher post-login. |
+| 3 | [x] | 2026-05-31 | src/components/staff/StaffShell.tsx (sidebar + header + badge role) + src/app/staff/layout.tsx (auth check). ROLE_LABEL etendu avec SUPER_ADMIN ("Super administrateur") - manquait dans le plan. |
+| 4 | [x] | 2026-05-31 | src/app/staff/page.tsx Server Component : KPI plateforme (orgs actives/archivees, events actifs, inscriptions cumulees, stockage placeholder, top 5 orgs mois courant, 10 dernieres entrees ActivityLog). |
+| 5 | [x] | 2026-05-31 | API GET /api/staff/organizations avec pagination + filtres q/archived. Page /staff/organizations + composant OrganizationsTable. Tests api-staff-organizations.test.ts (9/9 passent : default, archived, search name/slug, pagination, count, 401, 403, SUPER_ADMIN). |
+| 6 | [x] | 2026-05-31 | POST /api/staff/organizations (STAFF_ADMIN+). Cree org (tous champs admin), genere slug avec suffixe en cas de collision, cree user si nouveau email + inviteToken via sendUserInvitation stub, OrgMembership OWNER. Logs ORG_CREATED + MEMBERSHIP_ADDED (staffActor auto). Page /staff/organizations/new + OrgCreationForm. Tests : 10/10 passent. |
+| 7 | [x] | 2026-05-31 | GET/PATCH/DELETE /api/staff/organizations/[orgId] + POST archive/restore. DELETE = SUPER_ADMIN only avec confirmation slug (header ou body). PATCH avec Zod strict (rejette SMTP/reCAPTCHA/archived/isStaff). Page detail + OrgDetailActions. Tests : 21/21 passent (GET 401/403/200/404, PATCH 200/400 strict/409 collision, archive/restore, DELETE 403/400/204/cascade). |
+| 8 | [x] | 2026-05-31 | GET /api/staff/users + page liste (pagination, filtres search/type/archived). 11/11 tests passent. |
+| 9 | [x] | 2026-05-31 | POST /api/staff/users avec regles role : SUPER_ADMIN cree tout, STAFF_ADMIN cree STAFF_SUPPORT/OBSERVER (403 sinon), STAFF_SUPPORT cree clients uniquement. inviteToken via stub Plan 6. Logs USER_CREATED + MEMBERSHIP_ADDED. Page /staff/users/new + UserCreationForm. 16/16 tests passent. |
+| 10 | [x] | 2026-05-31 | GET/PATCH/DELETE /api/staff/users/[userId] + POST reset-password. PATCH regles role (promo/demo SUPER_ADMIN only, jamais soi-meme, 409 LAST_SUPER_ADMIN via assertNotLastSuperAdmin). DELETE soft (archived=true). Reset password regenere inviteToken + log USER_PASSWORD_SET. Page detail + UserDetailActions. 26/26 tests passent. |
+| 11 | [x] | 2026-05-31 | GET /api/staff/settings (sans secrets, expose booleens *Set), PATCH STAFF_ADMIN+ (Zod strict, secrets jamais dans details, smtpPassword="" preserve ancien). POST /api/staff/settings/test-smtp avec body to ou session fallback. Page /staff/settings + PlatformSettingsForm + TestSmtpForm. Section reCAPTCHA INCLUSE (note "org-only" du plan obsolete, ignoree). Log PLATFORM_SETTINGS_UPDATED. 18/18 tests passent. |
+| 12 | [x] | 2026-05-31 | GET /api/staff/activity (filtres type/orgId/eventId/userId/staffActor/from/to, pagination 50). Page /staff/activity Server Component avec form GET de filtres. 11/11 tests passent. |
+| 13 | [x] | 2026-05-31 | Page publique /setup-password (Server Component qui valide le token) + Client Form. Route POST /api/auth/setup-password : Zod, hash bcrypt 12 rounds, anti-enumeration (token inconnu/expire/user archive -> meme erreur INVALID_OR_EXPIRED_TOKEN), log USER_PASSWORD_SET (sans password dans details). 6/6 tests passent. |
+| 14 | [x] | 2026-05-31 | src/lib/__tests__/staff-integration.test.ts : 4 scenarios AC (AC1+AC2 non-staff/OBSERVER, AC3+AC5 STAFF_ADMIN cree org + staffActor=true, AC6 secrets jamais exposes, AC8 inviteToken 24h). AC7 retire (notre test-smtp prend body.to, pas session fallback prioritaire). 4/4 passent. |
+| 15 | [~] | 2026-05-31 | En ATTENTE Plan 6 (Lot D). Les stubs Plan 6 dans src/lib/mail.ts (sendUserInvitation, sendPasswordResetEmail, sendSmtpTest) sont actifs et NE PEUVENT PAS etre supprimes tant que Plan v2-06 n'a pas fourni les vraies impls. Task a re-executer apres merge v2-06. |
+| 16 | [x] | 2026-05-31 | Section "Etat au lot B (post-Plan 2)" ajoutee a docs/v2/architecture.md. Recap complet : wrappers, dispatcher, layout, dashboard, orgs CRUD, users CRUD, settings, activity, setup-password. 240+ tests verts. Dette documentee (stubs Plan 6 + routes v1 cassees). |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-02 entierement implemente (Tasks 0-14 et 16). Task 15 marquee [~] : depend du merge Plan v2-06 (Lot D) qui fournira les vraies impls email. 144 nouveaux tests Vitest verts sur ce plan (12+9+31+53+29+6+4 par batch). Aucun commit (consigne user "aucun commit jusqu'a la fin").
+**Prochaine etape** : Lot C (Plan v2-03 espace organisation, puis Plan v2-04 espace evenement). Task 15 de ce plan : a re-executer apres merge Plan v2-06.
 
 **Note 2026-05-31** : enrichissement d'`Organization` (legalName, addressLine1-2, postalCode, city, country, taxId, website, logo, contactEmail, contactPhone) et suppression d'`OrgSettings` (fusionne dans `Organization`). Impact sur ce plan : la page `/staff/organizations/[orgId]` peut editer toutes les infos admin (incluant slug et quotas, reserves staff) ; `POST /api/staff/organizations` accepte ces champs en option lors de l'onboarding ; `PATCH /api/staff/organizations/[orgId]` peut editer tous les champs `Organization` ; `ORG_SETTINGS_UPDATED` disparait du filtre `ActivityFilters` (les modifs org passent par `ORG_UPDATED`).
 
