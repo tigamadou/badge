@@ -48,9 +48,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ badgeId: string
   return NextResponse.json({
     ...base,
     participant: {
-      firstName: registration.firstName,
-      lastName: registration.lastName,
-      structure: registration.structure,
+      firstName: registration.snapshotFirstName,
+      lastName: registration.snapshotLastName,
+      structure: registration.snapshotStructure,
     },
   });
 }

@@ -189,3 +189,13 @@ L'expéditeur SMTP (`smtpFrom`) **n'est pas cascadé** : il est lu directement d
 - Spec 1 (Multi-tenancy & RBAC) : modèles, résolveur de settings
 - Spec 6 (Emails) : confirmation, rejet, lien édition, badge imprimé
 - Spec 4 (Event) : `BadgeDocument` réutilisé pour la page badge (mais c'est l'admin qui imprime, pas le public)
+
+## Superseded par v2-11 (comptes participants)
+
+Plan v2-11 remplace le flux d'inscription publique anonyme. À retenir :
+
+- **`/e/[slug]`** ne contient plus de formulaire inline ; la page présente l'événement avec un bouton « S'inscrire » qui redirige vers `/e/[slug]/register` (auth requise).
+- **`/e/[slug]/register`** est une page protégée : elle exige une session valide (compte participant) et un profil complet (`participantProfileCompletedAt`). Si le profil est incomplet, redirection automatique vers `/account/profile/complete?next=/e/[slug]/register`. La page affiche un formulaire minimal (choix de catégorie + consentement) qui POST sur `/api/events/[slug]/register`.
+- **`/edit-registration/[token]`** (legacy editToken 48h) est supprimée. La resoumission après rejet passe par `/account/registrations/[id]` (login requis) et le bouton « Resoumettre ».
+- **`/api/public/events/[slug]/registrations`** (POST anonyme) est supprimée. Toute inscription passe désormais par `/api/events/[slug]/register` (authentifié).
+- Le `Registration` snapshote le profil du `User` (8 colonnes `snapshot*`) au moment de la soumission et à chaque resoumission. Le profil persistant vit sur `User`.

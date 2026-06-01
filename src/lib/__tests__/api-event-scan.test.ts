@@ -22,7 +22,7 @@ async function withSession(user: { id: string; email: string; name: string; isSt
 async function seedOperator() {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const u = await prisma.user.create({
-    data: { email: `op-${stamp}@x.fr`, password: "x", name: "Op" },
+    data: { email: `op-${stamp}@x.fr`, password: "x", name: "Op", emailVerifiedAt: new Date() },
   });
   const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
   const event = await prisma.event.create({
@@ -33,6 +33,18 @@ async function seedOperator() {
   });
   await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
   return { u, org, event, cat };
+}
+
+async function mkParticipant(suffix: string) {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${suffix}`;
+  return prisma.user.create({
+    data: {
+      email: `p-${stamp}@x.fr`,
+      password: "x",
+      name: "P",
+      emailVerifiedAt: new Date(),
+    },
+  });
 }
 
 async function cleanup() {
@@ -51,17 +63,21 @@ describe("POST /scan/verify", () => {
 
   it("APPROVED badge -> authorized=true + BADGE_SCANNED log", async () => {
     const { u, org, event, cat } = await seedOperator();
+    const p = await mkParticipant("ok");
     const r = await prisma.registration.create({
       data: {
         id: "REG-OK",
         eventId: event.id,
         categoryId: cat.id,
-        email: "x@x.fr",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D",
+        userId: p.id,
+        snapshotEmail: "x@x.fr",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
@@ -86,17 +102,21 @@ describe("POST /scan/verify", () => {
 
   it("extracts badgeId from QR URL payload", async () => {
     const { u, org, event, cat } = await seedOperator();
+    const p = await mkParticipant("qr");
     const r = await prisma.registration.create({
       data: {
         id: "REG-QR",
         eventId: event.id,
         categoryId: cat.id,
-        email: "x@x.fr",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D",
+        userId: p.id,
+        snapshotEmail: "x@x.fr",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
@@ -126,17 +146,21 @@ describe("POST /scan/verify", () => {
     const cat = await prisma.category.create({
       data: { eventId: otherEvt.id, name: "V", color: "#000000", number: 1 },
     });
+    const p = await mkParticipant("foreign");
     await prisma.registration.create({
       data: {
         id: "REG-FOREIGN",
         eventId: otherEvt.id,
         categoryId: cat.id,
-        email: "x@x.fr",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D",
+        userId: p.id,
+        snapshotEmail: "x@x.fr",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
@@ -159,17 +183,21 @@ describe("POST /scan/verify", () => {
 
   it("REJECTED badge -> authorized=false", async () => {
     const { u, org, event, cat } = await seedOperator();
+    const p = await mkParticipant("rej");
     await prisma.registration.create({
       data: {
         id: "REG-REJ",
         eventId: event.id,
         categoryId: cat.id,
-        email: "x@x.fr",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D",
+        userId: p.id,
+        snapshotEmail: "x@x.fr",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "REJECTED",
       },
     });

@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendStatusNotification } from "@/lib/mail";
-import { generateEditToken } from "@/lib/edit-token";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
@@ -26,15 +25,14 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
 
-  const { token, expiresAt } = generateEditToken();
+  // v2-11 : plus de editToken. La resoumission passe par le compte du participant
+  // (/account/registrations/[id]/resubmit). Le mail de rejet pointe vers cette page.
   await prisma.registration.update({
     where: { id: regId },
     data: {
       status: "REJECTED",
       rejectionReason: parsed.data.reason,
       rejectionDetails: parsed.data.details ?? null,
-      editToken: token,
-      editTokenExpiresAt: expiresAt,
     },
   });
 

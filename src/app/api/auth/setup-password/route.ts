@@ -47,6 +47,10 @@ export async function POST(req: NextRequest) {
       password: hashed,
       inviteToken: null,
       inviteTokenExpiry: null,
+      // v2-11 : finaliser l'invitation vaut preuve de possession de l'email.
+      // authorize NextAuth refuse les comptes sans emailVerifiedAt -- on le pose ici
+      // si pas deja fait pour ne pas bloquer le login des staff invites.
+      emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
     },
   });
 

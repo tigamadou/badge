@@ -22,8 +22,6 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
       status: "APPROVED",
       rejectionReason: null,
       rejectionDetails: null,
-      editToken: null,
-      editTokenExpiresAt: null,
     },
   });
 

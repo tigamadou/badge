@@ -9,7 +9,7 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
   const { regId } = (await extra.params) as Params;
   const reg = await prisma.registration.findUnique({
     where: { id: regId },
-    select: { id: true, eventId: true, status: true, firstName: true, lastName: true, badgePrinted: true },
+    select: { id: true, eventId: true, status: true, snapshotFirstName: true, snapshotLastName: true, badgePrinted: true },
   });
   if (!reg || reg.eventId !== eventId) {
     return NextResponse.json(
@@ -32,8 +32,8 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     ok: true,
     registration: {
       id: reg.id,
-      firstName: reg.firstName,
-      lastName: reg.lastName,
+      firstName: reg.snapshotFirstName,
+      lastName: reg.snapshotLastName,
       status: reg.status,
       badgePrinted: reg.badgePrinted,
     },

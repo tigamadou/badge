@@ -2,14 +2,11 @@ import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Cleanup post-fichier pour eviter de polluer les fichiers de tests suivants
-// qui ne suppriment pas les tables Registration/Category/EventMembership
-// (tests legacy Plans v2-01/02/03).
+// Cleanup post-fichier pour eviter de polluer les fichiers de tests suivants.
 afterAll(async () => {
   await prisma.activityLog.deleteMany();
   await prisma.blockedEmail.deleteMany();
   await prisma.blockedDocument.deleteMany();
-  await prisma.submissionSnapshot.deleteMany();
   await prisma.registration.deleteMany();
   await prisma.category.deleteMany();
   await prisma.eventMembership.deleteMany();
@@ -27,7 +24,6 @@ vi.mock("@/lib/mail", async () => {
     ...actual,
     sendStatusNotification: vi.fn(async () => undefined),
     sendBadgePrintedNotification: vi.fn(async () => undefined),
-    sendEditLinkEmail: vi.fn(async () => undefined),
   };
 });
 import { sendStatusNotification, sendBadgePrintedNotification } from "@/lib/mail";
@@ -38,7 +34,9 @@ async function withSession(user: { id: string; email: string; name: string; isSt
 
 async function seedAdmin() {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const u = await prisma.user.create({ data: { email: `a-${stamp}@x.test`, password: "x", name: "A" } });
+  const u = await prisma.user.create({
+    data: { email: `a-${stamp}@x.test`, password: "x", name: "A", emailVerifiedAt: new Date() },
+  });
   const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
   const event = await prisma.event.create({
     data: { orgId: org.id, title: "E", slug: `e-${stamp}`, location: "L", date: new Date() },
@@ -48,6 +46,28 @@ async function seedAdmin() {
   });
   await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN" } });
   return { u, org, event, cat };
+}
+
+// v2-11 : cree un User participant complet (profil rempli) pour pouvoir creer
+// une Registration ou pour passer en `email` dans le POST /registrations.
+async function mkParticipantUser(suffix = "") {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${suffix}`;
+  return prisma.user.create({
+    data: {
+      email: `p-${stamp}@x.test`,
+      password: "x",
+      name: "Participant",
+      emailVerifiedAt: new Date(),
+      firstName: "F",
+      lastName: "L",
+      structure: "S",
+      photo: "uploads/test/photo.jpg",
+      idDocumentType: "CNI",
+      idDocumentNumber: `D-${stamp}`,
+      idDocument: "uploads/test/doc.pdf",
+      participantProfileCompletedAt: new Date(),
+    },
+  });
 }
 
 async function mkReg(
@@ -61,17 +81,21 @@ async function mkReg(
     idDocumentNumber: string;
   }> = {},
 ) {
+  const user = await mkParticipantUser();
   return prisma.registration.create({
     data: {
       id: `R-${Math.random().toString(36).slice(2, 12)}`,
       eventId,
       categoryId,
-      email: over.email ?? `${Math.random().toString(36).slice(2, 8)}@x.test`,
-      lastName: over.lastName ?? "L",
-      firstName: over.firstName ?? "F",
-      structure: "S",
-      idDocumentType: "CNI",
-      idDocumentNumber: over.idDocumentNumber ?? `D-${Math.random().toString(36).slice(2, 10)}`,
+      userId: user.id,
+      snapshotEmail: over.email ?? `${Math.random().toString(36).slice(2, 8)}@x.test`,
+      snapshotLastName: over.lastName ?? "L",
+      snapshotFirstName: over.firstName ?? "F",
+      snapshotStructure: "S",
+      snapshotPhoto: "uploads/test/photo.jpg",
+      snapshotIdDocumentType: "CNI",
+      snapshotIdDocumentNumber: over.idDocumentNumber ?? `D-${Math.random().toString(36).slice(2, 10)}`,
+      snapshotIdDocument: "uploads/test/doc.pdf",
       status: over.status ?? "PENDING",
     },
   });
@@ -79,6 +103,8 @@ async function mkReg(
 
 async function cleanup() {
   await prisma.activityLog.deleteMany();
+  await prisma.blockedEmail.deleteMany();
+  await prisma.blockedDocument.deleteMany();
   await prisma.registration.deleteMany();
   await prisma.category.deleteMany();
   await prisma.eventMembership.deleteMany();
@@ -86,6 +112,8 @@ async function cleanup() {
   await prisma.organization.deleteMany();
   await prisma.user.deleteMany();
   vi.mocked(getServerSession).mockReset();
+  vi.mocked(sendStatusNotification).mockClear();
+  vi.mocked(sendBadgePrintedNotification).mockClear();
 }
 
 describe("GET /registrations", () => {
@@ -116,12 +144,14 @@ describe("GET /registrations", () => {
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     const json = await res.json();
     expect(json.registrations).toHaveLength(1);
-    expect(json.registrations[0].firstName).toBe("Amadou");
+    expect(json.registrations[0].snapshotFirstName).toBe("Amadou");
   });
 
   it("OPERATOR can read list (defense in depth: scan needs participant infos)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `op-${stamp}@x.test`, password: "x", name: "Op" } });
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-op-${stamp}` } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: `e-op-${stamp}`, location: "L", date: new Date() },
@@ -143,6 +173,8 @@ describe("POST /registrations (manual creation)", () => {
 
   it("creates a registration with status=APPROVED by default", async () => {
     const { u, org, event, cat } = await seedAdmin();
+    // v2-11 : il faut un User participant avec profil complet
+    const participant = await mkParticipantUser("manual");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
@@ -150,18 +182,13 @@ describe("POST /registrations (manual creation)", () => {
       method: "POST",
       body: JSON.stringify({
         categoryId: cat.id,
-        email: "x@y.test",
-        firstName: "A",
-        lastName: "D",
-        structure: "ENSEA",
-        idDocumentType: "CNI",
-        idDocumentNumber: "DOC-1",
+        email: participant.email,
       }),
       headers: { "content-type": "application/json" },
     });
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(201);
-    const r = await prisma.registration.findFirst();
+    const r = await prisma.registration.findFirst({ where: { eventId: event.id } });
     expect(r?.status).toBe("APPROVED");
 
     const log = await prisma.activityLog.findFirst({ where: { type: "REGISTRATION_CREATED" } });
@@ -170,13 +197,16 @@ describe("POST /registrations (manual creation)", () => {
 
   it("OPERATOR cannot create (403)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `op-${stamp}@x.test`, password: "x", name: "Op" } });
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-op-c-${stamp}` } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: `e-op-c-${stamp}`, location: "L", date: new Date() },
     });
     const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
+    const participant = await mkParticipantUser("op-blocked");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
@@ -184,12 +214,7 @@ describe("POST /registrations (manual creation)", () => {
       method: "POST",
       body: JSON.stringify({
         categoryId: cat.id,
-        email: "x@y.test",
-        firstName: "A",
-        lastName: "D",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "DOC-1",
+        email: participant.email,
       }),
       headers: { "content-type": "application/json" },
     });
@@ -198,22 +223,8 @@ describe("POST /registrations (manual creation)", () => {
   });
 });
 
-async function cleanupSnapshots() {
-  await prisma.activityLog.deleteMany();
-  await prisma.submissionSnapshot.deleteMany();
-  await prisma.registration.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.eventMembership.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.organization.deleteMany();
-  await prisma.user.deleteMany();
-  vi.mocked(getServerSession).mockReset();
-  vi.mocked(sendStatusNotification).mockClear();
-  vi.mocked(sendBadgePrintedNotification).mockClear();
-}
-
 describe("POST /registrations/[regId]/approve", () => {
-  beforeEach(cleanupSnapshots);
+  beforeEach(cleanup);
 
   it("approves a pending registration, logs, and sends email", async () => {
     const { u, org, event, cat } = await seedAdmin();
@@ -236,7 +247,9 @@ describe("POST /registrations/[regId]/approve", () => {
 
   it("OPERATOR cannot approve (403)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `op-${stamp}@x.test`, password: "x", name: "Op" } });
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-op-a-${stamp}` } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: `e-op-a-${stamp}`, location: "L", date: new Date() },
@@ -256,9 +269,10 @@ describe("POST /registrations/[regId]/approve", () => {
 });
 
 describe("POST /registrations/[regId]/reject", () => {
-  beforeEach(cleanupSnapshots);
+  beforeEach(cleanup);
 
-  it("rejects with reason, generates editToken (64 hex), sends email", async () => {
+  // v2-11 : plus de editToken. Le test verifie status + raison + envoi mail.
+  it("rejects with reason, sets rejectionReason, sends email", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
@@ -277,8 +291,6 @@ describe("POST /registrations/[regId]/reject", () => {
     const after = await prisma.registration.findUnique({ where: { id: r.id } });
     expect(after?.status).toBe("REJECTED");
     expect(after?.rejectionReason).toBe("Photo illisible");
-    expect(after?.editToken).toMatch(/^[0-9a-f]{64}$/);
-    expect(after?.editTokenExpiresAt).not.toBeNull();
     expect(vi.mocked(sendStatusNotification)).toHaveBeenCalledWith(r.id);
   });
 
@@ -301,7 +313,7 @@ describe("POST /registrations/[regId]/reject", () => {
 });
 
 describe("POST /registrations/[regId]/print", () => {
-  beforeEach(cleanupSnapshots);
+  beforeEach(cleanup);
 
   it("marks badge printed and sends email", async () => {
     const { u, org, event, cat } = await seedAdmin();
@@ -335,9 +347,11 @@ describe("POST /registrations/[regId]/print", () => {
 });
 
 describe("PATCH /registrations/[regId]", () => {
-  beforeEach(cleanupSnapshots);
+  beforeEach(cleanup);
 
-  it("snapshots before update and audits", async () => {
+  // v2-11 : le PATCH met a jour les colonnes snapshot* directement (correction
+  // typo cote staff). Plus de SubmissionSnapshot, plus de versionnement.
+  it("updates snapshot fields and audits", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id, { firstName: "Old" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
@@ -346,7 +360,7 @@ describe("PATCH /registrations/[regId]", () => {
     const res = await PATCH(
       new NextRequest("http://localhost/x", {
         method: "PATCH",
-        body: JSON.stringify({ firstName: "New" }),
+        body: JSON.stringify({ snapshotFirstName: "New" }),
         headers: { "content-type": "application/json" },
       }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -354,31 +368,14 @@ describe("PATCH /registrations/[regId]", () => {
     expect(res.status).toBe(200);
 
     const after = await prisma.registration.findUnique({ where: { id: r.id } });
-    expect(after?.firstName).toBe("New");
-    const snaps = await prisma.submissionSnapshot.findMany({ where: { registrationId: r.id } });
-    expect(snaps).toHaveLength(1);
-    expect(snaps[0].firstName).toBe("Old");
+    expect(after?.snapshotFirstName).toBe("New");
+    const log = await prisma.activityLog.findFirst({ where: { type: "REGISTRATION_UPDATED", targetId: r.id } });
+    expect(log).not.toBeNull();
   });
 });
 
-async function cleanupAll() {
-  await prisma.activityLog.deleteMany();
-  await prisma.blockedEmail.deleteMany();
-  await prisma.blockedDocument.deleteMany();
-  await prisma.submissionSnapshot.deleteMany();
-  await prisma.registration.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.eventMembership.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.organization.deleteMany();
-  await prisma.user.deleteMany();
-  vi.mocked(getServerSession).mockReset();
-  vi.mocked(sendStatusNotification).mockClear();
-  vi.mocked(sendBadgePrintedNotification).mockClear();
-}
-
 describe("POST /registrations/[regId]/block-email", () => {
-  beforeEach(cleanupAll);
+  beforeEach(cleanup);
 
   it("adds the registration email to BlockedEmail", async () => {
     const { u, org, event, cat } = await seedAdmin();
@@ -401,7 +398,7 @@ describe("POST /registrations/[regId]/block-email", () => {
 });
 
 describe("GET /registrations/[regId]/duplicates", () => {
-  beforeEach(cleanupAll);
+  beforeEach(cleanup);
 
   it("returns duplicates matched on email/name/document within event", async () => {
     const { u, org, event, cat } = await seedAdmin();
@@ -421,7 +418,7 @@ describe("GET /registrations/[regId]/duplicates", () => {
 });
 
 describe("GET /registrations/export (CSV)", () => {
-  beforeEach(cleanupAll);
+  beforeEach(cleanup);
 
   it("returns text/csv with header + rows", async () => {
     const { u, org, event, cat } = await seedAdmin();
@@ -441,11 +438,13 @@ describe("GET /registrations/export (CSV)", () => {
 });
 
 describe("Quota — admin bypass with audit", () => {
-  beforeEach(cleanupAll);
+  beforeEach(cleanup);
 
   it("admin can create even if quota exceeded — log includes quotaBypass=true", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `a-${stamp}@x.test`, password: "x", name: "A" } });
+    const u = await prisma.user.create({
+      data: { email: `a-${stamp}@x.test`, password: "x", name: "A", emailVerifiedAt: new Date() },
+    });
     const org = await prisma.organization.create({
       data: { name: "O", slug: `qq-o-${stamp}`, quotaMaxRegistrations: 1 },
     });
@@ -454,20 +453,25 @@ describe("Quota — admin bypass with audit", () => {
     });
     const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN" } });
+    const seedUser = await mkParticipantUser("seed");
     await prisma.registration.create({
       data: {
         id: "R1",
         eventId: event.id,
         categoryId: cat.id,
-        email: "a@x.test",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D1",
+        userId: seedUser.id,
+        snapshotEmail: "a@x.test",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D1",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
+    const newParticipant = await mkParticipantUser("second");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
@@ -475,12 +479,7 @@ describe("Quota — admin bypass with audit", () => {
       method: "POST",
       body: JSON.stringify({
         categoryId: cat.id,
-        email: "second@x.test",
-        firstName: "B",
-        lastName: "B",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D2",
+        email: newParticipant.email,
       }),
       headers: { "content-type": "application/json" },
     });
@@ -495,11 +494,13 @@ describe("Quota — admin bypass with audit", () => {
 });
 
 describe("POST /registrations/[regId]/checkin", () => {
-  beforeEach(cleanupAll);
+  beforeEach(cleanup);
 
   it("OPERATOR can checkin (writes BADGE_SCANNED log)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `op-${stamp}@x.test`, password: "x", name: "Op" } });
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-ci-${stamp}` } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: `e-ci-${stamp}`, location: "L", date: new Date() },

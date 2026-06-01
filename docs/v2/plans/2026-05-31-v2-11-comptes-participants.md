@@ -8,28 +8,30 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0  | [ ] | -- | -- |
-| 1  | [ ] | -- | -- |
-| 2  | [ ] | -- | -- |
-| 3  | [ ] | -- | -- |
-| 4  | [ ] | -- | -- |
-| 5  | [ ] | -- | -- |
-| 6  | [ ] | -- | -- |
-| 7  | [ ] | -- | -- |
-| 8  | [ ] | -- | -- |
-| 9  | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
-| 18 | [ ] | -- | -- |
+| 0  | [x] | 2026-06-01 | Pre-flight : 98 references legacy inventoriees sur 18 fichiers, services UP, branche feat/v2-implementation (le plan annoncait feat/v2-sass, coquille). |
+| 1  | [x] | 2026-06-01 | Schema fusion : User v2 enrichi (champs profil + tokens email/reset + blocked) en preservant isStaff/staffRole/memberships v2-01. Registration refondue (userId + 8 snapshot* + @@unique([userId, eventId])). SubmissionSnapshot supprime. EDIT_LINK_SENT supprime. Nouveaux ActivityType USER_*. db push --force-reset (BDD dev jetable). |
+| 2  | [x] | 2026-06-01 | Helpers auth-tokens.ts (generateToken/hashToken/computeExpiry/EMAIL_VERIFY_TTL_MS=24h/PASSWORD_RESET_TTL_MS=1h/isExpired) + participant-profile.ts (isParticipantProfileComplete, buildRegistrationSnapshot, computeParticipantProfileCompletedAt, recomputeParticipantProfileCompletedAt). Tests differes Task 19. |
+| 3  | [x] | 2026-06-01 | recaptcha.ts existant suffisant. auth-participant.ts cree (requireAuth, getSessionUser, requireRegistrationOwner, AuthError). |
+| 4  | [x] | 2026-06-01 | authorize NextAuth refuse !emailVerifiedAt et blocked. setup-password pose emailVerifiedAt en finalisation d'invitation (pour ne pas bloquer les staff invites). |
+| 5  | [x] | 2026-06-01 | mail.ts : ajout sendAccountVerifyEmail(userId, plainToken), sendAccountPasswordReset(userId, plainToken), sendRegistrationResubmitted(registrationId). Suppression sendEditLinkEmail. sendStatusNotification (REJECTED) pointe vers /account/registrations/[id]. Adaptation snapshotEmail/snapshotFirstName/snapshotLastName partout. |
+| 6  | [x] | 2026-06-01 | POST /api/auth/register : validation Zod + rate-limit + reCAPTCHA + bcrypt 12 + emailVerifyToken (hash en BDD, plain dans le mail) + sendAccountVerifyEmail + log USER_REGISTERED. Renvoie 201. |
+| 7  | [x] | 2026-06-01 | POST /api/auth/verify-email : reponse uniforme INVALID_OR_EXPIRED_TOKEN anti-enumeration. Idempotent (200 alreadyVerified si deja confirme). |
+| 8  | [x] | 2026-06-01 | POST /api/auth/forgot-password : toujours 200 anti-enumeration, envoi uniquement si user verifie + non bloque. POST /api/auth/reset-password : passwordResetToken (hash) + bcrypt 12 + clear tokens + log. |
+| 9  | [x] | 2026-06-01 | GET + PUT /api/account/profile : sanitize (pas de password/tokens), whitelist Zod (firstName, lastName, structure, photo, idDocumentType, idDocumentNumber, idDocument), recalcul participantProfileCompletedAt, log USER_PROFILE_UPDATED. |
+| 10 | [x] | 2026-06-01 | GET /api/account/registrations (liste user courant), GET /api/account/registrations/[id] (403 si autre user), POST .../resubmit (409 si != REJECTED, re-snapshot depuis le user, sendRegistrationResubmitted, log REGISTRATION_RESUBMITTED). |
+| 11 | [x] | 2026-06-01 | POST /api/events/[slug]/register : requireAuth + check profil complet (sinon 400 PROFILE_INCOMPLETE) + buildRegistrationSnapshot + @@unique check + BlockedEmail/BlockedDocument check + quota + generateId + log REGISTRATION_CREATED + sendRegistrationConfirmation. |
+| 12 | [x] | 2026-06-01 | Pages auth : /register (form + redirect "verifiez votre email"), /verify-email/[token] (Server Component qui POST verify), /forgot-password (anti-enum), /reset-password/[token]. Style aligne sur /login existant. |
+| 13 | [x] | 2026-06-01 | Pages compte : /account/layout.tsx (verifie session, redirect /login), /account (liste regs + warning profil incomplet), /account/profile (ProfileForm Client Component), /account/profile/complete (variante guidee avec param `next`), /account/registrations/[id] (detail + ResubmitButton). Plus route /api/account/upload (form-data, kind=photo|document) + accountProfileKey dans storage.ts. |
+| 14 | [x] | 2026-06-01 | /e/[slug] refondue : presentation seule + boutons "Se connecter" / "Creer un compte" / "S'inscrire". /e/[slug]/register : nouvelle page (requireAuth + check profil complet sinon redirect /account/profile/complete?next=...). /e/[slug]/success enrichie avec param ?id et liens vers /account. |
+| 14.5 | [x] | 2026-06-01 | Playwright 1.60 installe (yarn add -D @playwright/test). playwright.config.ts minimal (chromium uniquement, baseURL localhost:3000, no webServer, locale fr-FR). Cible Makefile test-e2e ajoutee. Execution depuis l'hote (containers app legers). |
+| 15-16 | [-] | 2026-06-01 | E2E Playwright reportes : Playwright et la config sont livres mais les 4 specs (account-register, account-profile, event-register-flow, account-resubmit) ne sont pas ecrites dans cette session. La suite de tests Vitest d'integration couvre deja les golden paths. A planifier dans une session ulterieure. |
+| 17 | [x] | 2026-06-01 | Seed enrichi : SUPER_ADMIN avec emailVerifiedAt (backfill si seede avant v2-11). Nouveau participant participant@badge.local / particip123 avec profil complet (Awa Diallo, Universite FHB, CNI). Idempotent. |
+| 18 | [x] | 2026-06-01 | Suppression : /edit-registration/[token], /edit-registration/expired, /api/public/edit-registration/[token]/*, /api/public/events/[slug]/registrations, /api/admin/.../resend-edit-link, /api/admin/.../reset-edit-token, /api/setup-password (legacy), EditRegistrationForm, PublicRegistrationForm. Bouton UI "Renvoyer le lien d'edition" retire de RegistrationDetailPanel. Doc mise a jour : notifications-email.md, inscription-publique.md, multi-tenancy-rbac.md, espace-evenement.md, README v2 (entree v2-11 + v2-12). |
+| 19 | [x] | 2026-06-01 | Tests : 9 fichiers existants adaptes (80 tests) + 9 nouveaux fichiers ecrits (57 tests). Total 137 tests v2-11 verts. Fichiers ecrits : auth-tokens.test.ts, participant-profile.test.ts, register.test.ts, verify-email.test.ts, forgot-password.test.ts, reset-password.test.ts, profile.test.ts, registrations.test.ts, register-event.test.ts. Tests legacy supprimes (3) : public-edit, public-e2e, public-registrations. E2E Playwright non livres (cf. Task 15-16). |
+| 20 | [x] | 2026-06-01 | Verification finale : tsc --noEmit 0 erreur, vitest 559 tests / 60 fichiers verts, lint 0 erreur (19 warnings pre-existants). Pas de commit. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 0.
+**Derniere session** : 2026-06-01, plan termine (sauf E2E Playwright reportes).
+**Prochaine etape** : ecrire les 4 E2E Playwright dans une session ulterieure ; sinon plan complet.
 
 ---
 

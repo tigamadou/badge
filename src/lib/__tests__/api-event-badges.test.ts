@@ -26,7 +26,7 @@ async function withSession(user: { id: string; email: string; name: string; isSt
 async function seed(role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER") {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const u = await prisma.user.create({
-    data: { email: `u-${stamp}@x.test`, password: "x", name: "U" },
+    data: { email: `u-${stamp}@x.test`, password: "x", name: "U", emailVerifiedAt: new Date() },
   });
   const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
   const event = await prisma.event.create({
@@ -37,6 +37,18 @@ async function seed(role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER") {
   });
   await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role } });
   return { u, org, event, cat };
+}
+
+async function mkParticipant(suffix: string) {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${suffix}`;
+  return prisma.user.create({
+    data: {
+      email: `p-${stamp}@x.test`,
+      password: "x",
+      name: "P",
+      emailVerifiedAt: new Date(),
+    },
+  });
 }
 
 async function cleanup() {
@@ -55,17 +67,21 @@ describe("Badges API — GET /registrations contract used by /badges page", () =
 
   it("returns fields needed by BadgeListTable (badgePrinted, allAccessGranted, category)", async () => {
     const { u, org, event, cat } = await seed("OPERATOR");
+    const p = await mkParticipant("list-1");
     await prisma.registration.create({
       data: {
         id: "REG-LIST-1",
         eventId: event.id,
         categoryId: cat.id,
-        email: "a@x.fr",
-        firstName: "Alice",
-        lastName: "Dupont",
-        structure: "Acme",
-        idDocumentType: "CNI",
-        idDocumentNumber: "X1",
+        userId: p.id,
+        snapshotEmail: "a@x.fr",
+        snapshotFirstName: "Alice",
+        snapshotLastName: "Dupont",
+        snapshotStructure: "Acme",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X1",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
         badgePrinted: false,
         allAccessGranted: true,
@@ -94,17 +110,22 @@ describe("Badges API — POST /registrations/print", () => {
 
   it("marks APPROVED registrations as printed + logs BADGE_BATCH_PRINTED (ADMIN only)", async () => {
     const { u, org, event, cat } = await seed("ADMIN");
+    const p1 = await mkParticipant("p-1");
+    const p2 = await mkParticipant("p-2");
     const r1 = await prisma.registration.create({
       data: {
         id: "REG-P-1",
         eventId: event.id,
         categoryId: cat.id,
-        email: "a@x.fr",
-        firstName: "A",
-        lastName: "L",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "X1",
+        userId: p1.id,
+        snapshotEmail: "a@x.fr",
+        snapshotFirstName: "A",
+        snapshotLastName: "L",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X1",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
@@ -113,12 +134,15 @@ describe("Badges API — POST /registrations/print", () => {
         id: "REG-P-2",
         eventId: event.id,
         categoryId: cat.id,
-        email: "b@x.fr",
-        firstName: "B",
-        lastName: "L",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "X2",
+        userId: p2.id,
+        snapshotEmail: "b@x.fr",
+        snapshotFirstName: "B",
+        snapshotLastName: "L",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X2",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
@@ -151,17 +175,21 @@ describe("Badges API — POST /registrations/print", () => {
 
   it("ignores non-APPROVED registrations silently", async () => {
     const { u, org, event, cat } = await seed("ADMIN");
+    const p = await mkParticipant("pending");
     const pending = await prisma.registration.create({
       data: {
         id: "REG-PENDING",
         eventId: event.id,
         categoryId: cat.id,
-        email: "p@x.fr",
-        firstName: "P",
-        lastName: "L",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "P",
+        userId: p.id,
+        snapshotEmail: "p@x.fr",
+        snapshotFirstName: "P",
+        snapshotLastName: "L",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "P",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "PENDING",
       },
     });
@@ -187,17 +215,21 @@ describe("Badges API — POST /registrations/print", () => {
 
   it("OPERATOR cannot batch print (403)", async () => {
     const { u, org, event, cat } = await seed("OPERATOR");
+    const p = await mkParticipant("op");
     const r = await prisma.registration.create({
       data: {
         id: "REG-OP",
         eventId: event.id,
         categoryId: cat.id,
-        email: "o@x.fr",
-        firstName: "O",
-        lastName: "L",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "O",
+        userId: p.id,
+        snapshotEmail: "o@x.fr",
+        snapshotFirstName: "O",
+        snapshotLastName: "L",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "O",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });

@@ -112,6 +112,11 @@ rollback-prod:
 test:
 	docker compose -f docker-compose.dev.yml exec app yarn vitest run
 
+test-e2e:
+	@echo "Playwright tests s'executent depuis l'hote (chromium local) contre http://localhost:3000."
+	@echo "Pre-requis : make dev demarre, et la premiere fois : yarn playwright install chromium"
+	yarn playwright test
+
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint
 

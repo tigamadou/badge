@@ -615,3 +615,16 @@ export async function POST(req, { params }) {
 ## Dépendances en aval
 
 Toutes les sous-spec (2 à 7) dépendent de cette fondation. Aucune ne peut être développée avant que les helpers d'autorisation et le middleware soient en place.
+
+## Mise à jour v2-11 (rôle implicite participant)
+
+Plan v2-11 introduit le **rôle implicite participant** : tout `User` qui n'est ni staff ni membre d'org ni membre d'event reste néanmoins un compte valide pour s'inscrire à un événement public. La validation des accès aux routes `/api/account/*` et `/api/events/[slug]/register` passe par `requireAuth` (helper `src/lib/auth-participant.ts`), pas par les helpers staff/org/event.
+
+Champs ajoutés sur `User` (tous nullable sauf `blocked`) :
+
+- **Vérification email** : `emailVerifiedAt`, `emailVerifyToken @unique`, `emailVerifyTokenExpiry` (TTL 24h).
+- **Reset password self-service** : `passwordResetToken @unique`, `passwordResetExpiry` (TTL 1h). Distinct du `inviteToken` qui reste utilisé pour l'invitation/reset staff.
+- **Profil participant** : `firstName?`, `lastName?`, `structure?`, `photo?`, `idDocumentType?`, `idDocumentNumber?`, `idDocument?`, `participantProfileCompletedAt?`. Snapshoté dans chaque `Registration` au moment de la soumission/resoumission.
+- **Modération** : `blocked Boolean default(false)`, `blockedReason?`. `authorize` NextAuth refuse le login si `!emailVerifiedAt || blocked`.
+
+`ActivityType` enrichi (`USER_REGISTERED`, `USER_EMAIL_VERIFIED`, `USER_PASSWORD_RESET_REQUESTED`, `USER_PASSWORD_RESET_COMPLETED`, `USER_PROFILE_UPDATED`, `USER_BLOCKED`, `USER_UNBLOCKED`). `EDIT_LINK_SENT` supprimé.

@@ -7,6 +7,7 @@ afterAll(async () => {
   await prisma.category.deleteMany();
   await prisma.event.deleteMany();
   await prisma.organization.deleteMany();
+  await prisma.user.deleteMany();
 });
 
 async function mkOrgEvt() {
@@ -21,22 +22,38 @@ async function mkOrgEvt() {
   return { org, event, cat };
 }
 
+async function mkUser(email: string) {
+  return prisma.user.create({
+    data: {
+      email,
+      password: "x",
+      name: email,
+      emailVerifiedAt: new Date(),
+    },
+  });
+}
+
 async function mkReg(
   eventId: string,
   categoryId: string,
   data: Partial<{ email: string; firstName: string; lastName: string; idDocumentNumber: string }>,
 ) {
+  const email = data.email ?? `${Math.random().toString(36).slice(2, 8)}@x.test`;
+  const user = await mkUser(`${Math.random().toString(36).slice(2, 8)}-${email}`);
   return prisma.registration.create({
     data: {
       id: `R-${Math.random().toString(36).slice(2, 12)}`,
       eventId,
       categoryId,
-      email: data.email ?? `${Math.random().toString(36).slice(2, 8)}@x.test`,
-      lastName: data.lastName ?? "L",
-      firstName: data.firstName ?? "F",
-      structure: "S",
-      idDocumentType: "CNI",
-      idDocumentNumber: data.idDocumentNumber ?? `D-${Math.random().toString(36).slice(2, 10)}`,
+      userId: user.id,
+      snapshotEmail: email,
+      snapshotLastName: data.lastName ?? "L",
+      snapshotFirstName: data.firstName ?? "F",
+      snapshotStructure: "S",
+      snapshotPhoto: "uploads/test/photo.jpg",
+      snapshotIdDocumentType: "CNI",
+      snapshotIdDocumentNumber: data.idDocumentNumber ?? `D-${Math.random().toString(36).slice(2, 10)}`,
+      snapshotIdDocument: "uploads/test/doc.pdf",
     },
   });
 }
@@ -47,6 +64,7 @@ describe("findDuplicatesForRegistration", () => {
     await prisma.category.deleteMany();
     await prisma.event.deleteMany();
     await prisma.organization.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   it("matches by same email (same event, different id)", async () => {

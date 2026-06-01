@@ -52,6 +52,8 @@ Un plan par sous-spec, dans `docs/v2/plans/` (avec tracker de progression en tê
 | 5 | [Inscription publique scopée](plans/2026-05-28-v2-05-inscription-publique.md) | 3 575 | 19 |
 | 6 | [Notifications email multi-tenant](plans/2026-05-28-v2-06-notifications-email.md) | 2 017 | 12 |
 | 7 | ~~[Reset & déploiement initial](plans/2026-05-28-v2-07-deploiement-initial.md)~~ — **abandonné** | 1 194 | 7 |
+| 11 | [Comptes participants](plans/2026-05-31-v2-11-comptes-participants.md) | 725 | 18 |
+| 12 | [Templates de badges](plans/2026-05-31-v2-12-templates-badges.md) | — | — |
 
 ## Différences majeures avec la v1
 

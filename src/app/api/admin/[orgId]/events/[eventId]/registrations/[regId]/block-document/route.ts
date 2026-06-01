@@ -21,7 +21,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
 
   try {
     await prisma.blockedDocument.create({
-      data: { eventId, documentNumber: reg.idDocumentNumber, reason },
+      data: { eventId, documentNumber: reg.snapshotIdDocumentNumber, reason },
     });
   } catch (err) {
     if ((err as { code?: string }).code !== "P2002") throw err;
@@ -32,7 +32,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     orgId,
     eventId,
     targetId: regId,
-    details: { action: "block-document", documentNumber: reg.idDocumentNumber, reason },
+    details: { action: "block-document", documentNumber: reg.snapshotIdDocumentNumber, reason },
     req,
   });
   return NextResponse.json({ ok: true }, { status: 201 });

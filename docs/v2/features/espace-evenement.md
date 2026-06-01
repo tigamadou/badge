@@ -302,3 +302,14 @@ Le header affiche le nom event + breadcrumb (org > event) et un sélecteur event
 - Spec 3 (Espace org) : navigation parent
 - Spec 5 (Public) : route `/verify/[id]`, route `/edit-registration/[token]`
 - Spec 6 (Emails) : templates de notification (approbation, rejet, badge imprimé, lien d'édition)
+
+## Mise à jour v2-11 (snapshots inline)
+
+Plan v2-11 a refondu `Registration` :
+
+- Les champs profil ne vivent plus directement sur la registration. Ils sont **snapshotés** depuis `User` au moment de la soumission ou de la resoumission, via 8 colonnes `snapshot*` (email, firstName, lastName, structure, photo, idDocumentType, idDocumentNumber, idDocument).
+- Toutes les listes (registrations admin, badges, scan, recherche) lisent les colonnes `snapshot*`. Les opérations métier (approve/reject/print/scan/block-email/block-document) sont inchangées dans leur logique mais utilisent `snapshotEmail`/`snapshotIdDocumentNumber` pour les blocages.
+- Le mécanisme `editToken`/`editTokenExpiresAt` est supprimé. La resoumission après rejet passe par le compte participant (`/account/registrations/[id]`). L'UI admin « Renvoyer le lien d'édition » est retirée.
+- Le modèle `SubmissionSnapshot` (historique des versions) est supprimé : on garde uniquement le snapshot courant inline, réécrit à chaque resoumission.
+- `Registration` a une contrainte `@@unique([userId, eventId])` : un user ne peut s'inscrire qu'une fois par event.
+- L'admin peut toujours créer une registration manuellement via `POST /api/admin/[orgId]/events/[eventId]/registrations`, mais avec `{ userId | email, categoryId }` (sélectionne ou retrouve un User existant) ; le profil doit être complet sur le User cible.

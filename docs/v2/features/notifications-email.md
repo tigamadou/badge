@@ -224,3 +224,17 @@ Gestion des erreurs :
 - Spec 1 : `getPlatformSmtp()`, `resolveSettings()` (cascade branding), `ActivityLog`
 - Spec 5 : route `/edit-registration/[token]`, `/verify/[badgeId]`
 - Spec 7 : `PlatformSettings` initial seedé avec config SMTP complète (host, port, from, user, password, secure) — pas de fallback Org/Event possible
+
+## État d'implémentation
+
+Plan 6 implémenté (`docs/v2/plans/2026-05-28-v2-06-notifications-email.md`). Module `src/lib/mail.ts` réécrit, suite Vitest dans `src/lib/__tests__/mail.test.ts` (29 tests) et `src/lib/__tests__/mail-helpers.test.ts` (13 tests). Les routes API qui consomment ces fonctions sont mises à jour dans les plans 2 à 5.
+
+Fonctions exportées : `resolveTransporter`, `buildEmail`, `sendRegistrationConfirmation`, `sendStatusNotification`, `sendBadgePrintedNotification`, `sendEditLinkEmail`, `sendUserInvitation`, `sendPasswordResetEmail`, `sendSmtpTest`. SMTP plateforme uniquement (`getPlatformSmtp()`), branding cascade Event → Org → Platform. Tous les inputs utilisateur sont escapés HTML (anti-XSS). Les fonctions de notification (`send*Notification`, `send*Email`) avalent les erreurs SMTP via `console.error` pour ne pas casser la transaction métier appelante ; `sendSmtpTest` (UI staff) propage les erreurs.
+
+### Mise à jour v2-11 (comptes participants)
+
+Plan v2-11 a refondu le flux de notifications :
+
+- **Ajouté** : `sendAccountVerifyEmail(userId, plainToken)` (mail de confirmation d'email après `POST /api/auth/register`), `sendAccountPasswordReset(userId, plainToken)` (mail de reset password self-service après `POST /api/auth/forgot-password`), `sendRegistrationResubmitted(registrationId)` (mail de confirmation après resoumission depuis le compte participant).
+- **Supprimé** : `sendEditLinkEmail` (le mécanisme `editToken` est remplacé par le compte participant ; la resoumission passe par `/account/registrations/[id]/resubmit` après login).
+- **Modifié** : `sendStatusNotification` (REJECTED) — le lien d'édition pointe désormais vers `/account/registrations/[id]` (login requis) au lieu de `/edit-registration/[token]`. Les colonnes `email`/`firstName`/`lastName` lues sur la `Registration` sont remplacées par `snapshotEmail`/`snapshotFirstName`/`snapshotLastName` (idem pour `sendRegistrationConfirmation`, `sendBadgePrintedNotification`).

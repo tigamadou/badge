@@ -11,16 +11,18 @@ export type DuplicateMatch = {
   matchedOn: ("email" | "name" | "document")[];
 };
 
+// v2-11 : la duplication se calcule sur les colonnes snapshot* de la registration
+// courante (qui font foi pour l'evenement) et pas sur le User actuel.
 export async function findDuplicatesForRegistration(registrationId: string): Promise<DuplicateMatch[]> {
   const ref = await prisma.registration.findUnique({
     where: { id: registrationId },
     select: {
       id: true,
       eventId: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      idDocumentNumber: true,
+      snapshotEmail: true,
+      snapshotFirstName: true,
+      snapshotLastName: true,
+      snapshotIdDocumentNumber: true,
     },
   });
   if (!ref) return [];
@@ -30,17 +32,22 @@ export async function findDuplicatesForRegistration(registrationId: string): Pro
       eventId: ref.eventId,
       id: { not: ref.id },
       OR: [
-        { email: ref.email },
-        { idDocumentNumber: ref.idDocumentNumber },
-        { AND: [{ firstName: ref.firstName }, { lastName: ref.lastName }] },
+        { snapshotEmail: ref.snapshotEmail },
+        { snapshotIdDocumentNumber: ref.snapshotIdDocumentNumber },
+        {
+          AND: [
+            { snapshotFirstName: ref.snapshotFirstName },
+            { snapshotLastName: ref.snapshotLastName },
+          ],
+        },
       ],
     },
     select: {
       id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      idDocumentNumber: true,
+      snapshotEmail: true,
+      snapshotFirstName: true,
+      snapshotLastName: true,
+      snapshotIdDocumentNumber: true,
       status: true,
       createdAt: true,
     },
@@ -49,9 +56,23 @@ export async function findDuplicatesForRegistration(registrationId: string): Pro
 
   return candidates.map((c) => {
     const matchedOn: ("email" | "name" | "document")[] = [];
-    if (c.email === ref.email) matchedOn.push("email");
-    if (c.firstName === ref.firstName && c.lastName === ref.lastName) matchedOn.push("name");
-    if (c.idDocumentNumber === ref.idDocumentNumber) matchedOn.push("document");
-    return { ...c, matchedOn };
+    if (c.snapshotEmail === ref.snapshotEmail) matchedOn.push("email");
+    if (
+      c.snapshotFirstName === ref.snapshotFirstName &&
+      c.snapshotLastName === ref.snapshotLastName
+    ) {
+      matchedOn.push("name");
+    }
+    if (c.snapshotIdDocumentNumber === ref.snapshotIdDocumentNumber) matchedOn.push("document");
+    return {
+      id: c.id,
+      email: c.snapshotEmail,
+      firstName: c.snapshotFirstName,
+      lastName: c.snapshotLastName,
+      idDocumentNumber: c.snapshotIdDocumentNumber,
+      status: c.status,
+      createdAt: c.createdAt,
+      matchedOn,
+    };
   });
 }

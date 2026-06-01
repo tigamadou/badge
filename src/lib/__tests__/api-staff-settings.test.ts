@@ -5,6 +5,13 @@ import { prisma } from "@/lib/prisma";
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
+// Plan 6 : sendSmtpTest envoie reellement via nodemailer. Les tests d'API ne doivent
+// pas faire de vrai I/O SMTP — on le bouchonne ici pour valider la route uniquement.
+vi.mock("@/lib/mail", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/mail")>();
+  return { ...actual, sendSmtpTest: vi.fn(async () => undefined) };
+});
+
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
 function withSession(user: {

@@ -51,6 +51,10 @@ export function eventIdDocumentKey(eventId: string, filename: string): string {
   return `events/${eventId}/idDocuments/${safeFilename(filename)}`;
 }
 
+export function accountProfileKey(userId: string, kind: UploadKind, filename: string): string {
+  return `profile/${userId}/${kind === "photo" ? "photos" : "documents"}/${safeFilename(filename)}`;
+}
+
 async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true });
 }

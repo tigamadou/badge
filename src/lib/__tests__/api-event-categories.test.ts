@@ -113,17 +113,28 @@ describe("DELETE /api/admin/[orgId]/events/[eventId]/categories/[id]", () => {
   it("refuses deletion when registrations linked (409 CATEGORY_HAS_REGISTRATIONS)", async () => {
     const { u, org, event } = await seedAdmin();
     const cat = await prisma.category.create({ data: { eventId: event.id, name: "VIP", color: "#000000", number: 1 } });
+    const p = await prisma.user.create({
+      data: {
+        email: `p-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@x.test`,
+        password: "x",
+        name: "P",
+        emailVerifiedAt: new Date(),
+      },
+    });
     await prisma.registration.create({
       data: {
         id: "REG1",
         eventId: event.id,
         categoryId: cat.id,
-        email: "x@x.test",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D",
+        userId: p.id,
+        snapshotEmail: "x@x.test",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D",
+        snapshotIdDocument: "uploads/test/doc.pdf",
       },
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
@@ -213,17 +224,28 @@ describe("Category reassignment flow (critere d'acceptation #5)", () => {
     const catTo = await prisma.category.create({
       data: { eventId: event.id, name: "To", color: "#ffffff", number: 2 },
     });
+    const pReassign = await prisma.user.create({
+      data: {
+        email: `reassign-${Date.now()}@journey.test`,
+        password: "x",
+        name: "P",
+        emailVerifiedAt: new Date(),
+      },
+    });
     await prisma.registration.create({
       data: {
         id: "R-REASSIGN-1",
         eventId: event.id,
         categoryId: catFrom.id,
-        email: "reassign@journey.test",
-        firstName: "F",
-        lastName: "L",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D-REASSIGN-1",
+        userId: pReassign.id,
+        snapshotEmail: "reassign@journey.test",
+        snapshotFirstName: "F",
+        snapshotLastName: "L",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D-REASSIGN-1",
+        snapshotIdDocument: "uploads/test/doc.pdf",
       },
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });

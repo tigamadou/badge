@@ -6,21 +6,39 @@ import { resetRateLimitForTests } from "@/lib/rate-limit";
 beforeEach(resetRateLimitForTests);
 
 async function makeRegistration({ status = "APPROVED", printed = true, anonymous = false } = {}) {
-  const org = await prisma.organization.create({ data: { name: "O", slug: `o-${Date.now()}` } });
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
   const ev = await prisma.event.create({
-    data: { orgId: org.id, title: "Cerimonia", slug: `s-${Date.now()}`, location: "L", date: new Date("2026-06-01"), registrationOpen: true },
+    data: { orgId: org.id, title: "Cerimonia", slug: `s-${stamp}`, location: "L", date: new Date("2026-06-01"), registrationOpen: true },
   });
   const cat = await prisma.category.create({
     data: { eventId: ev.id, name: "Presse", color: "#fff", number: 1, anonymous },
   });
+  const user = await prisma.user.create({
+    data: {
+      email: `pv-${stamp}@x.test`,
+      password: "x",
+      name: "Alice Doe",
+      emailVerifiedAt: new Date(),
+    },
+  });
   return prisma.registration.create({
     data: {
       id: "111111111111",
-      eventId: ev.id, categoryId: cat.id,
-      email: "x@x", firstName: "Alice", lastName: "Doe", structure: "S",
-      idDocumentType: "CNI", idDocumentNumber: "X1",
+      eventId: ev.id,
+      categoryId: cat.id,
+      userId: user.id,
+      snapshotEmail: "x@x",
+      snapshotFirstName: "Alice",
+      snapshotLastName: "Doe",
+      snapshotStructure: "S",
+      snapshotPhoto: "uploads/test/photo.jpg",
+      snapshotIdDocumentType: "CNI",
+      snapshotIdDocumentNumber: "X1",
+      snapshotIdDocument: "uploads/test/doc.pdf",
       status: status as never,
-      badgePrinted: printed, badgePrintedAt: printed ? new Date() : null,
+      badgePrinted: printed,
+      badgePrintedAt: printed ? new Date() : null,
     },
   });
 }

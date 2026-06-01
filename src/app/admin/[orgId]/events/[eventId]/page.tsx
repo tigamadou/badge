@@ -69,7 +69,14 @@ export default async function EventDashboardPage({
         where: { eventId },
         orderBy: { createdAt: "desc" },
         take: 10,
-        select: { id: true, firstName: true, lastName: true, email: true, status: true, createdAt: true },
+        select: {
+          id: true,
+          snapshotFirstName: true,
+          snapshotLastName: true,
+          snapshotEmail: true,
+          status: true,
+          createdAt: true,
+        },
       }),
       countCountableRegistrations(eventId),
     ]);
@@ -112,7 +119,8 @@ export default async function EventDashboardPage({
           {latest.map((r) => (
             <li key={r.id} className="px-4 py-3 flex justify-between text-sm">
               <Link href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`} className="hover:underline">
-                {r.firstName} {r.lastName} <span className="text-gray-400">— {r.email}</span>
+                {r.snapshotFirstName} {r.snapshotLastName}{" "}
+                <span className="text-gray-400">— {r.snapshotEmail}</span>
               </Link>
               <span className="text-xs text-gray-500">
                 {r.status} — {new Date(r.createdAt).toLocaleDateString("fr-FR")}

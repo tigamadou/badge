@@ -26,15 +26,15 @@ export default async function BadgeDetailPage({
   return (
     <div className="space-y-4 max-w-2xl">
       <h1 className="text-2xl font-bold">
-        Badge — {registration.firstName} {registration.lastName}
+        Badge — {registration.snapshotFirstName} {registration.snapshotLastName}
       </h1>
       <BadgeDownloadV2
         registration={{
           id: registration.id,
-          firstName: registration.firstName,
-          lastName: registration.lastName,
-          structure: registration.structure,
-          photo: registration.photo,
+          firstName: registration.snapshotFirstName,
+          lastName: registration.snapshotLastName,
+          structure: registration.snapshotStructure,
+          photo: registration.snapshotPhoto,
           allAccessGranted: registration.allAccessGranted,
           category: {
             name: registration.category.name,

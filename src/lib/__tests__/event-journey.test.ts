@@ -11,7 +11,6 @@ vi.mock("@/lib/mail", async () => {
     ...actual,
     sendStatusNotification: vi.fn(async () => undefined),
     sendBadgePrintedNotification: vi.fn(async () => undefined),
-    sendEditLinkEmail: vi.fn(async () => undefined),
     sendUserInvitation: vi.fn(async () => undefined),
   };
 });
@@ -30,7 +29,12 @@ describe("ADMIN journey (smoke)", () => {
 
   it("OWNER (no EventMembership) inherits ADMIN: creates category + registration + prints badge", async () => {
     const owner = await prisma.user.create({
-      data: { email: "owner@journey.test", password: "x", name: "O" },
+      data: {
+        email: "owner@journey.test",
+        password: "x",
+        name: "O",
+        emailVerifiedAt: new Date(),
+      },
     });
     const org = await prisma.organization.create({ data: { name: "Acme", slug: "acme-journey" } });
     await prisma.orgMembership.create({
@@ -64,6 +68,23 @@ describe("ADMIN journey (smoke)", () => {
     expect(cat).toBeTruthy();
 
     // 2. ADMIN cree une inscription manuelle (APPROVED par defaut)
+    // v2-11 : le participant doit exister en tant que User avec profil complet.
+    await prisma.user.create({
+      data: {
+        email: "amadou@journey.test",
+        password: "x",
+        name: "Amadou Diallo",
+        emailVerifiedAt: new Date(),
+        firstName: "Amadou",
+        lastName: "Diallo",
+        structure: "ENSEA",
+        photo: "uploads/test/photo.jpg",
+        idDocumentType: "CNI",
+        idDocumentNumber: "CNI-JOURNEY-1",
+        idDocument: "uploads/test/doc.pdf",
+        participantProfileCompletedAt: new Date(),
+      },
+    });
     const { POST: createReg } = await import(
       "@/app/api/admin/[orgId]/events/[eventId]/registrations/route"
     );
@@ -73,11 +94,6 @@ describe("ADMIN journey (smoke)", () => {
         body: JSON.stringify({
           categoryId: cat!.id,
           email: "amadou@journey.test",
-          firstName: "Amadou",
-          lastName: "Diallo",
-          structure: "ENSEA",
-          idDocumentType: "CNI",
-          idDocumentNumber: "CNI-JOURNEY-1",
         }),
         headers: { "content-type": "application/json" },
       }),
@@ -123,7 +139,12 @@ describe("OPERATOR restrictions (smoke)", () => {
 
   it("OPERATOR can scan but cannot approve / PATCH / DELETE category (criteres #2, #10)", async () => {
     const op = await prisma.user.create({
-      data: { email: "op@journey.test", password: "x", name: "Op" },
+      data: {
+        email: "op@journey.test",
+        password: "x",
+        name: "Op",
+        emailVerifiedAt: new Date(),
+      },
     });
     const org = await prisma.organization.create({ data: { name: "O", slug: "o-op-journey" } });
     const event = await prisma.event.create({
@@ -141,17 +162,28 @@ describe("OPERATOR restrictions (smoke)", () => {
     await prisma.eventMembership.create({
       data: { userId: op.id, eventId: event.id, role: "OPERATOR" },
     });
+    const scanParticipant = await prisma.user.create({
+      data: {
+        email: "scan-target@journey.test",
+        password: "x",
+        name: "Scan Target",
+        emailVerifiedAt: new Date(),
+      },
+    });
     const reg = await prisma.registration.create({
       data: {
         id: "R-JOURNEY-OP",
         eventId: event.id,
         categoryId: cat.id,
-        email: "scan-target@journey.test",
-        lastName: "L",
-        firstName: "F",
-        structure: "S",
-        idDocumentType: "CNI",
-        idDocumentNumber: "D-OP-JOURNEY",
+        userId: scanParticipant.id,
+        snapshotEmail: "scan-target@journey.test",
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "D-OP-JOURNEY",
+        snapshotIdDocument: "uploads/test/doc.pdf",
         status: "APPROVED",
       },
     });
@@ -235,6 +267,7 @@ describe("Staff acting on event (smoke)", () => {
         name: "S",
         isStaff: true,
         staffRole: "STAFF_ADMIN",
+        emailVerifiedAt: new Date(),
       },
     });
     const org = await prisma.organization.create({ data: { name: "O", slug: "o-staff-journey" } });

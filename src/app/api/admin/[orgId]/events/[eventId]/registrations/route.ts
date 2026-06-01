@@ -6,6 +6,7 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { generateId } from "@/lib/generate-id";
 import { countCountableRegistrations } from "@/lib/event-quota";
+import { buildRegistrationSnapshot } from "@/lib/participant-profile";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (req, { eventId }) => {
   const url = new URL(req.url);
@@ -22,10 +23,10 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
   if (categoryId) where.categoryId = categoryId;
   if (q) {
     where.OR = [
-      { email: { contains: q } },
-      { firstName: { contains: q } },
-      { lastName: { contains: q } },
-      { idDocumentNumber: { contains: q } },
+      { snapshotEmail: { contains: q } },
+      { snapshotFirstName: { contains: q } },
+      { snapshotLastName: { contains: q } },
+      { snapshotIdDocumentNumber: { contains: q } },
     ];
   }
 
@@ -37,10 +38,10 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       take: limit,
       select: {
         id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        structure: true,
+        snapshotFirstName: true,
+        snapshotLastName: true,
+        snapshotEmail: true,
+        snapshotStructure: true,
         status: true,
         badgePrinted: true,
         allAccessGranted: true,
@@ -54,16 +55,15 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
   return NextResponse.json({ registrations, total, page, limit });
 });
 
+// v2-11 : l'admin cree une registration pour un User existant (le User porte
+// le profil persistant). L'admin choisit le user par id ou email. Si le user
+// n'existe pas ou si son profil est incomplet, on refuse 400.
 const createSchema = z.object({
   categoryId: z.string().min(1),
-  email: z.string().email(),
-  firstName: z.string().min(1).max(120),
-  lastName: z.string().min(1).max(120),
-  structure: z.string().min(1).max(200),
-  idDocumentType: z.string().min(1).max(40),
-  idDocumentNumber: z.string().min(1).max(80),
-  photo: z.string().nullable().optional(),
-  idDocument: z.string().nullable().optional(),
+  userId: z.string().optional(),
+  email: z.string().email().optional(),
+}).refine((d) => Boolean(d.userId) || Boolean(d.email), {
+  message: "userId or email required",
 });
 
 export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
@@ -72,6 +72,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
   if (!parsed.success) {
     return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
   }
+
   const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
   if (!category || category.eventId !== eventId) {
     return NextResponse.json({ error: "INVALID_CATEGORY" }, { status: 400 });
@@ -80,6 +81,55 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { date: true } });
   if (!event) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+  }
+
+  const user = parsed.data.userId
+    ? await prisma.user.findUnique({
+        where: { id: parsed.data.userId },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          structure: true,
+          photo: true,
+          idDocumentType: true,
+          idDocumentNumber: true,
+          idDocument: true,
+        },
+      })
+    : await prisma.user.findUnique({
+        where: { email: parsed.data.email!.toLowerCase().trim() },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          structure: true,
+          photo: true,
+          idDocumentType: true,
+          idDocumentNumber: true,
+          idDocument: true,
+        },
+      });
+
+  if (!user) {
+    return NextResponse.json({ error: "USER_NOT_FOUND" }, { status: 404 });
+  }
+
+  let snapshot;
+  try {
+    snapshot = buildRegistrationSnapshot(user);
+  } catch {
+    return NextResponse.json({ error: "PROFILE_INCOMPLETE" }, { status: 400 });
+  }
+
+  const existingReg = await prisma.registration.findUnique({
+    where: { userId_eventId: { userId: user.id, eventId } },
+    select: { id: true },
+  });
+  if (existingReg) {
+    return NextResponse.json({ error: "ALREADY_REGISTERED", registrationId: existingReg.id }, { status: 409 });
   }
 
   const sequentialNumber = (await prisma.registration.count({
@@ -96,14 +146,8 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
       id,
       eventId,
       categoryId: parsed.data.categoryId,
-      email: parsed.data.email.toLowerCase().trim(),
-      lastName: parsed.data.lastName,
-      firstName: parsed.data.firstName,
-      structure: parsed.data.structure,
-      idDocumentType: parsed.data.idDocumentType,
-      idDocumentNumber: parsed.data.idDocumentNumber,
-      photo: parsed.data.photo ?? null,
-      idDocument: parsed.data.idDocument ?? null,
+      userId: user.id,
+      ...snapshot,
       status: "APPROVED",
     },
   });

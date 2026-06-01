@@ -20,6 +20,11 @@ export const authOptions: AuthOptions = {
           where: { email: credentials.email.toLowerCase().trim() },
         });
         if (!user || user.archived) return null;
+        // v2-11 : refus si compte non verifie (participant inscrit mais email non confirme)
+        // ou compte bloque (moderation). Les staff invites passent par /setup-password qui
+        // pose un emailVerifiedAt implicite (cf. seed et flow invitation).
+        if (!user.emailVerifiedAt) return null;
+        if (user.blocked) return null;
         const ok = await compare(credentials.password, user.password);
         if (!ok) return null;
 

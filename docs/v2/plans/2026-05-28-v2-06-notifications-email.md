@@ -24,22 +24,22 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight OK : branche feat/v2-implementation (le plan annoncait feat/v2-sass, coquille), Plan 1 (13 tests) vert, nodemailer 6.10.1 present |
+| 1 | [x] | 2026-05-31 | mail-helpers.ts : escapeHtml, formatFromAddress, formatFrenchDate, buildBaseUrl. 13 tests verts |
+| 2 | [x] | 2026-05-31 | resolveTransporter + ResolvedTransport + loadBrandingContext. SMTP plateforme (getPlatformSmtp), branding cascade Event > Org > Platform. 6 tests verts |
+| 3 | [x] | 2026-05-31 | buildEmail (header logo + body + footer contact, lang=fr utf-8). 4 nouveaux tests, 10 cumules |
+| 4 | [x] | 2026-05-31 | sendRegistrationConfirmation. 3 nouveaux tests, 13 cumules. Note : introduit l'API privee `__mailTesting.setResolveTransporter` car `vi.spyOn` ESM ne peut pas intercepter les appels intra-module |
+| 5 | [x] | 2026-05-31 | sendStatusNotification (APPROVED/REJECTED + lien edit 48h + escapage). 4 nouveaux tests, 17 cumules |
+| 6 | [x] | 2026-05-31 | sendBadgePrintedNotification (badge pret + contact footer). 2 nouveaux tests, 19 cumules |
+| 7 | [x] | 2026-05-31 | sendEditLinkEmail (token 32 bytes hex, expiration 48h). 2 nouveaux tests, 21 cumules |
+| 8 | [x] | 2026-05-31 | sendUserInvitation (token 24h + setup-password). Signature elargie a `{ orgId?, eventId?, role? }` pour rester compatible avec les consumers existants (api/admin/.../events/.../members). 3 nouveaux tests, 24 cumules |
+| 9 | [x] | 2026-05-31 | sendPasswordResetEmail (alias staff avec subject distinct). 2 nouveaux tests, 26 cumules |
+| 10 | [x] | 2026-05-31 | sendSmtpTest (UI staff/org/event, propage les erreurs). 3 nouveaux tests, 29 cumules |
+| 11 | [x] | 2026-05-31 | Verifs : 525/525 tests Vitest verts (apres mock de sendSmtpTest dans api-staff-settings.test.ts pour eviter le vrai I/O SMTP), tsc --noEmit clean, eslint propre, aucune fuite de secret hors auth nodemailer |
+| 12 | [x] | 2026-05-31 | Doc : section "Etat d'implementation" ajoutee a docs/v2/features/notifications-email.md |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31, plan termine.
+**Prochaine etape** : aucune (plan complet). Prochaine etape : Plan 7 (deploiement initial).
 
 **Notes** :
 - **2026-05-31** — Decision de design : SMTP plateforme uniquement (pas de cascade). Les champs SMTP sont retires de `OrgSettings`/`EventSettings`. Tasks 2 et 10 adaptees (resolveTransporter lit directement `PlatformSettings` via `getPlatformSmtp()` ; le branding contextuel reste cascade Event -> Org -> Platform). Voir spec `docs/v2/features/notifications-email.md`.

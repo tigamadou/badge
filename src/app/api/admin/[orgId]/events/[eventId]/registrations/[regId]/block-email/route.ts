@@ -21,7 +21,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
 
   try {
     await prisma.blockedEmail.create({
-      data: { eventId, email: reg.email, reason },
+      data: { eventId, email: reg.snapshotEmail, reason },
     });
   } catch (err) {
     if ((err as { code?: string }).code !== "P2002") throw err;
@@ -32,7 +32,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     orgId,
     eventId,
     targetId: regId,
-    details: { action: "block-email", email: reg.email, reason },
+    details: { action: "block-email", email: reg.snapshotEmail, reason },
     req,
   });
   return NextResponse.json({ ok: true }, { status: 201 });

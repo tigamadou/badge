@@ -27,7 +27,11 @@ export default async function VerifyPage(
         category: reg.category,
         participant: reg.category.anonymous
           ? undefined
-          : { firstName: reg.firstName, lastName: reg.lastName, structure: reg.structure },
+          : {
+              firstName: reg.snapshotFirstName,
+              lastName: reg.snapshotLastName,
+              structure: reg.snapshotStructure,
+            },
       }
     : { valid: false as const, event: reg.event };
 

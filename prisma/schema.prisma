@@ -12,21 +12,46 @@ datasource db {
 // =====================================================
 
 model User {
-  id                String   @id @default(cuid())
-  email             String   @unique
+  id                String     @id @default(cuid())
+  email             String     @unique
   password          String
   name              String
-  isStaff           Boolean  @default(false)
+  isStaff           Boolean    @default(false)
   staffRole         StaffRole?
-  inviteToken       String?  @unique
+  inviteToken       String?    @unique
   inviteTokenExpiry DateTime?
-  archived          Boolean  @default(false)
+  archived          Boolean    @default(false)
   archivedAt        DateTime?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime   @default(now())
 
-  orgMemberships    OrgMembership[]
-  eventMemberships  EventMembership[]
-  activityLogs      ActivityLog[]
+  // v2-11 : verification email pour comptes participants
+  emailVerifiedAt        DateTime?
+  emailVerifyToken       String?   @unique
+  emailVerifyTokenExpiry DateTime?
+
+  // v2-11 : reset password (compte participant et staff)
+  passwordResetToken  String?   @unique
+  passwordResetExpiry DateTime?
+
+  // v2-11 : profil participant (nullable, complete progressivement). Persiste
+  // entre les inscriptions ; chaque Registration en snapshote la valeur courante.
+  firstName                     String?
+  lastName                      String?
+  structure                     String?
+  photo                         String?
+  idDocumentType                String?
+  idDocumentNumber              String?
+  idDocument                    String?
+  participantProfileCompletedAt DateTime?
+
+  // v2-11 : moderation participant. Refuse login si blocked = true.
+  blocked       Boolean @default(false)
+  blockedReason String?
+
+  orgMemberships   OrgMembership[]
+  eventMemberships EventMembership[]
+  activityLogs     ActivityLog[]
+  registrations    Registration[]
 }
 
 enum StaffRole {
@@ -46,38 +71,38 @@ enum StaffRole {
 // =====================================================
 
 model Organization {
-  id                       String   @id @default(cuid())
-  name                     String
-  legalName                String?
-  slug                     String   @unique
+  id        String  @id @default(cuid())
+  name      String
+  legalName String?
+  slug      String  @unique
 
   // Adresse postale structuree
-  addressLine1             String?
-  addressLine2             String?
-  postalCode               String?
-  city                     String?
-  country                  String?
+  addressLine1 String?
+  addressLine2 String?
+  postalCode   String?
+  city         String?
+  country      String?
 
   // Administratif
-  taxId                    String?
-  website                  String?
-  logo                     String?
+  taxId   String?
+  website String?
+  logo    String?
 
   // Contact public (anciennement OrgSettings - fusionne 2026-05-31)
-  contactEmail             String?
-  contactPhone             String?
+  contactEmail String?
+  contactPhone String?
 
-  archived                 Boolean  @default(false)
-  archivedAt               DateTime?
-  createdAt                DateTime @default(now())
+  archived   Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
 
-  quotaMaxEvents           Int?
-  quotaMaxRegistrations    Int?
-  quotaMaxStorageMB        Int?
+  quotaMaxEvents        Int?
+  quotaMaxRegistrations Int?
+  quotaMaxStorageMB     Int?
 
-  memberships              OrgMembership[]
-  events                   Event[]
-  categoryTemplates        CategoryTemplate[]
+  memberships       OrgMembership[]
+  events            Event[]
+  categoryTemplates CategoryTemplate[]
 }
 
 model OrgMembership {
@@ -111,19 +136,19 @@ enum OrgRole {
 // =====================================================
 
 model Event {
-  id               String   @id @default(cuid())
-  orgId            String
-  organization     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   title            String
-  slug             String   @unique
+  slug             String    @unique
   location         String
   date             DateTime
   logo             String?
-  registrationOpen Boolean  @default(false)
-  archived         Boolean  @default(false)
+  registrationOpen Boolean   @default(false)
+  archived         Boolean   @default(false)
   archivedAt       DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   memberships      EventMembership[]
   categories       Category[]
@@ -171,14 +196,14 @@ enum EventRole {
 // =====================================================
 
 model Category {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   eventId       String
-  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   name          String
   color         String
   number        Int
-  neutralBadge  Boolean  @default(false)
-  anonymous     Boolean  @default(false)
+  neutralBadge  Boolean        @default(false)
+  anonymous     Boolean        @default(false)
   registrations Registration[]
 
   @@unique([eventId, number])
@@ -204,52 +229,45 @@ model CategoryTemplate {
 // =====================================================
 
 model Registration {
-  id                 String             @id
-  eventId            String
-  event              Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  categoryId         String
-  category           Category           @relation(fields: [categoryId], references: [id])
-  email              String
-  lastName           String
-  firstName          String
-  structure          String
-  photo              String?
-  idDocumentType     String
-  idDocumentNumber   String
-  idDocument         String?
-  status             RegistrationStatus @default(PENDING)
-  badgePrinted       Boolean            @default(false)
-  badgePrintedAt     DateTime?
-  allAccessGranted   Boolean            @default(false)
-  rejectionReason    String?
-  rejectionDetails   String?            @db.Text
-  editToken          String?            @unique
-  editTokenExpiresAt DateTime?
-  createdAt          DateTime           @default(now())
+  // ID metier (genere par src/lib/generate-id.ts) -- format imprime sur le badge.
+  id         String   @id
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  snapshots          SubmissionSnapshot[]
+  // v2-11 : la registration appartient au compte participant. Le `User` porte
+  // le profil persistant ; chaque registration snapshote ce profil au moment de
+  // la soumission ou d'une resoumission.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
+  status           RegistrationStatus @default(PENDING)
+  badgePrinted     Boolean            @default(false)
+  badgePrintedAt   DateTime?
+  allAccessGranted Boolean            @default(false)
+  rejectionReason  String?
+  rejectionDetails String?            @db.Text
+
+  // v2-11 : snapshot inline du profil au moment de la soumission. Reecrit a
+  // chaque resoumission (pas de versionning historique). Les valeurs ici font
+  // foi pour le badge imprime et l'historique.
+  snapshotFirstName        String
+  snapshotLastName         String
+  snapshotEmail            String
+  snapshotStructure        String
+  snapshotPhoto            String
+  snapshotIdDocumentType   String
+  snapshotIdDocumentNumber String
+  snapshotIdDocument       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, eventId])
   @@index([eventId])
-  @@index([eventId, email])
   @@index([categoryId])
-}
-
-model SubmissionSnapshot {
-  id               String       @id @default(cuid())
-  registrationId   String
-  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  lastName         String
-  firstName        String
-  email            String
-  structure        String
-  categoryId       String
-  idDocumentType   String
-  idDocumentNumber String
-  photo            String?
-  idDocument       String?
-  createdAt        DateTime     @default(now())
-
-  @@index([registrationId])
+  @@index([status])
 }
 
 enum RegistrationStatus {
@@ -305,9 +323,9 @@ model PlatformSettings {
 // contact lit desormais directement event.organization.contactEmail.
 
 model EventSettings {
-  id           String  @id @default(cuid())
-  eventId      String  @unique
-  event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  eventId String @unique
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   // Note (2026-05-31) : pas de champs SMTP ici. Le SMTP est exclusivement
   // configure au niveau PlatformSettings (decision de design SMTP plateforme uniquement).
@@ -379,5 +397,13 @@ enum ActivityType {
   MEMBERSHIP_ROLE_CHANGED
   PLATFORM_SETTINGS_UPDATED
   EVENT_SETTINGS_UPDATED
-  EDIT_LINK_SENT
+
+  // v2-11 : comptes participants
+  USER_REGISTERED
+  USER_EMAIL_VERIFIED
+  USER_PASSWORD_RESET_REQUESTED
+  USER_PASSWORD_RESET_COMPLETED
+  USER_PROFILE_UPDATED
+  USER_BLOCKED
+  USER_UNBLOCKED
 }

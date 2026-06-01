@@ -7,6 +7,7 @@ afterAll(async () => {
   await prisma.category.deleteMany();
   await prisma.event.deleteMany();
   await prisma.organization.deleteMany();
+  await prisma.user.deleteMany();
 });
 
 async function setup(quotaMax: number | null = null) {
@@ -33,17 +34,29 @@ async function setup(quotaMax: number | null = null) {
 }
 
 async function mkReg(eventId: string, categoryId: string, status: "PENDING" | "APPROVED" | "REJECTED") {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const user = await prisma.user.create({
+    data: {
+      email: `q-${stamp}@x.test`,
+      password: "x",
+      name: "U",
+      emailVerifiedAt: new Date(),
+    },
+  });
   return prisma.registration.create({
     data: {
-      id: `R-${Math.random().toString(36).slice(2, 12)}`,
+      id: `R-${stamp}`,
       eventId,
       categoryId,
-      email: `${Math.random().toString(36).slice(2, 8)}@x.test`,
-      lastName: "L",
-      firstName: "F",
-      structure: "S",
-      idDocumentType: "CNI",
-      idDocumentNumber: `D-${Math.random().toString(36).slice(2, 10)}`,
+      userId: user.id,
+      snapshotEmail: `${stamp}@x.test`,
+      snapshotLastName: "L",
+      snapshotFirstName: "F",
+      snapshotStructure: "S",
+      snapshotPhoto: "uploads/test/photo.jpg",
+      snapshotIdDocumentType: "CNI",
+      snapshotIdDocumentNumber: `D-${stamp}`,
+      snapshotIdDocument: "uploads/test/doc.pdf",
       status,
     },
   });
@@ -55,6 +68,7 @@ describe("countCountableRegistrations", () => {
     await prisma.category.deleteMany();
     await prisma.event.deleteMany();
     await prisma.organization.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   it("counts PENDING + APPROVED, ignores REJECTED", async () => {
@@ -81,6 +95,7 @@ describe("assertQuotaAvailable", () => {
     await prisma.category.deleteMany();
     await prisma.event.deleteMany();
     await prisma.organization.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   it("passes when no quota set", async () => {

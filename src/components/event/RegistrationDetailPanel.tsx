@@ -59,13 +59,6 @@ export function RegistrationDetailPanel({
     alert("Document bloqué.");
   }
 
-  async function resendEditLink() {
-    setBusy(true);
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${r.id}/resend-edit-link`, { method: "POST" });
-    setBusy(false);
-    alert("Lien d'édition régénéré et envoyé.");
-  }
-
   async function toggleAllAccess() {
     await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${r.id}/all-access`, {
       method: "POST",
@@ -156,9 +149,6 @@ export function RegistrationDetailPanel({
           </Button>
           <Button variant="secondary" onClick={blockDocument} disabled={busy}>
             Bloquer ce document
-          </Button>
-          <Button variant="secondary" onClick={resendEditLink} disabled={busy}>
-            Renvoyer le lien d&apos;édition
           </Button>
           <Button variant="secondary" onClick={remove} disabled={busy}>
             Supprimer
