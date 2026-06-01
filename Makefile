@@ -117,6 +117,9 @@ test-e2e:
 	@echo "Pre-requis : make dev demarre. Premiere fois : 'docker compose -f docker-compose.dev.yml exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
 	docker compose -f docker-compose.dev.yml exec app yarn playwright test
 
+validate-badge-templates:
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
+
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint
 

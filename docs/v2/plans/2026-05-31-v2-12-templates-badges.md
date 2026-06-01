@@ -8,26 +8,27 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0  | [ ] | -- | -- |
-| 1  | [ ] | -- | -- |
-| 2  | [ ] | -- | -- |
-| 3  | [ ] | -- | -- |
-| 4  | [ ] | -- | -- |
-| 5  | [ ] | -- | -- |
-| 6  | [ ] | -- | -- |
-| 7  | [ ] | -- | -- |
-| 8  | [ ] | -- | -- |
-| 9  | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
+| 0  | [x] | 2026-06-01 | Pre-flight : deps OK (React-PDF 4.5, qrcode 1.5), helpers auth complets, OrgSettings supprime (v2-11) -> Organization.badgeTemplateId. EVENT_SETTINGS_UPDATED + PLATFORM_SETTINGS_UPDATED dans l'enum, ORG_SETTINGS_UPDATED inexistant -> log ORG_UPDATED. CI workflow absent -> integration CI sautee (par decision user). Pas de route badges/[badgeId] preexistante. |
+| 1  | [x] | 2026-06-01 | src/lib/badge-templates/types.ts : PageSize, TemplateMeta, TemplateContext, BadgeTemplate. |
+| 2  | [x] | 2026-06-01 | mm.ts (mm -> pt 2.83464567) + fonts.ts (Font.register Montserrat 4 weights + MONTSERRAT_REGISTERED marqueur). |
+| 3  | [x] | 2026-06-01 | default-v1 : meta CR80 paysage (85.6 x 54 mm) + template.tsx React-PDF (photo gauche 28x34mm, infos droite, QR + categorie pleine couleur en bas). Respect anonymous + neutralBadge. |
+| 4  | [x] | 2026-06-01 | index.ts BADGE_TEMPLATES + getTemplate + listTemplates + DEFAULT_TEMPLATE_ID. 7 tests verts (registry, getTemplate valide/null, listTemplates, validation meta, preview PNG skip Task 7). |
+| 5  | [x] | 2026-06-01 | Schema : Event.badgeTemplateId String?, Organization.badgeTemplateId String? (au lieu d'OrgSettings supprime), PlatformSettings.badgeTemplateId String @default("default-v1"). prisma db push + generate. Seed maj. |
+| 6  | [x] | 2026-06-01 | resolveBadgeTemplateId(event, organization, platform) -> string. Signature adaptee : 2eme parametre = Organization (pas OrgSettings). 5 tests cascade verts (event prioritaire, fallback org, fallback platform, org null, platform alt). |
+| 7  | [x] | 2026-06-01 | preview.png placeholder PNG 1x1 RGBA pour default-v1. scripts/copy-badge-previews.ts (Node fs/promises) + script "prebuild" dans package.json. /public/badge-previews/ ajoute au .gitignore. Test preview PNG reactive (skip retire) -> 7 tests verts. |
+| 8  | [x] | 2026-06-01 | recto-verso-v1 : meta A7 portrait (74 x 105 mm, 2 pages) + template.tsx (recto titre + photo 50x60 + identite + QR ; verso logo + titre + bande categorie 25mm). Enregistre dans le registry. Copie previews 2/2. 9 tests verts (registry + meta + 2 previews). |
+| 9  | [x] | 2026-06-01 | render.test.tsx : renderToBuffer + verification %PDF- + countPdfPages via regex `/Type /Page`. 2 tests verts (default-v1 = 1 page, recto-verso-v1 = 2 pages). |
+| 10 | [x] | 2026-06-01 | build-context.ts : buildTemplateContext(registration, options) -> TemplateContext. readFileAsDataUrl + generateQRCodeDataURL via objet `internals` (export __TEST__ pour vi.spyOn). 4 tests verts (complet, logo null, photo fail -> chaine vide, anonymous propage). |
+| 11 | [x] | 2026-06-01 | scripts/validate-badge-templates.ts (scan Event/Organization/PlatformSettings, exit 1 si orphelin). Cible Makefile `validate-badge-templates`. Integration CI sautee (par decision user, pas de .github/workflows/). |
+| 12 | [x] | 2026-06-01 | Route GET /api/admin/[orgId]/events/[eventId]/badges/[badgeId]/route.tsx : withEventAuth minRole VIEWER + check explicite hasEventPermission badge.print. resolveBadgeTemplateId + getTemplate + fallback DEFAULT_TEMPLATE_ID. buildTemplateContext + renderToStream + ReadableStream wrap. Header x-template-id pour debug/test. 4 tests verts (PDF, 1 page default, 2 pages recto-verso, fallback orphelin). |
+| 13 | [x] | 2026-06-01 | BadgeTemplatePicker.tsx Client Component (cartes + select + clear + messages + useTransition). Route PATCH /api/admin/[orgId]/events/[eventId]/settings/badge : Zod body { badgeTemplateId: string|null }, check hasEventPermission event.settings.update, validation getTemplate, log EVENT_SETTINGS_UPDATED. Page event-admin avec resolveBadgeTemplateId + effectiveLevel + redirect si pas permission. 5 tests verts (401/403/200 valide/200 null/400 unknown). |
+| 14 | [x] | 2026-06-01 | Route PATCH /api/admin/[orgId]/settings/badge : requireOrgRole MANAGER (OWNER inclus), update Organization.badgeTemplateId, log ORG_UPDATED. Page org-admin (redirect si pas role). 5 tests verts (401/403 AUDITOR/200 valide MANAGER/200 null OWNER/400 unknown). |
+| 15 | [x] | 2026-06-01 | Route PATCH /api/staff/settings/badge : requireStaff STAFF_ADMIN, Zod refuse null (NOT NULL), validation getTemplate, log PLATFORM_SETTINGS_UPDATED. Page staff (canClearToInherit=false). 5 tests verts (401/403 STAFF_OBSERVER/200 valide STAFF_ADMIN/400 null/400 unknown). |
+| 16 | [x] | 2026-06-01 | e2e/badge-template-selection.spec.ts : login event-admin -> /admin/.../settings/badge -> select recto-verso-v1 -> verifie persist BDD + data-selected -> clear inherit -> verifie null. 1 test vert. Doc maj : espace-evenement.md, espace-organisation.md, espace-staff.md (sous-section v2-12 chaque), docs/v2/README.md (entree v2-12). Helper db.ts enrichi : makeEventAdminUser + getEventBadgeTemplateId. Container app redemarre une fois pour rafraichir le client Prisma cache. |
+| 17 | [x] | 2026-06-01 | Verifs finales : tsc clean, 598 tests Vitest (68 fichiers), lint 0 erreur (19 warnings preexistants), 9/9 E2E Playwright verts (8 v2-11 + 1 v2-12), validate-badge-templates OK (0 orphelin). |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 0.
+**Derniere session** : 2026-06-01, plan **integralement termine** (toutes tasks [x]).
+**Prochaine etape** : aucun plan v2 en cours. Plans disponibles : aucun (v2-13+ a planifier).
 
 ---
 

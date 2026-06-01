@@ -156,6 +156,32 @@ export async function createTestEvent(opts: {
   return { orgId: org.id, eventId: event.id, eventSlug: event.slug, categoryId: category.id };
 }
 
+// v2-12 : cree un user staff avec EventMembership ADMIN sur un event donne.
+// Utile pour les E2E qui accedent aux pages /admin/[orgId]/events/[eventId]/*.
+export async function makeEventAdminUser(opts: {
+  scope: string;
+  eventId: string;
+  orgId: string;
+}): Promise<TestUser> {
+  const prisma = db();
+  const user = await createTestUser({ scope: opts.scope, verified: true });
+  await prisma.orgMembership.create({
+    data: { userId: user.id, orgId: opts.orgId, role: "OWNER" },
+  });
+  await prisma.eventMembership.create({
+    data: { userId: user.id, eventId: opts.eventId, role: "ADMIN" },
+  });
+  return user;
+}
+
+export async function getEventBadgeTemplateId(eventId: string): Promise<string | null> {
+  const e = await db().event.findUnique({
+    where: { id: eventId },
+    select: { badgeTemplateId: true },
+  });
+  return e?.badgeTemplateId ?? null;
+}
+
 export async function getLatestRegistrationForUser(userId: string) {
   return db().registration.findFirst({
     where: { userId },

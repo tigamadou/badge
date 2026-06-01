@@ -202,3 +202,11 @@ Dropdown affichant les orgs où l'utilisateur a une OrgMembership. Persiste le c
 
 - Spec 1 (Multi-tenancy & RBAC) : helpers d'autorisation, middleware, [matrice complète](multi-tenancy-rbac.md)
 - Spec 6 (Emails) : email d'invitation membre (OWNER / MANAGER / AUDITOR). Le test SMTP n'existe qu'au niveau staff (cf. spec 2).
+
+## v2-12 : selection du template de badge par defaut de l'organisation
+
+Plan v2-12 ajoute une page de selection du template de badge au niveau org :
+
+- **Page** : `/admin/[orgId]/settings/badge`. Affiche les templates disponibles et le template effectif (org si configure, sinon platform). Bouton « Utiliser le defaut herite » pour repasser sur null.
+- **API** : `PATCH /api/admin/[orgId]/settings/badge` (body `{ badgeTemplateId: string | null }`). Permission : OWNER ou MANAGER (via `requireOrgRole(userId, orgId, "MANAGER")`). Note (2026-05-31) : `OrgSettings` supprime -- le champ `badgeTemplateId` vit directement sur `Organization`. Le log utilise `ORG_UPDATED` (pas d'`ORG_SETTINGS_UPDATED` dans l'enum v2) avec `details = { field: "badgeTemplateId", value }`.
+- **Cascade** : utilise par `resolveBadgeTemplateId()` ; chaque event de l'org peut surcharger ce choix au niveau event.

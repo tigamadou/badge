@@ -100,6 +100,10 @@ model Organization {
   quotaMaxRegistrations Int?
   quotaMaxStorageMB     Int?
 
+  // v2-12 : id de template de badge override pour cette org (null = heritage platform).
+  // Note (2026-05-31) : OrgSettings supprime, ce champ vit directement sur Organization.
+  badgeTemplateId       String?
+
   memberships       OrgMembership[]
   events            Event[]
   categoryTemplates CategoryTemplate[]
@@ -146,6 +150,8 @@ model Event {
   date             DateTime
   logo             String?
   registrationOpen Boolean   @default(false)
+  // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).
+  badgeTemplateId  String?
   archived         Boolean   @default(false)
   archivedAt       DateTime?
   createdAt        DateTime  @default(now())
@@ -316,6 +322,10 @@ model PlatformSettings {
   recaptchaEnabled   Boolean @default(false)
   recaptchaSiteKey   String  @default("")
   recaptchaSecretKey String  @default("")
+  // v2-12 : template de badge par defaut de la plateforme (racine de la cascade).
+  // NOT NULL avec default -- garantit que resolveBadgeTemplateId renvoie toujours
+  // une valeur.
+  badgeTemplateId    String  @default("default-v1")
 }
 
 // Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs

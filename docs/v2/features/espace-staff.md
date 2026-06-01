@@ -211,3 +211,11 @@ Calcul : `isStaff=true` ET l'utilisateur n'a *pas* d'OrgMembership sur cette org
 - Spec 1 (Multi-tenancy & RBAC) : helpers `requireStaff`, middleware
 - Spec 6 (Emails) : template d'invitation, test SMTP
 - Spec 7 (Deploiement) : premier staff seedé
+
+## v2-12 : selection du template de badge par defaut de la plateforme
+
+Plan v2-12 ajoute une page de selection du template de badge au niveau plateforme :
+
+- **Page** : `/staff/settings/badge`. Affiche les templates disponibles et le template par defaut absolu. **Pas d'option « heriter »** : c'est la racine de la cascade ; `canClearToInherit={false}`. Le champ `PlatformSettings.badgeTemplateId` est NOT NULL avec `@default("default-v1")`.
+- **API** : `PATCH /api/staff/settings/badge` (body `{ badgeTemplateId: string }` -- null refuse par Zod). Permission : `STAFF_ADMIN` ou plus (via `requireStaff(userId, "STAFF_ADMIN")`). Validation : `getTemplate(id)` ; retour 400 `UNKNOWN_TEMPLATE` si orphelin. Log : `PLATFORM_SETTINGS_UPDATED` avec `details = { field: "badgeTemplateId", value }`.
+- **Cascade** : ce niveau est le fallback ultime. Le script `scripts/validate-badge-templates.ts` verifie qu'aucun `badgeTemplateId` orphelin du registry ne persiste en BDD (cible Makefile `validate-badge-templates`).

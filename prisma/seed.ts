@@ -18,6 +18,8 @@ async function main() {
       recaptchaEnabled: process.env.RECAPTCHA_SECRET_KEY ? true : false,
       recaptchaSiteKey: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "",
       recaptchaSecretKey: process.env.RECAPTCHA_SECRET_KEY || "",
+      // v2-12 : template par defaut absolu (racine de la cascade).
+      badgeTemplateId: "default-v1",
     },
     update: {},
   });

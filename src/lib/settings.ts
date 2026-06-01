@@ -114,3 +114,18 @@ export async function getPlatformPublicRecaptcha(): Promise<PublicRecaptcha> {
   const { recaptchaEnabled, recaptchaSiteKey } = await getPlatformRecaptcha();
   return { recaptchaEnabled, recaptchaSiteKey };
 }
+
+// v2-12 : cascade de resolution du template de badge.
+// Event > Organization > PlatformSettings (toujours non-null grace au @default).
+// Note (2026-05-31) : OrgSettings supprime -- le champ vit directement sur Organization.
+export function resolveBadgeTemplateId(
+  event: { badgeTemplateId: string | null } | null,
+  organization: { badgeTemplateId: string | null } | null,
+  platformSettings: { badgeTemplateId: string },
+): string {
+  return (
+    event?.badgeTemplateId ??
+    organization?.badgeTemplateId ??
+    platformSettings.badgeTemplateId
+  );
+}

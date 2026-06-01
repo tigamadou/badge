@@ -313,3 +313,11 @@ Plan v2-11 a refondu `Registration` :
 - Le modèle `SubmissionSnapshot` (historique des versions) est supprimé : on garde uniquement le snapshot courant inline, réécrit à chaque resoumission.
 - `Registration` a une contrainte `@@unique([userId, eventId])` : un user ne peut s'inscrire qu'une fois par event.
 - L'admin peut toujours créer une registration manuellement via `POST /api/admin/[orgId]/events/[eventId]/registrations`, mais avec `{ userId | email, categoryId }` (sélectionne ou retrouve un User existant) ; le profil doit être complet sur le User cible.
+
+## v2-12 : selection du template de badge
+
+Plan v2-12 ajoute une page de selection du template de badge au niveau event :
+
+- **Page** : `/admin/[orgId]/events/[eventId]/settings/badge` (Server Component + `BadgeTemplatePicker` Client). Affiche les templates disponibles via cartes (preview, label, description, format, nb de faces), le template effectif (avec niveau herite : event/org/platform), et un bouton « Utiliser le defaut herite » pour repasser sur null.
+- **API** : `PATCH /api/admin/[orgId]/events/[eventId]/settings/badge` (body `{ badgeTemplateId: string | null }`). Permission : `event.settings.update` (ADMIN d'event ou OWNER/MANAGER d'org via heritage). Validation : Zod + verification dans le registry (`getTemplate(id)`) ; retour 400 `UNKNOWN_TEMPLATE` si orphelin. Log : `EVENT_SETTINGS_UPDATED` avec `details = { field: "badgeTemplateId", value }`.
+- **Cascade de resolution** : `Event.badgeTemplateId ?? Organization.badgeTemplateId ?? PlatformSettings.badgeTemplateId` via le helper `resolveBadgeTemplateId()` de `src/lib/settings.ts`. La route GET PDF `/api/admin/[orgId]/events/[eventId]/badges/[badgeId]` consomme cette cascade et fait un fallback sur `default-v1` en cas d'id orphelin (avec un `console.warn`).
