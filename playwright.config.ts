@@ -1,15 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Config minimale v2-11 : tests E2E sur l'app dev. L'execution standard est :
+// Tests E2E. Deux modes d'execution :
 //
-//   docker compose -f docker-compose.dev.yml exec app yarn playwright test
+// 1) Dans le container (mode standard, headless) :
+//      docker compose -f docker-compose.dev.yml exec app yarn playwright test
+//    Le container embarque chromium Alpine via apk ; on l'injecte via
+//    PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser (defini dans le
+//    Dockerfile.dev ou passe explicitement).
 //
-// Le container app embarque chromium Alpine (apk add chromium) puisque les
-// binaires Playwright officiels supposent glibc. On reference le chromium
-// systeme via `executablePath`. Cote container, l'app est accessible sur
-// http://localhost:3000 (Next dev tourne dedans).
+// 2) Depuis l'hote macOS (mode UI Playwright, debug visuel) :
+//      yarn playwright install chromium   # premiere fois
+//      yarn playwright test --ui          # ou: make test-e2e-ui
+//    Sans PLAYWRIGHT_CHROMIUM_EXECUTABLE, Playwright utilise le chromium
+//    qu'il a installe localement. L'app dev doit tourner sur localhost:3000
+//    (make dev).
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const CHROMIUM_EXEC = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? "/usr/bin/chromium-browser";
+const CHROMIUM_EXEC = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,7 +37,7 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: {
-          executablePath: CHROMIUM_EXEC,
+          ...(CHROMIUM_EXEC ? { executablePath: CHROMIUM_EXEC } : {}),
           args: ["--no-sandbox", "--disable-dev-shm-usage"],
         },
       },

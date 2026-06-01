@@ -2,7 +2,7 @@
         prod prod-down prod-build prod-logs prod-seed \
         prod-db-reset prod-db-reset-v2 prod-db-push \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests \
-        test lint typecheck build logs \
+        test test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         upload deploy download-uploads download-db
 
@@ -115,7 +115,18 @@ test:
 test-e2e:
 	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."
 	@echo "Pre-requis : make dev demarre. Premiere fois : 'docker compose -f docker-compose.dev.yml exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
-	docker compose -f docker-compose.dev.yml exec app yarn playwright test
+	docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test
+
+# Mode UI Playwright (debug visuel, fenetre Electron native). S'execute sur
+# l'hote macOS, pas dans le container : il faut un display. Pre-requis :
+#   - make dev demarre (l'app doit etre joignable sur localhost:3000)
+#   - yarn install (cote hote)
+#   - yarn playwright install chromium (telecharge le binaire local, une seule fois)
+# Sans PLAYWRIGHT_CHROMIUM_EXECUTABLE, Playwright utilise son chromium integre.
+test-e2e-ui:
+	@echo "Lancement de Playwright en mode UI depuis l'hote (fenetre Electron)."
+	@echo "L'app dev doit tourner sur localhost:3000 (make dev)."
+	yarn playwright test --ui
 
 validate-badge-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
