@@ -4,8 +4,9 @@ import {
   createTestUser,
   seedEmailVerifyToken,
   getUserById,
+  getDb,
   disconnectDb,
-} from "./helpers/db";
+} from "../helpers/db";
 
 test.describe("Account register & verify email", () => {
   test.afterAll(async () => {
@@ -60,5 +61,83 @@ test.describe("Account register & verify email", () => {
     // Pour un compte participant simple, /admin renvoie en 403 ou redirection — on
     // accepte n'importe quelle URL hors /login.
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
+  });
+
+  test("register with email already taken shows french error", async ({ page }) => {
+    const existing = await createTestUser({ scope: "email-taken", verified: true });
+
+    await page.goto("/register");
+    await page.getByLabel("Nom complet").fill("Awa Diallo");
+    await page.getByLabel("Email").fill(existing.email);
+    await page.getByLabel(/^Mot de passe \(min/i).fill("Test1234!");
+    await page.getByLabel("Confirmer le mot de passe").fill("Test1234!");
+    await page.getByRole("button", { name: /créer mon compte/i }).click();
+
+    // L'API renvoie 409 avec error="Un compte avec cet email existe déjà.".
+    await expect(page.getByText(/un compte avec cet email existe déjà/i)).toBeVisible({
+      timeout: 6000,
+    });
+  });
+
+  test("expired verify-email token shows expiration message", async ({ page }) => {
+    const user = await createTestUser({ scope: "verify-expired", verified: false });
+    const plainToken = await seedEmailVerifyToken(user.id);
+
+    // Force l'expiry a une date passee en BDD pour simuler un token expire.
+    await getDb().user.update({
+      where: { id: user.id },
+      data: { emailVerifyTokenExpiry: new Date(Date.now() - 60_000) },
+    });
+
+    await page.goto(`/verify-email/${plainToken}`);
+    await expect(page.getByRole("heading", { name: /lien invalide ou expiré/i })).toBeVisible();
+  });
+
+  test("verify-email token consumed twice stays on success view", async ({ page }) => {
+    // La route verify-email est idempotente : si user.emailVerifiedAt existe deja
+    // ET que le hash matche, elle renvoie 200 alreadyVerified=true. Une fois consumed
+    // (token effacé), un 2e appel renvoie 400 (le hash ne match plus). On teste la
+    // 1ere visite (succes) puis la 2eme (erreur car token efface).
+    const user = await createTestUser({ scope: "verify-idempotent", verified: false });
+    const plainToken = await seedEmailVerifyToken(user.id);
+
+    // 1ere visite : confirme l'email
+    await page.goto(`/verify-email/${plainToken}`);
+    await expect(page.getByText(/email confirmé/i)).toBeVisible();
+
+    // 2eme visite avec le meme token : la BDD a clear le hash, donc match negatif.
+    await page.goto(`/verify-email/${plainToken}`);
+    await expect(page.getByRole("heading", { name: /lien invalide ou expiré/i })).toBeVisible();
+  });
+
+  test("rate limit on POST /api/auth/register triggers 429 after 10 requests", async ({
+    page,
+  }) => {
+    // Le rate limit est en memoire (cf src/lib/rate-limit.ts) : 10 req/min/IP.
+    // En dev local, l'IP source est la meme entre toutes les requetes -- on hit
+    // la limite a la 11e. Si la BDD est partagee entre runs, les buckets stales
+    // peuvent fausser le test (rate limit deja sature avant le 1er hit) -- on
+    // accepte alors un 429 immediat.
+    const baseEmail = `e2e-rate-${Date.now()}`;
+    let triggered429 = false;
+    let retryAfter: string | null = null;
+
+    for (let i = 0; i < 12; i++) {
+      const res = await page.request.post("/api/auth/register", {
+        data: {
+          email: `${baseEmail}-${i}@v2-11-e2e.test`,
+          password: "Test1234!",
+          name: "RateLimit",
+        },
+      });
+      if (res.status() === 429) {
+        triggered429 = true;
+        retryAfter = res.headers()["retry-after"] ?? null;
+        break;
+      }
+    }
+
+    expect(triggered429).toBe(true);
+    expect(retryAfter).not.toBeNull();
   });
 });

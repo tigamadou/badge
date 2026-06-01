@@ -3,9 +3,13 @@ import {
   cleanupE2ETestData,
   createTestUser,
   createTestEvent,
+  createTestRegistration,
+  createTestBlockedEmail,
   getLatestRegistrationForUser,
+  getDb,
   disconnectDb,
-} from "./helpers/db";
+} from "../helpers/db";
+import { loginAs } from "../helpers/auth";
 
 test.describe("Event registration flow", () => {
   test.afterAll(async () => {
@@ -24,47 +28,130 @@ test.describe("Event registration flow", () => {
   test("logged-in user with complete profile can register to an event", async ({ page }) => {
     const user = await createTestUser({ scope: "evt-flow", verified: true, profile: true });
     const { eventSlug } = await createTestEvent({ scope: "evt-flow" });
+    await loginAs(page, user);
 
-    // Login
-    await page.goto("/login");
-    await page.getByLabel("Email").fill(user.email);
-    await page.getByLabel("Mot de passe").fill(user.password);
-    await page.getByRole("button", { name: /se connecter/i }).click();
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
-
-    // Va sur /e/[slug] et clique sur "S'inscrire"
     await page.goto(`/e/${eventSlug}`);
     await page.getByRole("link", { name: /s'inscrire à cet événement/i }).click();
 
-    // Sur /e/[slug]/register : selectionne la categorie + accepte + soumet
     await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
     await page.getByLabel(/visiteur/i).check();
     await page.getByRole("checkbox").last().check();
     await page.getByRole("button", { name: /valider mon inscription/i }).click();
 
-    // Redirection vers success
     await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
     await expect(page.getByText(/votre inscription a bien été enregistrée/i)).toBeVisible();
 
-    // Verifie la registration en BDD
     const reg = await getLatestRegistrationForUser(user.id);
     expect(reg).not.toBeNull();
     expect(reg?.status).toBe("PENDING");
     expect(reg?.snapshotFirstName).toBe("Awa");
   });
 
-  test("user with incomplete profile is redirected to /account/profile/complete", async ({ page }) => {
+  test("user with incomplete profile is redirected to /account/profile/complete", async ({
+    page,
+  }) => {
     const user = await createTestUser({ scope: "evt-incomplete", verified: true, profile: false });
     const { eventSlug } = await createTestEvent({ scope: "evt-incomplete" });
-
-    await page.goto("/login");
-    await page.getByLabel("Email").fill(user.email);
-    await page.getByLabel("Mot de passe").fill(user.password);
-    await page.getByRole("button", { name: /se connecter/i }).click();
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
+    await loginAs(page, user);
 
     await page.goto(`/e/${eventSlug}/register`);
     await page.waitForURL(/\/account\/profile\/complete/, { timeout: 8000 });
     await expect(page.getByRole("heading", { name: /compléter votre profil/i })).toBeVisible();
+  });
+
+  test("already registered user sees notice + link to detail", async ({ page }) => {
+    const user = await createTestUser({
+      scope: "evt-already",
+      verified: true,
+      profile: true,
+    });
+    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-already" });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page.getByText(/déjà inscrit à cet événement/i)).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /voir le détail de mon inscription/i }),
+    ).toHaveAttribute("href", `/account/registrations/${regId}`);
+  });
+
+  test("archived event closes public page and refuses API register", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-archived", verified: true, profile: true });
+    const { eventId, eventSlug } = await createTestEvent({ scope: "evt-archived" });
+    await getDb().event.update({
+      where: { id: eventId },
+      data: { archived: true, archivedAt: new Date() },
+    });
+    await loginAs(page, user);
+
+    // UI : page publique affiche "Inscriptions fermées".
+    await page.goto(`/e/${eventSlug}`);
+    await expect(page.getByText(/inscriptions fermées/i)).toBeVisible();
+
+    // API : POST /api/events/[slug]/register renvoie 403 (CLOSED).
+    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
+      data: { categoryId: "anything" },
+    });
+    expect([403, 409]).toContain(res.status());
+  });
+
+  test("BlockedEmail blocks event registration", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-blocked", verified: true, profile: true });
+    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-blocked" });
+    await createTestBlockedEmail({ eventId, email: user.email });
+    await loginAs(page, user);
+
+    // Appel API direct : le snapshot prend l'email du User, qui est blocke -> 409 EMAIL_BLOCKED.
+    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
+      data: { categoryId },
+    });
+    expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe("EMAIL_BLOCKED");
+  });
+
+  test("org quotaMaxRegistrations enforced (429 QUOTA_EXCEEDED)", async ({ page }) => {
+    // On cree un event avec quota=1 puis on tente 2 registrations. La 2e doit
+    // echouer. Note: la route renvoie 429 (cf src/app/api/events/[slug]/register/route.ts:127),
+    // pas 409.
+    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-quota" });
+    await getDb().organization.updateMany({
+      where: { events: { some: { id: eventId } } },
+      data: { quotaMaxRegistrations: 1 },
+    });
+
+    // Premier user OK (PENDING compte dans le quota).
+    const firstUser = await createTestUser({
+      scope: "evt-quota-1",
+      verified: true,
+      profile: true,
+    });
+    await createTestRegistration({
+      userId: firstUser.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+
+    // 2e user tente l'inscription via l'API : doit etre rejete (quota atteint).
+    const secondUser = await createTestUser({
+      scope: "evt-quota-2",
+      verified: true,
+      profile: true,
+    });
+    await loginAs(page, secondUser);
+
+    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
+      data: { categoryId },
+    });
+    expect(res.status()).toBe(429);
+    const body = await res.json();
+    expect(body.code).toBe("QUOTA_EXCEEDED");
   });
 });

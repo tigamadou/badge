@@ -5,7 +5,7 @@ import {
   makeEventAdminUser,
   getEventBadgeTemplateId,
   disconnectDb,
-} from "./helpers/db";
+} from "../helpers/db";
 
 test.describe("v2-12 selection template badge (event-admin)", () => {
   test.afterAll(async () => {

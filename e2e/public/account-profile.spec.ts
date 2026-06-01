@@ -3,8 +3,11 @@ import {
   cleanupE2ETestData,
   createTestUser,
   getUserById,
+  getDb,
   disconnectDb,
-} from "./helpers/db";
+} from "../helpers/db";
+import { loginAs } from "../helpers/auth";
+import { ensureFixtures } from "../fixtures";
 
 test.describe("Account profile edit", () => {
   test.afterAll(async () => {
@@ -14,20 +17,11 @@ test.describe("Account profile edit", () => {
 
   test("user can edit profile fields and changes persist", async ({ page }) => {
     const user = await createTestUser({ scope: "profile-edit", verified: true });
-
-    // Login
-    await page.goto("/login");
-    await page.getByLabel("Email").fill(user.email);
-    await page.getByLabel("Mot de passe").fill(user.password);
-    await page.getByRole("button", { name: /se connecter/i }).click();
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
+    await loginAs(page, user);
 
     await page.goto("/account/profile");
     await expect(page.getByRole("heading", { name: /mon profil/i })).toBeVisible();
 
-    // Edition des champs texte (les uploads photo/doc demandent un fichier reel,
-    // on les saute ici et on s'attend a un profil partiellement complet apres
-    // submit -- participantProfileCompletedAt reste null).
     await page.getByLabel("Prénom").fill("Awa");
     await page.getByLabel("Nom", { exact: true }).fill("Diallo");
     await page.getByLabel(/structure/i).fill("ENSEA E2E");
@@ -35,11 +29,160 @@ test.describe("Account profile edit", () => {
 
     await page.getByRole("button", { name: /enregistrer/i }).click();
 
-    // Verification persistence
-    await page.waitForTimeout(1000); // attend la fin de l'update + refresh
+    // Verification persistence (le PUT renvoie 200 et le formulaire reste sur la
+    // page : on attend un court delai puis on lit la BDD).
+    await page.waitForTimeout(1000);
     const updated = await getUserById(user.id);
     expect(updated?.firstName).toBe("Awa");
     expect(updated?.lastName).toBe("Diallo");
     expect(updated?.structure).toBe("ENSEA E2E");
+  });
+
+  test("upload photo persists and serves via /api/files", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-upload-photo", verified: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    // Le composant ProfileForm appelle /api/account/upload?kind=photo a l'onChange.
+    await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
+
+    // Attend la fin de l'upload : l'UI affiche "Photo enregistrée : profile/<userId>/photos/...".
+    await expect(page.getByText(/photo enregistrée\s*:/i)).toBeVisible({ timeout: 10_000 });
+
+    // Sauvegarde pour persister le storageKey dans la BDD User.photo.
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await page.waitForTimeout(800);
+
+    const updated = await getDb().user.findUnique({
+      where: { id: user.id },
+      select: { photo: true },
+    });
+    expect(updated?.photo).toMatch(/^profile\/.+\/photos\/.+\.jpg$/);
+
+    // Telechargement via /api/files/[...path].
+    const res = await page.request.get(`/api/files/${updated!.photo}`);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toMatch(/image\/jpeg/);
+  });
+
+  test("upload document PDF persists and serves", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-upload-pdf", verified: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    await page.setInputFiles(
+      'input[type="file"][accept*="application/pdf"]',
+      fixtures.pdf,
+    );
+    await expect(page.getByText(/document enregistré\s*:/i)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await page.waitForTimeout(800);
+
+    const updated = await getDb().user.findUnique({
+      where: { id: user.id },
+      select: { idDocument: true },
+    });
+    expect(updated?.idDocument).toMatch(/^profile\/.+\/documents\/.+\.pdf$/);
+
+    const res = await page.request.get(`/api/files/${updated!.idDocument}`);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toMatch(/application\/pdf/);
+  });
+
+  test("upload over 5 Mo is refused with error", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-upload-large", verified: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    // L'API renvoie 413 TOO_LARGE -- l'UI affiche le message dans le state error.
+    // Le fichier "oversized" a un nom .bin et un mime octet-stream : il echouera
+    // soit sur BAD_TYPE (mime non autorise) soit sur TOO_LARGE -- on accepte les
+    // deux en verifiant juste qu'un message d'erreur s'affiche et que User.photo
+    // reste null.
+    await page.setInputFiles(
+      'input[type="file"][accept*="image/jpeg"]',
+      fixtures.oversized,
+    );
+    await expect(
+      page.getByText(/(trop volumineux|non autorisé|erreur d'upload)/i),
+    ).toBeVisible({ timeout: 10_000 });
+
+    const updated = await getDb().user.findUnique({
+      where: { id: user.id },
+      select: { photo: true },
+    });
+    expect(updated?.photo).toBeNull();
+  });
+
+  test("upload txt file is refused (bad mime)", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-upload-txt", verified: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    // Le file picker filtre par accept="image/*" : pour bypasser cote E2E on
+    // utilise setInputFiles qui ignore l'attribut accept cote client. L'API
+    // refusera le mime text/plain (BAD_TYPE 415).
+    await page.setInputFiles(
+      'input[type="file"][accept*="application/pdf"]',
+      fixtures.txt,
+    );
+    await expect(page.getByText(/(non autorisé|erreur d'upload)/i)).toBeVisible({
+      timeout: 8_000,
+    });
+  });
+
+  test("BlockedDocument does NOT affect profile save (out of scope)", async () => {
+    // BlockedDocument est une regle metier *par event* (cf schema.prisma) ; le
+    // check est applique dans /api/events/[slug]/register, pas dans
+    // /api/account/profile (cf src/app/api/account/profile/route.ts qui n'a aucun
+    // check BlockedDocument). Le test du scenario "BlockedDocument empeche
+    // l'inscription" est donc deporte vers event-register.spec.ts (T06).
+    test.skip(
+      true,
+      "BlockedDocument n'est pas check dans /api/account/profile (seulement dans /api/events/[slug]/register). Voir T06.",
+    );
+  });
+
+  test("participantProfileCompletedAt is set when all required fields are filled", async ({
+    page,
+  }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-completion", verified: true });
+
+    // Avant edition : completedAt est null.
+    let snap = await getUserById(user.id);
+    expect(snap?.participantProfileCompletedAt).toBeNull();
+
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    await page.getByLabel("Prénom").fill("Awa");
+    await page.getByLabel("Nom", { exact: true }).fill("Diallo");
+    await page.getByLabel(/structure/i).fill("ENSEA");
+    await page.getByLabel(/numéro de pièce/i).fill("CI-COMPLETION");
+
+    // Upload photo + document pour atteindre 100% des champs requis.
+    await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
+    await expect(page.getByText(/photo enregistrée\s*:/i)).toBeVisible({ timeout: 10_000 });
+    await page.setInputFiles(
+      'input[type="file"][accept*="application/pdf"]',
+      fixtures.pdf,
+    );
+    await expect(page.getByText(/document enregistré\s*:/i)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await page.waitForTimeout(1000);
+
+    snap = await getUserById(user.id);
+    expect(snap?.participantProfileCompletedAt).not.toBeNull();
   });
 });
