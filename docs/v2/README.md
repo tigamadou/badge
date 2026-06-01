@@ -54,6 +54,14 @@ Un plan par sous-spec, dans `docs/v2/plans/` (avec tracker de progression en tê
 | 7 | ~~[Reset & déploiement initial](plans/2026-05-28-v2-07-deploiement-initial.md)~~ — **abandonné** | 1 194 | 7 |
 | 11 | [Comptes participants](plans/2026-05-31-v2-11-comptes-participants.md) | 725 | 18 |
 | 12 | [Templates de badges](plans/2026-05-31-v2-12-templates-badges.md) | 622 | 17 |
+| 13 | [Couverture E2E complète](plans/2026-06-01-v2-13-e2e-coverage.md) | 711 | 31 |
+
+### Specs additionnelles (post-MVP, qualité)
+
+| Spec | Description |
+|---|---|
+| [Couverture E2E — design](specs/2026-06-01-e2e-coverage-design.md) | Stratégie, granularité, helpers Playwright, conventions de fixtures |
+| [Checklist visuelle manuelle](specs/2026-06-01-e2e-visual-review-checklist.md) | Revue UX page par page, viewport, rôles, états (vide/chargé/erreur) |
 
 ## Différences majeures avec la v1
 
