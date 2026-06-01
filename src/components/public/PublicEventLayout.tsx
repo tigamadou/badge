@@ -2,19 +2,23 @@ import Image from "next/image";
 import { formatEventDate } from "@/lib/format-date";
 
 type Props = {
+  // ADR 2026-06-01 (v2-14 Task 12) : `organization` ajoute pour cascade logo
+  // (Event.logo -> Org.logo) et lien website footer.
   event: { title: string; date: Date | string; location: string; logo?: string | null };
+  organization?: { logo?: string | null; website?: string | null };
   contact?: { email?: string; phone?: string };
   children: React.ReactNode;
 };
 
-export function PublicEventLayout({ event, contact, children }: Props) {
+export function PublicEventLayout({ event, organization, contact, children }: Props) {
+  const logoKey = event.logo ?? organization?.logo ?? null;
   return (
     <div className="min-h-screen bg-neutral-50">
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-4">
-          {event.logo && (
+          {logoKey && (
             <Image
-              src={`/api/files/${event.logo}`}
+              src={`/api/files/${logoKey}`}
               alt={event.title}
               width={56}
               height={56}
@@ -39,6 +43,18 @@ export function PublicEventLayout({ event, contact, children }: Props) {
               {contact?.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
               {contact?.email && contact?.phone && " — "}
               {contact?.phone}
+            </p>
+          )}
+          {organization?.website && (
+            <p className="mt-1">
+              <a
+                href={organization.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                {organization.website}
+              </a>
             </p>
           )}
           <p className="mt-1">Propulsé par Badge</p>

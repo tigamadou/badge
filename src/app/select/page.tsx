@@ -12,8 +12,17 @@ export default async function SelectPage() {
   const ctx = await loadUserContext(session.user.id);
   if (!ctx) redirect("/login");
 
+  // ADR 2026-06-01 (v2-14 Task 2) : etend a tous les roles org (OWNER, MANAGER, AUDITOR).
+  // Auparavant filtre `role: "OWNER"` excluait MANAGER et AUDITOR de leur propre selection.
   const orgs = await prisma.organization.findMany({
-    where: { memberships: { some: { userId: ctx.user.id, role: "OWNER" } } },
+    where: {
+      memberships: {
+        some: {
+          userId: ctx.user.id,
+          role: { in: ["OWNER", "MANAGER", "AUDITOR"] },
+        },
+      },
+    },
     select: { id: true, name: true, slug: true, archived: true },
     orderBy: { name: "asc" },
   });

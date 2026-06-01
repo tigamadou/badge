@@ -85,6 +85,24 @@ export const PATCH = withStaffAuth(
       return NextResponse.json({ error: "NOTHING_TO_UPDATE" }, { status: 400 });
     }
 
+    // ADR 2026-06-01 : seul SUPER_ADMIN peut ecrire smtpPassword / recaptchaSecretKey.
+    // Une chaine vide est ignoree (preserve la valeur existante) -- pas de restriction.
+    const writesSecret =
+      (data.smtpPassword !== undefined && data.smtpPassword !== "") ||
+      (data.recaptchaSecretKey !== undefined && data.recaptchaSecretKey !== "");
+    if (writesSecret) {
+      const me = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { staffRole: true },
+      });
+      if (me?.staffRole !== "SUPER_ADMIN") {
+        return NextResponse.json(
+          { error: "FORBIDDEN_SECRET_CHANGE" },
+          { status: 403 },
+        );
+      }
+    }
+
     await ensureSingleton();
 
     // smtpPassword/recaptchaSecretKey : si non fourni dans le PATCH, on conserve

@@ -6,6 +6,8 @@ import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole, hasOrgRole } from "@/lib/auth-helpers";
 import { EventShell } from "@/components/event/EventShell";
 import { EventOperatorShell } from "@/components/event/EventOperatorShell";
+import { EventPrinterShell } from "@/components/event/EventPrinterShell";
+import { EventViewerShell } from "@/components/event/EventViewerShell";
 
 export default async function EventLayout({
   params,
@@ -57,6 +59,31 @@ export default async function EventLayout({
       >
         {children}
       </EventOperatorShell>
+    );
+  }
+
+  // ADR 2026-06-01 (v2-14 Task 4) : shells dedies PRINTER et VIEWER.
+  if (role === "PRINTER") {
+    return (
+      <EventPrinterShell
+        org={{ id: event.organization.id, name: event.organization.name }}
+        event={{ id: event.id, title: event.title }}
+        user={{ name: ctx.user.name, email: ctx.user.email }}
+      >
+        {children}
+      </EventPrinterShell>
+    );
+  }
+
+  if (role === "VIEWER") {
+    return (
+      <EventViewerShell
+        org={{ id: event.organization.id, name: event.organization.name }}
+        event={{ id: event.id, title: event.title }}
+        user={{ name: ctx.user.name, email: ctx.user.email }}
+      >
+        {children}
+      </EventViewerShell>
     );
   }
 

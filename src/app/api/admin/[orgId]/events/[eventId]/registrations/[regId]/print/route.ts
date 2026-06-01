@@ -6,7 +6,10 @@ import { sendBadgePrintedNotification } from "@/lib/mail";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+// ADR 2026-06-01 (v2-14 Task 3) : permission badge.print = ADMIN + OPERATOR + PRINTER.
+// `minRole: "PRINTER"` couvre exactement ce besoin via la hierarchie partielle de
+// requireEventRole (ADMIN+OPERATOR englobent PRINTER ; VIEWER reste exclu).
+export const POST = withEventAuth({ minRole: "PRINTER" }, async (req, { orgId, eventId, session }, extra) => {
   const { regId } = (await extra.params) as Params;
   const existing = await prisma.registration.findUnique({ where: { id: regId } });
   if (!existing || existing.eventId !== eventId) {

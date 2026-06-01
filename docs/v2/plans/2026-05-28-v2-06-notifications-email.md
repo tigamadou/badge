@@ -31,7 +31,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 4 | [x] | 2026-05-31 | sendRegistrationConfirmation. 3 nouveaux tests, 13 cumules. Note : introduit l'API privee `__mailTesting.setResolveTransporter` car `vi.spyOn` ESM ne peut pas intercepter les appels intra-module |
 | 5 | [x] | 2026-05-31 | sendStatusNotification (APPROVED/REJECTED + lien edit 48h + escapage). 4 nouveaux tests, 17 cumules |
 | 6 | [x] | 2026-05-31 | sendBadgePrintedNotification (badge pret + contact footer). 2 nouveaux tests, 19 cumules |
-| 7 | [x] | 2026-05-31 | sendEditLinkEmail (token 32 bytes hex, expiration 48h). 2 nouveaux tests, 21 cumules |
+| 7 | [-] | 2026-06-01 | abandonnee : `sendEditLinkEmail` supprimee dans v2-11 (plus d'editToken public). Voir audit v2-14 §2.6. |
 | 8 | [x] | 2026-05-31 | sendUserInvitation (token 24h + setup-password). Signature elargie a `{ orgId?, eventId?, role? }` pour rester compatible avec les consumers existants (api/admin/.../events/.../members). 3 nouveaux tests, 24 cumules |
 | 9 | [x] | 2026-05-31 | sendPasswordResetEmail (alias staff avec subject distinct). 2 nouveaux tests, 26 cumules |
 | 10 | [x] | 2026-05-31 | sendSmtpTest (UI staff/org/event, propage les erreurs). 3 nouveaux tests, 29 cumules |

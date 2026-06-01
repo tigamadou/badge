@@ -92,6 +92,20 @@ export async function PUT(req: NextRequest) {
       if (typeof v === "string") data[k] = v;
     }
 
+    // ADR 2026-06-01 (v2-14 Task 7) : check blocage document plateforme si
+    // idDocumentNumber est modifie. eventId=NULL = blocage global.
+    if (data.idDocumentNumber !== undefined) {
+      const platformBlocked = await prisma.blockedDocument.findFirst({
+        where: { documentNumber: data.idDocumentNumber, eventId: null },
+      });
+      if (platformBlocked) {
+        return NextResponse.json(
+          { code: "DOCUMENT_BLOCKED", error: "Ce document ne peut pas etre utilise." },
+          { status: 403 },
+        );
+      }
+    }
+
     // Charge la valeur cible (existant + patch) pour recalculer la completion.
     const before = await prisma.user.findUnique({
       where: { id: session.id },

@@ -203,8 +203,11 @@ describe("PATCH /api/staff/settings", () => {
     expect(res.status).toBe(403);
   });
 
-  it("STAFF_ADMIN updates SMTP + reCAPTCHA fields, logs PLATFORM_SETTINGS_UPDATED without secret values", async () => {
-    await makeStaff("STAFF_ADMIN");
+  // ADR 2026-06-01 (v2-14 Task 1) : ecriture des secrets reservee a SUPER_ADMIN.
+  // Test rebascule en SUPER_ADMIN pour preserver la verification end-to-end de l'audit
+  // log sans valeurs secretes.
+  it("SUPER_ADMIN updates SMTP + reCAPTCHA fields, logs PLATFORM_SETTINGS_UPDATED without secret values", async () => {
+    await makeStaff("SUPER_ADMIN");
     const { PATCH } = await import("@/app/api/staff/settings/route");
     const req = new NextRequest("http://localhost/api/staff/settings", {
       method: "PATCH",

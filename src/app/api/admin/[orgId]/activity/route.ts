@@ -3,7 +3,9 @@ import type { Prisma, ActivityType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 
-export const GET = withOrgAuth("OWNER", async (req, { orgId }) => {
+// ADR 2026-06-01 (v2-14 Task 2) : lecture activity autorisee a tous les roles org
+// (OWNER, MANAGER, AUDITOR) -- conforme spec espace-organisation.
+export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
   const type = url.searchParams.get("type");
   const from = url.searchParams.get("from");

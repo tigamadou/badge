@@ -6,7 +6,9 @@ import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
 
-export const GET = withOrgAuth("OWNER", async (_req, { orgId }) => {
+// ADR 2026-06-01 (v2-14 Task 2) : lecture liste membres autorisee a tous les roles org
+// (OWNER, MANAGER, AUDITOR). La mutation (POST) reste OWNER-only.
+export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
   const memberships = await prisma.orgMembership.findMany({
     where: { orgId },
     include: {

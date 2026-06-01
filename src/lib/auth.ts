@@ -30,6 +30,12 @@ export const authOptions: AuthOptions = {
 
         await logActivity({ type: "USER_LOGIN", userId: user.id });
 
+        // ADR 2026-06-01 (v2-14 Task 14) : trace la derniere connexion reussie.
+        // Fire-and-forget : ne bloque pas le login si l'update echoue.
+        prisma.user
+          .update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
+          .catch((e) => console.error("[auth] lastLoginAt update failed", e));
+
         return {
           id: user.id,
           email: user.email,

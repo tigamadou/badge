@@ -66,6 +66,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ADR 2026-06-01 (v2-14 Task 7) : check blocage email plateforme. eventId=NULL
+  // designe un blocage global (impose par staff). Refus generique anti-enumeration.
+  const platformBlocked = await prisma.blockedEmail.findFirst({
+    where: { email, eventId: null },
+  });
+  if (platformBlocked) {
+    return NextResponse.json(
+      { code: "EMAIL_BLOCKED", error: "Cette adresse ne peut pas etre utilisee." },
+      { status: 403 },
+    );
+  }
+
   const hashed = await bcrypt.hash(password, 12);
   const plainToken = generateToken();
   const tokenHash = hashToken(plainToken);

@@ -98,18 +98,22 @@ export async function POST(
       return NextResponse.json({ code: "BAD_CATEGORY", error: "Catégorie invalide." }, { status: 400 });
     }
 
-    const blockedEmail = await prisma.blockedEmail.findUnique({
-      where: { eventId_email: { eventId: event.id, email: snapshot.snapshotEmail } },
+    // ADR 2026-06-01 (v2-14 Task 7) : cumule blocage plateforme (eventId=null)
+    // et blocage event-scoped (eventId=event.id). `in: [null, X]` n'accepte pas
+    // null dans le typage Prisma pour les champs nullable -- on passe par OR.
+    const blockedEmail = await prisma.blockedEmail.findFirst({
+      where: {
+        email: snapshot.snapshotEmail,
+        OR: [{ eventId: null }, { eventId: event.id }],
+      },
     });
     if (blockedEmail) {
       return NextResponse.json({ code: "EMAIL_BLOCKED", error: "Email bloqué." }, { status: 409 });
     }
-    const blockedDoc = await prisma.blockedDocument.findUnique({
+    const blockedDoc = await prisma.blockedDocument.findFirst({
       where: {
-        eventId_documentNumber: {
-          eventId: event.id,
-          documentNumber: snapshot.snapshotIdDocumentNumber,
-        },
+        documentNumber: snapshot.snapshotIdDocumentNumber,
+        OR: [{ eventId: null }, { eventId: event.id }],
       },
     });
     if (blockedDoc) {

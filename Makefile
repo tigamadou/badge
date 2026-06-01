@@ -1,6 +1,6 @@
 .PHONY: dev dev-down dev-build dev-restart \
         prod prod-down prod-build prod-logs prod-seed \
-        prod-db-reset prod-db-reset-v2 prod-db-push \
+        prod-db-reset  prod-db-push \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests \
         test test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
@@ -76,16 +76,7 @@ migrate-uploads-clear:
 
 # Reset complet v2 : drop+create DB, vide uploads, push schema, seed SUPER_ADMIN.
 # Ne pas confondre avec backup-prod : ce dernier doit etre execute AVANT.
-prod-db-reset-v2:
-	@echo "WARNING: This will ERASE the v1 production database and uploads!"
-	@echo "Have you run 'make backup-prod' ? (recommended)"
-	@read -p "Type 'reset-v2' to confirm: " confirm && [ "$$confirm" = "reset-v2" ] || (echo "Cancelled." && exit 1)
-	docker exec badge-db sh -c 'mysql -u root -p"$$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS badge; CREATE DATABASE badge;"'
-	docker exec badge-app sh -c 'rm -rf /app/uploads/* /app/uploads/.[!.]* 2>/dev/null; true'
-	docker exec badge-app npx --yes prisma db push
-	docker exec badge-app npx --yes prisma generate
-	docker exec badge-app yarn tsx prisma/seed.ts
-	@echo "Production database v2 reset and seeded."
+
 
 # Smoke tests post-deploiement.
 smoke-tests:
@@ -151,6 +142,12 @@ db-push:
 
 db-seed:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
+
+# ADR 2026-06-01 (v2-14 Task 15) : seed de demonstration complet (10 orgs,
+# 30 events, 200 participants). NE PAS executer en production (le smoke test
+# "0 org / 0 event" echouera). Reserve au dev local.
+db-seed-demo:
+	docker compose -f docker-compose.dev.yml exec -e SEED_MODE=demo app npx prisma db seed
 
 db-studio:
 	docker compose -f docker-compose.dev.yml exec app npx prisma studio

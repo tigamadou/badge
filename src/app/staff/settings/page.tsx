@@ -15,6 +15,17 @@ export default async function StaffSettingsPage() {
 
   const session = await getServerSession(authOptions);
 
+  // Determiner si l'utilisateur courant peut editer les secrets (smtpPassword,
+  // recaptchaSecretKey). Garde-fou ADR 2026-06-01 : reserve SUPER_ADMIN.
+  let canEditSecrets = false;
+  if (session?.user?.id) {
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { staffRole: true },
+    });
+    canEditSecrets = me?.staffRole === "SUPER_ADMIN";
+  }
+
   // Construction de la vue publique : on ne passe JAMAIS les valeurs secretes au
   // composant client. Les booleans *Set indiquent simplement leur presence.
   const safe = {
@@ -32,7 +43,7 @@ export default async function StaffSettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Parametres plateforme</h1>
-      <PlatformSettingsForm initial={safe} />
+      <PlatformSettingsForm initial={safe} canEditSecrets={canEditSecrets} />
       <TestSmtpForm defaultEmail={session?.user?.email ?? undefined} />
     </div>
   );

@@ -245,7 +245,9 @@ describe("POST /registrations/[regId]/approve", () => {
     expect(log?.eventId).toBe(event.id);
   });
 
-  it("OPERATOR cannot approve (403)", async () => {
+  // ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur registration.approve.
+  // Test inverse de l'ancien "OPERATOR cannot approve (403)" supprime.
+  it("OPERATOR can approve (200)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const u = await prisma.user.create({
       data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
@@ -256,6 +258,31 @@ describe("POST /registrations/[regId]/approve", () => {
     });
     const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    const after = await prisma.registration.findUnique({ where: { id: r.id } });
+    expect(after?.status).toBe("APPROVED");
+  });
+
+  // ADR 2026-06-01 (v2-14 Task 3) : VIEWER reste exclu (matrice).
+  it("VIEWER cannot approve (403)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `vw-${stamp}@x.test`, password: "x", name: "Vw", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-vw-a-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-vw-a-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "VIEWER" } });
     const r = await mkReg(event.id, cat.id);
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
@@ -343,6 +370,52 @@ describe("POST /registrations/[regId]/print", () => {
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
     );
     expect(res.status).toBe(409);
+  });
+
+  // ADR 2026-06-01 (v2-14 Task 3) : PRINTER autorise sur badge.print.
+  it("PRINTER can print (200)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `pr-${stamp}@x.test`, password: "x", name: "Pr", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-pr-p-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-pr-p-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "PRINTER" } });
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+  });
+
+  // ADR 2026-06-01 (v2-14 Task 3) : VIEWER reste exclu de badge.print.
+  it("VIEWER cannot print (403)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `vw-${stamp}@x.test`, password: "x", name: "Vw", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-vw-p-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-vw-p-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "VIEWER" } });
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(403);
   });
 });
 

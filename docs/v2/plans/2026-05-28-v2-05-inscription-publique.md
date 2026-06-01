@@ -38,15 +38,15 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 6 | [x] | 2026-05-31 | validators/registration.ts : Zod publicRegistrationSchema + editRegistrationSchema + ID_DOC_TYPES. Migration vers `.pipe(z.email(...))` (Zod 4). 8 tests. Non commit. |
 | 7 | [x] | 2026-05-31 | /api/upload rewrite public scope event:<slug>, mime/size/quota/token. 7 tests + afterEach cleanup uploads/events. Brise l'ancien caller v1 edit-registration (Task 16 le remplace). Non commit. |
 | 8 | [x] | 2026-05-31 | GET /api/public/events/[slug] (event + categories + public settings). 3 tests. Non commit. |
-| 9 | [x] | 2026-05-31 | POST /api/public/events/[slug]/registrations : rate-limit, recaptcha (getPlatformRecaptcha), blocklists, quota (PENDING+APPROVED), tokens, generateId+collision retry, log REGISTRATION_CREATED, sendRegistrationConfirmation. **Stub `sendRegistrationConfirmation` ajoute dans mail.ts**. 10 tests. Deviation regex `\d{13}` (plan disait `\d{12}`). Non commit. |
+| 9 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
 | 10 | [x] | 2026-05-31 | GET /api/public/verify/[badgeId] + page /verify/[badgeId] + composant BadgeVerifyView. Masque identite si Category.anonymous. Log BADGE_SCANNED. 5 tests. Non commit. |
-| 11 | [x] | 2026-05-31 | GET + POST /api/public/edit-registration/[token]. Snapshot avant update. Status -> PENDING + clear editToken/rejectionReason. Log REGISTRATION_RESUBMITTED. 6 tests + afterEach fs cleanup. Non commit. |
-| 12 | [x] | 2026-05-31 | POST /api/public/edit-registration/[token]/resend : cooldown 60s par registration + anti-enumeration (200 si token inconnu). Exporte `resetEditResendCooldownForTests`. 3 tests. Non commit. |
-| 13 | [x] | 2026-05-31 | PublicEventLayout (header logo + contact + footer) + closed.tsx (ClosedView). Substituts `formatEventDate` pour `formatDate`. Non commit. |
-| 14 | [x] | 2026-05-31 | FileUploadField + PublicRegistrationForm (Client Components, upload 2-phases, Zod safeParse, recaptcha gating, translateServerCode). Non commit. |
+| 11 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 12 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 13 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 14 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
 | 15 | [x] | 2026-05-31 | Page /e/[slug] + /e/[slug]/success. Bug-fix plan : recaptcha via `getPlatformPublicRecaptcha()` (pas via resolvePublicSettings). Refactor try/catch JSX en helper tagge pour satisfaire ESLint react-hooks/error-boundaries. Non commit. |
-| 16 | [x] | 2026-05-31 | EditRegistrationForm + page /edit-registration/[token] (rewrite v1) + /edit-registration/expired (Suspense boundary pour useSearchParams). Meme fix recaptcha que Task 15. Non commit. |
-| 17 | [x] | 2026-05-31 | public-e2e.test.ts : register -> reject -> edit -> approve -> verify ; resend sur token expire. 2 tests. Non commit. |
+| 16 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 17 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
 | 18 | [x] | 2026-05-31 | docs/v2/api/public.md cree (205 lignes), docs/v2/architecture.md section "Etat au lot D" ajoutee, docs/v2/features/inscription-publique.md avec note Statut. Non commit. |
 | 19 | [x] | 2026-05-31 | Verification finale : 483/483 tests verts (52 fichiers, +83 nouveaux Plan v2-05), make lint 0 erreurs, make typecheck 0 erreurs. Step 19.3 (smoke navigateur) reporte a l'utilisateur. |
 

@@ -66,7 +66,8 @@ type CatInput = {
   anonymous?: boolean;
 };
 
-export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
+// ADR 2026-06-01 (v2-14 Task 2) : MANAGER autorise a creer un event (spec espace-organisation).
+export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) {

@@ -26,14 +26,21 @@ export default async function OrgLayout({
   });
   if (!org) notFound();
 
-  if (!hasOrgRole(ctx, orgId, "OWNER") && !ctx.isStaff) {
+  // ADR 2026-06-01 (v2-14 Task 2) : layout org accessible aux 3 roles -- la matrice
+  // de permissions est appliquee route par route. Auparavant OWNER-only par mesure
+  // conservatrice, ce qui bloquait MANAGER/AUDITOR de l'espace org entierement.
+  if (!hasOrgRole(ctx, orgId, "AUDITOR") && !ctx.isStaff) {
     redirect("/select");
   }
 
   const orgs = await prisma.organization.findMany({
     where: ctx.isStaff
       ? {}
-      : { memberships: { some: { userId: ctx.user.id, role: "OWNER" } } },
+      : {
+          memberships: {
+            some: { userId: ctx.user.id, role: { in: ["OWNER", "MANAGER", "AUDITOR"] } },
+          },
+        },
     select: { id: true, name: true, slug: true },
     orderBy: { name: "asc" },
   });

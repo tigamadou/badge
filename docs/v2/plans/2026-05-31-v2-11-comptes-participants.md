@@ -679,6 +679,8 @@ Steps : grep final pour identifier les references restantes (demander a l'utilis
 
 > Cette section n'est pas une task numerotee (pas de commit dedie). Checklist final pour valider les criteres d'acceptation §8 de la spec.
 
+**Note 2026-06-01 (audit v2-14)** : ces criteres restent `[ ]` car non valides systematiquement par l'audit. L'audit (§2.8) note que le code livre est conforme a ~92% mais les checklists C1-C9 n'ont pas ete cochees explicitement. Les criteres seront ou bien valides par les verifs finales v2-14, ou bien declasses en `[-]` apres revue.
+
 - [ ] **C1** : `grep -E "SubmissionSnapshot|editToken|editTokenExpiresAt" /Users/amadou/Devs/projects/badge/prisma/schema.prisma | wc -l` -> `0`. Et `grep -E "emailVerifyToken|passwordResetToken|snapshotFirstName" /Users/amadou/Devs/projects/badge/prisma/schema.prisma | wc -l` -> `>= 3`.
 - [ ] **C2** : `docker compose -f docker-compose.dev.yml exec app yarn test src/app/api/auth/__tests__/` -> tous verts (>= 20 tests sur 4 routes).
 - [ ] **C3** : pages `/register`, `/login`, `/verify-email/[token]`, `/forgot-password`, `/reset-password/[token]` accessibles (`curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/<route>` -> 200 ou 307 selon auth). E2E `e2e/account-register.spec.ts` -> 2 passed.

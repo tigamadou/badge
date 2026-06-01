@@ -20,6 +20,8 @@ export type ResolvedTransport = {
   contactPhone: string;
   eventTitle?: string;
   orgName?: string;
+  // ADR 2026-06-01 (v2-14 Task 13) : `orgWebsite` ajoute pour affichage footer email.
+  orgWebsite?: string;
   logoUrl?: string;
   settings: ResolvedSettings;
 };
@@ -30,6 +32,7 @@ export type ResolvedTransport = {
 async function loadBrandingContext(ctx: TransportContext): Promise<{
   eventTitle?: string;
   orgName?: string;
+  orgWebsite?: string;
   logoUrl?: string;
   resolvedOrgId?: string;
   fromLabel: string | null;
@@ -46,7 +49,7 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
         title: true,
         logo: true,
         orgId: true,
-        organization: { select: { name: true, logo: true } },
+        organization: { select: { name: true, logo: true, website: true } },
       },
     });
     if (event) {
@@ -55,6 +58,7 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
       return {
         eventTitle: event.title,
         orgName: event.organization.name,
+        orgWebsite: event.organization.website ?? undefined,
         logoUrl: logoKey ? `${baseUrl}/api/files/${logoKey}` : undefined,
         resolvedOrgId: event.orgId,
         fromLabel: event.title,
@@ -65,11 +69,12 @@ async function loadBrandingContext(ctx: TransportContext): Promise<{
   if (ctx.orgId) {
     const org = await prisma.organization.findUnique({
       where: { id: ctx.orgId },
-      select: { name: true, logo: true },
+      select: { name: true, logo: true, website: true },
     });
     if (org) {
       return {
         orgName: org.name,
+        orgWebsite: org.website ?? undefined,
         logoUrl: org.logo ? `${baseUrl}/api/files/${org.logo}` : undefined,
         fromLabel: org.name,
         resolvedOrgId: ctx.orgId,
@@ -105,6 +110,7 @@ async function resolveTransporterImpl(ctx: TransportContext): Promise<ResolvedTr
     contactPhone: settings.contactPhone,
     eventTitle: branding.eventTitle,
     orgName: branding.orgName,
+    orgWebsite: branding.orgWebsite,
     logoUrl: branding.logoUrl,
     settings,
   };
@@ -162,6 +168,14 @@ export function buildEmail({ title, body, ctx }: BuildEmailArgs): string {
   if (ctx.contactPhone) {
     footerLines.push(
       `<p style="margin:0;color:#94a3b8;font-size:12px;">${escapeText(ctx.contactPhone)}</p>`,
+    );
+  }
+  // ADR 2026-06-01 (v2-14 Task 13) : lien orgWebsite si defini.
+  if (ctx.orgWebsite) {
+    footerLines.push(
+      `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">
+  <a href="${escapeAttr(ctx.orgWebsite)}" style="color:#94a3b8;text-decoration:none;">${escapeText(ctx.orgWebsite)}</a>
+</p>`,
     );
   }
   if (footerLines.length === 0) {
@@ -540,11 +554,24 @@ export async function sendRegistrationResubmitted(registrationId: string): Promi
   });
 }
 
+// ADR 2026-06-01 (v2-14 Task 13) : libelles FR par role injectes dans le body
+// du mail USER_INVITATION. Source de verite UI -> mail.
+const ROLE_LABELS_FR: Record<string, string> = {
+  OWNER: "Proprietaire",
+  MANAGER: "Gerant",
+  AUDITOR: "Auditeur",
+  ADMIN: "Administrateur d'evenement",
+  OPERATOR: "Operateur",
+  PRINTER: "Responsable impression",
+  VIEWER: "Lecteur",
+  SUPER_ADMIN: "Super administrateur",
+  STAFF_ADMIN: "Administrateur staff",
+  STAFF_SUPPORT: "Support staff",
+  STAFF_OBSERVER: "Observateur staff",
+};
+
 export async function sendUserInvitation(
   userId: string,
-  // `role` est conserve pour la signature attendue par les routes existantes
-  // (api/admin/.../events/.../members) ; il n'est pas affiche dans le mail pour
-  // l'instant — l'utilisateur le voit dans l'UI apres connexion.
   options?: { orgId?: string; eventId?: string; role?: string },
 ): Promise<void> {
   const user = await prisma.user.findUnique({
@@ -577,9 +604,17 @@ export async function sendUserInvitation(
     ? ` pour l'organisation <strong>${escapeText(ctx.orgName)}</strong>`
     : "";
 
+  // ADR 2026-06-01 (v2-14 Task 13) : libelle FR du role injecte dans le body
+  // si fourni par l'appelant.
+  const roleLabel = options?.role ? ROLE_LABELS_FR[options.role] : undefined;
+  const roleClause = roleLabel
+    ? `<p style="margin:0 0 16px;">Role attribue : <strong>${escapeText(roleLabel)}</strong>.</p>`
+    : "";
+
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${safeName}</strong>,</p>
     <p style="margin:0 0 16px;">Un compte vient d'être créé pour vous sur Badge${orgClause}.</p>
+    ${roleClause}
     <p style="margin:0 0 24px;">Cliquez sur le bouton ci-dessous pour définir votre mot de passe et activer votre compte :</p>
     <p style="margin:0 0 24px;text-align:center;">
       <a href="${baseUrl}/setup-password?token=${inviteToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Définir mon mot de passe</a>

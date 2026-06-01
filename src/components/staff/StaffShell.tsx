@@ -52,9 +52,18 @@ export function StaffShell({
       <div className="flex-1 flex flex-col">
         <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
           <div className="text-sm text-slate-500">Espace staff applicatif</div>
-          <Link href="/profile" className="text-sm text-slate-700 hover:underline">
-            Mon profil
-          </Link>
+          <div className="flex items-center gap-4 text-sm">
+            <Link href="/profile" className="text-slate-700 hover:underline">
+              Mon profil
+            </Link>
+            <Link
+              href="/api/auth/signout"
+              prefetch={false}
+              className="text-slate-700 hover:underline"
+            >
+              Se déconnecter
+            </Link>
+          </div>
         </header>
         <main className="flex-1 p-6 bg-slate-50">{children}</main>
       </div>

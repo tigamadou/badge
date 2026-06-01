@@ -137,7 +137,9 @@ describe("OPERATOR restrictions (smoke)", () => {
     vi.mocked(getServerSession).mockReset();
   });
 
-  it("OPERATOR can scan but cannot approve / PATCH / DELETE category (criteres #2, #10)", async () => {
+  // ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur approve (etait ADMIN-only).
+  // PATCH registration et DELETE category restent ADMIN-only.
+  it("OPERATOR can scan and approve, but cannot PATCH / DELETE category (criteres #2, #10)", async () => {
     const op = await prisma.user.create({
       data: {
         email: "op@journey.test",
@@ -203,7 +205,8 @@ describe("OPERATOR restrictions (smoke)", () => {
     );
     expect(rscan.status).toBe(200);
 
-    // approve : 403 (ADMIN minRole)
+    // ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur registration.approve.
+    // L'ancien comportement "OPERATOR cannot approve" est supprime.
     const { POST: approve } = await import(
       "@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/approve/route"
     );
@@ -216,7 +219,7 @@ describe("OPERATOR restrictions (smoke)", () => {
         params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: reg.id }),
       } as never,
     );
-    expect(rapp.status).toBe(403);
+    expect(rapp.status).toBe(200);
 
     // PATCH registration : 403
     const { PATCH } = await import(

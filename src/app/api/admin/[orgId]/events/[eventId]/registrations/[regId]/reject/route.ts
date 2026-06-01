@@ -12,7 +12,8 @@ const schema = z.object({
   details: z.string().max(2000).optional(),
 });
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+// ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur `registration.reject` par la matrice.
+export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, eventId, session }, extra) => {
   const { regId } = (await extra.params) as Params;
   const json = await req.json().catch(() => null);
   const parsed = schema.safeParse(json);

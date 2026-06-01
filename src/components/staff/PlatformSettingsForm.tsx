@@ -15,7 +15,18 @@ export type PublicSettings = {
   recaptchaSecretKeySet: boolean;
 };
 
-export function PlatformSettingsForm({ initial }: { initial: PublicSettings }) {
+export function PlatformSettingsForm({
+  initial,
+  canEditSecrets = false,
+}: {
+  initial: PublicSettings;
+  /**
+   * ADR 2026-06-01 : smtpPassword et recaptchaSecretKey sont editables uniquement
+   * par SUPER_ADMIN. Pour les autres roles staff, les champs sont desactives et
+   * un avertissement est affiche.
+   */
+  canEditSecrets?: boolean;
+}) {
   const router = useRouter();
   const [form, setForm] = useState({
     smtpHost: initial.smtpHost,
@@ -70,6 +81,13 @@ export function PlatformSettingsForm({ initial }: { initial: PublicSettings }) {
 
   return (
     <div className="space-y-4 max-w-2xl">
+      {!canEditSecrets && (
+        <div className="rounded bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-900">
+          Les champs <strong>Mot de passe SMTP</strong> et{" "}
+          <strong>Secret key reCAPTCHA</strong> sont reserves au role
+          SUPER_ADMIN. Vous pouvez modifier les autres parametres normalement.
+        </div>
+      )}
       {msg && (
         <div className="rounded bg-blue-50 border border-blue-200 px-3 py-2 text-sm">
           {msg}
@@ -103,10 +121,11 @@ export function PlatformSettingsForm({ initial }: { initial: PublicSettings }) {
         <Field
           label={`Mot de passe SMTP ${
             initial.smtpPasswordSet ? "(rempli — saisir pour remplacer)" : ""
-          }`}
+          }${canEditSecrets ? "" : " (reserve SUPER_ADMIN)"}`}
           type={showSecrets ? "text" : "password"}
           value={form.smtpPassword}
           onChange={(v) => setForm((f) => ({ ...f, smtpPassword: v }))}
+          disabled={!canEditSecrets}
         />
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -140,10 +159,11 @@ export function PlatformSettingsForm({ initial }: { initial: PublicSettings }) {
         <Field
           label={`Secret key ${
             initial.recaptchaSecretKeySet ? "(rempli — saisir pour remplacer)" : ""
-          }`}
+          }${canEditSecrets ? "" : " (reserve SUPER_ADMIN)"}`}
           type={showSecrets ? "text" : "password"}
           value={form.recaptchaSecretKey}
           onChange={(v) => setForm((f) => ({ ...f, recaptchaSecretKey: v }))}
+          disabled={!canEditSecrets}
         />
       </section>
 
@@ -172,11 +192,13 @@ function Field({
   value,
   onChange,
   type = "text",
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
+  disabled?: boolean;
 }) {
   return (
     <label className="block">
@@ -185,7 +207,8 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded border px-3 py-1.5 text-sm"
+        disabled={disabled}
+        className="mt-1 w-full rounded border px-3 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
       />
     </label>
   );

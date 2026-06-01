@@ -48,6 +48,9 @@ model User {
   blocked       Boolean @default(false)
   blockedReason String?
 
+  // v2-14 Task 14 : derniere connexion reussie (mise a jour par NextAuth signIn callback).
+  lastLoginAt DateTime?
+
   orgMemberships   OrgMembership[]
   eventMemberships EventMembership[]
   activityLogs     ActivityLog[]
@@ -282,26 +285,32 @@ enum RegistrationStatus {
   REJECTED
 }
 
+// ADR 2026-06-01 (v2-14 Task 7) : eventId nullable. NULL = blocage plateforme
+// (par staff), valeur = blocage event-scoped (comportement existant preserve).
+// Vu la semantique "multi-NULL toleres" de MySQL InnoDB sur UNIQUE, le check
+// d'unicite pour les blocages plateforme est applicatif (findFirst avant insert).
 model BlockedEmail {
   id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String?
+  event     Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   email     String
   reason    String?
   createdAt DateTime @default(now())
 
   @@unique([eventId, email])
+  @@index([email])
 }
 
 model BlockedDocument {
   id             String   @id @default(cuid())
-  eventId        String
-  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId        String?
+  event          Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   documentNumber String
   reason         String?
   createdAt      DateTime @default(now())
 
   @@unique([eventId, documentNumber])
+  @@index([documentNumber])
 }
 
 // =====================================================
@@ -416,4 +425,13 @@ enum ActivityType {
   USER_PROFILE_UPDATED
   USER_BLOCKED
   USER_UNBLOCKED
+
+  // v2-14 Task 6 : hard delete org tracee
+  ORG_DELETED
+
+  // v2-14 Task 7 (ADR blocklist scope plateforme) : blocages globaux par staff.
+  PLATFORM_BLOCKED_EMAIL_ADDED
+  PLATFORM_BLOCKED_EMAIL_REMOVED
+  PLATFORM_BLOCKED_DOCUMENT_ADDED
+  PLATFORM_BLOCKED_DOCUMENT_REMOVED
 }

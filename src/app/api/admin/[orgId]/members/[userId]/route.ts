@@ -90,7 +90,12 @@ export async function DELETE(req: NextRequest, { params }: Params): Promise<Resp
     throw err;
   }
 
-  const ownerCount = await prisma.orgMembership.count({ where: { orgId, role: "OWNER" } });
+  // ADR 2026-06-01 (v2-14 Task 2) : filtrer user.archived=false pour aligner sur
+  // assertNotLastOwner (sinon un OWNER archive serait compte et masquerait le
+  // garde-fou last-owner).
+  const ownerCount = await prisma.orgMembership.count({
+    where: { orgId, role: "OWNER", user: { archived: false } },
+  });
   const target = await prisma.orgMembership.findUnique({
     where: { userId_orgId: { userId, orgId } },
   });

@@ -117,7 +117,7 @@ export const PATCH = withStaffAuth<{ orgId: string }>(
 );
 
 export const DELETE = withStaffAuth<{ orgId: string }>(
-  async (req, _ctx, extra) => {
+  async (req, { session }, extra) => {
     const { orgId } = await extra.params;
     const org = await prisma.organization.findUnique({
       where: { id: orgId },
@@ -144,6 +144,18 @@ export const DELETE = withStaffAuth<{ orgId: string }>(
         { status: 400 },
       );
     }
+
+    // ADR 2026-06-01 (v2-14 Task 6) : tracer ORG_DELETED AVANT la cascade.
+    // On loggue avec orgId=null pour que l'entree survive a la suppression de
+    // l'org elle-meme (sinon FK SetNull casserait le lien). targetId conserve
+    // l'orgId d'origine pour audit.
+    await logActivity({
+      type: "ORG_DELETED",
+      userId: session.user.id,
+      targetId: orgId,
+      details: { name: org.name, slug: org.slug },
+      req,
+    });
 
     // Cascade delete via onDelete:Cascade sur tous les FK enfants
     // (OrgMembership, Event -> EventMembership -> Category -> Registration...).

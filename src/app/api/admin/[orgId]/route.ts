@@ -5,13 +5,28 @@ import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 
 export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
+  // ADR 2026-06-01 (v2-14 Task 10) : select enrichi avec champs administratifs
+  // (legalName, adresse, taxId, website, logo, contacts). Auparavant tronque
+  // aux compteurs/quotas -- la page settings org n'affichait pas ces infos.
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: {
       id: true,
       name: true,
       slug: true,
+      legalName: true,
+      addressLine1: true,
+      addressLine2: true,
+      postalCode: true,
+      city: true,
+      country: true,
+      taxId: true,
+      website: true,
+      logo: true,
+      contactEmail: true,
+      contactPhone: true,
       archived: true,
+      archivedAt: true,
       createdAt: true,
       quotaMaxEvents: true,
       quotaMaxRegistrations: true,

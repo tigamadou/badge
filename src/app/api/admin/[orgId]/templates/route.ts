@@ -20,7 +20,8 @@ export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
   return NextResponse.json({ templates });
 });
 
-export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
+// ADR 2026-06-01 (v2-14 Task 2) : MANAGER autorise sur CategoryTemplate CRUD (spec).
+export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = templateSchema.safeParse(json);
   if (!parsed.success) {

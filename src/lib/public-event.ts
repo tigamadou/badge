@@ -10,7 +10,11 @@ export class PublicEventError extends Error {
 }
 
 export type PublicEventBundle = {
-  event: Event & { organization: Pick<Organization, "id" | "name" | "slug"> };
+  // ADR 2026-06-01 (v2-14 Task 12) : `organization.logo` et `organization.website`
+  // exposes pour cascade UI publique (fallback logo + lien website footer).
+  event: Event & {
+    organization: Pick<Organization, "id" | "name" | "slug" | "logo" | "website">;
+  };
   categories: Category[];
   settings: PublicSettings;
 };
@@ -18,7 +22,11 @@ export type PublicEventBundle = {
 export async function loadPublicEventBySlug(slug: string): Promise<PublicEventBundle> {
   const event = await prisma.event.findUnique({
     where: { slug },
-    include: { organization: { select: { id: true, name: true, slug: true } } },
+    include: {
+      organization: {
+        select: { id: true, name: true, slug: true, logo: true, website: true },
+      },
+    },
   });
   if (!event) throw new PublicEventError("NOT_FOUND");
   if (event.archived || !event.registrationOpen) throw new PublicEventError("CLOSED");

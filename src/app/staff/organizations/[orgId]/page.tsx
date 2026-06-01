@@ -77,6 +77,13 @@ export default async function OrgDetailPage({
             </div>
           )}
         </div>
+        {/* ADR 2026-06-01 (v2-14 Task 5) : acces direct a l'espace org en mode staff. */}
+        <Link
+          href={`/admin/${org.id}`}
+          className="rounded bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-700"
+        >
+          Entrer dans l&apos;organisation →
+        </Link>
       </div>
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -13,7 +13,8 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    await requireOrgRole(session.user.id, orgId, "OWNER");
+    // ADR 2026-06-01 (v2-14 Task 2) : MANAGER autorise (spec espace-organisation).
+    await requireOrgRole(session.user.id, orgId, "MANAGER");
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.httpStatus });
