@@ -6,7 +6,7 @@ import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 
-export const GET = withOrgAuth("OWNER", async (req, { orgId }) => {
+export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
   const archived = url.searchParams.get("archived");
   const registrationOpen = url.searchParams.get("registrationOpen");

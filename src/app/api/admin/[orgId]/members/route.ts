@@ -41,13 +41,16 @@ export const GET = withOrgAuth("OWNER", async (_req, { orgId }) => {
   return NextResponse.json({ members: items });
 });
 
-const inviteSchema = z.object({
-  email: z
-    .string()
-    .email()
-    .transform((s) => s.toLowerCase().trim()),
-  name: z.string().min(1).max(120),
-});
+const inviteSchema = z
+  .object({
+    email: z
+      .string()
+      .email()
+      .transform((s) => s.toLowerCase().trim()),
+    name: z.string().min(1).max(120),
+    role: z.enum(["OWNER", "MANAGER", "AUDITOR"]).default("OWNER"),
+  })
+  .strict();
 
 export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
@@ -58,7 +61,7 @@ export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
       { status: 400 },
     );
   }
-  const { email, name } = parsed.data;
+  const { email, name, role } = parsed.data;
 
   let user = await prisma.user.findUnique({ where: { email } });
   let isNewUser = false;
@@ -93,14 +96,14 @@ export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
     return NextResponse.json({ ok: true, alreadyMember: true }, { status: 200 });
   }
 
-  await prisma.orgMembership.create({ data: { userId: user.id, orgId, role: "OWNER" } });
+  await prisma.orgMembership.create({ data: { userId: user.id, orgId, role } });
 
   await logActivity({
     type: "MEMBERSHIP_ADDED",
     userId: session.user.id,
     orgId,
     targetId: user.id,
-    details: { role: "OWNER", isNewUser },
+    details: { role, isNewUser },
     req,
   });
 

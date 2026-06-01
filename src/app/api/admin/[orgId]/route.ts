@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 
-export const GET = withOrgAuth("OWNER", async (_req, { orgId }) => {
+export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: {

@@ -12,7 +12,7 @@ const templateSchema = z.object({
   anonymous: z.boolean().optional(),
 });
 
-export const GET = withOrgAuth("OWNER", async (_req, { orgId }) => {
+export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
   const templates = await prisma.categoryTemplate.findMany({
     where: { orgId },
     orderBy: [{ number: "asc" }, { name: "asc" }],
