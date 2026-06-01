@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -46,7 +46,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
     return data.storageKey as string;
   }
 
-  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
     setError(null);
@@ -56,7 +56,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
     if (key) setPhoto(key);
   }
 
-  async function handleDoc(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleDoc(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
     setError(null);
@@ -66,23 +66,27 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
     if (key) setIdDocument(key);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSaving(true);
     try {
+      // On omet les chaines vides : le Zod schema cote API exige min(1) et
+      // refuserait sinon. Cela permet une sauvegarde partielle (ex : avant
+      // d'avoir upload la photo).
+      const payload: Record<string, string> = {};
+      if (firstName.trim()) payload.firstName = firstName;
+      if (lastName.trim()) payload.lastName = lastName;
+      if (structure.trim()) payload.structure = structure;
+      if (photo.trim()) payload.photo = photo;
+      if (idDocumentType.trim()) payload.idDocumentType = idDocumentType;
+      if (idDocumentNumber.trim()) payload.idDocumentNumber = idDocumentNumber;
+      if (idDocument.trim()) payload.idDocument = idDocument;
+
       const res = await fetch("/api/account/profile", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          structure,
-          photo,
-          idDocumentType,
-          idDocumentNumber,
-          idDocument,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

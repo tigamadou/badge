@@ -49,3 +49,8 @@ backups/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright (v2-11)
+/test-results/
+/playwright-report/
+/playwright/.cache/

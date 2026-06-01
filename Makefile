@@ -113,9 +113,9 @@ test:
 	docker compose -f docker-compose.dev.yml exec app yarn vitest run
 
 test-e2e:
-	@echo "Playwright tests s'executent depuis l'hote (chromium local) contre http://localhost:3000."
-	@echo "Pre-requis : make dev demarre, et la premiere fois : yarn playwright install chromium"
-	yarn playwright test
+	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."
+	@echo "Pre-requis : make dev demarre. Premiere fois : 'docker compose -f docker-compose.dev.yml exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
+	docker compose -f docker-compose.dev.yml exec app yarn playwright test
 
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint
