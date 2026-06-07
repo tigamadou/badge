@@ -29,7 +29,7 @@ export default function LoginPage() {
       setError("Email ou mot de passe incorrect");
       setLoading(false);
     } else {
-      router.push("/admin");
+      router.push("/select");
     }
   }
 

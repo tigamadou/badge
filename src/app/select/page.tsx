@@ -33,6 +33,9 @@ export default async function SelectPage() {
   if (!ctx.isStaff && orgs.length === 0) {
     redirect("/profile?message=no-org");
   }
+  if (ctx.isStaff && orgs.length === 0) {
+    redirect("/staff");
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

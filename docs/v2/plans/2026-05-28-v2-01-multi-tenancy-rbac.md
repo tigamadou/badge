@@ -27,7 +27,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
 | 0 | [x] | 2026-05-31 | Step 0.1 OK (branche feat/v2-implementation, arbre propre). Step 0.2 skippe sur decision utilisateur (pas de donnees critiques en BDD dev). |
-| 1 | [x] | 2026-05-31 | Schema v2 + seed (SUPER_ADMIN aligne sur spec, pas STAFF_ADMIN comme le plan disait). Migrations v1 supprimees. BDD `investiture` (DATABASE_URL legacy v1, conservee). 14 tables, 1 user SUPER_ADMIN seede. Step 1.7 (commit) skippe : commit final en fin de Lot A. |
+| 1 | [x] | 2026-05-31 | Schema v2 + seed (SUPER_ADMIN aligne sur spec, pas STAFF_ADMIN comme le plan disait). Migrations v1 supprimees. BDD `badge` (DATABASE_URL). 14 tables, 1 user SUPER_ADMIN seede. Step 1.7 (commit) skippe : commit final en fin de Lot A. |
 | 2 | [x] | 2026-05-31 | next-auth.d.ts (JWT minimal userId+isStaff) + auth.ts (SessionUser/UserContext/OrgMembershipLite/EventMembershipLite/EffectiveEventRole). Step 2.3 commit skippe. |
 | 3 | [x] | 2026-05-31 | user-context.ts + test (4/4 passent en 201ms). Ajoute l'alias `@/` a vitest.config.ts (manquant). Test bonus "archived user" en plus des 3 du plan. Step 3.5 commit skippe. |
 | 4 | [x] | 2026-05-31 | auth-helpers.ts + test (38/38 passent en 137ms). Matrice EVENT_PERMISSION_ROLES (16 permissions), hierarchies staff/org/event, effectiveEventRole avec heritages MANAGER->ADMIN et AUDITOR->VIEWER. Step 4.5 commit skippe. |
@@ -38,14 +38,14 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 9 | [x] | 2026-05-31 | src/middleware.ts reecrit (scope checks /admin, /staff, /profile + isStaff). Smoke test curl skippe (routes v1 cassent encore, Task 10 nettoie). |
 | 10 | [x] | 2026-05-31 | Identification des imports v1 casses (20+ fichiers api/, 3 pages admin/). Annotation faite dans docs/v2/architecture.md (section "Etat au lot A"). Pas de modification de routes (Plans 2-5 nettoient). |
 | 11 | [x] | 2026-05-31 | integration.test.ts : 11 scenarios couvrant SUPER_ADMIN/STAFF_ADMIN/OWNER/MANAGER/AUDITOR/PRINTER/VIEWER + last-owner + last-super-admin. 11/11 passent en 743ms. |
-| 12 | [x] | 2026-05-31 | Full suite : 123/131 passent. Les 8 fails sont dans 2 fichiers v1 obsoletes (auth.test.ts v1 sur checkRole, mail.test.ts v1 sur prisma.settings) - cohérent avec Task 10 (Plans 2-5 nettoient). Idempotence vérifiée (DROP investiture + push + seed + 96/96 tests v2 verts). Step 12.3 (git log) skippé : commit final en fin de Lot A. |
+| 12 | [x] | 2026-05-31 | Full suite : 123/131 passent. Les 8 fails sont dans 2 fichiers v1 obsoletes (auth.test.ts v1 sur checkRole, mail.test.ts v1 sur prisma.settings) - cohérent avec Task 10 (Plans 2-5 nettoient). Idempotence vérifiée (DROP badge + push + seed + 96/96 tests v2 verts). Step 12.3 (git log) skippé : commit final en fin de Lot A. |
 
 **Derniere session** : 2026-05-31 - Lot A complet (Tasks 0-12). 96 tests v2 verts (user-context, auth-helpers, auth-guards, settings, activity-log, integration). 8 fails dans 2 fichiers v1 obsoletes (auth.test.ts, mail.test.ts) - attendus, nettoyes par Plans 2-5.
 **Prochaine etape** : Lot B Plan v2-02 espace staff (terminé). ~~Plan v2-07 reset~~ — **abandonné 2026-05-31** : pas de déploiement prod planifié. Suite : Lot C Plan v2-03 espace organisation (terminé 2026-05-31). Prochaine : Plan v2-04 espace événement.
 
 > **Note conteneurs** : les conteneurs docker-compose s'appellent `badge-mysql-1`, `badge-app-1`, etc. (avec suffixe `-1`), pas `badge-db` / `badge-app`. Les commandes `docker exec badge-db ...` du plan doivent etre adaptees a `docker exec badge-mysql-1 ...`.
 
-> **Note BDD** : la BDD effective s'appelle `investiture` (heritage v1, conservee via DATABASE_URL dans .env), pas `badge` comme le plan suppose. Les commandes du plan referencant `badge` doivent cibler `investiture`. Aucun impact fonctionnel.
+> **Note BDD** : la BDD s'appelle `badge` (renommage 2026-06-07, l'ancien nom `investiture` etait un heritage v1).
 
 > **Note seed** : le seed cree un `SUPER_ADMIN` (aligne sur la spec deploiement-initial.md) avec env vars `SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_PASSWORD`, alors que le plan disait `STAFF_ADMIN` / `SEED_STAFF_*`. Ecart justifie : le seed amorce la plateforme avec le role au sommet.
 

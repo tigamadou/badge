@@ -50,7 +50,7 @@ Toutes les variables vivent dans `.env.production` a la racine du projet sur le 
 
 | Section | Variable | Description |
 |---------|----------|-------------|
-| Base de donnees | `DATABASE_URL` | URL MySQL au format `mysql://root:<password>@mysql:3306/<dbname>`. Par defaut `badge` en nouvelle prod v2. **Sur une instance heritee de v1, conserver `investiture`** pour eviter une migration de connexion (cf note plus bas). |
+| Base de donnees | `DATABASE_URL` | URL MySQL au format `mysql://root:<password>@mysql:3306/badge`. |
 | Base de donnees | `MYSQL_ROOT_PASSWORD` | Mot de passe root MySQL, reutilise par les cibles `backup-prod` / `prod-db-reset-v2` / `rollback-prod`. |
 | NextAuth | `NEXTAUTH_SECRET` | Cle de signature des JWT NextAuth. **Generer avec** `openssl rand -base64 32`. |
 | NextAuth | `NEXTAUTH_URL` | URL publique HTTPS de l'app (ex : `https://badge.exemple.tld`). |
@@ -72,20 +72,27 @@ Toutes les variables vivent dans `.env.production` a la racine du projet sur le 
 - **reCAPTCHA plateforme = source unique** : une seule paire de cles Google partagee pour tous les events. Aucun override `OrgSettings` ou `EventSettings`. Laisser vide pour desactiver completement le widget.
 - **Plus de variables v1** : `SMTP_*` (sans prefixe `PLATFORM_`), `SEED_ADMIN_*`, `RECAPTCHA_SITE_KEY` (sans `NEXT_PUBLIC_`) **ne sont plus lues par le code v2**. Si elles trainent dans l'ancien `.env.production` de la v1, les supprimer.
 
-### 2.3 Nom de la base de donnees (legacy vs nouvelle prod)
+### 2.3 Nom de la base de donnees
 
-Le fichier `.env.production.example` versionne pointe par defaut vers la base `investiture` (heritage v1, conservee si l'instance prod est une v1 a migrer). Le `docker-compose.yml` cree quant a lui une base `badge` par defaut (`MYSQL_DATABASE: badge`), et les cibles `backup-prod` / `prod-db-reset-v2` / `rollback-prod` du `Makefile` operent sur la base **`badge`**.
-
-**Choix par instance** :
-
-- **Nouvelle prod v2 (depuis zero)** : utiliser `badge`. Modifier `DATABASE_URL` en `mysql://root:...@mysql:3306/badge`. Les cibles Makefile sont alignees, rien d'autre a faire.
-- **Migration depuis v1** : possibilite de conserver le nom historique `investiture`. Dans ce cas, il faut **adapter** les references `badge` dans le `Makefile` (cibles `backup-prod`, `prod-db-reset-v2`, `rollback-prod`) en `investiture`, et faire de meme pour `MYSQL_DATABASE` dans `docker-compose.yml`. Plus simple : renommer la base au moment du reset (c'est l'occasion).
-
-> **Recommandation** : sur la mise en route v2, **passer a `badge`**. Le `Makefile` est deja aligne, c'est la voie qui demande zero patch.
+La base s'appelle `badge` partout : `DATABASE_URL`, `MYSQL_DATABASE` (cf `docker-compose.yml` et `docker-compose.dev.yml`), et les cibles `backup-prod` / `prod-db-reset-v2` / `rollback-prod` du `Makefile`. Aucun patch a appliquer.
 
 ### 2.4 Note environnement de dev
 
-En **dev local**, la base s'appelle toujours `investiture` (cf `.env`) — c'est un nom legacy v1 conserve pour eviter de casser les volumes existants des developpeurs. Les conteneurs dev portent les noms automatiques `badge-mysql-1`, `badge-app-1` (suffixe `-1` ajoute par Docker Compose puisqu'aucun `container_name` n'est defini dans `docker-compose.dev.yml`). En **prod**, les conteneurs portent les noms fixes `badge-app`, `badge-db`, `badge-pma`, `badge-caddy` (cf `docker-compose.yml`).
+En **dev local**, la base s'appelle `badge` (cf `.env`). Les conteneurs dev portent les noms automatiques `badge-mysql-1`, `badge-app-1` (suffixe `-1` ajoute par Docker Compose puisqu'aucun `container_name` n'est defini dans `docker-compose.dev.yml`). En **prod**, les conteneurs portent les noms fixes `badge-app`, `badge-db`, `badge-pma`, `badge-caddy` (cf `docker-compose.yml`).
+
+**Domaines dev `*.badge.local`** : un reverse proxy Caddy est inclus dans `docker-compose.dev.yml` et expose les services en HTTP sur le port 80 de l'hote :
+
+- `http://badge.local` -> app (Next.js)
+- `http://pma.badge.local` -> phpmyadmin
+- `http://mail.badge.local` -> mailpit (UI)
+
+Pour activer ces URL, ajouter au `/etc/hosts` de la machine hote (sudo requis) :
+
+```
+127.0.0.1 badge.local pma.badge.local mail.badge.local
+```
+
+Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent expose en parallele.
 
 ---
 

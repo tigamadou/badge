@@ -45,12 +45,21 @@ make dev
 
 Services disponibles :
 
-| Service | Port | Description |
-|---------|------|-------------|
-| app | 3000 | Next.js (hot reload) |
-| mysql | 3306 | Base de donnees MySQL |
-| phpmyadmin | 8080 | Interface admin BDD |
-| mailpit | 8025 | Capture d'emails |
+| Service | Port direct | URL via Caddy (HTTP) | Description |
+|---------|-------------|----------------------|-------------|
+| app | 3000 | http://badge.local | Next.js (hot reload) |
+| mysql | 3306 | -- | Base de donnees MySQL |
+| phpmyadmin | 8080 | http://pma.badge.local | Interface admin BDD |
+| mailpit | 8025 | http://mail.badge.local | Capture d'emails |
+| caddy | 80 | -- | Reverse proxy dev (routes les sous-domaines `*.badge.local`) |
+
+**Activer les URLs `*.badge.local`** : ajouter une seule ligne au `/etc/hosts` de la machine hote (sudo requis, a faire une seule fois) :
+
+```bash
+echo "127.0.0.1 badge.local pma.badge.local mail.badge.local" | sudo tee -a /etc/hosts
+```
+
+Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent exposes en parallele : aucun outil pointant vers `localhost` n'est casse.
 
 ### Lancer en production
 
@@ -100,7 +109,8 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 | `make prod` | Demarrer en production |
 | `make deploy` | Deployer sur le serveur |
 | `make db-push` | Appliquer le schema Prisma |
-| `make db-seed` | Initialiser les donnees |
+| `make db-seed` | Seed minimal (4 staff + 1 participant historique) |
+| `make db-seed-demo` | Seed demonstration (10 orgs, 30 events, 200 participants) -- dev uniquement |
 | `make test` | Lancer les tests |
 | `make lint` | Lancer le linter |
 

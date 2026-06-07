@@ -405,7 +405,7 @@ Plan 2 (espace staff applicatif) terminé. Disponible :
 
 Plan 1 (multi-tenancy & RBAC) terminé. Les fondations sont en place :
 
-- Schéma Prisma v2 + seed `SUPER_ADMIN` (`investiture` DB, 14 tables)
+- Schéma Prisma v2 + seed `SUPER_ADMIN` (`badge` DB, 14 tables)
 - Types : `next-auth.d.ts` (JWT minimal `userId` + `isStaff`), `auth.ts` (`SessionUser`, `UserContext`, `OrgMembershipLite`, `EventMembershipLite`, `EffectiveEventRole`)
 - Helpers : `loadUserContext`, `auth-helpers.ts` (purs : `staffRoleAtLeast`, `orgRoleAtLeast`, `hasOrgRole`, `effectiveEventRole`, `hasEventPermission` avec matrice `EVENT_PERMISSION_ROLES` à 16 permissions), `auth-guards.ts` (DB-aware : `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`, `getEffectiveEventRole`, `assertNotLastOwner`, `assertNotLastSuperAdmin`)
 - `settings.ts` : cascade contact `Event → Organization → Platform` + lectures directes `getPlatformSmtp` / `getPlatformRecaptcha` / `getPlatformPublicRecaptcha`
