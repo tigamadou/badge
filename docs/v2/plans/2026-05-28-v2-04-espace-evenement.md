@@ -2,9 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Mise à jour 2026-05-31 — SMTP plateforme uniquement.** Suite à la décision de design du 2026-05-31, les paramètres SMTP (y compris `smtpFrom`) sont **exclusivement** au niveau `PlatformSettings`. Aucun champ SMTP n'est overridable au niveau `EventSettings`, et il n'existe pas de route "test SMTP" côté event. **Task 7 (EventSettings)** est simplifiée : retrait complet de `smtpFrom` de la route GET/PATCH et du formulaire ; conservation uniquement de `contactEmail` + `contactPhone`. **Sous-task Step 7.4** (`settings/test-smtp/route.ts`) est supprimée. Les sources de vérité associées (`docs/v2/features/espace-evenement.md`, `docs/v2/features/multi-tenancy-rbac.md`) ont déjà été mises à jour.
+>
+> **Mise à jour 2026-05-31 — suppression d'OrgSettings, infos contact directement sur Organization.** Le modèle `OrgSettings` est **supprimé** (fusionné dans `Organization`). Les infos contact (`contactEmail`, `contactPhone`) sont désormais lues directement depuis `Organization`. La cascade settings pour les emails event reste : **`Event.settings` → `Organization` → `Platform`** (premier non-null gagne), mais l'étape intermédiaire lit `Organization.contactEmail`/`Organization.contactPhone` (et plus `Organization.settings.contactEmail`). Impact sur ce plan : si un test crée une `OrgSettings` pour poser un contact d'org, le remplacer par un `prisma.organization.update({ where: { id: orgId }, data: { contactEmail, contactPhone } })`. Le helper `resolveSettings(eventId)` (Plan 1) doit refléter la nouvelle cascade ; les tests qui le mockent ou inspectent ses sources doivent rester cohérents avec cette lecture directe.
+
 **Goal:** Implement the EVENT workspace of Badge v2 (`/admin/[orgId]/events/[eventId]/*`) : dashboard event, gestion complète des inscriptions (table, détail, création manuelle, approbation/rejet/édition, blocage email/document, export, doublons, lien d'édition), badges (liste, prévisualisation, impression unique et batch, all-access), catégories (CRUD scope event + import templates org), membres event (invitation ADMIN/OPERATOR), settings event (cascade overrides), scanner QR aux points de contrôle, blocages email/document, journal d'activité event. La sidebar OPERATOR est limitée à `/scan` et `/profile` (defense in depth via API + middleware).
 
-**Architecture:** Toutes les routes API sont protégées par un wrapper `withEventAuth` qui (1) résout `orgId` et `eventId` depuis le path, (2) vérifie que l'event appartient à l'org (cohérence URL), (3) appelle `requireEventRole` (Plan 1, honore héritage OWNER→ADMIN + bypass staff), (4) délègue au handler avec un contexte typé `EventAuthCtx`. Le pattern reflète `withOrgAuth` du Plan 3. Les pages serveur consomment Prisma directement pour les lectures ; les mutations passent par fetch vers les routes API protégées. Toute mutation appelle `logActivity({ orgId, eventId, … })` (le `staffActor` est auto-calculé par Plan 1). La cascade settings event utilise `resolveSettings(eventId)` du Plan 1 — `EventSettings` n'accepte que les overrides cosmétiques/contact + reCAPTCHA (pas le SMTP host). Le quota `quotaMaxRegistrations` est appliqué côté admin uniquement comme garde-fou ; la création publique (Plan 5) le respectera aussi. Les composants v1 (`RegistrationForm`, `BadgeDocument`, `BadgeBatchExport`, `TeamForm`, `RegistrationTable`, `QRScanner`) sont **refondus** sous `src/components/event/` avec une prop `event` typée et des callbacks scopés `eventId`. La séparation OPERATOR/ADMIN est triple : sidebar côté `EventShell`, middleware Plan 1, et chaque route API re-vérifie via `withEventAuth({ minRole: "ADMIN" })`.
+**Architecture:** Toutes les routes API sont protégées par un wrapper `withEventAuth` qui (1) résout `orgId` et `eventId` depuis le path, (2) vérifie que l'event appartient à l'org (cohérence URL), (3) appelle `requireEventRole` (Plan 1, honore héritage OWNER→ADMIN + bypass staff), (4) délègue au handler avec un contexte typé `EventAuthCtx`. Le pattern reflète `withOrgAuth` du Plan 3. Les pages serveur consomment Prisma directement pour les lectures ; les mutations passent par fetch vers les routes API protégées. Toute mutation appelle `logActivity({ orgId, eventId, … })` (le `staffActor` est auto-calculé par Plan 1). La cascade settings event utilise `resolveSettings(eventId)` du Plan 1 — `EventSettings` n'accepte que les overrides contact (`contactEmail`, `contactPhone`). Le SMTP est plateforme uniquement (décision 2026-05-31). reCAPTCHA n'est pas overridable au niveau event. Le quota `quotaMaxRegistrations` est appliqué côté admin uniquement comme garde-fou ; la création publique (Plan 5) le respectera aussi. Les composants v1 (`RegistrationForm`, `BadgeDocument`, `BadgeBatchExport`, `TeamForm`, `RegistrationTable`, `QRScanner`) sont **refondus** sous `src/components/event/` avec une prop `event` typée et des callbacks scopés `eventId`. La séparation OPERATOR/ADMIN est triple : sidebar côté `EventShell`, middleware Plan 1, et chaque route API re-vérifie via `withEventAuth({ minRole: "ADMIN" })`.
 
 **Tech Stack:** Next.js 16 App Router (Server Components + Client Forms), Prisma 6, NextAuth 4 (`getServerSession`), Zod 3 (validation), TypeScript 5, Vitest 4. UI : composants existants `Button`, `Input`, `Select`, `Table`, `Modal`, `StatusBadge`. Badges : `@react-pdf/renderer` 4. Scan : `html5-qrcode` 2. QR : `qrcode` 1.
 
@@ -14,7 +18,7 @@
 
 - Plan 1 — Multi-tenancy & RBAC (helpers `requireEventRole`, `getEffectiveEventRole`, `loadUserContext`, `logActivity`, `resolveSettings`, `AuthError`, schéma Prisma v2 dont `Registration`, `Category`, `SubmissionSnapshot`, `EventMembership`, `EventSettings`, `BlockedEmail`, `BlockedDocument`, `ActivityLog` avec types `BADGE_SCANNED`, `REGISTRATION_APPROVED`, etc.)
 - Plan 3 — Espace Organisation (fournit `CategoryTemplate` côté org pour `apply-template`, layout `/admin/[orgId]` parent, et `OrgSettings` cascade)
-- Plan 6 — Notifications email (fournit `sendStatusNotification(registrationId)`, `sendBadgePrintedNotification(registrationId)`, `sendEditLinkEmail(registrationId)`, `sendSmtpTest(to, eventId?)`, `sendUserInvitation(userId, { eventId? })`). **Stratégie de stub** : si Plan 6 n'est pas encore mergé, créer des stubs typés (Task 0.4) et **vérifier en Task finale** qu'aucun `[stub]` ne subsiste.
+- Plan 6 — Notifications email (fournit `sendStatusNotification(registrationId)`, `sendBadgePrintedNotification(registrationId)`, `sendEditLinkEmail(registrationId)`, `sendUserInvitation(userId, { eventId? })`). **Stratégie de stub** : si Plan 6 n'est pas encore mergé, créer des stubs typés (Task 0.4) et **vérifier en Task finale** qu'aucun `[stub]` ne subsiste. *Note : `sendSmtpTest` est utilisé par PlatformSettings (Plan 6) mais n'est plus consommé par Plan 4 depuis la décision 2026-05-31.*
 
 ---
 
@@ -26,32 +30,43 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
-| 18 | [ ] | -- | -- |
-| 19 | [ ] | -- | -- |
-| 20 | [ ] | -- | -- |
-| 21 | [ ] | -- | -- |
-| 22 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight : 6 helpers Plan 1/3 OK, 6 ActivityType (REGISTRATION_APPROVED, BADGE_SCANNED, etc.) OK. Ajout des 3 stubs Plan 6 manquants : sendStatusNotification, sendBadgePrintedNotification, sendEditLinkEmail. sendUserInvitation existait deja (Plan v2-02). |
+| 1 | [x] | 2026-05-31 | src/lib/with-event-auth.ts + tests (11/11 passent). Wrapper d'API : 401 sans session, 404 si event absent ou cross-org (URL tampering), 410 EVENT_ARCHIVED par defaut (allowArchived bypass), 409 REGISTRATION_CLOSED si requireRegistrationOpen=true, 403 sans role suffisant. ctx expose orgId/eventId/effectiveRole/session. OWNER org herite ADMIN event. Staff bypass total (effectiveRole=STAFF). |
+| 2 | [x] | 2026-05-31 | 4 helpers purs livres : event-quota (PENDING+APPROVED, REJECTED exclu), edit-token (randomBytes 32 hex, TTL 48h), duplicates (email/document/nom scope event), registration-csv (escape RFC4180). 26/26 tests verts. |
+| 3 | [x] | 2026-05-31 | Layout `/admin/[orgId]/events/[eventId]` + EventShell (sidebar complete ADMIN/STAFF) + EventOperatorShell (Scanner + Profil). Aiguillage par role. Bandeau "Mode staff" si staff sans membership. Typecheck vert. |
+| 4 | [x] | 2026-05-31 | Dashboard event (KPI ADMIN, Mes scans OPERATOR) + GET/PATCH route. Slug staff-only, P2002→409 SLUG_TAKEN, log EVENT_UPDATED + EVENT_REGISTRATION_OPENED/CLOSED. 5/5 tests verts. |
+| 5 | [x] | 2026-05-31 | Categories CRUD scope event + import-templates avec renumerotation. Routes GET/POST + [id] PATCH/DELETE + import-templates. Components CategoryForm/Table/ReassignModal/ImportTemplatesModal + page. 7/7 tests verts. |
+| 6 | [x] | 2026-05-31 | Members event GET/POST invite (user existant -> juste membership ; nouveau -> User + inviteToken + sendUserInvitation) + PATCH role + DELETE. 5/5 tests verts. |
+| 7 | [x] | 2026-05-31 | EventSettings GET/PATCH (contactEmail + contactPhone uniquement, SMTP plateforme uniquement). z.strict() refuse smtp*. Resolved cascade preview. 4/4 nouveaux tests verts. |
+| 8 | [x] | 2026-05-31 | Registrations GET liste (filtres status/categoryId/q + pagination) + POST manuel (status=APPROVED, audit REGISTRATION_CREATED). OPERATOR lit la liste, seul ADMIN cree. 5/5 tests verts. |
+| 9 | [x] | 2026-05-31 | Routes [regId] GET/PATCH/DELETE + approve/reject (editToken + sendStatusNotification)/print (badgePrinted + sendBadgePrintedNotification)/all-access. PATCH snapshot avant update. editToken jamais expose. 7/7 nouveaux tests verts. |
+| 10 | [x] | 2026-05-31 | Routes block-email, block-document, duplicates, resend-edit-link, reset-edit-token, checkin (OPERATOR), batch print, export CSV. 4/4 nouveaux tests verts. |
+| 11 | [x] | 2026-05-31 | Composants RegistrationActions (Approve/Reject modal/Print) + RegistrationTable (filtres + recherche + pagination + export CSV) + RegistrationForm refondu (prop categories, sans lecture Prisma). |
+| 12 | [x] | 2026-05-31 | Pages registrations (liste, new, [regId] detail) + composants RegistrationHistory (snapshots) + RegistrationDetailPanel (Approve/Reject/Print + block/edit-link/all-access/delete). Typecheck vert. |
+| 13 | [x] | 2026-05-31 | Composants badge V2 (BadgeDocument/Anonymous/Batch/Preview/Download/WebPreview) avec prop `event` et `registration`. Font Montserrat preservee. QR + ALL ACCESS + neutralBadge. Typecheck vert. |
+| 14 | [x] | 2026-05-31 | Pages badges liste/detail/print + components BadgeListTable (filtres + selection batch + open PDF preview) + BadgeBatchPanel (PDFViewer + fetch + QR generation). Typecheck vert. |
+| 15 | [x] | 2026-05-31 | Endpoint scan/verify (extract id from QR url, log BADGE_SCANNED, FOREIGN_EVENT 404, authorized iff APPROVED) + QRScanner (html5-qrcode + saisie manuelle + historique session) + page scan. 4/4 tests verts. |
+| 16 | [x] | 2026-05-31 | Blocked emails/documents : routes GET/POST + [id] DELETE pour les deux entites, audit REGISTRATION_UPDATED avec details.action discriminant. P2002 -> 409 ALLREADY_BLOCKED. Components BlockedEmailsForm/BlockedDocumentsForm + pages SSR. OPERATOR refuse en 403 (ADMIN minRole). 5/5 tests verts. |
+| 17 | [x] | 2026-05-31 | Activity log event : route GET + page. ADMIN voit tous les logs, OPERATOR filtre defense-in-depth (userId=session.user.id AND type=BADGE_SCANNED), VIEWER 403 (minRole OPERATOR car PRINTER/VIEWER stricts). Filtre type validate vs enum ActivityType. Pagination page/limit (max 100). 5/5 tests verts. |
+| 18 | [x] | 2026-05-31 | POST /registrations admin : audit `quotaBypass=true` si quota depasse apres creation (admin bypass, pas de blocage cote admin). 1/1 nouveau test vert. |
+| 19 | [x] | 2026-05-31 | event-journey.test.ts (3 tests integration). 1/ OWNER (no EventMembership) herite ADMIN, cree categorie + registration APPROVED + print badge ; logs portent orgId+eventId, staffActor=false (criteres #1, #6, #9). 2/ OPERATOR scan OK mais approve/PATCH/DELETE cat -> 403 (criteres #2, #10). 3/ Staff PATCH event -> log staffActor=true (audit). |
+| 20 | [x] | 2026-05-31 | Append au test api-event-categories.test.ts : flux complet DELETE catFrom -> 409 / PATCH reassignToCategoryId=catTo -> 200 / DELETE catFrom -> 204, registration deplacee vers catTo. 8/8 tests categories cumules. |
+| 21 | [-] | 2026-05-31 | Smoke navigateur manuel : reporte a l'utilisateur (necessite browser interactif). Steps documentees dans le plan, a executer si verif visuelle souhaitee. |
+| 22 | [x] | 2026-05-31 | Verification finale : 399/399 tests verts (test-setup.ts global cleanup ajoute pour fixer la regression cross-fichier liee aux residus Registration). Typecheck OK. Lint OK (0 erreurs apres fix RegistrationTable.tsx useTransition + MemberTable EventRole typage). Aucun secret SMTP/reCAPTCHA dans les routes event. Doc architecture.md a mettre a jour avec section "Etat au lot C (post-Plan 4)" — TODO complementaire. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-04 entierement implemente (Tasks 0-20, 22 = [x] ; Task 21 = [-] smoke navigateur manuel reporte a l'utilisateur). Execution via Agent Team de 3 implementers en parallele : `implementer-event` (Tasks 2-12), `implementer-badges-scan` (Tasks 13, 15), `implementer-blocked-activity` (Tasks 16-17) + team-lead (Tasks 0, 1, 14 coord, 18 verif, 19, 20, 22). **400/400 tests verts** (cumul Plan v2-01 + v2-02 + v2-03 + v2-04). Typecheck OK. Lint OK (0 erreurs). Aucun commit (consigne user — a commiter sur demande).
+
+Fixes infra livres pendant Plan v2-04 :
+- `src/test-setup.ts` : global `beforeEach` qui reset la BDD en ordre FK strict (corrige la regression cross-fichier liee aux `Registration` cumulees).
+- `src/components/ui/Input.tsx` : `label` rendu optionnel (deja fait Plan v2-03).
+- `src/components/event/RegistrationTable.tsx` : `useTransition` au lieu de setBusy synchrone (lint compliance).
+- `src/components/event/MemberTable.tsx` : type `EventRole` importe de `@prisma/client`.
+
+**Prochaine etape** : commit (sur demande utilisateur), puis Plan v2-05 (inscription publique) ou Plan v2-06 (templates email). Task 21 (smoke navigateur) reste a executer par l'utilisateur en local avec `make dev`.
+
+**Notes** :
+- 2026-05-31 — Décision SMTP plateforme uniquement. Task 7 (EventSettings) simplifiée : retrait de `smtpFrom` (API + UI), suppression de l'ancienne sous-task "Step 7.4: settings/test-smtp/route.ts" `[-]` (raison : aucune route test SMTP côté event, le SMTP est plateforme uniquement). Renumérotation des steps suivants (7.5 → 7.4, 7.6 → 7.5, 7.7 → 7.6, 7.8 → 7.7). Sources de vérité mises à jour : `docs/v2/features/espace-evenement.md`, `docs/v2/features/multi-tenancy-rbac.md`.
+- 2026-05-31 — Suppression d'`OrgSettings` (fusionné dans `Organization`). Les infos contact sont lues directement sur `Organization`. La cascade contact pour les emails event devient : `Event.settings` → `Organization.contactEmail/Phone` → `Platform`. Impact tests : tout setup qui crée une `OrgSettings` pour poser un contact d'org est remplacé par `prisma.organization.update({ where: { id: orgId }, data: { contactEmail, contactPhone } })`. Les mocks de `resolveSettings(eventId)` doivent refléter cette lecture directe.
 
 ---
 
@@ -141,7 +156,6 @@ Routes API (sous `src/app/api/admin/[orgId]/events/[eventId]/`) :
 - `members/route.ts` (GET, POST invite)
 - `members/[membershipId]/route.ts` (PATCH role, DELETE)
 - `settings/route.ts` (GET, PATCH)
-- `settings/test-smtp/route.ts` (POST)
 - `blocked-emails/route.ts` (GET, POST)
 - `blocked-emails/[id]/route.ts` (DELETE)
 - `blocked-documents/route.ts` (GET, POST)
@@ -205,10 +219,10 @@ Expected: les 6 types sont présents (ajoutés par Plan 1). Si l'un manque → a
 - [ ] **Step 0.4: Vérifier Plan 6 (mail) ou créer stubs typés**
 
 ```bash
-grep -E "export (async )?function (sendStatusNotification|sendBadgePrintedNotification|sendSmtpTest|sendUserInvitation|sendEditLinkEmail)" src/lib/mail.ts 2>/dev/null
+grep -E "export (async )?function (sendStatusNotification|sendBadgePrintedNotification|sendUserInvitation|sendEditLinkEmail)" src/lib/mail.ts 2>/dev/null
 ```
 
-Si **les 5 exports** sont présents → Plan 6 mergé, passer à Step 0.6.
+Si **les 4 exports** sont présents → Plan 6 mergé, passer à Step 0.6.
 
 Sinon, créer/compléter `src/lib/mail.ts` avec les stubs minimaux (à supprimer une fois Plan 6 mergé) :
 
@@ -224,14 +238,6 @@ export async function sendBadgePrintedNotification(_registrationId: string): Pro
 
 export async function sendEditLinkEmail(_registrationId: string): Promise<void> {
   console.warn("[stub] sendEditLinkEmail — Plan 6 not implemented yet");
-}
-
-export async function sendSmtpTest(
-  _to: string,
-  _opts?: { eventId?: string; orgId?: string },
-): Promise<{ messageId: string }> {
-  console.warn("[stub] sendSmtpTest — Plan 6 not implemented yet");
-  return { messageId: `stub-${Date.now()}` };
 }
 
 export async function sendUserInvitation(
@@ -3321,16 +3327,15 @@ git commit -m "feat(v2): membres event (GET liste, POST invite ADMIN/OPERATOR, P
 
 ---
 
-## Task 7: EventSettings — GET / PATCH + test SMTP
+## Task 7: EventSettings — GET / PATCH
 
 **Files:**
 - Create: `src/app/api/admin/[orgId]/events/[eventId]/settings/route.ts`
-- Create: `src/app/api/admin/[orgId]/events/[eventId]/settings/test-smtp/route.ts`
 - Create: `src/components/event/EventSettingsForm.tsx`
 - Create: `src/app/admin/[orgId]/events/[eventId]/settings/page.tsx`
 - Add tests in `src/lib/__tests__/api-event-settings.test.ts`
 
-> EventSettings cles overridables UNIQUEMENT : `smtpFrom`, `contactEmail`, `contactPhone`. Le SMTP host/port/user/password reste au niveau Org/Platform (resolveSettings). `null` = herite. GET ne retourne jamais de secret (cf. Plan 3 pattern).
+> EventSettings cles overridables UNIQUEMENT : `contactEmail`, `contactPhone`. Le SMTP est plateforme uniquement (décision 2026-05-31) — aucune override SMTP au niveau event, aucune route test SMTP côté event. `null` = herite. GET ne retourne jamais de secret (cf. Plan 3 pattern).
 
 - [ ] **Step 7.1: Add failing tests**
 
@@ -3350,7 +3355,7 @@ describe("GET /api/admin/[orgId]/events/[eventId]/settings", () => {
   it("returns event settings + resolved cascade preview", async () => {
     const { u, org, event } = await seedAdmin();
     await prisma.eventSettings.create({
-      data: { eventId: event.id, smtpFrom: "evt@x.com", contactEmail: "c@evt" },
+      data: { eventId: event.id, contactEmail: "c@evt", contactPhone: "+225 0101" },
     });
     await prisma.platformSettings.upsert({
       where: { id: "singleton" },
@@ -3365,9 +3370,9 @@ describe("GET /api/admin/[orgId]/events/[eventId]/settings", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.settings.smtpFrom).toBe("evt@x.com");
     expect(json.settings.contactEmail).toBe("c@evt");
-    expect(json.resolved.smtpFrom).toBe("evt@x.com");
+    expect(json.settings.contactPhone).toBe("+225 0101");
+    expect("smtpFrom" in json.settings).toBe(false);
     expect("smtpPassword" in json.resolved).toBe(false);
     expect("recaptchaSecretKey" in json.resolved).toBe(false);
   });
@@ -3390,42 +3395,43 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]/settings", () => {
     const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
     const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpFrom: "new@x", contactEmail: "ce@x", contactPhone: "+225 0101" }),
+      body: JSON.stringify({ contactEmail: "ce@x", contactPhone: "+225 0101" }),
       headers: { "content-type": "application/json" },
     });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(200);
 
     const s = await prisma.eventSettings.findUnique({ where: { eventId: event.id } });
-    expect(s?.smtpFrom).toBe("new@x");
+    expect(s?.contactEmail).toBe("ce@x");
+    expect(s?.contactPhone).toBe("+225 0101");
     const log = await prisma.activityLog.findFirst({ where: { type: "EVENT_SETTINGS_UPDATED" } });
     expect(log?.eventId).toBe(event.id);
   });
 
   it("null resets the override (cascade fallback)", async () => {
     const { u, org, event } = await seedAdmin();
-    await prisma.eventSettings.create({ data: { eventId: event.id, smtpFrom: "old@x" } });
+    await prisma.eventSettings.create({ data: { eventId: event.id, contactEmail: "old@x" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
     const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpFrom: null }),
+      body: JSON.stringify({ contactEmail: null }),
       headers: { "content-type": "application/json" },
     });
     await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     const s = await prisma.eventSettings.findUnique({ where: { eventId: event.id } });
-    expect(s?.smtpFrom).toBeNull();
+    expect(s?.contactEmail).toBeNull();
   });
 
-  it("refuses fields not allowed at event level (smtpHost, smtpPassword)", async () => {
+  it("refuses fields not allowed at event level (smtpFrom, smtpHost, smtpPassword)", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
     const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpHost: "evil.smtp", smtpPassword: "leak" }),
+      body: JSON.stringify({ smtpFrom: "leak@x", smtpHost: "evil.smtp", smtpPassword: "leak" }),
       headers: { "content-type": "application/json" },
     });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
@@ -3457,7 +3463,7 @@ export const GET = withEventAuth({ minRole: "ADMIN", allowArchived: true }, asyn
   const resolved = await resolvePublicSettings(eventId);
   return NextResponse.json({
     settings: settings
-      ? { smtpFrom: settings.smtpFrom, contactEmail: settings.contactEmail, contactPhone: settings.contactPhone }
+      ? { contactEmail: settings.contactEmail, contactPhone: settings.contactPhone }
       : {},
     resolved,
   });
@@ -3465,7 +3471,6 @@ export const GET = withEventAuth({ minRole: "ADMIN", allowArchived: true }, asyn
 
 const patchSchema = z
   .object({
-    smtpFrom: z.string().email().nullable().optional(),
     contactEmail: z.string().email().nullable().optional(),
     contactPhone: z.string().max(40).nullable().optional(),
   })
@@ -3498,41 +3503,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, ev
 });
 ```
 
-- [ ] **Step 7.4: Implement `src/app/api/admin/[orgId]/events/[eventId]/settings/test-smtp/route.ts`**
-
-```typescript
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { withEventAuth } from "@/lib/with-event-auth";
-import { logActivity } from "@/lib/activity-log";
-import { sendSmtpTest } from "@/lib/mail";
-
-const schema = z.object({ to: z.string().email() });
-
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
-  const json = await req.json().catch(() => null);
-  const parsed = schema.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
-  }
-  try {
-    const result = await sendSmtpTest(parsed.data.to, { eventId, orgId });
-    await logActivity({
-      type: "EVENT_SETTINGS_UPDATED",
-      userId: session.user.id,
-      orgId,
-      eventId,
-      details: { action: "smtp-test", to: parsed.data.to, messageId: result.messageId },
-      req,
-    });
-    return NextResponse.json({ ok: true, messageId: result.messageId });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "SMTP_ERROR" }, { status: 502 });
-  }
-});
-```
-
-- [ ] **Step 7.5: Run tests (pass)**
+- [ ] **Step 7.4: Run tests (pass)**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/api-event-settings.test.ts
@@ -3540,7 +3511,9 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Expected: 3 nouveaux tests verts.
 
-- [ ] **Step 7.6: Create `src/components/event/EventSettingsForm.tsx`**
+> Note 2026-05-31 : la sous-task "Step 7.4: Implement settings/test-smtp/route.ts" a été **supprimée** suite à la décision SMTP plateforme uniquement. Aucune route test SMTP n'existe côté event.
+
+- [ ] **Step 7.5: Create `src/components/event/EventSettingsForm.tsx`**
 
 ```typescript
 "use client";
@@ -3551,8 +3524,8 @@ import { Input } from "@/components/ui/Input";
 
 type Initial = {
   event: { id: string; title: string; location: string; date: string; slug: string; logo: string | null; registrationOpen: boolean };
-  settings: { smtpFrom: string | null; contactEmail: string | null; contactPhone: string | null };
-  resolved: { smtpFrom: string; contactEmail: string; contactPhone: string };
+  settings: { contactEmail: string | null; contactPhone: string | null };
+  resolved: { contactEmail: string; contactPhone: string };
 };
 
 export function EventSettingsForm({ orgId, eventId, initial }: { orgId: string; eventId: string; initial: Initial }) {
@@ -3561,10 +3534,8 @@ export function EventSettingsForm({ orgId, eventId, initial }: { orgId: string; 
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
   const [logo, setLogo] = useState<string | null>(initial.event.logo);
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
-  const [smtpFrom, setSmtpFrom] = useState(initial.settings.smtpFrom ?? "");
   const [contactEmail, setContactEmail] = useState(initial.settings.contactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(initial.settings.contactPhone ?? "");
-  const [testTo, setTestTo] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
   async function saveEvent(e: React.FormEvent) {
@@ -3585,23 +3556,11 @@ export function EventSettingsForm({ orgId, eventId, initial }: { orgId: string; 
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        smtpFrom: smtpFrom || null,
         contactEmail: contactEmail || null,
         contactPhone: contactPhone || null,
       }),
     });
     setMsg(res.ok ? "Paramètres enregistrés." : "Échec.");
-  }
-
-  async function testSmtp() {
-    setMsg(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/settings/test-smtp`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ to: testTo }),
-    });
-    const j = await res.json();
-    setMsg(res.ok ? `Email de test envoyé (id ${j.messageId}).` : `Échec : ${j.error}`);
   }
 
   return (
@@ -3628,13 +3587,7 @@ export function EventSettingsForm({ orgId, eventId, initial }: { orgId: string; 
       </form>
 
       <form onSubmit={saveSettings} className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Email & contact (overrides)</h2>
-        <Input
-          type="email"
-          value={smtpFrom}
-          onChange={(e) => setSmtpFrom(e.target.value)}
-          placeholder={`Expéditeur (cascade actuelle : ${initial.resolved.smtpFrom})`}
-        />
+        <h2 className="font-semibold">Contact (overrides)</h2>
         <Input
           type="email"
           value={contactEmail}
@@ -3647,29 +3600,16 @@ export function EventSettingsForm({ orgId, eventId, initial }: { orgId: string; 
           placeholder={`Téléphone de contact (cascade : ${initial.resolved.contactPhone || "—"})`}
         />
         <p className="text-xs text-gray-500">
-          Laisser vide pour hériter du niveau organisation. Les paramètres SMTP (serveur, mot de passe) restent au niveau organisation.
+          Laisser vide pour hériter du niveau organisation. Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
         </p>
         <Button type="submit">Enregistrer</Button>
       </form>
-
-      <div className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Tester l'envoi SMTP</h2>
-        <Input
-          type="email"
-          value={testTo}
-          onChange={(e) => setTestTo(e.target.value)}
-          placeholder="Adresse de destination du test"
-        />
-        <Button type="button" onClick={testSmtp} disabled={!testTo}>
-          Envoyer un email de test
-        </Button>
-      </div>
     </div>
   );
 }
 ```
 
-- [ ] **Step 7.7: Create `src/app/admin/[orgId]/events/[eventId]/settings/page.tsx`**
+- [ ] **Step 7.6: Create `src/app/admin/[orgId]/events/[eventId]/settings/page.tsx`**
 
 ```typescript
 import { prisma } from "@/lib/prisma";
@@ -3696,12 +3636,10 @@ export default async function EventSettingsPage({
       initial={{
         event: { ...event, date: event.date.toISOString() },
         settings: {
-          smtpFrom: settings?.smtpFrom ?? null,
           contactEmail: settings?.contactEmail ?? null,
           contactPhone: settings?.contactPhone ?? null,
         },
         resolved: {
-          smtpFrom: resolved.smtpFrom,
           contactEmail: resolved.contactEmail,
           contactPhone: resolved.contactPhone,
         },
@@ -3711,11 +3649,11 @@ export default async function EventSettingsPage({
 }
 ```
 
-- [ ] **Step 7.8: Commit**
+- [ ] **Step 7.7: Commit**
 
 ```bash
 git add "src/app/api/admin/[orgId]/events/[eventId]/settings" "src/app/admin/[orgId]/events/[eventId]/settings" src/components/event/EventSettingsForm.tsx src/lib/__tests__/api-event-settings.test.ts
-git commit -m "feat(v2): EventSettings (GET/PATCH overrides) + test SMTP + formulaire"
+git commit -m "feat(v2): EventSettings (GET/PATCH overrides contact) sans override SMTP"
 ```
 
 ---
@@ -8035,7 +7973,7 @@ Parcourir :
 - `/badges/[id]` -> Telecharger PDF, verifier logo + QR + categorie
 - `/scan` -> ouvrir la camera, scanner un QR -> autorise (vert)
 - `/members` -> inviter un OPERATOR -> Mailpit recoit invitation
-- `/settings` -> changer un override smtpFrom -> tester SMTP -> Mailpit recoit le test
+- `/settings` -> changer les overrides contactEmail / contactPhone -> verifier persistance (le SMTP est plateforme uniquement, aucune override SMTP cote event)
 - `/blocked-emails`, `/blocked-documents` -> ajouter + retirer
 - `/activity` -> verifier que toutes les actions apparaissent avec `staffActor` si pertinent
 
@@ -8122,7 +8060,7 @@ find "src/app/api/admin/[orgId]/events/[eventId]" -type f -name "route.ts" | sor
 find "src/app/admin/[orgId]/events/[eventId]" -type f -name "page.tsx" | sort
 ```
 
-Expected : 28 routes API + 14 pages (cf. File Structure en tete de plan). Si un fichier manque → revenir a la tache concernee.
+Expected : 27 routes API + 14 pages (cf. File Structure en tete de plan ; la route `settings/test-smtp` a été retirée le 2026-05-31). Si un fichier manque → revenir a la tache concernee.
 
 - [ ] **Step 22.6: Update `docs/v2/architecture.md`**
 
@@ -8136,7 +8074,7 @@ Plan 4 (espace événement) terminé. Disponible :
 - Wrapper `withEventAuth` (scope-event, honore héritage OWNER → ADMIN, refuse archived/closed selon options)
 - Layouts `EventShell` (sidebar complète ADMIN) + `EventOperatorShell` (Scanner + Profil)
 - Dashboard event (KPI + dashboard OPERATOR restreint)
-- API REST scope-event : 28 endpoints (registrations CRUD + approve/reject/print/all-access/checkin/duplicates/block, categories + import-templates, members invite, settings overrides + test-smtp, scan/verify, blocked-emails, blocked-documents, activity, export CSV)
+- API REST scope-event : 27 endpoints (registrations CRUD + approve/reject/print/all-access/checkin/duplicates/block, categories + import-templates, members invite, settings overrides contact uniquement, scan/verify, blocked-emails, blocked-documents, activity, export CSV)
 - Pages refondues : 14 (dashboard, registrations list/detail/new, badges list/detail/print, categories, members, settings, blocked-*, activity, scan)
 - Composants refondus v1 → v2 : RegistrationForm, RegistrationTable, RegistrationDetailPanel, CategoryForm, CategoryTable, QRScanner, BadgeDocumentV2, BadgeDocumentAnonymousV2, BadgeBatchExportV2, BadgePreviewV2, BadgeDownloadV2, BadgeWebPreviewV2
 - Helpers : event-quota (PENDING+APPROVED), edit-token (32 bytes hex, TTL 48h), duplicates (email/document/name), registration-csv
@@ -8178,7 +8116,7 @@ Expected : succession de `feat(v2)` et `test(v2)` cohérents scopés Plan 4 (~22
 Plan 4 (espace événement ADMIN/OPERATOR) est complet. Toutes les routes `/admin/[orgId]/events/[eventId]/*` et leurs API sont en place, testées (helpers purs + intégration + smoke e2e ADMIN/OPERATOR), avec :
 
 - Wrapper `withEventAuth` réutilisable (defense en profondeur, héritage OWNER → ADMIN)
-- 28 endpoints API scope-event (registrations, badges, categories, members, settings, blocked, scan, activity, export CSV)
+- 27 endpoints API scope-event (registrations, badges, categories, members, settings overrides contact, blocked, scan, activity, export CSV ; SMTP plateforme uniquement)
 - 14 pages refondues + composants v1 → v2 (BadgeDocument, RegistrationForm, QRScanner, CategoryForm, …)
 - Cascade settings event (overrides cosmétiques uniquement)
 - Quota inscriptions PENDING+APPROVED (REJECTED exclus) + bypass admin avec audit

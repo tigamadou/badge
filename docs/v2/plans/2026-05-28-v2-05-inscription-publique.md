@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les setups `PlatformSettings` de ce plan (lignes ~825-826, 1329-1330, 1492-1493, 2164-2165, 3395-3396), qui posent tous les champs SMTP sur le singleton, **restent valides** : `PlatformSettings` conserve l'ensemble des champs SMTP en tant que source unique. Precision : le resolveur de l'expediteur ne consulte plus que `PlatformSettings.smtpFrom` ; tous les emails d'inscription, de confirmation et de rejet partent avec la **meme identite plateforme**. Le **branding contextuel** (logo de l'event, contacts org/event, libelles) reste resolu via la cascade `Event > Org > Platform` -- seul le transport SMTP et le `smtpFrom` sont figes au niveau plateforme. Aucune assertion de ce plan ne verifie un `smtpFrom` specifique a un event ; rien a corriger de ce cote.
+>
+> **Mise a jour 2026-05-31 — suppression d'OrgSettings** : le modele `OrgSettings` est **supprime** (fusionne dans `Organization`). Les infos contact (`contactEmail`, `contactPhone`) sont desormais lues directement depuis `Organization.contactEmail` / `Organization.contactPhone` via la cascade `Event > Organization > Platform`. **Fallback logo** : si `Event.logo` est null, utiliser `Organization.logo` (si present), puis le logo plateforme en dernier recours. Impact sur ce plan : tous les `await prisma.orgSettings.deleteMany()` (setups de test) doivent **disparaitre** ; si un test pose un contact ou un logo cote org, il ecrit directement sur `Organization` via `prisma.organization.update({ where: { id: orgId }, data: { contactEmail, contactPhone, logo } })`. `resolvePublicSettings(eventId)` (Plan 1) doit refleter cette nouvelle cascade.
+
 **Goal:** Implement the full unauthenticated public surface of Badge v2: the contextualised registration page (`/e/[slug]`), the success page, the badge verification page (`/verify/[badgeId]`), the post-rejection edit flow (`/edit-registration/[token]`), and all backing public API routes. Every page resolves its branding, contact and reCAPTCHA settings via the cascade `Platform > Org > Event`, scopes uploads to the event, enforces blocklists and per-event registration quotas, and rate-limits public traffic.
 
 **Architecture:** Public pages are Server Components that load the `Event` by slug, verify `archived === false && registrationOpen === true`, resolve public settings via `resolvePublicSettings(eventId)`, and hand a typed payload to a Client Component form. File uploads use a two-phase protocol: `/api/upload?context=event:[slug]` validates type/size/quota and returns a signed `uploadToken` (HMAC, TTL 1h) tied to `{eventId, kind, originalKey}`; the registration creation route consumes those tokens to materialise the files under `uploads/events/[eventId]/photos/...` and `.../idDocuments/...`. Rate-limiting is in-memory per instance (Map keyed by IP+route) — adequate for MVP, replaceable with Redis later. Edit links use single-use UUID v4 tokens stored on `Registration` with a 48h TTL, never exposed in API responses. Submissions snapshot the previous data before overwrite via `SubmissionSnapshot`. The badge verification page reuses the existing Registration record and masks identity when `Category.anonymous === true`.
@@ -25,29 +29,39 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
-| 18 | [ ] | -- | -- |
-| 19 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Preflight OK : branche feat/v2-implementation, schema Prisma sync, settings.test 9/9 vert, UPLOAD_TOKEN_SECRET ajoute au .env (et .env.production.example sous Task 2). |
+| 1 | [x] | 2026-05-31 | storage.ts etendu (eventPhotoKey, eventIdDocumentKey, isAllowedMime, assertWithinSizeLimit, deleteFile, safeFilename anti-traversal). 13 tests storage. Commit `eeba058`. |
+| 2 | [x] | 2026-05-31 | upload-token.ts HMAC SHA256 + base64url + timingSafeEqual + validation runtime de la shape du payload. 6 tests. .env.production.example mis a jour. Commit `902c722`. |
+| 3 | [x] | 2026-05-31 | rate-limit.ts in-memory IP+route, 10/min, retryAfterMs. Tests extractClientIp ajoutes. Header comment des 3 limitations MVP. 9 tests. Commit `0836371`. |
+| 4 | [x] | 2026-05-31 | recaptcha.ts (skip si disabled, MISSING_TOKEN/LOW_SCORE/REJECTED/NETWORK, seuil 0.5). 5 tests. Commit `761389e`. |
+| 5 | [x] | 2026-05-31 | public-event.ts : loadPublicEventBySlug + loadEventByIdForVerify + PublicEventError. 6 tests. **Non commit** (regle no-implicit-commits depuis Task 5). |
+| 6 | [x] | 2026-05-31 | validators/registration.ts : Zod publicRegistrationSchema + editRegistrationSchema + ID_DOC_TYPES. Migration vers `.pipe(z.email(...))` (Zod 4). 8 tests. Non commit. |
+| 7 | [x] | 2026-05-31 | /api/upload rewrite public scope event:<slug>, mime/size/quota/token. 7 tests + afterEach cleanup uploads/events. Brise l'ancien caller v1 edit-registration (Task 16 le remplace). Non commit. |
+| 8 | [x] | 2026-05-31 | GET /api/public/events/[slug] (event + categories + public settings). 3 tests. Non commit. |
+| 9 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 10 | [x] | 2026-05-31 | GET /api/public/verify/[badgeId] + page /verify/[badgeId] + composant BadgeVerifyView. Masque identite si Category.anonymous. Log BADGE_SCANNED. 5 tests. Non commit. |
+| 11 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 12 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 13 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 14 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 15 | [x] | 2026-05-31 | Page /e/[slug] + /e/[slug]/success. Bug-fix plan : recaptcha via `getPlatformPublicRecaptcha()` (pas via resolvePublicSettings). Refactor try/catch JSX en helper tagge pour satisfaire ESLint react-hooks/error-boundaries. Non commit. |
+| 16 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 17 | [-] | 2026-06-01 | supersede par v2-11 (comptes participants) -- artefact non livre, remplace par flux authentifie. Voir audit v2-14 §2.5. |
+| 18 | [x] | 2026-05-31 | docs/v2/api/public.md cree (205 lignes), docs/v2/architecture.md section "Etat au lot D" ajoutee, docs/v2/features/inscription-publique.md avec note Statut. Non commit. |
+| 19 | [x] | 2026-05-31 | Verification finale : 483/483 tests verts (52 fichiers, +83 nouveaux Plan v2-05), make lint 0 erreurs, make typecheck 0 erreurs. Step 19.3 (smoke navigateur) reporte a l'utilisateur. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 0.
+**Derniere session** : 2026-05-31 - Plan v2-05 entierement implemente (Tasks 0-19 = [x]). Execution via subagent-driven-development sequentiel (skill officielle), avec spec-review + code-quality-review sur les tasks critiques (1, 2, 3, 5). **Commits arretes a partir de Task 5** suite a la regle projet : un agent ne commit que sur demande explicite utilisateur. Tasks 0-4 commitees (4 commits : `eeba058`, `902c722`, `0836371`, `761389e`). Tasks 5-19 stagees mais NON commitees, en attente de la decision de l'utilisateur sur le decoupage des commits.
+
+Fixes/decisions livrees pendant Plan v2-05 :
+- `src/lib/mail.ts` : stub `sendRegistrationConfirmation` ajoute (Task 9). Les autres stubs (`sendStatusNotification`, `sendBadgePrintedNotification`, `sendEditLinkEmail`) existaient deja depuis Plan v2-04.
+- `.env.production.example` : `UPLOAD_TOKEN_SECRET` documente avec hint `openssl rand -base64 32`.
+- Bug du plan corrige (Tasks 9, 11, 15, 16) : recaptcha doit etre lu via `getPlatformPublicRecaptcha()` / `getPlatformRecaptcha()` et non via `resolvePublicSettings()` qui ne contient que `{contactEmail, contactPhone}`.
+- Bug du plan corrige (Task 9) : la regex du badge ID etait `\d{12}` dans le plan, en realite 13 caracteres (1+6+2+1+3).
+- Test cooldown pollution (Task 12) : ajout d'un `resetEditResendCooldownForTests()` exporte pour reset le Map module-level entre tests.
+
+**Prochaine etape** : commit (sur demande utilisateur — decoupage possible : un commit par lot logique helpers/API/UI/docs, ou un commit unique "Plan v2-05"). Smoke navigateur (Step 19.3) a executer en local. Puis Plan v2-06 (vraies notifications email, remplace les stubs).
+
+**Note 2026-05-31** : suppression d'`OrgSettings` (fusionne dans `Organization`). Contact lu directement depuis `Organization.contactEmail`/`Organization.contactPhone` via la cascade `Event > Organization > Platform`. Fallback logo : `Event.logo` -> `Organization.logo` -> logo plateforme. Tous les setups de test `prisma.orgSettings.deleteMany()` / `prisma.orgSettings.create(...)` disparaissent ; tout contact ou logo cote org est pose via `prisma.organization.update`.
 
 ---
 
@@ -1484,7 +1498,6 @@ async function setup({
   await prisma.blockedDocument.deleteMany();
   await prisma.category.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.orgSettings.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.platformSettings.deleteMany();
   await prisma.platformSettings.create({
@@ -3387,7 +3400,6 @@ beforeEach(async () => {
   await prisma.registration.deleteMany();
   await prisma.category.deleteMany();
   await prisma.event.deleteMany();
-  await prisma.orgSettings.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.platformSettings.deleteMany();
   await prisma.platformSettings.create({

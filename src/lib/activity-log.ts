@@ -1,48 +1,61 @@
-import { prisma } from "./prisma";
+import { prisma } from "@/lib/prisma";
 import type { ActivityType, Prisma } from "@prisma/client";
-import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 
-interface LogActivityParams {
+export type LogActivityInput = {
   type: ActivityType;
-  userId?: string | null;
-  targetId?: string | null;
-  details?: Record<string, unknown>;
-  req?: Request | null;
+  userId?: string;
+  orgId?: string;
+  eventId?: string;
+  targetId?: string;
+  details?: Prisma.InputJsonValue;
+  req?: NextRequest;
+};
+
+function extractRequestMeta(req?: NextRequest) {
+  if (!req) return { ipAddress: undefined, userAgent: undefined };
+  const ipAddress =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    undefined;
+  const userAgent = req.headers.get("user-agent") || undefined;
+  return { ipAddress, userAgent };
 }
 
-export async function logActivity({ type, userId, targetId, details, req }: LogActivityParams): Promise<void> {
-  try {
-    let ipAddress: string | null = null;
-    let userAgent: string | null = null;
+export async function logActivity(input: LogActivityInput): Promise<void> {
+  let { orgId } = input;
+  const { eventId, userId, type, targetId, details, req } = input;
 
-    if (req) {
-      userAgent = req.headers.get("user-agent") || null;
-      ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-        || req.headers.get("x-real-ip")
-        || null;
-    } else {
-      try {
-        const h = await headers();
-        userAgent = h.get("user-agent") || null;
-        ipAddress = h.get("x-forwarded-for")?.split(",")[0]?.trim()
-          || h.get("x-real-ip")
-          || null;
-      } catch {
-        // headers() not available outside request context
-      }
-    }
-
-    await prisma.activityLog.create({
-      data: {
-        type,
-        ...(userId ? { user: { connect: { id: userId } } } : {}),
-        targetId: targetId ?? null,
-        details: (details ?? undefined) as Prisma.InputJsonValue | undefined,
-        ipAddress,
-        userAgent,
-      },
+  if (eventId && !orgId) {
+    const ev = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { orgId: true },
     });
-  } catch (error) {
-    console.error("[ActivityLog] Erreur lors de l'enregistrement:", error);
+    orgId = ev?.orgId ?? undefined;
   }
+
+  let staffActor = false;
+  if (userId && orgId) {
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isStaff: true },
+    });
+    staffActor = !!u?.isStaff;
+  }
+
+  const meta = extractRequestMeta(req);
+
+  await prisma.activityLog.create({
+    data: {
+      type,
+      userId: userId ?? null,
+      orgId: orgId ?? null,
+      eventId: eventId ?? null,
+      targetId: targetId ?? null,
+      details: details ?? undefined,
+      staffActor,
+      ipAddress: meta.ipAddress,
+      userAgent: meta.userAgent,
+    },
+  });
 }

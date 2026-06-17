@@ -1,0 +1,55 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { withEventAuth } from "@/lib/with-event-auth";
+import { logActivity } from "@/lib/activity-log";
+
+const patchSchema = z.object({ role: z.enum(["ADMIN", "OPERATOR", "PRINTER", "VIEWER"]) });
+
+export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+  const { membershipId } = (await extra.params) as { orgId: string; eventId: string; membershipId: string };
+  const json = await req.json().catch(() => null);
+  const parsed = patchSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  const existing = await prisma.eventMembership.findUnique({ where: { id: membershipId } });
+  if (!existing || existing.eventId !== eventId) {
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+  }
+
+  const updated = await prisma.eventMembership.update({
+    where: { id: membershipId },
+    data: { role: parsed.data.role },
+  });
+  await logActivity({
+    type: "MEMBERSHIP_ROLE_CHANGED",
+    userId: session.user.id,
+    orgId,
+    eventId,
+    targetId: updated.userId,
+    details: { from: existing.role, to: parsed.data.role, scope: "event" },
+    req,
+  });
+  return NextResponse.json({ membership: updated });
+});
+
+export const DELETE = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+  const { membershipId } = (await extra.params) as { orgId: string; eventId: string; membershipId: string };
+  const existing = await prisma.eventMembership.findUnique({ where: { id: membershipId } });
+  if (!existing || existing.eventId !== eventId) {
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+  }
+  await prisma.eventMembership.delete({ where: { id: membershipId } });
+  await logActivity({
+    type: "MEMBERSHIP_REMOVED",
+    userId: session.user.id,
+    orgId,
+    eventId,
+    targetId: existing.userId,
+    details: { role: existing.role, scope: "event" },
+    req,
+  });
+  return new NextResponse(null, { status: 204 });
+});

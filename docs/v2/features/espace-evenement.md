@@ -145,13 +145,13 @@ CRUD des `Category` de cet event — **ADMIN uniquement** :
 - Titre, lieu, date, logo
 - Slug (lecture seule, modification par staff uniquement)
 - Toggle `registrationOpen`
-- Section "EventSettings" (override OrgSettings/PlatformSettings) :
-  - smtpFrom override
+- Section "EventSettings" (override des champs contact de `Organization`) :
   - contactEmail / contactPhone override
-- Bouton "Tester SMTP" (résolution cascade)
 - Section "Blocages" :
   - Lien vers `/admin/[orgId]/events/[eventId]/blocked-emails`
   - Lien vers `/admin/[orgId]/events/[eventId]/blocked-documents`
+
+> **Pas de section SMTP** : le SMTP est plateforme uniquement (décision 2026-05-31). Aucun champ SMTP, aucun bouton "Test SMTP" n'est exposé dans cet espace. La config SMTP vit dans `/staff/settings` (réservé staff).
 
 ### `/admin/[orgId]/events/[eventId]/blocked-emails` et `/blocked-documents`
 
@@ -226,9 +226,8 @@ DELETE /api/admin/[orgId]/events/[eventId]/members/[membershipId]               
 ```
 GET    /api/admin/[orgId]/events/[eventId]                                                  # event.read.aggregated
 PATCH  /api/admin/[orgId]/events/[eventId]                                                  # event.update (titre, lieu, date, logo) / event.registration_toggle (registrationOpen) / event.archive
-GET    /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update (lecture admin)
-PATCH  /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update
-POST   /api/admin/[orgId]/events/[eventId]/settings/test-smtp                               # event.settings.update
+GET    /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update (lecture admin — contact uniquement)
+PATCH  /api/admin/[orgId]/events/[eventId]/settings                                         # event.settings.update — refuse les champs SMTP (HTTP 400 si fournis)
 GET    /api/admin/[orgId]/events/[eventId]/blocked-emails                                   # registration.block
 POST   /api/admin/[orgId]/events/[eventId]/blocked-emails                                   # registration.block
 DELETE /api/admin/[orgId]/events/[eventId]/blocked-emails/[id]                              # registration.block
@@ -303,3 +302,22 @@ Le header affiche le nom event + breadcrumb (org > event) et un sélecteur event
 - Spec 3 (Espace org) : navigation parent
 - Spec 5 (Public) : route `/verify/[id]`, route `/edit-registration/[token]`
 - Spec 6 (Emails) : templates de notification (approbation, rejet, badge imprimé, lien d'édition)
+
+## Mise à jour v2-11 (snapshots inline)
+
+Plan v2-11 a refondu `Registration` :
+
+- Les champs profil ne vivent plus directement sur la registration. Ils sont **snapshotés** depuis `User` au moment de la soumission ou de la resoumission, via 8 colonnes `snapshot*` (email, firstName, lastName, structure, photo, idDocumentType, idDocumentNumber, idDocument).
+- Toutes les listes (registrations admin, badges, scan, recherche) lisent les colonnes `snapshot*`. Les opérations métier (approve/reject/print/scan/block-email/block-document) sont inchangées dans leur logique mais utilisent `snapshotEmail`/`snapshotIdDocumentNumber` pour les blocages.
+- Le mécanisme `editToken`/`editTokenExpiresAt` est supprimé. La resoumission après rejet passe par le compte participant (`/account/registrations/[id]`). L'UI admin « Renvoyer le lien d'édition » est retirée.
+- Le modèle `SubmissionSnapshot` (historique des versions) est supprimé : on garde uniquement le snapshot courant inline, réécrit à chaque resoumission.
+- `Registration` a une contrainte `@@unique([userId, eventId])` : un user ne peut s'inscrire qu'une fois par event.
+- L'admin peut toujours créer une registration manuellement via `POST /api/admin/[orgId]/events/[eventId]/registrations`, mais avec `{ userId | email, categoryId }` (sélectionne ou retrouve un User existant) ; le profil doit être complet sur le User cible.
+
+## v2-12 : selection du template de badge
+
+Plan v2-12 ajoute une page de selection du template de badge au niveau event :
+
+- **Page** : `/admin/[orgId]/events/[eventId]/settings/badge` (Server Component + `BadgeTemplatePicker` Client). Affiche les templates disponibles via cartes (preview, label, description, format, nb de faces), le template effectif (avec niveau herite : event/org/platform), et un bouton « Utiliser le defaut herite » pour repasser sur null.
+- **API** : `PATCH /api/admin/[orgId]/events/[eventId]/settings/badge` (body `{ badgeTemplateId: string | null }`). Permission : `event.settings.update` (ADMIN d'event ou OWNER/MANAGER d'org via heritage). Validation : Zod + verification dans le registry (`getTemplate(id)`) ; retour 400 `UNKNOWN_TEMPLATE` si orphelin. Log : `EVENT_SETTINGS_UPDATED` avec `details = { field: "badgeTemplateId", value }`.
+- **Cascade de resolution** : `Event.badgeTemplateId ?? Organization.badgeTemplateId ?? PlatformSettings.badgeTemplateId` via le helper `resolveBadgeTemplateId()` de `src/lib/settings.ts`. La route GET PDF `/api/admin/[orgId]/events/[eventId]/badges/[badgeId]` consomme cette cascade et fait un fallback sur `default-v1` en cas d'id orphelin (avec un `console.warn`).

@@ -67,8 +67,8 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
   - v2 : `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`, `getEffectiveEventRoles`, `loadUserContext`, `assertNotLastOwner`, `assertNotLastSuperAdmin`
   - v1 : `checkRole(userRole, requiredRole)`
 - **`activity-log.ts`** — audit via `logActivity({ type, userId?, targetId?, orgId?, eventId?, details?, req? })`. Tout nouveau type d'action → ajouter un `ActivityType` au schéma Prisma.
-- **`mail.ts`** — envoi d'emails. v2 multi-tenant via `resolveTransporter(ctx)` qui résout le SMTP en cascade `Event → Org → Platform`. v1 mono-event.
-- **`settings.ts`** (v2) — `resolveSettings(eventId?, orgId?)` cascade Event → Org → Platform, premier non-null gagne. `resolvePublicSettings(...)` masque les secrets.
+- **`mail.ts`** — envoi d'emails. v2 : `resolveTransporter(ctx)` utilise un SMTP **plateforme uniquement** (`getPlatformSmtp()`, pas de cascade — décision 2026-05-31, voir `docs/v2/features/notifications-email.md`). Le **branding** reste contextuel : `fromLabel`, `logoUrl`, `contactEmail`/`contactPhone` sont résolus en cascade `Event → Org`. v1 mono-event.
+- **`settings.ts`** (v2) — `resolveSettings(eventId?, orgId?)` cascade `Event → Org` pour `contactEmail` / `contactPhone` uniquement (premier non-null gagne, pas de fallback Platform). Le SMTP et le reCAPTCHA ne sont **pas** cascadés : lecture directe via `getPlatformSmtp()` / `getPlatformRecaptcha()` (avec secret) / `getPlatformPublicRecaptcha()` (sans secret, pour les Server Components publics). `resolveBadgeTemplateId(event, organization, platformSettings)` cascade `Event → Org → Platform` pour le template de badge.
 - **`prisma.ts`** — client Prisma singleton.
 - **`storage.ts`** — abstraction upload/get/delete fichiers (local d'abord, S3 plus tard).
 - **`qrcode.ts`**, **`generate-id.ts`**, **`format-badge-name.ts`**, **`format-date.ts`**, **`image-to-dataurl.ts`** — utilitaires divers.
@@ -126,12 +126,15 @@ make dev    # démarre les conteneurs (à faire une fois)
 
 Services disponibles :
 
-| Service | Port | Description |
-|---------|------|-------------|
-| `app` | 3000 | Next.js avec hot reload |
-| `mysql` | 3306 | Base de données |
-| `phpmyadmin` | 8080 | Interface admin BDD |
-| `mailpit` | 8025 | Capture d'emails |
+| Service | Port direct | URL via Caddy (HTTP) | Description |
+|---------|-------------|----------------------|-------------|
+| `app` | 3000 | `http://badge.local` | Next.js avec hot reload |
+| `mysql` | 3306 | — | Base de données |
+| `phpmyadmin` | 8080 | `http://pma.badge.local` | Interface admin BDD |
+| `mailpit` | 8025 | `http://mail.badge.local` | Capture d'emails |
+| `caddy` | 80 | — | Reverse proxy dev (sous-domaines `*.badge.local`) |
+
+> **Pré-requis pour les URL `*.badge.local`** : ajouter au `/etc/hosts` de la machine hôte la ligne `127.0.0.1 badge.local pma.badge.local mail.badge.local`. Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
 
 Commandes principales :
 

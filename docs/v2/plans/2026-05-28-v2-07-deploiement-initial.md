@@ -1,5 +1,11 @@
 # Reset & déploiement initial — Implementation Plan
 
+> **ABANDONNÉ — 2026-05-31** : décision utilisateur de ne plus déployer la v2 en production. Ce plan reste documentaire (les tâches ont été exécutées et l'outillage prod livré le 2026-05-31 est conservé en l'état : `Makefile` cibles `backup-prod`/`prod-db-reset-v2`/`smoke-tests`/`migrate-uploads-clear`/`rollback-prod`, `scripts/smoke-tests.ts`, `.env.production.example`, `docs/v2/installation.md`), mais aucune mise en production n'est planifiée. Ne pas relancer ce plan tant que la décision n'est pas inversée. Les sections suivantes restent figées dans leur état du 2026-05-31.
+
+> **Mise a jour 2026-05-31 — decision SMTP plateforme uniquement** : les variables `PLATFORM_SMTP_*` deviennent la **seule** source SMTP de la plateforme. Aucun fallback ni override possible cote `OrgSettings` ou `EventSettings` : tous les emails (inscription, confirmation, rejet, invitations staff, tests SMTP) partent via le SMTP plateforme et avec `PLATFORM_SMTP_FROM` comme expediteur. Le seed `PlatformSettings` reste inchange (il continue d'inclure tous les champs SMTP), mais le tableau des variables critiques (section ci-dessous) est mis a jour pour refleter cette decision.
+>
+> **Mise a jour 2026-05-31 — schema Prisma v2 sans `OrgSettings`** : le modele `OrgSettings` est **supprime** (fusionne dans `Organization`, qui porte maintenant `legalName?`, `addressLine1?`, `addressLine2?`, `postalCode?`, `city?`, `country?`, `taxId?`, `website?`, `logo?`, `contactEmail?`, `contactPhone?` en plus de `name`, `slug` et des quotas). La table `OrgSettings` **disparait** de toute liste de tables du schema v2. Le seed v2 reste minimal et ne touche **pas** a `Organization` (creee par staff via UI) : il seed uniquement `PlatformSettings` + le premier `SUPER_ADMIN`. Cote `ActivityType`, **aucun** `ORG_SETTINGS_UPDATED` n'est livre par le schema v2 ; toute modification d'organisation (infos admin incluses) passe par `ORG_UPDATED`.
+
 ## Progression
 
 > **Convention** : avant chaque session, lire ce bloc pour reprendre la ou on s'etait arrete. Apres chaque task validee (tests verts + criteres d'acceptation OK), passer `[ ]` a `[x]` et dater. En cas d'interruption mi-task, passer a `[~]`, dater, et noter precisement l'etat (step en cours, fichiers touches, prochaine etape). Si une task est abandonnee : passer a `[-]` avec la raison dans les notes.
@@ -8,17 +14,19 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight deja valide par Lot A (branche feat/v2-implementation, conteneurs up, Plan 1 applique). |
+| 1 | [x] | 2026-05-31 | .env.production.example reecrit v2 (SEED_SUPER_ADMIN_*, SMTP plateforme, reCAPTCHA plateforme). .gitignore ajuste : `!.env.production.example` (pour pouvoir versionner) + `backups/`. |
+| 2 | [x] | 2026-05-31 | Makefile reecrit selon le plan : preserve toutes les cibles dev, ajoute backup-prod, migrate-uploads-clear, prod-db-reset-v2 (confirm "reset-v2"), smoke-tests, rollback-prod (confirm "rollback"). Validation make -n : dev/backup-prod/smoke-tests OK. |
+| 3 | [x] | 2026-05-31 | scripts/smoke-tests.ts + tests unitaires (2/2 passent). Execution effective : 8/8 OK apres reseed (DB SELECT, PlatformSettings singleton, staff seede, 0 org, 0 event, HTTP /login, /staff, /api/auth/providers). |
+| 4 | [x] | 2026-05-31 | docs/v2/installation.md redige (~578 lignes, 9 sections) : pre-requis serveur, variables env (decisions SMTP/reCAPTCHA plateforme unique), procedure deploiement initial v2 neuve, procedure reset v2 depuis v1, smoke tests (8 checks detailles), plan de rollback, recap Makefile v2, troubleshooting. Aligne sur SEED_SUPER_ADMIN_* (et non SEED_STAFF_*), conteneurs prod badge-app/badge-db, BDD prod par defaut "badge". |
+| 5 | [x] | 2026-05-31 | Dry run de la procedure complete couvert par Lot A (drop badge + db push + seed + tests). Idempotence verifiee, smoke tests 8/8 OK. Steps de validation noms (badge-mysql-1, badge) appliques. |
+| 6 | [x] | 2026-05-31 | Step 6.2 OK : `make rollback-prod` sans args affiche l'usage et exit 1. Step 6.3 OK : avec args mais confirmation vide -> "Cancelled." et exit 1. |
+| 7 | [x] | 2026-05-31 | Runbook prod inclus dans installation.md (section 4 "Procedure de reset v2") : sequencement complet J-1 + jour J (backup, prod-down, pull, build, reset-v2, smoke, login, splash maintenance, surveillance H+1/H+24). Le plan v2-07 conserve toutefois la checklist Step 7.1-7.18 d'origine pour le runbook d'execution coche le jour J. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-07 entierement termine (Tasks 0-7 toutes en [x]). Aucun commit (consigne user "aucun commit jusqu'a la fin").
+**Prochaine etape** : aucune — plan ABANDONNÉ le 2026-05-31 (la v2 ne sera pas déployée en production, voir encart en tête du plan). Les statuts `[x]` traduisent l'exécution effective des tâches au moment où le plan était actif ; ils ne sont pas modifiés.
+
+**Note 2026-05-31** : schema Prisma v2 sans `OrgSettings` (fusionne dans `Organization`). Le seed v2 ne touche pas a `Organization` (creee par staff via UI), uniquement `PlatformSettings` + premier `SUPER_ADMIN`. `ActivityType` ne contient pas `ORG_SETTINGS_UPDATED` ; les modifs org passent par `ORG_UPDATED`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -607,7 +615,7 @@ Variables critiques v2 :
 | `MYSQL_ROOT_PASSWORD` | Mot de passe root MySQL (utilisé aussi par les backups) |
 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` |
 | `NEXTAUTH_URL` / `BASE_URL` | URL publique HTTPS |
-| `PLATFORM_SMTP_*` | SMTP fallback plateforme (cascade Org/Event peut surcharger) |
+| `PLATFORM_SMTP_*` | SMTP plateforme (source unique, pas d'override possible côté Org/Event) |
 | `SEED_STAFF_EMAIL` / `SEED_STAFF_PASSWORD` | Premier STAFF_ADMIN (à changer après login) |
 
 Les anciennes variables `SMTP_*` (v1) et `SEED_ADMIN_*` (v1) **ne sont plus lues**.

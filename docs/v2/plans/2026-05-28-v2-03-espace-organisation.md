@@ -2,9 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the OWNER workspace of Badge v2 (`/admin/[orgId]/*`) : dashboard, paramètres `OrgSettings`, membres OWNER, modèles de catégories, liste/création d'events (wizard 3 étapes), archive/restore, journal d'activité, et la logique de sélection d'org post-login (multi-org + bandeau staff).
+**Goal:** Implement the OWNER workspace of Badge v2 (`/admin/[orgId]/*`) : dashboard, paramètres administratifs de l'organisation (fusionnés dans le modèle `Organization`), membres OWNER, modèles de catégories, liste/création d'events (wizard 3 étapes), archive/restore, journal d'activité, et la logique de sélection d'org post-login (multi-org + bandeau staff).
 
-**Architecture:** Toutes les routes sont protégées par un wrapper `withOrgAuth` qui résout l'`orgId` depuis le path, appelle `requireOrgRole` (Plan 1) et délègue ensuite au handler. Les pages serveur (`Server Components`) consomment les routes via `fetch` côté client uniquement pour les actions ; les lectures initiales se font directement via Prisma + helpers. Les secrets (`smtpPassword`, `recaptchaSecretKey`) ne sortent jamais via les réponses API. Toute mutation produit un `logActivity({ orgId, … })` avec `staffActor` auto-calculé par Plan 1. La création d'event applique la cascade : vérification du quota → génération d'un slug global unique → copie des `CategoryTemplate` sélectionnés en `Category`.
+> **Mise à jour 2026-05-31 — SMTP plateforme uniquement** : par décision de design, les paramètres SMTP vivent **exclusivement** au niveau `PlatformSettings`. Aucun champ SMTP ni override SMTP n'existe dans `OrgSettings`. En conséquence :
+> - La Task 5 (`OrgSettings` GET/PATCH + page) est simplifiée : `OrgSettings` ne contient plus que **contact** (`contactEmail`, `contactPhone`). Les tests, le schéma Zod, la réponse GET et l'audit ont été ajustés ; un test "defense in depth" rejette (HTTP 400) tout PATCH legacy qui tenterait d'envoyer des champs SMTP.
+> - La Task 6 (`POST /api/admin/[orgId]/settings/test-smtp`) est **supprimée**. La fonction `sendSmtpTest` reste fournie par Plan 6, mais elle n'est appelée que par les routes staff (`/staff/*`). Aucune UI "Tester SMTP" n'existe côté OWNER.
+> - Sources : `docs/v2/features/espace-organisation.md` et `docs/v2/features/multi-tenancy-rbac.md` mises à jour le même jour.
+>
+> **Mise à jour 2026-05-31 — reCAPTCHA plateforme uniquement** : le reCAPTCHA suit la même logique que le SMTP : plateforme uniquement (cf. décision 2026-05-31, `multi-tenancy-rbac.md`). Retrait de toute UI/route/test reCAPTCHA dans `/admin/[orgId]/*`. `OrgSettings` ne contient désormais que `contactEmail` et `contactPhone`.
+>
+> **Mise à jour 2026-05-31 — Enrichissement d'`Organization` et suppression d'`OrgSettings`** : `Organization` est enrichi avec les infos administratives (`legalName`, `addressLine1`, `addressLine2`, `postalCode`, `city`, `country`, `taxId`, `website`, `logo`) et de contact public (`contactEmail`, `contactPhone`). Le modèle `OrgSettings` est **supprimé**. En conséquence, la Task 5 est refondue : la route `GET/PATCH /api/admin/[orgId]/settings` **disparaît** et tous les champs administratifs sont édités via la route principale `PATCH /api/admin/[orgId]`. Cette route accepte désormais tous les champs `Organization` éditables — `name`, `legalName`, `addressLine1/2`, `postalCode`, `city`, `country`, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone` (tous réservés à `OWNER`), plus `slug` et `quotaMax*` (réservés au staff). Audit `ORG_UPDATED` (le type `ORG_SETTINGS_UPDATED` disparaît). La page `/admin/[orgId]/settings` reste, mais devient un formulaire complet (sections Identité, Adresse, Administratif, Contact public) qui POST sur la route principale ; plus de fallback/cascade affiché — tout est direct.
+
+**Architecture:** Toutes les routes sont protégées par un wrapper `withOrgAuth` qui résout l'`orgId` depuis le path, appelle `requireOrgRole` (Plan 1) et délègue ensuite au handler. Les pages serveur (`Server Components`) consomment les routes via `fetch` côté client uniquement pour les actions ; les lectures initiales se font directement via Prisma + helpers. `Organization` ne contient aucun secret (depuis 2026-05-31 : SMTP et reCAPTCHA sont gérés au niveau `PlatformSettings` uniquement ; le modèle `OrgSettings` a été supprimé et ses champs contact fusionnés dans `Organization`). Toute mutation produit un `logActivity({ orgId, … })` avec `staffActor` auto-calculé par Plan 1. La création d'event applique la cascade : vérification du quota → génération d'un slug global unique → copie des `CategoryTemplate` sélectionnés en `Category`.
 
 **Tech Stack:** Next.js 16 App Router (Server Components + Client Forms), Prisma 6, NextAuth 4 (session côté serveur via `getServerSession`), Zod (validation), TypeScript 5, Vitest 4. UI : composants existants `Button`, `Input`, `Select`, `Table`, `Modal`, `StatusBadge` (réutilisés depuis `src/components/ui/`).
 
@@ -12,7 +21,7 @@
 
 **Prerequisite plans:**
 - Plan 1 — Multi-tenancy & RBAC (helpers `requireOrgRole`, `requireStaff`, `loadUserContext`, `logActivity`, `resolveSettings`, `AuthError`)
-- Plan 6 — Notifications email multi-tenant (fournit `sendUserInvitation(userId, { orgId? })`, `sendSmtpTest`)
+- Plan 6 — Notifications email multi-tenant (fournit `sendUserInvitation(userId, { orgId? })` ; `sendSmtpTest` reste utilisé uniquement par les routes staff `/staff/*` — plus aucun appel depuis `/admin/[orgId]/*` depuis la décision 2026-05-31)
 
 ## Progression
 
@@ -22,27 +31,33 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0 | [ ] | -- | -- |
-| 1 | [ ] | -- | -- |
-| 2 | [ ] | -- | -- |
-| 3 | [ ] | -- | -- |
-| 4 | [ ] | -- | -- |
-| 5 | [ ] | -- | -- |
-| 6 | [ ] | -- | -- |
-| 7 | [ ] | -- | -- |
-| 8 | [ ] | -- | -- |
-| 9 | [ ] | -- | -- |
-| 10 | [ ] | -- | -- |
-| 11 | [ ] | -- | -- |
-| 12 | [ ] | -- | -- |
-| 13 | [ ] | -- | -- |
-| 14 | [ ] | -- | -- |
-| 15 | [ ] | -- | -- |
-| 16 | [ ] | -- | -- |
-| 17 | [ ] | -- | -- |
+| 0 | [x] | 2026-05-31 | Pre-flight + nettoyage v1. Helpers Plan 1 OK, stub `sendUserInvitation` OK. Fix bloquant : `vitest.config.ts` passe en `fileParallelism: false` (16 fichiers tests partagent une BDD unique avec `deleteMany`, collisions inter-fichiers). Suppression v1 (dette documentée Lot A Task 10) : 21 routes API (`api/{activity-logs,edit-registration,event,profile,registrations,scan,settings,teams,users,verify}/*`), pages admin v1 (`app/admin/*`), `app/scan/*`, `app/verify/[id]/*`, `app/badge-preview/[id]/*`, `components/admin/EventForm.tsx`, fichiers de tests v1 morts (`auth.test.ts`, `mail.test.ts`). Composants `components/badge/*` conservés (réutilisés par v2-12). Baseline : 269/269 tests, typecheck OK, lint OK (13 warnings mineurs). |
+| 1 | [x] | 2026-05-31 | src/lib/with-org-auth.ts + tests (4/4 passent). Wrapper d'API : 401 si pas de session, 403 si pas OWNER et pas staff, 200 pour OWNER (ctx exposé), 200 pour staff sans OrgMembership. |
+| 2 | [x] | 2026-05-31 | OrgSelector (dropdown multi-org + localStorage badge.lastOrgId), StaffBanner (bandeau amber si accès staff), OrgShell (sidebar Dashboard/Événements/Membres/Modèles/Paramètres/Journal + header). Typecheck OK. |
+| 3 | [x] | 2026-05-31 | src/app/admin/[orgId]/{layout,page}.tsx + src/app/api/admin/[orgId]/route.ts (GET). Layout : redirect login si pas session, notFound si org absente, redirect /select si pas OWNER ni staff, isStaffMode si staff sans OrgMembership. Dashboard : 4 KPI (events actifs/archives/insc mois courant/quota), 5 derniers events, 10 dernieres entrees ActivityLog. GET API retourne l'org avec _count events+memberships et quotas. Typecheck OK. |
+| 4 | [x] | 2026-05-31 | PATCH /api/admin/[orgId] base (name OWNER, slug staff). 3 tests Task 4 passent. Implementation fusionnee avec Task 5 directement (schema etendu, gain de temps). |
+| 5 | [x] | 2026-05-31 | PATCH etendu : Zod .strict() rejette les champs SMTP/reCAPTCHA legacy (HTTP 400, defense in depth). OWNER_FIELDS = name/legalName/addr/postalCode/city/country/taxId/website/logo/contactEmail/contactPhone. STAFF_FIELDS = slug/quotaMax*. Log ORG_UPDATED avec changedFields. Page /admin/[orgId]/settings + SettingsClient (4 sections : Identite / Adresse / Administratif / Contact public ; slug en disabled, indication staff-only). 8/8 tests passent (3 Task 4 + 5 Task 5). |
+| 6 | [-] | 2026-05-31 | Supprimee : decision "SMTP plateforme uniquement" ; aucune route test-smtp scope org. |
+| 7 | [x] | 2026-05-31 | Routes GET/POST members + DELETE [userId]. GET inclut lastLogin (via ActivityLog USER_LOGIN). POST cree user (avec inviteToken 24h via stub Plan 6) si email absent, sinon ajoute juste OrgMembership (sans toucher au token — corrige le comportement du stub Plan 6 qui regenere systematiquement). Idempotence : alreadyMember=true si OrgMembership existe. DELETE refuse 409 LAST_OWNER si seul OWNER. OrgMemberForm + MembersClient (tableau + bouton retirer + form invite). 12/12 tests api-org passent (3 Task 4 + 5 Task 5 + 2 Task 7 POST + 2 Task 7 DELETE). |
+| 8 | [x] | 2026-05-31 | CRUD CategoryTemplate complet : GET/POST routes + PATCH/DELETE [id] (404 si template d'une autre org). Validations Zod : color regex /^#[0-9a-fA-F]{6}$/, number int 0-999, name 1-120 chars. CategoryTemplateForm + TemplatesClient (tableau avec edition/suppression inline). Audit CATEGORY_TEMPLATE_{CREATED,UPDATED,DELETED}. 14/14 tests passent (+2 Task 8). |
+| 9 | [x] | 2026-05-31 | GET /api/admin/[orgId]/events avec filtres archived/registrationOpen (Prisma.EventWhereInput type-safe), include _count.registrations. Page liste avec tableau + bouton "Nouvel evenement" + status badges (Archive/Inscriptions ouvertes/Ferme). |
+| 10 | [x] | 2026-05-31 | slugify-event.ts (NFD + diacritiques + lowercase + alphanum + dashes) + uniqueEventSlug (suffixage -2/-3 global). 7/7 tests slugify passent. POST /api/admin/[orgId]/events : quota check 409 QUOTA_EXCEEDED, slug global unique, copie CategoryTemplate -> Category (renumerotation 1..N pour unicite), manualCategories optionnel, audit EVENT_CREATED. 4/4 tests POST events passent. 25 tests api-org+slugify cumules. |
+| 11 | [x] | 2026-05-31 | EventCreationWizard 3 etapes (Infos / Categories / Recap) + page /admin/[orgId]/events/new. Slug suggere automatiquement depuis titre (modifiable), mode template (cases a cocher des CategoryTemplate) ou manual (categories ajoutees a la volee). Gestion erreurs QUOTA_EXCEEDED / SLUG_TAKEN avec messages utilisateurs. Redirige vers /events/[eventId]/settings (Plan 4 livrera cette page). |
+| 12 | [x] | 2026-05-31 | Routes POST archive/restore. Archive : archived=true + archivedAt=now + registrationOpen=false. Restore : archived=false + archivedAt=null. 404 si l'event appartient a une autre org (scope check explicite). Audit EVENT_ARCHIVED / EVENT_RESTORED. 2/2 tests passent. |
+| 13 | [x] | 2026-05-31 | GET /api/admin/[orgId]/activity (filtres type/from/to/eventId/userId + pagination cursor take=50, max 200). Page /admin/[orgId]/activity affiche les 100 dernieres entrees scope org avec badge "staff" pour les actions staff. Typage Prisma.ActivityLogWhereInput + Prisma.DateTimeFilter. |
+| 14 | [x] | 2026-05-31 | src/app/select/page.tsx (Server Component). Liste les orgs OWNER + entree "Espace staff applicatif" si staff. Cas degeneres : redirect /admin/[orgId] si 1 seule org non-staff, redirect /profile?message=no-org si 0 org non-staff. |
+| 15 | [x] | 2026-05-31 | src/lib/org-redirect.ts + tests (8/8). Logique pure : null ctx -> /login ; staff sans hint -> /staff ; staff avec hint -> /admin/[hint] ; client sans org -> /profile?message=no-org ; client avec hint valide -> /admin/[hint] ; client mono-org -> /admin/[onlyOrgId] ; client multi-org sans hint valide -> /select. src/app/page.tsx remplace computeStaffRedirect (Plan v2-02) par resolveHomeRedirect (plus complet). src/lib/staff-redirect.ts + son test supprimes (superseded). |
+| 16 | [x] | 2026-05-31 | owner-journey.test.ts (integration via Prisma + fetch + mock `sendUserInvitation`). Test 1 : OWNER cree event "Conf 2026" -> invite Bob (sendUserInvitation appele 1x) -> archive event ; verifie ActivityLog contient EVENT_CREATED, MEMBERSHIP_ADDED, USER_CREATED, EVENT_ARCHIVED, tous staffActor=false. Test 2 : staff PATCH org -> ORG_UPDATED staffActor=true. 2/2 passent. |
+| 17 | [x] | 2026-05-31 | Verification finale : 303/303 tests verts (26 fichiers), typecheck OK, lint OK (0 erreurs, 13 warnings mineurs sur badge components). Aucun secret SMTP/reCAPTCHA dans /api/admin/. Aucune reference residuelle OrgSettings (sauf 2 commentaires documentaires de migration). 9 routes API admin + 7 pages admin livrees, conformes a la spec. Doc architecture.md mise a jour avec section "Etat au lot C (post-Plan 3)". Fix infra : composant Input rendu compatible label optionnel (le pattern v2 utilise placeholder seul). |
+| 18 | [x] | 2026-06-01 | Plan 6 livre, sendUserInvitation operationnelle. Audit v2-14 §2.3 confirme. |
 
-**Derniere session** : aucune, plan jamais commence.
-**Prochaine etape** : Task 1.
+**Derniere session** : 2026-05-31 - Plan v2-03 entierement implemente (Tasks 0-17 toutes en [x] ; Task 6 [-] supprimee 2026-05-31). Task 18 marquee [~] : depend du merge Plan v2-06 (Lot D) qui fournira les vraies impls email pour remplacer les stubs `sendUserInvitation`/`sendSmtpTest`/`sendPasswordResetEmail` dans `src/lib/mail.ts`. 303/303 tests verts (26 fichiers), typecheck OK, lint OK (0 erreurs, 13 warnings mineurs sur badge components a conserver pour v2-12). Aucun commit (consigne user "continue sans commit").
+**Prochaine etape** : Lot C suite -> Plan v2-04 (espace evenement `/admin/[orgId]/events/[eventId]/*`).
+
+**Notes** :
+- 2026-05-31 : decision "SMTP plateforme uniquement". Task 5 simplifiee (OrgSettings = contact + reCAPTCHA uniquement) ; Task 6 (`test-smtp` scope org) abandonnee. Voir l'en-tete du plan pour le detail.
+- 2026-05-31 : decision "reCAPTCHA plateforme uniquement" (correction du meme jour). Task 5 re-simplifiee : OrgSettings = contact uniquement (`contactEmail`, `contactPhone`). Retrait de tout champ/UI/route/test reCAPTCHA dans `/admin/[orgId]/*`. Le test "defense in depth" du PATCH OrgSettings refuse desormais aussi tout champ reCAPTCHA (HTTP 400). Voir l'en-tete du plan pour le detail.
+- 2026-05-31 : decision "enrichissement d'Organization, suppression d'OrgSettings". Task 5 refondue : la route `GET/PATCH /api/admin/[orgId]/settings` disparait, fusion dans la route principale `PATCH /api/admin/[orgId]` qui accepte desormais tous les champs Organization editables (`name`, `legalName`, adresse, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone` en OWNER ; `slug` et `quotaMax*` en staff). Tests `prisma.orgSettings.*` remplaces par `prisma.organization.*`. Activity log `ORG_UPDATED` (`ORG_SETTINGS_UPDATED` retire). UI `SettingsClient.tsx` refondue (sections Identite / Adresse / Administratif / Contact public) et POST sur la route principale. Task 17 (greps) ajustee. Voir l'en-tete du plan pour le detail.
 
 ---
 
@@ -71,9 +86,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 - `src/app/admin/[orgId]/events/new/page.tsx`
 - `src/app/admin/[orgId]/activity/page.tsx`
 - `src/app/select/page.tsx`
-- `src/app/api/admin/[orgId]/route.ts` (GET, PATCH)
-- `src/app/api/admin/[orgId]/settings/route.ts` (GET, PATCH)
-- `src/app/api/admin/[orgId]/settings/test-smtp/route.ts` (POST)
+- `src/app/api/admin/[orgId]/route.ts` (GET, PATCH — toutes les infos administratives)
 - `src/app/api/admin/[orgId]/members/route.ts` (GET, POST)
 - `src/app/api/admin/[orgId]/members/[userId]/route.ts` (DELETE)
 - `src/app/api/admin/[orgId]/templates/route.ts` (GET, POST)
@@ -116,7 +129,7 @@ Expected: les 4 fichiers existent. Si l'un est absent, **STOP** : exécuter Plan
 - [ ] **Step 0.3: Verify Plan 6 helpers exist (or stub)**
 
 ```bash
-grep -l "sendUserInvitation\|sendSmtpTest" src/lib/mail.ts src/lib/email/ 2>/dev/null || true
+grep -l "sendUserInvitation" src/lib/mail.ts src/lib/email/ 2>/dev/null || true
 ```
 
 Si Plan 6 n'est pas merge, créer un stub minimal dans `src/lib/mail.ts` (à supprimer une fois Plan 6 réel) :
@@ -125,12 +138,9 @@ Si Plan 6 n'est pas merge, créer un stub minimal dans `src/lib/mail.ts` (à sup
 export async function sendUserInvitation(_userId: string, _opts?: { orgId?: string }): Promise<void> {
   console.warn("[stub] sendUserInvitation called — Plan 6 not yet implemented");
 }
-export async function sendSmtpTest(_to: string, _orgId?: string): Promise<{ messageId: string }> {
-  return { messageId: "stub-" + Date.now() };
-}
 ```
 
-> Ces stubs seront remplacés par les vraies implémentations du Plan 6. Ne pas commit le stub si Plan 6 est déjà mergé.
+> Ce stub sera remplacé par la vraie implémentation du Plan 6. Ne pas commit le stub si Plan 6 est déjà mergé. `sendSmtpTest` n'est plus stubbé ici depuis la décision 2026-05-31 : aucune route `/admin/[orgId]/*` ne l'appelle, seules les routes `/staff/*` l'utilisent (couvertes par leur propre plan).
 
 - [ ] **Step 0.4: Run existing tests**
 
@@ -749,7 +759,7 @@ git commit -m "feat(v2): layout /admin/[orgId] + dashboard org + GET /api/admin/
 - Modify: `src/app/api/admin/[orgId]/route.ts` (ajout PATCH)
 - Create test entries in `src/lib/__tests__/api-org.test.ts`
 
-> Règle : le slug n'est modifiable que par un staff (`STAFF_SUPPORT` ou supérieur). Le nom est modifiable par OWNER ou staff. Audit `ORG_UPDATED` (staffActor auto).
+> Règle (note 2026-05-31) : ce premier squelette du PATCH ne couvre que `name` (OWNER) et `slug` (staff). La Task 5, refondue le 2026-05-31 suite à la fusion `OrgSettings → Organization`, **étend** ce même handler pour gérer tous les autres champs administratifs (`legalName`, adresse, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone` en OWNER ; `quotaMax*` en staff). Cette Task 4 reste donc le squelette de base ; les tests et le code complet vivent en Task 5. Audit `ORG_UPDATED` (staffActor auto).
 
 - [ ] **Step 4.1: Write failing test in `src/lib/__tests__/api-org.test.ts`**
 
@@ -907,109 +917,173 @@ git commit -m "feat(v2): PATCH /api/admin/[orgId] (nom OWNER, slug staff)"
 
 ---
 
-## Task 5: `OrgSettings` — GET / PATCH + page settings
+## Task 5: `Organization` — GET / PATCH (infos administratives complètes)
 
 **Files:**
-- Create: `src/app/api/admin/[orgId]/settings/route.ts`
+- Modify: `src/app/api/admin/[orgId]/route.ts` (étend PATCH pour gérer toutes les infos administratives)
 - Create: `src/app/admin/[orgId]/settings/page.tsx`
+- Create: `src/app/admin/[orgId]/settings/SettingsClient.tsx`
 - Add tests in `src/lib/__tests__/api-org.test.ts`
 
-> `GET` ne retourne **jamais** `smtpPassword` ni `recaptchaSecretKey`. `PATCH` accepte les champs nullable (null = hérite du niveau parent). Audit `ORG_SETTINGS_UPDATED`.
+> **Refondue 2026-05-31** : suite à la décision de design 2026-05-31 (enrichissement d'`Organization`, suppression d'`OrgSettings`), la route `GET/PATCH /api/admin/[orgId]/settings` **disparaît**. Toutes les infos administratives sont éditées via la route principale `PATCH /api/admin/[orgId]` (Task 4), étendue ici pour accepter tous les champs `Organization` éditables : `name`, `legalName`, `addressLine1`, `addressLine2`, `postalCode`, `city`, `country`, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone` (tous réservés à `OWNER`), ainsi que `slug` et `quotaMaxEvents`/`quotaMaxRegistrations`/`quotaMaxStorageMB` (réservés au **staff**). Tout champ SMTP ou reCAPTCHA envoyé par un client legacy est refusé en HTTP 400 (defense in depth — SMTP et reCAPTCHA vivent dans `PlatformSettings` uniquement). Audit `ORG_UPDATED` (le type `ORG_SETTINGS_UPDATED` n'existe plus).
 
-- [ ] **Step 5.1: Add failing test**
+- [ ] **Step 5.1: Add failing tests**
 
 Append to `src/lib/__tests__/api-org.test.ts` :
 
 ```typescript
-describe("GET /api/admin/[orgId]/settings", () => {
-  beforeEach(async () => {
-    await prisma.orgSettings.deleteMany();
-    await prisma.orgMembership.deleteMany();
-    await prisma.organization.deleteMany();
-    await prisma.user.deleteMany();
-    vi.mocked(getServerSession).mockReset();
-  });
-
-  it("does not return smtpPassword or recaptchaSecretKey", async () => {
-    const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
-    const org = await prisma.organization.create({ data: { name: "O", slug: "secret-o" } });
-    await prisma.orgSettings.create({
-      data: { orgId: org.id, smtpHost: "h", smtpPassword: "SECRET", recaptchaSecretKey: "SK" },
-    });
-    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { GET } = await import("@/app/api/admin/[orgId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/settings`);
-    const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
-    const json = await res.json();
-
-    expect(json.settings.smtpHost).toBe("h");
-    expect(json.settings.smtpPassword).toBeUndefined();
-    expect(json.settings.recaptchaSecretKey).toBeUndefined();
-  });
-});
-
-describe("PATCH /api/admin/[orgId]/settings", () => {
+describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
-    await prisma.orgSettings.deleteMany();
     await prisma.orgMembership.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.user.deleteMany();
     vi.mocked(getServerSession).mockReset();
   });
 
-  it("creates OrgSettings if missing and applies override", async () => {
+  it("OWNER updates legalName, address, taxId, website, logo, contact", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
-    const org = await prisma.organization.create({ data: { name: "O", slug: "p-o" } });
+    const org = await prisma.organization.create({ data: { name: "Acme", slug: "acme-admin" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/settings`, {
+    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpHost: "smtp.example.com", contactEmail: "c@x" }),
+      body: JSON.stringify({
+        legalName: "Acme SAS",
+        addressLine1: "1 rue de Paris",
+        addressLine2: "Bat. A",
+        postalCode: "75001",
+        city: "Paris",
+        country: "FR",
+        taxId: "FR12345678901",
+        website: "https://acme.example",
+        logo: "/uploads/acme.png",
+        contactEmail: "contact@acme.example",
+        contactPhone: "+33123456789",
+      }),
       headers: { "content-type": "application/json" },
     });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(200);
 
-    const settings = await prisma.orgSettings.findUnique({ where: { orgId: org.id } });
-    expect(settings?.smtpHost).toBe("smtp.example.com");
-    expect(settings?.contactEmail).toBe("c@x");
+    const updated = await prisma.organization.findUnique({ where: { id: org.id } });
+    expect(updated?.legalName).toBe("Acme SAS");
+    expect(updated?.addressLine1).toBe("1 rue de Paris");
+    expect(updated?.addressLine2).toBe("Bat. A");
+    expect(updated?.postalCode).toBe("75001");
+    expect(updated?.city).toBe("Paris");
+    expect(updated?.country).toBe("FR");
+    expect(updated?.taxId).toBe("FR12345678901");
+    expect(updated?.website).toBe("https://acme.example");
+    expect(updated?.logo).toBe("/uploads/acme.png");
+    expect(updated?.contactEmail).toBe("contact@acme.example");
+    expect(updated?.contactPhone).toBe("+33123456789");
+
+    const log = await prisma.activityLog.findFirst({ where: { type: "ORG_UPDATED", orgId: org.id } });
+    expect(log).toBeTruthy();
+    expect(log?.staffActor).toBe(false);
   });
 
-  it("null value resets override (cascade fallback)", async () => {
-    const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
-    const org = await prisma.organization.create({ data: { name: "O", slug: "p-o2" } });
-    await prisma.orgSettings.create({ data: { orgId: org.id, smtpHost: "h" } });
+  it("MANAGER (non-OWNER membership) is refused with HTTP 403", async () => {
+    const u = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+    const org = await prisma.organization.create({ data: { name: "Acme", slug: "acme-mgr" } });
+    // Pas d'OrgMembership pour ce user => requireOrgRole rejette.
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ legalName: "Acme SAS" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(403);
+  });
+
+  it("OWNER cannot edit slug (silently ignored, only staff can)", async () => {
+    const u = await prisma.user.create({ data: { email: "o2@x", password: "x", name: "O2" } });
+    const org = await prisma.organization.create({ data: { name: "Acme", slug: "keep-slug" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/settings`, {
+    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ smtpHost: null }),
+      body: JSON.stringify({ slug: "owner-attempt" }),
       headers: { "content-type": "application/json" },
     });
-    await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(400); // NOTHING_TO_UPDATE car slug filtre cote serveur
 
-    const settings = await prisma.orgSettings.findUnique({ where: { orgId: org.id } });
-    expect(settings?.smtpHost).toBeNull();
+    const after = await prisma.organization.findUnique({ where: { id: org.id } });
+    expect(after?.slug).toBe("keep-slug");
+  });
+
+  it("OWNER cannot edit quotaMaxEvents (silently ignored, only staff can)", async () => {
+    const u = await prisma.user.create({ data: { email: "o3@x", password: "x", name: "O3" } });
+    const org = await prisma.organization.create({
+      data: { name: "Acme", slug: "keep-quota", quotaMaxEvents: 5 },
+    });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ quotaMaxEvents: 999 }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(400); // NOTHING_TO_UPDATE car quota filtre cote serveur
+
+    const after = await prisma.organization.findUnique({ where: { id: org.id } });
+    expect(after?.quotaMaxEvents).toBe(5);
+  });
+
+  it("rejects legacy SMTP and reCAPTCHA fields with HTTP 400 (defense in depth)", async () => {
+    // Depuis 2026-05-31, SMTP et reCAPTCHA sont geres uniquement au niveau PlatformSettings.
+    // Un client legacy qui tenterait un PATCH avec smtpHost/smtpPassword ou recaptcha* doit etre refuse.
+    const u = await prisma.user.create({ data: { email: "o4@x", password: "x", name: "O4" } });
+    const org = await prisma.organization.create({ data: { name: "Acme", slug: "no-secrets" } });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+
+    // SMTP refuse
+    const reqSmtp = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ smtpHost: "smtp.example.com", smtpPassword: "secret" }),
+      headers: { "content-type": "application/json" },
+    });
+    const resSmtp = await PATCH(reqSmtp, { params: Promise.resolve({ orgId: org.id }) });
+    expect(resSmtp.status).toBe(400);
+
+    // reCAPTCHA refuse
+    const reqCaptcha = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ recaptchaEnabled: true, recaptchaSiteKey: "sk", recaptchaSecretKey: "secret" }),
+      headers: { "content-type": "application/json" },
+    });
+    const resCaptcha = await PATCH(reqCaptcha, { params: Promise.resolve({ orgId: org.id }) });
+    expect(resCaptcha.status).toBe(400);
   });
 });
 ```
 
-- [ ] **Step 5.2: Run test (expected to fail)**
+- [ ] **Step 5.2: Run tests (expected to fail)**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/api-org.test.ts
 ```
 
-Expected: FAIL (route not found).
+Expected: FAIL (le PATCH de Task 4 ne gere encore que name + slug).
 
-- [ ] **Step 5.3: Create `src/app/api/admin/[orgId]/settings/route.ts`**
+- [ ] **Step 5.3: Étendre `src/app/api/admin/[orgId]/route.ts`**
+
+Remplacer le `patchSchema` et le handler PATCH par la version etendue qui couvre tous les champs administratifs. Le schema Zod utilise `.strict()` pour refuser tout champ inconnu (defense in depth contre SMTP/reCAPTCHA legacy).
 
 ```typescript
 import { NextRequest, NextResponse } from "next/server";
@@ -1018,87 +1092,92 @@ import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 
-const settingsPatchSchema = z.object({
-  smtpHost: z.string().nullable().optional(),
-  smtpPort: z.number().int().min(1).max(65535).nullable().optional(),
-  smtpFrom: z.string().email().nullable().optional(),
-  smtpUser: z.string().nullable().optional(),
-  smtpPassword: z.string().nullable().optional(),
-  smtpSecure: z.boolean().nullable().optional(),
-  contactEmail: z.string().email().nullable().optional(),
-  contactPhone: z.string().nullable().optional(),
-  recaptchaEnabled: z.boolean().nullable().optional(),
-  recaptchaSiteKey: z.string().nullable().optional(),
-  recaptchaSecretKey: z.string().nullable().optional(),
-});
+// Note (2026-05-31) : OrgSettings supprime. Tous les champs administratifs vivent
+// dans Organization. Le schema .strict() refuse tout champ SMTP/reCAPTCHA legacy
+// (SMTP et reCAPTCHA sont geres uniquement dans PlatformSettings).
+const patchSchema = z
+  .object({
+    // OWNER editable
+    name: z.string().min(1).max(120).optional(),
+    legalName: z.string().max(200).nullable().optional(),
+    addressLine1: z.string().max(200).nullable().optional(),
+    addressLine2: z.string().max(200).nullable().optional(),
+    postalCode: z.string().max(20).nullable().optional(),
+    city: z.string().max(100).nullable().optional(),
+    country: z.string().max(100).nullable().optional(),
+    taxId: z.string().max(50).nullable().optional(),
+    website: z.string().url().max(255).nullable().optional(),
+    logo: z.string().max(500).nullable().optional(),
+    contactEmail: z.string().email().nullable().optional(),
+    contactPhone: z.string().max(50).nullable().optional(),
+    // Staff-only
+    slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/).optional(),
+    quotaMaxEvents: z.number().int().min(0).nullable().optional(),
+    quotaMaxRegistrations: z.number().int().min(0).nullable().optional(),
+    quotaMaxStorageMB: z.number().int().min(0).nullable().optional(),
+  })
+  .strict();
 
-export const GET = withOrgAuth("OWNER", async (_req, { orgId }) => {
-  const s = await prisma.orgSettings.findUnique({ where: { orgId } });
-  // Strip secrets unconditionally
-  const safe = s
-    ? {
-        smtpHost: s.smtpHost,
-        smtpPort: s.smtpPort,
-        smtpFrom: s.smtpFrom,
-        smtpSecure: s.smtpSecure,
-        contactEmail: s.contactEmail,
-        contactPhone: s.contactPhone,
-        recaptchaEnabled: s.recaptchaEnabled,
-        recaptchaSiteKey: s.recaptchaSiteKey,
-        // smtpUser, smtpPassword, recaptchaSecretKey never returned
-        smtpUserSet: !!s.smtpUser,
-        smtpPasswordSet: !!s.smtpPassword,
-        recaptchaSecretKeySet: !!s.recaptchaSecretKey,
-      }
-    : null;
-  return NextResponse.json({ settings: safe ?? {} });
-});
+const OWNER_FIELDS = [
+  "name",
+  "legalName",
+  "addressLine1",
+  "addressLine2",
+  "postalCode",
+  "city",
+  "country",
+  "taxId",
+  "website",
+  "logo",
+  "contactEmail",
+  "contactPhone",
+] as const;
+
+const STAFF_FIELDS = [
+  "slug",
+  "quotaMaxEvents",
+  "quotaMaxRegistrations",
+  "quotaMaxStorageMB",
+] as const;
 
 export const PATCH = withOrgAuth("OWNER", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
-  const parsed = settingsPatchSchema.safeParse(json);
+  const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
   }
 
-  const data = parsed.data;
-  const updated = await prisma.orgSettings.upsert({
-    where: { orgId },
-    create: { orgId, ...data },
-    update: data,
-  });
+  const isStaff = session.user.isStaff;
+  const data: Record<string, unknown> = {};
+  for (const k of OWNER_FIELDS) {
+    if (k in parsed.data) data[k] = (parsed.data as Record<string, unknown>)[k];
+  }
+  if (isStaff) {
+    for (const k of STAFF_FIELDS) {
+      if (k in parsed.data) data[k] = (parsed.data as Record<string, unknown>)[k];
+    }
+  }
 
-  // Audit but strip secret values from details
-  const { smtpPassword, recaptchaSecretKey, ...auditable } = data;
-  await logActivity({
-    type: "ORG_SETTINGS_UPDATED",
-    userId: session.user.id,
-    orgId,
-    details: {
-      changedFields: Object.keys(data),
-      values: auditable,
-      smtpPasswordChanged: smtpPassword !== undefined,
-      recaptchaSecretKeyChanged: recaptchaSecretKey !== undefined,
-    },
-    req,
-  });
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "NOTHING_TO_UPDATE" }, { status: 400 });
+  }
 
-  // Return without secrets
-  return NextResponse.json({
-    settings: {
-      smtpHost: updated.smtpHost,
-      smtpPort: updated.smtpPort,
-      smtpFrom: updated.smtpFrom,
-      smtpSecure: updated.smtpSecure,
-      contactEmail: updated.contactEmail,
-      contactPhone: updated.contactPhone,
-      recaptchaEnabled: updated.recaptchaEnabled,
-      recaptchaSiteKey: updated.recaptchaSiteKey,
-      smtpUserSet: !!updated.smtpUser,
-      smtpPasswordSet: !!updated.smtpPassword,
-      recaptchaSecretKeySet: !!updated.recaptchaSecretKey,
-    },
-  });
+  try {
+    const org = await prisma.organization.update({ where: { id: orgId }, data });
+    await logActivity({
+      type: "ORG_UPDATED",
+      userId: session.user.id,
+      orgId,
+      details: { changedFields: Object.keys(data) },
+      req,
+    });
+    return NextResponse.json({ org });
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      return NextResponse.json({ error: "SLUG_TAKEN" }, { status: 409 });
+    }
+    throw err;
+  }
 });
 ```
 
@@ -1114,30 +1193,29 @@ export default async function SettingsPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const [org, settings] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: orgId },
-      select: { id: true, name: true, slug: true },
-    }),
-    prisma.orgSettings.findUnique({ where: { orgId } }),
-  ]);
+  // Note (2026-05-31) : OrgSettings supprime. On lit tout depuis Organization.
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      id: true,
+      name: true,
+      legalName: true,
+      slug: true,
+      addressLine1: true,
+      addressLine2: true,
+      postalCode: true,
+      city: true,
+      country: true,
+      taxId: true,
+      website: true,
+      logo: true,
+      contactEmail: true,
+      contactPhone: true,
+    },
+  });
   if (!org) throw new Error("Org not found");
 
-  const safe = {
-    smtpHost: settings?.smtpHost ?? null,
-    smtpPort: settings?.smtpPort ?? null,
-    smtpFrom: settings?.smtpFrom ?? null,
-    smtpSecure: settings?.smtpSecure ?? null,
-    contactEmail: settings?.contactEmail ?? null,
-    contactPhone: settings?.contactPhone ?? null,
-    recaptchaEnabled: settings?.recaptchaEnabled ?? null,
-    recaptchaSiteKey: settings?.recaptchaSiteKey ?? null,
-    smtpUserSet: !!settings?.smtpUser,
-    smtpPasswordSet: !!settings?.smtpPassword,
-    recaptchaSecretKeySet: !!settings?.recaptchaSecretKey,
-  };
-
-  return <SettingsClient orgId={orgId} org={org} initialSettings={safe} />;
+  return <SettingsClient orgId={orgId} initialOrg={org} />;
 }
 ```
 
@@ -1150,106 +1228,148 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
-type Settings = {
-  smtpHost: string | null;
-  smtpPort: number | null;
-  smtpFrom: string | null;
-  smtpSecure: boolean | null;
+type OrgForm = {
+  name: string;
+  legalName: string | null;
+  slug: string;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
+  taxId: string | null;
+  website: string | null;
+  logo: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
-  recaptchaEnabled: boolean | null;
-  recaptchaSiteKey: string | null;
-  smtpUserSet: boolean;
-  smtpPasswordSet: boolean;
-  recaptchaSecretKeySet: boolean;
 };
 
 export function SettingsClient({
   orgId,
-  org,
-  initialSettings,
+  initialOrg,
 }: {
   orgId: string;
-  org: { name: string; slug: string };
-  initialSettings: Settings;
+  initialOrg: OrgForm;
 }) {
-  const [settings, setSettings] = useState(initialSettings);
+  const [org, setOrg] = useState<OrgForm>(initialOrg);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function save(patch: Partial<Settings & { smtpUser: string | null; smtpPassword: string | null; recaptchaSecretKey: string | null }>) {
+  function set<K extends keyof OrgForm>(key: K, value: OrgForm[K]) {
+    setOrg((o) => ({ ...o, [key]: value }));
+  }
+
+  async function save() {
     setSaving(true);
     setMsg(null);
-    const res = await fetch(`/api/admin/${orgId}/settings`, {
+    // PATCH sur la route principale (plus de /settings depuis 2026-05-31).
+    // On envoie tous les champs editables OWNER. Slug et quotas sont filtres cote serveur (staff only).
+    const res = await fetch(`/api/admin/${orgId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(patch),
+      body: JSON.stringify({
+        name: org.name,
+        legalName: org.legalName,
+        addressLine1: org.addressLine1,
+        addressLine2: org.addressLine2,
+        postalCode: org.postalCode,
+        city: org.city,
+        country: org.country,
+        taxId: org.taxId,
+        website: org.website,
+        logo: org.logo,
+        contactEmail: org.contactEmail,
+        contactPhone: org.contactPhone,
+      }),
     });
     setSaving(false);
     if (res.ok) {
-      const json = await res.json();
-      setSettings(json.settings);
       setMsg("Paramètres enregistrés.");
     } else {
       setMsg("Erreur lors de l'enregistrement.");
     }
   }
 
-  async function testSmtp() {
-    const res = await fetch(`/api/admin/${orgId}/settings/test-smtp`, { method: "POST" });
-    if (res.ok) setMsg("Email de test envoyé. Vérifiez votre boîte.");
-    else setMsg("Échec du test SMTP.");
-  }
-
   return (
     <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">Paramètres</h1>
+      <h1 className="text-2xl font-bold">Paramètres de l'organisation</h1>
       {msg && <div className="rounded bg-blue-50 border border-blue-200 px-3 py-2 text-sm">{msg}</div>}
 
       <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Général</h2>
+        <h2 className="font-semibold">Identité</h2>
         <div>
           <label className="text-sm text-gray-600">Nom</label>
-          <Input defaultValue={org.name} disabled />
-          <p className="text-xs text-gray-500 mt-1">Modifiable via PATCH /api/admin/[orgId].</p>
+          <Input value={org.name} onChange={(e) => set("name", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-sm text-gray-600">Raison sociale</label>
+          <Input
+            value={org.legalName ?? ""}
+            onChange={(e) => set("legalName", e.target.value || null)}
+          />
         </div>
         <div>
           <label className="text-sm text-gray-600">Slug</label>
-          <Input defaultValue={org.slug} disabled />
+          <Input value={org.slug} disabled />
           <p className="text-xs text-gray-500 mt-1">Modifiable par le staff uniquement.</p>
+        </div>
+        <div>
+          <label className="text-sm text-gray-600">Logo (URL)</label>
+          <Input
+            placeholder="/uploads/logo.png"
+            value={org.logo ?? ""}
+            onChange={(e) => set("logo", e.target.value || null)}
+          />
         </div>
       </section>
 
       <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">SMTP (override)</h2>
-        <p className="text-xs text-gray-500">
-          Laissez vide pour hériter de la plateforme. Les champs sont nullable (null = héritage).
-        </p>
+        <h2 className="font-semibold">Adresse</h2>
         <Input
-          placeholder="smtp.example.com"
-          value={settings.smtpHost ?? ""}
-          onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value || null })}
+          placeholder="Ligne 1"
+          value={org.addressLine1 ?? ""}
+          onChange={(e) => set("addressLine1", e.target.value || null)}
         />
         <Input
-          type="number"
-          placeholder="587"
-          value={settings.smtpPort ?? ""}
-          onChange={(e) =>
-            setSettings({ ...settings, smtpPort: e.target.value ? Number(e.target.value) : null })
-          }
+          placeholder="Ligne 2"
+          value={org.addressLine2 ?? ""}
+          onChange={(e) => set("addressLine2", e.target.value || null)}
         />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            placeholder="Code postal"
+            value={org.postalCode ?? ""}
+            onChange={(e) => set("postalCode", e.target.value || null)}
+          />
+          <Input
+            placeholder="Ville"
+            value={org.city ?? ""}
+            onChange={(e) => set("city", e.target.value || null)}
+          />
+        </div>
         <Input
-          placeholder="noreply@exemple.fr"
-          value={settings.smtpFrom ?? ""}
-          onChange={(e) => setSettings({ ...settings, smtpFrom: e.target.value || null })}
+          placeholder="Pays"
+          value={org.country ?? ""}
+          onChange={(e) => set("country", e.target.value || null)}
         />
-        <div className="flex gap-2">
-          <Button onClick={() => save(settings)} disabled={saving}>
-            Enregistrer
-          </Button>
-          <Button onClick={testSmtp} variant="secondary">
-            Tester SMTP
-          </Button>
+      </section>
+
+      <section className="bg-white border rounded p-4 space-y-3">
+        <h2 className="font-semibold">Administratif</h2>
+        <div>
+          <label className="text-sm text-gray-600">Numéro fiscal / SIRET</label>
+          <Input
+            value={org.taxId ?? ""}
+            onChange={(e) => set("taxId", e.target.value || null)}
+          />
+        </div>
+        <div>
+          <label className="text-sm text-gray-600">Site web</label>
+          <Input
+            placeholder="https://exemple.fr"
+            value={org.website ?? ""}
+            onChange={(e) => set("website", e.target.value || null)}
+          />
         </div>
       </section>
 
@@ -1257,18 +1377,22 @@ export function SettingsClient({
         <h2 className="font-semibold">Contact public</h2>
         <Input
           placeholder="contact@exemple.fr"
-          value={settings.contactEmail ?? ""}
-          onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value || null })}
+          value={org.contactEmail ?? ""}
+          onChange={(e) => set("contactEmail", e.target.value || null)}
         />
         <Input
           placeholder="+33 1 23 45 67 89"
-          value={settings.contactPhone ?? ""}
-          onChange={(e) => setSettings({ ...settings, contactPhone: e.target.value || null })}
+          value={org.contactPhone ?? ""}
+          onChange={(e) => set("contactPhone", e.target.value || null)}
         />
-        <Button onClick={() => save(settings)} disabled={saving}>
-          Enregistrer
-        </Button>
       </section>
+
+      <Button onClick={save} disabled={saving}>
+        Enregistrer
+      </Button>
+
+      {/* Note 2026-05-31 : SMTP et reCAPTCHA vivent uniquement au niveau PlatformSettings (geres par le staff).
+          Aucun formulaire SMTP, "Tester SMTP" ou reCAPTCHA n'est expose dans /admin/[orgId]/*. */}
     </div>
   );
 }
@@ -1280,59 +1404,22 @@ export function SettingsClient({
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/api-org.test.ts
 ```
 
-Expected: tests précédents + 3 nouveaux passent.
+Expected: tests précédents + 5 nouveaux passent (OWNER edit toutes les infos, MANAGER 403, OWNER refuse slug, OWNER refuse quotaMaxEvents, refus SMTP/reCAPTCHA legacy HTTP 400).
 
 - [ ] **Step 5.7: Commit**
 
 ```bash
-git add src/app/api/admin/[orgId]/settings src/app/admin/[orgId]/settings src/lib/__tests__/api-org.test.ts
-git commit -m "feat(v2): GET/PATCH OrgSettings (sans secrets) + page settings"
+git add src/app/api/admin/[orgId]/route.ts src/app/admin/[orgId]/settings src/lib/__tests__/api-org.test.ts
+git commit -m "feat(v2): PATCH /api/admin/[orgId] etendu (infos administratives completes) + page settings"
 ```
 
 ---
 
-## Task 6: `POST /api/admin/[orgId]/settings/test-smtp`
+## Task 6: `POST /api/admin/[orgId]/settings/test-smtp` — SUPPRIMEE (2026-05-31)
 
-**Files:**
-- Create: `src/app/api/admin/[orgId]/settings/test-smtp/route.ts`
-
-> Utilise `sendSmtpTest(to, orgId)` du Plan 6. Le destinataire est l'email de l'utilisateur connecté. Audit `ORG_SETTINGS_UPDATED` avec un détail `testSmtp: true`.
-
-- [ ] **Step 6.1: Create `src/app/api/admin/[orgId]/settings/test-smtp/route.ts`**
-
-```typescript
-import { NextRequest, NextResponse } from "next/server";
-import { withOrgAuth } from "@/lib/with-org-auth";
-import { sendSmtpTest } from "@/lib/mail";
-import { logActivity } from "@/lib/activity-log";
-
-export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
-  try {
-    const result = await sendSmtpTest(session.user.email, orgId);
-    await logActivity({
-      type: "ORG_SETTINGS_UPDATED",
-      userId: session.user.id,
-      orgId,
-      details: { testSmtp: true, to: session.user.email, messageId: result.messageId },
-      req,
-    });
-    return NextResponse.json({ ok: true, messageId: result.messageId });
-  } catch (err: any) {
-    return NextResponse.json({ error: "SMTP_FAILED", message: err.message }, { status: 502 });
-  }
-});
-```
-
-- [ ] **Step 6.2: Manual smoke test**
-
-Connecté en OWNER, dans `/admin/[orgId]/settings`, cliquer "Tester SMTP". Vérifier dans Mailpit (`http://localhost:8025`) qu'un email est reçu.
-
-- [ ] **Step 6.3: Commit**
-
-```bash
-git add src/app/api/admin/[orgId]/settings/test-smtp
-git commit -m "feat(v2): POST /api/admin/[orgId]/settings/test-smtp"
-```
+> **Statut** : `[-]` abandonnee. **Raison** : decision de design 2026-05-31 — le SMTP vit uniquement au niveau `PlatformSettings`. Aucun override SMTP au niveau organisation, donc aucune route "test SMTP" scope org. La fonction `sendSmtpTest` reste fournie par Plan 6, mais n'est appelee que par les routes staff (`/staff/*`, couvertes par leur propre plan). Voir l'en-tete de ce plan et `docs/v2/features/espace-organisation.md` pour le detail.
+>
+> Ne rien implementer pour cette task. Aucun fichier `src/app/api/admin/[orgId]/settings/test-smtp/route.ts` ne doit etre cree. Passer directement a la Task 7.
 
 ---
 
@@ -3615,7 +3702,6 @@ describe("OWNER journey (smoke)", () => {
     await prisma.category.deleteMany();
     await prisma.event.deleteMany();
     await prisma.categoryTemplate.deleteMany();
-    await prisma.orgSettings.deleteMany();
     await prisma.orgMembership.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.user.deleteMany();
@@ -3753,10 +3839,18 @@ Expected: pas de warning, pas d'erreur TypeScript dans les nouveaux fichiers de 
 - [ ] **Step 17.3: Verify no secret leaks in API**
 
 ```bash
-docker compose -f docker-compose.dev.yml exec app sh -c 'grep -rn "smtpPassword\|recaptchaSecretKey" src/app/api/admin/' || true
+docker compose -f docker-compose.dev.yml exec app sh -c 'grep -rn "smtpPassword\|recaptchaSecretKey\|recaptchaSiteKey" src/app/api/admin/' || true
 ```
 
-Expected : aucune apparition dans une réponse `NextResponse.json(...)`. Seules les `details` du `logActivity` peuvent contenir `smtpPasswordChanged: true` (booléen, pas la valeur).
+Expected : aucune apparition. Depuis 2026-05-31, SMTP et reCAPTCHA sont geres uniquement au niveau `PlatformSettings` : aucun champ `smtpPassword`, `recaptchaSecretKey` ou `recaptchaSiteKey` n'existe dans `Organization` (le modele `OrgSettings` a egalement ete supprime le meme jour), donc aucune route `/api/admin/[orgId]/*` ne doit y faire reference.
+
+- [ ] **Step 17.3-bis: Verify no residual OrgSettings reference**
+
+```bash
+docker compose -f docker-compose.dev.yml exec app sh -c 'grep -rn "OrgSettings\|orgSettings\|ORG_SETTINGS_UPDATED" src/app/api/admin/ src/app/admin/ src/lib/ src/components/' || true
+```
+
+Expected : aucune apparition. Depuis 2026-05-31, le modele `OrgSettings` est supprime ; toute reference doit avoir ete remplacee par `Organization` (et `ORG_SETTINGS_UPDATED` par `ORG_UPDATED`).
 
 - [ ] **Step 17.4: Manual exploratory test**
 
@@ -3766,7 +3860,7 @@ Parcourir, connecté en OWNER :
 - `/admin/[orgId]/events/new` — wizard 3 étapes
 - `/admin/[orgId]/members` — invite + retrait
 - `/admin/[orgId]/templates` — CRUD
-- `/admin/[orgId]/settings` — formulaire + test SMTP
+- `/admin/[orgId]/settings` — formulaire complet (sections Identite, Adresse, Administratif, Contact public) qui POST sur `PATCH /api/admin/[orgId]` ; aucun SMTP ni reCAPTCHA cote org depuis 2026-05-31
 - `/admin/[orgId]/activity` — journal
 
 Connecté en STAFF_ADMIN, ouvrir la même org : vérifier le bandeau "Mode staff" en haut, et qu'au moins une action génère un `staffActor=true` visible dans le journal.
@@ -3793,7 +3887,7 @@ Plan 3 (espace organisation) terminé. Disponible :
 
 - Layout `OrgShell` + sélecteur d'org + bandeau staff
 - Routes `/admin/[orgId]/{dashboard, settings, members, templates, events, events/new, activity}`
-- API REST scope-org : settings (sans secrets), members (LAST_OWNER 409), templates, events (quota + slug unique), archive/restore, activity
+- API REST scope-org : organisation (`PATCH /api/admin/[orgId]` accepte toutes les infos administratives — identite, adresse, taxId, website, logo, contact public ; slug et quotas restent staff-only ; SMTP et reCAPTCHA non geres ici depuis 2026-05-31), members (LAST_OWNER 409), templates, events (quota + slug unique), archive/restore, activity
 - Wizard `EventCreationWizard` 3 étapes
 - Dispatcher post-login (`/`, `/select`)
 
@@ -3867,7 +3961,7 @@ git commit -m "chore(org): supprime les stubs Plan 6 residuels"
 Plan 3 (espace organisation OWNER) est complet. Toutes les routes `/admin/[orgId]/*` (hors `events/[eventId]/*`) et leurs API correspondantes sont en place, testées (intégration + e2e), avec :
 
 - Wrapper `withOrgAuth` réutilisable pour toutes les API scope-org
-- Cascade `OrgSettings` correctement appliquée (null = hérite)
+- Cascade contact correctement appliquée via `Organization` (`OrgSettings` supprime 2026-05-31)
 - Quotas appliqués à la création d'event
 - Slug d'event globalement unique avec suffixage automatique
 - Audit log `staffActor` automatique pour les actions staff

@@ -1,8 +1,12 @@
 # Inscription publique scopée
 
+> **Statut** : implémenté via [Plan v2-05](../plans/2026-05-28-v2-05-inscription-publique.md) le 2026-05-31. Documentation API détaillée : [`api/public.md`](../api/public.md). Les emails d'inscription (`sendRegistrationConfirmation`, `sendEditLinkEmail`, `sendStatusNotification`, `sendBadgePrintedNotification`) utilisent encore les stubs `console.warn` de `src/lib/mail.ts` en attendant le Plan v2-06.
+
+> **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé. Le contact public (`contactEmail`, `contactPhone`) et le `logo` d'une organisation vivent désormais directement sur `Organization`. La cascade de résolution traverse `Event → Organization → Platform` (plus `OrgSettings` au milieu).
+
 ## Description fonctionnelle
 
-L'inscription publique permet à un participant non authentifié de s'inscrire à un événement via un formulaire web, en accédant à l'URL `https://badge.app/e/[slug]`. La page est entièrement contextualisée par l'événement : logo, titre, catégories, contact, reCAPTCHA, expéditeur SMTP — tout est résolu en cascade depuis `Event → Org → Platform`.
+L'inscription publique permet à un participant non authentifié de s'inscrire à un événement via un formulaire web, en accédant à l'URL `https://badge.app/e/[slug]`. La page est entièrement contextualisée par l'événement : logo, titre, catégories, contact public. Le contact est résolu en cascade `Event → Organization → Platform` (lecture directe de `Organization.contactEmail` / `Organization.contactPhone`). Le reCAPTCHA et l'expéditeur SMTP sont uniques au niveau plateforme (décisions 2026-05-31, cf. `multi-tenancy-rbac.md`) — `getPlatformRecaptcha()` et `getPlatformSmtp()` lisent directement `PlatformSettings`.
 
 Cette feature couvre aussi les flux post-inscription côté participant :
 
@@ -119,9 +123,9 @@ POST   /api/upload?context=event:[slug]                → upload sans auth, ret
 
 Layout commun pour `/e/*` et `/verify/*` et `/edit-registration/*` :
 
-- Logo event (résolu depuis `event.logo` via `/api/files/[...path]`)
+- Logo event : `event.logo` si défini, sinon fallback `event.organization.logo` ; rendu via `/api/files/[...path]`
 - Titre event + date + lieu
-- Footer : contact résolu (email + tél) + mentions "Propulsé par Badge"
+- Footer : contact résolu en cascade (`contactEmail`, `contactPhone`) + lien `website` cliquable si `event.organization.website` est défini + mention "Propulsé par Badge"
 
 ### `PublicRegistrationForm` (Client Component)
 
@@ -144,26 +148,27 @@ Comme `PublicRegistrationForm` mais avec donnée initiale, et avec un encart "Vo
 Quand on rend `/e/[slug]`, le résolveur charge :
 
 ```
-1. EventSettings (table) — override
-2. OrgSettings (table) — override
-3. PlatformSettings (table) — défaut
+1. EventSettings (table)            — override pour le contact
+2. Organization (champs directs)    — override pour le contact (ex-OrgSettings, supprimé en v2)
+3. PlatformSettings (table)         — défaut pour le contact + source unique SMTP/reCAPTCHA
 ```
 
-Pour chaque clé : premier non-null gagne. Les clés publiques (sans secret) :
+Pour le contact (cascadable) : premier non-null gagne. Les clés publiques exposées :
 
-- `smtpFrom` (pour préparer l'expéditeur de la confirmation)
-- `contactEmail`, `contactPhone` (footer)
-- `recaptchaEnabled`, `recaptchaSiteKey` (formulaire)
+- `contactEmail`, `contactPhone` (footer) — cascade Event → Organization → Platform (lecture directe `Organization.contactEmail` / `Organization.contactPhone`, plus de table `OrgSettings`)
+- `recaptchaEnabled`, `recaptchaSiteKey` (formulaire) — **lus directement depuis `PlatformSettings`** via `getPlatformPublicRecaptcha()` ; pas de cascade. Une seule clé Google partagée pour tous les events. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun event.
+
+L'expéditeur SMTP (`smtpFrom`) **n'est pas cascadé** : il est lu directement depuis `PlatformSettings` via `getPlatformSmtp()` (décision 2026-05-31). Tous les emails de confirmation, rejet, badge imprimé, etc. partent avec la même identité d'expéditeur plateforme, quel que soit l'événement.
 
 ## Critères d'acceptation
 
 1. `/e/[slug-inexistant]` → 404 avec page d'erreur sobre.
 2. `/e/[slug-event-archived]` → page "Inscriptions fermées".
 3. `/e/[slug]` avec `registrationOpen=false` → page "Inscriptions fermées".
-4. Un participant peut s'inscrire avec reCAPTCHA activé (clé site résolue depuis settings cascade).
+4. Un participant peut s'inscrire avec reCAPTCHA activé (clé site lue depuis `PlatformSettings.recaptchaSiteKey` via `getPlatformPublicRecaptcha()`). Si la plateforme n'a pas activé reCAPTCHA, le widget est absent et le formulaire reste fonctionnel.
 5. La création échoue (HTTP 409) si email ou document est bloqué pour cet event.
 6. La création échoue (HTTP 429) si quota atteint, avec message "Inscriptions complètes".
-7. L'email de confirmation utilise l'expéditeur SMTP résolu en cascade.
+7. L'email de confirmation utilise l'expéditeur SMTP plateforme et affiche le branding event (logo, contact) résolu en cascade dans le corps et le footer.
 8. `/verify/[badgeId]` d'un badge approuvé+imprimé affiche les infos (sauf si catégorie anonyme : masque nom).
 9. `/verify/[badgeId]` d'un badge PENDING/REJECTED affiche "Badge non valide".
 10. `/edit-registration/[token]` avec token expiré redirige vers une page "Lien expiré" avec bouton "Demander un nouveau lien".
@@ -173,7 +178,7 @@ Pour chaque clé : premier non-null gagne. Les clés publiques (sans secret) :
 
 ## Sécurité
 
-- Pas d'authentification mais reCAPTCHA en option (configurable par org/event)
+- Pas d'authentification mais reCAPTCHA en option (configuré au niveau plateforme uniquement — une seule clé partagée pour tous les events)
 - Rate limit par IP sur `/api/public/*` : implémentation in-memory par instance pour MVP (table `Map<ip, { count, resetAt }>` avec fenêtre 1 minute, max 10 requêtes). Migration vers Redis si scaling horizontal.
 - Tokens éphémères pour les uploads (1h)
 - Tokens d'édition (`editToken`) : UUID v4, single-use, 48h, hashés en BDD ? Proposition : stocker en clair (consistant avec v1) mais non listables — vérifier le seuil de risque
@@ -184,3 +189,13 @@ Pour chaque clé : premier non-null gagne. Les clés publiques (sans secret) :
 - Spec 1 (Multi-tenancy & RBAC) : modèles, résolveur de settings
 - Spec 6 (Emails) : confirmation, rejet, lien édition, badge imprimé
 - Spec 4 (Event) : `BadgeDocument` réutilisé pour la page badge (mais c'est l'admin qui imprime, pas le public)
+
+## Superseded par v2-11 (comptes participants)
+
+Plan v2-11 remplace le flux d'inscription publique anonyme. À retenir :
+
+- **`/e/[slug]`** ne contient plus de formulaire inline ; la page présente l'événement avec un bouton « S'inscrire » qui redirige vers `/e/[slug]/register` (auth requise).
+- **`/e/[slug]/register`** est une page protégée : elle exige une session valide (compte participant) et un profil complet (`participantProfileCompletedAt`). Si le profil est incomplet, redirection automatique vers `/account/profile/complete?next=/e/[slug]/register`. La page affiche un formulaire minimal (choix de catégorie + consentement) qui POST sur `/api/events/[slug]/register`.
+- **`/edit-registration/[token]`** (legacy editToken 48h) est supprimée. La resoumission après rejet passe par `/account/registrations/[id]` (login requis) et le bouton « Resoumettre ».
+- **`/api/public/events/[slug]/registrations`** (POST anonyme) est supprimée. Toute inscription passe désormais par `/api/events/[slug]/register` (authentifié).
+- Le `Registration` snapshote le profil du `User` (8 colonnes `snapshot*`) au moment de la soumission et à chaque resoumission. Le profil persistant vit sur `User`.

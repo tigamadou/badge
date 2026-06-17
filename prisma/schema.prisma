@@ -7,98 +7,276 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// =====================================================
+//  Identity & RBAC
+// =====================================================
+
 model User {
-  id                String        @id @default(cuid())
-  email             String        @unique
+  id                String     @id @default(cuid())
+  email             String     @unique
   password          String
   name              String
-  role              Role          @default(OPERATOR)
-  inviteToken       String?       @unique
+  isStaff           Boolean    @default(false)
+  staffRole         StaffRole?
+  inviteToken       String?    @unique
   inviteTokenExpiry DateTime?
-  createdAt         DateTime      @default(now())
-  activityLogs      ActivityLog[]
+  archived          Boolean    @default(false)
+  archivedAt        DateTime?
+  createdAt         DateTime   @default(now())
+
+  // v2-11 : verification email pour comptes participants
+  emailVerifiedAt        DateTime?
+  emailVerifyToken       String?   @unique
+  emailVerifyTokenExpiry DateTime?
+
+  // v2-11 : reset password (compte participant et staff)
+  passwordResetToken  String?   @unique
+  passwordResetExpiry DateTime?
+
+  // v2-11 : profil participant (nullable, complete progressivement). Persiste
+  // entre les inscriptions ; chaque Registration en snapshote la valeur courante.
+  firstName                     String?
+  lastName                      String?
+  structure                     String?
+  photo                         String?
+  idDocumentType                String?
+  idDocumentNumber              String?
+  idDocument                    String?
+  participantProfileCompletedAt DateTime?
+
+  // v2-11 : moderation participant. Refuse login si blocked = true.
+  blocked       Boolean @default(false)
+  blockedReason String?
+
+  // v2-14 Task 14 : derniere connexion reussie (mise a jour par NextAuth signIn callback).
+  lastLoginAt DateTime?
+
+  orgMemberships   OrgMembership[]
+  eventMemberships EventMembership[]
+  activityLogs     ActivityLog[]
+  registrations    Registration[]
 }
 
-enum Role {
+enum StaffRole {
+  // Hierarchie lineaire : SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER.
+  // SUPER_ADMIN au sommet (decision 2026-05-31) : tous les droits, y compris hard delete
+  // org et promotion STAFF_ADMIN / SUPER_ADMIN, et actions metier sur donnees client
+  // (avec audit staffActor=true). En v1, SUPER_ADMIN avait des restrictions metier ;
+  // cette restriction disparait en v2.
   SUPER_ADMIN
-  ADMIN
-  MODERATEUR
-  OPERATOR
+  STAFF_ADMIN
+  STAFF_SUPPORT
+  STAFF_OBSERVER
 }
+
+// =====================================================
+//  Organization
+// =====================================================
+
+model Organization {
+  id        String  @id @default(cuid())
+  name      String
+  legalName String?
+  slug      String  @unique
+
+  // Adresse postale structuree
+  addressLine1 String?
+  addressLine2 String?
+  postalCode   String?
+  city         String?
+  country      String?
+
+  // Administratif
+  taxId   String?
+  website String?
+  logo    String?
+
+  // Contact public (anciennement OrgSettings - fusionne 2026-05-31)
+  contactEmail String?
+  contactPhone String?
+
+  archived   Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  quotaMaxEvents        Int?
+  quotaMaxRegistrations Int?
+  quotaMaxStorageMB     Int?
+
+  // v2-12 : id de template de badge override pour cette org (null = heritage platform).
+  // Note (2026-05-31) : OrgSettings supprime, ce champ vit directement sur Organization.
+  badgeTemplateId       String?
+
+  memberships       OrgMembership[]
+  events            Event[]
+  categoryTemplates CategoryTemplate[]
+}
+
+model OrgMembership {
+  id           String       @id @default(cuid())
+  userId       String
+  orgId        String
+  role         OrgRole
+  createdAt    DateTime     @default(now())
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId])
+}
+
+enum OrgRole {
+  // Hierarchie lineaire : OWNER > MANAGER > AUDITOR (decision 2026-05-31).
+  // OWNER : pleins pouvoirs sur l'org (infos administratives, archivage, membres org).
+  // MANAGER : gere les events de l'org (create/archive event, membres event,
+  //           CategoryTemplate), mais ne touche pas aux infos org ni a la facturation.
+  // AUDITOR : lecture seule sur tout, y compris activity log (DPO, commanditaire).
+  // Heritages event : OWNER et MANAGER agissent comme ADMIN event sur les events de
+  // l'org parent ; AUDITOR agit comme VIEWER event.
+  OWNER
+  MANAGER
+  AUDITOR
+}
+
+// =====================================================
+//  Event
+// =====================================================
 
 model Event {
-  id               String   @id @default(cuid())
+  id           String       @id @default(cuid())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
   title            String
+  slug             String    @unique
   location         String
   date             DateTime
   logo             String?
-  registrationOpen Boolean  @default(true)
+  registrationOpen Boolean   @default(false)
+  // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).
+  badgeTemplateId  String?
+  archived         Boolean   @default(false)
+  archivedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  memberships      EventMembership[]
+  categories       Category[]
+  registrations    Registration[]
+  blockedEmails    BlockedEmail[]
+  blockedDocuments BlockedDocument[]
+  settings         EventSettings?
+
+  @@index([orgId])
 }
 
-model Team {
+model EventMembership {
+  id        String    @id @default(cuid())
+  userId    String
+  eventId   String
+  role      EventRole
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+}
+
+enum EventRole {
+  // Hierarchie PARTIELLE (decision 2026-05-31) : ADMIN > OPERATOR > { PRINTER, VIEWER }.
+  // PRINTER et VIEWER sont DISJOINTS : ni l'un n'inclut l'autre. Consequence :
+  // un simple "role minimum" lineaire ne suffit plus ; les checks metier s'expriment
+  // par permissions atomiques (cf. requireEventPermission dans la spec).
+  // - ADMIN     : tous les droits event.
+  // - OPERATOR  : lecture detaillee + approbations + scan + impression badge ;
+  //               ne supprime pas, ne cree pas manuellement, ne configure pas l'event.
+  // - PRINTER   : ecran d'impression badge uniquement (recherche par nom/badgeId,
+  //               impression). Pas d'acces a la liste detaillee, pas de scan.
+  // - VIEWER    : liste agregee uniquement (compteurs, noms, categorie, statut).
+  //               Pas de details personnels (email, doc, photo), pas d'impression.
+  ADMIN
+  OPERATOR
+  PRINTER
+  VIEWER
+}
+
+// =====================================================
+//  Categories (replaces v1 Team)
+// =====================================================
+
+model Category {
   id            String         @id @default(cuid())
+  eventId       String
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   name          String
   color         String
-  number        Int            @unique
+  number        Int
   neutralBadge  Boolean        @default(false)
   anonymous     Boolean        @default(false)
   registrations Registration[]
+
+  @@unique([eventId, number])
+  @@unique([eventId, name])
 }
 
+model CategoryTemplate {
+  id           String       @id @default(cuid())
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name         String
+  color        String
+  number       Int
+  neutralBadge Boolean      @default(false)
+  anonymous    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+
+  @@index([orgId])
+}
+
+// =====================================================
+//  Registration (scoped to event)
+// =====================================================
+
 model Registration {
-  id               String             @id
-  email            String
-  lastName         String
-  firstName        String
-  structure        String
-  photo            String?
-  idDocumentType   String
-  idDocumentNumber String
-  idDocument       String?
+  // ID metier (genere par src/lib/generate-id.ts) -- format imprime sur le badge.
+  id         String   @id
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  // v2-11 : la registration appartient au compte participant. Le `User` porte
+  // le profil persistant ; chaque registration snapshote ce profil au moment de
+  // la soumission ou d'une resoumission.
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
   status           RegistrationStatus @default(PENDING)
   badgePrinted     Boolean            @default(false)
   badgePrintedAt   DateTime?
-  allAccessGranted  Boolean            @default(false)
-  rejectionReason   String?
-  rejectionDetails  String?            @db.Text
-  editToken          String?   @unique
-  editTokenExpiresAt DateTime?
-  teamId            String
-  team              Team               @relation(fields: [teamId], references: [id])
-  createdAt         DateTime           @default(now())
-  snapshots         SubmissionSnapshot[]
-}
+  allAccessGranted Boolean            @default(false)
+  rejectionReason  String?
+  rejectionDetails String?            @db.Text
 
-model SubmissionSnapshot {
-  id               String       @id @default(cuid())
-  registrationId   String
-  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  lastName         String
-  firstName        String
-  email            String
-  structure        String
-  teamId           String
-  idDocumentType   String
-  idDocumentNumber String
-  photo            String?
-  idDocument       String?
-  createdAt        DateTime     @default(now())
+  // v2-11 : snapshot inline du profil au moment de la soumission. Reecrit a
+  // chaque resoumission (pas de versionning historique). Les valeurs ici font
+  // foi pour le badge imprime et l'historique.
+  snapshotFirstName        String
+  snapshotLastName         String
+  snapshotEmail            String
+  snapshotStructure        String
+  snapshotPhoto            String
+  snapshotIdDocumentType   String
+  snapshotIdDocumentNumber String
+  snapshotIdDocument       String
 
-  @@index([registrationId])
-}
-
-model BlockedEmail {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  reason    String?
   createdAt DateTime @default(now())
-}
+  updatedAt DateTime @updatedAt
 
-model BlockedDocument {
-  id             String   @id @default(cuid())
-  documentNumber String   @unique
-  reason         String?
-  createdAt      DateTime @default(now())
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([categoryId])
+  @@index([status])
 }
 
 enum RegistrationStatus {
@@ -107,18 +285,94 @@ enum RegistrationStatus {
   REJECTED
 }
 
+// ADR 2026-06-01 (v2-14 Task 7) : eventId nullable. NULL = blocage plateforme
+// (par staff), valeur = blocage event-scoped (comportement existant preserve).
+// Vu la semantique "multi-NULL toleres" de MySQL InnoDB sur UNIQUE, le check
+// d'unicite pour les blocages plateforme est applicatif (findFirst avant insert).
+model BlockedEmail {
+  id        String   @id @default(cuid())
+  eventId   String?
+  event     Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  email     String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, email])
+  @@index([email])
+}
+
+model BlockedDocument {
+  id             String   @id @default(cuid())
+  eventId        String?
+  event          Event?   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  documentNumber String
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  @@unique([eventId, documentNumber])
+  @@index([documentNumber])
+}
+
+// =====================================================
+//  Settings cascade
+// =====================================================
+
+model PlatformSettings {
+  id                 String  @id @default("singleton")
+  smtpHost           String  @default("")
+  smtpPort           Int     @default(587)
+  smtpFrom           String  @default("noreply@badge.local")
+  smtpUser           String  @default("")
+  smtpPassword       String  @default("")
+  smtpSecure         Boolean @default(false)
+  // Note (2026-05-31) : reCAPTCHA est exclusivement configure ici (PlatformSettings),
+  // meme logique que le SMTP. Aucun override Org/Event possible. Lecture via
+  // getPlatformRecaptcha() / getPlatformPublicRecaptcha().
+  recaptchaEnabled   Boolean @default(false)
+  recaptchaSiteKey   String  @default("")
+  recaptchaSecretKey String  @default("")
+  // v2-12 : template de badge par defaut de la plateforme (racine de la cascade).
+  // NOT NULL avec default -- garantit que resolveBadgeTemplateId renvoie toujours
+  // une valeur.
+  badgeTemplateId    String  @default("default-v1")
+}
+
+// Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs
+// (contactEmail, contactPhone) ont ete fusionnes dans Organization. La cascade
+// contact lit desormais directement event.organization.contactEmail.
+
+model EventSettings {
+  id      String @id @default(cuid())
+  eventId String @unique
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Note (2026-05-31) : pas de champs SMTP ici. Le SMTP est exclusivement
+  // configure au niveau PlatformSettings (decision de design SMTP plateforme uniquement).
+  contactEmail String?
+  contactPhone String?
+}
+
+// =====================================================
+//  Activity log
+// =====================================================
+
 model ActivityLog {
-  id        String       @id @default(cuid())
-  type      ActivityType
-  userId    String?
-  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  targetId  String?
-  details   Json?
-  ipAddress String?
-  userAgent String?      @db.Text
-  createdAt DateTime     @default(now())
+  id         String       @id @default(cuid())
+  type       ActivityType
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orgId      String?
+  eventId    String?
+  targetId   String?
+  details    Json?
+  staffActor Boolean      @default(false)
+  ipAddress  String?
+  userAgent  String?      @db.Text
+  createdAt  DateTime     @default(now())
 
   @@index([type])
+  @@index([orgId])
+  @@index([eventId])
   @@index([userId])
   @@index([createdAt])
 }
@@ -129,6 +383,7 @@ enum ActivityType {
   REGISTRATION_REJECTED
   REGISTRATION_UPDATED
   REGISTRATION_DELETED
+  REGISTRATION_RESUBMITTED
   BADGE_PRINTED
   BADGE_BATCH_PRINTED
   BADGE_ALL_ACCESS_TOGGLED
@@ -143,23 +398,40 @@ enum ActivityType {
   CATEGORY_CREATED
   CATEGORY_UPDATED
   CATEGORY_DELETED
+  CATEGORY_TEMPLATE_CREATED
+  CATEGORY_TEMPLATE_UPDATED
+  CATEGORY_TEMPLATE_DELETED
+  ORG_CREATED
+  ORG_UPDATED
+  ORG_ARCHIVED
+  ORG_RESTORED
+  EVENT_CREATED
   EVENT_UPDATED
-  SETTINGS_UPDATED
-  REGISTRATION_RESUBMITTED
-  EDIT_LINK_SENT
-}
+  EVENT_ARCHIVED
+  EVENT_RESTORED
+  EVENT_REGISTRATION_OPENED
+  EVENT_REGISTRATION_CLOSED
+  MEMBERSHIP_ADDED
+  MEMBERSHIP_REMOVED
+  MEMBERSHIP_ROLE_CHANGED
+  PLATFORM_SETTINGS_UPDATED
+  EVENT_SETTINGS_UPDATED
 
-model Settings {
-  id                String  @id @default(cuid())
-  smtpHost          String  @default("")
-  smtpPort          Int     @default(587)
-  smtpFrom          String  @default("")
-  smtpUser          String  @default("")
-  smtpPassword      String  @default("")
-  smtpSecure        Boolean @default(false)
-  contactEmail      String  @default("")
-  contactPhone      String  @default("")
-  recaptchaEnabled  Boolean @default(false)
-  recaptchaSiteKey  String  @default("")
-  recaptchaSecretKey String @default("")
+  // v2-11 : comptes participants
+  USER_REGISTERED
+  USER_EMAIL_VERIFIED
+  USER_PASSWORD_RESET_REQUESTED
+  USER_PASSWORD_RESET_COMPLETED
+  USER_PROFILE_UPDATED
+  USER_BLOCKED
+  USER_UNBLOCKED
+
+  // v2-14 Task 6 : hard delete org tracee
+  ORG_DELETED
+
+  // v2-14 Task 7 (ADR blocklist scope plateforme) : blocages globaux par staff.
+  PLATFORM_BLOCKED_EMAIL_ADDED
+  PLATFORM_BLOCKED_EMAIL_REMOVED
+  PLATFORM_BLOCKED_DOCUMENT_ADDED
+  PLATFORM_BLOCKED_DOCUMENT_REMOVED
 }

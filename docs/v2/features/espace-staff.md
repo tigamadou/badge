@@ -1,5 +1,7 @@
 # Espace Staff applicatif
 
+> **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé. Toutes les infos administratives d'une organisation (`legalName`, adresse postale, `taxId`, `website`, `logo`) et son contact public (`contactEmail`, `contactPhone`) vivent désormais directement sur `Organization`. Le staff édite tous ces champs depuis `/staff/organizations/[orgId]` (le slug et les quotas restent exclusifs staff).
+
 ## Description fonctionnelle
 
 L'espace staff (`/staff/*`) est le back-office de la plateforme, accessible uniquement aux utilisateurs ayant `isStaff=true`. La hiérarchie staff est linéaire : `SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`. Il permet :
@@ -46,7 +48,7 @@ KPI globaux (lecture pour tous staffs) :
 
 Liste paginée des organisations avec :
 
-- Colonnes : nom, slug, OWNERs (avatars), nombre d'events, nombre d'inscriptions, archived (filtre)
+- Colonnes : nom, slug, OWNERs (avatars), nombre d'events, nombre d'inscriptions, archived (filtre). Colonnes secondaires optionnelles affichables : `legalName`, `taxId`.
 - Recherche par nom/slug
 - Action création (`STAFF_ADMIN` ou `SUPER_ADMIN`)
 - Action **suppression définitive** (hard delete) : `SUPER_ADMIN` uniquement, avec confirmation forte (re-saisie du slug de l'org)
@@ -55,10 +57,10 @@ Liste paginée des organisations avec :
 
 Détail d'une organisation, avec onglets :
 
-- **Vue d'ensemble** : métriques, quotas (consommé / limite), liste events récents — lecture pour tous staffs
+- **Vue d'ensemble** : métriques, quotas (consommé / limite), liste events récents, ainsi qu'un récapitulatif des infos administratives de l'org (identité `name`/`legalName`, adresse postale, `taxId`, `website`, `logo`, contact public `contactEmail`/`contactPhone`) — lecture pour tous staffs
 - **Membres** : OWNERs de l'org — lecture pour tous staffs ; inviter un OWNER réservé à `STAFF_ADMIN` ou `SUPER_ADMIN`
 - **Quotas** : édition `STAFF_ADMIN` ou `SUPER_ADMIN` — `quotaMaxEvents`, `quotaMaxRegistrations`, `quotaMaxStorageMB`
-- **Paramètres** : édition du nom et du slug par `STAFF_ADMIN` ou `SUPER_ADMIN` ; archivage / désarchivage par `STAFF_ADMIN` ou `SUPER_ADMIN` ; bouton rouge **"Supprimer définitivement"** réservé à `SUPER_ADMIN` (hard delete, confirmation forte par re-saisie du slug)
+- **Paramètres** : édition par `STAFF_ADMIN` ou `SUPER_ADMIN` de **tous** les champs `Organization` — identité (`name`, `legalName`, `slug` — le slug reste exclusif staff), adresse postale (`addressLine1`, `addressLine2`, `postalCode`, `city`, `country`), administratif (`taxId`, `website`, `logo`), contact public (`contactEmail`, `contactPhone`). Archivage / désarchivage par `STAFF_ADMIN` ou `SUPER_ADMIN` ; bouton rouge **"Supprimer définitivement"** réservé à `SUPER_ADMIN` (hard delete, confirmation forte par re-saisie du slug)
 - **Activité** : `ActivityLog` filtré sur cette org — lecture pour tous staffs
 
 Bouton **"Entrer dans l'organisation"** (visible à tous staffs) → redirige `/admin/[orgId]` avec bandeau d'avertissement.
@@ -100,15 +102,15 @@ Détail user : nom, email, rôle, memberships, dernier login. Actions :
 
 ### `/staff/settings`
 
-`PlatformSettings` — édition selon le rôle :
+`PlatformSettings` — édition selon le rôle. Cette page est la **seule** interface de configuration SMTP **et reCAPTCHA** de la plateforme (décisions 2026-05-31 : SMTP plateforme uniquement et reCAPTCHA plateforme uniquement, aucun override possible côté Org ou Event).
 
-- **SMTP par défaut** :
+- **SMTP (unique source pour tous les emails)** :
   - `smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpSecure` : `STAFF_ADMIN` ou `SUPER_ADMIN`
   - `smtpPassword` : `SUPER_ADMIN` uniquement
-- **reCAPTCHA par défaut** :
+- **reCAPTCHA (unique source pour tous les formulaires publics)** :
   - `recaptchaSiteKey`, `recaptchaEnabled` : `STAFF_ADMIN` ou `SUPER_ADMIN`
   - `recaptchaSecretKey` : `SUPER_ADMIN` uniquement
-- **Test SMTP** (bouton "Envoyer un email de test") : `STAFF_ADMIN` ou `SUPER_ADMIN`
+- **Test SMTP** (bouton "Envoyer un email de test") : `STAFF_ADMIN` ou `SUPER_ADMIN`. Envoie un email de test à l'adresse du staff connecté via la config SMTP plateforme.
 
 Champs sensibles (`smtpPassword`, `recaptchaSecretKey`) :
 
@@ -134,9 +136,9 @@ Le rôle requis est indiqué pour chaque route. La hiérarchie est inclusive : `
 
 ```
 GET    /api/staff/organizations                          → tout staff (lecture)
-POST   /api/staff/organizations                          → STAFF_ADMIN + SUPER_ADMIN
+POST   /api/staff/organizations                          → STAFF_ADMIN + SUPER_ADMIN. Body : name + slug (obligatoires) ; legalName, adresse (addressLine1/2, postalCode, city, country), taxId, website, logo, contactEmail, contactPhone, quotaMaxEvents, quotaMaxRegistrations, quotaMaxStorageMB optionnels lors de l'onboarding.
 GET    /api/staff/organizations/[orgId]                  → tout staff (lecture)
-PATCH  /api/staff/organizations/[orgId]                  → STAFF_ADMIN + SUPER_ADMIN (nom, slug, quotas)
+PATCH  /api/staff/organizations/[orgId]                  → STAFF_ADMIN + SUPER_ADMIN (tous les champs Organization : name, legalName, slug, addressLine1/2, postalCode, city, country, taxId, website, logo, contactEmail, contactPhone, quotaMaxEvents, quotaMaxRegistrations, quotaMaxStorageMB)
 POST   /api/staff/organizations/[orgId]/archive          → STAFF_ADMIN + SUPER_ADMIN
 POST   /api/staff/organizations/[orgId]/restore          → STAFF_ADMIN + SUPER_ADMIN
 DELETE /api/staff/organizations/[orgId]                  → SUPER_ADMIN uniquement (hard delete, confirmation forte)
@@ -209,3 +211,11 @@ Calcul : `isStaff=true` ET l'utilisateur n'a *pas* d'OrgMembership sur cette org
 - Spec 1 (Multi-tenancy & RBAC) : helpers `requireStaff`, middleware
 - Spec 6 (Emails) : template d'invitation, test SMTP
 - Spec 7 (Deploiement) : premier staff seedé
+
+## v2-12 : selection du template de badge par defaut de la plateforme
+
+Plan v2-12 ajoute une page de selection du template de badge au niveau plateforme :
+
+- **Page** : `/staff/settings/badge`. Affiche les templates disponibles et le template par defaut absolu. **Pas d'option « heriter »** : c'est la racine de la cascade ; `canClearToInherit={false}`. Le champ `PlatformSettings.badgeTemplateId` est NOT NULL avec `@default("default-v1")`.
+- **API** : `PATCH /api/staff/settings/badge` (body `{ badgeTemplateId: string }` -- null refuse par Zod). Permission : `STAFF_ADMIN` ou plus (via `requireStaff(userId, "STAFF_ADMIN")`). Validation : `getTemplate(id)` ; retour 400 `UNKNOWN_TEMPLATE` si orphelin. Log : `PLATFORM_SETTINGS_UPDATED` avec `details = { field: "badgeTemplateId", value }`.
+- **Cascade** : ce niveau est le fallback ultime. Le script `scripts/validate-badge-templates.ts` verifie qu'aucun `badgeTemplateId` orphelin du registry ne persiste en BDD (cible Makefile `validate-badge-templates`).

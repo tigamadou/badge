@@ -14,7 +14,7 @@ Cette feature pose les fondations de tout le reste : modèle de données tenant,
 
 Inclus :
 
-- Modèles Prisma : `User`, `Organization`, `Event`, `OrgMembership`, `EventMembership`, `OrgSettings`, `EventSettings`, `PlatformSettings`, `CategoryTemplate`, `Category` (ex-`Team`)
+- Modèles Prisma : `User`, `Organization`, `Event`, `OrgMembership`, `EventMembership`, `EventSettings`, `PlatformSettings`, `CategoryTemplate`, `Category` (ex-`Team`). Note : `OrgSettings` n'existe plus en v2 (fusionné dans `Organization`, décision 2026-05-31).
 - Enums : `StaffRole`, `OrgRole`, `EventRole`
 - Helpers d'autorisation (`src/lib/auth.ts`)
 - Middleware Next.js de scoping (`src/middleware.ts`)
@@ -70,19 +70,41 @@ enum StaffRole {
 ```prisma
 model Organization {
   id                       String   @id @default(cuid())
-  name                     String
-  slug                     String   @unique
-  archived                 Boolean  @default(false)
-  archivedAt               DateTime?
-  createdAt                DateTime @default(now())
 
+  // Identite
+  name                     String                          // nom commercial / d'usage
+  legalName                String?                         // nom legal si different de name
+  slug                     String   @unique               // /e/[slug] indirectement via events
+
+  // Adresse postale structuree
+  addressLine1             String?
+  addressLine2             String?
+  postalCode               String?
+  city                     String?
+  country                  String?                         // ISO-3166-1 alpha-2 recommande (FR, CI, SN...)
+
+  // Identification administrative
+  taxId                    String?                         // SIRET (FR), IFU (CI/SN/BJ), VAT/EIN... format libre
+  website                  String?                         // URL https://...
+  logo                     String?                         // uploads/org-assets/[orgId]/logo.*
+
+  // Contact public (affiche dans emails et footer pages publiques)
+  contactEmail             String?
+  contactPhone             String?
+
+  // Quotas (staff uniquement)
   quotaMaxEvents           Int?
   quotaMaxRegistrations    Int?
   quotaMaxStorageMB        Int?
 
+  // Etat
+  archived                 Boolean  @default(false)
+  archivedAt               DateTime?
+  createdAt                DateTime @default(now())
+
+  // Relations
   memberships              OrgMembership[]
   events                   Event[]
-  settings                 OrgSettings?
   categoryTemplates        CategoryTemplate[]
 }
 
@@ -204,54 +226,39 @@ model PlatformSettings {
   recaptchaSecretKey String  @default("")
 }
 
-model OrgSettings {
-  id                 String       @id @default(cuid())
-  orgId              String       @unique
-  organization       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-
-  smtpHost           String?
-  smtpPort           Int?
-  smtpFrom           String?
-  smtpUser           String?
-  smtpPassword       String?
-  smtpSecure         Boolean?
-  contactEmail       String?
-  contactPhone       String?
-  recaptchaEnabled   Boolean?
-  recaptchaSiteKey   String?
-  recaptchaSecretKey String?
-}
-
 model EventSettings {
   id           String  @id @default(cuid())
   eventId      String  @unique
   event        Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  smtpFrom     String?
   contactEmail String?
   contactPhone String?
 }
 ```
 
-**Règle de résolution** : pour une clé donnée, on parcourt `EventSettings → OrgSettings → PlatformSettings`, premier non-null gagne. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
+**Règle de résolution** : pour une clé cascadable (contact uniquement), on parcourt `EventSettings → Organization → PlatformSettings`, premier non-null gagne. `OrgSettings` **n'existe plus en v2** (décision 2026-05-31) — les champs contact ex-`OrgSettings` ont fusionné dans `Organization` (cf. modèle ci-dessus). Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sont jamais exposées dans les réponses API.
+
+**SMTP = plateforme uniquement** (décision 2026-05-31) : les paramètres SMTP (`smtpHost`, `smtpPort`, `smtpFrom`, `smtpUser`, `smtpPassword`, `smtpSecure`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun override possible au niveau Org ou Event. Le branding contextuel non-SMTP (logo via `Event.logo`, `contactEmail`, `contactPhone`) reste cascadé : les emails affichent toujours le bon logo et contact selon le contexte, mais partent tous avec la même identité d'expéditeur plateforme.
+
+**reCAPTCHA = plateforme uniquement** (décision 2026-05-31, même logique que SMTP) : les paramètres reCAPTCHA (`recaptchaEnabled`, `recaptchaSiteKey`, `recaptchaSecretKey`) ne sont configurables qu'au niveau `PlatformSettings`. Aucun champ reCAPTCHA dans `Organization` ni `EventSettings`. La plateforme Badge porte une seule clé Google reCAPTCHA partagée par tous les events de toutes les organisations clientes. Si la plateforme n'a pas activé reCAPTCHA, le widget n'apparaît sur aucun formulaire public.
 
 ### Périmètre des overrides Settings
 
 | Clé | Platform | Org | Event |
 |---|:---:|:---:|:---:|
-| `smtpHost` | ✓ | ✓ | — |
-| `smtpPort` | ✓ | ✓ | — |
-| `smtpUser` | ✓ | ✓ | — |
-| `smtpPassword` | ✓ | ✓ | — |
-| `smtpSecure` | ✓ | ✓ | — |
-| `smtpFrom` | ✓ | ✓ | ✓ |
-| `contactEmail` | — | ✓ | ✓ |
-| `contactPhone` | — | ✓ | ✓ |
-| `recaptchaSiteKey` | ✓ | ✓ | — |
-| `recaptchaSecretKey` | ✓ | ✓ | — |
-| `recaptchaEnabled` | ✓ | ✓ | — |
+| `smtpHost` | ✓ | — | — |
+| `smtpPort` | ✓ | — | — |
+| `smtpUser` | ✓ | — | — |
+| `smtpPassword` | ✓ | — | — |
+| `smtpSecure` | ✓ | — | — |
+| `smtpFrom` | ✓ | — | — |
+| `contactEmail` | — | ✓ (champ `Organization.contactEmail`) | ✓ |
+| `contactPhone` | — | ✓ (champ `Organization.contactPhone`) | ✓ |
+| `recaptchaSiteKey` | ✓ | — | — |
+| `recaptchaSecretKey` | ✓ | — | — |
+| `recaptchaEnabled` | ✓ | — | — |
 
-> **Note** : les secrets sensibles (mots de passe SMTP, secret reCAPTCHA) ne sont jamais overridables au niveau Event pour limiter la surface de fuite. Seules les clés explicitement listées dans `EventSettings` (cf. modèle Prisma plus haut) peuvent être surchargées au niveau event ; toutes les autres ne cascadent qu'Org → Platform.
+> **Note** : le SMTP n'est jamais overridable hors plateforme — toute configuration de connexion vit dans `PlatformSettings` uniquement. Le reCAPTCHA suit la même logique — une seule clé Google partagée, plateforme uniquement, pas d'override possible. Seules les clés explicitement listées dans `EventSettings` (cf. modèle Prisma plus haut) peuvent être surchargées au niveau event ; toutes les autres ne cascadent qu'Org → Platform pour les clés cascadables (contact uniquement).
 
 ### Activity log
 
@@ -283,7 +290,7 @@ Les `ActivityType` héritent de v1 (REGISTRATION_*, BADGE_*, USER_*, etc.) plus 
 - `ORG_CREATED`, `ORG_UPDATED`, `ORG_ARCHIVED`, `ORG_RESTORED`
 - `EVENT_CREATED`, `EVENT_ARCHIVED`, `EVENT_RESTORED`, `EVENT_REGISTRATION_OPENED`, `EVENT_REGISTRATION_CLOSED`
 - `MEMBERSHIP_ADDED`, `MEMBERSHIP_REMOVED`, `MEMBERSHIP_ROLE_CHANGED`
-- `PLATFORM_SETTINGS_UPDATED`, `ORG_SETTINGS_UPDATED`, `EVENT_SETTINGS_UPDATED`
+- `PLATFORM_SETTINGS_UPDATED`, `EVENT_SETTINGS_UPDATED` (l'ancien `ORG_SETTINGS_UPDATED` disparaît — toute modification d'infos administratives de l'org passe par `ORG_UPDATED`)
 - `CATEGORY_TEMPLATE_CREATED`, `CATEGORY_TEMPLATE_UPDATED`, `CATEGORY_TEMPLATE_DELETED`
 
 ## Matrice des permissions par rôle
@@ -313,20 +320,19 @@ Cette matrice est la **source de vérité** : les helpers d'autorisation (`requi
 
 | Action organisation | OWNER | MANAGER | AUDITOR |
 |---|:---:|:---:|:---:|
-| Lire les infos org, settings (hors secrets), quotas | ✓ | ✓ | ✓ |
+| Lire les infos org (identité, adresse, taxId, website, logo, contact), quotas | ✓ | ✓ | ✓ |
 | Lire l'activity log de l'org | ✓ | ✓ | ✓ |
 | Lire la liste des events et des membres | ✓ | ✓ | ✓ |
 | Créer un event | ✓ | ✓ | — |
 | Archiver / restaurer un event de l'org | ✓ | ✓ | — |
 | Inviter / retirer des membres event (sur events de l'org) | ✓ | ✓ | — |
 | Gérer les `CategoryTemplate` de l'org | ✓ | ✓ | — |
-| Modifier `OrgSettings` (SMTP, reCAPTCHA, contact) | ✓ | — | — |
-| Modifier le nom, le logo de l'org | ✓ | — | — |
+| Modifier les infos administratives de l'org (nom, legalName, adresse, taxId, website, logo, contact public) | ✓ | — | — |
 | Archiver / restaurer l'org | ✓ | — | — |
 | Inviter / retirer / changer rôle de membres org | ✓ | — | — |
 
 Notes :
-- `MANAGER` ne touche **jamais** à la facturation (hors-app), aux secrets SMTP/reCAPTCHA, ni à l'archivage de l'org elle-même.
+- `MANAGER` ne touche **jamais** à la facturation (hors-app) ni à l'archivage de l'org elle-même. Le SMTP et le reCAPTCHA sont plateforme-only (cf. décisions 2026-05-31 dans la section Settings) — ni OWNER ni MANAGER n'y accèdent ; seul le staff configure ces paramètres.
 - `AUDITOR` est lecture seule sur **tout**, y compris l'activity log — c'est sa raison d'être (DPO, cabinet comptable, commanditaire).
 - Le slug d'org reste réservé au staff (cf. `espace-organisation.md`).
 
@@ -497,31 +503,50 @@ Le middleware Next.js intercepte chaque requête sur les routes protégées :
 ## Résolveur de settings (`src/lib/settings.ts`)
 
 ```typescript
-// Cascade : Event → Org → Platform, premier non-null gagne
+// Cascade : EventSettings → Organization → PlatformSettings, premier non-null gagne
+// Ne couvre PAS les champs SMTP ni reCAPTCHA, qui sont lus directement depuis PlatformSettings.
+// OrgSettings a ete supprime en v2 : la cascade lit directement Organization.contactEmail/Phone.
 async function resolveSettings(
   eventId?: string,
   orgId?: string,
 ): Promise<ResolvedSettings>;
 
 type ResolvedSettings = {
+  // Cascade EventSettings → Organization → PlatformSettings pour le contact
+  contactEmail: string;
+  contactPhone: string;
+};
+
+// Variante publique (sans secrets) pour les Server Components
+async function resolvePublicSettings(eventId?: string, orgId?: string): Promise<PublicSettings>;
+
+// Lectures directes de PlatformSettings (pas de cascade)
+async function getPlatformSmtp(): Promise<PlatformSmtp>;
+async function getPlatformRecaptcha(): Promise<PlatformRecaptcha>;
+async function getPlatformPublicRecaptcha(): Promise<PublicRecaptcha>; // sans secret, pour les Server Components publics
+
+type PlatformSmtp = {
   smtpHost: string;
   smtpPort: number;
   smtpFrom: string;
   smtpUser: string;
-  smtpPassword: string;        // jamais exposé via API
+  smtpPassword: string;  // jamais exposé via API
   smtpSecure: boolean;
-  contactEmail: string;
-  contactPhone: string;
+};
+
+type PlatformRecaptcha = {
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;  // jamais exposé via API
 };
 
-// Variante publique (sans secrets) pour les Server Components
-async function resolvePublicSettings(eventId?: string, orgId?: string): Promise<PublicSettings>;
+type PublicRecaptcha = {
+  recaptchaEnabled: boolean;
+  recaptchaSiteKey: string;
+};
 ```
 
-Quand `eventId` est fourni, `orgId` est résolu automatiquement via `event.orgId`. Si ni l'un ni l'autre, ne lit que `PlatformSettings`.
+Quand `eventId` est fourni, `orgId` est résolu automatiquement via `event.orgId`. Si ni l'un ni l'autre, ne lit que `PlatformSettings`. Le SMTP et le reCAPTCHA n'ont pas de variante "résolue" : il y a une seule source de vérité pour chacun, `PlatformSettings`.
 
 ## Activity log enrichi (`src/lib/activity-log.ts`)
 
@@ -581,7 +606,7 @@ export async function POST(req, { params }) {
 7. Un user sans aucun droit est redirigé vers `/login` (ou reçoit 403 sur les routes API).
 8. Toute mutation génère un `ActivityLog` correctement scopé (`orgId`/`eventId`).
 9. Les actions staff sur données client (`orgId IS NOT NULL`) ont `staffActor=true`.
-10. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sortent jamais des routes API publiques.
+10. Les valeurs sensibles (`smtpPassword`, `recaptchaSecretKey`) ne sortent jamais des routes API publiques. Les champs SMTP et reCAPTCHA ne sortent jamais des routes `/api/admin/*` ni `/api/public/*` : ils ne sont consultables qu'à travers `/api/staff/settings` (lecture sans secret) ou `/api/staff/settings` PATCH (réservé `STAFF_ADMIN`+). Seul le `recaptchaSiteKey` (clé publique) est exposé aux Server Components publics via `getPlatformPublicRecaptcha()`.
 11. Suppression du dernier `OWNER` d'une org non archivée renvoie HTTP 409 (`code=LAST_OWNER`).
 12. Suppression du dernier `SUPER_ADMIN` de la plateforme renvoie HTTP 409 (`code=LAST_SUPER_ADMIN`).
 13. Un `STAFF_ADMIN` qui tente de promouvoir un user en `STAFF_ADMIN` ou `SUPER_ADMIN` reçoit HTTP 403.
@@ -590,3 +615,16 @@ export async function POST(req, { params }) {
 ## Dépendances en aval
 
 Toutes les sous-spec (2 à 7) dépendent de cette fondation. Aucune ne peut être développée avant que les helpers d'autorisation et le middleware soient en place.
+
+## Mise à jour v2-11 (rôle implicite participant)
+
+Plan v2-11 introduit le **rôle implicite participant** : tout `User` qui n'est ni staff ni membre d'org ni membre d'event reste néanmoins un compte valide pour s'inscrire à un événement public. La validation des accès aux routes `/api/account/*` et `/api/events/[slug]/register` passe par `requireAuth` (helper `src/lib/auth-participant.ts`), pas par les helpers staff/org/event.
+
+Champs ajoutés sur `User` (tous nullable sauf `blocked`) :
+
+- **Vérification email** : `emailVerifiedAt`, `emailVerifyToken @unique`, `emailVerifyTokenExpiry` (TTL 24h).
+- **Reset password self-service** : `passwordResetToken @unique`, `passwordResetExpiry` (TTL 1h). Distinct du `inviteToken` qui reste utilisé pour l'invitation/reset staff.
+- **Profil participant** : `firstName?`, `lastName?`, `structure?`, `photo?`, `idDocumentType?`, `idDocumentNumber?`, `idDocument?`, `participantProfileCompletedAt?`. Snapshoté dans chaque `Registration` au moment de la soumission/resoumission.
+- **Modération** : `blocked Boolean default(false)`, `blockedReason?`. `authorize` NextAuth refuse le login si `!emailVerifiedAt || blocked`.
+
+`ActivityType` enrichi (`USER_REGISTERED`, `USER_EMAIL_VERIFIED`, `USER_PASSWORD_RESET_REQUESTED`, `USER_PASSWORD_RESET_COMPLETED`, `USER_PROFILE_UPDATED`, `USER_BLOCKED`, `USER_UNBLOCKED`). `EDIT_LINK_SENT` supprimé.

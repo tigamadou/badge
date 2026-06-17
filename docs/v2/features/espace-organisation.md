@@ -1,12 +1,14 @@
 # Espace Organisation (OWNER / MANAGER / AUDITOR)
 
+> **Mise à jour 2026-05-31** : le modèle `OrgSettings` est supprimé et fusionné dans `Organization`. Toutes les infos administratives (`legalName`, adresse postale structurée, `taxId`, `website`, `logo`) et le contact public (`contactEmail`, `contactPhone`) vivent désormais directement sur `Organization`. Les endpoints `/api/admin/[orgId]/settings` ont été fusionnés dans `/api/admin/[orgId]`. Voir [`multi-tenancy-rbac.md`](multi-tenancy-rbac.md) pour le modèle complet.
+
 ## Description fonctionnelle
 
 L'espace organisation (`/admin/[orgId]/*`) est le tableau de bord du client B2B. Il est partagé entre trois rôles d'OrgMembership avec des niveaux de droits différents : `OWNER` (gestion complète), `MANAGER` (gestion opérationnelle des events et templates), `AUDITOR` (lecture seule). La matrice complète des permissions vit dans [multi-tenancy-rbac.md](multi-tenancy-rbac.md) — ce document ne la duplique pas.
 
 Synthèse de ce qui est gérable dans cet espace :
 
-- Paramètres de l'organisation : nom (OWNER), slug (staff), `OrgSettings` = override SMTP/contact/reCAPTCHA (modification OWNER, lecture OWNER/MANAGER/AUDITOR sans secrets)
+- Paramètres de l'organisation : identité (`name`, `legalName`), adresse postale structurée (`addressLine1`, `addressLine2`, `postalCode`, `city`, `country`), administratif (`taxId`, `website`, `logo`), contact public (`contactEmail`, `contactPhone`). Modification OWNER (slug réservé staff), lecture OWNER/MANAGER/AUDITOR. Tous ces champs vivent directement sur `Organization` (pas de table `OrgSettings`). **Le SMTP et le reCAPTCHA sont plateforme uniquement** (décisions 2026-05-31, cf. [`multi-tenancy-rbac.md`](multi-tenancy-rbac.md)) — aucun champ SMTP ni reCAPTCHA n'est exposé ici.
 - Événements de l'org : création et archivage (OWNER ou MANAGER), lecture (tous rôles org)
 - Modèles de catégories réutilisables (`CategoryTemplate`) : CRUD (OWNER ou MANAGER), lecture (tous rôles org)
 - Membres de l'organisation : invitation, changement de rôle, retrait (OWNER uniquement)
@@ -48,23 +50,36 @@ Exclu :
 
 ### `/admin/[orgId]/settings`
 
-Lecture : OWNER, MANAGER, AUDITOR (sans les secrets : `smtpPassword`, `recaptchaSecretKey`).
-Modification : OWNER uniquement (ou staff, audité).
+Lecture : OWNER, MANAGER, AUDITOR.
+Modification : OWNER uniquement (ou staff, audité). Le slug et les quotas restent réservés au staff.
 
-`OrgSettings` (override de `PlatformSettings`) :
+Tous les champs ci-dessous vivent directement sur `Organization` — il n'y a plus de table `OrgSettings`, ni de mécanisme de fallback/override entre `Organization` et un éventuel sous-modèle.
 
-- SMTP override (host, port, from, user, password, secure) — tous nullable, null = hérite de Platform
-- Contact public (email, téléphone) — affichés dans les emails et le footer des pages publiques
-- reCAPTCHA override (siteKey, secretKey, enabled)
+> **Pas de section SMTP ni reCAPTCHA** : le SMTP et le reCAPTCHA sont plateforme uniquement (décisions 2026-05-31). Aucun champ SMTP, aucun champ reCAPTCHA, aucun bouton "Test SMTP" n'est exposé dans cet espace. Pour modifier ces configs, voir l'espace staff (`/staff/settings`).
 
-Section "Paramètres généraux" :
+**Paramètres de l'organisation** :
 
-- Nom de l'organisation (OWNER)
-- Slug (lecture seule, modifiable par le staff uniquement)
+- **Identité**
+  - Nom commercial (`name`) — OWNER
+  - Nom légal (`legalName`, optionnel) — OWNER
+  - Slug (`slug`) — lecture seule, modifiable par le staff uniquement
+- **Adresse postale** (tous optionnels, OWNER)
+  - `addressLine1`, `addressLine2`
+  - `postalCode`, `city`
+  - `country` (ISO-3166-1 alpha-2 : FR, CI, SN…)
+- **Administratif** (OWNER)
+  - `taxId` (SIRET, IFU, VAT, EIN… format libre)
+  - `website` (URL `https://…`)
+  - `logo` (upload image, max 5 Mo, JPEG/PNG/WebP ; stocké dans `uploads/org-assets/[orgId]/logo.*`)
+- **Contact public** (OWNER) — affichés dans les emails et le footer des pages publiques. Première étape de la cascade Event → Organization → Platform.
+  - `contactEmail`
+  - `contactPhone`
+- **Quotas** (lecture seule pour OWNER/MANAGER/AUDITOR, édition staff uniquement)
+  - `quotaMaxEvents`
+  - `quotaMaxRegistrations`
+  - `quotaMaxStorageMB`
 
-Bouton "Tester SMTP" (OWNER) : envoie un email test depuis l'expéditeur résolu en cascade.
-
-Pour MANAGER et AUDITOR, le formulaire est affiché en mode lecture seule, sans les secrets.
+Pour MANAGER et AUDITOR, le formulaire est affiché en mode lecture seule.
 
 ### `/admin/[orgId]/members`
 
@@ -127,11 +142,8 @@ Lecture : OWNER, MANAGER, AUDITOR (tous les rôles d'OrgMembership accèdent au 
 ## Routes API
 
 ```
-GET    /api/admin/[orgId]                           → infos org (OWNER, MANAGER, AUDITOR)
-PATCH  /api/admin/[orgId]                           → nom (OWNER), slug (staff uniquement)
-GET    /api/admin/[orgId]/settings                  → OrgSettings sans secrets (OWNER, MANAGER, AUDITOR)
-PATCH  /api/admin/[orgId]/settings                  → OWNER ou staff (audité)
-POST   /api/admin/[orgId]/settings/test-smtp        → OWNER
+GET    /api/admin/[orgId]                           → infos org complètes : identité, adresse, taxId, website, logo, contact, quotas (OWNER, MANAGER, AUDITOR)
+PATCH  /api/admin/[orgId]                           → OWNER (ou staff audité). Accepte tous les champs Organization éditables : name, legalName, addressLine1/2, postalCode, city, country, taxId, website, logo, contactEmail, contactPhone. Le slug et les quotas (quotaMaxEvents, quotaMaxRegistrations, quotaMaxStorageMB) restent staff uniquement (HTTP 403 si OWNER les fournit). Refuse tout champ SMTP ou reCAPTCHA (HTTP 400 si fournis).
 GET    /api/admin/[orgId]/members                   → liste OrgMembership (OWNER, MANAGER, AUDITOR)
 POST   /api/admin/[orgId]/members                   → invite ou ajoute membre avec rôle souhaité (OWNER ou staff)
 PATCH  /api/admin/[orgId]/members/[userId]          → change rôle (OWNER ; refuse si rétrogradation du dernier OWNER actif, HTTP 409 LAST_OWNER)
@@ -158,7 +170,7 @@ Layout commun pour `/admin/[orgId]/*` :
 - Sidebar : Dashboard, Événements, Membres, Modèles catégories, Paramètres, Journal
 - Header : nom org + sélecteur org (si user a plusieurs orgs) + avatar user
 - Bandeau staff (`StaffBanner`) si l'accès vient de `isStaff` sans OrgMembership
-- La sidebar et les pages sont **adaptées par rôle** : un AUDITOR ne voit aucune action de création, modification ou suppression (boutons masqués), uniquement les vues en lecture seule. Un MANAGER voit les actions sur events, templates et membres event mais pas les actions sur `OrgSettings`, l'archivage org ou la gestion des membres org.
+- La sidebar et les pages sont **adaptées par rôle** : un AUDITOR ne voit aucune action de création, modification ou suppression (boutons masqués), uniquement les vues en lecture seule. Un MANAGER voit les actions sur events, templates et membres event mais pas les actions sur les paramètres de l'organisation (identité, adresse, contact public, etc.), l'archivage org ou la gestion des membres org.
 
 ### `EventCreationWizard`
 
@@ -177,15 +189,24 @@ Dropdown affichant les orgs où l'utilisateur a une OrgMembership. Persiste le c
 5. Création event avec un template applique correctement les `Categories` (nom, color, number copiés).
 6. Suppression ou rétrogradation du dernier `OWNER` actif d'une org non archivée est refusée (HTTP 409, `code=LAST_OWNER`).
 7. Invitation d'un utilisateur déjà existant ajoute la `OrgMembership` avec le rôle choisi sans recréer le user.
-8. `OrgSettings.smtpPassword` et `recaptchaSecretKey` ne sont jamais retournés dans `GET /api/admin/[orgId]/settings`, quel que soit le rôle.
-9. Toute action audit-log avec `staffActor=true` si effectuée par un staff sans `OrgMembership`.
+8. Aucun champ SMTP ni reCAPTCHA n'est jamais exposé ni accepté par les routes `/admin/*` (les configs SMTP et reCAPTCHA vivent dans `PlatformSettings` uniquement). Si un client legacy envoie un de ces champs en `PATCH /api/admin/[orgId]`, la route renvoie HTTP 400.
+9. Toute action audit-log avec `staffActor=true` si effectuée par un staff sans `OrgMembership`. La modification des champs administratifs (`name`, `legalName`, adresse, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone`) est journalisée via `ORG_UPDATED`.
 10. Un AUDITOR voit la liste des events et les inscriptions agrégées de l'org, mais aucun bouton d'action (création, édition, archivage, approbation) n'est rendu côté UI ; les routes mutantes correspondantes renvoient HTTP 403 si elles sont appelées directement.
-11. Un MANAGER peut créer un event (sous quota) mais reçoit HTTP 403 sur `PATCH /api/admin/[orgId]/settings`, `POST /api/admin/[orgId]/archive` et toute route de gestion des membres org.
-12. Un MANAGER ne peut pas inviter, modifier ou retirer un membre de l'organisation (HTTP 403 sur les routes `members`). Il garde le droit d'inviter et de gérer les membres au niveau event.
-13. Promotion par un OWNER d'un `MANAGER` ou d'un `AUDITOR` vers `OWNER` est autorisée et journalisée.
-14. Un AUDITOR accède à `/admin/[orgId]/activity` et y voit le journal complet de son org en lecture seule.
+11. Un MANAGER peut créer un event (sous quota) mais reçoit HTTP 403 sur `PATCH /api/admin/[orgId]` (modification des infos administratives ou du contact public), `POST /api/admin/[orgId]/archive` et toute route de gestion des membres org.
+12. La modification de `legalName`, des champs d'adresse, `taxId`, `website`, `logo`, `contactEmail`, `contactPhone` est réservée à OWNER (ou staff audité). MANAGER et AUDITOR reçoivent HTTP 403 sur ces champs.
+13. Un MANAGER ne peut pas inviter, modifier ou retirer un membre de l'organisation (HTTP 403 sur les routes `members`). Il garde le droit d'inviter et de gérer les membres au niveau event.
+14. Promotion par un OWNER d'un `MANAGER` ou d'un `AUDITOR` vers `OWNER` est autorisée et journalisée.
+15. Un AUDITOR accède à `/admin/[orgId]/activity` et y voit le journal complet de son org en lecture seule.
 
 ## Dépendances
 
 - Spec 1 (Multi-tenancy & RBAC) : helpers d'autorisation, middleware, [matrice complète](multi-tenancy-rbac.md)
-- Spec 6 (Emails) : email d'invitation membre (OWNER / MANAGER / AUDITOR), test SMTP
+- Spec 6 (Emails) : email d'invitation membre (OWNER / MANAGER / AUDITOR). Le test SMTP n'existe qu'au niveau staff (cf. spec 2).
+
+## v2-12 : selection du template de badge par defaut de l'organisation
+
+Plan v2-12 ajoute une page de selection du template de badge au niveau org :
+
+- **Page** : `/admin/[orgId]/settings/badge`. Affiche les templates disponibles et le template effectif (org si configure, sinon platform). Bouton « Utiliser le defaut herite » pour repasser sur null.
+- **API** : `PATCH /api/admin/[orgId]/settings/badge` (body `{ badgeTemplateId: string | null }`). Permission : OWNER ou MANAGER (via `requireOrgRole(userId, orgId, "MANAGER")`). Note (2026-05-31) : `OrgSettings` supprime -- le champ `badgeTemplateId` vit directement sur `Organization`. Le log utilise `ORG_UPDATED` (pas d'`ORG_SETTINGS_UPDATED` dans l'enum v2) avec `details = { field: "badgeTemplateId", value }`.
+- **Cascade** : utilise par `resolveBadgeTemplateId()` ; chaque event de l'org peut surcharger ce choix au niveau event.

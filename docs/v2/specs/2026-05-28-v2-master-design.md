@@ -37,13 +37,14 @@ Staff applicatif (global, hors-org)
         │               │                 │
         ▼               ▼                 ▼
     ORGANIZATION ──────────────────▶  EVENT
-        │                                 │
-        ├─ OrgSettings                    ├─ EventSettings (override)
-        │   └─ badgeTemplateId?           │   └─ badgeTemplateId?
-        ├─ CategoryTemplates              ├─ Categories
-        └─ Quotas                         ├─ BlockedEmails / BlockedDocuments
-                                          ├─ Members (EventMembership)
-                                          └─ Registrations (avec snapshot)
+        │  ├─ infos admin : legalName, adresse structurée,
+        │  │   taxId, website, logo, contactEmail, contactPhone
+        │  ├─ badgeTemplateId?            ├─ EventSettings (override)
+        │  ├─ CategoryTemplates           │   └─ badgeTemplateId?
+        │  └─ Quotas                      ├─ Categories
+        │                                 ├─ BlockedEmails / BlockedDocuments
+        │                                 ├─ Members (EventMembership)
+        │                                 └─ Registrations (avec snapshot)
 
 PlatformSettings (singleton, racine de la cascade)
     └─ badgeTemplateId (NOT NULL, défaut "default-v1")
@@ -55,7 +56,7 @@ PlatformSettings (singleton, racine de la cascade)
 2. **User unifié pour staff, membres d'org/event, ET participants.** Un même compte peut être staff sur la plateforme, OWNER d'une organisation, et participant à un event d'une autre org — sans duplication. Voir [v2-11](../features/comptes-participants.md).
 3. **OWNER hérite implicitement d'ADMIN** sur tous les events de son organisation, sans `EventMembership` explicite.
 4. **Staff applicatif a accès complet aux données client**, avec audit obligatoire (`ActivityLog.staffActor=true`) visible par les OWNERs.
-5. **Settings en cascade** : `PlatformSettings → OrgSettings → EventSettings`, premier non-null en remontant. S'applique aux SMTP, reCAPTCHA, branding, contact, et au `badgeTemplateId`.
+5. **Settings en cascade** : `Event → Organization → Platform`, premier non-null en remontant. S'applique au branding contextuel (logo via `Event.logo`, `contactEmail`/`contactPhone` portés directement par `Organization` et `EventSettings`) et au `badgeTemplateId`. Le modèle `OrgSettings` n'existe plus : ses champs cascadables ont été fusionnés dans `Organization` (décision 2026-05-31). **Deux exceptions** (décisions 2026-05-31) : le SMTP et le reCAPTCHA sont plateforme uniquement (lus directement depuis `PlatformSettings` via `getPlatformSmtp()` et `getPlatformRecaptcha()`, pas de cascade).
 6. **Soft delete partout** : `archived: bool` + `archivedAt: DateTime?` sur `User`, `Organization`, `Event`. Hard delete réservé aux scripts staff.
 7. **Slug global unique** pour `Event` (`/e/[slug]`) : évite tout besoin de sous-domaine et permet le partage public de l'URL.
 8. **Registration porte un snapshot des infos profil au moment de la soumission.** L'édition se fait via `/account/profile` (compte requis), plus de `editToken` à usage unique. Le snapshot garantit l'audit immuable du badge délivré.
@@ -134,7 +135,7 @@ Neuf sous-spécifications couvrent le périmètre v2. Chacune a sa propre spec (
 | 4 | — | [Espace Événement](../features/espace-evenement.md) | Inscriptions, badges (PDF via registry), catégories, scan, journal, EventSettings (dont template badge event), members |
 | 5 | — | [Inscription publique scopée](../features/inscription-publique.md) | `/e/[slug]` (publique présentation), `/e/[slug]/register` (compte requis), `/verify/[badgeId]`, branding, cascade Settings — **partiellement superseded par v2-11** (suppression `/edit-registration/[token]`, refonte du flux d'inscription) |
 | 6 | — | [Notifications email multi-tenant](../features/notifications-email.md) | Résolveur SMTP en cascade, templates, expéditeur dynamique (étendu par v2-11 : nouveaux templates `account-verify-email`, `account-password-reset`, `registration-resubmitted`) |
-| 7 | — | [Reset & déploiement initial](../features/deploiement-initial.md) | Reset prod, seed staff + participant, smoke tests, rollback |
+| 7 | — | ~~[Reset & déploiement initial](../features/deploiement-initial.md)~~ — **abandonné 2026-05-31** | ~~Reset prod, seed staff + participant, smoke tests, rollback~~ — décision utilisateur le 2026-05-31 : la v2 ne sera pas déployée en production. L'outillage livré reste en place. |
 | 11 | [v2-11](2026-05-31-v2-11-comptes-participants.md) | [Comptes participants](../features/comptes-participants.md) | Compte unifié global, vérification email, reset password, snapshot Registration, suppression `editToken`/`SubmissionSnapshot`, refonte flux `/e/[slug]` |
 | 12 | [v2-12](2026-05-31-v2-12-templates-badges.md) | [Templates de badges multi-faces](../features/templates-badges.md) | Registry de templates React-PDF dans le code, cascade `Event → Org → Platform`, support mono-face / multi-face, preview PNG, 3 pages de sélection (event/org/staff) |
 
@@ -147,7 +148,7 @@ Lot A — Fondations
     └─ Spec 1 (multi-tenancy + RBAC) ──┐
                                        ▼
 Lot B — Auth & staff
-    ├─ Spec 7 (reset + seed)
+    ├─ Spec 7 (reset + seed)  [ABANDONNÉ 2026-05-31 — pas de déploiement prod]
     └─ Spec 2 (espace staff)
                                        ▼
 Lot C — Org & event
@@ -162,7 +163,7 @@ Lot D — Public, comptes et emails
 Lot E — Templates badges
     └─ Spec 12 (templates badges multi-faces)
                                        ▼
-[Mise en prod v2]
+[Mise en prod v2 — ABANDONNÉE 2026-05-31]
                                        ▼
 Lot F — Chantiers post-MVP (version v3)
     ├─ Spec v3-01 (stockage S3 / MinIO)
@@ -181,7 +182,7 @@ Chaque sous-spec a son plan d'implémentation détaillé (`docs/v2/plans/`) avec
 - **Audit** : toute mutation côté staff sur des données client génère un `ActivityLog` avec `staffActor=true`, visible par les OWNERs. Helper centralisé `logActivity({ type, userId, targetId, orgId?, eventId?, details?, req? })`.
 - **Sessions NextAuth** : JWT contient `userId` + `isStaff`. Les Memberships sont résolus serveur à chaque requête (pas dans le JWT) pour permettre des changements de droits instantanés sans déconnexion.
 - **Helpers d'autorisation** (`src/lib/auth.ts`) : `requireStaff()`, `requireOrgRole(orgId, roles)`, `requireEventRole(eventId, roles)`, `requireEventPermission(eventId, perm)`, `getEffectiveEventRoles()`, `loadUserContext()`. Staff bypass et héritage OWNER y sont centralisés.
-- **Résolution Settings** : `resolveSettings(eventId?, orgId?)` cascade `Event → Org → Platform`, premier non-null gagne. `resolvePublicSettings(...)` masque les secrets côté public.
+- **Résolution Settings** : `resolveSettings(eventId?, orgId?)` cascade `Event → Organization → Platform`, premier non-null gagne — pour les champs cascadables (`contactEmail`, `contactPhone`, `badgeTemplateId`). Les valeurs de contact lues côté `Organization` proviennent directement du modèle enrichi (plus de `OrgSettings` intermédiaire). `resolvePublicSettings(...)` masque les secrets côté public. Les configs SMTP et reCAPTCHA ne sont pas cascadées : `getPlatformSmtp()` et `getPlatformRecaptcha()` lisent directement `PlatformSettings` (décisions 2026-05-31).
 - **Authentification participant** : NextAuth `CredentialsProvider` refuse si `!emailVerifiedAt` ou `user.blocked`. Pas de tables d'auth séparées entre staff et participants.
 - **Mot de passe** : bcryptjs avec **12 rounds**, longueur minimale **6 caractères**. Vérification email obligatoire avant premier login.
 - **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
@@ -253,6 +254,9 @@ Chaque sous-spec a son plan d'implémentation détaillé (`docs/v2/plans/`) avec
 - **2026-05-31** — Ajout sous-spec v2-11 (comptes participants) et v2-12 (templates badges) après brainstorming
 - **2026-05-31** — Réorganisation : sortie de v2-08 (stockage S3), v2-09 (Kamal), v2-10 (tests + CI) vers la nouvelle version [v3](../../v3/README.md) (chantiers post-MVP, non bloquants pour la livraison v2)
 - **2026-05-31** — Cette spec maîtresse réécrite pour refléter le périmètre v2 final (9 sous-specs : 1-7, 11, 12)
+- **2026-05-31** — Décision SMTP plateforme uniquement : retrait des champs SMTP de `OrgSettings` et `EventSettings`, simplification du résolveur, suppression des UIs Test SMTP côté Org/Event. Specs 1, 3, 4, 5, 6 et plans associés mis à jour.
+- **2026-05-31** — Décision reCAPTCHA plateforme uniquement (même logique que SMTP) : retrait des champs reCAPTCHA d'`OrgSettings`, conservation dans `PlatformSettings` comme source unique. UI configurée dans `/staff/settings`. `getPlatformRecaptcha()` lit directement `PlatformSettings`. Specs 1, 2, 3, 5 et plans associés mis à jour. *Note* : la décision avait d'abord été formulée comme « reCAPTCHA org-only » puis corrigée le même jour vers « platform-only » (version définitive).
+- **2026-05-31** — Enrichissement d'`Organization` avec infos administratives (`legalName`, adresse structurée, `taxId`, `website`, `logo`) et fusion des champs ex-`OrgSettings` (`contactEmail`, `contactPhone`). Suppression du modèle `OrgSettings`. Édition réservée à l'`OWNER` (slug et quotas restent réservés staff).
 - Implémentation : à démarrer
 - Smoke tests : à venir
 - Mise en production : à venir (puis enchaînement avec v3)

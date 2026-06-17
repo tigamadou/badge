@@ -1,0 +1,11 @@
+http://badge.local {
+	reverse_proxy app:3000
+}
+
+http://pma.badge.local {
+	reverse_proxy phpmyadmin:80
+}
+
+http://mail.badge.local {
+	reverse_proxy mailpit:8025
+}
