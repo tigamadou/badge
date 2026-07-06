@@ -26,7 +26,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 2 | [x] | 2026-07-06 | `/admin/[orgId]/events` reskine (table rounded-xl, statut non interactif pastilles, lien Configurer). Requete inchangee. Switch inscriptions inline -> non cable (affiche statut), a cabler plus tard. typecheck+lint OK. |
 | 3 | [x] | 2026-07-06 | `EventCreationWizard` reskine (Stepper current 0-based + Segmented + Card + Checkbox multi-select + KeyValue recap). Etat/submit/validation/erreurs QUOTA/SLUG preserves. typecheck+lint OK. |
 | 4 | [x] | 2026-07-06 | `MembersClient` + `OrgMemberForm` reskines (Card invitation, table RoleBadge/avatar, dernier OWNER verrouille cote affichage). refresh/remove/409 preserves. typecheck+lint OK. |
-| 5 | [ ] | | `org-category-templates.html` -> `/admin/[orgId]/templates` (Table + CatPill/Switch, Modal edition). |
+| 5 | [x] | 2026-07-06 | `TemplatesClient` + `CategoryTemplateForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/POST/PATCH preserves. Toggles inline table -> concentres dans la modale. typecheck+lint OK. |
 | 6 | [ ] | | `org-badge-template.html` -> `/admin/[orgId]/settings/badge` (Switch heritage, galerie BadgeCard via BadgeTemplatePicker). |
 | 7 | [ ] | | `org-settings.html` -> `/admin/[orgId]/settings` (FormSection Identite/Adresse/Administratif/Contact, FileBox logo, QuotaBar). |
 | 8 | [ ] | | `org-log.html` -> `/admin/[orgId]/activity` (Toolbar, Table + LogType, lignes cliquables -> journal-detail, Pagination). |
@@ -457,9 +457,9 @@ Modeles de categories reutilisables : page-head + bouton Nouvelle categorie, Tab
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `TemplatesClient.tsx` + `CategoryTemplateForm.tsx`. Preserver `useState(templates/editing/adding)`, `refresh()`, `remove(id)` (`confirm` + `DELETE`), et le save du form (POST create / PATCH update).
+- [x] **Step 1: Lire + preserver.** Relire `TemplatesClient.tsx` + `CategoryTemplateForm.tsx`. Preserver `useState(templates/editing/adding)`, `refresh()`, `remove(id)` (`confirm` + `DELETE`), et le save du form (POST create / PATCH update).
 
-- [ ] **Step 2: Reconstruire le JSX.** Table reskinee + Modal (au lieu du form inline conditionnel, ou en conservant l'inline si plus simple — la maquette privilegie la Modal). Extrait ligne + CatPill :
+- [x] **Step 2: Reconstruire le JSX.** Table reskinee + Modal (au lieu du form inline conditionnel, ou en conservant l'inline si plus simple — la maquette privilegie la Modal). Extrait ligne + CatPill :
 
 ```tsx
 <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
@@ -486,9 +486,9 @@ Puis la Modal d'edition, alimentee par `editing`, contenant `CategoryTemplateFor
 
 > **Notes de fidelite / preservation.** (a) Les `Switch` de la **table** (Anonyme / ALL ACCESS) sont un toggle inline : sans endpoint de patch par ligne, les rendre en **lecture** (checked reflète la data, `onChange` no-op ou desactive) et concentrer l'edition dans la Modal (qui, elle, PATCH via le form existant). Ne pas fabriquer un endpoint. **Noter** l'affordance toggle inline si souhaitee plus tard. (b) La palette de couleurs de la Modal doit correspondre aux couleurs manipulees par le form existant (`t.color`) ; garder l'`Input type="color"` du form si la palette fixe n'est pas cablee. (c) `colorName()` : helper d'affichage local (map hex -> libelle « Indigo »/« Teal »… comme la maquette) — pur presentational, pas de logique metier ; si non trivial, afficher le hex. (d) Verifier la signature `Modal` v2-15 (`open`/`title`/`onClose` vs `onCancel`/`onConfirm`) et adapter.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK.
+- [x] **Step 3: `make typecheck`** — Expected: OK.
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : liste chargee (CatPill couleurs, N° `01`/`02`…, Switch reflet data), vide (`EmptyState`), ouverture Modal edition (`shadow-xl`, `rounded-2xl`, palette + switches), enregistrement -> `refresh`. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : liste chargee (CatPill couleurs, N° `01`/`02`…, Switch reflet data), vide (`EmptyState`), ouverture Modal edition (`shadow-xl`, `rounded-2xl`, palette + switches), enregistrement -> `refresh`. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-category-templates.html` (table CatPill + Switch, Modal edition palette + switches).
