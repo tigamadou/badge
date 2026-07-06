@@ -31,7 +31,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 7  | [x] | 2026-07-06 | `/e/[slug]` reskine (Card/CardBody + CatPill, slate). Branches CTA session + hrefs preserves. typecheck+lint OK. |
 | 8  | [x] | 2026-07-06 | `RegisterEventForm` reskine (RadioCards + Checkbox + FormSection + Alert/Spinner). POST/409/redirection success preserves. Identite/uploads restent au profil (Task 14). typecheck+lint OK. |
 | 9  | [x] | 2026-07-06 | `/e/[slug]/success` reskine (Card + SuccessRing + FileBox). notFound/settings/liens preserves. typecheck+lint OK. |
-| 10 | [ ] | | Apercu badge `/badge/[id]` (`BadgeCard` + boutons). |
+| 10 | [x] | 2026-07-06 | `/badge/[id]` apercu web via BadgeCard (QR img), PDF conserve via BadgeDownload. Identite masquee si anonyme. typecheck+lint OK. |
 | 11 | [ ] | | Verification badge `/verify/[badgeId]` (`VerifyBanner`, 3 cas). |
 | 12 | [ ] | | Tableau de bord participant `/account` (+ layout, cartes, `EmptyState`). |
 | 13 | [ ] | | Detail inscription `/account/registrations/[id]` (`KeyValue`, `Timeline`, `FileBox`). |
@@ -527,9 +527,9 @@ Etats « déjà inscrit » (bloc `existing`) : `Alert` tone `warn` + lien detail
 
 **Composants:** `BadgeCard` (directeur Task 16), `Button`, `Icon` (`download`, `smartphone`), `Spinner`. Rendu PDF conserve via `BadgeDownload` (dynamic import react-pdf).
 
-- [ ] **Step 1: Lire l'existant** — page client : `fetch('/api/verify/${id}')`, generation QR (`generateQRCodeDataURL`), `imageUrlToDataUrl` pour la photo, etats « Chargement… » / « non valide » / « Génération… ». Rend `BadgePreview` (react-pdf) + `BadgeDownload`. **Preserver** la generation QR + le telechargement PDF (`BadgeDownload`). Le `BadgePreview` react-pdf peut etre remplace visuellement par `BadgeCard` HTML pour l'apercu web (plus fidele a la maquette et plus leger) ; garder `BadgeDownload` pour le PDF reel.
+- [x] **Step 1: Lire l'existant** — page client : `fetch('/api/verify/${id}')`, generation QR (`generateQRCodeDataURL`), `imageUrlToDataUrl` pour la photo, etats « Chargement… » / « non valide » / « Génération… ». Rend `BadgePreview` (react-pdf) + `BadgeDownload`. **Preserver** la generation QR + le telechargement PDF (`BadgeDownload`). Le `BadgePreview` react-pdf peut etre remplace visuellement par `BadgeCard` HTML pour l'apercu web (plus fidele a la maquette et plus leger) ; garder `BadgeDownload` pour le PDF reel.
 
-- [ ] **Step 2: Reconstruire l'apercu web avec `BadgeCard`** — le QR (dataURL) devient une `<img>` dans le slot `qr` :
+- [x] **Step 2: Reconstruire l'apercu web avec `BadgeCard`** — le QR (dataURL) devient une `<img>` dans le slot `qr` :
 ```tsx
 if (!data) return <div className="mt-20 text-center"><Spinner /></div>;
 if (!data.valid) return <p className="mt-20 text-center text-rose-600">Badge non valide ou inscription non approuvée.</p>;
@@ -559,8 +559,8 @@ return (
 ```
 > `BadgeDownload` (bouton « Télécharger le PDF ») reste le composant canonique du PDF — ne pas le remplacer. `smartphone` a ajouter au registre `Icon` si absent. Le passage de `BadgePreview` (react-pdf) a `BadgeCard` (HTML) pour l'**apercu** depend de la reconciliation V1/V2 du directeur (Task 16) : si `BadgeCard` n'est pas encore stabilise, conserver `BadgePreview` en attendant et noter au tracker.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — badge d'une inscription APPROVED+imprimee (via seed) : carte fidele (bande marine, cat-band coloree, QR, ruban all-access si applicable), telechargement PDF fonctionnel. 375/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — badge d'une inscription APPROVED+imprimee (via seed) : carte fidele (bande marine, cat-band coloree, QR, ruban all-access si applicable), telechargement PDF fonctionnel. 375/1440. `make test` vert.
 
 **Acceptance:** `BadgeCard` fidele a `apercu-badge.html` ; QR + telechargement PDF inchanges.
 

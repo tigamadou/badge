@@ -6,11 +6,9 @@ import dynamic from "next/dynamic";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { formatEventDate } from "@/lib/format-date";
 import { imageUrlToDataUrl } from "@/lib/image-to-dataurl";
+import { BadgeCard } from "@/components/badge/BadgeCard";
+import { Spinner } from "@/components/ui/Feedback";
 
-const BadgePreview = dynamic(
-  () => import("@/components/badge/BadgePreview").then((m) => m.BadgePreview),
-  { ssr: false }
-);
 const BadgeDownload = dynamic(
   () => import("@/components/badge/BadgeDownload").then((m) => m.BadgeDownload),
   { ssr: false }
@@ -36,8 +34,14 @@ export default function BadgePage() {
     }
   }, [data]);
 
-  if (!data) return <p className="text-center mt-20">Chargement...</p>;
-  if (!data.valid) return <p className="text-center mt-20 text-red-500">Badge non valide ou inscription non approuvée.</p>;
+  if (!data)
+    return (
+      <div className="mt-20 text-center">
+        <Spinner />
+      </div>
+    );
+  if (!data.valid)
+    return <p className="mt-20 text-center text-rose-600">Badge non valide ou inscription non approuvée.</p>;
 
   const reg = data.registration as unknown as {
     id: string;
@@ -69,13 +73,47 @@ export default function BadgePage() {
   const team = { id: "", name: reg.team.name, color: reg.team.color, number: 0, neutralBadge: reg.team.neutralBadge ?? false, anonymous: reg.team.anonymous ?? false };
   const event = { id: "", title: evt.title, location: evt.location, date: formatEventDate(evt.date), logo: "" };
 
-  if (!qrCodeDataUrl) return <p className="text-center mt-20">Génération du badge...</p>;
+  if (!qrCodeDataUrl)
+    return (
+      <div className="mt-20 flex items-center justify-center gap-2 text-slate-500">
+        <Spinner /> Génération du badge…
+      </div>
+    );
+
+  // Apercu web via BadgeCard (HTML). Le PDF officiel reste genere par BadgeDownload.
+  // Anonymat : on masque l'identite dans l'apercu web quand la categorie est anonyme,
+  // pour rester coherent avec le rendu PDF anonyme.
+  const anonymous = team.anonymous;
+  const displayName = anonymous ? "Identité masquée" : `${reg.firstName} ${reg.lastName}`;
 
   return (
-    <div className="max-w-md mx-auto mt-10 text-center">
-      <h1 className="text-xl font-bold mb-6">Votre badge</h1>
-      <BadgePreview registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} allAccessGranted={reg.allAccessGranted} />
-      <div className="mt-4">
+    <div className="mx-auto mt-10 max-w-md px-4 text-center">
+      <h1 className="mb-6 text-xl font-semibold text-slate-900">Votre badge</h1>
+      <div className="flex justify-center">
+        <BadgeCard
+          org={event.title}
+          name={displayName}
+          role={anonymous ? undefined : reg.structure}
+          category={team.name}
+          categoryColor={team.neutralBadge ? "#334155" : team.color}
+          qr={
+            qrCodeDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrCodeDataUrl} alt="QR code du badge" className="h-full w-full" />
+            ) : null
+          }
+          meta={
+            <>
+              N° {reg.id}
+              <br />
+              {event.location} · {event.date}
+            </>
+          }
+          allAccess={reg.allAccessGranted}
+        />
+      </div>
+      <p className="mt-3 text-xs text-slate-400">Format 100 × 140 mm</p>
+      <div className="mt-4 flex justify-center">
         <BadgeDownload registration={registration} team={team} event={event} qrCodeDataUrl={qrCodeDataUrl} allAccessGranted={reg.allAccessGranted} />
       </div>
     </div>
