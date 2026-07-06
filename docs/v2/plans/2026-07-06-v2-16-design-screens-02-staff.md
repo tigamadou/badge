@@ -22,7 +22,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
 | 1  | [x] | 2026-07-06 | `/staff` reskine (StatGrid + Card top-orgs + Timeline). Icone `archive` ajoutee. Promise.all/topOrgs preserves. typecheck+lint OK. |
-| 2  | [ ] | | `staff-orgs.html` -> `/staff/organizations` (Toolbar, Table, Pagination, badge archivee). |
+| 2  | [x] | 2026-07-06 | `/staff/organizations` + `OrganizationsTable` reskines (toolbar GET habillee, table rounded-xl, OrgLogo, Tag archivee). where/select/take preserves. typecheck+lint OK. |
 | 3  | [ ] | | `staff-org-create.html` -> `/staff/organizations/new` (FormSection x5). |
 | 4  | [ ] | | `staff-org-detail.html` -> `/staff/organizations/[orgId]` (Tabs, Quotas, danger + Modal). |
 | 5  | [ ] | | `staff-users.html` -> `/staff/users` (Toolbar + Segmented, Table, Pagination). |
@@ -175,11 +175,11 @@ Liste des organisations : toolbar (recherche + case archivees + compteur), table
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver la logique**
+- [x] **Step 1: Lire et preserver la logique**
 
 Relire `page.tsx` (filtres `q`/`archived` via `searchParams`, `where` Prisma, `select` avec `_count`) et `OrganizationsTable.tsx`. **Preserver** le `where`, le `select`, le `take: 100`. La toolbar reste un `<form method="get">` (pas de state client necessaire : conserver le pattern GET pour ne pas introduire de logique). On peut donc garder `SearchInput` **non controle** ou styliser directement l'`<input>` de recherche — privilegier le balisage `Toolbar` habille tout en gardant le formulaire GET (les composants clients `SearchInput`/`Checkbox` ne sont pas indispensables si le form GET suffit ; utiliser un input stylise identique a la maquette).
 
-- [ ] **Step 2: Reconstruire le JSX (page + table)**
+- [x] **Step 2: Reconstruire le JSX (page + table)**
 
 `page.tsx` — head + toolbar en form GET habille maquette :
 
@@ -238,12 +238,12 @@ Relire `page.tsx` (filtres `q`/`archived` via `searchParams`, `where` Prisma, `s
 
 _(La maquette montre 5 colonnes + actions ; adapter aux colonnes reellement disponibles dans le `select` — ne pas inventer de donnee « inscriptions » si le `_count` ne l'expose pas. Si l'inscription totale par org n'est pas requetee, omettre cette colonne plutot que d'ajouter une requete.)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/organizations` en 375/768/1440. Verifier : toolbar responsive, table `rounded-xl` en-tete slate-50, logos, slug mono, ligne archivee attenuee + `Tag`. La pagination n'apparait que si l'app pagine reellement (le `take:100` actuel ne pagine pas — ne pas ajouter de faux pager ; si besoin, laisser tel quel). `make test` vert.
 
