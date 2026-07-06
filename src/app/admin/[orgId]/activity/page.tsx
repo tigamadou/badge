@@ -1,4 +1,9 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { LogType } from "@/components/ui/JournalBlocks";
+import { Tag } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
+import { logKind } from "@/lib/activity-labels";
 
 export default async function ActivityPage({
   params,
@@ -15,53 +20,57 @@ export default async function ActivityPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Journal d&apos;activité</h1>
-      <p className="text-sm text-slate-500">
-        Les actions marquées{" "}
-        <span className="px-1 rounded bg-amber-100 text-amber-800">staff</span> sont effectuées par
-        le staff applicatif.
-      </p>
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Journal d&apos;activité</h1>
+        <p className="mt-0.5 text-sm text-slate-400">
+          Les actions marquées <Tag icon="shield">staff</Tag> sont effectuées par le staff applicatif.
+        </p>
+      </div>
 
-      <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-slate-50 text-left">
-          <tr>
-            <th className="px-3 py-2">Date</th>
-            <th className="px-3 py-2">Type</th>
-            <th className="px-3 py-2">Acteur</th>
-            <th className="px-3 py-2">Détails</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.length === 0 && (
-            <tr>
-              <td colSpan={4} className="px-3 py-4 text-center text-slate-500">
-                Aucune activité.
-              </td>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">Horodatage</th>
+              <th className="px-4 py-3">Action</th>
+              <th className="px-4 py-3">Auteur</th>
+              <th className="px-4 py-3" />
             </tr>
-          )}
-          {logs.map((l) => (
-            <tr key={l.id} className="border-t">
-              <td className="px-3 py-2 whitespace-nowrap">
-                {new Date(l.createdAt).toLocaleString("fr-FR")}
-              </td>
-              <td className="px-3 py-2">
-                {l.type}
-                {l.staffActor && (
-                  <span className="ml-2 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    staff
+          </thead>
+          <tbody>
+            {logs.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">
+                  Aucune activité.
+                </td>
+              </tr>
+            )}
+            {logs.map((l) => (
+              <tr key={l.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                  {new Date(l.createdAt).toLocaleString("fr-FR")}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-2">
+                    <LogType kind={logKind(l.type)}>{l.type}</LogType>
+                    {l.staffActor && <Tag icon="shield">staff</Tag>}
                   </span>
-                )}
-              </td>
-              <td className="px-3 py-2">{l.user?.email ?? "—"}</td>
-              <td className="px-3 py-2 text-xs text-slate-600">
-                <pre className="whitespace-pre-wrap font-mono">
-                  {JSON.stringify(l.details, null, 0)}
-                </pre>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                </td>
+                <td className="px-4 py-3 text-[13px] text-slate-600">{l.user?.email ?? "—"}</td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/admin/${orgId}/activity/${l.id}`}
+                    aria-label="Voir le détail"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <Icon name="chevron-right" size={16} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

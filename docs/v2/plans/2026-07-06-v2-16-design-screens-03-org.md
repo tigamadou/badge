@@ -29,7 +29,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 5 | [x] | 2026-07-06 | `TemplatesClient` + `CategoryTemplateForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/POST/PATCH preserves. Toggles inline table -> concentres dans la modale. typecheck+lint OK. |
 | 6 | [x] | 2026-07-06 | `/admin/[orgId]/settings/badge` : head aligne DS ; galerie via BadgeTemplatePicker deja habille (Task 9 staff), heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
 | 7 | [x] | 2026-07-06 | `SettingsClient` reskine (Card + FormSection Identite/Adresse/Administratif/Contact + Input label + Alert + Annuler). save/PATCH preserves. Logo=URL (pas d'endpoint upload cable). Quotas geres staff, non affiches ici. typecheck+lint OK. |
-| 8 | [ ] | | `org-log.html` -> `/admin/[orgId]/activity` (Toolbar, Table + LogType, lignes cliquables -> journal-detail, Pagination). |
+| 8 | [x] | 2026-07-06 | `/admin/[orgId]/activity` reskine (table LogType, lignes cliquables) + nouvelle route detail `/admin/[orgId]/activity/[logId]` (JournalEntryDetail scope orgId). Requete take:100 preservee. typecheck+lint+test OK. |
 
 **Convention de test (reskin)** : ces pages sont un **reskin de rendu**. La verification primaire est le **controle visuel** contre la maquette. Assertion de chaines de classes Tailwind = anti-pattern (fragile, faible valeur, YAGNI). Par task :
 1. `make typecheck` — aucune regression de types (les signatures de props/data ne changent pas ; si un composant du directeur impose une prop, l'alimenter depuis la data existante sans requete nouvelle).
@@ -641,9 +641,9 @@ Journal d'activite : page-head + bouton Exporter, Toolbar (recherche + filtres T
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `page.tsx`. Preserver `prisma.activityLog.findMany({ where: { orgId }, orderBy: { createdAt: "desc" }, take: 100, include: { user } })`. Conserver le marquage `staffActor`.
+- [x] **Step 1: Lire + preserver.** Relire `page.tsx`. Preserver `prisma.activityLog.findMany({ where: { orgId }, orderBy: { createdAt: "desc" }, take: 100, include: { user } })`. Conserver le marquage `staffActor`.
 
-- [ ] **Step 2: Reconstruire le JSX.** Toolbar + table avec `LogType` + lignes cliquables + Pagination. Extrait representatif :
+- [x] **Step 2: Reconstruire le JSX.** Toolbar + table avec `LogType` + lignes cliquables + Pagination. Extrait representatif :
 
 ```tsx
 <tr
@@ -667,9 +667,9 @@ Journal d'activite : page-head + bouton Exporter, Toolbar (recherche + filtres T
 
 > **Notes de fidelite / preservation.** (a) **Lignes cliquables -> vue detail** : la cible est la vue detail de journal partagee, **livree par le sous-plan STAFF** (`journal-detail.html`). Route org cible suggeree : `/admin/[orgId]/activity/[logId]` **ou** une modale reutilisant les blocs `LogType`/`KeyValue`/`Diff`/`Payload`. Si la vue detail n'est pas encore livree, garder l'affordance (curseur pointer + chevron + hover) et **noter** le blocage (la route detail sera branchee quand staff livre) — ne pas re-specifier les blocs ici. (b) `LogType type={l.type}` : le composant du directeur (Task 20) mappe `ActivityType` -> categorie coloree (acces/creation/systeme/suppression/modification) + libelle FR. Verifier que tous les `ActivityType` du schema sont couverts ; completer le mapping dans `LogType` (directeur), pas ici. (c) `describe(l)`/`context(l)` : helpers presentational locaux derivant l'action lisible et le contexte (event/org) depuis `l.details` — affichage seul, pas de logique metier. (d) Pagination : si la page charge `take: 100` sans pagination serveur, rendre la `Pagination` en cote client sur le tableau charge, ou garder l'info « X sur N » et brancher plus tard ; **noter** si non fonctionnelle. (e) Le staff-actor reste visible (audit).
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK.
+- [x] **Step 3: `make typecheck`** — Expected: OK.
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : charge (LogType colores par categorie, horodatage `mono`, chevrons), vide (`EmptyState`), clic sur ligne -> vue detail (ou affordance notee si detail non livre). Mode staff : bandeau intact + lignes `staff` marquees. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : charge (LogType colores par categorie, horodatage `mono`, chevrons), vide (`EmptyState`), clic sur ligne -> vue detail (ou affordance notee si detail non livre). Mode staff : bandeau intact + lignes `staff` marquees. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-log.html` (toolbar, table LogType, lignes cliquables, pagination).
