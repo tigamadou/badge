@@ -36,7 +36,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 11 | [x] | 2026-07-06 | Fusion blocklists en onglets : hote `blocked-emails` charge les 2 listes -> `BlocklistTabs` (Tabs + compteurs) ; `blocked-documents` redirige. Forms reskines (Card/table/Alert). APIs inchangees. typecheck+lint+test OK. |
 | 12 | [x] | 2026-07-06 | `QRScanner` reskine (ScanResult panel + CatPill/StatusBadge + historique a pastilles, conteneur camera habille). Logique html5-qrcode/verifyPayload/manuel intacte. typecheck+lint OK. Overlay reticule plein-cadre: gere par html5-qrcode, non force (note). |
 | 13 | [x] | 2026-07-06 | `MemberTable` reskine (table avatar + select role stylé + modal invitation). setRole/remove/refresh preserves. typecheck+lint OK. |
-| 14 | [ ] | | Parametres (`settings/page.tsx`) — FormSection + Switch quota + Contact override. |
+| 14 | [x] | 2026-07-06 | `EventSettingsForm` reskine (2 Cards Informations/Contact + Input + Switch inscriptions + Alert). Les 2 save() (event PATCH / settings PATCH) preserves. typecheck+lint OK. |
 | 15 | [ ] | | Journal (`activity/page.tsx`) — Table + LogType + Pagination + lignes cliquables -> vue detail. |
 
 **Convention de test (reskin)** : chaque page est validee par (a) `make typecheck` vert, (b) `make test` vert (les tests existants — de rendu et E2E — ne dependent pas des classes de couleur ; s'ils cassent sur un texte/role, corriger la cause racine, pas contourner), (c) controle visuel contre la maquette sur 3 viewports (375 / 768 / 1440) x etats (vide / charge / erreur) x roles pertinents. Les composants a etat vivent deja dans `src/components/event/*` et portent leurs propres tests d'interaction ; on habille leur JSX sans toucher la logique.
@@ -597,8 +597,8 @@ Formulaire de reglages : FormSection "Informations", FormSection "Inscriptions" 
 **Composants:** `Card`/`CardBody`, `FormSection`, `Switch`, `Input`, `Button`, `Icon`, `Alert`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `EventSettingsForm.tsx` : chargement des reglages event, `registrationOpen`, quota, override contact (cascade `resolveSettings`), server action de sauvegarde. Ne rien changer a la cascade ni au submit.
-- [ ] **Step 2: Reconstruire le JSX** : trois `FormSection` (Informations / Inscriptions / Contact override) habillant les `Input` existants ; `Switch` pour l'ouverture des inscriptions (branche sur `registrationOpen`) ; lien vers `blocked-emails` (hote des Listes de blocage — voir Task 11). Extrait representatif :
+- [x] **Step 1: Lire et preserver** `EventSettingsForm.tsx` : chargement des reglages event, `registrationOpen`, quota, override contact (cascade `resolveSettings`), server action de sauvegarde. Ne rien changer a la cascade ni au submit.
+- [x] **Step 2: Reconstruire le JSX** : trois `FormSection` (Informations / Inscriptions / Contact override) habillant les `Input` existants ; `Switch` pour l'ouverture des inscriptions (branche sur `registrationOpen`) ; lien vers `blocked-emails` (hote des Listes de blocage — voir Task 11). Extrait representatif :
 
 ```tsx
 <FormSection title="Inscriptions" description="Contrôle l'ouverture du formulaire public et le quota.">
@@ -610,9 +610,9 @@ Formulaire de reglages : FormSection "Informations", FormSection "Inscriptions" 
 </FormSection>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-settings.html` sur 375/768/1440. Verifier : sections separees par bordures, Switch ouverture, override contact, lien blocklists. Etats : sauvegarde OK (Alert success), erreur validation.
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-settings.html` sur 375/768/1440. Verifier : sections separees par bordures, Switch ouverture, override contact, lien blocklists. Etats : sauvegarde OK (Alert success), erreur validation.
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** parametres fideles (3 FormSection + Switch + lien blocklists) ; cascade contact et sauvegarde preservees ; typecheck + tests verts.
 

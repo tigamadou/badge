@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Switch } from "@/components/ui/FormControls";
+import { Alert } from "@/components/ui/Feedback";
 
 type Initial = {
   event: {
@@ -62,52 +65,64 @@ export function EventSettingsForm({
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <h1 className="text-2xl font-bold">Paramètres de l&apos;événement</h1>
-      {msg && <div className="rounded bg-blue-50 border border-blue-200 px-4 py-2 text-sm">{msg}</div>}
+    <div className="max-w-2xl space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;événement</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Informations, inscriptions et contact</p>
+      </div>
+      {msg && <Alert tone={msg.includes("Échec") ? "err" : "success"}>{msg}</Alert>}
 
-      <form onSubmit={saveEvent} className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Informations</h2>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" required />
-        <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Lieu" />
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        <Input
-          value={logo ?? ""}
-          onChange={(e) => setLogo(e.target.value || null)}
-          placeholder="Chemin du logo (uploads/.../logo.png)"
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={registrationOpen}
-            onChange={(e) => setRegistrationOpen(e.target.checked)}
-          />
-          Inscriptions ouvertes
-        </label>
-        <div className="text-xs text-slate-500">
-          Slug : <code>{initial.event.slug}</code> (modifiable par le staff uniquement)
-        </div>
-        <Button type="submit">Enregistrer</Button>
-      </form>
+      <Card>
+        <CardHead title="Informations" />
+        <CardBody>
+          <form onSubmit={saveEvent} className="space-y-4">
+            <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} />
+            <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            <Input
+              label="Logo (chemin uploads/…)"
+              value={logo ?? ""}
+              onChange={(e) => setLogo(e.target.value || null)}
+              placeholder="uploads/.../logo.png"
+            />
+            <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
+            <p className="text-xs text-slate-400">
+              Slug : <code className="font-mono text-slate-600">{initial.event.slug}</code> (modifiable par le staff
+              uniquement)
+            </p>
+            <div className="flex justify-end">
+              <Button type="submit">Enregistrer</Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
 
-      <form onSubmit={saveSettings} className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Contact (overrides)</h2>
-        <Input
-          type="email"
-          value={contactEmail}
-          onChange={(e) => setContactEmail(e.target.value)}
-          placeholder={`Email de contact (cascade : ${initial.resolved.contactEmail || "—"})`}
-        />
-        <Input
-          value={contactPhone}
-          onChange={(e) => setContactPhone(e.target.value)}
-          placeholder={`Téléphone de contact (cascade : ${initial.resolved.contactPhone || "—"})`}
-        />
-        <p className="text-xs text-slate-500">
-          Laisser vide pour hériter du niveau organisation. Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
-        </p>
-        <Button type="submit">Enregistrer</Button>
-      </form>
+      <Card>
+        <CardHead title="Contact (surcharges)" subtitle="Laisser vide pour hériter du niveau organisation." />
+        <CardBody>
+          <form onSubmit={saveSettings} className="space-y-4">
+            <Input
+              label="E-mail de contact"
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder={`Cascade : ${initial.resolved.contactEmail || "—"}`}
+            />
+            <Input
+              label="Téléphone de contact"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder={`Cascade : ${initial.resolved.contactPhone || "—"}`}
+            />
+            <p className="text-xs text-slate-400">
+              Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
+            </p>
+            <div className="flex justify-end">
+              <Button type="submit">Enregistrer</Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
     </div>
   );
 }
