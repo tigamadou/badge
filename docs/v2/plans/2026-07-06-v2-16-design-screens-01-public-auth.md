@@ -24,7 +24,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 0  | [x] | 2026-07-06 | Pre-flight OK : directeur implemente (composants presents), typecheck+lint baseline verts. |
 | 1  | [x] | 2026-07-06 | Landing `LandingView.tsx` + rendu conditionnel sur `/` (branche authentifiee inchangee). typecheck+lint OK, test 657/657. Revue visuelle = manuelle. |
 | 2  | [x] | 2026-07-06 | `/login` reskine (Alert/Spinner/sous-titre/pied/lien mdp oublie) + `AuthCard` enrichi (subtitle/footer). typecheck+lint OK, test 657/657. |
-| 3  | [ ] | | Mot de passe oublie `/forgot-password` (form + etat « e-mail envoye »). |
+| 3  | [x] | 2026-07-06 | `/forgot-password` reskine (SuccessRing/Alert/Spinner, etat done). Logique anti-enumeration preservee. typecheck+lint OK. |
 | 4  | [ ] | | Reinitialisation `/reset-password/[token]` (+ `PasswordMeter`). |
 | 5  | [ ] | | Definition a l'invitation `/setup-password` (+ `PasswordMeter`). |
 | 6  | [ ] | | Verification e-mail `/verify-email/[token]` (`SuccessRing`). |
@@ -239,9 +239,9 @@ type Props = { title: string; subtitle?: React.ReactNode; footer?: React.ReactNo
 
 **Composants:** `AuthCard`, `Input`, `Button`, `Spinner`, `SuccessRing`, `Icon` (`mail`, `arrow-left`), `next/link`.
 
-- [ ] **Step 1: Lire l'existant** — page client, `fetch("/api/auth/forgot-password")`, anti-enumeration (`setDone(true)` uniforme). Preserver `done` (etat succes) et `email`, `error`, `loading`.
+- [x] **Step 1: Lire l'existant** — page client, `fetch("/api/auth/forgot-password")`, anti-enumeration (`setDone(true)` uniforme). Preserver `done` (etat succes) et `email`, `error`, `loading`.
 
-- [ ] **Step 2: Reconstruire** — mapper `done` sur l'etat SuccessRing :
+- [x] **Step 2: Reconstruire** — mapper `done` sur l'etat SuccessRing :
 ```tsx
 <AuthCard title={done ? "Vérifiez votre boîte mail" : "Mot de passe oublié"}
   subtitle={done ? undefined : "Saisissez votre e-mail pour recevoir un lien de réinitialisation."}
@@ -268,8 +268,8 @@ type Props = { title: string; subtitle?: React.ReactNode; footer?: React.ReactNo
 ```
 > Conserver le message anti-enumeration exact deja present. « Renvoyer » repasse simplement en mode form (pas de nouvel appel automatique).
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — 375/1440, les 2 etats (form / envoye). `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — 375/1440, les 2 etats (form / envoye). `make test` vert.
 
 **Acceptance:** 2 etats fideles ; comportement anti-enumeration preserve.
 

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -37,38 +39,53 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <AuthCard title="Mot de passe oublié">
+    <AuthCard
+      title={done ? "Vérifiez votre boîte mail" : "Mot de passe oublié"}
+      subtitle={done ? undefined : "Saisissez votre e-mail pour recevoir un lien de réinitialisation."}
+      footer={
+        <Link href="/login" className="inline-flex items-center gap-1 text-green-600 hover:underline">
+          <Icon name="arrow-left" size={13} /> Retour à la connexion
+        </Link>
+      }
+    >
       {done ? (
-        <div className="space-y-4 text-center">
-          <p className="text-sm text-slate-700">
-            Si un compte existe pour <strong>{email}</strong>, vous recevrez un email avec un
-            lien de réinitialisation. Vérifiez votre boîte de réception.
+        <div className="text-center">
+          <SuccessRing>
+            <Icon name="mail" size={26} />
+          </SuccessRing>
+          <p className="text-sm text-slate-600">
+            Si un compte existe pour <b className="text-slate-900">{email}</b>, un lien de réinitialisation a été envoyé.
           </p>
-          <p className="text-sm">
-            <Link href="/login" className="text-green-600 hover:underline">Retour à la connexion</Link>
-          </p>
+          <Button variant="secondary" className="mt-6 w-full" onClick={() => setDone(false)}>
+            Renvoyer l&apos;e-mail
+          </Button>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Saisissez l&apos;adresse email de votre compte. Nous vous enverrons un lien pour
-            réinitialiser votre mot de passe.
-          </p>
+          {error && (
+            <Alert tone="err">
+              <Icon name="alert-triangle" size={16} /> {error}
+            </Alert>
+          )}
           <Input
-            label="Email"
+            label="Adresse e-mail"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="vous@organisation.fr"
             required
             autoComplete="email"
+            disabled={loading}
           />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Envoi..." : "Envoyer le lien"}
+          <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
+            {loading ? (
+              <>
+                <Spinner size={16} /> Envoi…
+              </>
+            ) : (
+              "Envoyer le lien"
+            )}
           </Button>
-          <p className="text-sm text-center text-slate-600">
-            <Link href="/login" className="text-green-600 hover:underline">Retour à la connexion</Link>
-          </p>
         </form>
       )}
     </AuthCard>
