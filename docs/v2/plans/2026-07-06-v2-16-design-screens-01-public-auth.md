@@ -34,7 +34,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 10 | [x] | 2026-07-06 | `/badge/[id]` apercu web via BadgeCard (QR img), PDF conserve via BadgeDownload. Identite masquee si anonyme. typecheck+lint OK. |
 | 11 | [x] | 2026-07-06 | `BadgeVerifyView` reskine (VerifyBanner/Card/CatPill/KeyValue, 3 cas). Icones `user`/`lock` ajoutees au registre. Forme de `data` preservee. typecheck+lint+test OK. |
 | 12 | [x] | 2026-07-06 | `/account` + layout reskines (AccountNav client, cartes d'inscription, StatusBadge, EmptyState, Alert onboarding). Icone `tag` ajoutee. Requetes/gardes preservees. typecheck+lint+test OK. |
-| 13 | [ ] | | Detail inscription `/account/registrations/[id]` (`KeyValue`, `Timeline`, `FileBox`). |
+| 13 | [x] | 2026-07-06 | `/account/registrations/[id]` reskine (Card/CardHead + KeyValue + CatPill + StatusBadge + Alert). ResubmitButton/gardes/requetes preserves. typecheck+lint OK. |
 | 14 | [ ] | | Profil `/account/profile` (+ `/complete`) (banniere, photo, mot de passe, zone danger). |
 | 15 | [ ] | | Selecteur d'organisation `/select` (`PickCard` / `PickCardDashed` / `OrgLogo`). |
 
@@ -699,9 +699,9 @@ En-tete : logo, `AccountNav`, user-chip (initiales + nom + signout).
 
 **Composants:** `Card`/`CardHead`/`CardBody`, `KeyValue`, `CatPill`, `FileBox`, `Timeline`/`TimelineItem`, `Alert` (err), `StatusBadge`, `Icon` (`arrow-left`, `pencil`). `ResubmitButton` existant conserve.
 
-- [ ] **Step 1: Lire l'existant** — charge `registration` (snapshots, status, rejection, event, category), garde `userId !== userId -> redirect("/account")`, `ResubmitButton` si REJECTED. Preserver la garde d'appartenance, les snapshots et `ResubmitButton`.
+- [x] **Step 1: Lire l'existant** — charge `registration` (snapshots, status, rejection, event, category), garde `userId !== userId -> redirect("/account")`, `ResubmitButton` si REJECTED. Preserver la garde d'appartenance, les snapshots et `ResubmitButton`.
 
-- [ ] **Step 2: Reconstruire**
+- [x] **Step 2: Reconstruire**
 ```tsx
 <div className="space-y-6">
   <Link href="/account" className="inline-flex items-center gap-1 text-[13px] text-green-600 hover:underline"><Icon name="arrow-left" size={13} /> Mes inscriptions</Link>
@@ -755,8 +755,8 @@ En-tete : logo, `AccountNav`, user-chip (initiales + nom + signout).
 ```
 > La maquette montre des `filebox` « Pièces fournies » : les pieces reelles vivent au profil (snapshots ici) ; n'afficher `FileBox` que si des cles de fichier existent dans la selection — sinon ne pas inventer d'aperçu. `Timeline` reconstruit a partir des dates reelles (`createdAt`/`updatedAt`/`badgePrintedAt`), pas de dates fictives.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — inscription REJECTED (encart + timeline danger), APPROVED, PENDING. 375/768/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — inscription REJECTED (encart + timeline danger), APPROVED, PENDING. 375/768/1440. `make test` vert.
 
 **Acceptance:** recap + timeline + encart rejet fideles ; garde d'appartenance et `ResubmitButton` inchanges.
 
