@@ -22,7 +22,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 1 | [ ] | | `org-dashboard.html` -> `/admin/[orgId]` (StorageAlert 82%, StatGrid, Card derniers events + Switch, Timeline). |
+| 1 | [x] | 2026-07-06 | `/admin/[orgId]` reskine (StatGrid + Card derniers events + Timeline). Alerte quota conservee (seuil >80). Storage reel non expose -> alerte pilotee par eventsPct/regsPct (inchangee). typecheck+lint OK. |
 | 2 | [ ] | | `org-events.html` -> `/admin/[orgId]/events` (Toolbar, Table events, Switch inscriptions, tag Archive). |
 | 3 | [ ] | | `org-event-create.html` -> `/admin/[orgId]/events/new` (Stepper, Segmented modele/manuel, RadioCards/Table categories). |
 | 4 | [ ] | | `org-members.html` -> `/admin/[orgId]/members` (form invitation, Table + RoleBadge, dernier OWNER verrouille). |
@@ -98,9 +98,9 @@ Tableau de bord org : alerte quota stockage 82%, grille de 4 StatCard, carte « 
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `src/app/admin/[orgId]/page.tsx`. **Preserver a l'identique** le bloc `Promise.all` (comptes events actif/archive, `registrationsThisMonth`, `latestEvents`, `recentActivity`, quotas org) et les calculs `eventsPct`/`regsPct`. Ne rien ajouter aux `select` Prisma sauf si un champ deja disponible sur l'objet est necessaire au rendu (ex. `date`, `registrationOpen`, `title` sont deja selectionnes).
+- [x] **Step 1: Lire + preserver.** Relire `src/app/admin/[orgId]/page.tsx`. **Preserver a l'identique** le bloc `Promise.all` (comptes events actif/archive, `registrationsThisMonth`, `latestEvents`, `recentActivity`, quotas org) et les calculs `eventsPct`/`regsPct`. Ne rien ajouter aux `select` Prisma sauf si un champ deja disponible sur l'objet est necessaire au rendu (ex. `date`, `registrationOpen`, `title` sont deja selectionnes).
 
-- [ ] **Step 2: Reconstruire le JSX.** Remplacer le contenu retourne. Page-head + StorageAlert conditionnelle + StatGrid + panel-grid deux colonnes :
+- [x] **Step 2: Reconstruire le JSX.** Remplacer le contenu retourne. Page-head + StorageAlert conditionnelle + StatGrid + panel-grid deux colonnes :
 
 ```tsx
 import Link from "next/link";
@@ -202,9 +202,9 @@ return (
 
 > **Notes de fidelite / preservation.** (a) La maquette affiche un `Switch` actif/archive et un compteur d'inscriptions par ligne. Le compteur exige `_count.registrations` sur `latestEvents` : si absent du `select` existant, l'ajouter au `select` **de la requete deja presente** (pas de nouvelle requete). Sinon, retirer le compteur plutot qu'inventer une valeur. (b) `membersCount` : si non deja recupere, ajouter un `prisma.orgMembership.count` **dans le `Promise.all` existant** (meme batch) ou retirer la StatCard Membres. (c) Le badge staff/audit (`a.staffActor`) reste visible via `tone="warn"` — ne pas le perdre. (d) `storagePct` : la maquette montre 82% en dur ; si le stockage reel n'est pas expose par le modele, conserver l'alerte pilotee par `eventsPct`/`regsPct` (logique existante) et **noter** dans le tracker.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK (aucune signature de page ne change ; `params: Promise<{ orgId }>` conserve).
+- [x] **Step 3: `make typecheck`** — Expected: OK (aucune signature de page ne change ; `params: Promise<{ orgId }>` conserve).
 
-- [ ] **Step 4: Controle visuel + `make test`.** Ouvrir `http://badge.local/admin/[orgId]` (id reel via seed) sur **375 / 768 / 1440**. Verifier : page-head + bouton vert, alerte quota ambre si >80%, 4 StatCard (label uppercase, chiffre `tabular-nums`), 2 cartes cote a cote >=lg / empilees en mobile, Timeline avec dot ambre pour les actions staff. Recharger en **mode staff** : le bandeau ambre `StaffBanner` reste au-dessus. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** Ouvrir `http://badge.local/admin/[orgId]` (id reel via seed) sur **375 / 768 / 1440**. Verifier : page-head + bouton vert, alerte quota ambre si >80%, 4 StatCard (label uppercase, chiffre `tabular-nums`), 2 cartes cote a cote >=lg / empilees en mobile, Timeline avec dot ambre pour les actions staff. Recharger en **mode staff** : le bandeau ambre `StaffBanner` reste au-dessus. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-dashboard.html` (page-head, alerte quota, 4 stats, 2 panels).

@@ -1,5 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Alert, EmptyState } from "@/components/ui/Feedback";
+import { Timeline, TimelineItem } from "@/components/ui/Timeline";
+import { Tag } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
+import { logKind } from "@/lib/activity-labels";
 
 export default async function OrgDashboardPage({
   params,
@@ -43,88 +50,86 @@ export default async function OrgDashboardPage({
       ? Math.round((registrationsThisMonth / org.quotaMaxRegistrations) * 100)
       : null;
 
+  const quotaWarning = (eventsPct != null && eventsPct > 80) || (regsPct != null && regsPct > 80);
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Tableau de bord</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Kpi label="Événements actifs" value={eventsActive} />
-        <Kpi label="Événements archivés" value={eventsArchived} />
-        <Kpi label="Inscriptions ce mois" value={registrationsThisMonth} />
-        <Kpi
-          label="Quota events"
-          value={org?.quotaMaxEvents != null ? `${eventsActive}/${org.quotaMaxEvents}` : "—"}
-          warn={eventsPct != null && eventsPct > 80}
-        />
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Tableau de bord</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Vue d&apos;ensemble de votre organisation</p>
       </div>
 
-      {(eventsPct != null && eventsPct > 80) || (regsPct != null && regsPct > 80) ? (
-        <div className="rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Un quota dépasse 80 %. Contactez le support si vous prévoyez d&apos;aller plus loin.
-        </div>
-      ) : null}
+      {quotaWarning && (
+        <Alert tone="warn">
+          <Icon name="alert-triangle" size={16} /> Un quota dépasse 80 %. Contactez le support si vous prévoyez
+          d&apos;aller plus loin.
+        </Alert>
+      )}
 
-      <section>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold">Derniers événements</h2>
-          <Link href={`/admin/${orgId}/events`} className="text-sm text-green-600 hover:underline">
-            Tout voir
-          </Link>
-        </div>
-        <ul className="bg-white border rounded divide-y">
-          {latestEvents.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">Aucun événement pour le moment.</li>
-          )}
-          {latestEvents.map((e) => (
-            <li key={e.id} className="px-4 py-3 flex justify-between">
-              <Link href={`/admin/${orgId}/events/${e.id}`} className="text-sm hover:underline">
-                {e.title}
+      <StatGrid cols={4}>
+        <StatCard label="Événements actifs" value={eventsActive} icon="calendar" />
+        <StatCard label="Événements archivés" value={eventsArchived} icon="archive" />
+        <StatCard label="Inscriptions ce mois" value={registrationsThisMonth.toLocaleString("fr-FR")} icon="user-check" />
+        <StatCard
+          label="Quota événements"
+          value={org?.quotaMaxEvents != null ? `${eventsActive} / ${org.quotaMaxEvents}` : "—"}
+          icon="hard-drive"
+        />
+      </StatGrid>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHead
+            title="Derniers événements"
+            action={
+              <Link href={`/admin/${orgId}/events`} className="text-[13px] font-medium text-green-600 hover:underline">
+                Tout voir
               </Link>
-              <span className="text-xs text-slate-500">
-                {new Date(e.date).toLocaleDateString("fr-FR")}
-                {e.registrationOpen ? " — inscriptions ouvertes" : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold mb-3">Journal récent</h2>
-        <ul className="bg-white border rounded divide-y">
-          {recentActivity.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">Aucune activité récente.</li>
-          )}
-          {recentActivity.map((a) => (
-            <li key={a.id} className="px-4 py-3 text-sm flex justify-between">
-              <span>
-                {a.type}
-                {a.staffActor && (
-                  <span className="ml-2 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    staff
+            }
+          />
+          <CardBody className="divide-y divide-slate-100 !py-0">
+            {latestEvents.length === 0 ? (
+              <div className="py-2">
+                <EmptyState icon="calendar" title="Aucun événement" />
+              </div>
+            ) : (
+              latestEvents.map((e) => (
+                <Link
+                  key={e.id}
+                  href={`/admin/${orgId}/events/${e.id}`}
+                  className="flex items-center justify-between gap-3 py-3 text-sm hover:text-green-600"
+                >
+                  <span className="text-slate-900">{e.title}</span>
+                  <span className="flex items-center gap-2 text-xs text-slate-400">
+                    {new Date(e.date).toLocaleDateString("fr-FR")}
+                    {e.registrationOpen && <Tag icon="check">inscriptions ouvertes</Tag>}
                   </span>
-                )}
-              </span>
-              <span className="text-slate-500 text-xs">
-                {new Date(a.createdAt).toLocaleString("fr-FR")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
+                </Link>
+              ))
+            )}
+          </CardBody>
+        </Card>
 
-function Kpi({ label, value, warn }: { label: string; value: string | number; warn?: boolean }) {
-  return (
-    <div
-      className={`rounded border p-4 bg-white ${
-        warn ? "border-amber-400 bg-amber-50" : "border-slate-200"
-      }`}
-    >
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
+        <Card>
+          <CardHead title="Activité récente" />
+          <CardBody>
+            {recentActivity.length === 0 ? (
+              <EmptyState icon="scroll-text" title="Aucune activité récente" />
+            ) : (
+              <Timeline>
+                {recentActivity.map((a) => (
+                  <TimelineItem
+                    key={a.id}
+                    tone={a.staffActor ? "warn" : logKind(a.type) === "suppression" ? "danger" : "ok"}
+                    title={a.type}
+                    meta={`${a.staffActor ? "Staff · " : ""}${new Date(a.createdAt).toLocaleString("fr-FR")}`}
+                  />
+                ))}
+              </Timeline>
+            )}
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 }
