@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
-import { AuthCard } from "@/components/auth/AuthCard";
+import { OrgLogo, PickCard, PickCardDashed } from "@/components/ui/PickCard";
+import { Tag } from "@/components/ui/Labels";
 
 export default async function SelectPage() {
   const session = await getServerSession(authOptions);
@@ -39,32 +40,27 @@ export default async function SelectPage() {
   }
 
   return (
-    <AuthCard title="Choisissez une organisation">
-      <div className="space-y-4">
-        {ctx.isStaff && (
-          <Link
-            href="/staff"
-            className="block w-full rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 hover:bg-amber-100"
-          >
-            Espace staff applicatif
-          </Link>
-        )}
-        <ul className="space-y-1">
+    <div className="flex min-h-screen flex-col items-center bg-slate-50 px-5 py-16">
+      <Image src="/logo.png" alt="Badge" width={120} height={30} className="mb-8 h-8 w-auto object-contain" />
+      <div className="w-full max-w-3xl">
+        <h1 className="mb-1 text-center text-[22px] font-semibold text-slate-900">Choisissez une organisation</h1>
+        <p className="mb-8 text-center text-sm text-slate-500">Accédez à l&apos;espace de gestion de votre choix.</p>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
           {orgs.map((o) => (
-            <li key={o.id}>
-              <Link
-                href={`/admin/${o.id}`}
-                className="block w-full rounded-lg border border-slate-200 px-4 py-3 text-sm hover:bg-slate-50"
-              >
-                {o.name}
-                {o.archived && (
-                  <span className="ml-2 px-2 py-0.5 rounded bg-slate-200 text-xs">Archivée</span>
-                )}
-              </Link>
-            </li>
+            <PickCard
+              key={o.id}
+              href={`/admin/${o.id}`}
+              logo={<OrgLogo name={o.name} />}
+              title={o.name}
+              subtitle={o.slug}
+              meta={o.archived ? <Tag>Archivée</Tag> : undefined}
+            />
           ))}
-        </ul>
+          {ctx.isStaff && (
+            <PickCardDashed href="/staff" icon="shield" label="Toutes les organisations · Mode staff" />
+          )}
+        </div>
       </div>
-    </AuthCard>
+    </div>
   );
 }

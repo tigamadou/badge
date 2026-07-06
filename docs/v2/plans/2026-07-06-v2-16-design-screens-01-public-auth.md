@@ -36,7 +36,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 12 | [x] | 2026-07-06 | `/account` + layout reskines (AccountNav client, cartes d'inscription, StatusBadge, EmptyState, Alert onboarding). Icone `tag` ajoutee. Requetes/gardes preservees. typecheck+lint+test OK. |
 | 13 | [x] | 2026-07-06 | `/account/registrations/[id]` reskine (Card/CardHead + KeyValue + CatPill + StatusBadge + Alert). ResubmitButton/gardes/requetes preserves. typecheck+lint OK. |
 | 14 | [x] | 2026-07-06 | `ProfileForm` reskine (FormSection + Input + FileBox + Alert/Spinner). Upload/submit/validation preserves. Zone danger 'supprimer compte' NON ajoutee (pas d'endpoint - hors-scope). typecheck+lint OK. |
-| 15 | [ ] | | Selecteur d'organisation `/select` (`PickCard` / `PickCardDashed` / `OrgLogo`). |
+| 15 | [x] | 2026-07-06 | `/select` reskine (grille PickCard + OrgLogo + PickCardDashed staff). Redirections/requete memberships preservees. typecheck+lint+test OK. |
 
 ---
 
@@ -803,9 +803,9 @@ En-tete : logo, `AccountNav`, user-chip (initiales + nom + signout).
 
 **Composants:** `PickCard`, `PickCardDashed`, `OrgLogo`, `Icon` (`shield`), `next/link`.
 
-- [ ] **Step 1: Lire l'existant** — Server Component : charge `orgs` (memberships OWNER/MANAGER/AUDITOR), redirections auto (1 org non-staff -> `/admin/{id}`, 0 org non-staff -> `/profile?message=no-org`, 0 org staff -> `/staff`), rend liste + entree staff si `ctx.isStaff`. **Preserver** exactement ces redirections et le filtre de roles.
+- [x] **Step 1: Lire l'existant** — Server Component : charge `orgs` (memberships OWNER/MANAGER/AUDITOR), redirections auto (1 org non-staff -> `/admin/{id}`, 0 org non-staff -> `/profile?message=no-org`, 0 org staff -> `/staff`), rend liste + entree staff si `ctx.isStaff`. **Preserver** exactement ces redirections et le filtre de roles.
 
-- [ ] **Step 2: Reconstruire** — grille `PickCard` + `PickCardDashed` staff :
+- [x] **Step 2: Reconstruire** — grille `PickCard` + `PickCardDashed` staff :
 ```tsx
 return (
   <div className="min-h-screen bg-slate-50">
@@ -833,8 +833,8 @@ return (
 ```
 > Ne pas afficher le compteur « N événements · N inscriptions » de la maquette s'il n'est pas deja charge (ne pas ajouter de requetes d'agregation — YAGNI/hors-scope) ; se limiter au slug. `AuthCard` n'est plus utilise ici (pleine grille), c'est intentionnel et fidele a la maquette.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — compte multi-orgs (grille), compte staff (carte dashed en plus), org archivee (tag). Verifier les redirections auto (1 org / 0 org) toujours actives. 375/768/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — compte multi-orgs (grille), compte staff (carte dashed en plus), org archivee (tag). Verifier les redirections auto (1 org / 0 org) toujours actives. 375/768/1440. `make test` vert.
 
 **Acceptance:** grille `PickCard` fidele ; redirections auto et filtre de roles inchanges.
 
