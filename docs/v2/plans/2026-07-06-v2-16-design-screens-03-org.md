@@ -27,7 +27,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 3 | [x] | 2026-07-06 | `EventCreationWizard` reskine (Stepper current 0-based + Segmented + Card + Checkbox multi-select + KeyValue recap). Etat/submit/validation/erreurs QUOTA/SLUG preserves. typecheck+lint OK. |
 | 4 | [x] | 2026-07-06 | `MembersClient` + `OrgMemberForm` reskines (Card invitation, table RoleBadge/avatar, dernier OWNER verrouille cote affichage). refresh/remove/409 preserves. typecheck+lint OK. |
 | 5 | [x] | 2026-07-06 | `TemplatesClient` + `CategoryTemplateForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/POST/PATCH preserves. Toggles inline table -> concentres dans la modale. typecheck+lint OK. |
-| 6 | [ ] | | `org-badge-template.html` -> `/admin/[orgId]/settings/badge` (Switch heritage, galerie BadgeCard via BadgeTemplatePicker). |
+| 6 | [x] | 2026-07-06 | `/admin/[orgId]/settings/badge` : head aligne DS ; galerie via BadgeTemplatePicker deja habille (Task 9 staff), heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
 | 7 | [ ] | | `org-settings.html` -> `/admin/[orgId]/settings` (FormSection Identite/Adresse/Administratif/Contact, FileBox logo, QuotaBar). |
 | 8 | [ ] | | `org-log.html` -> `/admin/[orgId]/activity` (Toolbar, Table + LogType, lignes cliquables -> journal-detail, Pagination). |
 
@@ -511,9 +511,9 @@ Template de badge de l'organisation : Switch « Heriter de la plateforme » + ai
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `page.tsx` + `BadgeTemplatePicker.tsx`. Preserver : redirections RBAC, `resolveBadgeTemplateId`, `effectiveLevel`, la liste `templates` (map de `listTemplates()`), les props passees au picker (`currentValue`, `effectiveId`, `effectiveLevel`, `patchUrl`, `canClearToInherit`) et la logique de PATCH interne du picker.
+- [x] **Step 1: Lire + preserver.** Relire `page.tsx` + `BadgeTemplatePicker.tsx`. Preserver : redirections RBAC, `resolveBadgeTemplateId`, `effectiveLevel`, la liste `templates` (map de `listTemplates()`), les props passees au picker (`currentValue`, `effectiveId`, `effectiveLevel`, `patchUrl`, `canClearToInherit`) et la logique de PATCH interne du picker.
 
-- [ ] **Step 2: Reconstruire le JSX.** Dans `page.tsx`, habiller le titre en page-head DS (le picker reste). Dans `BadgeTemplatePicker.tsx`, remplacer les cartes actuelles par une galerie de `tpl-card` avec apercu `BadgeCard` (ou `MiniBadge` a l'echelle). Extrait de la galerie :
+- [x] **Step 2: Reconstruire le JSX.** Dans `page.tsx`, habiller le titre en page-head DS (le picker reste). Dans `BadgeTemplatePicker.tsx`, remplacer les cartes actuelles par une galerie de `tpl-card` avec apercu `BadgeCard` (ou `MiniBadge` a l'echelle). Extrait de la galerie :
 
 ```tsx
 <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
@@ -545,9 +545,9 @@ Template de badge de l'organisation : Switch « Heriter de la plateforme » + ai
 
 > **Notes de fidelite / preservation.** (a) Le Switch « Heriter de la plateforme » correspond a `canClearToInherit` : `on` = template null (herite). Cabler sur l'action existante du picker qui remet la valeur a null ; ne pas creer d'endpoint. Quand herite, la galerie est attenuee/verrouillee (`opacity-55 pointer-events-none`) comme la maquette. (b) `MiniBadge`/`BadgeCard` (Task 16) : passer les meta du template (`t.previewSrc`/`t.label`) selon l'API livree ; si `MiniBadge` attend une image, utiliser `t.previewSrc`. Adapter aux props reelles et documenter. (c) La selection declenche le PATCH deja implemente dans le picker — **inchange**. (d) RBAC MANAGER-only conserve : ne pas exposer le picker en lecture a un role insuffisant.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK.
+- [x] **Step 3: `make typecheck`** — Expected: OK.
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : herite (Switch on, galerie attenuee, carte plateforme marquee « Herite »), specifique org (Switch off, selection active bordee vert). Selection -> PATCH -> reflet. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : herite (Switch on, galerie attenuee, carte plateforme marquee « Herite »), specifique org (Switch off, selection active bordee vert). Selection -> PATCH -> reflet. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-badge-template.html` (Switch heritage + aide, galerie BadgeCard, carte selectionnee/heritee).

@@ -59,12 +59,11 @@ export default async function OrgBadgeSettingsPage({
   }));
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Template de badge</h1>
-        <p className="text-sm text-slate-600 mt-1">
-          Choisissez le template par defaut pour tous les evenements de{" "}
-          {organization.name}. Chaque evenement peut surcharger ce choix.
+        <h1 className="text-xl font-semibold text-slate-900">Modèle de badge</h1>
+        <p className="mt-0.5 text-sm text-slate-400">
+          Modèle appliqué par défaut aux événements de {organization.name}. Chaque événement peut le surcharger.
         </p>
       </div>
 
