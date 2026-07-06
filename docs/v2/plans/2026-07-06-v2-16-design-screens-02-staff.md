@@ -27,7 +27,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 4  | [x] | 2026-07-06 | `/staff/organizations/[orgId]` + `OrgDetailActions` reskines (StatGrid/QuotaBar/KeyValue/Card + zone danger rose + Modal de confirmation slug). canDelete/RBAC + API archive/restore/delete preserves. typecheck+lint OK. |
 | 5  | [x] | 2026-07-06 | `/staff/users` reskine (toolbar GET habillee, table rounded-xl, avatars initiales, RoleBadge navy/slate, Tag archive). where/select/take preserves. typecheck+lint OK. |
 | 6  | [x] | 2026-07-06 | `UserCreationForm` reskine (Card + FormSection + RadioCards type + selects habilles + Alert/Spinner). Gardes canCreateStaff/canCreateTopStaff + submit preserves. typecheck+lint OK. |
-| 7  | [ ] | | `staff-user-detail.html` -> `/staff/users/[userId]` (Appartenances, Informations). |
+| 7  | [x] | 2026-07-06 | `/staff/users/[userId]` + `UserDetailActions` reskines (Card/RoleBadge/KeyValue/Timeline + boutons Button/Alert). Gardes RBAC + mutations preservees. typecheck+lint OK. |
 | 8  | [ ] | | `staff-settings.html` -> `/staff/settings` (SMTP + Test, reCAPTCHA, Branding). |
 | 9  | [ ] | | `staff-badge-template.html` -> `/staff/settings/badge` (galerie BadgeCard). |
 | 10 | [ ] | | `staff-log.html` -> `/staff/activity` (Toolbar, Table LogType, lignes cliquables, Pagination). |
@@ -578,11 +578,11 @@ Detail utilisateur : en-tete (avatar + nom + email + type), actions (reinitialis
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire la `page.tsx`. **Preserver** les gardes (`canAdmin`, `canEditTopRoles`, `canResetPassword`, `isSelf`), la requete `findUnique` (orgMemberships + eventMemberships), `recentActivity`, `notFound()`, et `UserDetailActions` avec toutes ses props. On remplace le balisage des sections.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 En-tete deux colonnes (grid-2col de la maquette). Appartenances org via `Card` + list-row `OrgLogo` + `RoleBadge` ; Informations via `KeyValue` ; journal recent via `Timeline` :
 
@@ -616,11 +616,11 @@ En-tete deux colonnes (grid-2col de la maquette). Appartenances org via `Card` +
 </div>
 ```
 
-- [ ] **Step 3: Habiller `UserDetailActions` + typecheck**
+- [x] **Step 3: Habiller `UserDetailActions` + typecheck**
 
 Relire `UserDetailActions.tsx`. **Preserver** les mutations (reset password / archive / role) et leurs gardes. Habiller les boutons en `Button`/`btn-ghost-sm` conformes DS (reinitialiser = secondary, archiver = danger discret). `make typecheck`.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/users/[userId]` en 375/768/1440. Verifier : en-tete avatar, deux cartes cote a cote (empilees en mobile), RoleBadge, `KeyValue`, actions conditionnees par role. `make test` vert.
 

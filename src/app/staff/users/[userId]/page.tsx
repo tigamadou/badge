@@ -6,7 +6,21 @@ import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { RoleBadge, Tag } from "@/components/ui/Labels";
+import { KeyValue } from "@/components/ui/JournalBlocks";
+import { Timeline, TimelineItem } from "@/components/ui/Timeline";
+import { Icon } from "@/components/ui/Icon";
 import { UserDetailActions } from "./UserDetailActions";
+
+function initials(name: string | null): string {
+  return (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 export default async function UserDetailPage({
   params,
@@ -59,62 +73,71 @@ export default async function UserDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{user.name}</h1>
-        <div className="text-sm text-slate-500">{user.email}</div>
-        <div className="mt-1 flex gap-2 text-xs">
-          {user.isStaff && user.staffRole && (
-            <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-              {user.staffRole}
-            </span>
-          )}
-          {user.archived && (
-            <span className="px-2 py-0.5 rounded bg-red-100 text-red-800">Archive</span>
-          )}
+      <Link href="/staff/users" className="inline-flex items-center gap-1 text-[13px] text-slate-400 hover:text-slate-600">
+        <Icon name="arrow-left" size={13} /> Utilisateurs
+      </Link>
+
+      <div className="flex items-center gap-4">
+        <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+          {initials(user.name)}
+        </span>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold text-slate-900">{user.name}</h1>
+            {user.isStaff && user.staffRole && <RoleBadge tone="navy">{user.staffRole}</RoleBadge>}
+            {user.archived && <Tag icon="archive">Archivé</Tag>}
+          </div>
+          <div className="text-sm text-slate-400">{user.email}</div>
         </div>
       </div>
 
-      <section>
-        <h2 className="text-lg font-semibold mb-2 text-sm">
-          Organisations ({user.orgMemberships.length})
-        </h2>
-        <ul className="bg-white border rounded divide-y text-sm">
-          {user.orgMemberships.length === 0 && (
-            <li className="px-3 py-2 text-slate-500">Aucune appartenance org.</li>
-          )}
-          {user.orgMemberships.map((m) => (
-            <li
-              key={m.organization.id}
-              className="px-3 py-2 flex justify-between"
-            >
-              <span>
-                {m.organization.name}
-                {m.organization.archived && (
-                  <span className="ml-2 text-amber-700 text-xs">(archive)</span>
-                )}
-              </span>
-              <span className="text-slate-500">{m.role}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Card>
+        <CardHead title="Informations" />
+        <CardBody>
+          <KeyValue
+            items={[
+              { label: "Type", value: user.isStaff ? "Staff applicatif" : "Client" },
+              { label: "Créé le", value: new Date(user.createdAt).toLocaleDateString("fr-FR") },
+              { label: "Statut", value: user.archived ? "Archivé" : "Actif" },
+            ]}
+          />
+        </CardBody>
+      </Card>
 
-      <section>
-        <h2 className="text-lg font-semibold mb-2 text-sm">
-          Evenements ({user.eventMemberships.length})
-        </h2>
-        <ul className="bg-white border rounded divide-y text-sm">
-          {user.eventMemberships.length === 0 && (
-            <li className="px-3 py-2 text-slate-500">Aucune appartenance event.</li>
+      <Card>
+        <CardHead title={`Organisations (${user.orgMemberships.length})`} />
+        <CardBody className="divide-y divide-slate-100 !py-0">
+          {user.orgMemberships.length === 0 ? (
+            <p className="py-4 text-sm text-slate-400">Aucune appartenance organisation.</p>
+          ) : (
+            user.orgMemberships.map((m) => (
+              <div key={m.organization.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <Link href={`/staff/organizations/${m.organization.id}`} className="text-slate-900 hover:text-green-600">
+                  {m.organization.name}
+                  {m.organization.archived && <span className="ml-2 text-xs text-slate-400">(archivée)</span>}
+                </Link>
+                <RoleBadge tone="slate">{m.role}</RoleBadge>
+              </div>
+            ))
           )}
-          {user.eventMemberships.map((m) => (
-            <li key={m.event.id} className="px-3 py-2 flex justify-between">
-              <span>{m.event.title}</span>
-              <span className="text-slate-500">{m.role}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title={`Événements (${user.eventMemberships.length})`} />
+        <CardBody className="divide-y divide-slate-100 !py-0">
+          {user.eventMemberships.length === 0 ? (
+            <p className="py-4 text-sm text-slate-400">Aucune appartenance événement.</p>
+          ) : (
+            user.eventMemberships.map((m) => (
+              <div key={m.event.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <span className="text-slate-900">{m.event.title}</span>
+                <RoleBadge tone="slate">{m.role}</RoleBadge>
+              </div>
+            ))
+          )}
+        </CardBody>
+      </Card>
 
       <UserDetailActions
         user={{
@@ -129,38 +152,25 @@ export default async function UserDetailPage({
         isSelf={isSelf}
       />
 
-      <section>
-        <h2 className="text-lg font-semibold mb-2">Journal recent</h2>
-        <ul className="bg-white border rounded divide-y text-sm">
-          {recentActivity.length === 0 && (
-            <li className="px-3 py-2 text-slate-500">Aucune activite.</li>
+      <Card>
+        <CardHead title="Journal récent" />
+        <CardBody>
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-slate-400">Aucune activité.</p>
+          ) : (
+            <Timeline>
+              {recentActivity.map((a) => (
+                <TimelineItem
+                  key={a.id}
+                  tone={a.staffActor ? "warn" : "ok"}
+                  title={a.type}
+                  meta={`${a.staffActor ? "Staff · " : ""}${new Date(a.createdAt).toLocaleString("fr-FR")}`}
+                />
+              ))}
+            </Timeline>
           )}
-          {recentActivity.map((a) => (
-            <li key={a.id} className="px-3 py-2 flex justify-between">
-              <span>
-                {a.type}
-                {a.staffActor && (
-                  <span className="ml-2 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    staff
-                  </span>
-                )}
-              </span>
-              <span className="text-slate-500 text-xs">
-                {new Date(a.createdAt).toLocaleString("fr-FR")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <div>
-        <Link
-          href="/staff/users"
-          className="text-sm text-green-600 hover:underline"
-        >
-          Retour a la liste
-        </Link>
-      </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }

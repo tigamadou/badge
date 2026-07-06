@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Alert } from "@/components/ui/Feedback";
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
@@ -75,61 +78,47 @@ export function UserDetailActions({
   }
 
   return (
-    <section className="border-t pt-4 space-y-3">
-      <h2 className="text-lg font-semibold">Actions</h2>
-      {msg && (
-        <div className="rounded bg-blue-50 border border-blue-200 px-3 py-2 text-sm">
-          {msg}
-        </div>
-      )}
+    <Card>
+      <CardHead title="Actions" />
+      <CardBody className="space-y-3">
+        {msg && <Alert tone="info">{msg}</Alert>}
 
-      {canResetPassword && !user.archived && (
-        <button
-          onClick={resetPwd}
-          disabled={busy}
-          className="rounded border px-3 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
-        >
-          Renvoyer un lien de configuration de mot de passe
-        </button>
-      )}
+        {canResetPassword && !user.archived && (
+          <Button variant="secondary" onClick={resetPwd} disabled={busy}>
+            Renvoyer un lien de configuration de mot de passe
+          </Button>
+        )}
 
-      {canAdmin && user.isStaff && !isSelf && (
-        <div className="flex gap-2 items-center">
-          <select
-            value={staffRole}
-            onChange={(e) => setStaffRole(e.target.value as StaffRoleStr)}
-            className="rounded border px-3 py-1.5 text-sm"
-          >
-            <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
-            <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>
-            {canEditTopRoles && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
-            {canEditTopRoles && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
-          </select>
-          <button
-            onClick={changeRole}
-            disabled={busy}
-            className="rounded bg-green-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
-          >
-            Changer le role
-          </button>
-        </div>
-      )}
+        {canAdmin && user.isStaff && !isSelf && (
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={staffRole}
+              onChange={(e) => setStaffRole(e.target.value as StaffRoleStr)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
+              <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>
+              {canEditTopRoles && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
+              {canEditTopRoles && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
+            </select>
+            <Button onClick={changeRole} disabled={busy}>
+              Changer le rôle
+            </Button>
+          </div>
+        )}
 
-      {canAdmin && !user.archived && !isSelf && (
-        <button
-          onClick={archive}
-          disabled={busy}
-          className="rounded border border-amber-400 text-amber-700 px-3 py-1.5 text-sm hover:bg-amber-50 disabled:opacity-50"
-        >
-          Archiver l&apos;utilisateur
-        </button>
-      )}
+        {canAdmin && !user.archived && !isSelf && (
+          <Button variant="danger" onClick={archive} disabled={busy}>
+            Archiver l&apos;utilisateur
+          </Button>
+        )}
 
-      {isSelf && (
-        <p className="text-xs text-slate-500">
-          Vous ne pouvez ni archiver votre compte ni modifier votre propre role.
-        </p>
-      )}
-    </section>
+        {isSelf && (
+          <p className="text-xs text-slate-400">
+            Vous ne pouvez ni archiver votre compte ni modifier votre propre rôle.
+          </p>
+        )}
+      </CardBody>
+    </Card>
   );
 }
