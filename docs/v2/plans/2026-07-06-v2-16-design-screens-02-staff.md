@@ -31,7 +31,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 8  | [x] | 2026-07-06 | `/staff/settings` + PlatformSettingsForm + TestSmtpForm reskines (Card/FormSection/Input/Switch/Alert). Secrets jamais rendus (*Set booleens), garde canEditSecrets preservee. Branding non ajoute (pas de champs). typecheck+lint OK. |
 | 9  | [x] | 2026-07-06 | `BadgeTemplatePicker` reskine (galerie rounded-xl, ring vert, Tag/Alert/Button). data-testid/data-selected E2E preserves, cascade/PATCH intacts. typecheck+lint OK. |
 | 10 | [x] | 2026-07-06 | `/staff/activity` reskine (toolbar GET habillee, table LogType, lignes cliquables -> detail, pager GET). helper logKind. where/pagination preserves. typecheck+lint OK. |
-| 11 | [ ] | | `journal-detail.html` -> **nouvelle route** `/staff/activity/[logId]` (LogType/KeyValue/Diff/Payload). |
+| 11 | [x] | 2026-07-06 | Nouvelle route `/staff/activity/[logId]` + composant partage `JournalEntryDetail` + `activity-labels.ts` (logKind/describe/extractDiff) + `JournalEntryActions` (copy/export). Lookups org/event separes (pas de relation). Lecture seule, aucun changement schema. typecheck+lint+test OK. |
 
 ---
 
@@ -842,7 +842,7 @@ Expected: OK.
 
 **Steps**
 
-- [ ] **Step 1: Definir la route et la requete (aucune logique metier, lecture seule)**
+- [x] **Step 1: Definir la route et la requete (aucune logique metier, lecture seule)**
 
 Nouvelle page Server Component. **Preserver le pattern d'acces staff** des autres pages `/staff/*` (le layout `StaffShell` protege deja l'espace ; ne pas ajouter de nouvelle regle RBAC). Requete `findUnique` sur l'entree :
 
@@ -876,7 +876,7 @@ export default async function StaffJournalDetailPage({ params }: { params: Promi
 
 **Schema `ActivityLog` verifie** (`prisma/schema.prisma` l.359-378) : champs disponibles = `id`, `type` (`ActivityType`), `userId`/`user` (relation `User?`), `orgId`, `eventId`, `targetId`, `details` (`Json?`), `staffActor` (`Boolean`), `ipAddress` (`String?`), `userAgent` (`String?`), `createdAt`. **Il n'existe aucune relation `organization`/`event`** — utiliser les scalaires + lookups ci-dessus. Ne pas inventer de champ ni modifier le schema.
 
-- [ ] **Step 2: Reconstruire le JSX (2 colonnes) avec les blocs journal**
+- [x] **Step 2: Reconstruire le JSX (2 colonnes) avec les blocs journal**
 
 Le `Diff` n'est rendu que si `details` contient une forme `{ changes: { <champ>: { from, to } } }` ; sinon on affiche seulement `KeyValue` + `Payload`. `Payload` recoit `JSON.stringify(log.details, null, 2)`. Boutons Copier/Exporter cote client (petit composant client optionnel ou liens no-op fideles a la maquette) :
 
@@ -938,12 +938,12 @@ Le `Diff` n'est rendu que si `details` contient une forme `{ changes: { <champ>:
 
 Reutiliser le helper `logKind` de la Task 10 (le factoriser dans un module partage `src/lib/activity-labels.ts` si pratique — sinon dupliquer une fois, factoriser plus tard quand org/event le reclameront).
 
-- [ ] **Step 3: Rendre les lignes du journal cliquables (deja fait Task 10) + typecheck**
+- [x] **Step 3: Rendre les lignes du journal cliquables (deja fait Task 10) + typecheck**
 
 Verifier que la Task 10 pointe bien vers cette route. `make typecheck`.
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/activity/[logId]` (prendre un ID reel via `/staff/activity`) en 375/768/1440. Verifier : entete LogType + ID mono, layout 2 colonnes (empile en mobile), `KeyValue`, `Payload` scrollable horizontalement, colonne laterale Auteur/Contexte, `notFound()` sur un ID inexistant. `make test` vert.
 

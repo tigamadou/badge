@@ -44,6 +44,7 @@ import {
   Lock,
   Tag,
   Archive,
+  Copy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -93,6 +94,7 @@ const ICONS = {
   lock: Lock,
   tag: Tag,
   archive: Archive,
+  copy: Copy,
   "arrow-right": ArrowRight,
   "chevron-right": ChevronRight,
   "external-link": ExternalLink,
