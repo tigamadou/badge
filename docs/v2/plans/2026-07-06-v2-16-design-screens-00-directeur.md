@@ -25,7 +25,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 1  | [x] | 2026-07-06 | `Card`/`CardHead`/`CardBody` (`src/components/ui/Card.tsx`). Test rendu OK, typecheck OK. |
 | 2  | [x] | 2026-07-06 | `StatCard`/`StatGrid` (`src/components/ui/StatCard.tsx`). Test rendu OK, typecheck OK. |
 | 3  | [x] | 2026-07-06 | `Timeline`/`TimelineItem` (`src/components/ui/Timeline.tsx`). Test rendu OK, typecheck OK. |
-| 4  | [ ] | | `QuotaBar` + `StorageAlert`. |
+| 4  | [x] | 2026-07-06 | `QuotaBar`/`StorageAlert` (`src/components/ui/QuotaBar.tsx`). Test rendu OK, typecheck OK. |
 | 5  | [ ] | | `MiniChart`. |
 | 6  | [ ] | | `Alert`, `EmptyState`, `Spinner`, `ProgressBar`, `SuccessRing`. |
 | 7  | [ ] | | `Toolbar` + `SearchInput` + `ChipFilter`. |
@@ -459,7 +459,7 @@ Jauge de quota (label + valeur tabulaire + barre coloree seuils) et alerte stock
   - `QuotaBar({ label, valueText, pct }: { label: ReactNode; valueText: ReactNode; pct: number }): JSX.Element` — `pct` 0-100 ; seuils : `>= 90` danger (rose), `>= 75` warn (amber), sinon vert.
   - `StorageAlert({ pct, children }: { pct: number; children: ReactNode }): JSX.Element` — bandeau amber si `pct >= 75`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -473,12 +473,12 @@ test("QuotaBar clamp la largeur et expose la valeur", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/QuotaBar.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -514,12 +514,12 @@ export function StorageAlert({ pct, children }: { pct: number; children: ReactNo
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/QuotaBar.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
