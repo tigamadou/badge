@@ -35,7 +35,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 11 | [x] | 2026-07-06 | `BadgeVerifyView` reskine (VerifyBanner/Card/CatPill/KeyValue, 3 cas). Icones `user`/`lock` ajoutees au registre. Forme de `data` preservee. typecheck+lint+test OK. |
 | 12 | [x] | 2026-07-06 | `/account` + layout reskines (AccountNav client, cartes d'inscription, StatusBadge, EmptyState, Alert onboarding). Icone `tag` ajoutee. Requetes/gardes preservees. typecheck+lint+test OK. |
 | 13 | [x] | 2026-07-06 | `/account/registrations/[id]` reskine (Card/CardHead + KeyValue + CatPill + StatusBadge + Alert). ResubmitButton/gardes/requetes preserves. typecheck+lint OK. |
-| 14 | [ ] | | Profil `/account/profile` (+ `/complete`) (banniere, photo, mot de passe, zone danger). |
+| 14 | [x] | 2026-07-06 | `ProfileForm` reskine (FormSection + Input + FileBox + Alert/Spinner). Upload/submit/validation preserves. Zone danger 'supprimer compte' NON ajoutee (pas d'endpoint - hors-scope). typecheck+lint OK. |
 | 15 | [ ] | | Selecteur d'organisation `/select` (`PickCard` / `PickCardDashed` / `OrgLogo`). |
 
 ---
@@ -773,9 +773,9 @@ En-tete : logo, `AccountNav`, user-chip (initiales + nom + signout).
 
 **Composants:** `Card`/`CardBody`, `FormSection`, `Input`, `Button`, `Dropzone`/`FileBox` (photo/pièce — reutilise `FileUploadField` existant), `Alert` (info onboarding), `Icon` (`upload`, `check`).
 
-- [ ] **Step 1: Lire l'existant** — `page.tsx` (serveur) charge le user + rend `ProfileForm initial={...}`. `complete/page.tsx` idem + `redirectTo=safeNext`. `ProfileForm` (client) porte la logique de save + uploads (`FileUploadField`) + validation. **Preserver** `ProfileForm`'s onSubmit, ses champs, `redirectTo`, et la garde e-mail non modifiable. Lire `ProfileForm.tsx` et `FileUploadField.tsx` avant edition.
+- [x] **Step 1: Lire l'existant** — `page.tsx` (serveur) charge le user + rend `ProfileForm initial={...}`. `complete/page.tsx` idem + `redirectTo=safeNext`. `ProfileForm` (client) porte la logique de save + uploads (`FileUploadField`) + validation. **Preserver** `ProfileForm`'s onSubmit, ses champs, `redirectTo`, et la garde e-mail non modifiable. Lire `ProfileForm.tsx` et `FileUploadField.tsx` avant edition.
 
-- [ ] **Step 2: Reconstruire** — envelopper les champs de `ProfileForm` dans `FormSection`, marquer l'e-mail `disabled`, habiller les uploads via `Dropzone`/`FileBox` (le directeur Task 12 recable `FileUploadField` dessus — le reutiliser, ne pas dupliquer). Banniere onboarding via `Alert tone="info"` (page profil) ou texte d'intro (page complete). Zone danger :
+- [x] **Step 2: Reconstruire** — envelopper les champs de `ProfileForm` dans `FormSection`, marquer l'e-mail `disabled`, habiller les uploads via `Dropzone`/`FileBox` (le directeur Task 12 recable `FileUploadField` dessus — le reutiliser, ne pas dupliquer). Banniere onboarding via `Alert tone="info"` (page profil) ou texte d'intro (page complete). Zone danger :
 ```tsx
 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
   <button type="button" className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50">Supprimer mon compte</button>
@@ -787,8 +787,8 @@ En-tete : logo, `AccountNav`, user-chip (initiales + nom + signout).
 ```
 > « Supprimer mon compte » : ne cabler une action **que si** un endpoint de suppression existe deja ; sinon rendre le bouton (fidélité maquette) et noter au tracker qu'il n'est pas cable (pas de nouvelle logique metier — hors-scope du reskin). L'e-mail reste `disabled` (déjà non modifiable cote logique).
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — `/account/profile` (profil complet vs incomplet -> banniere + champs requis surlignés) et `/account/profile/complete` (redirection `next` apres save preservee). 375/768/1440. `make test` vert (les tests existants de `ProfileForm`/uploads restent verts).
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — `/account/profile` (profil complet vs incomplet -> banniere + champs requis surlignés) et `/account/profile/complete` (redirection `next` apres save preservee). 375/768/1440. `make test` vert (les tests existants de `ProfileForm`/uploads restent verts).
 
 **Acceptance:** sections + photo + zone danger fideles ; save, uploads, e-mail disabled et `redirectTo` inchanges.
 
