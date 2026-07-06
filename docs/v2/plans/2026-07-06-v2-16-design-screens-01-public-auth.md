@@ -26,7 +26,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 2  | [x] | 2026-07-06 | `/login` reskine (Alert/Spinner/sous-titre/pied/lien mdp oublie) + `AuthCard` enrichi (subtitle/footer). typecheck+lint OK, test 657/657. |
 | 3  | [x] | 2026-07-06 | `/forgot-password` reskine (SuccessRing/Alert/Spinner, etat done). Logique anti-enumeration preservee. typecheck+lint OK. |
 | 4  | [x] | 2026-07-06 | `/reset-password/[token]` reskine (PasswordMeter + score client, Alert/Spinner/SuccessRing). Validation <6/concordance et POST preserves. typecheck+lint OK. |
-| 5  | [ ] | | Definition a l'invitation `/setup-password` (+ `PasswordMeter`). |
+| 5  | [x] | 2026-07-06 | `SetupPasswordForm` reskine (Input/Button/Alert/Spinner/PasswordMeter). Titre generique conserve (prenom non charge, YAGNI). Validation+POST preserves. typecheck+lint OK. |
 | 6  | [ ] | | Verification e-mail `/verify-email/[token]` (`SuccessRing`). |
 | 7  | [ ] | | Presentation evenement public `/e/[slug]` (hero + categories + CTA). |
 | 8  | [ ] | | Formulaire d'inscription `/e/[slug]/register` (`RadioCards` + `Checkbox`). |
@@ -328,12 +328,12 @@ Etat succes : `SuccessRing` `check` + bouton « Se connecter » (`Button` en `Li
 
 **Composants:** `AuthCard`, `Input`, `Button`, `PasswordMeter`, `Spinner`.
 
-- [ ] **Step 1: Lire l'existant** — `page.tsx` (serveur) valide `inviteToken` en base (`inviteTokenExpiry`, `archived`) et rend `<InvalidLink/>` ou `<SetupPasswordForm token={token} />`. Lire `SetupPasswordForm.tsx` pour connaitre son flux (POST + redirection). **Ne pas** changer la validation serveur ni le flux du form ; seulement le rendu. Le titre « Bienvenue, {prénom} » suppose de disposer du prenom : si `page.tsx` ne le charge pas aujourd'hui, **conserver** le titre generique existant (« Configurer votre mot de passe ») — ne pas ajouter de requete Prisma pour un simple libelle (YAGNI). Noter cet ecart mineur dans le tracker.
+- [x] **Step 1: Lire l'existant** — `page.tsx` (serveur) valide `inviteToken` en base (`inviteTokenExpiry`, `archived`) et rend `<InvalidLink/>` ou `<SetupPasswordForm token={token} />`. Lire `SetupPasswordForm.tsx` pour connaitre son flux (POST + redirection). **Ne pas** changer la validation serveur ni le flux du form ; seulement le rendu. Le titre « Bienvenue, {prénom} » suppose de disposer du prenom : si `page.tsx` ne le charge pas aujourd'hui, **conserver** le titre generique existant (« Configurer votre mot de passe ») — ne pas ajouter de requete Prisma pour un simple libelle (YAGNI). Noter cet ecart mineur dans le tracker.
 
-- [ ] **Step 2: Reconstruire** — reutiliser le meme `pwScore`/`PasswordMeter` que la Task 4 dans `SetupPasswordForm`. Bouton « Activer mon compte » avec `Spinner` en chargement. `InvalidLink` conserve son `AuthCard` (titre « Lien expiré ou invalide »).
+- [x] **Step 2: Reconstruire** — reutiliser le meme `pwScore`/`PasswordMeter` que la Task 4 dans `SetupPasswordForm`. Bouton « Activer mon compte » avec `Spinner` en chargement. `InvalidLink` conserve son `AuthCard` (titre « Lien expiré ou invalide »).
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — page avec token valide (via seed/invitation) : form + meter ; token invalide : `InvalidLink`. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — page avec token valide (via seed/invitation) : form + meter ; token invalide : `InvalidLink`. `make test` vert.
 
 **Acceptance:** form fidele + meter ; validation du token et POST inchanges.
 

@@ -2,10 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { PasswordMeter } from "@/components/ui/PasswordMeter";
+import { Icon } from "@/components/ui/Icon";
 
 type Props = {
   token: string;
 };
+
+function pwScore(v: string): 0 | 1 | 2 | 3 | 4 {
+  let s = 0;
+  if (v.length >= 6) s++;
+  if (v.length >= 10) s++;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++;
+  if (/\d/.test(v) || /[^A-Za-z0-9]/.test(v)) s++;
+  return Math.min(4, s) as 0 | 1 | 2 | 3 | 4;
+}
+const PW_LABEL = ["très faible", "faible", "moyenne", "correcte", "forte"];
 
 export default function SetupPasswordForm({ token }: Props) {
   const router = useRouter();
@@ -41,9 +56,7 @@ export default function SetupPasswordForm({ token }: Props) {
         return;
       }
       const email = typeof data.email === "string" ? data.email : "";
-      const url = email
-        ? `/login?email=${encodeURIComponent(email)}`
-        : "/login";
+      const url = email ? `/login?email=${encodeURIComponent(email)}` : "/login";
       router.push(url);
     } catch {
       setError("Une erreur est survenue");
@@ -53,42 +66,49 @@ export default function SetupPasswordForm({ token }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <Alert tone="err">
+          <Icon name="alert-triangle" size={16} /> {error}
+        </Alert>
+      )}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Nouveau mot de passe
-        </label>
-        <input
+        <Input
+          label="Nouveau mot de passe"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={6}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
+          autoComplete="new-password"
+          disabled={loading}
         />
+        <PasswordMeter score={pwScore(password)} />
+        {password && (
+          <p className="-mt-1 text-[13px] text-slate-500">
+            Robustesse :{" "}
+            <b className={pwScore(password) >= 3 ? "text-green-700" : "text-rose-700"}>{PW_LABEL[pwScore(password)]}</b>
+          </p>
+        )}
       </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          Confirmer le mot de passe
-        </label>
-        <input
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          minLength={6}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
-        />
-      </div>
-
-      {error && <p className="text-rose-600 text-sm">{error}</p>}
-
-      <button
-        type="submit"
+      <Input
+        label="Confirmer le mot de passe"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        required
+        minLength={6}
+        autoComplete="new-password"
         disabled={loading}
-        className="w-full bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
-      >
-        {loading ? "Configuration..." : "Configurer le mot de passe"}
-      </button>
+      />
+      <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
+        {loading ? (
+          <>
+            <Spinner size={16} /> Configuration…
+          </>
+        ) : (
+          "Activer mon compte"
+        )}
+      </Button>
     </form>
   );
 }
