@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
@@ -5,6 +6,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole } from "@/lib/auth-helpers";
+import { LogType } from "@/components/ui/JournalBlocks";
+import { Tag } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
+import { logKind } from "@/lib/activity-labels";
 
 export default async function ActivityPage({
   params,
@@ -51,34 +56,58 @@ export default async function ActivityPage({
   });
 
   return (
-    <div className="space-y-4 max-w-3xl">
-      <h1 className="text-2xl font-bold">Journal d&apos;activite</h1>
-      <ul className="bg-white border rounded divide-y text-sm">
-        {logs.length === 0 && (
-          <li className="px-3 py-3 text-slate-500">Aucune activite.</li>
-        )}
-        {logs.map((l) => (
-          <li key={l.id} className="px-3 py-3 flex justify-between items-start">
-            <div>
-              <div className="font-medium">
-                {l.type}
-                {l.staffActor && (
-                  <span className="ml-2 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    staff
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Journal d&apos;activité</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Les actions réalisées sur cet événement</p>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">Horodatage</th>
+              <th className="px-4 py-3">Action</th>
+              <th className="px-4 py-3">Auteur</th>
+              <th className="px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {logs.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">
+                  Aucune activité.
+                </td>
+              </tr>
+            )}
+            {logs.map((l) => (
+              <tr key={l.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                  {new Date(l.createdAt).toLocaleString("fr-FR")}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-2">
+                    <LogType kind={logKind(l.type)}>{l.type}</LogType>
+                    {l.staffActor && <Tag icon="shield">staff</Tag>}
                   </span>
-                )}
-              </div>
-              <div className="text-xs text-slate-500">
-                {l.user ? `${l.user.name} (${l.user.email})` : "Systeme"}
-                {l.targetId ? ` — cible ${l.targetId}` : ""}
-              </div>
-            </div>
-            <div className="text-xs text-slate-500 whitespace-nowrap">
-              {new Date(l.createdAt).toLocaleString("fr-FR")}
-            </div>
-          </li>
-        ))}
-      </ul>
+                </td>
+                <td className="px-4 py-3 text-[13px] text-slate-600">
+                  {l.user ? l.user.email : "Système"}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/admin/${orgId}/events/${eventId}/activity/${l.id}`}
+                    aria-label="Voir le détail"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <Icon name="chevron-right" size={16} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

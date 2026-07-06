@@ -37,7 +37,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 12 | [x] | 2026-07-06 | `QRScanner` reskine (ScanResult panel + CatPill/StatusBadge + historique a pastilles, conteneur camera habille). Logique html5-qrcode/verifyPayload/manuel intacte. typecheck+lint OK. Overlay reticule plein-cadre: gere par html5-qrcode, non force (note). |
 | 13 | [x] | 2026-07-06 | `MemberTable` reskine (table avatar + select role stylé + modal invitation). setRole/remove/refresh preserves. typecheck+lint OK. |
 | 14 | [x] | 2026-07-06 | `EventSettingsForm` reskine (2 Cards Informations/Contact + Input + Switch inscriptions + Alert). Les 2 save() (event PATCH / settings PATCH) preserves. typecheck+lint OK. |
-| 15 | [ ] | | Journal (`activity/page.tsx`) — Table + LogType + Pagination + lignes cliquables -> vue detail. |
+| 15 | [x] | 2026-07-06 | Journal event reskine (table LogType, lignes cliquables) + nouvelle route detail `/admin/[orgId]/events/[eventId]/activity/[logId]` (JournalEntryDetail scope eventId). Requete/role/where OPERATOR preserves. typecheck+lint+test OK. |
 
 **Convention de test (reskin)** : chaque page est validee par (a) `make typecheck` vert, (b) `make test` vert (les tests existants — de rendu et E2E — ne dependent pas des classes de couleur ; s'ils cassent sur un texte/role, corriger la cause racine, pas contourner), (c) controle visuel contre la maquette sur 3 viewports (375 / 768 / 1440) x etats (vide / charge / erreur) x roles pertinents. Les composants a etat vivent deja dans `src/components/event/*` et portent leurs propres tests d'interaction ; on habille leur JSX sans toucher la logique.
 
@@ -632,11 +632,11 @@ Table du journal (type via `LogType`, auteur, cible, date) + Toolbar de filtres 
 **Composants:** `Toolbar`/`SearchInput`/`ChipFilter`, `Table`, `LogType`, `Pagination`, `Button`, `Icon`, `EmptyState`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `activity/page.tsx` : garde de role (`STAFF`/`ADMIN`/`OPERATOR`), le `where` conditionnel OPERATOR (`userId` + `type: "BADGE_SCANNED"`), la requete `activityLog.findMany` (take 100). Ne rien changer aux requetes.
-- [ ] **Step 2: Reconstruire le JSX** : `page-head` + bouton Exporter ; `Toolbar` avec `SearchInput` + `ChipFilter` (Type / Periode / Utilisateur) — cablage cote client si filtrage local, sinon presentation seule si le filtrage n'existe pas encore (ne pas inventer de requete). `Table` avec lignes cliquables : `LogType` (mappe `l.type` -> tonalite/libelle), auteur (`l.user`), cible, badge `staff` ambre si `l.staffActor`, date. `Pagination`. Chaque ligne pointe vers la vue detail journal (route partagee du sous-plan 02) via l'`id` du log.
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-log.html` sur 375/768/1440 (roles ADMIN + OPERATOR). Verifier : `LogType` colore par famille, lignes cliquables (hover + chevron), Pagination, variante OPERATOR (uniquement ses scans). Etat vide (EmptyState "Aucune activité").
-- [ ] **Step 5:** `make test` — Expected: vert. Si la vue detail journal du sous-plan 02 n'est pas encore disponible, laisser la ligne cliquable pointer vers une route existante ou differer le lien et passer la task en `[~]` avec note.
+- [x] **Step 1: Lire et preserver** `activity/page.tsx` : garde de role (`STAFF`/`ADMIN`/`OPERATOR`), le `where` conditionnel OPERATOR (`userId` + `type: "BADGE_SCANNED"`), la requete `activityLog.findMany` (take 100). Ne rien changer aux requetes.
+- [x] **Step 2: Reconstruire le JSX** : `page-head` + bouton Exporter ; `Toolbar` avec `SearchInput` + `ChipFilter` (Type / Periode / Utilisateur) — cablage cote client si filtrage local, sinon presentation seule si le filtrage n'existe pas encore (ne pas inventer de requete). `Table` avec lignes cliquables : `LogType` (mappe `l.type` -> tonalite/libelle), auteur (`l.user`), cible, badge `staff` ambre si `l.staffActor`, date. `Pagination`. Chaque ligne pointe vers la vue detail journal (route partagee du sous-plan 02) via l'`id` du log.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-log.html` sur 375/768/1440 (roles ADMIN + OPERATOR). Verifier : `LogType` colore par famille, lignes cliquables (hover + chevron), Pagination, variante OPERATOR (uniquement ses scans). Etat vide (EmptyState "Aucune activité").
+- [x] **Step 5:** `make test` — Expected: vert. Si la vue detail journal du sous-plan 02 n'est pas encore disponible, laisser la ligne cliquable pointer vers une route existante ou differer le lien et passer la task en `[~]` avec note.
 
 **Acceptance:** journal fidele (Toolbar + table LogType + Pagination) ; lignes cliquables vers la vue detail journal partagee ; variante OPERATOR intacte ; typecheck + tests verts.
 
