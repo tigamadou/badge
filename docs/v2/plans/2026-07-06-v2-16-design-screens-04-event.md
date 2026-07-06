@@ -23,7 +23,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 1  | [ ] | | Dashboard evenement (`page.tsx`) — StatGrid 5, MiniChart, QuotaBar, table 10 dernieres. |
+| 1  | [x] | 2026-07-06 | Dashboard evenement reskine (StatGrid 4+3, Card 10 dernieres + StatusBadge, alerte quota). Branche OPERATOR habillee. MiniChart omis (pas de serie 30j). Queries/role preserves. typecheck+lint OK. |
 | 2  | [ ] | | Liste inscriptions (`registrations/page.tsx`) — Toolbar + ChipFilter + BatchBar + Table. **Ecran le plus dense.** |
 | 3  | [ ] | | Detail inscription (`registrations/[regId]/page.tsx`) — Cards + FileBox + Timeline + actions. |
 | 4  | [ ] | | Inscription manuelle (`registrations/new/page.tsx`) — FormSection + RadioCards + Dropzone. |
@@ -86,8 +86,8 @@ Tableau de bord : bandeau titre + actions (Scanner / Inscription), 5 statcards c
 **Composants:** `StatGrid`/`StatCard`, `Card`/`CardHead`/`CardBody`, `MiniChart`, `QuotaBar`, `Alert`, `CatPill`, `StatusBadge`, `Table`, `Button`/`Link`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `page.tsx`. Conserver **intact** : `getServerSession`, `loadUserContext`, la garde `event.orgId !== orgId`, `effectiveEventRole`, le bloc `if (role === "OPERATOR")` (dashboard operateur), le `Promise.all` de 8 comptages (`pending`/`approved`/`rejected`/`badgesPrinted`/`scansToday`/`scansTotal`/`latest`/`quota30d`) et le calcul `quotaPct`. Ne rien changer aux requetes.
-- [ ] **Step 2: Reconstruire le JSX du dashboard admin** (branche apres le bloc OPERATOR). Remplacer les `<Kpi>` maison et la `<ul>` par les composants directeur. La grille passe a `g5` (5 cartes). Les dates de labels du MiniChart et l'`alert-info` de variantes par role sont statiques dans la maquette ; pour la donnee reelle, alimenter `MiniChart` avec une serie 30 jours si disponible, sinon garder la serie derivee du comptage existant (ne pas ajouter de requete). Extrait representatif (fidele a la maquette, cable a la data existante) :
+- [x] **Step 1: Lire et preserver** `page.tsx`. Conserver **intact** : `getServerSession`, `loadUserContext`, la garde `event.orgId !== orgId`, `effectiveEventRole`, le bloc `if (role === "OPERATOR")` (dashboard operateur), le `Promise.all` de 8 comptages (`pending`/`approved`/`rejected`/`badgesPrinted`/`scansToday`/`scansTotal`/`latest`/`quota30d`) et le calcul `quotaPct`. Ne rien changer aux requetes.
+- [x] **Step 2: Reconstruire le JSX du dashboard admin** (branche apres le bloc OPERATOR). Remplacer les `<Kpi>` maison et la `<ul>` par les composants directeur. La grille passe a `g5` (5 cartes). Les dates de labels du MiniChart et l'`alert-info` de variantes par role sont statiques dans la maquette ; pour la donnee reelle, alimenter `MiniChart` avec une serie 30 jours si disponible, sinon garder la serie derivee du comptage existant (ne pas ajouter de requete). Extrait representatif (fidele a la maquette, cable a la data existante) :
 
 ```tsx
 <div className="space-y-6">
@@ -140,9 +140,9 @@ Tableau de bord : bandeau titre + actions (Scanner / Inscription), 5 statcards c
 </div>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-dashboard.html` sur 375/768/1440. Verifier : g5 responsive (2 cols mobile), couleurs des valeurs (emerald/amber/rose), MiniChart aligne en bas, QuotaBar `warn` amber >= 75 %. Etat vide : `latest` = 0 -> `EmptyState`. Role OPERATOR : la variante allegee s'affiche toujours.
-- [ ] **Step 5:** `make test` — Expected: vert (aucune regression sur les tests dashboard/E2E).
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-dashboard.html` sur 375/768/1440. Verifier : g5 responsive (2 cols mobile), couleurs des valeurs (emerald/amber/rose), MiniChart aligne en bas, QuotaBar `warn` amber >= 75 %. Etat vide : `latest` = 0 -> `EmptyState`. Role OPERATOR : la variante allegee s'affiche toujours.
+- [x] **Step 5:** `make test` — Expected: vert (aucune regression sur les tests dashboard/E2E).
 
 **Acceptance:** dashboard admin fidele a la maquette (5 statcards, MiniChart, 2 QuotaBar, table 10 lignes) ; variante OPERATOR intacte ; data et RBAC inchangees ; typecheck + tests verts.
 

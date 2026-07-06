@@ -6,6 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole } from "@/lib/auth-helpers";
 import { countCountableRegistrations } from "@/lib/event-quota";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Alert, EmptyState } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 export default async function EventDashboardPage({
   params,
@@ -36,15 +41,15 @@ export default async function EventDashboardPage({
       where: { type: "BADGE_SCANNED", userId: ctx.user.id, eventId },
     });
     return (
-      <div className="space-y-6 max-w-xl">
-        <h1 className="text-2xl font-bold">Tableau de bord opérateur</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Kpi label="Mes scans" value={myScans} />
+      <div className="max-w-xl space-y-6">
+        <h1 className="text-xl font-semibold text-slate-900">Tableau de bord opérateur</h1>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <StatCard label="Mes scans" value={myScans} icon="scan-line" />
           <Link
             href={`/admin/${orgId}/events/${eventId}/scan`}
-            className="rounded border bg-white p-4 hover:bg-slate-50 flex items-center justify-center text-lg font-semibold"
+            className="flex items-center justify-center gap-2 rounded-xl bg-green-600 p-4 text-sm font-medium text-white hover:bg-green-700"
           >
-            Ouvrir le scanner
+            <Icon name="scan-line" size={18} /> Ouvrir le scanner
           </Link>
         </div>
       </div>
@@ -86,60 +91,75 @@ export default async function EventDashboardPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{event.title} — Tableau de bord</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Kpi label="En attente" value={pending} />
-        <Kpi label="Approuvées" value={approved} />
-        <Kpi label="Rejetées" value={rejected} />
-        <Kpi label="Badges imprimés" value={badgesPrinted} />
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">{event.title}</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Tableau de bord de l&apos;événement</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Kpi label="Scans aujourd&apos;hui" value={scansToday} />
-        <Kpi label="Scans total" value={scansTotal} />
-        <Kpi
+      {quotaPct != null && quotaPct > 80 && (
+        <Alert tone="warn">
+          <Icon name="alert-triangle" size={16} /> Le quota d&apos;inscriptions dépasse 80 %.
+        </Alert>
+      )}
+
+      <StatGrid cols={4}>
+        <StatCard label="En attente" value={pending} icon="clock" />
+        <StatCard label="Approuvées" value={approved} icon="user-check" />
+        <StatCard label="Rejetées" value={rejected} icon="x" />
+        <StatCard label="Badges imprimés" value={badgesPrinted} icon="id-card" />
+      </StatGrid>
+
+      <StatGrid cols={3}>
+        <StatCard label="Scans aujourd'hui" value={scansToday} icon="scan-line" />
+        <StatCard label="Scans total" value={scansTotal} icon="scan-line" />
+        <StatCard
           label="Quota inscriptions"
-          value={quotaMax != null ? `${quota30d}/${quotaMax}` : "—"}
-          warn={quotaPct != null && quotaPct > 80}
+          value={quotaMax != null ? `${quota30d} / ${quotaMax}` : "—"}
+          icon="user-check"
         />
-      </div>
+      </StatGrid>
 
-      <section>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold">Dernières inscriptions</h2>
-          <Link href={`/admin/${orgId}/events/${eventId}/registrations`} className="text-sm text-green-600 hover:underline">
-            Tout voir
-          </Link>
-        </div>
-        <ul className="bg-white border rounded divide-y">
-          {latest.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">Aucune inscription pour le moment.</li>
-          )}
-          {latest.map((r) => (
-            <li key={r.id} className="px-4 py-3 flex justify-between text-sm">
-              <Link href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`} className="hover:underline">
-                {r.snapshotFirstName} {r.snapshotLastName}{" "}
-                <span className="text-slate-400">— {r.snapshotEmail}</span>
+      <Card>
+        <CardHead
+          title="Dernières inscriptions"
+          action={
+            <Link
+              href={`/admin/${orgId}/events/${eventId}/registrations`}
+              className="text-[13px] font-medium text-green-600 hover:underline"
+            >
+              Tout voir
+            </Link>
+          }
+        />
+        <CardBody className="divide-y divide-slate-100 !py-0">
+          {latest.length === 0 ? (
+            <div className="py-2">
+              <EmptyState icon="user-check" title="Aucune inscription pour le moment" />
+            </div>
+          ) : (
+            latest.map((r) => (
+              <Link
+                key={r.id}
+                href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`}
+                className="flex items-center justify-between gap-3 py-3 text-sm hover:text-green-600"
+              >
+                <span>
+                  <span className="font-medium text-slate-900">
+                    {r.snapshotFirstName} {r.snapshotLastName}
+                  </span>{" "}
+                  <span className="text-slate-400">— {r.snapshotEmail}</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <StatusBadge status={r.status} />
+                  <span className="text-xs tabular-nums text-slate-400">
+                    {new Date(r.createdAt).toLocaleDateString("fr-FR")}
+                  </span>
+                </span>
               </Link>
-              <span className="text-xs text-slate-500">
-                {r.status} — {new Date(r.createdAt).toLocaleDateString("fr-FR")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
-
-function Kpi({ label, value, warn }: { label: string; value: string | number; warn?: boolean }) {
-  return (
-    <div
-      className={`rounded border p-4 bg-white ${warn ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}
-    >
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
+            ))
+          )}
+        </CardBody>
+      </Card>
     </div>
   );
 }
