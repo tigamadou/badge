@@ -3,6 +3,18 @@
 import { useState } from "react";
 import { OrgMemberForm } from "@/components/admin/OrgMemberForm";
 import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Feedback";
+import { RoleBadge } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
+
+function initials(name: string | null): string {
+  return (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 type Member = {
   userId: string;
@@ -56,43 +68,67 @@ export function MembersClient({ orgId, initial }: { orgId: string; initial: Memb
     refresh();
   }
 
+  const ownerCount = members.filter((m) => m.role === "OWNER").length;
+
   return (
-    <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold">Membres</h1>
-      {err && (
-        <div className="rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-          {err}
-        </div>
-      )}
+    <div className="max-w-3xl space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Membres</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Les membres de votre organisation et leurs rôles</p>
+      </div>
+      {err && <Alert tone="err">{err}</Alert>}
 
       <OrgMemberForm orgId={orgId} onAdded={refresh} />
 
-      <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-slate-50 text-left">
-          <tr>
-            <th className="px-3 py-2">Nom</th>
-            <th className="px-3 py-2">Email</th>
-            <th className="px-3 py-2">Rôle</th>
-            <th className="px-3 py-2">Invité le</th>
-            <th className="px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((m) => (
-            <tr key={m.userId} className="border-t">
-              <td className="px-3 py-2">{m.name}</td>
-              <td className="px-3 py-2">{m.email}</td>
-              <td className="px-3 py-2">{m.role}</td>
-              <td className="px-3 py-2">{new Date(m.invitedAt).toLocaleDateString("fr-FR")}</td>
-              <td className="px-3 py-2 text-right">
-                <Button variant="secondary" onClick={() => remove(m.userId)}>
-                  Retirer
-                </Button>
-              </td>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">Membre</th>
+              <th className="px-4 py-3">Rôle</th>
+              <th className="px-4 py-3">Invité le</th>
+              <th className="px-4 py-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {members.map((m) => {
+              const isLastOwner = m.role === "OWNER" && ownerCount === 1;
+              return (
+                <tr key={m.userId} className="border-t border-slate-100 hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+                        {initials(m.name)}
+                      </span>
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">{m.name}</div>
+                        <div className="text-xs text-slate-400">{m.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <RoleBadge tone={m.role === "OWNER" ? "green" : "slate"}>{m.role}</RoleBadge>
+                  </td>
+                  <td className="px-4 py-3 text-sm tabular-nums text-slate-500">
+                    {new Date(m.invitedAt).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {isLastOwner ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                        <Icon name="lock" size={12} /> Dernier OWNER
+                      </span>
+                    ) : (
+                      <Button variant="secondary" onClick={() => remove(m.userId)}>
+                        Retirer
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

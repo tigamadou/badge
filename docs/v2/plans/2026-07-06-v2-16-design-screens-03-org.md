@@ -25,7 +25,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 1 | [x] | 2026-07-06 | `/admin/[orgId]` reskine (StatGrid + Card derniers events + Timeline). Alerte quota conservee (seuil >80). Storage reel non expose -> alerte pilotee par eventsPct/regsPct (inchangee). typecheck+lint OK. |
 | 2 | [x] | 2026-07-06 | `/admin/[orgId]/events` reskine (table rounded-xl, statut non interactif pastilles, lien Configurer). Requete inchangee. Switch inscriptions inline -> non cable (affiche statut), a cabler plus tard. typecheck+lint OK. |
 | 3 | [x] | 2026-07-06 | `EventCreationWizard` reskine (Stepper current 0-based + Segmented + Card + Checkbox multi-select + KeyValue recap). Etat/submit/validation/erreurs QUOTA/SLUG preserves. typecheck+lint OK. |
-| 4 | [ ] | | `org-members.html` -> `/admin/[orgId]/members` (form invitation, Table + RoleBadge, dernier OWNER verrouille). |
+| 4 | [x] | 2026-07-06 | `MembersClient` + `OrgMemberForm` reskines (Card invitation, table RoleBadge/avatar, dernier OWNER verrouille cote affichage). refresh/remove/409 preserves. typecheck+lint OK. |
 | 5 | [ ] | | `org-category-templates.html` -> `/admin/[orgId]/templates` (Table + CatPill/Switch, Modal edition). |
 | 6 | [ ] | | `org-badge-template.html` -> `/admin/[orgId]/settings/badge` (Switch heritage, galerie BadgeCard via BadgeTemplatePicker). |
 | 7 | [ ] | | `org-settings.html` -> `/admin/[orgId]/settings` (FormSection Identite/Adresse/Administratif/Contact, FileBox logo, QuotaBar). |
@@ -392,9 +392,9 @@ Membres : page-head + bouton Inviter, carte formulaire d'invitation (e-mail + ro
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `MembersClient.tsx` + `OrgMemberForm.tsx`. Preserver `useState(members)`, `refresh()`, `remove(userId)` (dont le `confirm` et le 409 -> « Impossible : c'est le dernier OWNER. »), et le POST d'invitation du form.
+- [x] **Step 1: Lire + preserver.** Relire `MembersClient.tsx` + `OrgMemberForm.tsx`. Preserver `useState(members)`, `refresh()`, `remove(userId)` (dont le `confirm` et le 409 -> « Impossible : c'est le dernier OWNER. »), et le POST d'invitation du form.
 
-- [ ] **Step 2: Reconstruire le JSX.** Page-head + carte formulaire + table. Extrait representatif (ligne membre + RoleBadge + statut + verrou dernier OWNER) :
+- [x] **Step 2: Reconstruire le JSX.** Page-head + carte formulaire + table. Extrait representatif (ligne membre + RoleBadge + statut + verrou dernier OWNER) :
 
 ```tsx
 function initials(name: string) {
@@ -432,9 +432,9 @@ const roleTone = (r: string) => (r === "OWNER" ? "green" : r === "AUDITOR" ? "am
 
 > **Notes de fidelite / preservation.** (a) La maquette montre un `role-badge` fige pour l'OWNER et un `select` inline pour changer le role d'un membre : ne cabler le changement de role que si un endpoint `PATCH .../members/[userId]` existe deja ; sinon garder `RoleBadge` en affichage et **noter**. (b) « Dernier OWNER » : deriver `isLastOwner` cote client depuis `members` (compter les `role === "OWNER"`) — c'est de l'affichage ; la garde reelle reste cote serveur (409). Ne pas masquer le message d'erreur 409. (c) Le formulaire d'invitation garde son POST ; l'habiller en carte inline (e-mail flex-1 + Select role 180px + bouton). (d) Aide « dernier OWNER » en `help`/`Alert tone="info"`. (e) Le tri `orderBy: createdAt asc` et le mapping `page.tsx` restent inchanges.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK.
+- [x] **Step 3: `make typecheck`** — Expected: OK.
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : OWNER seul (verrou visible), plusieurs roles (RoleBadge green/amber/slate), invite en attente (`StatusBadge` « Invite »), tentative de retrait du dernier OWNER -> `Alert` d'erreur (409). Mode staff : bandeau intact ; une suppression en mode staff reste auditee. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : OWNER seul (verrou visible), plusieurs roles (RoleBadge green/amber/slate), invite en attente (`StatusBadge` « Invite »), tentative de retrait du dernier OWNER -> `Alert` d'erreur (409). Mode staff : bandeau intact ; une suppression en mode staff reste auditee. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-members.html` (form invitation, table avatars + RoleBadge + statut, verrou dernier OWNER, aide).

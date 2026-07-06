@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () => void }) {
   const [email, setEmail] = useState("");
@@ -30,25 +33,38 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
   }
 
   return (
-    <form onSubmit={submit} className="bg-white border rounded p-4 space-y-3">
-      <h3 className="font-semibold">Inviter un OWNER</h3>
-      {err && <div className="text-sm text-red-600">{err}</div>}
-      <Input
-        placeholder="Nom complet"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
-      <Input
-        type="email"
-        placeholder="email@exemple.fr"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <Button type="submit" disabled={loading}>
-        {loading ? "Envoi..." : "Inviter"}
-      </Button>
-    </form>
+    <Card>
+      <CardHead title="Inviter un membre" subtitle="Un e-mail d'invitation sera envoyé (rôle OWNER)." />
+      <CardBody>
+        <form onSubmit={submit} className="space-y-4">
+          {err && (
+            <Alert tone="err">
+              <Icon name="alert-triangle" size={16} /> {err}
+            </Alert>
+          )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input placeholder="Nom complet" value={name} onChange={(e) => setName(e.target.value)} required />
+            <Input
+              type="email"
+              placeholder="email@exemple.fr"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" className="flex items-center justify-center gap-2" disabled={loading}>
+            {loading ? (
+              <>
+                <Spinner size={16} /> Envoi…
+              </>
+            ) : (
+              <>
+                <Icon name="send" size={16} /> Inviter
+              </>
+            )}
+          </Button>
+        </form>
+      </CardBody>
+    </Card>
   );
 }
