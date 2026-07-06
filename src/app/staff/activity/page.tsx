@@ -1,6 +1,9 @@
+import Link from "next/link";
 import type { ActivityType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { LogType } from "@/components/ui/JournalBlocks";
+import { Icon } from "@/components/ui/Icon";
 
 const TYPES: ActivityType[] = [
   "REGISTRATION_CREATED",
@@ -39,6 +42,35 @@ const TYPES: ActivityType[] = [
   "USER_BLOCKED",
   "USER_UNBLOCKED",
 ];
+
+// Mappe un ActivityType sur une categorie visuelle de LogType.
+export function logKind(
+  t: ActivityType,
+): "creation" | "modification" | "suppression" | "systeme" | "connexion" | "acces" {
+  const s = String(t);
+  if (s === "USER_LOGIN") return "connexion";
+  if (
+    s.endsWith("_CREATED") ||
+    s === "MEMBERSHIP_ADDED" ||
+    s === "USER_REGISTERED" ||
+    s === "ORG_RESTORED" ||
+    s === "EVENT_RESTORED"
+  )
+    return "creation";
+  if (s.endsWith("_DELETED") || s.endsWith("_ARCHIVED") || s === "MEMBERSHIP_REMOVED" || s === "USER_BLOCKED")
+    return "suppression";
+  if (s === "BADGE_SCANNED" || s.endsWith("_PRINTED") || s.endsWith("_EXPORTED")) return "acces";
+  if (
+    s.endsWith("_UPDATED") ||
+    s === "MEMBERSHIP_ROLE_CHANGED" ||
+    s.endsWith("SETTINGS_UPDATED") ||
+    s === "USER_PASSWORD_SET"
+  )
+    return "modification";
+  return "systeme";
+}
+
+const FIELD_CLASS = "block rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-700";
 
 export default async function StaffActivityPage({
   searchParams,
@@ -102,21 +134,26 @@ export default async function StaffActivityPage({
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  function pageHref(p: number): string {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) {
+      if (v && k !== "page") params.set(k, v);
+    }
+    params.set("page", String(p));
+    return `/staff/activity?${params.toString()}`;
+  }
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Journal d&apos;activite</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Journal d&apos;activité</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Toutes les actions de la plateforme</p>
+      </div>
 
-      <form
-        method="get"
-        className="flex flex-wrap gap-2 items-end bg-white border rounded p-3"
-      >
-        <label className="text-sm">
-          <div className="text-slate-600">Type</div>
-          <select
-            name="type"
-            defaultValue={sp.type ?? ""}
-            className="block rounded border px-2 py-1 text-sm"
-          >
+      <form method="get" className="flex flex-wrap items-end gap-2.5">
+        <label className="text-[13px] text-slate-500">
+          <div className="mb-1">Type</div>
+          <select name="type" defaultValue={sp.type ?? ""} className={FIELD_CLASS}>
             <option value="">Tous</option>
             {TYPES.map((t) => (
               <option key={t} value={t}>
@@ -125,107 +162,111 @@ export default async function StaffActivityPage({
             ))}
           </select>
         </label>
-        <label className="text-sm">
-          <div className="text-slate-600">Staff?</div>
-          <select
-            name="staffActor"
-            defaultValue={sp.staffActor ?? "all"}
-            className="block rounded border px-2 py-1 text-sm"
-          >
+        <label className="text-[13px] text-slate-500">
+          <div className="mb-1">Staff</div>
+          <select name="staffActor" defaultValue={sp.staffActor ?? "all"} className={FIELD_CLASS}>
             <option value="all">Tous</option>
             <option value="true">Oui</option>
             <option value="false">Non</option>
           </select>
         </label>
-        <label className="text-sm">
-          <div className="text-slate-600">Du</div>
-          <input
-            type="date"
-            name="from"
-            defaultValue={sp.from ?? ""}
-            className="block rounded border px-2 py-1 text-sm"
-          />
+        <label className="text-[13px] text-slate-500">
+          <div className="mb-1">Du</div>
+          <input type="date" name="from" defaultValue={sp.from ?? ""} className={FIELD_CLASS} />
         </label>
-        <label className="text-sm">
-          <div className="text-slate-600">Au</div>
-          <input
-            type="date"
-            name="to"
-            defaultValue={sp.to ?? ""}
-            className="block rounded border px-2 py-1 text-sm"
-          />
+        <label className="text-[13px] text-slate-500">
+          <div className="mb-1">Au</div>
+          <input type="date" name="to" defaultValue={sp.to ?? ""} className={FIELD_CLASS} />
         </label>
-        <label className="text-sm">
-          <div className="text-slate-600">Org ID</div>
-          <input
-            name="orgId"
-            defaultValue={sp.orgId ?? ""}
-            className="block rounded border px-2 py-1 text-sm"
-          />
+        <label className="text-[13px] text-slate-500">
+          <div className="mb-1">Org ID</div>
+          <input name="orgId" defaultValue={sp.orgId ?? ""} className={FIELD_CLASS} />
         </label>
-        <label className="text-sm">
-          <div className="text-slate-600">User ID</div>
-          <input
-            name="userId"
-            defaultValue={sp.userId ?? ""}
-            className="block rounded border px-2 py-1 text-sm"
-          />
+        <label className="text-[13px] text-slate-500">
+          <div className="mb-1">User ID</div>
+          <input name="userId" defaultValue={sp.userId ?? ""} className={FIELD_CLASS} />
         </label>
         <button
           type="submit"
-          className="rounded bg-slate-800 text-white px-3 py-1.5 text-sm"
+          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>
       </form>
 
-      <div className="text-sm text-slate-500">
-        {total} entree{total > 1 ? "s" : ""} — page {page} / {totalPages}
+      <div className="text-[13px] text-slate-400">
+        {total} entrée{total > 1 ? "s" : ""} · page {page} / {totalPages}
       </div>
 
-      <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-slate-50 text-left">
-          <tr>
-            <th className="px-3 py-2">Date</th>
-            <th className="px-3 py-2">Type</th>
-            <th className="px-3 py-2">Acteur</th>
-            <th className="px-3 py-2">Cible</th>
-            <th className="px-3 py-2">Staff?</th>
-          </tr>
-        </thead>
-        <tbody>
-          {activities.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
-                Aucune entree.
-              </td>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">Horodatage</th>
+              <th className="px-4 py-3">Action</th>
+              <th className="px-4 py-3">Auteur</th>
+              <th className="px-4 py-3">Contexte</th>
+              <th className="px-4 py-3" />
             </tr>
+          </thead>
+          <tbody>
+            {activities.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
+                  Aucune entrée.
+                </td>
+              </tr>
+            )}
+            {activities.map((a) => (
+              <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                  {new Date(a.createdAt).toLocaleString("fr-FR")}
+                </td>
+                <td className="px-4 py-3">
+                  <LogType kind={logKind(a.type)}>{a.type}</LogType>
+                </td>
+                <td className="px-4 py-3 text-[13px] text-slate-600">{a.user?.email ?? "—"}</td>
+                <td className="px-4 py-3 text-xs text-slate-400">
+                  {a.orgId && <div>org : {a.orgId}</div>}
+                  {a.eventId && <div>event : {a.eventId}</div>}
+                  {a.targetId && <div>cible : {a.targetId}</div>}
+                  {!a.orgId && !a.eventId && !a.targetId && "—"}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/staff/activity/${a.id}`}
+                    aria-label="Voir le détail"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <Icon name="chevron-right" size={16} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end gap-2">
+          {page > 1 && (
+            <Link
+              href={pageHref(page - 1)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <Icon name="arrow-left" size={14} /> Précédent
+            </Link>
           )}
-          {activities.map((a) => (
-            <tr key={a.id} className="border-t">
-              <td className="px-3 py-2 text-xs text-slate-500">
-                {new Date(a.createdAt).toLocaleString("fr-FR")}
-              </td>
-              <td className="px-3 py-2 font-mono text-xs">{a.type}</td>
-              <td className="px-3 py-2">{a.user?.email ?? "—"}</td>
-              <td className="px-3 py-2 text-xs">
-                {a.orgId && <div>org: {a.orgId}</div>}
-                {a.eventId && <div>event: {a.eventId}</div>}
-                {a.targetId && <div>target: {a.targetId}</div>}
-              </td>
-              <td className="px-3 py-2">
-                {a.staffActor ? (
-                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    staff
-                  </span>
-                ) : (
-                  <span className="text-slate-500 text-xs">—</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          {page < totalPages && (
+            <Link
+              href={pageHref(page + 1)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Suivant <Icon name="arrow-right" size={14} />
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

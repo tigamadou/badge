@@ -30,7 +30,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 7  | [x] | 2026-07-06 | `/staff/users/[userId]` + `UserDetailActions` reskines (Card/RoleBadge/KeyValue/Timeline + boutons Button/Alert). Gardes RBAC + mutations preservees. typecheck+lint OK. |
 | 8  | [x] | 2026-07-06 | `/staff/settings` + PlatformSettingsForm + TestSmtpForm reskines (Card/FormSection/Input/Switch/Alert). Secrets jamais rendus (*Set booleens), garde canEditSecrets preservee. Branding non ajoute (pas de champs). typecheck+lint OK. |
 | 9  | [x] | 2026-07-06 | `BadgeTemplatePicker` reskine (galerie rounded-xl, ring vert, Tag/Alert/Button). data-testid/data-selected E2E preserves, cascade/PATCH intacts. typecheck+lint OK. |
-| 10 | [ ] | | `staff-log.html` -> `/staff/activity` (Toolbar, Table LogType, lignes cliquables, Pagination). |
+| 10 | [x] | 2026-07-06 | `/staff/activity` reskine (toolbar GET habillee, table LogType, lignes cliquables -> detail, pager GET). helper logKind. where/pagination preserves. typecheck+lint OK. |
 | 11 | [ ] | | `journal-detail.html` -> **nouvelle route** `/staff/activity/[logId]` (LogType/KeyValue/Diff/Payload). |
 
 ---
@@ -775,11 +775,11 @@ Journal global : head + bouton Exporter, toolbar de filtres (recherche + type + 
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire `page.tsx`. **Preserver** `TYPES`, le `where` (type/org/user/event/staffActor/plage de dates), la pagination `page`/`pageSize=50`/`total`/`totalPages`, la requete `findMany` avec `user`/`orgId`/`eventId`/`targetId`. On remplace le balisage du form et de la table ; on conserve le `<form method="get">` (filtres serveur).
 
-- [ ] **Step 2: Reconstruire le JSX + mapping LogType**
+- [x] **Step 2: Reconstruire le JSX + mapping LogType**
 
 Mapper `ActivityType` -> `kind` de `LogType` (`*_CREATED`->creation, `*_UPDATED`/`*_ROLE_CHANGED`/`*SETTINGS_UPDATED`->modification, `*_DELETED`/`*_ARCHIVED`/`*_REMOVED`->suppression, `USER_LOGIN`->connexion, `BADGE_SCANNED`/`*_PRINTED`/`*_EXPORTED`->acces, sinon systeme). Lignes cliquables via `<Link>` de ligne ou `onClick` navigation vers `/staff/activity/${a.id}` :
 
@@ -815,12 +815,12 @@ Filtres : garder le `<form method="get">` mais l'habiller (input recherche + sel
 
 _(Les lignes doivent etre cliquables tout en gardant le `<td>` action ; utiliser un `<Link>` sur la cellule d'action + curseur pointer sur la ligne, ou un `<Link legacyBehavior>` — eviter d'imbriquer `<a>` dans `<a>`. Le plus simple : rendre l'ID cliquable dans la colonne action et la colonne « action metier ».)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/activity` en 375/768/1440. Verifier : toolbar de filtres, table avec `LogType` colore par categorie, horodatage mono, badge staff amber, `Pagination` verte, clic sur une ligne -> `/staff/activity/[logId]`. `make test` vert.
 
