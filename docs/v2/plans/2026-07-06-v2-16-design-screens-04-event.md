@@ -31,7 +31,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 6  | [x] | 2026-07-06 | `BadgeListTable` reskine (filtre habille, BatchBar + Checkbox, table CatPill/Tag). Selection/batchPrint/openBatchPdf/load preserves. typecheck+lint OK. |
 | 7  | [x] | 2026-07-06 | `BadgeBatchPanel` reskine (Card progression Spinner+ProgressBar + grille MiniBadge incrementale, puis PDFViewer). Fetches/QR/BadgeBatchExportV2 preserves. typecheck+lint OK. |
 | 8  | [x] | 2026-07-06 | Apercu badge event reskine (BadgeCard HTML + panneaux Informations KeyValue / Actions). BadgeDownloadV2 PDF conserve. Identite masquee si anonyme. Query/notFound preserves. typecheck+lint OK. |
-| 9  | [ ] | | Template badge event (`settings/badge/page.tsx`) — Switch heritage + galerie tpl + BadgeCard. |
+| 9  | [x] | 2026-07-06 | `settings/badge` event : head aligne DS ; galerie via BadgeTemplatePicker deja habille, heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
 | 10 | [ ] | | Categories (`categories/page.tsx`) — Table + CatDot + Switch + Modal edition. |
 | 11 | [ ] | | **Fusion blocklists** en onglets (`blocked-emails` hote + Tabs Emails/Documents). |
 | 12 | [ ] | | Scanner (`scan/page.tsx`) — ScannerFrame + ScanResult (reskin QRScanner, logica intacte). |
@@ -397,8 +397,8 @@ Configuration du template de badge au niveau event : Switch "Heriter de l'organi
 **Composants:** `Card`/`CardBody`, `Switch`, `BadgeCard`, `Tag`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** la page : resolution du template (`resolveBadgeTemplateId` cascade Event -> Org -> Platform), etat "heriter", selection du template, server action de sauvegarde. Ne rien changer a la cascade.
-- [ ] **Step 2: Reconstruire le JSX** : Card avec `Switch` "Hériter de l'organisation" (branche sur l'etat existant ; desactive la galerie quand actif) + texte d'aide ; galerie de `tpl-card` (grille), chaque carte avec un apercu `BadgeCard` reduit + nom + `Tag`, l'active marquee `selected`. Extrait representatif :
+- [x] **Step 1: Lire et preserver** la page : resolution du template (`resolveBadgeTemplateId` cascade Event -> Org -> Platform), etat "heriter", selection du template, server action de sauvegarde. Ne rien changer a la cascade.
+- [x] **Step 2: Reconstruire le JSX** : Card avec `Switch` "Hériter de l'organisation" (branche sur l'etat existant ; desactive la galerie quand actif) + texte d'aide ; galerie de `tpl-card` (grille), chaque carte avec un apercu `BadgeCard` reduit + nom + `Tag`, l'active marquee `selected`. Extrait representatif :
 
 ```tsx
 <Card>
@@ -422,9 +422,9 @@ Configuration du template de badge au niveau event : Switch "Heriter de l'organi
 </Card>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-badge-template.html` sur 375/768/1440. Verifier : Switch desactive/masque la galerie, apercus BadgeCard, carte active bordure verte + Tag. Etat herite (galerie grisee) vs surcharge.
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-badge-template.html` sur 375/768/1440. Verifier : Switch desactive/masque la galerie, apercus BadgeCard, carte active bordure verte + Tag. Etat herite (galerie grisee) vs surcharge.
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** ecran template fidele ; cascade de resolution et sauvegarde preservees ; typecheck + tests verts.
 

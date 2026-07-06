@@ -67,12 +67,12 @@ export default async function EventBadgeSettingsPage({
   }));
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Template de badge</h1>
-        <p className="text-sm text-slate-600 mt-1">
-          Choisissez le template de badge utilise pour {event.title}. Vous pouvez
-          aussi laisser herite (template de l&apos;organisation ou de la plateforme).
+        <h1 className="text-xl font-semibold text-slate-900">Modèle de badge</h1>
+        <p className="mt-0.5 text-sm text-slate-400">
+          Modèle utilisé pour {event.title}. Vous pouvez aussi hériter du modèle de l&apos;organisation ou de la
+          plateforme.
         </p>
       </div>
 
