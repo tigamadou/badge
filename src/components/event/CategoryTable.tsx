@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { CatPill, Tag } from "@/components/ui/Labels";
+import { EmptyState } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 import { CategoryForm } from "./CategoryForm";
 import { CategoryReassignModal } from "./CategoryReassignModal";
 import { CategoryImportTemplatesModal } from "./CategoryImportTemplatesModal";
@@ -60,24 +63,27 @@ export function CategoryTable({
     refresh();
   }
 
+  const modalOpen = adding || editing !== null;
+
   return (
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Catégories</h1>
-        <div className="space-x-2">
-          {!adding && !editing && (
-            <>
-              <Button variant="secondary" onClick={() => setImporting(true)}>
-                Importer un modèle
-              </Button>
-              <Button onClick={() => setAdding(true)}>Nouvelle catégorie</Button>
-            </>
-          )}
+    <div className="max-w-3xl space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Catégories</h1>
+          <p className="mt-0.5 text-sm text-slate-400">Catégories de participation de l&apos;événement</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setImporting(true)}>
+            Importer un modèle
+          </Button>
+          <Button onClick={() => setAdding(true)}>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="plus" size={16} /> Ajouter
+            </span>
+          </Button>
         </div>
       </div>
 
-      {adding && <CategoryForm orgId={orgId} eventId={eventId} onSaved={refresh} />}
-      {editing && <CategoryForm orgId={orgId} eventId={eventId} initial={editing} onSaved={refresh} />}
       {importing && (
         <CategoryImportTemplatesModal orgId={orgId} eventId={eventId} onDone={refresh} onCancel={() => setImporting(false)} />
       )}
@@ -92,49 +98,86 @@ export function CategoryTable({
         />
       )}
 
-      <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-slate-50 text-left">
-          <tr>
-            <th className="px-3 py-2">#</th>
-            <th className="px-3 py-2">Nom</th>
-            <th className="px-3 py-2">Couleur</th>
-            <th className="px-3 py-2">Neutre</th>
-            <th className="px-3 py-2">Anonyme</th>
-            <th className="px-3 py-2">Inscriptions</th>
-            <th className="px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {cats.length === 0 && (
-            <tr>
-              <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
-                Aucune catégorie. Créez la première.
-              </td>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">N°</th>
+              <th className="px-4 py-3">Catégorie</th>
+              <th className="px-4 py-3">Options</th>
+              <th className="px-4 py-3">Inscriptions</th>
+              <th className="px-4 py-3" />
             </tr>
-          )}
-          {cats.map((c) => (
-            <tr key={c.id} className="border-t">
-              <td className="px-3 py-2">{c.number}</td>
-              <td className="px-3 py-2 font-medium">{c.name}</td>
-              <td className="px-3 py-2">
-                <span className="inline-block w-4 h-4 rounded mr-1 align-middle" style={{ background: c.color }} />
-                {c.color}
-              </td>
-              <td className="px-3 py-2">{c.neutralBadge ? "oui" : "non"}</td>
-              <td className="px-3 py-2">{c.anonymous ? "oui" : "non"}</td>
-              <td className="px-3 py-2">{c._count.registrations}</td>
-              <td className="px-3 py-2 text-right space-x-2">
-                <Button variant="secondary" onClick={() => setEditing(c)}>
-                  Éditer
-                </Button>
-                <Button variant="secondary" onClick={() => remove(c)}>
-                  Supprimer
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {cats.length === 0 && (
+              <tr>
+                <td colSpan={5}>
+                  <EmptyState icon="tags" title="Aucune catégorie" description="Créez la première catégorie." />
+                </td>
+              </tr>
+            )}
+            {cats.map((c) => (
+              <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <td className="px-4 py-3 text-sm tabular-nums text-slate-400">{c.number}</td>
+                <td className="px-4 py-3">
+                  <CatPill color={c.color} label={c.name} />
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.neutralBadge && <Tag>Neutre</Tag>}
+                    {c.anonymous && <Tag icon="lock">Anonyme</Tag>}
+                    {!c.neutralBadge && !c.anonymous && <span className="text-xs text-slate-400">—</span>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{c._count.registrations}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="inline-flex gap-1">
+                    <button
+                      onClick={() => setEditing(c)}
+                      aria-label="Éditer"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      <Icon name="pencil" size={15} />
+                    </button>
+                    <button
+                      onClick={() => remove(c)}
+                      aria-label="Supprimer"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <Icon name="trash-2" size={15} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+            <div className="border-b border-slate-200 px-6 py-5">
+              <h3 className="text-base font-semibold text-slate-900">
+                {editing ? "Modifier la catégorie" : "Nouvelle catégorie"}
+              </h3>
+            </div>
+            <div className="px-6 py-5">
+              <CategoryForm
+                orgId={orgId}
+                eventId={eventId}
+                initial={editing ?? undefined}
+                onSaved={refresh}
+                onCancel={() => {
+                  setEditing(null);
+                  setAdding(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

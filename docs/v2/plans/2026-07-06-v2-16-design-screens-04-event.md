@@ -32,7 +32,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 7  | [x] | 2026-07-06 | `BadgeBatchPanel` reskine (Card progression Spinner+ProgressBar + grille MiniBadge incrementale, puis PDFViewer). Fetches/QR/BadgeBatchExportV2 preserves. typecheck+lint OK. |
 | 8  | [x] | 2026-07-06 | Apercu badge event reskine (BadgeCard HTML + panneaux Informations KeyValue / Actions). BadgeDownloadV2 PDF conserve. Identite masquee si anonyme. Query/notFound preserves. typecheck+lint OK. |
 | 9  | [x] | 2026-07-06 | `settings/badge` event : head aligne DS ; galerie via BadgeTemplatePicker deja habille, heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
-| 10 | [ ] | | Categories (`categories/page.tsx`) — Table + CatDot + Switch + Modal edition. |
+| 10 | [x] | 2026-07-06 | `CategoryTable` + `CategoryForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/reassign/import preserves. typecheck+lint OK. |
 | 11 | [ ] | | **Fusion blocklists** en onglets (`blocked-emails` hote + Tabs Emails/Documents). |
 | 12 | [ ] | | Scanner (`scan/page.tsx`) — ScannerFrame + ScanResult (reskin QRScanner, logica intacte). |
 | 13 | [ ] | | Membres (`members/page.tsx`) — Table + RoleBadge + Modal invitation. |
@@ -444,11 +444,11 @@ Table des categories (nom, `CatDot`, statut anonyme via Switch) + Modal d'editio
 **Composants:** `Table`, `CatPill`/`CatDot`, `Switch`, `Modal`, `Input`, `FormSection`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `CategoryTable.tsx` / `CategoryForm.tsx` : CRUD categories, toggle anonyme, import de modeles (`CategoryImportTemplatesModal`), reassignation (`CategoryReassignModal`). Ne rien changer.
-- [ ] **Step 2: Reconstruire le JSX** : `page-head` avec boutons Modeles/Nouvelle ; `Table` (nom + `CatDot` couleur, count `mono`, `Switch` anonyme cable sur l'action existante, `btn-icon` crayon d'edition) ; `Modal` d'edition habillant `CategoryForm` (Input nom, sélecteur couleur, `Switch` anonyme).
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-categories.html` sur 375/768/1440. Verifier : table, CatDot couleurs, Switch anonyme, Modal (overlay flou + shadow-xl). Etats : liste vide (EmptyState), edition, reassignation avant suppression.
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 1: Lire et preserver** `CategoryTable.tsx` / `CategoryForm.tsx` : CRUD categories, toggle anonyme, import de modeles (`CategoryImportTemplatesModal`), reassignation (`CategoryReassignModal`). Ne rien changer.
+- [x] **Step 2: Reconstruire le JSX** : `page-head` avec boutons Modeles/Nouvelle ; `Table` (nom + `CatDot` couleur, count `mono`, `Switch` anonyme cable sur l'action existante, `btn-icon` crayon d'edition) ; `Modal` d'edition habillant `CategoryForm` (Input nom, sélecteur couleur, `Switch` anonyme).
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-categories.html` sur 375/768/1440. Verifier : table, CatDot couleurs, Switch anonyme, Modal (overlay flou + shadow-xl). Etats : liste vide (EmptyState), edition, reassignation avant suppression.
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** categories fideles (table + Switch + Modal) ; CRUD, import modeles, reassignation preserves ; typecheck + tests verts.
 
