@@ -29,7 +29,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 5  | [x] | 2026-07-06 | `SetupPasswordForm` reskine (Input/Button/Alert/Spinner/PasswordMeter). Titre generique conserve (prenom non charge, YAGNI). Validation+POST preserves. typecheck+lint OK. |
 | 6  | [x] | 2026-07-06 | `/verify-email/[token]` bascule sur AuthCard + SuccessRing (succes) / Alert (erreur). `verifyToken`/`resolveBaseUrl` preserves. typecheck+lint OK. |
 | 7  | [x] | 2026-07-06 | `/e/[slug]` reskine (Card/CardBody + CatPill, slate). Branches CTA session + hrefs preserves. typecheck+lint OK. |
-| 8  | [ ] | | Formulaire d'inscription `/e/[slug]/register` (`RadioCards` + `Checkbox`). |
+| 8  | [x] | 2026-07-06 | `RegisterEventForm` reskine (RadioCards + Checkbox + FormSection + Alert/Spinner). POST/409/redirection success preserves. Identite/uploads restent au profil (Task 14). typecheck+lint OK. |
 | 9  | [ ] | | Confirmation `/e/[slug]/success` (`SuccessRing` + `FileBox`). |
 | 10 | [ ] | | Apercu badge `/badge/[id]` (`BadgeCard` + boutons). |
 | 11 | [ ] | | Verification badge `/verify/[badgeId]` (`VerifyBanner`, 3 cas). |
@@ -442,9 +442,9 @@ return result.ok ? (
 
 **Composants:** `RadioCards`, `Checkbox`, `Button`, `Alert` (err), `Card`/`CardBody`, `Icon` (`lock`, `users`), `Spinner`.
 
-- [ ] **Step 1: Lire l'existant** — `RegisterEventForm` (client) : `categoryId` (radios), `accepted` (checkbox RGPD), POST `/api/events/${slug}/register`, gestion 409 -> redirection detail, succes -> `/e/${slug}/success?id=`. `page.tsx` : redirection profil incomplet, etat `existing` « déjà inscrit ». Preserver strictement.
+- [x] **Step 1: Lire l'existant** — `RegisterEventForm` (client) : `categoryId` (radios), `accepted` (checkbox RGPD), POST `/api/events/${slug}/register`, gestion 409 -> redirection detail, succes -> `/e/${slug}/success?id=`. `page.tsx` : redirection profil incomplet, etat `existing` « déjà inscrit ». Preserver strictement.
 
-- [ ] **Step 2: Reconstruire** — remplacer les radios manuelles par `RadioCards` et la checkbox brute par `Checkbox` :
+- [x] **Step 2: Reconstruire** — remplacer les radios manuelles par `RadioCards` et la checkbox brute par `Checkbox` :
 ```tsx
 <form onSubmit={handleSubmit} className="space-y-6">
   <FormSection title="Catégorie de participation" description="Sélectionnez la catégorie qui vous correspond.">
@@ -468,8 +468,8 @@ return result.ok ? (
 ```
 Etats « déjà inscrit » (bloc `existing`) : `Alert` tone `warn` + lien detail. Etats « fermé »/« capacité » : si un jour la page les distingue, utiliser deux `Card` centrees (`Icon` `lock` amber / `users` rose) reprenant `ClosedView` ; sinon laisser `ClosedView` gerer (ne pas inventer l'etat « liste d'attente » s'il n'existe pas cote logique — le porter visuellement seulement si `ClosedView` le supporte deja).
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — form (radio-cards colorees + consentement), etat « déjà inscrit », etat « fermé ». 375/768/1440. Verifier le golden path : selection catégorie -> `S'inscrire` -> redirection success. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — form (radio-cards colorees + consentement), etat « déjà inscrit », etat « fermé ». 375/768/1440. Verifier le golden path : selection catégorie -> `S'inscrire` -> redirection success. `make test` vert.
 
 **Acceptance:** `RadioCards`+`Checkbox` fideles ; POST, gestion 409, redirection success et garde « profil incomplet » inchanges.
 

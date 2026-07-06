@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { RadioCards } from "@/components/ui/RadioCards";
+import { Checkbox, FormSection } from "@/components/ui/FormControls";
+import { Alert, Spinner } from "@/components/ui/Feedback";
 
 type Category = {
   id: string;
@@ -56,54 +59,39 @@ export default function RegisterEventForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Catégorie</label>
-        <div className="space-y-2">
-          {categories.map((c) => (
-            <label
-              key={c.id}
-              className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${
-                categoryId === c.id
-                  ? "border-green-500 bg-green-50"
-                  : "border-slate-200 bg-white hover:border-slate-300"
-              }`}
-            >
-              <input
-                type="radio"
-                name="categoryId"
-                value={c.id}
-                checked={categoryId === c.id}
-                onChange={() => setCategoryId(c.id)}
-                className="text-green-600"
-              />
-              <span
-                className="inline-block h-3 w-3 rounded-full"
-                style={{ backgroundColor: c.color }}
-              />
-              <span className="text-sm text-slate-900">{c.name}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <label className="flex items-start gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={accepted}
-          onChange={(e) => setAccepted(e.target.checked)}
-          className="mt-0.5"
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <FormSection title="Catégorie de participation" description="Sélectionnez la catégorie qui vous correspond.">
+        <RadioCards
+          name="Catégorie"
+          value={categoryId || null}
+          onChange={setCategoryId}
+          options={categories.map((c) => ({ value: c.id, title: c.name, color: c.color }))}
         />
-        <span>
-          Je confirme que les informations de mon profil (identité, structure, photo, pièce
-          d&apos;identité) seront utilisées pour cette inscription et la production de mon badge.
-        </span>
-      </label>
+      </FormSection>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <Checkbox
+        checked={accepted}
+        onChange={setAccepted}
+        label={
+          <>
+            Je confirme que les informations de mon profil (identité, structure, photo, pièce d&apos;identité) seront
+            utilisées pour cette inscription et la production de mon badge.
+          </>
+        }
+      />
 
-      <Button type="submit" disabled={loading || !categoryId}>
-        {loading ? "Inscription..." : "Valider mon inscription"}
+      {error && (
+        <Alert tone="err">{error}</Alert>
+      )}
+
+      <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading || !categoryId}>
+        {loading ? (
+          <>
+            <Spinner size={16} /> Inscription…
+          </>
+        ) : (
+          "S'inscrire"
+        )}
       </Button>
     </form>
   );
