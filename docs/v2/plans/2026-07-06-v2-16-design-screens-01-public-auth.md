@@ -25,7 +25,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 1  | [x] | 2026-07-06 | Landing `LandingView.tsx` + rendu conditionnel sur `/` (branche authentifiee inchangee). typecheck+lint OK, test 657/657. Revue visuelle = manuelle. |
 | 2  | [x] | 2026-07-06 | `/login` reskine (Alert/Spinner/sous-titre/pied/lien mdp oublie) + `AuthCard` enrichi (subtitle/footer). typecheck+lint OK, test 657/657. |
 | 3  | [x] | 2026-07-06 | `/forgot-password` reskine (SuccessRing/Alert/Spinner, etat done). Logique anti-enumeration preservee. typecheck+lint OK. |
-| 4  | [ ] | | Reinitialisation `/reset-password/[token]` (+ `PasswordMeter`). |
+| 4  | [x] | 2026-07-06 | `/reset-password/[token]` reskine (PasswordMeter + score client, Alert/Spinner/SuccessRing). Validation <6/concordance et POST preserves. typecheck+lint OK. |
 | 5  | [ ] | | Definition a l'invitation `/setup-password` (+ `PasswordMeter`). |
 | 6  | [ ] | | Verification e-mail `/verify-email/[token]` (`SuccessRing`). |
 | 7  | [ ] | | Presentation evenement public `/e/[slug]` (hero + categories + CTA). |
@@ -284,9 +284,9 @@ type Props = { title: string; subtitle?: React.ReactNode; footer?: React.ReactNo
 
 **Composants:** `AuthCard`, `Input`, `Button`, `PasswordMeter`, `SuccessRing` (facultatif sur succes), `Icon` (`check`), `Spinner`.
 
-- [ ] **Step 1: Lire l'existant** — page client, `use(params)` -> `token`, validation `length < 6` + `password !== confirm`, `fetch("/api/auth/reset-password", { token, password })`, `done`. Preserver la validation et l'appel.
+- [x] **Step 1: Lire l'existant** — page client, `use(params)` -> `token`, validation `length < 6` + `password !== confirm`, `fetch("/api/auth/reset-password", { token, password })`, `done`. Preserver la validation et l'appel.
 
-- [ ] **Step 2: Reconstruire + score local** — `PasswordMeter` attend un `score: 0..4` : le calculer **cote client** a partir du champ (aucune donnee serveur), via un petit helper local :
+- [x] **Step 2: Reconstruire + score local** — `PasswordMeter` attend un `score: 0..4` : le calculer **cote client** a partir du champ (aucune donnee serveur), via un petit helper local :
 ```tsx
 function pwScore(v: string): 0 | 1 | 2 | 3 | 4 {
   let s = 0;
@@ -311,8 +311,8 @@ Rendu (etat form) :
 ```
 Etat succes : `SuccessRing` `check` + bouton « Se connecter » (`Button` en `Link` ou `<a>` vers `/login`). Conserver la validation existante et les messages.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — saisir un mot de passe faible puis fort : le meter et le libelle suivent ; etat succes. 375/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — saisir un mot de passe faible puis fort : le meter et le libelle suivent ; etat succes. 375/1440. `make test` vert.
 
 **Acceptance:** meter + libelle fideles ; validation `< 6` / non-concordance et POST inchanges.
 
