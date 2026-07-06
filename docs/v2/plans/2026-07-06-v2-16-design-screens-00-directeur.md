@@ -38,7 +38,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 14 | [x] | 2026-07-06 | `Stepper` (`src/components/ui/Stepper.tsx`). Test rendu OK, typecheck OK. |
 | 15 | [x] | 2026-07-06 | `Tabs`/`Segmented` (`src/components/ui/Tabs.tsx`, client). Test rendu OK, typecheck OK. |
 | 16 | [x] | 2026-07-06 | `BadgeCard`/`MiniBadge` (`src/components/badge/`). Test rendu OK, typecheck OK. Reconciliation doublons `BadgePreview*`/`BadgeWebPreview*` -> reportee (suppression = accord utilisateur), a arbitrer aux tasks apercu badge. |
-| 17 | [ ] | | `Scanner` (frame/reticle/laser + result). |
+| 17 | [x] | 2026-07-06 | `ScannerFrame`/`ScanResult` (`src/components/event/ScannerFrame.tsx`). Test rendu OK, typecheck OK. Recablage `QRScanner` -> reporte au sous-plan 04 (verif camera navigateur). |
 | 18 | [ ] | | `PickCard` / `OrgLogo`. |
 | 19 | [ ] | | `PhoneMockup` + `VerifyBanner`. |
 | 20 | [ ] | | Blocs journal : `LogType`, `KeyValue`, `Diff`, `Payload`. |
@@ -1690,7 +1690,7 @@ Habillage plein ecran du scanner QR. Reference : `.scan-frame`/`.scan-reticle`/`
   - `ScannerFrame({ children }: { children: ReactNode }): JSX.Element` — cadre sombre + reticule vert + laser (le flux camera est passe en `children`).
   - `ScanResult({ valid, title, children }: { valid: boolean; title: ReactNode; children?: ReactNode }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1704,12 +1704,12 @@ test("ScanResult valide/invalide", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/event/__tests__/ScannerFrame.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -1743,12 +1743,12 @@ export function ScanResult({ valid, title, children }: { valid: boolean; title: 
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/event/__tests__/ScannerFrame.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Composer dans QRScanner + typecheck**
+- [x] **Step 5: Composer dans QRScanner + typecheck**
 
 Run: `make typecheck && yarn vitest run src/components/event`
 Expected: OK. Revue visuelle contre `event-scanner.html` (cadre + reticule + resultat).
