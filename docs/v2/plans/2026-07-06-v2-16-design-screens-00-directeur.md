@@ -20,8 +20,8 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0  | [ ] | | Pre-flight : branche, conteneurs up, typecheck baseline. |
-| 0.5| [ ] | | `Icon` partage (registre lucide etendu) — **prerequis de presque toutes les tasks**. |
+| 0  | [x] | 2026-07-06 | Pre-flight OK : branche `feat/design_implementation`, conteneur `badge-app-1` up, typecheck + lint (0 erreur) baseline verts, socle v2-15 present. |
+| 0.5| [x] | 2026-07-06 | `Icon` partage (`src/components/ui/Icon.tsx`, 41 icones) + recablage `SidebarNav` (registre centralise). Test rendu node OK, typecheck OK. |
 | 1  | [ ] | | `Card` / `CardHead` / `CardBody`. |
 | 2  | [ ] | | `StatCard` + `StatGrid` (delta up/down). |
 | 3  | [ ] | | `Timeline` + `TimelineItem`. |
@@ -63,7 +63,9 @@ _(Reprises de v2-15 — s'appliquent implicitement a chaque task.)_
 - **Verification** : `make lint && make typecheck && make test` (conteneur Docker dev) + controle visuel. L'evidence avant l'affirmation.
 - **Git** : aucun commit sans demande explicite de l'utilisateur.
 
-**Convention de test (reskin)** : les composants presentational sont valides par (a) un test de rendu Vitest + Testing Library verifiant la presence des elements/roles/textes cles, (b) `make typecheck`, (c) controle visuel contre la maquette. Les composants a etat (Switch, RadioCards, Stepper, ChipFilter, Dropzone, Scanner) ont en plus un test d'interaction.
+**Convention de test (reskin)** : les composants presentational sont valides par (a) un test de rendu Vitest verifiant la presence des elements/textes/classes cles, (b) `make typecheck`, (c) controle visuel contre la maquette. Les composants a etat controle (Switch, RadioCards, Stepper, Tabs, Dropzone) sont rendus dans chaque etat (via leurs props) pour couvrir les variantes.
+
+> **Adaptation (constat a l'execution, 2026-07-06)** : la repo n'a **pas** de stack DOM de test (ni `@testing-library/react`, ni jsdom/happy-dom) et son Vitest tourne en `environment: "node"` avec une politique de tests integration/node (cf. `vitest.config.ts`, `CLAUDE.md` §4). Plutot que d'introduire une nouvelle stack de test (RTL+jsdom) au milieu du lot, les tests de rendu utilisent **`renderToStaticMarkup` de `react-dom/server`** (env node, aucune dependance ajoutee) et assertent sur le HTML produit. Les exemples de tests RTL/`@testing-library` ecrits dans les tasks ci-dessous sont donc a transposer en assertions `renderToStaticMarkup` (rendre le composant dans chaque etat de prop et verifier le markup). La revue visuelle navigateur reste une etape **manuelle** (a faire par un humain / quand un navigateur est disponible) : elle n'est pas simulee ni affirmee automatiquement.
 
 **Convention d'emplacement** : composants transverses dans `src/components/ui/` sauf `BadgeCard`/`MiniBadge` (`src/components/badge/`) et `Scanner` (`src/components/event/`, aligne sur `QRScanner` existant). Un fichier par composant (ou cluster proche), export nomme.
 
@@ -73,17 +75,17 @@ _(Reprises de v2-15 — s'appliquent implicitement a chaque task.)_
 
 **Files:** aucun (verification d'environnement).
 
-- [ ] **Step 1: Verifier la branche et les conteneurs**
+- [x] **Step 1: Verifier la branche et les conteneurs**
 
 Run: `git branch --show-current && make dev`
 Expected: `feat/design_implementation` ; conteneurs `app`/`mysql`/`mailpit` up.
 
-- [ ] **Step 2: Baseline verte**
+- [x] **Step 2: Baseline verte**
 
 Run: `make typecheck && make lint`
 Expected: typecheck OK, lint 0 erreur (warnings preexistants tolerees).
 
-- [ ] **Step 3: Confirmer le socle v2-15 present**
+- [x] **Step 3: Confirmer le socle v2-15 present**
 
 Run: `ls src/components/ui/ src/components/staff/StaffShell.tsx src/components/admin/OrgShell.tsx src/components/event/EventShell.tsx src/components/auth/AuthCard.tsx`
 Expected: primitives `Button/Input/Select/Modal/Table/Pagination/StatusBadge` + les 3 shells + AuthCard presents. Si absent : STOP (le socle v2-15 est prerequis).
@@ -105,7 +107,7 @@ v2-15 n'expose **pas** de composant `Icon` : le registre (~10 icones) est intern
   - `Icon({ name, size? }: { name: IconName; size?: number }): JSX.Element` — rend l'icone lucide correspondante avec `strokeWidth={1.5}` et `currentColor`. Si `name` absent du registre : rend `null` (jamais de crash) — a signaler en dev.
   - `ICON_NAMES: IconName[]` (pour la page styleguide).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render } from "@testing-library/react";
@@ -119,12 +121,12 @@ test("Icon rend un svg pour un nom connu et rien pour un inconnu", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/Icon.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import {
@@ -159,12 +161,12 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
 
 _(Ajouter au registre toute icone reclamee par un ecran des sous-plans mais absente ci-dessus, au moment ou le sous-plan la demande.)_
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Icon.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Recabler SidebarNav sur le registre partage + verifier**
+- [x] **Step 5: Recabler SidebarNav sur le registre partage + verifier**
 
 Modifier `SidebarNav.tsx` pour importer `IconName` depuis `../ui/Icon` (supprimer le `ICONS` local duplique ; conserver `LucideIcon` uniquement si encore utilise). `make typecheck && yarn vitest run src/components/admin`.
 Expected: OK, aucun shell casse (les 3 shells passent toujours des noms string valides).

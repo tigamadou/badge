@@ -2,37 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  Settings,
-  ScrollText,
-  Calendar,
-  Tags,
-  UserCheck,
-  IdCard,
-  ScanLine,
-  type LucideIcon,
-} from "lucide-react";
+import { Icon, type IconName } from "../ui/Icon";
 
-// Registre interne : les Server Components (shells) ne peuvent pas passer une
-// fonction (composant icone) a travers la frontiere client. Ils passent donc
-// un NOM serialisable, resolu ici cote client.
-const ICONS: Record<string, LucideIcon> = {
-  "layout-dashboard": LayoutDashboard,
-  "building-2": Building2,
-  users: Users,
-  settings: Settings,
-  "scroll-text": ScrollText,
-  calendar: Calendar,
-  tags: Tags,
-  "user-check": UserCheck,
-  "id-card": IdCard,
-  "scan-line": ScanLine,
-};
-
-export type IconName = keyof typeof ICONS;
+export type { IconName };
 
 export type NavLink = {
   href: string;
@@ -64,7 +36,6 @@ export function SidebarNav({ items }: { items: NavEntry[] }) {
           );
         }
         const active = isActive(pathname, item);
-        const Icon = ICONS[item.icon];
         return (
           <Link
             key={item.href}
@@ -76,7 +47,7 @@ export function SidebarNav({ items }: { items: NavEntry[] }) {
                 : "border-transparent text-slate-300 hover:bg-white/10 hover:text-white"
             }`}
           >
-            {Icon ? <Icon size={18} strokeWidth={1.5} className="shrink-0" /> : null}
+            <Icon name={item.icon} size={18} className="shrink-0" />
             {item.label}
           </Link>
         );
