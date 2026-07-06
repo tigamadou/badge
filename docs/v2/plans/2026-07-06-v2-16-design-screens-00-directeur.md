@@ -41,7 +41,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 17 | [x] | 2026-07-06 | `ScannerFrame`/`ScanResult` (`src/components/event/ScannerFrame.tsx`). Test rendu OK, typecheck OK. Recablage `QRScanner` -> reporte au sous-plan 04 (verif camera navigateur). |
 | 18 | [x] | 2026-07-06 | `OrgLogo`/`PickCard`/`PickCardDashed` (`src/components/ui/PickCard.tsx`). Test rendu OK, typecheck OK. |
 | 19 | [x] | 2026-07-06 | `VerifyBanner`/`PhoneMockup` (`src/components/ui/VerifyBanner.tsx`). Test rendu OK, typecheck OK. |
-| 20 | [ ] | | Blocs journal : `LogType`, `KeyValue`, `Diff`, `Payload`. |
+| 20 | [x] | 2026-07-06 | Blocs journal `LogType`/`KeyValue`/`Diff`/`Payload` (`src/components/ui/JournalBlocks.tsx`). Test rendu OK, typecheck OK. |
 | 21 | [ ] | | Page `/styleguide` (dev-only) + verification directeur. |
 
 ---
@@ -1949,7 +1949,7 @@ Composants de la vue detail de journal. Reference : `.log-type` (318-326), `.kv`
   - `Diff({ oldValue, newValue }: { oldValue: ReactNode; newValue: ReactNode }): JSX.Element`
   - `Payload({ json }: { json: string }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1967,12 +1967,12 @@ test("blocs journal rendent leur contenu", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/JournalBlocks.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -2034,12 +2034,12 @@ export function Payload({ json }: { json: string }) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/JournalBlocks.test.tsx`
 Expected: PASS. _(Note : le fond `modification` utilise `indigo-500/10` uniquement comme couleur de categorie de log, pas comme accent d'action — conforme a la contrainte "accent vert unique".)_
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
