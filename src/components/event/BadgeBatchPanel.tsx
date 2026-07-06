@@ -29,8 +29,6 @@ export function BadgeBatchPanel({
 
   useEffect(() => {
     let cancelled = false;
-    setItems([]);
-    setDone(false);
     (async () => {
       const evtRes = await fetch(`/api/admin/${orgId}/events/${eventId}`);
       if (!evtRes.ok) return;
