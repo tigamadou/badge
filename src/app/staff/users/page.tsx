@@ -2,6 +2,17 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { RoleBadge, Tag } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
+
+function initials(name: string | null): string {
+  return (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 export default async function StaffUsersPage({
   searchParams,
@@ -37,96 +48,113 @@ export default async function StaffUsersPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Utilisateurs</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Utilisateurs</h1>
+          <p className="mt-0.5 text-sm text-slate-400">Comptes staff et clients de la plateforme</p>
+        </div>
         <Link
           href="/staff/users/new"
-          className="rounded bg-green-600 text-white px-3 py-1.5 text-sm hover:bg-green-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
         >
-          Nouvel utilisateur
+          <Icon name="plus" size={16} /> Créer un utilisateur
         </Link>
       </div>
 
-      <form className="flex gap-2 items-end" method="get">
-        <input
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Email ou nom"
-          className="flex-1 rounded border px-3 py-1.5 text-sm"
-        />
+      <form method="get" className="flex flex-wrap items-center gap-2.5">
+        <div className="relative min-w-[200px] flex-1">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <Icon name="search" size={16} />
+          </span>
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Rechercher un utilisateur…"
+            className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400"
+          />
+        </div>
         <select
           name="type"
           defaultValue={type}
-          className="rounded border px-3 py-1.5 text-sm"
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700"
         >
           <option value="all">Tous</option>
           <option value="staff">Staff</option>
           <option value="client">Clients</option>
         </select>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="archived"
-            value="true"
-            defaultChecked={showArchived}
-          />
-          Archives
+        <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-600">
+          <input type="checkbox" name="archived" value="true" defaultChecked={showArchived} className="accent-green-600" />
+          Archivés
         </label>
-        <button type="submit" className="rounded bg-slate-800 text-white px-3 py-1.5 text-sm">
+        <button
+          type="submit"
+          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+        >
           Filtrer
         </button>
       </form>
 
-      <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-slate-50 text-left">
-          <tr>
-            <th className="px-3 py-2">Nom</th>
-            <th className="px-3 py-2">Email</th>
-            <th className="px-3 py-2">Type</th>
-            <th className="px-3 py-2">Organisations</th>
-            <th className="px-3 py-2">Statut</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
-                Aucun utilisateur.
-              </td>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">Nom</th>
+              <th className="px-4 py-3">E-mail</th>
+              <th className="px-4 py-3">Type</th>
+              <th className="px-4 py-3">Organisations</th>
+              <th className="px-4 py-3" />
             </tr>
-          )}
-          {users.map((u) => (
-            <tr key={u.id} className="border-t">
-              <td className="px-3 py-2">
-                <Link
-                  href={`/staff/users/${u.id}`}
-                  className="text-green-600 hover:underline"
-                >
-                  {u.name}
-                </Link>
-              </td>
-              <td className="px-3 py-2">{u.email}</td>
-              <td className="px-3 py-2">
-                {u.isStaff ? (
-                  <span className="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    {u.staffRole}
-                  </span>
-                ) : (
-                  <span className="text-slate-500 text-xs">Client</span>
-                )}
-              </td>
-              <td className="px-3 py-2">{u._count.orgMemberships}</td>
-              <td className="px-3 py-2">
-                {u.archived ? (
-                  <span className="text-amber-700 text-xs">Archive</span>
-                ) : (
-                  <span className="text-emerald-700 text-xs">Actif</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
+                  Aucun utilisateur.
+                </td>
+              </tr>
+            )}
+            {users.map((u) => (
+              <tr
+                key={u.id}
+                className={`border-t border-slate-100 hover:bg-slate-50 ${u.archived ? "opacity-60" : ""}`}
+              >
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+                      {initials(u.name)}
+                    </span>
+                    <Link
+                      href={`/staff/users/${u.id}`}
+                      className="text-sm font-medium text-slate-900 hover:text-green-600"
+                    >
+                      {u.name}
+                    </Link>
+                    {u.archived && <Tag icon="archive">Archivé</Tag>}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-[13px] text-slate-500">{u.email}</td>
+                <td className="px-4 py-3">
+                  {u.isStaff ? (
+                    <RoleBadge tone="navy">{u.staffRole}</RoleBadge>
+                  ) : (
+                    <RoleBadge tone="slate">Client</RoleBadge>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{u._count.orgMemberships}</td>
+                <td className="px-4 py-3 text-right">
+                  <Link
+                    href={`/staff/users/${u.id}`}
+                    aria-label={`Ouvrir ${u.name}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <Icon name="chevron-right" size={16} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

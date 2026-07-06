@@ -25,7 +25,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 2  | [x] | 2026-07-06 | `/staff/organizations` + `OrganizationsTable` reskines (toolbar GET habillee, table rounded-xl, OrgLogo, Tag archivee). where/select/take preserves. typecheck+lint OK. |
 | 3  | [x] | 2026-07-06 | `OrgCreationForm` reskine (Card + FormSection Organisation/OWNER + Input/Alert/Spinner). Sections Adresse/Contact non ajoutees (pas de champs API - hors-scope). submit/payload preserves. typecheck+lint OK. |
 | 4  | [x] | 2026-07-06 | `/staff/organizations/[orgId]` + `OrgDetailActions` reskines (StatGrid/QuotaBar/KeyValue/Card + zone danger rose + Modal de confirmation slug). canDelete/RBAC + API archive/restore/delete preserves. typecheck+lint OK. |
-| 5  | [ ] | | `staff-users.html` -> `/staff/users` (Toolbar + Segmented, Table, Pagination). |
+| 5  | [x] | 2026-07-06 | `/staff/users` reskine (toolbar GET habillee, table rounded-xl, avatars initiales, RoleBadge navy/slate, Tag archive). where/select/take preserves. typecheck+lint OK. |
 | 6  | [ ] | | `staff-user-create.html` -> `/staff/users/new` (RadioCards type, RoleBadge, lier org). |
 | 7  | [ ] | | `staff-user-detail.html` -> `/staff/users/[userId]` (Appartenances, Informations). |
 | 8  | [ ] | | `staff-settings.html` -> `/staff/settings` (SMTP + Test, reCAPTCHA, Branding). |
@@ -433,11 +433,11 @@ Liste des utilisateurs : toolbar (recherche + segmented Tous/Staff/Clients + arc
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire `page.tsx`. **Preserver** `searchParams` (`q`/`type`/`archived`), le `where` Prisma (`isStaff`, `OR` email/name), le `select` avec `_count.orgMemberships`, `take: 100`. On remplace uniquement le balisage.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 Head + toolbar GET, table habillee. `RoleBadge` avec tone selon staff/role :
 
@@ -465,12 +465,12 @@ Head + toolbar GET, table habillee. `RoleBadge` avec tone selon staff/role :
 
 _(Definir `initials()` localement ou reutiliser un helper existant ; ne pas rendre le statut par la couleur seule — garder le libelle `Client`/le `Tag` Archivé.)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/users` en 375/768/1440. Verifier : toolbar, avatars initiales, `RoleBadge` navy pour staff, ligne archivee attenuee. `make test` vert.
 
