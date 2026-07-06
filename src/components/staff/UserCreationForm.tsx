@@ -2,10 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Card, CardBody } from "@/components/ui/Card";
+import { FormSection } from "@/components/ui/FormControls";
+import { RadioCards } from "@/components/ui/RadioCards";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 type OrgLite = { id: string; name: string };
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
+
+const SELECT_CLASS =
+  "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500";
 
 export function UserCreationForm({
   orgs,
@@ -53,153 +63,134 @@ export function UserCreationForm({
       const json = await res.json();
       router.push(`/staff/users/${json.user.id}`);
     } else if (res.status === 409) {
-      setMsg("Email deja utilise.");
+      setMsg("E-mail déjà utilisé.");
     } else {
       const json = await res.json().catch(() => ({}));
-      setMsg(json.error ?? "Erreur a la creation.");
+      setMsg(json.error ?? "Erreur à la création.");
     }
   }
 
+  const typeOptions = [
+    { value: "client", title: "Client", description: "Rattaché à une organisation.", color: "#16a34a" },
+    ...(canCreateStaff
+      ? [{ value: "staff", title: "Staff applicatif", description: "Administration de la plateforme.", color: "#004D74" }]
+      : []),
+  ];
+
   return (
-    <form onSubmit={submit} className="max-w-xl space-y-3 bg-white border rounded p-4">
+    <form onSubmit={submit} className="max-w-2xl space-y-4">
       {msg && (
-        <div className="rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800">
-          {msg}
-        </div>
+        <Alert tone="err">
+          <Icon name="alert-triangle" size={16} /> {msg}
+        </Alert>
       )}
 
-      <Field
-        label="Email"
-        type="email"
-        value={form.email}
-        onChange={(v) => setForm((f) => ({ ...f, email: v }))}
-        required
-      />
-      <Field
-        label="Nom complet"
-        value={form.name}
-        onChange={(v) => setForm((f) => ({ ...f, name: v }))}
-        required
-      />
+      <Card>
+        <div className="px-6">
+          <FormSection title="Compte">
+            <div className="space-y-4">
+              <Input
+                label="Adresse e-mail"
+                type="email"
+                required
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
+              <Input
+                label="Nom complet"
+                required
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+          </FormSection>
 
-      <fieldset className="flex gap-4 text-sm">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            checked={form.type === "client"}
-            onChange={() => setForm((f) => ({ ...f, type: "client" }))}
-          />
-          Client
-        </label>
-        {canCreateStaff && (
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={form.type === "staff"}
-              onChange={() => setForm((f) => ({ ...f, type: "staff" }))}
+          <FormSection title="Type de compte">
+            <RadioCards
+              name="Type de compte"
+              value={form.type}
+              onChange={(v) => setForm((f) => ({ ...f, type: v as "client" | "staff" }))}
+              options={typeOptions}
             />
-            Staff applicatif
-          </label>
-        )}
-      </fieldset>
+          </FormSection>
 
-      {form.type === "staff" && (
-        <label className="block">
-          <span className="text-sm text-slate-600">Role staff</span>
-          <select
-            value={form.staffRole}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, staffRole: e.target.value as StaffRoleStr }))
-            }
-            className="mt-1 w-full rounded border px-3 py-1.5 text-sm"
-          >
-            <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
-            <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>
-            {canCreateTopStaff && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
-            {canCreateTopStaff && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
-          </select>
-        </label>
-      )}
-
-      {form.type === "client" && (
-        <>
-          <label className="block">
-            <span className="text-sm text-slate-600">
-              Lier a une organisation (optionnel)
-            </span>
-            <select
-              value={form.orgId}
-              onChange={(e) => setForm((f) => ({ ...f, orgId: e.target.value }))}
-              className="mt-1 w-full rounded border px-3 py-1.5 text-sm"
-            >
-              <option value="">Aucune</option>
-              {orgs.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {form.orgId && (
-            <label className="block">
-              <span className="text-sm text-slate-600">Role dans l&apos;organisation</span>
-              <select
-                value={form.orgRole}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    orgRole: e.target.value as typeof form.orgRole,
-                  }))
-                }
-                className="mt-1 w-full rounded border px-3 py-1.5 text-sm"
-              >
-                <option value="OWNER">OWNER</option>
-                <option value="MANAGER">MANAGER</option>
-                <option value="AUDITOR">AUDITOR</option>
-              </select>
-            </label>
+          {form.type === "staff" && canCreateStaff && (
+            <FormSection title="Rôle staff">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-slate-700">Rôle</span>
+                <select
+                  value={form.staffRole}
+                  onChange={(e) => setForm((f) => ({ ...f, staffRole: e.target.value as StaffRoleStr }))}
+                  className={SELECT_CLASS}
+                >
+                  <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
+                  <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>
+                  {canCreateTopStaff && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
+                  {canCreateTopStaff && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
+                </select>
+              </label>
+            </FormSection>
           )}
-        </>
-      )}
 
-      <p className="text-xs text-slate-500">
-        L&apos;utilisateur recevra un email avec un lien setup-password valable 24h.
-      </p>
+          {form.type === "client" && (
+            <FormSection title="Lier à une organisation (optionnel)">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">Organisation</span>
+                  <select
+                    value={form.orgId}
+                    onChange={(e) => setForm((f) => ({ ...f, orgId: e.target.value }))}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="">Aucune</option>
+                    {orgs.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {form.orgId && (
+                  <label className="block">
+                    <span className="mb-1 block text-sm font-medium text-slate-700">Rôle dans l&apos;organisation</span>
+                    <select
+                      value={form.orgRole}
+                      onChange={(e) => setForm((f) => ({ ...f, orgRole: e.target.value as typeof form.orgRole }))}
+                      className={SELECT_CLASS}
+                    >
+                      <option value="OWNER">OWNER</option>
+                      <option value="MANAGER">MANAGER</option>
+                      <option value="AUDITOR">AUDITOR</option>
+                    </select>
+                  </label>
+                )}
+              </div>
+            </FormSection>
+          )}
+        </div>
+        <CardBody className="border-t border-slate-100 text-[13px] text-slate-400">
+          L&apos;utilisateur recevra un e-mail avec un lien setup-password valable 24 h.
+        </CardBody>
+      </Card>
 
-      <button
-        type="submit"
-        disabled={busy || !form.email.trim() || !form.name.trim()}
-        className="rounded bg-green-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
-      >
-        {busy ? "Creation..." : "Creer l'utilisateur"}
-      </button>
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="secondary" onClick={() => router.push("/staff/users")}>
+          Annuler
+        </Button>
+        <Button
+          type="submit"
+          className="flex items-center justify-center gap-2"
+          disabled={busy || !form.email.trim() || !form.name.trim()}
+        >
+          {busy ? (
+            <>
+              <Spinner size={16} /> Création…
+            </>
+          ) : (
+            "Créer et inviter"
+          )}
+        </Button>
+      </div>
     </form>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm text-slate-600">{label}</span>
-      <input
-        type={type}
-        value={value}
-        required={required}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded border px-3 py-1.5 text-sm"
-      />
-    </label>
   );
 }

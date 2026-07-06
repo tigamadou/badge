@@ -26,7 +26,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 3  | [x] | 2026-07-06 | `OrgCreationForm` reskine (Card + FormSection Organisation/OWNER + Input/Alert/Spinner). Sections Adresse/Contact non ajoutees (pas de champs API - hors-scope). submit/payload preserves. typecheck+lint OK. |
 | 4  | [x] | 2026-07-06 | `/staff/organizations/[orgId]` + `OrgDetailActions` reskines (StatGrid/QuotaBar/KeyValue/Card + zone danger rose + Modal de confirmation slug). canDelete/RBAC + API archive/restore/delete preserves. typecheck+lint OK. |
 | 5  | [x] | 2026-07-06 | `/staff/users` reskine (toolbar GET habillee, table rounded-xl, avatars initiales, RoleBadge navy/slate, Tag archive). where/select/take preserves. typecheck+lint OK. |
-| 6  | [ ] | | `staff-user-create.html` -> `/staff/users/new` (RadioCards type, RoleBadge, lier org). |
+| 6  | [x] | 2026-07-06 | `UserCreationForm` reskine (Card + FormSection + RadioCards type + selects habilles + Alert/Spinner). Gardes canCreateStaff/canCreateTopStaff + submit preserves. typecheck+lint OK. |
 | 7  | [ ] | | `staff-user-detail.html` -> `/staff/users/[userId]` (Appartenances, Informations). |
 | 8  | [ ] | | `staff-settings.html` -> `/staff/settings` (SMTP + Test, reCAPTCHA, Branding). |
 | 9  | [ ] | | `staff-badge-template.html` -> `/staff/settings/badge` (galerie BadgeCard). |
@@ -492,11 +492,11 @@ Creation d'utilisateur : Compte (email + nom), Type de compte (RadioCards Staff/
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire `page.tsx` (gardes `canCreateStaff`/`canCreateTopStaff`, requete `orgs`) et `UserCreationForm.tsx` (client). **Preserver** l'ensemble : state des champs, submit POST, props `orgs`/`canCreateStaff`/`canCreateTopStaff`, la logique conditionnelle qui masque le role staff aux non-autorises et restreint SUPER_ADMIN a `canCreateTopStaff`. Le port habille sans changer ces regles.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 Type de compte en `RadioCards` (client, relie au state `isStaff`), section role staff conditionnee comme aujourd'hui :
 
@@ -551,12 +551,12 @@ Type de compte en `RadioCards` (client, relie au state `isStaff`), section role 
 
 _(Aligner exactement les noms de champs et options sur le `FormState`/l'API reels de `UserCreationForm.tsx` — l'extrait ci-dessus illustre la structure, pas les identifiants definitifs.)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/users/new` en 375/768/1440, connecte en STAFF_ADMIN puis SUPER_ADMIN. Verifier : RadioCards a 2 colonnes (selection verte), section role staff qui apparait/disparait selon le type, option SUPER_ADMIN visible seulement pour `canCreateTopStaff`. Soumettre golden path (creation + invitation). `make test` vert.
 
