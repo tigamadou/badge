@@ -30,7 +30,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 5  | [x] | 2026-07-06 | Vue agregee VIEWER reskine (StatGrid 3 + Card repartition CatPill + total). Queries/role/notFound preserves, non nominatif. typecheck+lint OK. |
 | 6  | [x] | 2026-07-06 | `BadgeListTable` reskine (filtre habille, BatchBar + Checkbox, table CatPill/Tag). Selection/batchPrint/openBatchPdf/load preserves. typecheck+lint OK. |
 | 7  | [x] | 2026-07-06 | `BadgeBatchPanel` reskine (Card progression Spinner+ProgressBar + grille MiniBadge incrementale, puis PDFViewer). Fetches/QR/BadgeBatchExportV2 preserves. typecheck+lint OK. |
-| 8  | [ ] | | Apercu badge (`badges/[badgeId]/page.tsx`) — BadgeCard + panneaux Actions/Informations. |
+| 8  | [x] | 2026-07-06 | Apercu badge event reskine (BadgeCard HTML + panneaux Informations KeyValue / Actions). BadgeDownloadV2 PDF conserve. Identite masquee si anonyme. Query/notFound preserves. typecheck+lint OK. |
 | 9  | [ ] | | Template badge event (`settings/badge/page.tsx`) — Switch heritage + galerie tpl + BadgeCard. |
 | 10 | [ ] | | Categories (`categories/page.tsx`) — Table + CatDot + Switch + Modal edition. |
 | 11 | [ ] | | **Fusion blocklists** en onglets (`blocked-emails` hote + Tabs Emails/Documents). |
@@ -374,11 +374,11 @@ Apercu d'un badge unique : `BadgeCard` (100x140 mm) + panneaux Actions (Imprimer
 **Composants:** `BadgeCard`, `Card`/`CardHead`/`CardBody`, `Switch`, `KeyValue`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** la page : chargement du badge (snapshot, categorie, QR, org logo), actions d'impression/telechargement. **Reconcilier les doublons badge V1/V2** en utilisant le `BadgeCard` canonique du directeur (Task 16).
-- [ ] **Step 2: Reconstruire le JSX** : `grid-2col` avec `BadgeCard` (props = snapshot + categorie + QR + logo org) a gauche, et a droite un `stack` de Card "Actions" (Switch d'un reglage existant, boutons Imprimer/Telecharger cables) + Card "Informations" (`KeyValue`).
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-badge-preview.html` sur 375/768/1440. Verifier : BadgeCard aux bonnes proportions (Montserrat `font-badge`), QR net, panneaux Actions/Informations. Empilement mobile.
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 1: Lire et preserver** la page : chargement du badge (snapshot, categorie, QR, org logo), actions d'impression/telechargement. **Reconcilier les doublons badge V1/V2** en utilisant le `BadgeCard` canonique du directeur (Task 16).
+- [x] **Step 2: Reconstruire le JSX** : `grid-2col` avec `BadgeCard` (props = snapshot + categorie + QR + logo org) a gauche, et a droite un `stack` de Card "Actions" (Switch d'un reglage existant, boutons Imprimer/Telecharger cables) + Card "Informations" (`KeyValue`).
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-badge-preview.html` sur 375/768/1440. Verifier : BadgeCard aux bonnes proportions (Montserrat `font-badge`), QR net, panneaux Actions/Informations. Empilement mobile.
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** apercu fidele (BadgeCard canonique + Actions + Informations) ; impression/telechargement preserves ; typecheck + tests verts.
 
