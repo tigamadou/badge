@@ -5,6 +5,13 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { QuotaBar } from "@/components/ui/QuotaBar";
+import { KeyValue } from "@/components/ui/JournalBlocks";
+import { OrgLogo } from "@/components/ui/PickCard";
+import { Tag } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
 import { OrgDetailActions } from "./OrgDetailActions";
 
 export default async function OrgDetailPage({
@@ -65,154 +72,122 @@ export default async function OrgDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold">{org.name}</h1>
-          <div className="text-sm text-slate-500 font-mono">/{org.slug}</div>
-          {org.archived && (
-            <div className="mt-1 text-sm text-amber-700">
-              Archivee le{" "}
-              {org.archivedAt &&
-                new Date(org.archivedAt).toLocaleDateString("fr-FR")}
-            </div>
-          )}
+      <Link
+        href="/staff/organizations"
+        className="inline-flex items-center gap-1 text-[13px] text-slate-400 hover:text-slate-600"
+      >
+        <Icon name="arrow-left" size={13} /> Organisations
+      </Link>
+
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <OrgLogo name={org.name} size={48} />
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">{org.name}</h1>
+            <p className="mt-0.5 font-mono text-[13px] text-slate-400">
+              {org.slug} · {org._count.events} événement(s)
+            </p>
+            {org.archived && (
+              <div className="mt-1.5">
+                <Tag icon="archive">
+                  Archivée{org.archivedAt ? ` le ${new Date(org.archivedAt).toLocaleDateString("fr-FR")}` : ""}
+                </Tag>
+              </div>
+            )}
+          </div>
         </div>
         {/* ADR 2026-06-01 (v2-14 Task 5) : acces direct a l'espace org en mode staff. */}
         <Link
           href={`/admin/${org.id}`}
-          className="rounded bg-green-600 text-white px-4 py-2 text-sm hover:bg-green-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
         >
-          Entrer dans l&apos;organisation →
+          <Icon name="external-link" size={16} /> Entrer dans l&apos;organisation
         </Link>
       </div>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card
-          label="Events"
-          value={fmtQuota(org.quotaMaxEvents, org._count.events)}
-        />
-        <Card label="OWNERs" value={String(org._count.memberships)} />
-        <Card
+      <StatGrid cols={3}>
+        <StatCard label="Événements" value={org._count.events} icon="calendar" />
+        <StatCard label="OWNERs" value={org._count.memberships} icon="users" />
+        <StatCard
           label="Stockage max"
-          value={
-            org.quotaMaxStorageMB ? `${org.quotaMaxStorageMB} Mo` : "Illimite"
-          }
+          value={org.quotaMaxStorageMB ? `${org.quotaMaxStorageMB} Mo` : "Illimité"}
+          icon="hard-drive"
         />
-      </section>
+      </StatGrid>
 
-      <section className="bg-white border rounded p-4 space-y-2">
-        <h2 className="text-lg font-semibold">Informations administratives</h2>
-        <Row label="Raison sociale" value={org.legalName} />
-        <Row label="Adresse" value={formatAddress(org)} />
-        <Row label="Identifiant fiscal" value={org.taxId} />
-        <Row label="Site web" value={org.website} />
-        <Row label="Contact email" value={org.contactEmail} />
-        <Row label="Contact telephone" value={org.contactPhone} />
-      </section>
+      <Card>
+        <CardHead title="Quotas" />
+        <CardBody>
+          <QuotaBar
+            label="Événements"
+            valueText={`${org._count.events} / ${org.quotaMaxEvents ?? "∞"}`}
+            pct={org.quotaMaxEvents ? Math.round((org._count.events / org.quotaMaxEvents) * 100) : 0}
+          />
+          <KeyValue
+            items={[
+              { label: "Quota inscriptions", value: org.quotaMaxRegistrations?.toString() ?? "Illimité" },
+              { label: "Quota stockage", value: org.quotaMaxStorageMB ? `${org.quotaMaxStorageMB} Mo` : "Illimité" },
+            ]}
+          />
+        </CardBody>
+      </Card>
 
-      <section className="bg-white border rounded p-4 space-y-2">
-        <h2 className="text-lg font-semibold">Quotas</h2>
-        <Row
-          label="Quota max events"
-          value={org.quotaMaxEvents?.toString() ?? "Illimite"}
-        />
-        <Row
-          label="Quota max inscriptions"
-          value={org.quotaMaxRegistrations?.toString() ?? "Illimite"}
-        />
-        <Row
-          label="Quota max stockage (Mo)"
-          value={org.quotaMaxStorageMB?.toString() ?? "Illimite"}
-        />
-      </section>
+      <Card>
+        <CardHead title="Informations administratives" />
+        <CardBody>
+          <KeyValue
+            items={[
+              { label: "Raison sociale", value: org.legalName ?? "—" },
+              { label: "Adresse", value: formatAddress(org) ?? "—" },
+              { label: "Identifiant fiscal", value: org.taxId ?? "—" },
+              { label: "Site web", value: org.website ?? "—" },
+              { label: "Contact e-mail", value: org.contactEmail ?? "—" },
+              { label: "Contact téléphone", value: org.contactPhone ?? "—" },
+            ]}
+          />
+        </CardBody>
+      </Card>
 
-      <section>
-        <h2 className="text-lg font-semibold mb-2">OWNERs</h2>
-        <ul className="bg-white border rounded divide-y">
-          {org.memberships.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">
-              Aucun OWNER associe.
-            </li>
+      <Card>
+        <CardHead title="OWNERs" />
+        <CardBody className="divide-y divide-slate-100 !py-0">
+          {org.memberships.length === 0 ? (
+            <p className="py-4 text-sm text-slate-400">Aucun OWNER associé.</p>
+          ) : (
+            org.memberships.map((m) => (
+              <div key={m.user.id} className="flex items-center justify-between py-3 text-sm">
+                <span className="text-slate-900">{m.user.name}</span>
+                <span className="text-slate-400">{m.user.email}</span>
+              </div>
+            ))
           )}
-          {org.memberships.map((m) => (
-            <li
-              key={m.user.id}
-              className="px-4 py-3 text-sm flex justify-between"
-            >
-              <span>{m.user.name}</span>
-              <span className="text-slate-500">{m.user.email}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+        </CardBody>
+      </Card>
 
-      <section>
-        <h2 className="text-lg font-semibold mb-2">
-          Derniers evenements ({org._count.events})
-        </h2>
-        <ul className="bg-white border rounded divide-y">
-          {org.events.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">
-              Aucun evenement.
-            </li>
+      <Card>
+        <CardHead title={`Derniers événements (${org._count.events})`} />
+        <CardBody className="divide-y divide-slate-100 !py-0">
+          {org.events.length === 0 ? (
+            <p className="py-4 text-sm text-slate-400">Aucun événement.</p>
+          ) : (
+            org.events.map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                <span className="flex items-center gap-2 text-slate-900">
+                  {e.title}
+                  {e.archived && <Tag icon="archive">archivé</Tag>}
+                </span>
+                <span className="text-xs tabular-nums text-slate-400">
+                  {new Date(e.date).toLocaleDateString("fr-FR")} · {e._count.registrations} inscriptions
+                </span>
+              </div>
+            ))
           )}
-          {org.events.map((e) => (
-            <li key={e.id} className="px-4 py-3 text-sm flex justify-between">
-              <span>
-                {e.title}
-                {e.archived && (
-                  <span className="ml-2 text-amber-700">(archive)</span>
-                )}
-              </span>
-              <span className="text-slate-500 text-xs">
-                {new Date(e.date).toLocaleDateString("fr-FR")} —{" "}
-                {e._count.registrations} inscriptions
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+        </CardBody>
+      </Card>
 
-      <OrgDetailActions
-        org={{ id: org.id, slug: org.slug, archived: org.archived }}
-        canDelete={canDelete}
-      />
-
-      <div>
-        <Link
-          href="/staff/organizations"
-          className="text-sm text-green-600 hover:underline"
-        >
-          Retour a la liste
-        </Link>
-      </div>
+      <OrgDetailActions org={{ id: org.id, slug: org.slug, archived: org.archived }} canDelete={canDelete} />
     </div>
   );
-}
-
-function Card({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded border bg-white p-4">
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="text-xl font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="grid grid-cols-3 text-sm">
-      <div className="text-slate-500">{label}</div>
-      <div className="col-span-2">
-        {value ?? <span className="text-slate-400">—</span>}
-      </div>
-    </div>
-  );
-}
-
-function fmtQuota(max: number | null, used: number): string {
-  if (max == null) return `${used} / illimite`;
-  return `${used} / ${max}`;
 }
 
 function formatAddress(org: {

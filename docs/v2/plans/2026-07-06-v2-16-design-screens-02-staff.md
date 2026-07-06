@@ -24,7 +24,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 1  | [x] | 2026-07-06 | `/staff` reskine (StatGrid + Card top-orgs + Timeline). Icone `archive` ajoutee. Promise.all/topOrgs preserves. typecheck+lint OK. |
 | 2  | [x] | 2026-07-06 | `/staff/organizations` + `OrganizationsTable` reskines (toolbar GET habillee, table rounded-xl, OrgLogo, Tag archivee). where/select/take preserves. typecheck+lint OK. |
 | 3  | [x] | 2026-07-06 | `OrgCreationForm` reskine (Card + FormSection Organisation/OWNER + Input/Alert/Spinner). Sections Adresse/Contact non ajoutees (pas de champs API - hors-scope). submit/payload preserves. typecheck+lint OK. |
-| 4  | [ ] | | `staff-org-detail.html` -> `/staff/organizations/[orgId]` (Tabs, Quotas, danger + Modal). |
+| 4  | [x] | 2026-07-06 | `/staff/organizations/[orgId]` + `OrgDetailActions` reskines (StatGrid/QuotaBar/KeyValue/Card + zone danger rose + Modal de confirmation slug). canDelete/RBAC + API archive/restore/delete preserves. typecheck+lint OK. |
 | 5  | [ ] | | `staff-users.html` -> `/staff/users` (Toolbar + Segmented, Table, Pagination). |
 | 6  | [ ] | | `staff-user-create.html` -> `/staff/users/new` (RadioCards type, RoleBadge, lier org). |
 | 7  | [ ] | | `staff-user-detail.html` -> `/staff/users/[userId]` (Appartenances, Informations). |
@@ -349,11 +349,11 @@ Detail organisation : en-tete (logo + nom + slug mono), CTA « Entrer dans l'org
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire la `page.tsx` : **preserver** la garde session (`getServerSession` + `loadUserContext`), `canDelete = ctx?.staffRole === "SUPER_ADMIN"`, la requete `findUnique` complete (adresses, taxId, quotas, memberships OWNER, events, `_count`), `notFound()`, et le composant client `OrgDetailActions` avec ses props `{ org, canDelete }`. Les helpers locaux `Card`/`Row`/`fmtQuota`/`formatAddress` sont remplaces (Card -> composant transverse ; Row -> `KeyValue`). **Conserver** `formatAddress` (pure) pour composer une valeur `KeyValue`.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 En-tete + stats + quotas ; la maquette utilise des onglets, mais la page reelle affiche tout en sections empilees — on peut soit garder l'empilement habille, soit introduire `Tabs` (client) autour de blocs statiques. **Recommandation** : garder l'empilement (pas d'etat a introduire) et habiller chaque bloc en `Card`, fidele au contenu de la maquette panneau par panneau. Quotas via `QuotaBar` (pct = used/max) :
 
@@ -408,11 +408,11 @@ En-tete + stats + quotas ; la maquette utilise des onglets, mais la page reelle 
 </div>
 ```
 
-- [ ] **Step 3: Habiller `OrgDetailActions` (zone de danger + Modal)**
+- [x] **Step 3: Habiller `OrgDetailActions` (zone de danger + Modal)**
 
 Relire `OrgDetailActions.tsx`. **Preserver** les appels API (archive/restore/delete) et la garde `canDelete`. Habiller la zone de danger en `Card` bordure `rose-200`, titre `rose-700`, champ de confirmation de slug + `Button variant="danger"`. La confirmation de suppression definitive passe par la primitive `Modal` (overlay flou + `shadow-xl`). `make typecheck`.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/organizations/[orgId]` en 375/768/1440 avec un org du seed. Verifier : en-tete logo/CTA, statcards, `QuotaBar` avec seuils de couleur, `KeyValue` a 2 colonnes, zone de danger rose, `Modal` de suppression (SUPER_ADMIN uniquement — verifier que le bouton reste absent pour un role inferieur). `make test` vert.
 

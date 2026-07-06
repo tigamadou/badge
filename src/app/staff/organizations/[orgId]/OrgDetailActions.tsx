@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 export function OrgDetailActions({
   org,
@@ -13,43 +19,38 @@ export function OrgDetailActions({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmSlug, setConfirmSlug] = useState("");
 
   async function archive() {
     setBusy(true);
     setMsg(null);
-    const res = await fetch(`/api/staff/organizations/${org.id}/archive`, {
-      method: "POST",
-    });
+    const res = await fetch(`/api/staff/organizations/${org.id}/archive`, { method: "POST" });
     setBusy(false);
     if (res.ok) {
-      setMsg("Organisation archivee.");
+      setMsg("Organisation archivée.");
       router.refresh();
     } else {
-      setMsg("Echec de l'archivage.");
+      setMsg("Échec de l'archivage.");
     }
   }
 
   async function restore() {
     setBusy(true);
     setMsg(null);
-    const res = await fetch(`/api/staff/organizations/${org.id}/restore`, {
-      method: "POST",
-    });
+    const res = await fetch(`/api/staff/organizations/${org.id}/restore`, { method: "POST" });
     setBusy(false);
     if (res.ok) {
-      setMsg("Organisation restauree.");
+      setMsg("Organisation restaurée.");
       router.refresh();
     } else {
-      setMsg("Echec de la restauration.");
+      setMsg("Échec de la restauration.");
     }
   }
 
   async function destroy() {
-    const typed = window.prompt(
-      `Suppression definitive. Pour confirmer, tapez le slug "${org.slug}".`,
-    );
-    if (typed !== org.slug) {
-      setMsg("Confirmation invalide.");
+    if (confirmSlug !== org.slug) {
+      setMsg("Confirmation invalide : saisissez le slug exact.");
       return;
     }
     setBusy(true);
@@ -66,52 +67,63 @@ export function OrgDetailActions({
     if (res.ok) {
       router.push("/staff/organizations");
     } else {
-      setMsg("Echec de la suppression.");
+      setConfirmOpen(false);
+      setMsg("Échec de la suppression.");
     }
   }
 
   return (
-    <section className="border-t pt-4">
-      <h2 className="text-lg font-semibold mb-2">Zone de risque</h2>
-      {msg && (
-        <div className="mb-2 rounded bg-blue-50 border border-blue-200 px-3 py-2 text-sm">
-          {msg}
+    <Card className="border-rose-200">
+      <CardHead title="Zone de danger" />
+      <CardBody className="space-y-4">
+        {msg && <Alert tone="info">{msg}</Alert>}
+        <div className="flex flex-wrap gap-3">
+          {!org.archived ? (
+            <Button variant="secondary" onClick={archive} disabled={busy}>
+              Archiver
+            </Button>
+          ) : (
+            <Button variant="secondary" onClick={restore} disabled={busy}>
+              Restaurer
+            </Button>
+          )}
+          {canDelete && (
+            <Button variant="danger" onClick={() => setConfirmOpen(true)} disabled={busy}>
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="trash-2" size={16} /> Supprimer définitivement
+              </span>
+            </Button>
+          )}
         </div>
-      )}
-      <div className="flex gap-2">
-        {!org.archived && (
-          <button
-            onClick={archive}
-            disabled={busy}
-            className="rounded border border-amber-400 text-amber-700 px-3 py-1.5 text-sm hover:bg-amber-50 disabled:opacity-50"
-          >
-            Archiver
-          </button>
+        {!canDelete && (
+          <p className="text-xs text-slate-400">La suppression définitive est réservée aux SUPER_ADMIN.</p>
         )}
-        {org.archived && (
-          <button
-            onClick={restore}
-            disabled={busy}
-            className="rounded border border-emerald-500 text-emerald-700 px-3 py-1.5 text-sm hover:bg-emerald-50 disabled:opacity-50"
-          >
-            Restaurer
-          </button>
-        )}
-        {canDelete && (
-          <button
-            onClick={destroy}
-            disabled={busy}
-            className="rounded border border-red-500 text-red-700 px-3 py-1.5 text-sm hover:bg-red-50 disabled:opacity-50"
-          >
-            Supprimer definitivement
-          </button>
-        )}
-      </div>
-      {!canDelete && (
-        <p className="mt-2 text-xs text-slate-500">
-          La suppression definitive est reservee aux SUPER_ADMIN.
-        </p>
-      )}
-    </section>
+      </CardBody>
+
+      <Modal
+        open={confirmOpen}
+        title="Supprimer définitivement l'organisation"
+        confirmLabel="Supprimer définitivement"
+        confirmVariant="danger"
+        onCancel={() => {
+          setConfirmOpen(false);
+          setConfirmSlug("");
+        }}
+        onConfirm={destroy}
+      >
+        <div className="space-y-3">
+          <p>
+            Cette action est <b>irréversible</b>. Pour confirmer, saisissez le slug de l&apos;organisation :{" "}
+            <code className="font-mono text-slate-900">{org.slug}</code>
+          </p>
+          <Input
+            label="Slug de confirmation"
+            value={confirmSlug}
+            onChange={(e) => setConfirmSlug(e.target.value)}
+            placeholder={org.slug}
+          />
+        </div>
+      </Modal>
+    </Card>
   );
 }
