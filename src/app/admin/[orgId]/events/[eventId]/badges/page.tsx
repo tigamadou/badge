@@ -7,8 +7,11 @@ export default async function BadgesPage({
 }) {
   const { orgId, eventId } = await params;
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Badges</h1>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Badges</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Générez et imprimez les badges des inscriptions approuvées</p>
+      </div>
       <BadgeListTable orgId={orgId} eventId={eventId} />
     </div>
   );

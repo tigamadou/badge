@@ -28,7 +28,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 3  | [x] | 2026-07-06 | Detail inscription reskine : `RegistrationDetailPanel` (Card/KeyValue/CatPill/StatusBadge/Alert/FileBox), `RegistrationActions` (boutons + modal DS), `RegistrationHistory` (Timeline), page back-link. Tous handlers/server actions preserves. typecheck+lint OK. |
 | 4  | [x] | 2026-07-06 | `RegistrationForm` reskine (Card + FormSection Identite/Categorie RadioCards/Piece + Alert/Spinner). Categories sans couleur (select expose id/name/number). State/submit/validation preserves. typecheck+lint OK. |
 | 5  | [x] | 2026-07-06 | Vue agregee VIEWER reskine (StatGrid 3 + Card repartition CatPill + total). Queries/role/notFound preserves, non nominatif. typecheck+lint OK. |
-| 6  | [ ] | | Liste badges (`badges/page.tsx`) — Toolbar + Table + Checkbox. |
+| 6  | [x] | 2026-07-06 | `BadgeListTable` reskine (filtre habille, BatchBar + Checkbox, table CatPill/Tag). Selection/batchPrint/openBatchPdf/load preserves. typecheck+lint OK. |
 | 7  | [ ] | | Impression batch (`badges/print/page.tsx`) — Spinner + ProgressBar + grille MiniBadge. |
 | 8  | [ ] | | Apercu badge (`badges/[badgeId]/page.tsx`) — BadgeCard + panneaux Actions/Informations. |
 | 9  | [ ] | | Template badge event (`settings/badge/page.tsx`) — Switch heritage + galerie tpl + BadgeCard. |
@@ -304,11 +304,11 @@ Table des badges avec toolbar (recherche + ChipFilter Categorie/Impression), Che
 **Composants:** `Toolbar`/`SearchInput`/`ChipFilter`, `Checkbox`, `CatPill`, `StatusBadge`, `Table`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `BadgeListTable.tsx` : filtres, selection, lien vers `badges/print`. Ne rien changer aux handlers.
-- [ ] **Step 2: Reconstruire le JSX** : `page-head` avec boutons Exporter/Imprimer, `Toolbar` + `SearchInput` + `ChipFilter` (Categorie, Statut d'impression), `Table` avec `Checkbox` de ligne, `CatPill`, `StatusBadge`, colonne "imprime". Le bouton Imprimer pointe vers `badges/print`.
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-badges.html` sur 375/768/1440. Verifier : toolbar, table, selection, lien impression. Etat vide (EmptyState).
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 1: Lire et preserver** `BadgeListTable.tsx` : filtres, selection, lien vers `badges/print`. Ne rien changer aux handlers.
+- [x] **Step 2: Reconstruire le JSX** : `page-head` avec boutons Exporter/Imprimer, `Toolbar` + `SearchInput` + `ChipFilter` (Categorie, Statut d'impression), `Table` avec `Checkbox` de ligne, `CatPill`, `StatusBadge`, colonne "imprime". Le bouton Imprimer pointe vers `badges/print`.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-badges.html` sur 375/768/1440. Verifier : toolbar, table, selection, lien impression. Etat vide (EmptyState).
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** liste badges fidele ; selection + lien impression intacts ; typecheck + tests verts.
 
