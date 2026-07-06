@@ -24,7 +24,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 0.5| [x] | 2026-07-06 | `Icon` partage (`src/components/ui/Icon.tsx`, 41 icones) + recablage `SidebarNav` (registre centralise). Test rendu node OK, typecheck OK. |
 | 1  | [x] | 2026-07-06 | `Card`/`CardHead`/`CardBody` (`src/components/ui/Card.tsx`). Test rendu OK, typecheck OK. |
 | 2  | [x] | 2026-07-06 | `StatCard`/`StatGrid` (`src/components/ui/StatCard.tsx`). Test rendu OK, typecheck OK. |
-| 3  | [ ] | | `Timeline` + `TimelineItem`. |
+| 3  | [x] | 2026-07-06 | `Timeline`/`TimelineItem` (`src/components/ui/Timeline.tsx`). Test rendu OK, typecheck OK. |
 | 4  | [ ] | | `QuotaBar` + `StorageAlert`. |
 | 5  | [ ] | | `MiniChart`. |
 | 6  | [ ] | | `Alert`, `EmptyState`, `Spinner`, `ProgressBar`, `SuccessRing`. |
@@ -373,7 +373,7 @@ Fil d'activite vertical (rail + dots colores). Reference : `.tl`, `.tl-item`, `.
   - `Timeline({ children }): JSX.Element`
   - `TimelineItem({ tone?, title, meta }: { tone?: "default" | "ok" | "warn" | "danger"; title: ReactNode; meta: ReactNode }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -390,12 +390,12 @@ test("Timeline rend des items avec titre et meta", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/Timeline.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -434,12 +434,12 @@ export function TimelineItem({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Timeline.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
