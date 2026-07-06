@@ -29,7 +29,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 6  | [x] | 2026-07-06 | `UserCreationForm` reskine (Card + FormSection + RadioCards type + selects habilles + Alert/Spinner). Gardes canCreateStaff/canCreateTopStaff + submit preserves. typecheck+lint OK. |
 | 7  | [x] | 2026-07-06 | `/staff/users/[userId]` + `UserDetailActions` reskines (Card/RoleBadge/KeyValue/Timeline + boutons Button/Alert). Gardes RBAC + mutations preservees. typecheck+lint OK. |
 | 8  | [x] | 2026-07-06 | `/staff/settings` + PlatformSettingsForm + TestSmtpForm reskines (Card/FormSection/Input/Switch/Alert). Secrets jamais rendus (*Set booleens), garde canEditSecrets preservee. Branding non ajoute (pas de champs). typecheck+lint OK. |
-| 9  | [ ] | | `staff-badge-template.html` -> `/staff/settings/badge` (galerie BadgeCard). |
+| 9  | [x] | 2026-07-06 | `BadgeTemplatePicker` reskine (galerie rounded-xl, ring vert, Tag/Alert/Button). data-testid/data-selected E2E preserves, cascade/PATCH intacts. typecheck+lint OK. |
 | 10 | [ ] | | `staff-log.html` -> `/staff/activity` (Toolbar, Table LogType, lignes cliquables, Pagination). |
 | 11 | [ ] | | `journal-detail.html` -> **nouvelle route** `/staff/activity/[logId]` (LogType/KeyValue/Diff/Payload). |
 
@@ -713,11 +713,11 @@ Modele de badge plateforme : apercu du template par defaut (galerie de `BadgeCar
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire `page.tsx`. **Preserver** la garde (`staffRoleAtLeast(..., "STAFF_ADMIN")`, redirect), `listTemplates()`, `currentValue`, et le composant `BadgeTemplatePicker` avec ses props (`templates`, `currentValue`, `effectiveId`, `effectiveLevel="platform"`, `patchUrl`, `canClearToInherit={false}`). Le port n'affecte pas la cascade ni le PATCH.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 Head fidele maquette + `BadgeTemplatePicker` habille en galerie `tpl-card` : chaque carte rend un apercu via `BadgeCard` (scale reduit) + nom + `StatusBadge`/`Tag` « Défaut » sur le template actif :
 
@@ -749,12 +749,12 @@ Dans `BadgeTemplatePicker`, chaque vignette (preserver le clic de selection + PA
 
 _(Si `BadgeTemplatePicker` s'appuie deja sur `previewSrc` (images), garder l'image comme apercu et n'ajouter `BadgeCard` que si aucun apercu image n'existe — ne pas casser le rendu PDF ni la selection.)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/settings/badge` en 375/768/1440. Verifier : galerie de cartes, apercu de badge fidele, carte active borde-verte + `StatusBadge` « Défaut », selection qui PATCH sans erreur. `make test` vert.
 
