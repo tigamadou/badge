@@ -34,7 +34,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 10 | [x] | 2026-07-06 | `FormSection`/`Switch`/`Checkbox` (`src/components/ui/FormControls.tsx`, client). Test rendu (2 etats) OK, typecheck OK. |
 | 11 | [x] | 2026-07-06 | `RadioCards` (`src/components/ui/RadioCards.tsx`, client). Test rendu (selection) OK, typecheck OK. |
 | 12 | [x] | 2026-07-06 | `FileBox`/`Dropzone` (`src/components/ui/FileBox.tsx`, client). Test rendu OK, typecheck OK. Recablage `FileUploadField` -> reporte au sous-plan 01 (verif visuelle du flux upload). |
-| 13 | [ ] | | `PasswordMeter`. |
+| 13 | [x] | 2026-07-06 | `PasswordMeter` (`src/components/ui/PasswordMeter.tsx`). Test rendu OK, typecheck OK. |
 | 14 | [ ] | | `Stepper`. |
 | 15 | [ ] | | `Tabs` + `Segmented`. |
 | 16 | [ ] | | `BadgeCard` + `MiniBadge` (reconciliation V1/V2). |
@@ -1340,7 +1340,7 @@ Jauge de robustesse de mot de passe. Reference : `.pw-meter`/`.pw-bar` (112-118)
 **Interfaces:**
 - Produces: `PasswordMeter({ score }: { score: 0 | 1 | 2 | 3 | 4 }): JSX.Element` — 4 barres, couleur croissante rose->amber->green.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1353,12 +1353,12 @@ test("PasswordMeter allume `score` barres", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/PasswordMeter.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 const FILL = ["bg-rose-600", "bg-rose-600", "bg-amber-700", "bg-green-500", "bg-green-600"];
@@ -1375,12 +1375,12 @@ export function PasswordMeter({ score }: { score: 0 | 1 | 2 | 3 | 4 }) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/PasswordMeter.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
