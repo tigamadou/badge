@@ -25,7 +25,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 |------|--------|------|-------|
 | 1  | [x] | 2026-07-06 | Dashboard evenement reskine (StatGrid 4+3, Card 10 dernieres + StatusBadge, alerte quota). Branche OPERATOR habillee. MiniChart omis (pas de serie 30j). Queries/role preserves. typecheck+lint OK. |
 | 2  | [x] | 2026-07-06 | `RegistrationTable` reskine (toolbar habillee, CatPill, StatusBadge ui, table rounded-xl, pager). Handlers/fetch/export preserves. BatchBar non ajoutee (pas de selection/endpoint batch dans la logique). typecheck+lint OK. |
-| 3  | [ ] | | Detail inscription (`registrations/[regId]/page.tsx`) — Cards + FileBox + Timeline + actions. |
+| 3  | [x] | 2026-07-06 | Detail inscription reskine : `RegistrationDetailPanel` (Card/KeyValue/CatPill/StatusBadge/Alert/FileBox), `RegistrationActions` (boutons + modal DS), `RegistrationHistory` (Timeline), page back-link. Tous handlers/server actions preserves. typecheck+lint OK. |
 | 4  | [ ] | | Inscription manuelle (`registrations/new/page.tsx`) — FormSection + RadioCards + Dropzone. |
 | 5  | [ ] | | Vue agregee VIEWER (`registrations/overview/page.tsx`) — StatGrid + repartition non nominative. |
 | 6  | [ ] | | Liste badges (`badges/page.tsx`) — Toolbar + Table + Checkbox. |
@@ -207,8 +207,8 @@ Fiche : bandeau titre + StatusBadge + barre d'actions (Approuver / Rejeter-Bloqu
 **Composants:** `Card`/`CardHead`/`CardBody`, `KeyValue`, `FileBox`, `Timeline`/`TimelineItem`, `StatusBadge`, `Button`, `Tag`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** la page + les 3 composants. Conserver : chargement de l'inscription (snapshots), `RegistrationActions` (server actions approve/reject/block/resend/delete), `RegistrationHistory` (logs). Ne changer aucun appel.
-- [ ] **Step 2: Reconstruire le JSX** : lien retour, `page-head` avec `StatusBadge`, barre d'actions habillee de `Button` (variants primary/danger/ghost + `btn-icon`), `grid-2col` avec Card "Informations" (liste `KeyValue` des champs snapshot + categorie via `CatPill`) et Card "Pièces fournies" (un `FileBox` par document uploade, `thumbUrl` si image, action de telechargement). `Timeline` alimentee par les logs de `RegistrationHistory` (tone `ok`/`warn`/`danger` selon type). Extrait representatif :
+- [x] **Step 1: Lire et preserver** la page + les 3 composants. Conserver : chargement de l'inscription (snapshots), `RegistrationActions` (server actions approve/reject/block/resend/delete), `RegistrationHistory` (logs). Ne changer aucun appel.
+- [x] **Step 2: Reconstruire le JSX** : lien retour, `page-head` avec `StatusBadge`, barre d'actions habillee de `Button` (variants primary/danger/ghost + `btn-icon`), `grid-2col` avec Card "Informations" (liste `KeyValue` des champs snapshot + categorie via `CatPill`) et Card "Pièces fournies" (un `FileBox` par document uploade, `thumbUrl` si image, action de telechargement). `Timeline` alimentee par les logs de `RegistrationHistory` (tone `ok`/`warn`/`danger` selon type). Extrait representatif :
 
 ```tsx
 <Card>
@@ -223,9 +223,9 @@ Fiche : bandeau titre + StatusBadge + barre d'actions (Approuver / Rejeter-Bloqu
 </Card>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-inscription-detail.html` sur 375/768/1440. Verifier : grid-2col empile en mobile, FileBox tronque les noms longs, Timeline avec dots colores, barre d'actions selon statut (Approuver masque si deja approuvee). Etats : sans pieces (message), avec pieces, action en erreur (Alert).
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-inscription-detail.html` sur 375/768/1440. Verifier : grid-2col empile en mobile, FileBox tronque les noms longs, Timeline avec dots colores, barre d'actions selon statut (Approuver masque si deja approuvee). Etats : sans pieces (message), avec pieces, action en erreur (Alert).
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** fiche fidele (actions + Informations + Pieces + Timeline) ; toutes les server actions (approuver/rejeter/bloquer/renvoyer/supprimer) fonctionnelles ; typecheck + tests verts.
 

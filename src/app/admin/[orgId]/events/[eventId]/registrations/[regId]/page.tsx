@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { RegistrationDetailPanel } from "@/components/event/RegistrationDetailPanel";
+import { Icon } from "@/components/ui/Icon";
 
 export default async function RegistrationDetailPage({
   params,
@@ -37,7 +39,13 @@ export default async function RegistrationDetailPage({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="max-w-4xl space-y-6">
+      <Link
+        href={`/admin/${orgId}/events/${eventId}/registrations`}
+        className="inline-flex items-center gap-1 text-[13px] text-slate-400 hover:text-slate-600"
+      >
+        <Icon name="arrow-left" size={13} /> Inscriptions
+      </Link>
       <RegistrationDetailPanel orgId={orgId} eventId={eventId} registration={r} />
     </div>
   );
