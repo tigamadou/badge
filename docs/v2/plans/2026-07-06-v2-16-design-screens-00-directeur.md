@@ -30,7 +30,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 6  | [x] | 2026-07-06 | Feedback (`src/components/ui/Feedback.tsx`) : Alert/EmptyState/Spinner/ProgressBar/SuccessRing. Test rendu OK, typecheck OK. |
 | 7  | [x] | 2026-07-06 | `Toolbar`/`SearchInput`/`ChipFilter` (`src/components/ui/Toolbar.tsx`, client). Test rendu OK, typecheck OK. |
 | 8  | [x] | 2026-07-06 | `BatchBar`/`BatchButton` (`src/components/ui/BatchBar.tsx`). Test rendu OK, typecheck OK. |
-| 9  | [ ] | | `CatPill` / `CatDot`, `RoleBadge`, `Tag`. |
+| 9  | [x] | 2026-07-06 | `CatPill`/`RoleBadge`/`Tag` (`src/components/ui/Labels.tsx`). Test rendu OK, typecheck OK. |
 | 10 | [ ] | | `FormSection`, `Switch`, `Checkbox`. |
 | 11 | [ ] | | `RadioCards`. |
 | 12 | [ ] | | `FileBox` + `Dropzone`. |
@@ -914,7 +914,7 @@ Etiquettes. Reference : `.cat-pill`/`.cat-dot` (154-156), `.role-badge` (27-34),
   - `RoleBadge({ tone?, children }: { tone?: "green" | "navy" | "amber" | "slate"; children: ReactNode }): JSX.Element`
   - `Tag({ icon?, children }: { icon?: IconName; children: ReactNode }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -931,12 +931,12 @@ test("etiquettes rendent leur libelle", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/Labels.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -977,12 +977,12 @@ export function Tag({ icon, children }: { icon?: IconName; children: ReactNode }
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Labels.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
