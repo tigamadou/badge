@@ -22,7 +22,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 |------|--------|------|-------|
 | 0  | [x] | 2026-07-06 | Pre-flight OK : branche `feat/design_implementation`, conteneur `badge-app-1` up, typecheck + lint (0 erreur) baseline verts, socle v2-15 present. |
 | 0.5| [x] | 2026-07-06 | `Icon` partage (`src/components/ui/Icon.tsx`, 41 icones) + recablage `SidebarNav` (registre centralise). Test rendu node OK, typecheck OK. |
-| 1  | [ ] | | `Card` / `CardHead` / `CardBody`. |
+| 1  | [x] | 2026-07-06 | `Card`/`CardHead`/`CardBody` (`src/components/ui/Card.tsx`). Test rendu OK, typecheck OK. |
 | 2  | [ ] | | `StatCard` + `StatGrid` (delta up/down). |
 | 3  | [ ] | | `Timeline` + `TimelineItem`. |
 | 4  | [ ] | | `QuotaBar` + `StorageAlert`. |
@@ -187,7 +187,7 @@ Bloc de contenu blanc, borde, radius-xl, sans ombre. Reference : `.card`, `.card
   - `CardHead({ title, subtitle?, action? }: { title: ReactNode; subtitle?: ReactNode; action?: ReactNode }): JSX.Element`
   - `CardBody({ children, className? }: { children: ReactNode; className?: string }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -207,12 +207,12 @@ test("Card rend un titre, un sous-titre, une action et un corps", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `make test -- src/components/ui/__tests__/Card.test.tsx` (ou `yarn vitest run src/components/ui/__tests__/Card.test.tsx`)
 Expected: FAIL — module `../Card` introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -246,12 +246,12 @@ export function CardBody({ children, className = "" }: { children: ReactNode; cl
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Card.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
