@@ -24,7 +24,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 |------|--------|------|-------|
 | 1 | [x] | 2026-07-06 | `/admin/[orgId]` reskine (StatGrid + Card derniers events + Timeline). Alerte quota conservee (seuil >80). Storage reel non expose -> alerte pilotee par eventsPct/regsPct (inchangee). typecheck+lint OK. |
 | 2 | [x] | 2026-07-06 | `/admin/[orgId]/events` reskine (table rounded-xl, statut non interactif pastilles, lien Configurer). Requete inchangee. Switch inscriptions inline -> non cable (affiche statut), a cabler plus tard. typecheck+lint OK. |
-| 3 | [ ] | | `org-event-create.html` -> `/admin/[orgId]/events/new` (Stepper, Segmented modele/manuel, RadioCards/Table categories). |
+| 3 | [x] | 2026-07-06 | `EventCreationWizard` reskine (Stepper current 0-based + Segmented + Card + Checkbox multi-select + KeyValue recap). Etat/submit/validation/erreurs QUOTA/SLUG preserves. typecheck+lint OK. |
 | 4 | [ ] | | `org-members.html` -> `/admin/[orgId]/members` (form invitation, Table + RoleBadge, dernier OWNER verrouille). |
 | 5 | [ ] | | `org-category-templates.html` -> `/admin/[orgId]/templates` (Table + CatPill/Switch, Modal edition). |
 | 6 | [ ] | | `org-badge-template.html` -> `/admin/[orgId]/settings/badge` (Switch heritage, galerie BadgeCard via BadgeTemplatePicker). |
@@ -300,9 +300,9 @@ Wizard de creation : Stepper 3 etapes (Informations / Categories / Recapitulatif
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `EventCreationWizard.tsx`. **Preserver a l'identique** : `useState` (`step`, `title`, `date`, `location`, `slug`, `slugTouched`, `mode`, `selectedTemplates`, `manualCats`, `submitting`, `err`), `suggestedSlug`, `onTitleChange`, `step1Valid`, `addManualCategory`, `submit()` (endpoint, gestion `QUOTA_EXCEEDED`/`SLUG_TAKEN`, `router.push`). On ne reskine que le rendu.
+- [x] **Step 1: Lire + preserver.** Relire `EventCreationWizard.tsx`. **Preserver a l'identique** : `useState` (`step`, `title`, `date`, `location`, `slug`, `slugTouched`, `mode`, `selectedTemplates`, `manualCats`, `submitting`, `err`), `suggestedSlug`, `onTitleChange`, `step1Valid`, `addManualCategory`, `submit()` (endpoint, gestion `QUOTA_EXCEEDED`/`SLUG_TAKEN`, `router.push`). On ne reskine que le rendu.
 
-- [ ] **Step 2: Reconstruire le JSX.** Remplacer le `<ol>` d'etapes par `Stepper`, les deux `Button` de mode par `Segmented`, et habiller chaque etape dans une `Card card-pad`. Extrait representatif (Stepper + Segmented + navigation) :
+- [x] **Step 2: Reconstruire le JSX.** Remplacer le `<ol>` d'etapes par `Stepper`, les deux `Button` de mode par `Segmented`, et habiller chaque etape dans une `Card card-pad`. Extrait representatif (Stepper + Segmented + navigation) :
 
 ```tsx
 import { Stepper } from "@/components/ui/Stepper";
@@ -366,9 +366,9 @@ return (
 
 > **Notes de fidelite / preservation.** (a) `Stepper.current` est 0-based : `step` reste 1..3, on passe `current={step - 1}`. Verifier l'API reelle du `Stepper` du directeur (Task 14) et adapter (`current`/`active`/`steps` selon la signature livree ; documenter dans le tracker si differente). (b) Etape 1 (Informations) : garder les `Input` (Titre/Date/Lieu/Slug + aide slug) tels quels, juste dans la `Card`. (c) Etape Categories mode « template » : la maquette montre un `Select` de modele + une table d'apercu ; conserver la selection multiple existante (`selectedTemplates`) — soit en `Checkbox` par ligne (Task 10), soit en table d'apercu ; ne pas restreindre a une selection unique si l'existant est multiple. (d) Etape 3 (Recap) : reskiner en `dl`/`KeyValue`, garder les memes champs. (e) `submit()` et la gestion d'erreurs (`QUOTA_EXCEEDED`, `SLUG_TAKEN`) **inchangees**.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK (le type de `step` reste `1 | 2 | 3`).
+- [x] **Step 3: `make typecheck`** — Expected: OK (le type de `step` reste `1 | 2 | 3`).
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Parcours golden path : etape 1 -> validation -> etape 2 (Segmented bascule template/manuel) -> etape 3 -> `Creer` -> redirection settings. Verifier l'etat `done`/`on`/pending du Stepper, l'erreur quota/slug rendue en `Alert`. `make test` vert (les tests existants du wizard, s'il y en a, restent verts).
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Parcours golden path : etape 1 -> validation -> etape 2 (Segmented bascule template/manuel) -> etape 3 -> `Creer` -> redirection settings. Verifier l'etat `done`/`on`/pending du Stepper, l'erreur quota/slug rendue en `Alert`. `make test` vert (les tests existants du wizard, s'il y en a, restent verts).
 
 **Acceptance:**
 - Rendu fidele a `org-event-create.html` (Stepper 3 etapes, Segmented, apercu categories, navigation).

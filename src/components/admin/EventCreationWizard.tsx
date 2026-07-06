@@ -4,6 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Stepper } from "@/components/ui/Stepper";
+import { Segmented } from "@/components/ui/Tabs";
+import { Checkbox } from "@/components/ui/FormControls";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { KeyValue } from "@/components/ui/JournalBlocks";
+import { Icon } from "@/components/ui/Icon";
 
 type Template = { id: string; name: string; color: string; number: number };
 type ManualCategory = {
@@ -22,6 +29,8 @@ type CreatePayload = {
   templateIds?: string[];
   manualCategories?: ManualCategory[];
 };
+
+const STEPS = ["Informations", "Catégories", "Récapitulatif"];
 
 export function EventCreationWizard({
   orgId,
@@ -109,192 +118,175 @@ export function EventCreationWizard({
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-2xl font-bold">Nouvel événement</h1>
+      <h1 className="text-xl font-semibold text-slate-900">Nouvel événement</h1>
 
-      <ol className="flex gap-4 text-sm">
-        <li className={step === 1 ? "font-bold" : "text-slate-500"}>1. Informations</li>
-        <li className={step === 2 ? "font-bold" : "text-slate-500"}>2. Catégories</li>
-        <li className={step === 3 ? "font-bold" : "text-slate-500"}>3. Récap</li>
-      </ol>
+      <Stepper steps={STEPS} current={step - 1} />
 
       {err && (
-        <div className="rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-          {err}
-        </div>
+        <Alert tone="err">
+          <Icon name="alert-triangle" size={16} /> {err}
+        </Alert>
       )}
 
       {step === 1 && (
-        <section className="bg-white border rounded p-4 space-y-3">
-          <Input
-            placeholder="Titre"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-            required
-          />
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          <Input
-            placeholder="Lieu"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            required
-          />
-          <div>
-            <label className="text-sm text-slate-600">Slug (URL publique)</label>
-            <Input
-              value={slug}
-              onChange={(e) => {
-                setSlug(e.target.value);
-                setSlugTouched(true);
-              }}
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Suggéré automatiquement à partir du titre. Si le slug existe déjà globalement, un
-              suffixe -2, -3… sera ajouté à la création.
-            </p>
-          </div>
-          <div className="flex justify-end">
-            <Button disabled={!step1Valid()} onClick={() => setStep(2)}>
-              Suivant
-            </Button>
-          </div>
-        </section>
+        <Card>
+          <CardBody className="space-y-4">
+            <Input label="Titre" value={title} onChange={(e) => onTitleChange(e.target.value)} required />
+            <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} required />
+            <div>
+              <Input
+                label="Slug (URL publique)"
+                value={slug}
+                onChange={(e) => {
+                  setSlug(e.target.value);
+                  setSlugTouched(true);
+                }}
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Suggéré automatiquement à partir du titre. Si le slug existe déjà globalement, un suffixe -2, -3… sera
+                ajouté à la création.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <Button disabled={!step1Valid()} onClick={() => setStep(2)}>
+                Continuer
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
       )}
 
       {step === 2 && (
-        <section className="bg-white border rounded p-4 space-y-3">
-          <div className="flex gap-2">
-            <Button
-              variant={mode === "template" ? "primary" : "secondary"}
-              onClick={() => setMode("template")}
-            >
-              Partir d&apos;un modèle
-            </Button>
-            <Button
-              variant={mode === "manual" ? "primary" : "secondary"}
-              onClick={() => setMode("manual")}
-            >
-              Définir manuellement
-            </Button>
-          </div>
+        <Card>
+          <CardBody className="space-y-4">
+            <Segmented
+              value={mode}
+              onChange={(v) => setMode(v as "template" | "manual")}
+              options={[
+                { value: "template", label: "Depuis un modèle" },
+                { value: "manual", label: "Manuelles" },
+              ]}
+            />
 
-          {mode === "template" && (
-            <div className="space-y-2">
-              {templates.length === 0 && (
-                <p className="text-sm text-slate-500">
-                  Aucun modèle disponible. Créez-en un dans Modèles catégories ou passez en manuel.
-                </p>
-              )}
-              {templates.map((t) => (
-                <label key={t.id} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
+            {mode === "template" && (
+              <div className="space-y-2">
+                {templates.length === 0 && (
+                  <p className="text-sm text-slate-400">
+                    Aucun modèle disponible. Créez-en un dans Modèles catégories ou passez en manuel.
+                  </p>
+                )}
+                {templates.map((t) => (
+                  <Checkbox
+                    key={t.id}
                     checked={selectedTemplates.includes(t.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) setSelectedTemplates([...selectedTemplates, t.id]);
+                    onChange={(on) => {
+                      if (on) setSelectedTemplates([...selectedTemplates, t.id]);
                       else setSelectedTemplates(selectedTemplates.filter((id) => id !== t.id));
                     }}
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-3 w-3 rounded" style={{ background: t.color }} />
+                        {t.name} <span className="text-slate-400">#{t.number}</span>
+                      </span>
+                    }
                   />
-                  <span
-                    className="inline-block w-3 h-3 rounded"
-                    style={{ background: t.color }}
-                  />
-                  {t.name} (#{t.number})
-                </label>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {mode === "manual" && (
-            <div className="space-y-2">
-              {manualCats.map((c, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <Input
-                    placeholder="Nom"
-                    value={c.name}
-                    onChange={(e) => {
-                      const next = [...manualCats];
-                      next[i] = { ...next[i], name: e.target.value };
-                      setManualCats(next);
-                    }}
-                  />
-                  <Input
-                    type="color"
-                    value={c.color}
-                    onChange={(e) => {
-                      const next = [...manualCats];
-                      next[i] = { ...next[i], color: e.target.value };
-                      setManualCats(next);
-                    }}
-                  />
-                  <Input
-                    type="number"
-                    value={c.number}
-                    onChange={(e) => {
-                      const next = [...manualCats];
-                      next[i] = { ...next[i], number: Number(e.target.value) };
-                      setManualCats(next);
-                    }}
-                    className="w-20"
-                  />
-                </div>
-              ))}
-              <Button variant="secondary" onClick={addManualCategory}>
-                Ajouter une catégorie
+            {mode === "manual" && (
+              <div className="space-y-2">
+                {manualCats.map((c, i) => (
+                  <div key={i} className="flex items-end gap-2">
+                    <Input
+                      label={i === 0 ? "Nom" : undefined}
+                      placeholder="Nom"
+                      value={c.name}
+                      onChange={(e) => {
+                        const next = [...manualCats];
+                        next[i] = { ...next[i], name: e.target.value };
+                        setManualCats(next);
+                      }}
+                    />
+                    <input
+                      type="color"
+                      value={c.color}
+                      onChange={(e) => {
+                        const next = [...manualCats];
+                        next[i] = { ...next[i], color: e.target.value };
+                        setManualCats(next);
+                      }}
+                      className="h-9 w-12 rounded-lg border border-slate-300"
+                    />
+                    <Input
+                      type="number"
+                      value={c.number}
+                      onChange={(e) => {
+                        const next = [...manualCats];
+                        next[i] = { ...next[i], number: Number(e.target.value) };
+                        setManualCats(next);
+                      }}
+                      className="w-20"
+                    />
+                  </div>
+                ))}
+                <Button variant="secondary" onClick={addManualCategory}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icon name="plus" size={16} /> Ajouter une catégorie
+                  </span>
+                </Button>
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <Button variant="secondary" onClick={() => setStep(1)}>
+                Précédent
               </Button>
+              <Button onClick={() => setStep(3)}>Continuer</Button>
             </div>
-          )}
-
-          <div className="flex justify-between">
-            <Button variant="secondary" onClick={() => setStep(1)}>
-              Retour
-            </Button>
-            <Button onClick={() => setStep(3)}>Suivant</Button>
-          </div>
-        </section>
+          </CardBody>
+        </Card>
       )}
 
       {step === 3 && (
-        <section className="bg-white border rounded p-4 space-y-3">
-          <h2 className="font-semibold">Récap</h2>
-          <dl className="text-sm space-y-1">
-            <div>
-              <dt className="inline font-medium">Titre : </dt>
-              <dd className="inline">{title}</dd>
+        <Card>
+          <CardBody className="space-y-4">
+            <KeyValue
+              items={[
+                { label: "Titre", value: title },
+                { label: "Date", value: date },
+                { label: "Lieu", value: location },
+                { label: "Slug", value: slug || "(auto)" },
+                {
+                  label: "Catégories",
+                  value:
+                    mode === "template"
+                      ? `${selectedTemplates.length} modèle(s) sélectionné(s)`
+                      : `${manualCats.length} manuelle(s)`,
+                },
+              ]}
+            />
+            <p className="text-xs text-slate-400">
+              L&apos;événement sera créé avec les inscriptions fermées par défaut. Vous pourrez les ouvrir depuis la page
+              de configuration.
+            </p>
+            <div className="flex justify-between">
+              <Button variant="secondary" onClick={() => setStep(2)}>
+                Précédent
+              </Button>
+              <Button onClick={submit} className="flex items-center justify-center gap-2" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Spinner size={16} /> Création…
+                  </>
+                ) : (
+                  "Créer l'événement"
+                )}
+              </Button>
             </div>
-            <div>
-              <dt className="inline font-medium">Date : </dt>
-              <dd className="inline">{date}</dd>
-            </div>
-            <div>
-              <dt className="inline font-medium">Lieu : </dt>
-              <dd className="inline">{location}</dd>
-            </div>
-            <div>
-              <dt className="inline font-medium">Slug : </dt>
-              <dd className="inline">{slug || "(auto)"}</dd>
-            </div>
-            <div>
-              <dt className="inline font-medium">Catégories : </dt>
-              <dd className="inline">
-                {mode === "template"
-                  ? `${selectedTemplates.length} modèle(s) sélectionné(s)`
-                  : `${manualCats.length} manuelle(s)`}
-              </dd>
-            </div>
-          </dl>
-          <p className="text-xs text-slate-500">
-            L&apos;événement sera créé avec les inscriptions fermées par défaut. Vous pourrez les
-            ouvrir depuis la page de configuration.
-          </p>
-          <div className="flex justify-between">
-            <Button variant="secondary" onClick={() => setStep(2)}>
-              Retour
-            </Button>
-            <Button onClick={submit} disabled={submitting}>
-              {submitting ? "Création..." : "Créer l'événement"}
-            </Button>
-          </div>
-        </section>
+          </CardBody>
+        </Card>
       )}
     </div>
   );
