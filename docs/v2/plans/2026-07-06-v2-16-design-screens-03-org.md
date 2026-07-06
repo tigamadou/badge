@@ -23,7 +23,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
 | 1 | [x] | 2026-07-06 | `/admin/[orgId]` reskine (StatGrid + Card derniers events + Timeline). Alerte quota conservee (seuil >80). Storage reel non expose -> alerte pilotee par eventsPct/regsPct (inchangee). typecheck+lint OK. |
-| 2 | [ ] | | `org-events.html` -> `/admin/[orgId]/events` (Toolbar, Table events, Switch inscriptions, tag Archive). |
+| 2 | [x] | 2026-07-06 | `/admin/[orgId]/events` reskine (table rounded-xl, statut non interactif pastilles, lien Configurer). Requete inchangee. Switch inscriptions inline -> non cable (affiche statut), a cabler plus tard. typecheck+lint OK. |
 | 3 | [ ] | | `org-event-create.html` -> `/admin/[orgId]/events/new` (Stepper, Segmented modele/manuel, RadioCards/Table categories). |
 | 4 | [ ] | | `org-members.html` -> `/admin/[orgId]/members` (form invitation, Table + RoleBadge, dernier OWNER verrouille). |
 | 5 | [ ] | | `org-category-templates.html` -> `/admin/[orgId]/templates` (Table + CatPill/Switch, Modal edition). |
@@ -228,9 +228,9 @@ Liste des evenements : page-head + bouton Creer, Toolbar (recherche + filtre sta
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire la page. Preserver `prisma.event.findMany({ where: { orgId }, orderBy: { date: "desc" }, select: { … _count.registrations } })`. Ne pas filtrer cote serveur autrement qu'aujourd'hui.
+- [x] **Step 1: Lire + preserver.** Relire la page. Preserver `prisma.event.findMany({ where: { orgId }, orderBy: { date: "desc" }, select: { … _count.registrations } })`. Ne pas filtrer cote serveur autrement qu'aujourd'hui.
 
-- [ ] **Step 2: Reconstruire le JSX.** Page-head + Toolbar + table reskinee. Extrait representatif de la ligne :
+- [x] **Step 2: Reconstruire le JSX.** Page-head + Toolbar + table reskinee. Extrait representatif de la ligne :
 
 ```tsx
 <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -274,9 +274,9 @@ Liste des evenements : page-head + bouton Creer, Toolbar (recherche + filtre sta
 
 > **Notes de fidelite / preservation.** (a) La maquette rend l'ouverture d'inscriptions comme un `Switch` interactif inline. Un vrai toggle exige un endpoint : si `PATCH /api/admin/[orgId]/events/[eventId]` (ou equivalent) existe deja, le cabler dans un `EventsClient` client ; sinon, rendre le statut en **`StatusBadge` non interactif** (« Ouvertes » / « Fermees ») — jamais coder l'etat par la couleur seule — et **noter** l'affordance Switch a cabler plus tard. (b) Les chips de filtre / la case « archives » : garder l'affichage ; ne les rendre fonctionnels que s'ils filtrent cote client sur `events` deja charge (pas de requete). Sinon les marquer `disabled` et noter. (c) La colonne action pointe vers la page de configuration existante (« Configurer ») ; conserver la cible actuelle.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK.
+- [x] **Step 3: `make typecheck`** — Expected: OK.
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Etat **charge** (>=1 event actif + 1 archive en `opacity-60` avec Tag), etat **vide** (`EmptyState` « Aucun evenement »). Table scroll horizontal en mobile (`overflow-x-auto`). Mode staff : bandeau intact. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Etat **charge** (>=1 event actif + 1 archive en `opacity-60` avec Tag), etat **vide** (`EmptyState` « Aucun evenement »). Table scroll horizontal en mobile (`overflow-x-auto`). Mode staff : bandeau intact. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-events.html` (toolbar, table, ligne archivee attenuee + Tag).
