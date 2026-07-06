@@ -39,7 +39,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 15 | [x] | 2026-07-06 | `Tabs`/`Segmented` (`src/components/ui/Tabs.tsx`, client). Test rendu OK, typecheck OK. |
 | 16 | [x] | 2026-07-06 | `BadgeCard`/`MiniBadge` (`src/components/badge/`). Test rendu OK, typecheck OK. Reconciliation doublons `BadgePreview*`/`BadgeWebPreview*` -> reportee (suppression = accord utilisateur), a arbitrer aux tasks apercu badge. |
 | 17 | [x] | 2026-07-06 | `ScannerFrame`/`ScanResult` (`src/components/event/ScannerFrame.tsx`). Test rendu OK, typecheck OK. Recablage `QRScanner` -> reporte au sous-plan 04 (verif camera navigateur). |
-| 18 | [ ] | | `PickCard` / `OrgLogo`. |
+| 18 | [x] | 2026-07-06 | `OrgLogo`/`PickCard`/`PickCardDashed` (`src/components/ui/PickCard.tsx`). Test rendu OK, typecheck OK. |
 | 19 | [ ] | | `PhoneMockup` + `VerifyBanner`. |
 | 20 | [ ] | | Blocs journal : `LogType`, `KeyValue`, `Diff`, `Payload`. |
 | 21 | [ ] | | Page `/styleguide` (dev-only) + verification directeur. |
@@ -1769,7 +1769,7 @@ Selecteur d'organisation (grille de cartes) + logo initiales. Reference : `.pick
   - `PickCard({ href, logo, title, subtitle?, meta? }: { href: string; logo: ReactNode; title: ReactNode; subtitle?: ReactNode; meta?: ReactNode }): JSX.Element`
   - `PickCardDashed({ href, icon, label }: { href: string; icon: IconName; label: ReactNode }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1783,12 +1783,12 @@ test("OrgLogo derive les initiales ; PickCard est un lien", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/PickCard.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -1853,12 +1853,12 @@ export function PickCardDashed({ href, icon, label }: { href: string; icon: Icon
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/PickCard.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
