@@ -33,7 +33,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 9  | [x] | 2026-07-06 | `/e/[slug]/success` reskine (Card + SuccessRing + FileBox). notFound/settings/liens preserves. typecheck+lint OK. |
 | 10 | [x] | 2026-07-06 | `/badge/[id]` apercu web via BadgeCard (QR img), PDF conserve via BadgeDownload. Identite masquee si anonyme. typecheck+lint OK. |
 | 11 | [x] | 2026-07-06 | `BadgeVerifyView` reskine (VerifyBanner/Card/CatPill/KeyValue, 3 cas). Icones `user`/`lock` ajoutees au registre. Forme de `data` preservee. typecheck+lint+test OK. |
-| 12 | [ ] | | Tableau de bord participant `/account` (+ layout, cartes, `EmptyState`). |
+| 12 | [x] | 2026-07-06 | `/account` + layout reskines (AccountNav client, cartes d'inscription, StatusBadge, EmptyState, Alert onboarding). Icone `tag` ajoutee. Requetes/gardes preservees. typecheck+lint+test OK. |
 | 13 | [ ] | | Detail inscription `/account/registrations/[id]` (`KeyValue`, `Timeline`, `FileBox`). |
 | 14 | [ ] | | Profil `/account/profile` (+ `/complete`) (banniere, photo, mot de passe, zone danger). |
 | 15 | [ ] | | Selecteur d'organisation `/select` (`PickCard` / `PickCardDashed` / `OrgLogo`). |
@@ -635,9 +635,9 @@ return (
 
 **Composants:** `StatusBadge` (statut inscription), `EmptyState`, `Card`, `Alert` (onboarding), `Icon` (`map-pin`, `tag`, `chevron-right`, `id-card`), `next/link`. La nav active reprend `accent-nav-bg`.
 
-- [ ] **Step 1: Lire l'existant** — `layout.tsx` : garde session, charge `name`/`email`/`participantProfileCompletedAt`, header nav + signout. `page.tsx` : charge `user` + `registrations` (status, rejectionReason, event, category), banniere si profil incomplet, liste ou message vide. **Preserver** requetes, gardes et `STATUS_LABEL`.
+- [x] **Step 1: Lire l'existant** — `layout.tsx` : garde session, charge `name`/`email`/`participantProfileCompletedAt`, header nav + signout. `page.tsx` : charge `user` + `registrations` (status, rejectionReason, event, category), banniere si profil incomplet, liste ou message vide. **Preserver** requetes, gardes et `STATUS_LABEL`.
 
-- [ ] **Step 2: Reconstruire**
+- [x] **Step 2: Reconstruire**
 
 `layout.tsx` header (onglets avec actif) — comme la nav ne connait pas le pathname cote serveur, extraire un petit composant client `AccountNav` (2 liens, `usePathname`) OU garder les liens serveur avec surlignage au hover uniquement. Preferer un mini `AccountNav` client pour l'etat actif fidele :
 ```tsx
@@ -683,8 +683,8 @@ En-tete : logo, `AccountNav`, user-chip (initiales + nom + signout).
 ```
 > `fmtDay`/`fmtMonth` : petits formatters locaux (`Intl.DateTimeFormat("fr-FR", { day/month })`) — pas de dep. `StatusBadge` (v2-15) porte deja les 3 statuts avec libelle FR ; le reutiliser plutot que recreer un badge.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — compte avec inscriptions (statuts varies) + compte vide (`EmptyState`) + profil incomplet (banniere). 375/768/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — compte avec inscriptions (statuts varies) + compte vide (`EmptyState`) + profil incomplet (banniere). 375/768/1440. `make test` vert.
 
 **Acceptance:** barre + cartes + etats fideles ; requetes et gardes inchangees.
 

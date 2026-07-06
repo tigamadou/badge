@@ -42,6 +42,7 @@ import {
   Smartphone,
   User,
   Lock,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -89,6 +90,7 @@ const ICONS = {
   "map-pin": MapPin,
   user: User,
   lock: Lock,
+  tag: Tag,
   "arrow-right": ArrowRight,
   "chevron-right": ChevronRight,
   "external-link": ExternalLink,
