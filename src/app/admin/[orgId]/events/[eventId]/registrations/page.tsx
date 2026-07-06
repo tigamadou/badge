@@ -7,8 +7,11 @@ export default async function RegistrationsListPage({
 }) {
   const { orgId, eventId } = await params;
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Inscriptions</h1>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Inscriptions</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Gérez et modérez les inscriptions de l&apos;événement</p>
+      </div>
       <RegistrationTable orgId={orgId} eventId={eventId} />
     </div>
   );

@@ -24,7 +24,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
 | 1  | [x] | 2026-07-06 | Dashboard evenement reskine (StatGrid 4+3, Card 10 dernieres + StatusBadge, alerte quota). Branche OPERATOR habillee. MiniChart omis (pas de serie 30j). Queries/role preserves. typecheck+lint OK. |
-| 2  | [ ] | | Liste inscriptions (`registrations/page.tsx`) — Toolbar + ChipFilter + BatchBar + Table. **Ecran le plus dense.** |
+| 2  | [x] | 2026-07-06 | `RegistrationTable` reskine (toolbar habillee, CatPill, StatusBadge ui, table rounded-xl, pager). Handlers/fetch/export preserves. BatchBar non ajoutee (pas de selection/endpoint batch dans la logique). typecheck+lint OK. |
 | 3  | [ ] | | Detail inscription (`registrations/[regId]/page.tsx`) — Cards + FileBox + Timeline + actions. |
 | 4  | [ ] | | Inscription manuelle (`registrations/new/page.tsx`) — FormSection + RadioCards + Dropzone. |
 | 5  | [ ] | | Vue agregee VIEWER (`registrations/overview/page.tsx`) — StatGrid + repartition non nominative. |
@@ -162,8 +162,8 @@ Ecran le plus dense de l'app : toolbar (recherche + 3 ChipFilter Statut/Categori
 **Composants:** `Toolbar`/`SearchInput`/`ChipFilter`, `BatchBar`/`BatchButton`, `Checkbox`, `CatPill`, `StatusBadge`, `Table`, `Pagination`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `RegistrationTable.tsx` — cartographier l'etat existant (query de recherche, filtres statut/categorie, tri, set des IDs selectionnes, page courante, appels server actions Approuver/Imprimer/Exporter). **Ne changer aucun handler ni fetch.**
-- [ ] **Step 2: Reconstruire le JSX** : entete via `Toolbar` + `SearchInput` (branche sur l'etat recherche existant) + trois `ChipFilter` (Statut / Categorie / Tri, options tirees des filtres existants) + bouton Exporter. Rendre `BatchBar count={selected.size}` avec `BatchButton` Approuver/Imprimer/Exporter cables sur les actions existantes. Table : en-tete avec `Checkbox` "tout selectionner", lignes avec `Checkbox` de selection, `CatPill`, `StatusBadge`, meta. `Pagination` en pied branche sur la page existante. Extrait representatif :
+- [x] **Step 1: Lire et preserver** `RegistrationTable.tsx` — cartographier l'etat existant (query de recherche, filtres statut/categorie, tri, set des IDs selectionnes, page courante, appels server actions Approuver/Imprimer/Exporter). **Ne changer aucun handler ni fetch.**
+- [x] **Step 2: Reconstruire le JSX** : entete via `Toolbar` + `SearchInput` (branche sur l'etat recherche existant) + trois `ChipFilter` (Statut / Categorie / Tri, options tirees des filtres existants) + bouton Exporter. Rendre `BatchBar count={selected.size}` avec `BatchButton` Approuver/Imprimer/Exporter cables sur les actions existantes. Table : en-tete avec `Checkbox` "tout selectionner", lignes avec `Checkbox` de selection, `CatPill`, `StatusBadge`, meta. `Pagination` en pied branche sur la page existante. Extrait representatif :
 
 ```tsx
 <Toolbar>
@@ -185,9 +185,9 @@ Ecran le plus dense de l'app : toolbar (recherche + 3 ChipFilter Statut/Categori
 <Pagination page={page} total={pageCount} onChange={setPage} />
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-inscriptions.html` sur 375/768/1440. Verifier : toolbar wrap sur mobile, BatchBar marine apparait/masque selon selection, checkbox "tout selectionner" coherente, CatPill/StatusBadge fideles, Pagination active verte. Etats : vide (`EmptyState` "Aucune inscription"), charge, erreur d'action (Alert).
-- [ ] **Step 5:** `make test` — Expected: vert (tests d'interaction de `RegistrationTable` intacts).
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-inscriptions.html` sur 375/768/1440. Verifier : toolbar wrap sur mobile, BatchBar marine apparait/masque selon selection, checkbox "tout selectionner" coherente, CatPill/StatusBadge fideles, Pagination active verte. Etats : vide (`EmptyState` "Aucune inscription"), charge, erreur d'action (Alert).
+- [x] **Step 5:** `make test` — Expected: vert (tests d'interaction de `RegistrationTable` intacts).
 
 **Acceptance:** liste fidele (toolbar + filtres + BatchBar + table + pagination) ; selection multiple, approbation/impression/export par lot toujours fonctionnels ; aucune requete ni action modifiee ; typecheck + tests verts.
 
