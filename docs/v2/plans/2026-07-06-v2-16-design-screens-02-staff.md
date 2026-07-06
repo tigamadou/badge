@@ -28,7 +28,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 5  | [x] | 2026-07-06 | `/staff/users` reskine (toolbar GET habillee, table rounded-xl, avatars initiales, RoleBadge navy/slate, Tag archive). where/select/take preserves. typecheck+lint OK. |
 | 6  | [x] | 2026-07-06 | `UserCreationForm` reskine (Card + FormSection + RadioCards type + selects habilles + Alert/Spinner). Gardes canCreateStaff/canCreateTopStaff + submit preserves. typecheck+lint OK. |
 | 7  | [x] | 2026-07-06 | `/staff/users/[userId]` + `UserDetailActions` reskines (Card/RoleBadge/KeyValue/Timeline + boutons Button/Alert). Gardes RBAC + mutations preservees. typecheck+lint OK. |
-| 8  | [ ] | | `staff-settings.html` -> `/staff/settings` (SMTP + Test, reCAPTCHA, Branding). |
+| 8  | [x] | 2026-07-06 | `/staff/settings` + PlatformSettingsForm + TestSmtpForm reskines (Card/FormSection/Input/Switch/Alert). Secrets jamais rendus (*Set booleens), garde canEditSecrets preservee. Branding non ajoute (pas de champs). typecheck+lint OK. |
 | 9  | [ ] | | `staff-badge-template.html` -> `/staff/settings/badge` (galerie BadgeCard). |
 | 10 | [ ] | | `staff-log.html` -> `/staff/activity` (Toolbar, Table LogType, lignes cliquables, Pagination). |
 | 11 | [ ] | | `journal-detail.html` -> **nouvelle route** `/staff/activity/[logId]` (LogType/KeyValue/Diff/Payload). |
@@ -643,11 +643,11 @@ Parametres plateforme : alerte info SUPER_ADMIN, carte SMTP (hote/port/user/mot 
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire les 3 fichiers. **Preserver** absolument la construction `safe` de `page.tsx` (secrets **jamais** transmis, seuls `smtpPasswordSet`/`recaptchaSecretKeySet` booleens), la garde `canEditSecrets = staffRole === "SUPER_ADMIN"`, et les submit/handlers de `PlatformSettingsForm`/`TestSmtpForm`. Le port habille sans changer le contrat de props ni exposer de secret.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 `page.tsx` : head + `Alert` info + les deux composants clients (layout 2 colonnes) :
 
@@ -686,12 +686,12 @@ Relire les 3 fichiers. **Preserver** absolument la construction `safe` de `page.
 
 `TestSmtpForm.tsx` — bouton `Tester l'envoi SMTP` + zone de resultat en `Alert` (succes/erreur selon la reponse), inchange fonctionnellement.
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/settings` en 375/768/1440, connecte SUPER_ADMIN puis role inferieur. Verifier : `Alert` info visible pour SUPER_ADMIN uniquement, champs sensibles `disabled` sinon, `Switch` TLS, bouton Tester -> `Alert` de resultat, secrets jamais pre-remplis (placeholder points). `make test` vert.
 
