@@ -23,7 +23,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 0  | [x] | 2026-07-06 | Pre-flight OK : branche `feat/design_implementation`, conteneur `badge-app-1` up, typecheck + lint (0 erreur) baseline verts, socle v2-15 present. |
 | 0.5| [x] | 2026-07-06 | `Icon` partage (`src/components/ui/Icon.tsx`, 41 icones) + recablage `SidebarNav` (registre centralise). Test rendu node OK, typecheck OK. |
 | 1  | [x] | 2026-07-06 | `Card`/`CardHead`/`CardBody` (`src/components/ui/Card.tsx`). Test rendu OK, typecheck OK. |
-| 2  | [ ] | | `StatCard` + `StatGrid` (delta up/down). |
+| 2  | [x] | 2026-07-06 | `StatCard`/`StatGrid` (`src/components/ui/StatCard.tsx`). Test rendu OK, typecheck OK. |
 | 3  | [ ] | | `Timeline` + `TimelineItem`. |
 | 4  | [ ] | | `QuotaBar` + `StorageAlert`. |
 | 5  | [ ] | | `MiniChart`. |
@@ -273,7 +273,7 @@ KPI card (label uppercase, gros chiffre, sous-texte, delta up/down + icone). Ref
   - `StatCard({ label, value, icon, sub?, delta? }: { label: string; value: ReactNode; icon: IconName; sub?: ReactNode; delta?: { dir: "up" | "down"; text: string } }): JSX.Element`
   - `type IconName = string` (nom lucide, ex. `"building-2"`) — reutiliser le registre d'icones introduit par `SidebarNav` en v2-15 ; si l'API du registre differe, adapter l'import ici et le documenter dans les notes du tracker.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -292,12 +292,12 @@ test("StatCard affiche label, valeur, sous-texte et delta up", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/StatCard.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -348,12 +348,12 @@ export function StatCard({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/StatCard.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck + revue visuelle**
+- [x] **Step 5: Typecheck + revue visuelle**
 
 Run: `make typecheck`
 Expected: OK. Comparer a `template/screens/staff-dashboard.html` (4 statcards) : label uppercase, chiffre `text-2xl`, delta vert.
