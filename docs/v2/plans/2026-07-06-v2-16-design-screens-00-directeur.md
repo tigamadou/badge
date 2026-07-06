@@ -36,7 +36,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 12 | [x] | 2026-07-06 | `FileBox`/`Dropzone` (`src/components/ui/FileBox.tsx`, client). Test rendu OK, typecheck OK. Recablage `FileUploadField` -> reporte au sous-plan 01 (verif visuelle du flux upload). |
 | 13 | [x] | 2026-07-06 | `PasswordMeter` (`src/components/ui/PasswordMeter.tsx`). Test rendu OK, typecheck OK. |
 | 14 | [x] | 2026-07-06 | `Stepper` (`src/components/ui/Stepper.tsx`). Test rendu OK, typecheck OK. |
-| 15 | [ ] | | `Tabs` + `Segmented`. |
+| 15 | [x] | 2026-07-06 | `Tabs`/`Segmented` (`src/components/ui/Tabs.tsx`, client). Test rendu OK, typecheck OK. |
 | 16 | [ ] | | `BadgeCard` + `MiniBadge` (reconciliation V1/V2). |
 | 17 | [ ] | | `Scanner` (frame/reticle/laser + result). |
 | 18 | [ ] | | `PickCard` / `OrgLogo`. |
@@ -1474,7 +1474,7 @@ Navigation intra-page (onglets soulignes + controle segmente). Reference : `.tab
   - `Tabs({ tabs, value, onChange }: { tabs: { value: string; label: ReactNode }[]; value: string; onChange: (v: string) => void }): JSX.Element` (client)
   - `Segmented({ options, value, onChange }: { options: { value: string; label: ReactNode }[]; value: string; onChange: (v: string) => void }): JSX.Element` (client)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1496,12 +1496,12 @@ test("Tabs change l'onglet actif", async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/Tabs.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 "use client";
@@ -1566,12 +1566,12 @@ export function Segmented({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Tabs.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
