@@ -30,7 +30,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 6  | [x] | 2026-07-06 | `/verify-email/[token]` bascule sur AuthCard + SuccessRing (succes) / Alert (erreur). `verifyToken`/`resolveBaseUrl` preserves. typecheck+lint OK. |
 | 7  | [x] | 2026-07-06 | `/e/[slug]` reskine (Card/CardBody + CatPill, slate). Branches CTA session + hrefs preserves. typecheck+lint OK. |
 | 8  | [x] | 2026-07-06 | `RegisterEventForm` reskine (RadioCards + Checkbox + FormSection + Alert/Spinner). POST/409/redirection success preserves. Identite/uploads restent au profil (Task 14). typecheck+lint OK. |
-| 9  | [ ] | | Confirmation `/e/[slug]/success` (`SuccessRing` + `FileBox`). |
+| 9  | [x] | 2026-07-06 | `/e/[slug]/success` reskine (Card + SuccessRing + FileBox). notFound/settings/liens preserves. typecheck+lint OK. |
 | 10 | [ ] | | Apercu badge `/badge/[id]` (`BadgeCard` + boutons). |
 | 11 | [ ] | | Verification badge `/verify/[badgeId]` (`VerifyBanner`, 3 cas). |
 | 12 | [ ] | | Tableau de bord participant `/account` (+ layout, cartes, `EmptyState`). |
@@ -484,9 +484,9 @@ Etats « déjà inscrit » (bloc `existing`) : `Alert` tone `warn` + lien detail
 
 **Composants:** `PublicEventLayout`, `Card`/`CardBody`, `SuccessRing`, `FileBox`, `Icon` (`check`, `clock`, `id-card`), `Button`/`Link`.
 
-- [ ] **Step 1: Lire l'existant** — Server Component : `event` par slug, `resolvePublicSettings`, `searchParams.id` -> lien detail. Preserver `notFound`, settings, et le lien `/account/registrations/{id}`.
+- [x] **Step 1: Lire l'existant** — Server Component : `event` par slug, `resolvePublicSettings`, `searchParams.id` -> lien detail. Preserver `notFound`, settings, et le lien `/account/registrations/{id}`.
 
-- [ ] **Step 2: Reconstruire**
+- [x] **Step 2: Reconstruire**
 ```tsx
 <PublicEventLayout event={event} contact={{ email: settings.contactEmail, phone: settings.contactPhone }}>
   <Card>
@@ -511,8 +511,8 @@ Etats « déjà inscrit » (bloc `existing`) : `Alert` tone `warn` + lien detail
 ```
 > `FileBox` accepte un `subtitle` : y placer la ligne secondaire. Ne pas inventer de N° « joli » (`0241-8837`) — reutiliser l'`id` reel deja passe.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — avec et sans `id`. 375/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — avec et sans `id`. 375/1440. `make test` vert.
 
 **Acceptance:** SuccessRing + FileBox fideles ; liens detail/compte inchanges.
 
