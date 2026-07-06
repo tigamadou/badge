@@ -21,8 +21,8 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 0  | [ ] | | Pre-flight : branche, directeur implemente, baseline verte. |
-| 1  | [ ] | | Landing publique `accueil.html` (**new** — rendu conditionnel sur `/`). |
+| 0  | [x] | 2026-07-06 | Pre-flight OK : directeur implemente (composants presents), typecheck+lint baseline verts. |
+| 1  | [x] | 2026-07-06 | Landing `LandingView.tsx` + rendu conditionnel sur `/` (branche authentifiee inchangee). typecheck+lint OK, test 657/657. Revue visuelle = manuelle. |
 | 2  | [ ] | | Connexion `/login` (+ enrichissement `AuthCard` : sous-titre/pied). |
 | 3  | [ ] | | Mot de passe oublie `/forgot-password` (form + etat « e-mail envoye »). |
 | 4  | [ ] | | Reinitialisation `/reset-password/[token]` (+ `PasswordMeter`). |
@@ -65,17 +65,17 @@ Voir les **contraintes globales du plan directeur** (accent vert unique `green-6
 
 **Files:** aucun (verification d'environnement).
 
-- [ ] **Step 1: Branche + conteneurs**
+- [x] **Step 1: Branche + conteneurs**
 
 Run: `git branch --show-current && make dev`
 Expected: `feat/design_implementation` ; conteneurs `app`/`mysql`/`mailpit` up.
 
-- [ ] **Step 2: Directeur implemente**
+- [x] **Step 2: Directeur implemente**
 
 Run: `ls src/components/ui/Icon.tsx src/components/ui/Feedback.tsx src/components/ui/PasswordMeter.tsx src/components/ui/RadioCards.tsx src/components/ui/FileBox.tsx src/components/ui/Timeline.tsx src/components/ui/PickCard.tsx src/components/ui/VerifyBanner.tsx src/components/ui/JournalBlocks.tsx src/components/ui/Labels.tsx src/components/badge/BadgeCard.tsx`
 Expected: tous presents. Si absent : **STOP**, implementer le directeur d'abord.
 
-- [ ] **Step 3: Baseline verte**
+- [x] **Step 3: Baseline verte**
 
 Run: `make typecheck && make lint`
 Expected: typecheck OK, lint 0 erreur (warnings preexistants toleres).
@@ -94,11 +94,11 @@ Expected: typecheck OK, lint 0 erreur (warnings preexistants toleres).
 
 **Composants:** `Button` (primitive), `Icon` (`arrow-right`, `user-check`, `id-card`, `scan-line`), `next/link`, `next/image` (logo).
 
-- [ ] **Step 1: Lire l'existant + preserver la redirection authentifiee**
+- [x] **Step 1: Lire l'existant + preserver la redirection authentifiee**
 
 Lire `src/app/page.tsx` (deja lu : `getServerSession` -> `loadUserContext` -> `resolveHomeRedirect`). Conserver strictement la branche authentifiee. Ne modifier que la branche « pas de session ».
 
-- [ ] **Step 2: Reconstruire**
+- [x] **Step 2: Reconstruire**
 
 `page.tsx` :
 ```tsx
@@ -164,8 +164,8 @@ export function LandingView() {
 ```
 > `arrow-right` doit exister au registre `Icon` (directeur Task 0.5) ; sinon l'y ajouter et le noter dans le tracker du directeur.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — `/` deconnecte (naviguer en navigation privee ou apres signout) sur 375/768/1440. Verifier : bouclier vert, titre 40px desktop qui reste lisible en mobile (le titre passe en `text-3xl` sous 640px si necessaire), 3 features en ligne desktop / empilees mobile, footer. `/` **connecte** redirige toujours (staff/org). `make test` reste vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — `/` deconnecte (naviguer en navigation privee ou apres signout) sur 375/768/1440. Verifier : bouclier vert, titre 40px desktop qui reste lisible en mobile (le titre passe en `text-3xl` sous 640px si necessaire), 3 features en ligne desktop / empilees mobile, footer. `/` **connecte** redirige toujours (staff/org). `make test` reste vert.
 
 **Acceptance:** landing fidele a `accueil.html` ; utilisateur connecte redirige exactement comme avant (aucune regression sur `resolveHomeRedirect`).
 
