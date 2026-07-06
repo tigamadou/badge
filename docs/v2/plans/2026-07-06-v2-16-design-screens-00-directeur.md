@@ -37,7 +37,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 13 | [x] | 2026-07-06 | `PasswordMeter` (`src/components/ui/PasswordMeter.tsx`). Test rendu OK, typecheck OK. |
 | 14 | [x] | 2026-07-06 | `Stepper` (`src/components/ui/Stepper.tsx`). Test rendu OK, typecheck OK. |
 | 15 | [x] | 2026-07-06 | `Tabs`/`Segmented` (`src/components/ui/Tabs.tsx`, client). Test rendu OK, typecheck OK. |
-| 16 | [ ] | | `BadgeCard` + `MiniBadge` (reconciliation V1/V2). |
+| 16 | [x] | 2026-07-06 | `BadgeCard`/`MiniBadge` (`src/components/badge/`). Test rendu OK, typecheck OK. Reconciliation doublons `BadgePreview*`/`BadgeWebPreview*` -> reportee (suppression = accord utilisateur), a arbitrer aux tasks apercu badge. |
 | 17 | [ ] | | `Scanner` (frame/reticle/laser + result). |
 | 18 | [ ] | | `PickCard` / `OrgLogo`. |
 | 19 | [ ] | | `PhoneMockup` + `VerifyBanner`. |
@@ -1593,7 +1593,7 @@ Credential produit (~100x140mm) + vignette pour la grille batch. Reference : `.b
   - `BadgeCard({ org, name, role?, category, categoryColor, qr, meta, allAccess? }: { org: ReactNode; name: ReactNode; role?: ReactNode; category: ReactNode; categoryColor: string; qr: ReactNode; meta: ReactNode; allAccess?: boolean }): JSX.Element`
   - `MiniBadge({ name, category, categoryColor, state }: { name: ReactNode; category: ReactNode; categoryColor: string; state: "pending" | "generating" | "done" }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1610,12 +1610,12 @@ test("BadgeCard affiche nom, org, categorie et bandeau all-access", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/badge/__tests__/BadgeCard.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -1664,12 +1664,12 @@ export function BadgeCard({
 ```
 _(MiniBadge : vignette compacte reprenant `bc-band` + nom + `cat-dot` + icone d'etat check/spinner — meme palette.)_
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/badge/__tests__/BadgeCard.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Reconciliation V1/V2 + typecheck**
+- [x] **Step 5: Reconciliation V1/V2 + typecheck**
 
 Noter dans le tracker quel composant `*V2` devient canonique et lesquels sont morts (suppression = accord utilisateur explicite). `make typecheck`.
 Expected: OK. Revue visuelle contre `apercu-badge.html`.
