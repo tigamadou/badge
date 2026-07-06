@@ -34,7 +34,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 9  | [x] | 2026-07-06 | `settings/badge` event : head aligne DS ; galerie via BadgeTemplatePicker deja habille, heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
 | 10 | [x] | 2026-07-06 | `CategoryTable` + `CategoryForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/reassign/import preserves. typecheck+lint OK. |
 | 11 | [x] | 2026-07-06 | Fusion blocklists en onglets : hote `blocked-emails` charge les 2 listes -> `BlocklistTabs` (Tabs + compteurs) ; `blocked-documents` redirige. Forms reskines (Card/table/Alert). APIs inchangees. typecheck+lint+test OK. |
-| 12 | [ ] | | Scanner (`scan/page.tsx`) — ScannerFrame + ScanResult (reskin QRScanner, logica intacte). |
+| 12 | [x] | 2026-07-06 | `QRScanner` reskine (ScanResult panel + CatPill/StatusBadge + historique a pastilles, conteneur camera habille). Logique html5-qrcode/verifyPayload/manuel intacte. typecheck+lint OK. Overlay reticule plein-cadre: gere par html5-qrcode, non force (note). |
 | 13 | [ ] | | Membres (`members/page.tsx`) — Table + RoleBadge + Modal invitation. |
 | 14 | [ ] | | Parametres (`settings/page.tsx`) — FormSection + Switch quota + Contact override. |
 | 15 | [ ] | | Journal (`activity/page.tsx`) — Table + LogType + Pagination + lignes cliquables -> vue detail. |
@@ -526,8 +526,8 @@ Reskin du scanner QR plein cadre : `ScannerFrame` (reticle + laser) + `ScanResul
 **Composants:** `Card`/`CardBody`, `ScannerFrame`, `ScanResult`, `SuccessRing`, `CatPill`, `Tag`, `Input`, `Button`, `Timeline` (historique de session), `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `QRScanner.tsx` : initialisation `html5-qrcode`, gestion permissions camera, callback de scan, appel de verification (server action), gestion des resultats, historique de session en state. **Ne changer aucune de ces mecaniques.**
-- [ ] **Step 2: Reconstruire le JSX** : `page-head` avec `Tag` d'etat camera (`dot ok`/rouge) ; `grid-2col` avec `ScannerFrame` (habille le `<div id="reader">` de `html5-qrcode` — le container conserve son id/ref) a gauche, et a droite : `ScanResult` (valid/invalid selon le dernier scan, avec mini apercu participant + `CatPill`), Card de saisie manuelle (`Input mono` + `Button` "Vérifier" cable sur le meme handler de verification), et un historique de session (Timeline des scans). Extrait representatif :
+- [x] **Step 1: Lire et preserver** `QRScanner.tsx` : initialisation `html5-qrcode`, gestion permissions camera, callback de scan, appel de verification (server action), gestion des resultats, historique de session en state. **Ne changer aucune de ces mecaniques.**
+- [x] **Step 2: Reconstruire le JSX** : `page-head` avec `Tag` d'etat camera (`dot ok`/rouge) ; `grid-2col` avec `ScannerFrame` (habille le `<div id="reader">` de `html5-qrcode` — le container conserve son id/ref) a gauche, et a droite : `ScanResult` (valid/invalid selon le dernier scan, avec mini apercu participant + `CatPill`), Card de saisie manuelle (`Input mono` + `Button` "Vérifier" cable sur le meme handler de verification), et un historique de session (Timeline des scans). Extrait representatif :
 
 ```tsx
 <div className="grid gap-6 lg:grid-cols-2">
@@ -551,9 +551,9 @@ Reskin du scanner QR plein cadre : `ScannerFrame` (reticle + laser) + `ScanResul
 </div>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-scanner.html` sur 375/768/1440 (roles OPERATOR + STAFF/ADMIN). Verifier : `ScannerFrame` (reticle coins + laser anime), `ScanResult` valid (emerald) vs invalid (rose), saisie manuelle, historique. **Tester la camera reellement** (autorisation, scan d'un QR de test, resultat) — ne pas affirmer sans preuve. Etat sans permission camera (message + saisie manuelle disponible).
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-scanner.html` sur 375/768/1440 (roles OPERATOR + STAFF/ADMIN). Verifier : `ScannerFrame` (reticle coins + laser anime), `ScanResult` valid (emerald) vs invalid (rose), saisie manuelle, historique. **Tester la camera reellement** (autorisation, scan d'un QR de test, resultat) — ne pas affirmer sans preuve. Etat sans permission camera (message + saisie manuelle disponible).
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** scanner fidele (frame + result + saisie manuelle + historique) ; logique camera et verification intactes, testees en navigateur ; typecheck + tests verts.
 
