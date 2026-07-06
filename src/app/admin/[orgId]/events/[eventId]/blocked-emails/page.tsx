@@ -1,23 +1,31 @@
 import { prisma } from "@/lib/prisma";
-import { BlockedEmailsForm } from "@/components/event/BlockedEmailsForm";
+import { BlocklistTabs } from "@/components/event/BlocklistTabs";
 
-export default async function BlockedEmailsPage({
+// Hote des onglets de listes de blocage (fusion v2-16 : e-mails + documents).
+export default async function BlocklistPage({
   params,
 }: {
   params: Promise<{ orgId: string; eventId: string }>;
 }) {
   const { orgId, eventId } = await params;
-  const rows = await prisma.blockedEmail.findMany({
-    where: { eventId },
-    orderBy: { createdAt: "desc" },
-  });
+  const [emails, documents] = await Promise.all([
+    prisma.blockedEmail.findMany({ where: { eventId }, orderBy: { createdAt: "desc" } }),
+    prisma.blockedDocument.findMany({ where: { eventId }, orderBy: { createdAt: "desc" } }),
+  ]);
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Emails bloques</h1>
-      <BlockedEmailsForm
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Listes de blocage</h1>
+        <p className="mt-0.5 text-sm text-slate-400">
+          Empêchez certaines inscriptions par e-mail ou par pièce d&apos;identité
+        </p>
+      </div>
+      <BlocklistTabs
         orgId={orgId}
         eventId={eventId}
-        initial={rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))}
+        emails={emails.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))}
+        documents={documents.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }))}
       />
     </div>
   );

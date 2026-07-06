@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card, CardBody } from "@/components/ui/Card";
+import { Alert } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 type Row = { id: string; email: string; reason: string | null; createdAt: string };
 
@@ -60,57 +63,67 @@ export function BlockedEmailsForm({
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
-      <form onSubmit={add} className="bg-white border rounded p-4 space-y-2">
-        <h2 className="font-semibold">Bloquer un email</h2>
-        <Input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-        />
-        <Input
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Raison (optionnelle)"
-        />
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-        <Button type="submit">Bloquer</Button>
-      </form>
-      <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-slate-50 text-left">
-          <tr>
-            <th className="px-3 py-2">Email</th>
-            <th className="px-3 py-2">Raison</th>
-            <th className="px-3 py-2">Depuis</th>
-            <th className="px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={4} className="px-3 py-4 text-center text-slate-500">
-                Aucun email bloque.
-              </td>
-            </tr>
+    <div className="space-y-4">
+      <Card>
+        <CardBody>
+          <form onSubmit={add} className="flex flex-wrap items-end gap-3">
+            <div className="flex-1">
+              <Input label="E-mail à bloquer" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.fr" required />
+            </div>
+            <div className="flex-1">
+              <Input label="Raison (optionnelle)" value={reason} onChange={(e) => setReason(e.target.value)} />
+            </div>
+            <Button type="submit" variant="danger">
+              Bloquer
+            </Button>
+          </form>
+          {error && (
+            <div className="mt-3">
+              <Alert tone="err">{error}</Alert>
+            </div>
           )}
-          {rows.map((r) => (
-            <tr key={r.id} className="border-t">
-              <td className="px-3 py-2">{r.email}</td>
-              <td className="px-3 py-2 text-slate-600">{r.reason ?? "—"}</td>
-              <td className="px-3 py-2 text-xs text-slate-500">
-                {new Date(r.createdAt).toLocaleDateString("fr-FR")}
-              </td>
-              <td className="px-3 py-2 text-right">
-                <Button variant="secondary" onClick={() => remove(r.id)}>
-                  Retirer
-                </Button>
-              </td>
+        </CardBody>
+      </Card>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="px-4 py-3">E-mail</th>
+              <th className="px-4 py-3">Raison</th>
+              <th className="px-4 py-3">Depuis</th>
+              <th className="px-4 py-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-10 text-center text-sm text-slate-400">
+                  Aucun e-mail bloqué.
+                </td>
+              </tr>
+            )}
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <td className="px-4 py-3 font-mono text-[13px] text-slate-900">{r.email}</td>
+                <td className="px-4 py-3 text-[13px] text-slate-500">{r.reason ?? "—"}</td>
+                <td className="px-4 py-3 text-xs tabular-nums text-slate-400">
+                  {new Date(r.createdAt).toLocaleDateString("fr-FR")}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => remove(r.id)}
+                    aria-label="Retirer"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <Icon name="trash-2" size={15} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

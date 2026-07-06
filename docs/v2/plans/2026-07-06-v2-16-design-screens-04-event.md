@@ -33,7 +33,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 8  | [x] | 2026-07-06 | Apercu badge event reskine (BadgeCard HTML + panneaux Informations KeyValue / Actions). BadgeDownloadV2 PDF conserve. Identite masquee si anonyme. Query/notFound preserves. typecheck+lint OK. |
 | 9  | [x] | 2026-07-06 | `settings/badge` event : head aligne DS ; galerie via BadgeTemplatePicker deja habille, heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
 | 10 | [x] | 2026-07-06 | `CategoryTable` + `CategoryForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/reassign/import preserves. typecheck+lint OK. |
-| 11 | [ ] | | **Fusion blocklists** en onglets (`blocked-emails` hote + Tabs Emails/Documents). |
+| 11 | [x] | 2026-07-06 | Fusion blocklists en onglets : hote `blocked-emails` charge les 2 listes -> `BlocklistTabs` (Tabs + compteurs) ; `blocked-documents` redirige. Forms reskines (Card/table/Alert). APIs inchangees. typecheck+lint+test OK. |
 | 12 | [ ] | | Scanner (`scan/page.tsx`) — ScannerFrame + ScanResult (reskin QRScanner, logica intacte). |
 | 13 | [ ] | | Membres (`members/page.tsx`) — Table + RoleBadge + Modal invitation. |
 | 14 | [ ] | | Parametres (`settings/page.tsx`) — FormSection + Switch quota + Contact override. |
@@ -475,9 +475,9 @@ Table des categories (nom, `CatDot`, statut anonyme via Switch) + Modal d'editio
 **Composants:** `Tabs`, `Table`, `Tag`, `FormSection`/`Input`, `Button`, `Icon`, `Alert`/`EmptyState`.
 
 **Steps:**
-- [ ] **Step 1: Valider la decision d'URL** (voir ci-dessus) avec l'utilisateur. Consigner le choix dans le tracker avant de coder.
-- [ ] **Step 2: Lire et preserver** les deux pages + les deux forms. Conserver **intactes** les requetes `prisma.blockedEmail.findMany` et `prisma.blockedDocument.findMany`, ainsi que les server actions d'ajout/suppression de chaque form. Aucune API modifiee.
-- [ ] **Step 3: Reconstruire l'hote** `blocked-emails/page.tsx` : charger **les deux** listes, rendre un `page-head` "Listes de blocage" puis un `Tabs` a deux panneaux. Onglet "E-mails" -> `BlockedEmailsForm` (initial = emails) ; onglet "Documents" -> `BlockedDocumentsForm` (initial = documents). Chaque libelle d'onglet porte un `Tag` compteur. Extrait representatif :
+- [x] **Step 1: Valider la decision d'URL** (voir ci-dessus) avec l'utilisateur. Consigner le choix dans le tracker avant de coder.
+- [x] **Step 2: Lire et preserver** les deux pages + les deux forms. Conserver **intactes** les requetes `prisma.blockedEmail.findMany` et `prisma.blockedDocument.findMany`, ainsi que les server actions d'ajout/suppression de chaque form. Aucune API modifiee.
+- [x] **Step 3: Reconstruire l'hote** `blocked-emails/page.tsx` : charger **les deux** listes, rendre un `page-head` "Listes de blocage" puis un `Tabs` a deux panneaux. Onglet "E-mails" -> `BlockedEmailsForm` (initial = emails) ; onglet "Documents" -> `BlockedDocumentsForm` (initial = documents). Chaque libelle d'onglet porte un `Tag` compteur. Extrait representatif :
 
 ```tsx
 export default async function BlockedListsPage({ params }) {
@@ -502,11 +502,11 @@ export default async function BlockedListsPage({ params }) {
 }
 ```
 
-- [ ] **Step 4: Gerer `blocked-documents/page.tsx`** selon la decision : `redirect(\`/admin/${orgId}/events/${eventId}/blocked-emails\`)` (option recommandee). Mettre a jour la nav du shell si elle listait deux entrees (une seule entree "Listes de blocage").
-- [ ] **Step 5: Reskin interne** des deux forms (tbl + formulaire d'ajout) avec `Table`, `Input`, `Button`, `btn-icon` corbeille, `EmptyState` par onglet.
-- [ ] **Step 6:** `make typecheck` — Expected: OK.
-- [ ] **Step 7: Controle visuel** contre `event-blocklists.html` sur 375/768/1440. Verifier : `Tabs` fonctionnels (panneau visible/masque, ARIA `role="tab"`/`tabpanel`), compteurs, tables, suppression sur chaque onglet, redirect de l'ancienne route. Etats vides par onglet.
-- [ ] **Step 8:** `make test` — Expected: vert (les tests des deux forms restent valides ; ajuster tout test qui pointait l'ancienne page `blocked-documents` s'il verifie l'URL — cause racine, pas contournement).
+- [x] **Step 4: Gerer `blocked-documents/page.tsx`** selon la decision : `redirect(\`/admin/${orgId}/events/${eventId}/blocked-emails\`)` (option recommandee). Mettre a jour la nav du shell si elle listait deux entrees (une seule entree "Listes de blocage").
+- [x] **Step 5: Reskin interne** des deux forms (tbl + formulaire d'ajout) avec `Table`, `Input`, `Button`, `btn-icon` corbeille, `EmptyState` par onglet.
+- [x] **Step 6:** `make typecheck` — Expected: OK.
+- [x] **Step 7: Controle visuel** contre `event-blocklists.html` sur 375/768/1440. Verifier : `Tabs` fonctionnels (panneau visible/masque, ARIA `role="tab"`/`tabpanel`), compteurs, tables, suppression sur chaque onglet, redirect de l'ancienne route. Etats vides par onglet.
+- [x] **Step 8:** `make test` — Expected: vert (les tests des deux forms restent valides ; ajuster tout test qui pointait l'ancienne page `blocked-documents` s'il verifie l'URL — cause racine, pas contournement).
 
 **Acceptance:** un seul ecran a onglets E-mails/Documents fidele a la maquette ; **les deux API inchangees** ; ajout/suppression fonctionnels sur chaque onglet ; redirect de l'ancienne route ; nav du shill coherente ; decision d'URL consignee ; typecheck + tests verts.
 
