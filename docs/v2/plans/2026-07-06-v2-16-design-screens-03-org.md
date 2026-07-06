@@ -1,6 +1,6 @@
 # Port des maquettes v2-16 — Espace Organisation — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Porter le **contenu** des 8 pages de l'espace Organisation (`/admin/[orgId]/*`) a la fidelite des maquettes `template/screens/org-*.html`, en **reskin** : on remplace le rendu JSX en composant avec la bibliotheque transverse (plan directeur) + les primitives v2-15, **sans** creer de logique metier, de route ni de server action. Data-fetching, RBAC, server actions et endpoints API restent strictement inchanges.
 

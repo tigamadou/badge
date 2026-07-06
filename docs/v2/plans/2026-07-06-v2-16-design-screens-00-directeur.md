@@ -1,6 +1,6 @@
 # Port des maquettes v2-16 — Plan directeur (composants transverses) — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Construire la bibliotheque de composants d'ecran partages (statcards, timeline, quota, minichart, radio-cards, dropzone, stepper, badge-card, scanner, etc.) absents du socle v2-15, pour que les 4 sous-plans d'espace (01-04) composent avec eux au lieu de dupliquer du balisage.
 

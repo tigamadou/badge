@@ -1,6 +1,6 @@
 # Port des maquettes v2-16 — Espace Public & Authentification — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Porter le **contenu** des pages publiques et d'authentification (+ compte participant) a la fidelite des maquettes `template/` du bundle Claude Design, en remplacant le rendu JSX existant par une composition des composants transverses du plan directeur, **sans** modifier la logique metier (data-fetching, server actions, RBAC, validation). Seule exception « new » : la landing marketing publique (`accueil.html`), aujourd'hui absente.
 

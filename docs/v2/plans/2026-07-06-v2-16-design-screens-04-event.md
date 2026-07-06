@@ -1,6 +1,6 @@
 # Port des maquettes v2-16 — Espace Evenement — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Porter le **contenu** des 15 pages de l'espace Evenement a la fidelite des maquettes `template/screens/event-*.html`, en composant avec la bibliotheque de composants transverses du plan directeur (StatCard, MiniChart, QuotaBar, Toolbar, BatchBar, RadioCards, FileBox/Dropzone, BadgeCard/MiniBadge, ScannerFrame/ScanResult, Tabs, etc.). Reskin **pur** : aucune nouvelle logique metier ni nouvelle route API, **sauf** la fusion UI des deux listes de blocage (emails + documents) en un seul ecran a onglets. Les data-fetching, server actions, RBAC et les quatre shells par role restent inchanges.
 

@@ -1,6 +1,6 @@
 # Port des maquettes v2-16 — Espace Staff — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Porter le **contenu** des 10 pages de l'espace Staff a la fidelite des maquettes `template/screens/staff-*.html`, plus creer la **vue detail d'entree de journal** (`journal-detail.html`) cote staff — 1re implementation d'une vue partagee (org/event la reutiliseront). C'est un **reskin** : on remplace le rendu JSX en composant avec la bibliotheque du plan directeur, sans toucher au data-fetching, aux server actions ni au RBAC.
 
