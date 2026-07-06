@@ -27,7 +27,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 3  | [x] | 2026-07-06 | `Timeline`/`TimelineItem` (`src/components/ui/Timeline.tsx`). Test rendu OK, typecheck OK. |
 | 4  | [x] | 2026-07-06 | `QuotaBar`/`StorageAlert` (`src/components/ui/QuotaBar.tsx`). Test rendu OK, typecheck OK. |
 | 5  | [x] | 2026-07-06 | `MiniChart` (`src/components/ui/MiniChart.tsx`). Test rendu OK, typecheck OK. |
-| 6  | [ ] | | `Alert`, `EmptyState`, `Spinner`, `ProgressBar`, `SuccessRing`. |
+| 6  | [x] | 2026-07-06 | Feedback (`src/components/ui/Feedback.tsx`) : Alert/EmptyState/Spinner/ProgressBar/SuccessRing. Test rendu OK, typecheck OK. |
 | 7  | [ ] | | `Toolbar` + `SearchInput` + `ChipFilter`. |
 | 8  | [ ] | | `BatchBar`. |
 | 9  | [ ] | | `CatPill` / `CatDot`, `RoleBadge`, `Tag`. |
@@ -602,7 +602,7 @@ Cluster feedback. Reference : `.alert`, `.empty`/`.center-state`, `.spinner`, `.
   - `ProgressBar({ pct }: { pct: number }): JSX.Element`
   - `SuccessRing({ children }: { children: ReactNode }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -620,12 +620,12 @@ test("Alert err a le role alert ; EmptyState montre titre ; ProgressBar clampe",
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/Feedback.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -698,12 +698,12 @@ export function SuccessRing({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Feedback.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
