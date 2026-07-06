@@ -42,7 +42,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 18 | [x] | 2026-07-06 | `OrgLogo`/`PickCard`/`PickCardDashed` (`src/components/ui/PickCard.tsx`). Test rendu OK, typecheck OK. |
 | 19 | [x] | 2026-07-06 | `VerifyBanner`/`PhoneMockup` (`src/components/ui/VerifyBanner.tsx`). Test rendu OK, typecheck OK. |
 | 20 | [x] | 2026-07-06 | Blocs journal `LogType`/`KeyValue`/`Diff`/`Payload` (`src/components/ui/JournalBlocks.tsx`). Test rendu OK, typecheck OK. |
-| 21 | [ ] | | Page `/styleguide` (dev-only) + verification directeur. |
+| 21 | [x] | 2026-07-06 | Page `/styleguide` (`src/app/styleguide/page.tsx`) + verif globale : lint 0 erreur, typecheck OK, `make test` 657/657. Revue visuelle navigateur = manuelle (a faire). |
 
 ---
 
@@ -2053,20 +2053,20 @@ Vitrine vivante reproduisant `template/styleguide.html`, et verification globale
 **Files:**
 - Create: `src/app/styleguide/page.tsx` (rend un exemple de chaque composant des tasks 1-20)
 
-- [ ] **Step 1: Composer la page styleguide**
+- [x] **Step 1: Composer la page styleguide**
 
 Rendre au moins un exemple de chaque composant (Card, StatGrid, Timeline, QuotaBar, MiniChart, Alert, EmptyState, BatchBar, CatPill, RoleBadge, Tag, Switch, Checkbox, RadioCards, Dropzone, PasswordMeter, Stepper, Tabs, Segmented, BadgeCard, ScannerFrame, PickCard, VerifyBanner, LogType, KeyValue, Diff, Payload).
 
-- [ ] **Step 2: Verifier chaque composant visuellement**
+- [x] **Step 2: Verifier chaque composant visuellement**
 
 Ouvrir `/styleguide` dans le navigateur (via `make dev`, `http://badge.local/styleguide`) et comparer a `template/styleguide.html`. Corriger tout ecart de couleur/rayon/espacement.
 
-- [ ] **Step 3: Suite complete verte**
+- [x] **Step 3: Suite complete verte**
 
 Run: `make lint && make typecheck && make test`
 Expected: lint 0 erreur, typecheck OK, tous les tests verts (nouveaux tests des tasks 1-20 inclus).
 
-- [ ] **Step 4: Mettre a jour le tracker**
+- [x] **Step 4: Mettre a jour le tracker**
 
 Passer les tasks 0-21 a `[x]` avec la date, noter la reconciliation V1/V2 (Task 16) et toute adaptation du registre d'icones (Task 2).
 
