@@ -23,7 +23,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 |------|--------|------|-------|
 | 1  | [x] | 2026-07-06 | `/staff` reskine (StatGrid + Card top-orgs + Timeline). Icone `archive` ajoutee. Promise.all/topOrgs preserves. typecheck+lint OK. |
 | 2  | [x] | 2026-07-06 | `/staff/organizations` + `OrganizationsTable` reskines (toolbar GET habillee, table rounded-xl, OrgLogo, Tag archivee). where/select/take preserves. typecheck+lint OK. |
-| 3  | [ ] | | `staff-org-create.html` -> `/staff/organizations/new` (FormSection x5). |
+| 3  | [x] | 2026-07-06 | `OrgCreationForm` reskine (Card + FormSection Organisation/OWNER + Input/Alert/Spinner). Sections Adresse/Contact non ajoutees (pas de champs API - hors-scope). submit/payload preserves. typecheck+lint OK. |
 | 4  | [ ] | | `staff-org-detail.html` -> `/staff/organizations/[orgId]` (Tabs, Quotas, danger + Modal). |
 | 5  | [ ] | | `staff-users.html` -> `/staff/users` (Toolbar + Segmented, Table, Pagination). |
 | 6  | [ ] | | `staff-user-create.html` -> `/staff/users/new` (RadioCards type, RoleBadge, lier org). |
@@ -265,11 +265,11 @@ Formulaire de creation en sections (Identite, Adresse, Administratif, Contact, Q
 
 **Steps**
 
-- [ ] **Step 1: Lire et preserver**
+- [x] **Step 1: Lire et preserver**
 
 Relire `OrgCreationForm.tsx` (client). **Preserver** `FormState`, `INITIAL_FORM`, `useState`, `useRouter`, le handler de submit (POST vers l'API existante) et l'ensemble des champs deja pilotes (`name`, `slug`, quotas, `ownerEmail`, `ownerName`). Le port habille les champs existants ; **ne pas** ajouter de champs qui n'ont pas de cible API (ex. SIRET/TVA de la maquette) sauf s'ils existent deja dans le state — sinon les omettre. La `page.tsx` recoit juste le lien retour + titre.
 
-- [ ] **Step 2: Reconstruire le JSX**
+- [x] **Step 2: Reconstruire le JSX**
 
 `page.tsx` :
 
@@ -322,12 +322,12 @@ Relire `OrgCreationForm.tsx` (client). **Preserver** `FormState`, `INITIAL_FORM`
 
 _(Adapter les sections a l'ensemble reel de champs : la maquette liste Adresse/Administratif ; ne les inclure que si le `FormState`/l'API les gerent. Sinon, garder les sections effectivement branchees pour eviter toute demi-implementation.)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 `http://badge.local/staff/organizations/new` en 375/768/1440. Verifier : sections separees par `border-slate-100`, grilles responsives (1 col mobile), barre d'action collee a droite pour le CTA vert. Soumettre le formulaire golden path : la creation fonctionne comme avant. `make test` vert.
 
