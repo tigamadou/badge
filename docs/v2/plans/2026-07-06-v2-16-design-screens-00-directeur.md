@@ -33,7 +33,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 9  | [x] | 2026-07-06 | `CatPill`/`RoleBadge`/`Tag` (`src/components/ui/Labels.tsx`). Test rendu OK, typecheck OK. |
 | 10 | [x] | 2026-07-06 | `FormSection`/`Switch`/`Checkbox` (`src/components/ui/FormControls.tsx`, client). Test rendu (2 etats) OK, typecheck OK. |
 | 11 | [x] | 2026-07-06 | `RadioCards` (`src/components/ui/RadioCards.tsx`, client). Test rendu (selection) OK, typecheck OK. |
-| 12 | [ ] | | `FileBox` + `Dropzone`. |
+| 12 | [x] | 2026-07-06 | `FileBox`/`Dropzone` (`src/components/ui/FileBox.tsx`, client). Test rendu OK, typecheck OK. Recablage `FileUploadField` -> reporte au sous-plan 01 (verif visuelle du flux upload). |
 | 13 | [ ] | | `PasswordMeter`. |
 | 14 | [ ] | | `Stepper`. |
 | 15 | [ ] | | `Tabs` + `Segmented`. |
@@ -1217,7 +1217,7 @@ Affichage d'un fichier depose + zone de depot. Reference : `.filebox` (177-180),
   - `FileBox({ icon?, title, subtitle?, thumbUrl?, action? }: { icon?: IconName; title: ReactNode; subtitle?: ReactNode; thumbUrl?: string; action?: ReactNode }): JSX.Element`
   - `Dropzone({ onFiles, title, subtitle, accept? }: { onFiles: (files: FileList) => void; title: ReactNode; subtitle: ReactNode; accept?: string }): JSX.Element` (client)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1230,12 +1230,12 @@ test("FileBox affiche titre et sous-titre", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/FileBox.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 "use client";
@@ -1317,12 +1317,12 @@ export function Dropzone({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/FileBox.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Recabler FileUploadField sur Dropzone/FileBox sans changer sa logique, puis typecheck + tests**
+- [x] **Step 5: Recabler FileUploadField sur Dropzone/FileBox sans changer sa logique, puis typecheck + tests**
 
 Run: `make typecheck && yarn vitest run src/components/public`
 Expected: OK ; les tests existants de `FileUploadField` (s'il y en a) restent verts. Revue visuelle : la dropzone d'inscription publique reprend le visuel maquette.
