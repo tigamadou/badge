@@ -28,7 +28,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 4  | [x] | 2026-07-06 | `QuotaBar`/`StorageAlert` (`src/components/ui/QuotaBar.tsx`). Test rendu OK, typecheck OK. |
 | 5  | [x] | 2026-07-06 | `MiniChart` (`src/components/ui/MiniChart.tsx`). Test rendu OK, typecheck OK. |
 | 6  | [x] | 2026-07-06 | Feedback (`src/components/ui/Feedback.tsx`) : Alert/EmptyState/Spinner/ProgressBar/SuccessRing. Test rendu OK, typecheck OK. |
-| 7  | [ ] | | `Toolbar` + `SearchInput` + `ChipFilter`. |
+| 7  | [x] | 2026-07-06 | `Toolbar`/`SearchInput`/`ChipFilter` (`src/components/ui/Toolbar.tsx`, client). Test rendu OK, typecheck OK. |
 | 8  | [ ] | | `BatchBar`. |
 | 9  | [ ] | | `CatPill` / `CatDot`, `RoleBadge`, `Tag`. |
 | 10 | [ ] | | `FormSection`, `Switch`, `Checkbox`. |
@@ -724,7 +724,7 @@ Barre d'outils de liste (recherche + filtres chips). Reference : `.toolbar`, `.s
   - `SearchInput({ value, onChange, placeholder? }: { value: string; onChange: (v: string) => void; placeholder?: string }): JSX.Element` (client).
   - `ChipFilter({ label, options, value, onChange }: { label: string; options: { value: string; label: string }[]; value: string; onChange: (v: string) => void }): JSX.Element` (client) — select stylise en chip.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -743,12 +743,12 @@ test("SearchInput remonte la saisie", async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/Toolbar.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 "use client";
@@ -809,12 +809,12 @@ export function ChipFilter({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/Toolbar.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
