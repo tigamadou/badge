@@ -40,7 +40,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 16 | [x] | 2026-07-06 | `BadgeCard`/`MiniBadge` (`src/components/badge/`). Test rendu OK, typecheck OK. Reconciliation doublons `BadgePreview*`/`BadgeWebPreview*` -> reportee (suppression = accord utilisateur), a arbitrer aux tasks apercu badge. |
 | 17 | [x] | 2026-07-06 | `ScannerFrame`/`ScanResult` (`src/components/event/ScannerFrame.tsx`). Test rendu OK, typecheck OK. Recablage `QRScanner` -> reporte au sous-plan 04 (verif camera navigateur). |
 | 18 | [x] | 2026-07-06 | `OrgLogo`/`PickCard`/`PickCardDashed` (`src/components/ui/PickCard.tsx`). Test rendu OK, typecheck OK. |
-| 19 | [ ] | | `PhoneMockup` + `VerifyBanner`. |
+| 19 | [x] | 2026-07-06 | `VerifyBanner`/`PhoneMockup` (`src/components/ui/VerifyBanner.tsx`). Test rendu OK, typecheck OK. |
 | 20 | [ ] | | Blocs journal : `LogType`, `KeyValue`, `Diff`, `Payload`. |
 | 21 | [ ] | | Page `/styleguide` (dev-only) + verification directeur. |
 
@@ -1878,7 +1878,7 @@ Cadre mobile + bandeau de resultat de verification publique. Reference : `.phone
   - `VerifyBanner({ valid, title, children? }: { valid: boolean; title: ReactNode; children?: ReactNode }): JSX.Element`
   - `PhoneMockup({ children }: { children: ReactNode }): JSX.Element` — cadre optionnel (desktop) ; a ne pas rendre en < 640px reel (la page verif est deja mobile).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -1890,12 +1890,12 @@ test("VerifyBanner reflete l'etat", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/VerifyBanner.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -1922,12 +1922,12 @@ export function PhoneMockup({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/VerifyBanner.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
