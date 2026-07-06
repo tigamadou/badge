@@ -28,7 +28,7 @@ Legende statuts : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` aband
 | 4 | [x] | 2026-07-06 | `MembersClient` + `OrgMemberForm` reskines (Card invitation, table RoleBadge/avatar, dernier OWNER verrouille cote affichage). refresh/remove/409 preserves. typecheck+lint OK. |
 | 5 | [x] | 2026-07-06 | `TemplatesClient` + `CategoryTemplateForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/POST/PATCH preserves. Toggles inline table -> concentres dans la modale. typecheck+lint OK. |
 | 6 | [x] | 2026-07-06 | `/admin/[orgId]/settings/badge` : head aligne DS ; galerie via BadgeTemplatePicker deja habille (Task 9 staff), heritage via canClearToInherit. Cascade/PATCH inchanges. typecheck+lint OK. |
-| 7 | [ ] | | `org-settings.html` -> `/admin/[orgId]/settings` (FormSection Identite/Adresse/Administratif/Contact, FileBox logo, QuotaBar). |
+| 7 | [x] | 2026-07-06 | `SettingsClient` reskine (Card + FormSection Identite/Adresse/Administratif/Contact + Input label + Alert + Annuler). save/PATCH preserves. Logo=URL (pas d'endpoint upload cable). Quotas geres staff, non affiches ici. typecheck+lint OK. |
 | 8 | [ ] | | `org-log.html` -> `/admin/[orgId]/activity` (Toolbar, Table + LogType, lignes cliquables -> journal-detail, Pagination). |
 
 **Convention de test (reskin)** : ces pages sont un **reskin de rendu**. La verification primaire est le **controle visuel** contre la maquette. Assertion de chaines de classes Tailwind = anti-pattern (fragile, faible valeur, YAGNI). Par task :
@@ -570,9 +570,9 @@ Parametres org : carte a `FormSection` (Identite avec logo « Changer » via Fil
 
 **Steps:**
 
-- [ ] **Step 1: Lire + preserver.** Relire `SettingsClient.tsx`. Preserver le type `OrgForm`, tous les `set(key, value)`, `save()` (PATCH + gestion `msg`), et les champs envoyes au PATCH.
+- [x] **Step 1: Lire + preserver.** Relire `SettingsClient.tsx`. Preserver le type `OrgForm`, tous les `set(key, value)`, `save()` (PATCH + gestion `msg`), et les champs envoyes au PATCH.
 
-- [ ] **Step 2: Reconstruire le JSX.** Envelopper dans une `Card` avec `FormSection` par groupe. Extrait representatif (Identite + logo + Quotas lecture seule) :
+- [x] **Step 2: Reconstruire le JSX.** Envelopper dans une `Card` avec `FormSection` par groupe. Extrait representatif (Identite + logo + Quotas lecture seule) :
 
 ```tsx
 import { FormSection } from "@/components/ui/FormControls";
@@ -616,9 +616,9 @@ import { QuotaBar } from "@/components/ui/QuotaBar";
 
 > **Notes de fidelite / preservation.** (a) Les Quotas sont **lecture seule** dans la maquette (geres par le staff) : afficher via `QuotaBar` avec les valeurs de quota deja disponibles cote org si le `select` de `page.tsx` les expose ; sinon, elargir le `select` **existant** (meme requete) pour recuperer `quotaMaxEvents`/`quotaMaxRegistrations` et le `_count` events, ou afficher des placeholders et **noter**. Ne pas rendre ces jauges editables. (b) Le bouton « Changer » du logo : cabler sur l'upload existant (`FileUploadField`/`storage.ts`) si present ; sinon garder le champ URL actuel (`org.logo`) habille en FileBox et **noter**. (c) `Input` v2-15 : verifier s'il supporte une prop `label` ; sinon garder le pattern `label` + `Input` comme aujourd'hui. (d) Le message `msg` de `save()` -> `Alert tone="success"`/`"err"`. (e) « Annuler » = reset vers `initialOrg` (deja en state) — pas de navigation destructive.
 
-- [ ] **Step 3: `make typecheck`** — Expected: OK.
+- [x] **Step 3: `make typecheck`** — Expected: OK.
 
-- [ ] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : charge (4 FormSection + Quotas + FileBox logo), enregistrement OK (`Alert` succes), erreur (`Alert` err). Verifier `max-w-[760px]`, separateurs `slate-100` entre sections, `tabular-nums` sur quotas. Mode staff : bandeau intact. `make test` vert.
+- [x] **Step 4: Controle visuel + `make test`.** 3 viewports. Etats : charge (4 FormSection + Quotas + FileBox logo), enregistrement OK (`Alert` succes), erreur (`Alert` err). Verifier `max-w-[760px]`, separateurs `slate-100` entre sections, `tabular-nums` sur quotas. Mode staff : bandeau intact. `make test` vert.
 
 **Acceptance:**
 - Rendu fidele a `org-settings.html` (FormSection Identite/Adresse/Administratif/Contact/Quotas, FileBox logo, QuotaBar lecture seule).

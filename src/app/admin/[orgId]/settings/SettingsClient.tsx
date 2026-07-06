@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { FormSection } from "@/components/ui/FormControls";
+import { Alert, Spinner } from "@/components/ui/Feedback";
 
 type OrgForm = {
   name: string;
@@ -29,7 +32,7 @@ export function SettingsClient({
 }) {
   const [org, setOrg] = useState<OrgForm>(initialOrg);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   function set<K extends keyof OrgForm>(key: K, value: OrgForm[K]) {
     setOrg((o) => ({ ...o, [key]: value }));
@@ -58,111 +61,116 @@ export function SettingsClient({
     });
     setSaving(false);
     if (res.ok) {
-      setMsg("Paramètres enregistrés.");
+      setMsg({ ok: true, text: "Paramètres enregistrés." });
     } else {
-      setMsg("Erreur lors de l'enregistrement.");
+      setMsg({ ok: false, text: "Erreur lors de l'enregistrement." });
     }
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <h1 className="text-2xl font-bold">Paramètres de l&apos;organisation</h1>
-      {msg && (
-        <div className="rounded bg-blue-50 border border-blue-200 px-3 py-2 text-sm">{msg}</div>
-      )}
+    <div className="max-w-2xl space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;organisation</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Identité, adresse et contact public</p>
+      </div>
+      {msg && <Alert tone={msg.ok ? "success" : "err"}>{msg.text}</Alert>}
 
-      <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Identité</h2>
-        <div>
-          <label className="text-sm text-slate-600">Nom</label>
-          <Input value={org.name} onChange={(e) => set("name", e.target.value)} />
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">Raison sociale</label>
-          <Input
-            value={org.legalName ?? ""}
-            onChange={(e) => set("legalName", e.target.value || null)}
-          />
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">Slug</label>
-          <Input value={org.slug} disabled />
-          <p className="text-xs text-slate-500 mt-1">Modifiable par le staff uniquement.</p>
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">Logo (URL)</label>
-          <Input
-            placeholder="/uploads/logo.png"
-            value={org.logo ?? ""}
-            onChange={(e) => set("logo", e.target.value || null)}
-          />
-        </div>
-      </section>
+      <Card>
+        <div className="px-6">
+          <FormSection title="Identité">
+            <div className="space-y-4">
+              <Input label="Nom" value={org.name} onChange={(e) => set("name", e.target.value)} />
+              <Input
+                label="Raison sociale"
+                value={org.legalName ?? ""}
+                onChange={(e) => set("legalName", e.target.value || null)}
+              />
+              <div>
+                <Input label="Slug" value={org.slug} disabled />
+                <p className="mt-1 text-xs text-slate-400">Modifiable par le staff uniquement.</p>
+              </div>
+              <Input
+                label="Logo (URL)"
+                placeholder="/uploads/logo.png"
+                value={org.logo ?? ""}
+                onChange={(e) => set("logo", e.target.value || null)}
+              />
+            </div>
+          </FormSection>
 
-      <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Adresse</h2>
-        <Input
-          placeholder="Ligne 1"
-          value={org.addressLine1 ?? ""}
-          onChange={(e) => set("addressLine1", e.target.value || null)}
-        />
-        <Input
-          placeholder="Ligne 2"
-          value={org.addressLine2 ?? ""}
-          onChange={(e) => set("addressLine2", e.target.value || null)}
-        />
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            placeholder="Code postal"
-            value={org.postalCode ?? ""}
-            onChange={(e) => set("postalCode", e.target.value || null)}
-          />
-          <Input
-            placeholder="Ville"
-            value={org.city ?? ""}
-            onChange={(e) => set("city", e.target.value || null)}
-          />
-        </div>
-        <Input
-          placeholder="Pays"
-          value={org.country ?? ""}
-          onChange={(e) => set("country", e.target.value || null)}
-        />
-      </section>
+          <FormSection title="Adresse">
+            <div className="space-y-4">
+              <Input
+                label="Ligne 1"
+                value={org.addressLine1 ?? ""}
+                onChange={(e) => set("addressLine1", e.target.value || null)}
+              />
+              <Input
+                label="Ligne 2"
+                value={org.addressLine2 ?? ""}
+                onChange={(e) => set("addressLine2", e.target.value || null)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Code postal"
+                  value={org.postalCode ?? ""}
+                  onChange={(e) => set("postalCode", e.target.value || null)}
+                />
+                <Input label="Ville" value={org.city ?? ""} onChange={(e) => set("city", e.target.value || null)} />
+              </div>
+              <Input label="Pays" value={org.country ?? ""} onChange={(e) => set("country", e.target.value || null)} />
+            </div>
+          </FormSection>
 
-      <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Administratif</h2>
-        <div>
-          <label className="text-sm text-slate-600">Numéro fiscal / SIRET</label>
-          <Input value={org.taxId ?? ""} onChange={(e) => set("taxId", e.target.value || null)} />
-        </div>
-        <div>
-          <label className="text-sm text-slate-600">Site web</label>
-          <Input
-            placeholder="https://exemple.fr"
-            value={org.website ?? ""}
-            onChange={(e) => set("website", e.target.value || null)}
-          />
-        </div>
-      </section>
+          <FormSection title="Administratif">
+            <div className="space-y-4">
+              <Input
+                label="Numéro fiscal / SIRET"
+                value={org.taxId ?? ""}
+                onChange={(e) => set("taxId", e.target.value || null)}
+              />
+              <Input
+                label="Site web"
+                placeholder="https://exemple.fr"
+                value={org.website ?? ""}
+                onChange={(e) => set("website", e.target.value || null)}
+              />
+            </div>
+          </FormSection>
 
-      <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Contact public</h2>
-        <Input
-          placeholder="contact@exemple.fr"
-          value={org.contactEmail ?? ""}
-          onChange={(e) => set("contactEmail", e.target.value || null)}
-        />
-        <Input
-          placeholder="+33 1 23 45 67 89"
-          value={org.contactPhone ?? ""}
-          onChange={(e) => set("contactPhone", e.target.value || null)}
-        />
-      </section>
+          <FormSection title="Contact public">
+            <div className="space-y-4">
+              <Input
+                label="E-mail de contact"
+                placeholder="contact@exemple.fr"
+                value={org.contactEmail ?? ""}
+                onChange={(e) => set("contactEmail", e.target.value || null)}
+              />
+              <Input
+                label="Téléphone"
+                placeholder="+33 1 23 45 67 89"
+                value={org.contactPhone ?? ""}
+                onChange={(e) => set("contactPhone", e.target.value || null)}
+              />
+            </div>
+          </FormSection>
+        </div>
+      </Card>
 
-      <Button onClick={save} disabled={saving}>
-        Enregistrer
-      </Button>
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="secondary" onClick={() => setOrg(initialOrg)}>
+          Annuler
+        </Button>
+        <Button onClick={save} className="flex items-center justify-center gap-2" disabled={saving}>
+          {saving ? (
+            <>
+              <Spinner size={16} /> Enregistrement…
+            </>
+          ) : (
+            "Enregistrer"
+          )}
+        </Button>
+      </div>
     </div>
   );
 }
