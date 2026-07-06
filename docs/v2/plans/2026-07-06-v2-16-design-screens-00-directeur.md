@@ -26,7 +26,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 2  | [x] | 2026-07-06 | `StatCard`/`StatGrid` (`src/components/ui/StatCard.tsx`). Test rendu OK, typecheck OK. |
 | 3  | [x] | 2026-07-06 | `Timeline`/`TimelineItem` (`src/components/ui/Timeline.tsx`). Test rendu OK, typecheck OK. |
 | 4  | [x] | 2026-07-06 | `QuotaBar`/`StorageAlert` (`src/components/ui/QuotaBar.tsx`). Test rendu OK, typecheck OK. |
-| 5  | [ ] | | `MiniChart`. |
+| 5  | [x] | 2026-07-06 | `MiniChart` (`src/components/ui/MiniChart.tsx`). Test rendu OK, typecheck OK. |
 | 6  | [ ] | | `Alert`, `EmptyState`, `Spinner`, `ProgressBar`, `SuccessRing`. |
 | 7  | [ ] | | `Toolbar` + `SearchInput` + `ChipFilter`. |
 | 8  | [ ] | | `BatchBar`. |
@@ -537,7 +537,7 @@ Sparkline 30 jours (barres verticales). Reference : `.minichart` (badge.css 359-
 **Interfaces:**
 - Produces: `MiniChart({ values, ariaLabel }: { values: number[]; ariaLabel: string }): JSX.Element` — normalise sur le max, hauteur 120px.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -550,12 +550,12 @@ test("MiniChart rend une barre par valeur avec un label accessible", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/MiniChart.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 export function MiniChart({ values, ariaLabel }: { values: number[]; ariaLabel: string }) {
@@ -574,12 +574,12 @@ export function MiniChart({ values, ariaLabel }: { values: number[]; ariaLabel: 
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/MiniChart.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
