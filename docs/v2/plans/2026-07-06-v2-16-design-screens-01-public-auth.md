@@ -27,7 +27,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 3  | [x] | 2026-07-06 | `/forgot-password` reskine (SuccessRing/Alert/Spinner, etat done). Logique anti-enumeration preservee. typecheck+lint OK. |
 | 4  | [x] | 2026-07-06 | `/reset-password/[token]` reskine (PasswordMeter + score client, Alert/Spinner/SuccessRing). Validation <6/concordance et POST preserves. typecheck+lint OK. |
 | 5  | [x] | 2026-07-06 | `SetupPasswordForm` reskine (Input/Button/Alert/Spinner/PasswordMeter). Titre generique conserve (prenom non charge, YAGNI). Validation+POST preserves. typecheck+lint OK. |
-| 6  | [ ] | | Verification e-mail `/verify-email/[token]` (`SuccessRing`). |
+| 6  | [x] | 2026-07-06 | `/verify-email/[token]` bascule sur AuthCard + SuccessRing (succes) / Alert (erreur). `verifyToken`/`resolveBaseUrl` preserves. typecheck+lint OK. |
 | 7  | [ ] | | Presentation evenement public `/e/[slug]` (hero + categories + CTA). |
 | 8  | [ ] | | Formulaire d'inscription `/e/[slug]/register` (`RadioCards` + `Checkbox`). |
 | 9  | [ ] | | Confirmation `/e/[slug]/success` (`SuccessRing` + `FileBox`). |
@@ -348,9 +348,9 @@ Etat succes : `SuccessRing` `check` + bouton « Se connecter » (`Button` en `Li
 
 **Composants:** `AuthCard`, `SuccessRing`, `Button`/`Link`, `Icon` (`check`), `Alert` (cas erreur, tone `err`).
 
-- [ ] **Step 1: Lire l'existant** — Server Component : `verifyToken(token, baseUrl)` (fetch serveur -> `/api/auth/verify-email`), rend succes (avec `alreadyVerified`) ou erreur. Preserver `resolveBaseUrl()` et l'appel. Aujourd'hui la page n'utilise pas `AuthCard` (markup inline) — la basculer sur `AuthCard` pour homogeneiser.
+- [x] **Step 1: Lire l'existant** — Server Component : `verifyToken(token, baseUrl)` (fetch serveur -> `/api/auth/verify-email`), rend succes (avec `alreadyVerified`) ou erreur. Preserver `resolveBaseUrl()` et l'appel. Aujourd'hui la page n'utilise pas `AuthCard` (markup inline) — la basculer sur `AuthCard` pour homogeneiser.
 
-- [ ] **Step 2: Reconstruire**
+- [x] **Step 2: Reconstruire**
 ```tsx
 return result.ok ? (
   <AuthCard title={result.alreadyVerified ? "Email déjà confirmé" : "Adresse vérifiée"}>
@@ -373,8 +373,8 @@ return result.ok ? (
 );
 ```
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — succes (token valide via seed) et erreur (token bidon). 375/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — succes (token valide via seed) et erreur (token bidon). 375/1440. `make test` vert.
 
 **Acceptance:** succes + erreur fideles ; `verifyToken` inchange.
 

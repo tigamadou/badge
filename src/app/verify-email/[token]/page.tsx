@@ -1,5 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { Alert, SuccessRing } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 async function verifyToken(token: string, baseUrl: string): Promise<{ ok: boolean; alreadyVerified?: boolean }> {
   // Server-side fetch vers la route API pour valider le token. On utilise le
@@ -35,45 +37,36 @@ export default async function VerifyEmailPage({
   const { token } = await params;
   const result = await verifyToken(token, resolveBaseUrl());
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-5 py-10">
-      <div className="w-full max-w-[400px] rounded-2xl border border-slate-200 bg-white p-8 text-center space-y-4">
-        <div className="flex justify-center mb-2">
-          <Image src="/logo.png" alt="Badge" width={120} height={120} className="h-20 w-auto object-contain" />
-        </div>
-        {result.ok ? (
-          <>
-            <h1 className="text-[22px] font-semibold text-green-700">
-              {result.alreadyVerified ? "Email déjà confirmé" : "Email confirmé"}
-            </h1>
-            <p className="text-sm text-slate-700">
-              Votre adresse email est désormais vérifiée. Vous pouvez vous connecter à votre compte.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block mt-2 bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700"
-            >
-              Se connecter
-            </Link>
-          </>
-        ) : (
-          <>
-            <h1 className="text-[22px] font-semibold text-red-600">Lien invalide ou expiré</h1>
-            <p className="text-sm text-slate-700">
-              Ce lien de confirmation est invalide ou a expiré. Vous pouvez vous inscrire à nouveau
-              ou demander un nouveau lien depuis la page de connexion.
-            </p>
-            <div className="space-x-3">
-              <Link href="/register" className="text-green-600 hover:underline text-sm">
-                S&apos;inscrire à nouveau
-              </Link>
-              <Link href="/login" className="text-green-600 hover:underline text-sm">
-                Se connecter
-              </Link>
-            </div>
-          </>
-        )}
+  return result.ok ? (
+    <AuthCard title={result.alreadyVerified ? "Email déjà confirmé" : "Adresse vérifiée"}>
+      <div className="text-center">
+        <SuccessRing>
+          <Icon name="check" size={34} />
+        </SuccessRing>
+        <p className="text-sm text-slate-600">
+          Votre adresse e-mail a bien été confirmée. Vous pouvez maintenant vous connecter.
+        </p>
+        <Link
+          href="/login"
+          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700"
+        >
+          Se connecter
+        </Link>
       </div>
-    </div>
+    </AuthCard>
+  ) : (
+    <AuthCard title="Lien invalide ou expiré">
+      <div className="space-y-4 text-center">
+        <Alert tone="err">Ce lien de confirmation est invalide ou a expiré.</Alert>
+        <div className="flex justify-center gap-4 text-sm">
+          <Link href="/register" className="text-green-600 hover:underline">
+            S&apos;inscrire à nouveau
+          </Link>
+          <Link href="/login" className="text-green-600 hover:underline">
+            Se connecter
+          </Link>
+        </div>
+      </div>
+    </AuthCard>
   );
 }
