@@ -40,6 +40,8 @@ import {
   ExternalLink,
   Send,
   Smartphone,
+  User,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +87,8 @@ const ICONS = {
   "alert-triangle": AlertTriangle,
   clock: Clock,
   "map-pin": MapPin,
+  user: User,
+  lock: Lock,
   "arrow-right": ArrowRight,
   "chevron-right": ChevronRight,
   "external-link": ExternalLink,

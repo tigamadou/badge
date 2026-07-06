@@ -32,7 +32,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 8  | [x] | 2026-07-06 | `RegisterEventForm` reskine (RadioCards + Checkbox + FormSection + Alert/Spinner). POST/409/redirection success preserves. Identite/uploads restent au profil (Task 14). typecheck+lint OK. |
 | 9  | [x] | 2026-07-06 | `/e/[slug]/success` reskine (Card + SuccessRing + FileBox). notFound/settings/liens preserves. typecheck+lint OK. |
 | 10 | [x] | 2026-07-06 | `/badge/[id]` apercu web via BadgeCard (QR img), PDF conserve via BadgeDownload. Identite masquee si anonyme. typecheck+lint OK. |
-| 11 | [ ] | | Verification badge `/verify/[badgeId]` (`VerifyBanner`, 3 cas). |
+| 11 | [x] | 2026-07-06 | `BadgeVerifyView` reskine (VerifyBanner/Card/CatPill/KeyValue, 3 cas). Icones `user`/`lock` ajoutees au registre. Forme de `data` preservee. typecheck+lint+test OK. |
 | 12 | [ ] | | Tableau de bord participant `/account` (+ layout, cartes, `EmptyState`). |
 | 13 | [ ] | | Detail inscription `/account/registrations/[id]` (`KeyValue`, `Timeline`, `FileBox`). |
 | 14 | [ ] | | Profil `/account/profile` (+ `/complete`) (banniere, photo, mot de passe, zone danger). |
@@ -576,9 +576,9 @@ return (
 
 **Composants:** `VerifyBanner`, `Card`/`CardBody`, `CatPill`, `KeyValue` (ou lignes `between`), `Icon` (`check`, `x`, `user`, `lock`, `circle-x`).
 
-- [ ] **Step 1: Lire l'existant** — `page.tsx` (serveur) construit `data` : `valid` = `status==="APPROVED" && badgePrinted` ; si `category.anonymous`, `participant` est `undefined` (nom masqué). Passe a `BadgeVerifyView` (presentational). **Preserver** ce calcul et la forme de `data` (union `valid true/false`). Ne modifier que `BadgeVerifyView`.
+- [x] **Step 1: Lire l'existant** — `page.tsx` (serveur) construit `data` : `valid` = `status==="APPROVED" && badgePrinted` ; si `category.anonymous`, `participant` est `undefined` (nom masqué). Passe a `BadgeVerifyView` (presentational). **Preserver** ce calcul et la forme de `data` (union `valid true/false`). Ne modifier que `BadgeVerifyView`.
 
-- [ ] **Step 2: Reconstruire `BadgeVerifyView`** — 3 cas depuis l'union existante :
+- [x] **Step 2: Reconstruire `BadgeVerifyView`** — 3 cas depuis l'union existante :
 ```tsx
 if (!data.valid) {
   return (
@@ -618,8 +618,8 @@ return (
 ```
 > Page deja mobile (`max-w-md`). Le `PhoneMockup` du directeur est un cadre **desktop** optionnel — non requis ici (la page reelle est deja pleine largeur mobile). Ne pas l'imposer.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — 3 cas (badge valide nominatif, valide catégorie anonyme, non valide) via seed. **375 px prioritaire** (mobile-first) + 768/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — 3 cas (badge valide nominatif, valide catégorie anonyme, non valide) via seed. **375 px prioritaire** (mobile-first) + 768/1440. `make test` vert.
 
 **Acceptance:** 3 cas fideles ; calcul `valid`/anonymat cote serveur inchange.
 
