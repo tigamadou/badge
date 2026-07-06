@@ -35,7 +35,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 10 | [x] | 2026-07-06 | `CategoryTable` + `CategoryForm` reskines (table CatPill/Tag, modal overlay edition avec Switch). refresh/remove/reassign/import preserves. typecheck+lint OK. |
 | 11 | [x] | 2026-07-06 | Fusion blocklists en onglets : hote `blocked-emails` charge les 2 listes -> `BlocklistTabs` (Tabs + compteurs) ; `blocked-documents` redirige. Forms reskines (Card/table/Alert). APIs inchangees. typecheck+lint+test OK. |
 | 12 | [x] | 2026-07-06 | `QRScanner` reskine (ScanResult panel + CatPill/StatusBadge + historique a pastilles, conteneur camera habille). Logique html5-qrcode/verifyPayload/manuel intacte. typecheck+lint OK. Overlay reticule plein-cadre: gere par html5-qrcode, non force (note). |
-| 13 | [ ] | | Membres (`members/page.tsx`) — Table + RoleBadge + Modal invitation. |
+| 13 | [x] | 2026-07-06 | `MemberTable` reskine (table avatar + select role stylé + modal invitation). setRole/remove/refresh preserves. typecheck+lint OK. |
 | 14 | [ ] | | Parametres (`settings/page.tsx`) — FormSection + Switch quota + Contact override. |
 | 15 | [ ] | | Journal (`activity/page.tsx`) — Table + LogType + Pagination + lignes cliquables -> vue detail. |
 
@@ -573,11 +573,11 @@ Table des membres (avatar, nom, `RoleBadge`, actions) + Modal/formulaire d'invit
 **Composants:** `Card`/`CardBody`, `Table`, `RoleBadge`, `Input`/`Select`, `Button`, `Modal` (si invitation en modale), `Icon`, `EmptyState`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `MemberTable.tsx` / `MemberInviteForm.tsx` : liste des membres/roles effectifs, invitation (server action), changement de role, retrait, gardes `assertNotLastOwner`. Ne rien changer.
-- [ ] **Step 2: Reconstruire le JSX** : Card d'invitation (`Input` email + `Select` role + `Button` Inviter), puis `Table` des membres (avatar initiales, nom + email, `RoleBadge` du role, actions changer role/retirer). Respecter le rendu de la maquette (avatar sm).
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-members.html` sur 375/768/1440. Verifier : formulaire d'invitation wrap sur mobile, RoleBadge par tonalite (OWNER/ADMIN navy, OPERATOR green, etc.), actions. Etats : erreur d'invitation (Alert), liste vide.
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 1: Lire et preserver** `MemberTable.tsx` / `MemberInviteForm.tsx` : liste des membres/roles effectifs, invitation (server action), changement de role, retrait, gardes `assertNotLastOwner`. Ne rien changer.
+- [x] **Step 2: Reconstruire le JSX** : Card d'invitation (`Input` email + `Select` role + `Button` Inviter), puis `Table` des membres (avatar initiales, nom + email, `RoleBadge` du role, actions changer role/retirer). Respecter le rendu de la maquette (avatar sm).
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-members.html` sur 375/768/1440. Verifier : formulaire d'invitation wrap sur mobile, RoleBadge par tonalite (OWNER/ADMIN navy, OPERATOR green, etc.), actions. Etats : erreur d'invitation (Alert), liste vide.
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** membres fideles (invitation + table + RoleBadge) ; invitation/changement de role/retrait preserves ; typecheck + tests verts.
 
