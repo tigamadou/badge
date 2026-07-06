@@ -43,6 +43,7 @@ import {
   User,
   Lock,
   Tag,
+  Archive,
   type LucideIcon,
 } from "lucide-react";
 
@@ -91,6 +92,7 @@ const ICONS = {
   user: User,
   lock: Lock,
   tag: Tag,
+  archive: Archive,
   "arrow-right": ArrowRight,
   "chevron-right": ChevronRight,
   "external-link": ExternalLink,

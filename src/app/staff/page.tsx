@@ -1,6 +1,11 @@
 import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Timeline, TimelineItem } from "@/components/ui/Timeline";
+import { OrgLogo } from "@/components/ui/PickCard";
+import { EmptyState } from "@/components/ui/Feedback";
 
 export default async function StaffDashboardPage() {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -61,81 +66,87 @@ export default async function StaffDashboardPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
+  const topMax = topOrgs[0]?.count ?? 1;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Tableau de bord plateforme</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Kpi label="Organisations actives" value={orgsActive} />
-        <Kpi label="Organisations archivees" value={orgsArchived} />
-        <Kpi label="Evenements actifs" value={eventsActive} />
-        <Kpi label="Inscriptions cumulees" value={registrationsTotal} />
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">Tableau de bord</h1>
+        <p className="mt-1 text-sm text-slate-400">Vue d&apos;ensemble de la plateforme</p>
       </div>
 
-      <section>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold">Top organisations (mois en cours)</h2>
-          <Link href="/staff/organizations" className="text-sm text-green-600 hover:underline">
-            Tout voir
-          </Link>
-        </div>
-        <ul className="bg-white border rounded divide-y">
-          {topOrgs.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">
-              Aucune inscription ce mois-ci.
-            </li>
-          )}
-          {topOrgs.map((o) => (
-            <li key={o.orgId} className="px-4 py-3 flex justify-between text-sm">
-              <Link
-                href={`/staff/organizations/${o.orgId}`}
-                className="hover:underline"
-              >
-                {o.name}
+      <StatGrid cols={4}>
+        <StatCard label="Organisations actives" value={orgsActive} icon="building-2" />
+        <StatCard label="Organisations archivées" value={orgsArchived} icon="archive" />
+        <StatCard label="Événements actifs" value={eventsActive} icon="calendar" />
+        <StatCard label="Inscriptions cumulées" value={registrationsTotal.toLocaleString("fr-FR")} icon="user-check" />
+      </StatGrid>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHead
+            title="Top organisations"
+            subtitle="Par inscriptions ce mois-ci"
+            action={
+              <Link href="/staff/organizations" className="text-[13px] font-medium text-green-600 hover:underline">
+                Tout voir
               </Link>
-              <span className="text-slate-500">{o.count} inscriptions</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold">Journal recent</h2>
-          <Link href="/staff/activity" className="text-sm text-green-600 hover:underline">
-            Tout voir
-          </Link>
-        </div>
-        <ul className="bg-white border rounded divide-y">
-          {recentActivity.length === 0 && (
-            <li className="px-4 py-3 text-sm text-slate-500">Aucune activite recente.</li>
-          )}
-          {recentActivity.map((a) => (
-            <li key={a.id} className="px-4 py-3 text-sm flex justify-between">
-              <span>
-                {a.type}
-                {a.staffActor && (
-                  <span className="ml-2 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs">
-                    staff
+            }
+          />
+          <CardBody className="space-y-3">
+            {topOrgs.length === 0 ? (
+              <p className="text-sm text-slate-400">Aucune inscription ce mois-ci.</p>
+            ) : (
+              topOrgs.map((o) => (
+                <div key={o.orgId} className="flex items-center gap-3">
+                  <OrgLogo name={o.name} size={32} />
+                  <Link href={`/staff/organizations/${o.orgId}`} className="flex-1 text-sm text-slate-900 hover:underline">
+                    {o.name}
+                  </Link>
+                  <div className="w-28">
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-green-600"
+                        style={{ width: `${Math.round((o.count / topMax) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="w-14 text-right text-sm tabular-nums text-slate-500">
+                    {o.count.toLocaleString("fr-FR")}
                   </span>
-                )}
-              </span>
-              <span className="text-slate-500 text-xs">
-                {new Date(a.createdAt).toLocaleString("fr-FR")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
+                </div>
+              ))
+            )}
+          </CardBody>
+        </Card>
 
-function Kpi({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded border border-slate-200 p-4 bg-white">
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
+        <Card>
+          <CardHead
+            title="Activité récente"
+            action={
+              <Link href="/staff/activity" className="text-[13px] font-medium text-green-600 hover:underline">
+                Tout voir
+              </Link>
+            }
+          />
+          <CardBody>
+            {recentActivity.length === 0 ? (
+              <EmptyState icon="scroll-text" title="Aucune activité récente" />
+            ) : (
+              <Timeline>
+                {recentActivity.map((a) => (
+                  <TimelineItem
+                    key={a.id}
+                    tone={a.staffActor ? "warn" : "ok"}
+                    title={a.type}
+                    meta={`${a.staffActor ? "Staff · " : ""}${new Date(a.createdAt).toLocaleString("fr-FR")}`}
+                  />
+                ))}
+              </Timeline>
+            )}
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 
 | Task | Statut | Date | Notes |
 |------|--------|------|-------|
-| 1  | [ ] | | `staff-dashboard.html` -> `/staff` (StatGrid, Top 5 + QuotaBar, Timeline). |
+| 1  | [x] | 2026-07-06 | `/staff` reskine (StatGrid + Card top-orgs + Timeline). Icone `archive` ajoutee. Promise.all/topOrgs preserves. typecheck+lint OK. |
 | 2  | [ ] | | `staff-orgs.html` -> `/staff/organizations` (Toolbar, Table, Pagination, badge archivee). |
 | 3  | [ ] | | `staff-org-create.html` -> `/staff/organizations/new` (FormSection x5). |
 | 4  | [ ] | | `staff-org-detail.html` -> `/staff/organizations/[orgId]` (Tabs, Quotas, danger + Modal). |
@@ -75,11 +75,11 @@ Vue d'ensemble plateforme : 4 statcards, carte « Top 5 organisations » (logo +
 
 **Steps**
 
-- [ ] **Step 1: Lire la page et cartographier la logique a preserver**
+- [x] **Step 1: Lire la page et cartographier la logique a preserver**
 
 Relire `src/app/staff/page.tsx`. **Preserver** integralement le bloc `Promise.all` (`orgsActive`, `orgsArchived`, `eventsActive`, `registrationsTotal`, `topOrgsRaw`, `recentActivity`), la reconstruction `orgCounts`/`topOrgs`, la requete `events` conditionnelle. On ne remplace que le `return (...)` et on supprime les helpers locaux `Kpi` (remplaces par `StatCard`).
 
-- [ ] **Step 2: Reconstruire le JSX avec les composants transverses**
+- [x] **Step 2: Reconstruire le JSX avec les composants transverses**
 
 Les 4 KPI existants sont conserves (donnees reelles), habilles en `StatCard` avec icone par NOM string. Pour le Top 5, la largeur de `QuotaBar` est relative au max de la liste (`topOrgs[0].count`). La timeline mappe `a.type`/`a.staffActor` sur un `tone` :
 
@@ -148,12 +148,12 @@ return (
 
 _(Note : `QuotaBar` avec `label`/`valueText` vides sert ici de simple jauge inline ; si le rendu du wrapper `my-3.5` gene l'alignement, envelopper dans un `span` de hauteur controlee. La liste reste 1:1 avec la maquette `list-row` + `qbar`.)_
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `make typecheck`
 Expected: OK (les helpers `Kpi` supprimes ne sont plus references).
 
-- [ ] **Step 4: Controle visuel + tests**
+- [x] **Step 4: Controle visuel + tests**
 
 Ouvrir `http://badge.local/staff` en 375 / 768 / 1440 px. Verifier : 4 statcards (grille 2 cols mobile, 4 cols desktop), Top 5 avec logos + jauges vertes + valeurs tabulaires, timeline avec dots colores. `make test` vert.
 
