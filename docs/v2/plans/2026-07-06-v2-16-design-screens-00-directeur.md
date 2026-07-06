@@ -29,7 +29,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 5  | [x] | 2026-07-06 | `MiniChart` (`src/components/ui/MiniChart.tsx`). Test rendu OK, typecheck OK. |
 | 6  | [x] | 2026-07-06 | Feedback (`src/components/ui/Feedback.tsx`) : Alert/EmptyState/Spinner/ProgressBar/SuccessRing. Test rendu OK, typecheck OK. |
 | 7  | [x] | 2026-07-06 | `Toolbar`/`SearchInput`/`ChipFilter` (`src/components/ui/Toolbar.tsx`, client). Test rendu OK, typecheck OK. |
-| 8  | [ ] | | `BatchBar`. |
+| 8  | [x] | 2026-07-06 | `BatchBar`/`BatchButton` (`src/components/ui/BatchBar.tsx`). Test rendu OK, typecheck OK. |
 | 9  | [ ] | | `CatPill` / `CatDot`, `RoleBadge`, `Tag`. |
 | 10 | [ ] | | `FormSection`, `Switch`, `Checkbox`. |
 | 11 | [ ] | | `RadioCards`. |
@@ -834,7 +834,7 @@ Barre d'actions par lot (fond marine, compteur + actions). Reference : `.batch-b
   - `BatchBar({ count, children }: { count: number; children: ReactNode }): JSX.Element` — masque si `count === 0`.
   - `BatchButton({ icon?, children, onClick }: { icon?: IconName; children: ReactNode; onClick: () => void }): JSX.Element`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { render, screen } from "@testing-library/react";
@@ -853,12 +853,12 @@ test("BatchBar masque a 0, affiche compteur et actions sinon", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `yarn vitest run src/components/ui/__tests__/BatchBar.test.tsx`
 Expected: FAIL — module introuvable.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -888,12 +888,12 @@ export function BatchButton({ icon, children, onClick }: { icon?: IconName; chil
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `yarn vitest run src/components/ui/__tests__/BatchBar.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `make typecheck`
 Expected: OK.
