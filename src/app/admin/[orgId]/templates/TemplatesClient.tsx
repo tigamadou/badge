@@ -46,7 +46,7 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
       {editing && <CategoryTemplateForm orgId={orgId} initial={editing} onSaved={refresh} />}
 
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">#</th>
             <th className="px-3 py-2">Nom</th>

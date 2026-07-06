@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Paramètres</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "settings", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" } };</script>
+<div id="page" data-screen-label="41 Event paramètres">
+
+  <div class="page-head"><div><h1>Paramètres</h1><p class="sub">Salon Tech 2026</p></div></div>
+
+  <div class="card card-pad" style="max-width:760px;">
+    <div class="form-section">
+      <h3>Informations</h3>
+      <div class="field"><label>Titre</label><input class="input" value="Salon Tech 2026" /></div>
+      <div class="row-2"><div class="field"><label>Slug</label><input class="input mono" value="salon-tech-2026" /></div><div class="field"><label>Quota inscriptions</label><input class="input" value="1500" /></div></div>
+      <div class="row-2"><div class="field" style="margin-bottom:0;"><label>Dates</label><input class="input" value="15–17 mars 2026" /></div><div class="field" style="margin-bottom:0;"><label>Lieu</label><input class="input" value="Paris Expo" /></div></div>
+    </div>
+
+    <div class="form-section">
+      <h3>Inscriptions</h3>
+      <div class="between" style="padding:4px 0;"><div><div class="ds-value" style="font-weight:500;">Inscriptions ouvertes</div><div class="ds-meta">Le formulaire public accepte les nouvelles inscriptions.</div></div><label class="switch"><span class="track on"></span></label></div>
+    </div>
+
+    <div class="form-section">
+      <h3>Contact (override)</h3>
+      <p class="desc">Remplace les coordonnées de l'organisation pour cet événement.</p>
+      <div class="row-2" style="margin-bottom:0;"><div class="field" style="margin-bottom:0;"><label>E-mail de contact</label><input class="input" placeholder="contact@salontech.fr" /></div><div class="field" style="margin-bottom:0;"><label>Téléphone</label><input class="input" placeholder="01 23 45 67 89" /></div></div>
+    </div>
+
+    <div class="form-section" style="border-bottom:0;">
+      <h3>Listes de blocage</h3>
+      <div class="stack" style="gap:10px;">
+        <a class="filebox" href="event-blocklists.html" style="text-decoration:none;"><span class="thumb"><span data-ico="ban" data-size="18"></span></span><div style="flex:1;"><div class="fb-t">E-mails bloqués</div><div class="fb-s">12 entrées</div></div><span data-ico="chevron-right" data-size="18" style="color:var(--slate-400);"></span></a>
+        <a class="filebox" href="event-blocklists.html" style="text-decoration:none;"><span class="thumb"><span data-ico="ban" data-size="18"></span></span><div style="flex:1;"><div class="fb-t">Documents bloqués</div><div class="fb-s">5 entrées</div></div><span data-ico="chevron-right" data-size="18" style="color:var(--slate-400);"></span></a>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap12" style="justify-content:flex-end;max-width:760px;margin-top:20px;"><button class="btn btn-secondary">Annuler</button><button class="btn btn-primary"><span data-ico="check" data-size="16"></span> Enregistrer</button></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

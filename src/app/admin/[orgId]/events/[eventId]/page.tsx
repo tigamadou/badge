@@ -42,7 +42,7 @@ export default async function EventDashboardPage({
           <Kpi label="Mes scans" value={myScans} />
           <Link
             href={`/admin/${orgId}/events/${eventId}/scan`}
-            className="rounded border bg-white p-4 hover:bg-gray-50 flex items-center justify-center text-lg font-semibold"
+            className="rounded border bg-white p-4 hover:bg-slate-50 flex items-center justify-center text-lg font-semibold"
           >
             Ouvrir le scanner
           </Link>
@@ -108,21 +108,21 @@ export default async function EventDashboardPage({
       <section>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold">Dernières inscriptions</h2>
-          <Link href={`/admin/${orgId}/events/${eventId}/registrations`} className="text-sm text-blue-600 hover:underline">
+          <Link href={`/admin/${orgId}/events/${eventId}/registrations`} className="text-sm text-green-600 hover:underline">
             Tout voir
           </Link>
         </div>
         <ul className="bg-white border rounded divide-y">
           {latest.length === 0 && (
-            <li className="px-4 py-3 text-sm text-gray-500">Aucune inscription pour le moment.</li>
+            <li className="px-4 py-3 text-sm text-slate-500">Aucune inscription pour le moment.</li>
           )}
           {latest.map((r) => (
             <li key={r.id} className="px-4 py-3 flex justify-between text-sm">
               <Link href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`} className="hover:underline">
                 {r.snapshotFirstName} {r.snapshotLastName}{" "}
-                <span className="text-gray-400">— {r.snapshotEmail}</span>
+                <span className="text-slate-400">— {r.snapshotEmail}</span>
               </Link>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-slate-500">
                 {r.status} — {new Date(r.createdAt).toLocaleDateString("fr-FR")}
               </span>
             </li>
@@ -136,9 +136,9 @@ export default async function EventDashboardPage({
 function Kpi({ label, value, warn }: { label: string; value: string | number; warn?: boolean }) {
   return (
     <div
-      className={`rounded border p-4 bg-white ${warn ? "border-amber-400 bg-amber-50" : "border-gray-200"}`}
+      className={`rounded border p-4 bg-white ${warn ? "border-amber-400 bg-amber-50" : "border-slate-200"}`}
     >
-      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-xs text-slate-500">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
     </div>
   );

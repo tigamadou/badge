@@ -80,7 +80,7 @@ export function BlockedDocumentsForm({
         <Button type="submit">Bloquer</Button>
       </form>
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">Document</th>
             <th className="px-3 py-2">Raison</th>
@@ -91,7 +91,7 @@ export function BlockedDocumentsForm({
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+              <td colSpan={4} className="px-3 py-4 text-center text-slate-500">
                 Aucun document bloque.
               </td>
             </tr>
@@ -99,8 +99,8 @@ export function BlockedDocumentsForm({
           {rows.map((r) => (
             <tr key={r.id} className="border-t">
               <td className="px-3 py-2">{r.documentNumber}</td>
-              <td className="px-3 py-2 text-gray-600">{r.reason ?? "—"}</td>
-              <td className="px-3 py-2 text-xs text-gray-500">
+              <td className="px-3 py-2 text-slate-600">{r.reason ?? "—"}</td>
+              <td className="px-3 py-2 text-xs text-slate-500">
                 {new Date(r.createdAt).toLocaleDateString("fr-FR")}
               </td>
               <td className="px-3 py-2 text-right">

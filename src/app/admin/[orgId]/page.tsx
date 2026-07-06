@@ -67,20 +67,20 @@ export default async function OrgDashboardPage({
       <section>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold">Derniers événements</h2>
-          <Link href={`/admin/${orgId}/events`} className="text-sm text-blue-600 hover:underline">
+          <Link href={`/admin/${orgId}/events`} className="text-sm text-green-600 hover:underline">
             Tout voir
           </Link>
         </div>
         <ul className="bg-white border rounded divide-y">
           {latestEvents.length === 0 && (
-            <li className="px-4 py-3 text-sm text-gray-500">Aucun événement pour le moment.</li>
+            <li className="px-4 py-3 text-sm text-slate-500">Aucun événement pour le moment.</li>
           )}
           {latestEvents.map((e) => (
             <li key={e.id} className="px-4 py-3 flex justify-between">
               <Link href={`/admin/${orgId}/events/${e.id}`} className="text-sm hover:underline">
                 {e.title}
               </Link>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-slate-500">
                 {new Date(e.date).toLocaleDateString("fr-FR")}
                 {e.registrationOpen ? " — inscriptions ouvertes" : ""}
               </span>
@@ -93,7 +93,7 @@ export default async function OrgDashboardPage({
         <h2 className="text-lg font-semibold mb-3">Journal récent</h2>
         <ul className="bg-white border rounded divide-y">
           {recentActivity.length === 0 && (
-            <li className="px-4 py-3 text-sm text-gray-500">Aucune activité récente.</li>
+            <li className="px-4 py-3 text-sm text-slate-500">Aucune activité récente.</li>
           )}
           {recentActivity.map((a) => (
             <li key={a.id} className="px-4 py-3 text-sm flex justify-between">
@@ -105,7 +105,7 @@ export default async function OrgDashboardPage({
                   </span>
                 )}
               </span>
-              <span className="text-gray-500 text-xs">
+              <span className="text-slate-500 text-xs">
                 {new Date(a.createdAt).toLocaleString("fr-FR")}
               </span>
             </li>
@@ -120,10 +120,10 @@ function Kpi({ label, value, warn }: { label: string; value: string | number; wa
   return (
     <div
       className={`rounded border p-4 bg-white ${
-        warn ? "border-amber-400 bg-amber-50" : "border-gray-200"
+        warn ? "border-amber-400 bg-amber-50" : "border-slate-200"
       }`}
     >
-      <div className="text-xs text-gray-500">{label}</div>
+      <div className="text-xs text-slate-500">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
     </div>
   );

@@ -47,8 +47,8 @@ Services disponibles :
 
 | Service | Port direct | URL via Caddy (HTTP) | Description |
 |---------|-------------|----------------------|-------------|
-| app | 3000 | http://badge.local | Next.js (hot reload) |
-| mysql | 3306 | -- | Base de donnees MySQL |
+| app | 3785 | http://badge.local | Next.js (hot reload) |
+| mysql | 33060 | -- | Base de donnees MySQL |
 | phpmyadmin | 8080 | http://pma.badge.local | Interface admin BDD |
 | mailpit | 8025 | http://mail.badge.local | Capture d'emails |
 | caddy | 80 | -- | Reverse proxy dev (routes les sous-domaines `*.badge.local`) |
@@ -59,7 +59,7 @@ Services disponibles :
 echo "127.0.0.1 badge.local pma.badge.local mail.badge.local" | sudo tee -a /etc/hosts
 ```
 
-Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent exposes en parallele : aucun outil pointant vers `localhost` n'est casse.
+Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent exposes en parallele : aucun outil pointant vers `localhost` n'est casse.
 
 ### Lancer en production
 

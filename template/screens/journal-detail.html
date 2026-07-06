@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Journal · Détail d'une entrée</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>
+  // Adapte la coquille (staff / org / event) selon le journal d'origine.
+  (function () {
+    var shell = (new URLSearchParams(location.search).get("shell") || "event");
+    var cfg = {
+      staff: { shell: "staff", active: "log", user: { name: "Marie Dubois", role: "SUPER_ADMIN" }, crumbs: ["Staff", "Journal", "Entrée"], back: "staff-log.html" },
+      org: { shell: "org", active: "log", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" }, crumbs: ["Salon Tech", "Journal", "Entrée"], back: "org-log.html" },
+      event: { shell: "event", active: "log", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" }, crumbs: ["Salon Tech", "Salon Tech 2026", "Journal", "Entrée"], back: "event-log.html" },
+    }[shell];
+    window.BADGE = cfg;
+    window.__BACK = cfg.back;
+  })();
+</script>
+<div id="page" data-screen-label="45 Journal détail entrée">
+
+  <a class="link" id="back" href="event-log.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Journal d'activité</a>
+
+  <div class="page-head" style="margin-top:12px;align-items:flex-start;">
+    <div>
+      <div class="flex gap12" style="align-items:center;margin-bottom:8px;"><span class="log-type modification"><span class="ld"></span> Modification</span><span class="ds-meta mono">ENTRÉE #LOG-8841-2C</span></div>
+      <h1>Catégorie « Presse » passée en anonyme</h1>
+      <p class="sub">5 juin 2026 à 10:02:14 (UTC+2)</p>
+    </div>
+    <div class="flex gap8"><button class="btn-ghost-sm"><span data-ico="copy" data-size="14"></span> Copier l'ID</button><button class="btn-ghost-sm"><span data-ico="download" data-size="14"></span> Exporter (JSON)</button></div>
+  </div>
+
+  <div class="grid-2col">
+    <!-- Colonne principale -->
+    <div class="stack" style="gap:24px;">
+
+      <div class="card">
+        <div class="card-head"><h3>Détails de l'action</h3></div>
+        <div class="card-pad" style="padding-top:8px;">
+          <dl class="kv">
+            <dt>Type</dt><dd><span class="log-type modification"><span class="ld"></span> Modification</span></dd>
+            <dt>Objet</dt><dd>Catégorie · <b>Presse</b> <span class="cat-pill" style="margin-left:6px;"><span class="cat-dot" style="background:#f43f5e;"></span> #04</span></dd>
+            <dt>Champ modifié</dt><dd><span class="mono">anonymous</span></dd>
+            <dt>Résultat</dt><dd><span class="status status-approved"><span data-ico="check" data-size="12"></span> Succès</span></dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Modification</h3><p>Valeur avant / après</p></div>
+        <div class="card-pad">
+          <div class="diff">
+            <div class="dcell old"><div class="dl">Avant</div><span class="mono">anonymous: false</span></div>
+            <span class="arrow" data-ico="arrow-right" data-size="20"></span>
+            <div class="dcell new"><div class="dl">Après</div><span class="mono">anonymous: true</span></div>
+          </div>
+          <p class="help" style="margin-top:14px;"><span data-ico="info" data-size="13" style="vertical-align:-2px;"></span> Le nom des porteurs de cette catégorie est désormais masqué sur la page de vérification publique.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Charge utile brute</h3><p>Données techniques de l'événement</p></div>
+        <div class="card-pad">
+<pre class="payload">{
+  "id": "LOG-8841-2C",
+  "type": "category.updated",
+  "actor_id": "usr_7Kp2",
+  "target": { "kind": "category", "id": "cat_04", "name": "Presse" },
+  "changes": { "anonymous": { "from": false, "to": true } },
+  "context": { "org": "salon-tech", "event": "salon-tech-2026" },
+  "ip": "92.184.106.x",
+  "created_at": "2026-06-05T08:02:14Z"
+}</pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Colonne latérale -->
+    <div class="stack" style="gap:24px;">
+      <div class="card card-pad">
+        <h3 class="ds-h2" style="margin:0 0 16px;">Auteur</h3>
+        <div class="flex gap12" style="align-items:center;margin-bottom:16px;">
+          <span class="avatar" style="width:44px;height:44px;font-size:15px;">SB</span>
+          <div><div class="cell-name">Sophie Bernard</div><div class="ds-meta">sophie.bernard@salontech.fr</div></div>
+        </div>
+        <dl class="kv" style="grid-template-columns:110px 1fr;">
+          <dt>Rôle</dt><dd><span class="role-badge">ADMIN</span></dd>
+          <dt>Adresse IP</dt><dd class="mono">92.184.106.x</dd>
+          <dt>Appareil</dt><dd>Chrome · macOS</dd>
+        </dl>
+      </div>
+
+      <div class="card card-pad">
+        <h3 class="ds-h2" style="margin:0 0 14px;">Contexte</h3>
+        <div class="stack" style="gap:10px;">
+          <a class="filebox" href="org-dashboard.html" style="text-decoration:none;"><span class="thumb">ST</span><div style="flex:1;"><div class="fb-t">Salon Tech</div><div class="fb-s mono">salon-tech</div></div><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></a>
+          <a class="filebox" href="event-dashboard.html" style="text-decoration:none;"><span class="thumb"><span data-ico="calendar" data-size="18"></span></span><div style="flex:1;"><div class="fb-t">Salon Tech 2026</div><div class="fb-s">15–17 mars 2026</div></div><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></a>
+          <a class="filebox" href="event-categories.html" style="text-decoration:none;"><span class="thumb"><span data-ico="tags" data-size="18"></span></span><div style="flex:1;"><div class="fb-t">Catégorie Presse</div><div class="fb-s">Objet concerné</div></div><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></a>
+        </div>
+      </div>
+
+      <div class="card card-pad">
+        <h3 class="ds-h2" style="margin:0 0 12px;">Entrées liées</h3>
+        <div class="tl">
+          <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">Catégorie « Presse » créée</div><div class="tl-s">Julien Roy · 02/06 14:20</div></div>
+          <div class="tl-item"><span class="tl-dot ok"></span><div class="tl-t">Couleur modifiée — Rose</div><div class="tl-s">Sophie Bernard · 04/06 09:11</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  (function () { var b = document.getElementById("back"); if (b && window.__BACK) b.setAttribute("href", window.__BACK); })();
+</script>
+</body>
+</html>

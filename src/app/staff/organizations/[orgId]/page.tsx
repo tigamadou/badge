@@ -80,7 +80,7 @@ export default async function OrgDetailPage({
         {/* ADR 2026-06-01 (v2-14 Task 5) : acces direct a l'espace org en mode staff. */}
         <Link
           href={`/admin/${org.id}`}
-          className="rounded bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-700"
+          className="rounded bg-green-600 text-white px-4 py-2 text-sm hover:bg-green-700"
         >
           Entrer dans l&apos;organisation →
         </Link>
@@ -181,7 +181,7 @@ export default async function OrgDetailPage({
       <div>
         <Link
           href="/staff/organizations"
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-green-600 hover:underline"
         >
           Retour a la liste
         </Link>

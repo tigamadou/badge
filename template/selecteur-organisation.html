@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Sélecteur d'organisation</title>
+<link rel="stylesheet" href="assets/badge.css" />
+</head>
+<body>
+  <div class="public-page" data-screen-label="08 Sélecteur d'organisation" style="min-height:100vh;">
+    <div style="display:flex;align-items:center;padding:18px 28px;background:#fff;border-bottom:1px solid var(--border-card);">
+      <img src="assets/logo.svg" alt="Badge" style="height:28px;" />
+      <span style="flex:1;"></span>
+      <div class="user-chip"><span class="nm" style="font-size:14px;color:var(--fg2);">Marie Dubois</span><span class="avatar">MD</span></div>
+    </div>
+    <div style="max-width:880px;margin:0 auto;padding:48px 24px 80px;">
+      <div style="text-align:center;margin-bottom:36px;">
+        <h1 style="font-size:24px;font-weight:600;color:var(--fg1);margin:0 0 8px;">Choisissez une organisation</h1>
+        <p class="ds-body">Vous avez accès à 4 organisations. Sélectionnez celle que vous souhaitez gérer.</p>
+      </div>
+
+      <div class="card-grid">
+        <a class="pick-card" href="screens/org-dashboard.html">
+          <span class="org-logo">ST</span>
+          <div><div style="font-size:15px;font-weight:600;color:var(--fg1);">Salon Tech</div><div class="ds-meta mono">salon-tech</div></div>
+          <div class="ds-meta">3 événements · 1 248 inscriptions</div>
+        </a>
+        <a class="pick-card" href="screens/org-dashboard.html">
+          <span class="org-logo">CM</span>
+          <div><div style="font-size:15px;font-weight:600;color:var(--fg1);">Congrès Médical</div><div class="ds-meta mono">congres-medical</div></div>
+          <div class="ds-meta">1 événement · 540 inscriptions</div>
+        </a>
+        <a class="pick-card" href="screens/org-dashboard.html">
+          <span class="org-logo">UF</span>
+          <div><div style="font-size:15px;font-weight:600;color:var(--fg1);">Université Forum</div><div class="ds-meta mono">univ-forum</div></div>
+          <div class="ds-meta">5 événements · 2 105 inscriptions</div>
+        </a>
+        <a class="pick-card" href="screens/org-dashboard.html">
+          <span class="org-logo">EX</span>
+          <div><div style="font-size:15px;font-weight:600;color:var(--fg1);">ExpoPro Lyon</div><div class="ds-meta mono">expopro-lyon</div></div>
+          <div class="ds-meta">2 événements · 880 inscriptions</div>
+        </a>
+        <a class="pick-card dashed" href="screens/staff-dashboard.html" style="grid-column:span 1;">
+          <span class="org-logo" style="background:rgba(0,77,116,.1);"><span data-ico="shield" data-size="20"></span></span>
+          <div style="font-size:15px;font-weight:600;color:var(--fg1);">Toutes les organisations</div>
+          <div class="ds-meta">Mode staff — administration plateforme</div>
+        </a>
+      </div>
+    </div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

@@ -40,7 +40,7 @@ export function OrgSelector({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+        className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-slate-50"
       >
         <span>{current?.name ?? "Sélectionner"}</span>
         <span aria-hidden>▾</span>
@@ -52,7 +52,7 @@ export function OrgSelector({
               <li key={o.id}>
                 <button
                   onClick={() => switchTo(o.id)}
-                  className={`block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
+                  className={`block w-full px-4 py-2 text-left text-sm hover:bg-slate-50 ${
                     o.id === currentOrgId ? "font-semibold" : ""
                   }`}
                 >
@@ -64,7 +64,7 @@ export function OrgSelector({
               <li className="border-t">
                 <button
                   onClick={() => router.push("/staff")}
-                  className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                 >
                   Toutes les organisations (mode staff)
                 </button>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Paramètres plateforme</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "settings", user: { name: "Marie Dubois", role: "SUPER_ADMIN" } };</script>
+<div id="page" data-screen-label="19 Staff paramètres plateforme">
+
+  <div class="page-head"><div><h1>Paramètres plateforme</h1><p class="sub">Configuration globale — réservée aux SUPER_ADMIN</p></div></div>
+
+  <div class="alert alert-info"><span data-ico="shield" data-size="16" style="vertical-align:-3px;"></span> Vous êtes connecté en tant que SUPER_ADMIN. Les champs sensibles ci-dessous sont modifiables.</div>
+
+  <div class="grid2" style="margin-top:8px;align-items:start;">
+    <div class="card">
+      <div class="card-head"><h3>Serveur SMTP</h3><p>Envoi des e-mails transactionnels</p></div>
+      <div class="card-pad">
+        <div class="row-2"><div class="field"><label>Hôte</label><input class="input mono" value="smtp.mailgun.org" /></div><div class="field"><label>Port</label><input class="input mono" value="587" /></div></div>
+        <div class="field"><label>Utilisateur</label><input class="input" value="postmaster@badge.fr" /></div>
+        <div class="field"><label>Mot de passe</label><div class="input-group"><input class="input" type="password" value="••••••••••••" /><button class="btn-icon" style="border:1px solid var(--border-input);"><span data-ico="eye" data-size="16"></span></button></div></div>
+        <div class="between"><label class="switch"><span class="track on"></span> TLS activé</label><button class="btn btn-secondary btn-sm"><span data-ico="send" data-size="15"></span> Tester l'envoi SMTP</button></div>
+        <div class="alert alert-ok" style="margin:14px 0 0;"><span data-ico="check-circle" data-size="15" style="vertical-align:-3px;"></span> Dernier test réussi · il y a 2 h</div>
+      </div>
+    </div>
+
+    <div class="stack" style="gap:24px;">
+      <div class="card">
+        <div class="card-head"><h3>reCAPTCHA</h3><p>Protection des formulaires publics</p></div>
+        <div class="card-pad">
+          <div class="field"><label>Clé du site</label><input class="input mono" value="6Lc...A1b" /></div>
+          <div class="field" style="margin-bottom:0;"><label>Clé secrète</label><div class="input-group"><input class="input" type="password" value="••••••••••••" /><button class="btn-icon" style="border:1px solid var(--border-input);"><span data-ico="eye" data-size="16"></span></button></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Branding</h3><p>Identité visuelle de la plateforme</p></div>
+        <div class="card-pad">
+          <div class="field"><label>Nom affiché</label><input class="input" value="Badge" /></div>
+          <div class="field" style="margin-bottom:0;"><label>Logo</label><div class="filebox"><span class="thumb"><img src="../assets/logo.svg" style="height:20px;" alt="logo" /></span><div style="flex:1;"><div class="fb-t">logo.svg</div><div class="fb-s">Actuel</div></div><button class="btn btn-secondary btn-sm">Changer</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap12" style="justify-content:flex-end;margin-top:20px;"><button class="btn btn-secondary">Annuler</button><button class="btn btn-primary"><span data-ico="check" data-size="16"></span> Enregistrer</button></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

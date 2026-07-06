@@ -75,7 +75,7 @@ export default async function StaffDashboardPage() {
       <section>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold">Top organisations (mois en cours)</h2>
-          <Link href="/staff/organizations" className="text-sm text-blue-600 hover:underline">
+          <Link href="/staff/organizations" className="text-sm text-green-600 hover:underline">
             Tout voir
           </Link>
         </div>
@@ -102,7 +102,7 @@ export default async function StaffDashboardPage() {
       <section>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-lg font-semibold">Journal recent</h2>
-          <Link href="/staff/activity" className="text-sm text-blue-600 hover:underline">
+          <Link href="/staff/activity" className="text-sm text-green-600 hover:underline">
             Tout voir
           </Link>
         </div>

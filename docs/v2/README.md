@@ -55,6 +55,7 @@ Un plan par sous-spec, dans `docs/v2/plans/` (avec tracker de progression en tê
 | 11 | [Comptes participants](plans/2026-05-31-v2-11-comptes-participants.md) | 725 | 18 |
 | 12 | [Templates de badges](plans/2026-05-31-v2-12-templates-badges.md) | 622 | 17 |
 | 13 | [Couverture E2E complète](plans/2026-06-01-v2-13-e2e-coverage.md) | 711 | 31 |
+| 15 | [Refonte design system (marine + vert)](plans/2026-06-17-v2-15-design-system-refonte.md) | — | 17 |
 
 ### Specs additionnelles (post-MVP, qualité)
 

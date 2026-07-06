@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Utilisateurs</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "users", user: { name: "Marie Dubois", role: "SUPER_ADMIN" } };</script>
+<div id="page" data-screen-label="16 Staff utilisateurs">
+
+  <div class="page-head">
+    <div><h1>Utilisateurs</h1><p class="sub">128 utilisateurs au total</p></div>
+    <a class="btn btn-primary" href="staff-user-create.html"><span data-ico="plus" data-size="16"></span> Créer un utilisateur</a>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Rechercher un utilisateur…" /></div>
+    <div class="segmented"><button class="on">Tous</button><button>Staff</button><button>Clients</button><button>Archivés</button></div>
+    <span class="spacer"></span>
+    <span class="ds-meta">128 résultats</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Organisations</th><th>Dernière connexion</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">MD</span><span class="cell-name">Marie Dubois</span></div></td><td class="cell-meta">marie.dubois@badge.fr</td><td><span class="role-badge navy">SUPER_ADMIN</span></td><td>Toutes</td><td class="cell-meta">il y a 5 min</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="chevron-right" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">PG</span><span class="cell-name">Paul Garnier</span></div></td><td class="cell-meta">paul.garnier@badge.fr</td><td><span class="role-badge navy">STAFF</span></td><td>Toutes</td><td class="cell-meta">il y a 2 h</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="chevron-right" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">JR</span><span class="cell-name">Julien Roy</span></div></td><td class="cell-meta">julien.roy@salontech.fr</td><td><span class="role-badge">OWNER</span></td><td>2</td><td class="cell-meta">hier</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="chevron-right" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">SB</span><span class="cell-name">Sophie Bernard</span></div></td><td class="cell-meta">sophie.bernard@salontech.fr</td><td><span class="role-badge amber">AUDITOR</span></td><td>1</td><td class="cell-meta">il y a 3 j</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="chevron-right" data-size="16"></span></button></div></td></tr>
+        <tr style="opacity:.6;"><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">LC</span><span class="cell-name">Lucas Caron <span class="tag" style="margin-left:6px;"><span data-ico="archive" data-size="11"></span> Archivé</span></span></div></td><td class="cell-meta">lucas.caron@exemple.fr</td><td><span class="role-badge slate">MANAGER</span></td><td>0</td><td class="cell-meta">il y a 2 mois</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="archive-restore" data-size="16"></span></button></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager"><span class="info">1–5 sur 128</span><div class="ctrls"><button class="btn-ghost-sm" disabled style="opacity:.5;"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

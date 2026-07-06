@@ -84,7 +84,7 @@ export function EventSettingsForm({
           />
           Inscriptions ouvertes
         </label>
-        <div className="text-xs text-gray-500">
+        <div className="text-xs text-slate-500">
           Slug : <code>{initial.event.slug}</code> (modifiable par le staff uniquement)
         </div>
         <Button type="submit">Enregistrer</Button>
@@ -103,7 +103,7 @@ export function EventSettingsForm({
           onChange={(e) => setContactPhone(e.target.value)}
           placeholder={`Téléphone de contact (cascade : ${initial.resolved.contactPhone || "—"})`}
         />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-slate-500">
           Laisser vide pour hériter du niveau organisation. Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
         </p>
         <Button type="submit">Enregistrer</Button>

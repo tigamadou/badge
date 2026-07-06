@@ -58,7 +58,7 @@ test.describe("Auth setup-password (invite token)", () => {
   test("invalid token shows expired / invalid view", async ({ page }) => {
     await page.goto(`/setup-password?token=this-token-does-not-exist-${Date.now()}`);
     await expect(
-      page.getByRole("heading", { name: /lien expire ou invalide/i }),
+      page.getByRole("heading", { name: /lien expir[ée] ou invalide/i }),
     ).toBeVisible();
   });
 
@@ -73,7 +73,7 @@ test.describe("Auth setup-password (invite token)", () => {
 
     await page.goto(`/setup-password?token=${encodeURIComponent(token)}`);
     await expect(
-      page.getByRole("heading", { name: /lien expire ou invalide/i }),
+      page.getByRole("heading", { name: /lien expir[ée] ou invalide/i }),
     ).toBeVisible();
   });
 
@@ -87,7 +87,7 @@ test.describe("Auth setup-password (invite token)", () => {
 
     await page.goto(`/setup-password?token=${encodeURIComponent(token)}`);
     await expect(
-      page.getByRole("heading", { name: /lien expire ou invalide/i }),
+      page.getByRole("heading", { name: /lien expir[ée] ou invalide/i }),
     ).toBeVisible();
   });
 });

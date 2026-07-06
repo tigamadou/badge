@@ -105,7 +105,7 @@ src/
     page.tsx                             # Redirige vers /login pour MVP v2
 
   components/
-    ui/                                  # Génériques (Button, Input, ...) — inchangés
+    ui/                                  # Génériques (Button, Input, ...) — accent vert (refonte v2-15)
     layouts/                             # StaffShell, OrgShell, EventShell, PublicEventLayout
     admin/                               # Forms refactorés par scope
     badge/                               # BadgeDocument, ... refactorés avec prop `event`
@@ -218,9 +218,23 @@ Implémentation future : `S3Storage` (sans changement du code consommateur).
 
 Contraintes : taille max 5 Mo, types JPEG/PNG/WebP/PDF. ACL via le path (vérifié dans `/api/files/[...path]`).
 
+## Design system (refonte v2-15, 2026-06-17)
+
+L'UI applique un design system généré (voir `docs/v2/plans/2026-06-17-v2-15-design-system-refonte.md`) :
+
+- **Accent unique** : vert `green-600` (hover `green-700`) — remplace l'ancien indigo. Nav active = texte `green-400` + fond `green-500/15` + rail gauche `border-l-2 border-green-400`.
+- **Sidebar marine** : `bg-brand-navy` (`#004D74`, utilitaire Tailwind exposé via `@theme` dans `globals.css`), `w-56` ; header blanc `h-14` ; canvas `bg-slate-50`. Les trois shells (`StaffShell`, `OrgShell`, `EventShell`) partagent le composant client `SidebarNav` (`src/components/admin/SidebarNav.tsx`) qui gère l'item actif via `usePathname`.
+- **Polices** : **Inter** pour l'UI (`--font-sans` par défaut), **Montserrat** réservée au rendu badge (`--font-badge` + `@react-pdf/renderer`). Les deux sont chargées via `next/font/google` dans `layout.tsx`.
+- **Neutres** : ramp `slate-*` uniquement (les anciens `gray-*` ont été uniformisés). Plat par mandat : aucune ombre sauf modales (`shadow-xl`). Rayons `rounded-lg` (boutons/inputs), `rounded-xl` (cartes/tables), `rounded-2xl` (modales/carte auth).
+- **Sémantiques d'état** : emerald (succès), amber (attente), rose (rejet), blue (info) — réservées aux états, jamais comme accent.
+- **Icônes** : `lucide-react` (stroke 1.5, `currentColor`).
+- **Auth/public** : carte centrée partagée `src/components/auth/AuthCard.tsx` ; bandeau hero marine sur l'inscription publique (`PublicEventLayout`).
+- **Accessibilité AA** : focus clavier toujours visible (règle `:focus-visible` globale, ring vert) ; statut jamais codé par la couleur seule (le `StatusBadge` porte un libellé).
+- Les composants legacy v1 `AdminShell`/`Sidebar`/`Header` (code mort) ont été supprimés lors de cette refonte.
+
 ## Dépendances externes
 
-- **Google Fonts (Montserrat)** : le rendu PDF des badges (`@react-pdf/renderer`) charge la police Montserrat depuis `https://fonts.googleapis.com/`. Le serveur applicatif doit disposer d'un accès sortant vers ce domaine pour produire les PDF. En cas d'environnement hors-ligne, prévoir une mise en cache locale ou un fournisseur de police alternatif.
+- **Google Fonts (Inter + Montserrat)** : l'UI charge **Inter** et le rendu PDF des badges (`@react-pdf/renderer`) charge **Montserrat** depuis `https://fonts.googleapis.com/`. Le serveur applicatif doit disposer d'un accès sortant vers ce domaine. En cas d'environnement hors-ligne, prévoir une mise en cache locale ou un fournisseur de police alternatif.
 
 ## Flux de données principaux
 

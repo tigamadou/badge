@@ -25,11 +25,13 @@ export function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 border border-slate-200">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">{title}</h3>
-        <div className="mb-6">{children}</div>
-        <div className="flex justify-end gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="border-b border-slate-200 px-6 py-5">
+          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+        </div>
+        <div className="px-6 py-5 text-sm text-slate-600">{children}</div>
+        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
           <Button variant="secondary" onClick={onCancel}>
             Annuler
           </Button>

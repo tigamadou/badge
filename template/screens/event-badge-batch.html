@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Impression batch</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+<style>
+  .badge-thumb { border: 1.5px solid var(--border-card); border-radius: 12px; overflow: hidden; background: #fff; position: relative; }
+  .badge-thumb.sel { border-color: var(--green-600); box-shadow: 0 0 0 1px var(--green-600); }
+  .badge-thumb .prev { aspect-ratio: 100/140; display: flex; align-items: center; justify-content: center; padding: 10px; }
+  .badge-thumb .chk { position: absolute; top: 8px; left: 8px; }
+  .badge-thumb .cap { padding: 8px 10px; border-top: 1px solid var(--border-subtle); font-size: 12px; font-weight: 500; color: var(--fg1); }
+  .mini-badge { width: 100%; max-width: 110px; aspect-ratio: 100/140; border-radius: 7px; border: 1px solid var(--border-card); display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-badge); }
+  .mini-badge .mb-band { height: 6px; }
+  .mini-badge .mb-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 6px; }
+  .mini-badge .mb-ph { width: 34px; height: 34px; border-radius: 6px; background: var(--slate-100); display: flex; align-items: center; justify-content: center; color: var(--slate-400); }
+  .mini-badge .mb-nm { font-size: 10px; font-weight: 700; color: var(--fg1); text-align: center; line-height: 1.1; }
+  .mini-badge .mb-cat { font-size: 8px; color: #fff; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+  .grid-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+</style>
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "badges", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" }, crumbs: ["Salon Tech", "Salon Tech 2026", "Badges", "Impression batch"] };</script>
+<div id="page" data-screen-label="37 Event impression batch">
+
+  <a class="link" href="event-badges.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Badges</a>
+  <div class="page-head" style="margin-top:12px;"><div><h1>Impression batch</h1><p class="sub">12 badges sélectionnés</p></div></div>
+
+  <!-- Progress -->
+  <div class="card card-pad" style="margin-bottom:20px;">
+    <div class="between" style="margin-bottom:10px;"><div class="flex gap8" style="align-items:center;"><span class="spinner" style="width:18px;height:18px;border-width:2px;"></span><span class="ds-value" style="font-weight:500;">Génération du PDF en cours…</span></div><span class="ds-meta mono">8 / 12</span></div>
+    <div class="progress"><i style="width:67%;"></i></div>
+  </div>
+
+  <div class="toolbar">
+    <label class="check"><input type="checkbox" checked /> Tout sélectionner</label>
+    <span class="spacer"></span>
+    <button class="btn btn-secondary"><span data-ico="download" data-size="16"></span> Télécharger le PDF</button>
+    <button class="btn btn-primary"><span data-ico="printer" data-size="16"></span> Générer &amp; imprimer</button>
+  </div>
+
+  <div class="grid-thumbs" id="grid"></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  (function () {
+    var names = ["Camille Laurent","Yanis Bernard","Léa Girard","Thomas Rey","Hugo Faure","Inès Moreau","Marc Petit","Julie Roux","Noah Blanc","Emma Lopez","Lucas Caron","Sarah Klein"];
+    var cats = [["Conférencier","#6366f1"],["Exposant","#14b8a6"],["Visiteur","#f59e0b"],["Presse","#f43f5e"]];
+    var done = [true,true,true,true,true,true,true,true,false,false,false,false];
+    var g = document.getElementById('grid');
+    g.innerHTML = names.map(function (n, i) {
+      var c = cats[i % 4];
+      return '<div class="badge-thumb sel"><span class="chk box on"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>' +
+        '<div class="prev"><div class="mini-badge"><div class="mb-band" style="background:' + c[1] + '"></div><div class="mb-body"><div class="mb-ph"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></div><div class="mb-nm">' + n + '</div><div class="mb-cat" style="background:' + c[1] + '">' + c[0] + '</div></div></div></div>' +
+        '<div class="cap" style="display:flex;align-items:center;justify-content:space-between;">' + n.split(' ')[0] + (done[i] ? '<span style="color:var(--green-600);" title="Généré"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></span>' : '<span class="spinner" style="width:12px;height:12px;border-width:2px;"></span>') + '</div></div>';
+    }).join('');
+  })();
+</script>
+</body>
+</html>

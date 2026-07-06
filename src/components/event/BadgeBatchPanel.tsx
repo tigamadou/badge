@@ -67,7 +67,7 @@ export function BadgeBatchPanel({
     };
   }, [orgId, eventId, ids, baseUrl]);
 
-  if (!event || items.length === 0) return <div className="text-sm text-gray-500">Chargement...</div>;
+  if (!event || items.length === 0) return <div className="text-sm text-slate-500">Chargement...</div>;
 
   return (
     <PDFViewer style={{ width: "100%", height: 800 }}>

@@ -60,7 +60,7 @@ export default async function RegistrationsOverviewPage({ params }: Props) {
       <section className="bg-white border rounded p-4">
         <h2 className="font-semibold mb-3">Par categorie</h2>
         {categories.length === 0 ? (
-          <p className="text-sm text-gray-500">Aucune categorie.</p>
+          <p className="text-sm text-slate-500">Aucune categorie.</p>
         ) : (
           <ul className="space-y-2">
             {categories.map((c) => (
@@ -83,7 +83,7 @@ export default async function RegistrationsOverviewPage({ params }: Props) {
 
       <section className="bg-white border rounded p-4">
         <h2 className="font-semibold mb-1">Total comptabilise</h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-600">
           {totalCountable} inscription(s) (PENDING + APPROVED). Les rejets ne sont
           pas comptabilises dans le quota.
         </p>

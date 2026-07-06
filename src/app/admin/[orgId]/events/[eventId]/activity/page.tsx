@@ -55,7 +55,7 @@ export default async function ActivityPage({
       <h1 className="text-2xl font-bold">Journal d&apos;activite</h1>
       <ul className="bg-white border rounded divide-y text-sm">
         {logs.length === 0 && (
-          <li className="px-3 py-3 text-gray-500">Aucune activite.</li>
+          <li className="px-3 py-3 text-slate-500">Aucune activite.</li>
         )}
         {logs.map((l) => (
           <li key={l.id} className="px-3 py-3 flex justify-between items-start">
@@ -68,12 +68,12 @@ export default async function ActivityPage({
                   </span>
                 )}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-slate-500">
                 {l.user ? `${l.user.name} (${l.user.email})` : "Systeme"}
                 {l.targetId ? ` — cible ${l.targetId}` : ""}
               </div>
             </div>
-            <div className="text-xs text-gray-500 whitespace-nowrap">
+            <div className="text-xs text-slate-500 whitespace-nowrap">
               {new Date(l.createdAt).toLocaleString("fr-FR")}
             </div>
           </li>

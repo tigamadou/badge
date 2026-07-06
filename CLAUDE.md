@@ -128,13 +128,13 @@ Services disponibles :
 
 | Service | Port direct | URL via Caddy (HTTP) | Description |
 |---------|-------------|----------------------|-------------|
-| `app` | 3000 | `http://badge.local` | Next.js avec hot reload |
-| `mysql` | 3306 | — | Base de données |
+| `app` | 3785 | `http://badge.local` | Next.js avec hot reload |
+| `mysql` | 33060 | — | Base de données |
 | `phpmyadmin` | 8080 | `http://pma.badge.local` | Interface admin BDD |
 | `mailpit` | 8025 | `http://mail.badge.local` | Capture d'emails |
 | `caddy` | 80 | — | Reverse proxy dev (sous-domaines `*.badge.local`) |
 
-> **Pré-requis pour les URL `*.badge.local`** : ajouter au `/etc/hosts` de la machine hôte la ligne `127.0.0.1 badge.local pma.badge.local mail.badge.local`. Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
+> **Pré-requis pour les URL `*.badge.local`** : ajouter au `/etc/hosts` de la machine hôte la ligne `127.0.0.1 badge.local pma.badge.local mail.badge.local`. Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
 
 Commandes principales :
 

@@ -110,14 +110,14 @@ test-e2e:
 
 # Mode UI Playwright (debug visuel, fenetre Electron native). S'execute sur
 # l'hote macOS, pas dans le container : il faut un display. Pre-requis :
-#   - make dev demarre (l'app doit etre joignable sur localhost:3000)
+#   - make dev demarre (l'app doit etre joignable sur localhost:3785)
 #   - yarn install (cote hote)
 #   - yarn playwright install chromium (telecharge le binaire local, une seule fois)
 # Sans PLAYWRIGHT_CHROMIUM_EXECUTABLE, Playwright utilise son chromium integre.
 test-e2e-ui:
 	@echo "Lancement de Playwright en mode UI depuis l'hote (fenetre Electron)."
-	@echo "L'app dev doit tourner sur localhost:3000 (make dev)."
-	yarn playwright test --ui
+	@echo "L'app dev doit tourner sur localhost:3785 (make dev)."
+	PLAYWRIGHT_BASE_URL=http://localhost:3785 yarn playwright test --ui
 
 validate-badge-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts

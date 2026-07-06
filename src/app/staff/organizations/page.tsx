@@ -38,7 +38,7 @@ export default async function StaffOrganizationsPage({
         <h1 className="text-2xl font-bold">Organisations</h1>
         <Link
           href="/staff/organizations/new"
-          className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm hover:bg-blue-700"
+          className="rounded bg-green-600 text-white px-3 py-1.5 text-sm hover:bg-green-700"
         >
           Nouvelle organisation
         </Link>

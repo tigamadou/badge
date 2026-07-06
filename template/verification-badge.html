@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Vérification publique de badge</title>
+<link rel="stylesheet" href="assets/badge.css" />
+</head>
+<body>
+  <div class="state-page" data-screen-label="06 Vérification badge">
+    <div class="state-head">
+      <div class="crumb"><a href="index.html">Galerie</a> / Public &amp; Auth / Vérification de badge</div>
+      <h1>Vérification publique de badge</h1>
+      <p>Mobile-first — page atteinte par scan du QR. Trois cas : valide, valide anonyme (nom masqué), non valide.</p>
+    </div>
+    <div class="state-row">
+
+      <!-- VALID -->
+      <div class="state-col">
+        <div class="state-label"><span class="dot ok"></span> Badge valide</div>
+        <div class="phone">
+          <div class="pbar"><span>9:41</span><span><span data-ico="shield" data-size="13" style="vertical-align:-2px;"></span></span></div>
+          <div class="pscreen">
+            <div style="padding:16px;">
+              <div class="verify-banner valid">
+                <span class="vb-ic"><span data-ico="check" data-size="30"></span></span>
+                <div class="vb-t">Badge valide</div>
+                <div style="font-size:13px;opacity:.85;margin-top:4px;">Vérifié le 15 mars 2026 · 09:41</div>
+              </div>
+              <div class="card card-pad" style="margin-top:16px;text-align:center;">
+                <div class="bc-photo" style="margin:0 auto 12px;width:88px;height:88px;"><span data-ico="user" data-size="34"></span></div>
+                <div style="font-size:20px;font-weight:700;color:var(--fg1);font-family:var(--font-badge);">Camille Laurent</div>
+                <div style="margin-top:10px;"><span class="cat-pill" style="justify-content:center;"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></div>
+                <div class="divider" style="margin:18px 0;"></div>
+                <div class="ds-meta" style="text-align:left;line-height:1.9;">
+                  <div class="between"><span>Événement</span><b style="color:var(--fg1);font-weight:500;">Salon Tech 2026</b></div>
+                  <div class="between"><span>Dates</span><b style="color:var(--fg1);font-weight:500;">15–17 mars 2026</b></div>
+                  <div class="between"><span>N° badge</span><b style="color:var(--fg1);font-weight:500;" class="mono">0241-8837</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VALID ANONYMOUS -->
+      <div class="state-col">
+        <div class="state-label"><span class="dot ok"></span> Valide — catégorie anonyme</div>
+        <div class="phone">
+          <div class="pbar"><span>9:41</span><span><span data-ico="shield" data-size="13" style="vertical-align:-2px;"></span></span></div>
+          <div class="pscreen">
+            <div style="padding:16px;">
+              <div class="verify-banner valid">
+                <span class="vb-ic"><span data-ico="check" data-size="30"></span></span>
+                <div class="vb-t">Badge valide</div>
+                <div style="font-size:13px;opacity:.85;margin-top:4px;">Vérifié le 15 mars 2026 · 09:43</div>
+              </div>
+              <div class="card card-pad" style="margin-top:16px;text-align:center;">
+                <div class="bc-photo" style="margin:0 auto 12px;width:88px;height:88px;"><span data-ico="lock" data-size="30"></span></div>
+                <div style="font-size:16px;font-weight:600;color:var(--fg3);font-style:italic;">Nom masqué</div>
+                <div style="margin-top:10px;"><span class="cat-pill" style="justify-content:center;"><span class="cat-dot" style="background:#f43f5e;"></span> Presse</span></div>
+                <div class="divider" style="margin:18px 0;"></div>
+                <div class="ds-meta" style="text-align:left;line-height:1.9;">
+                  <div class="between"><span>Événement</span><b style="color:var(--fg1);font-weight:500;">Salon Tech 2026</b></div>
+                  <div class="between"><span>Dates</span><b style="color:var(--fg1);font-weight:500;">15–17 mars 2026</b></div>
+                </div>
+                <p class="help" style="margin-top:14px;">La catégorie « Presse » est anonyme : le nom du porteur n'est pas affiché publiquement.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVALID -->
+      <div class="state-col">
+        <div class="state-label"><span class="dot err"></span> Badge non valide</div>
+        <div class="phone">
+          <div class="pbar"><span>9:41</span><span><span data-ico="shield" data-size="13" style="vertical-align:-2px;"></span></span></div>
+          <div class="pscreen">
+            <div style="padding:16px;">
+              <div class="verify-banner invalid">
+                <span class="vb-ic"><span data-ico="x" data-size="30"></span></span>
+                <div class="vb-t">Badge non valide</div>
+                <div style="font-size:13px;opacity:.85;margin-top:4px;">Ce badge a été révoqué ou n'existe pas.</div>
+              </div>
+              <div class="card card-pad" style="margin-top:16px;text-align:center;">
+                <span class="eico" data-ico="circle-x" data-size="44" style="color:var(--rose-600);"></span>
+                <p class="ds-body" style="margin:12px 0 4px;font-weight:500;color:var(--fg1);">Accès refusé</p>
+                <p class="help">Ce QR code ne correspond à aucun badge actif. Adressez-vous à l'accueil de l'événement.</p>
+                <div class="divider" style="margin:16px 0;"></div>
+                <div class="ds-meta mono">Code scanné · 9F2A-0000-XXXX</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

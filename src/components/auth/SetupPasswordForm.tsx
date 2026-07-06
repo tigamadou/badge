@@ -63,7 +63,7 @@ export default function SetupPasswordForm({ token }: Props) {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={6}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
         />
       </div>
       <div>
@@ -76,7 +76,7 @@ export default function SetupPasswordForm({ token }: Props) {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           minLength={6}
-          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600"
         />
       </div>
 
@@ -85,7 +85,7 @@ export default function SetupPasswordForm({ token }: Props) {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+        className="w-full bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-50"
       >
         {loading ? "Configuration..." : "Configurer le mot de passe"}
       </button>

@@ -74,23 +74,23 @@ export function SettingsClient({
       <section className="bg-white border rounded p-4 space-y-3">
         <h2 className="font-semibold">Identité</h2>
         <div>
-          <label className="text-sm text-gray-600">Nom</label>
+          <label className="text-sm text-slate-600">Nom</label>
           <Input value={org.name} onChange={(e) => set("name", e.target.value)} />
         </div>
         <div>
-          <label className="text-sm text-gray-600">Raison sociale</label>
+          <label className="text-sm text-slate-600">Raison sociale</label>
           <Input
             value={org.legalName ?? ""}
             onChange={(e) => set("legalName", e.target.value || null)}
           />
         </div>
         <div>
-          <label className="text-sm text-gray-600">Slug</label>
+          <label className="text-sm text-slate-600">Slug</label>
           <Input value={org.slug} disabled />
-          <p className="text-xs text-gray-500 mt-1">Modifiable par le staff uniquement.</p>
+          <p className="text-xs text-slate-500 mt-1">Modifiable par le staff uniquement.</p>
         </div>
         <div>
-          <label className="text-sm text-gray-600">Logo (URL)</label>
+          <label className="text-sm text-slate-600">Logo (URL)</label>
           <Input
             placeholder="/uploads/logo.png"
             value={org.logo ?? ""}
@@ -133,11 +133,11 @@ export function SettingsClient({
       <section className="bg-white border rounded p-4 space-y-3">
         <h2 className="font-semibold">Administratif</h2>
         <div>
-          <label className="text-sm text-gray-600">Numéro fiscal / SIRET</label>
+          <label className="text-sm text-slate-600">Numéro fiscal / SIRET</label>
           <Input value={org.taxId ?? ""} onChange={(e) => set("taxId", e.target.value || null)} />
         </div>
         <div>
-          <label className="text-sm text-gray-600">Site web</label>
+          <label className="text-sm text-slate-600">Site web</label>
           <Input
             placeholder="https://exemple.fr"
             value={org.website ?? ""}

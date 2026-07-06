@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Journal</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "log", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" } };</script>
+<div id="page" data-screen-label="44 Event journal">
+
+  <div class="page-head"><div><h1>Journal d'activité</h1><p class="sub">Actions sur Salon Tech 2026</p></div><button class="btn-ghost-sm"><span data-ico="download" data-size="14"></span> Exporter</button></div>
+
+  <div class="toolbar wrap">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Rechercher…" /></div>
+    <button class="chip-filter"><span data-ico="filter" data-size="14"></span> Type <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="calendar" data-size="14"></span> 7 derniers jours <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="user" data-size="14"></span> Membre <span data-ico="chevron-down" data-size="14"></span></button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Horodatage</th><th>Type</th><th>Action</th><th>Auteur</th><th>Contexte</th><th></th></tr></thead>
+      <tbody>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">09:41</td><td><span class="log-type acces"><span class="ld"></span> Accès</span></td><td>Scan d'accès — Camille Laurent autorisée</td><td>Paul Lefèvre</td><td class="cell-meta">Conférencier</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">08:30</td><td><span class="log-type acces"><span class="ld"></span> Inscriptions</span></td><td>42 inscriptions approuvées en lot</td><td>Sophie Bernard</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">06/06 17:12</td><td><span class="log-type modification"><span class="ld"></span> Badges</span></td><td>Impression batch — 12 badges générés</td><td>Paul Lefèvre</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">06/06 14:05</td><td><span class="log-type suppression"><span class="ld"></span> Blocage</span></td><td>E-mail spam@exemple.fr ajouté à la liste de blocage</td><td>Sophie Bernard</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">05/06 11:20</td><td><span class="log-type suppression"><span class="ld"></span> Rejet</span></td><td>Inscription rejetée — justificatif illisible</td><td>Sophie Bernard</td><td class="cell-meta">Yanis Bernard</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">05/06 10:02</td><td><span class="log-type modification"><span class="ld"></span> Modification</span></td><td>Catégorie « Presse » passée en anonyme</td><td>Sophie Bernard</td><td class="cell-meta">Presse</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=event'"><td class="cell-meta mono">04/06 16:48</td><td><span class="log-type creation"><span class="ld"></span> Membre</span></td><td>Membre invité — Marc Petit (VIEWER)</td><td>Sophie Bernard</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager"><span class="info">1–7 sur 486</span><div class="ctrls"><button class="btn-ghost-sm" disabled style="opacity:.5;"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -84,7 +84,7 @@ export default async function EventRegisterPage({
             <p>Vous êtes déjà inscrit à cet événement.</p>
             <Link
               href={`/account/registrations/${existing.id}`}
-              className="mt-1 inline-block text-indigo-700 underline"
+              className="mt-1 inline-block text-green-700 underline"
             >
               Voir le détail de mon inscription
             </Link>

@@ -112,9 +112,9 @@ export function EventCreationWizard({
       <h1 className="text-2xl font-bold">Nouvel événement</h1>
 
       <ol className="flex gap-4 text-sm">
-        <li className={step === 1 ? "font-bold" : "text-gray-500"}>1. Informations</li>
-        <li className={step === 2 ? "font-bold" : "text-gray-500"}>2. Catégories</li>
-        <li className={step === 3 ? "font-bold" : "text-gray-500"}>3. Récap</li>
+        <li className={step === 1 ? "font-bold" : "text-slate-500"}>1. Informations</li>
+        <li className={step === 2 ? "font-bold" : "text-slate-500"}>2. Catégories</li>
+        <li className={step === 3 ? "font-bold" : "text-slate-500"}>3. Récap</li>
       </ol>
 
       {err && (
@@ -139,7 +139,7 @@ export function EventCreationWizard({
             required
           />
           <div>
-            <label className="text-sm text-gray-600">Slug (URL publique)</label>
+            <label className="text-sm text-slate-600">Slug (URL publique)</label>
             <Input
               value={slug}
               onChange={(e) => {
@@ -147,7 +147,7 @@ export function EventCreationWizard({
                 setSlugTouched(true);
               }}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Suggéré automatiquement à partir du titre. Si le slug existe déjà globalement, un
               suffixe -2, -3… sera ajouté à la création.
             </p>
@@ -180,7 +180,7 @@ export function EventCreationWizard({
           {mode === "template" && (
             <div className="space-y-2">
               {templates.length === 0 && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500">
                   Aucun modèle disponible. Créez-en un dans Modèles catégories ou passez en manuel.
                 </p>
               )}
@@ -282,7 +282,7 @@ export function EventCreationWizard({
               </dd>
             </div>
           </dl>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-slate-500">
             L&apos;événement sera créé avec les inscriptions fermées par défaut. Vous pourrez les
             ouvrir depuis la page de configuration.
           </p>

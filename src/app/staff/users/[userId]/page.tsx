@@ -156,7 +156,7 @@ export default async function UserDetailPage({
       <div>
         <Link
           href="/staff/users"
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-green-600 hover:underline"
         >
           Retour a la liste
         </Link>

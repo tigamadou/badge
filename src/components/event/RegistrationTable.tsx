@@ -77,7 +77,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
       </div>
 
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">Nom</th>
             <th className="px-3 py-2">Email</th>
@@ -90,7 +90,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
         <tbody>
           {rows.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+              <td colSpan={6} className="px-3 py-6 text-center text-slate-500">
                 Aucune inscription.
               </td>
             </tr>
@@ -102,7 +102,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
                   {r.firstName} {r.lastName}
                 </Link>
               </td>
-              <td className="px-3 py-2 text-gray-600">{r.email}</td>
+              <td className="px-3 py-2 text-slate-600">{r.email}</td>
               <td className="px-3 py-2">
                 <span className="inline-block w-3 h-3 rounded mr-1 align-middle" style={{ background: r.category.color }} />
                 {r.category.name}
@@ -112,7 +112,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
               </td>
               <td className="px-3 py-2">{r.badgePrinted ? "Imprimé" : "—"}</td>
               <td className="px-3 py-2 text-right">
-                <Link href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`} className="text-sm text-blue-600 hover:underline">
+                <Link href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`} className="text-sm text-green-600 hover:underline">
                   Détail
                 </Link>
               </td>
@@ -122,7 +122,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
       </table>
 
       <div className="flex justify-between items-center text-sm">
-        <span className="text-gray-500">
+        <span className="text-slate-500">
           {total} inscription{total > 1 ? "s" : ""}
         </span>
         <div className="flex gap-2">

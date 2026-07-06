@@ -33,7 +33,7 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
             <td className="px-3 py-2">
               <Link
                 href={`/staff/organizations/${o.id}`}
-                className="text-blue-600 hover:underline"
+                className="text-green-600 hover:underline"
               >
                 {o.name}
               </Link>

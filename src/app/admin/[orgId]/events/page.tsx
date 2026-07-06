@@ -33,7 +33,7 @@ export default async function EventsListPage({
       </div>
 
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">Titre</th>
             <th className="px-3 py-2">Slug</th>
@@ -47,7 +47,7 @@ export default async function EventsListPage({
         <tbody>
           {events.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
+              <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
                 Aucun événement. Créez votre premier événement.
               </td>
             </tr>
@@ -59,13 +59,13 @@ export default async function EventsListPage({
                   {e.title}
                 </Link>
               </td>
-              <td className="px-3 py-2 text-gray-500">{e.slug}</td>
+              <td className="px-3 py-2 text-slate-500">{e.slug}</td>
               <td className="px-3 py-2">{new Date(e.date).toLocaleDateString("fr-FR")}</td>
               <td className="px-3 py-2">{e.location}</td>
               <td className="px-3 py-2">{e._count.registrations}</td>
               <td className="px-3 py-2">
                 {e.archived ? (
-                  <span className="px-2 py-0.5 rounded bg-gray-200 text-xs">Archivé</span>
+                  <span className="px-2 py-0.5 rounded bg-slate-200 text-xs">Archivé</span>
                 ) : e.registrationOpen ? (
                   <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">
                     Inscriptions ouvertes
@@ -79,7 +79,7 @@ export default async function EventsListPage({
               <td className="px-3 py-2 text-right">
                 <Link
                   href={`/admin/${orgId}/events/${e.id}/settings`}
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-green-600 hover:underline text-sm"
                 >
                   Configurer
                 </Link>

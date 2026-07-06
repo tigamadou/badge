@@ -55,7 +55,7 @@ export function CategoryImportTemplatesModal({
         <h3 className="font-semibold">Importer des modèles de catégories</h3>
         {err && <div className="text-sm text-red-600">{err}</div>}
         {templates.length === 0 ? (
-          <p className="text-sm text-gray-500">Aucun modèle disponible pour cette organisation.</p>
+          <p className="text-sm text-slate-500">Aucun modèle disponible pour cette organisation.</p>
         ) : (
           <ul className="max-h-64 overflow-y-auto divide-y border rounded">
             {templates.map((t) => (

@@ -1,23 +1,31 @@
 import Link from "next/link";
 import type { StaffRole } from "@prisma/client";
+import { LogOut } from "lucide-react";
+import { SidebarNav, type NavEntry } from "@/components/admin/SidebarNav";
 
-type Nav = { href: string; label: string };
-
-const NAV: Nav[] = [
-  { href: "/staff", label: "Tableau de bord" },
-  { href: "/staff/organizations", label: "Organisations" },
-  { href: "/staff/users", label: "Utilisateurs" },
-  { href: "/staff/settings", label: "Parametres" },
-  { href: "/staff/activity", label: "Journal" },
+const NAV: NavEntry[] = [
+  { href: "/staff", label: "Tableau de bord", icon: "layout-dashboard", exact: true },
+  { href: "/staff/organizations", label: "Organisations", icon: "building-2" },
+  { href: "/staff/users", label: "Utilisateurs", icon: "users" },
+  { href: "/staff/settings", label: "Paramètres", icon: "settings" },
+  { href: "/staff/activity", label: "Journal", icon: "scroll-text" },
 ];
 
-// Hierarchie complete avec SUPER_ADMIN au sommet (decision 2026-05-31).
 const ROLE_LABEL: Record<StaffRole, string> = {
   SUPER_ADMIN: "Super administrateur",
   STAFF_ADMIN: "Administrateur",
   STAFF_SUPPORT: "Support",
   STAFF_OBSERVER: "Observateur",
 };
+
+function initials(name: string) {
+  return (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 export function StaffShell({
   user,
@@ -27,45 +35,37 @@ export function StaffShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-60 bg-slate-900 text-white p-4 flex flex-col">
-        <div className="text-lg font-bold mb-6">Badge — Staff</div>
-        <nav className="flex-1 space-y-1">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="block rounded px-3 py-2 text-sm hover:bg-slate-800"
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="text-xs text-slate-400 mt-auto pt-4 border-t border-slate-800">
-          <div className="font-medium text-slate-200">{user.name}</div>
-          <div className="truncate">{user.email}</div>
-          <div className="mt-1 inline-block px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-            {ROLE_LABEL[user.staffRole]}
-          </div>
+    <div className="flex h-screen overflow-hidden">
+      <aside className="flex w-56 flex-none flex-col gap-1 bg-brand-navy px-3 py-4">
+        <div className="mb-3 px-2 text-base font-semibold text-white">Badge</div>
+        <SidebarNav items={NAV} />
+        <div className="mt-auto pt-2">
+          <Link
+            href="/api/auth/signout"
+            prefetch={false}
+            className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <LogOut size={18} strokeWidth={1.5} className="shrink-0" />
+            Déconnexion
+          </Link>
         </div>
       </aside>
-      <div className="flex-1 flex flex-col">
-        <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
-          <div className="text-sm text-slate-500">Espace staff applicatif</div>
-          <div className="flex items-center gap-4 text-sm">
-            <Link href="/profile" className="text-slate-700 hover:underline">
-              Mon profil
-            </Link>
-            <Link
-              href="/api/auth/signout"
-              prefetch={false}
-              className="text-slate-700 hover:underline"
-            >
-              Se déconnecter
-            </Link>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 flex-none items-center gap-3 border-b border-slate-200 bg-white px-5">
+          <nav className="flex flex-1 items-center gap-2 text-sm">
+            <span className="text-slate-400">Staff</span>
+          </nav>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-navy">
+            {ROLE_LABEL[user.staffRole]}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600">{user.name}</span>
+            <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+              {initials(user.name)}
+            </span>
           </div>
         </header>
-        <main className="flex-1 p-6 bg-slate-50">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">{children}</main>
       </div>
     </div>
   );

@@ -93,7 +93,7 @@ export function CategoryTable({
       )}
 
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">#</th>
             <th className="px-3 py-2">Nom</th>
@@ -107,7 +107,7 @@ export function CategoryTable({
         <tbody>
           {cats.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
+              <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
                 Aucune catégorie. Créez la première.
               </td>
             </tr>

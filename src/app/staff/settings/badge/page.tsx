@@ -40,8 +40,8 @@ export default async function StaffBadgeSettingsPage() {
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Template de badge par defaut</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Template de badge par defaut</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Template utilise par defaut pour toute la plateforme. Les organisations et
           evenements peuvent surcharger ce choix. <strong>Pas d&apos;option heriter</strong> :
           ce niveau est la racine de la cascade.

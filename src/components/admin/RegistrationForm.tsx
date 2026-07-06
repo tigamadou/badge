@@ -155,7 +155,7 @@ export function RegistrationForm({
         <button
           type="button"
           onClick={() => idDocInputRef.current?.click()}
-          className="w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
+          className="w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer"
         >
           {idDocFileName ? (
             <span className="text-sm text-slate-700 flex items-center justify-center gap-2">
@@ -192,7 +192,7 @@ export function RegistrationForm({
         <button
           type="button"
           onClick={() => photoInputRef.current?.click()}
-          className="w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer"
+          className="w-full border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-green-500 hover:bg-green-50 transition-colors cursor-pointer"
         >
           {photoFileName ? (
             <span className="text-sm text-slate-700 flex items-center justify-center gap-2">

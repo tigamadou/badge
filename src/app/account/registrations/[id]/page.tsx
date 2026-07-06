@@ -65,11 +65,11 @@ export default async function RegistrationDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/account" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/account" className="text-sm text-green-600 hover:underline">
           ← Retour
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">{registration.event.title}</h1>
-        <p className="text-sm text-gray-600">
+        <h1 className="text-2xl font-bold text-slate-900 mt-2">{registration.event.title}</h1>
+        <p className="text-sm text-slate-600">
           {formatDate(registration.event.date)} · {registration.event.location}
         </p>
       </div>
@@ -86,7 +86,7 @@ export default async function RegistrationDetailPage({
               </p>
             )}
             {registration.rejectionDetails && (
-              <p className="text-gray-700">{registration.rejectionDetails}</p>
+              <p className="text-slate-700">{registration.rejectionDetails}</p>
             )}
           </div>
         )}
@@ -96,26 +96,26 @@ export default async function RegistrationDetailPage({
       </div>
 
       {registration.status === "REJECTED" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-          <p className="text-sm text-gray-700">
+        <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-slate-700">
             Vous pouvez corriger les informations de votre profil puis resoumettre votre inscription.
             Le snapshot soumis sera réécrit avec les valeurs actuelles de votre profil.
           </p>
-          <Link href="/account/profile" className="text-sm text-indigo-600 underline">
+          <Link href="/account/profile" className="text-sm text-green-600 underline">
             Modifier mon profil
           </Link>
           <ResubmitButton registrationId={registration.id} />
         </div>
       )}
 
-      <section className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+      <section className="bg-white rounded-lg border border-slate-200 p-6">
+        <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">
           Informations enregistrées pour cette inscription
         </h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <dt className="text-gray-500">Catégorie</dt>
-            <dd className="text-gray-900">
+            <dt className="text-slate-500">Catégorie</dt>
+            <dd className="text-slate-900">
               <span
                 className="inline-block w-3 h-3 rounded-sm mr-2 align-middle"
                 style={{ backgroundColor: registration.category.color }}
@@ -124,28 +124,28 @@ export default async function RegistrationDetailPage({
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">Nom</dt>
-            <dd className="text-gray-900">
+            <dt className="text-slate-500">Nom</dt>
+            <dd className="text-slate-900">
               {registration.snapshotFirstName} {registration.snapshotLastName}
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">Email</dt>
-            <dd className="text-gray-900">{registration.snapshotEmail}</dd>
+            <dt className="text-slate-500">Email</dt>
+            <dd className="text-slate-900">{registration.snapshotEmail}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Structure</dt>
-            <dd className="text-gray-900">{registration.snapshotStructure}</dd>
+            <dt className="text-slate-500">Structure</dt>
+            <dd className="text-slate-900">{registration.snapshotStructure}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Pièce</dt>
-            <dd className="text-gray-900">
+            <dt className="text-slate-500">Pièce</dt>
+            <dd className="text-slate-900">
               {registration.snapshotIdDocumentType} — {registration.snapshotIdDocumentNumber}
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">Inscrit le</dt>
-            <dd className="text-gray-900">{formatDate(registration.createdAt)}</dd>
+            <dt className="text-slate-500">Inscrit le</dt>
+            <dd className="text-slate-900">{formatDate(registration.createdAt)}</dd>
           </div>
         </dl>
       </section>

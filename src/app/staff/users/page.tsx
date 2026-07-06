@@ -41,7 +41,7 @@ export default async function StaffUsersPage({
         <h1 className="text-2xl font-bold">Utilisateurs</h1>
         <Link
           href="/staff/users/new"
-          className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm hover:bg-blue-700"
+          className="rounded bg-green-600 text-white px-3 py-1.5 text-sm hover:bg-green-700"
         >
           Nouvel utilisateur
         </Link>
@@ -100,7 +100,7 @@ export default async function StaffUsersPage({
               <td className="px-3 py-2">
                 <Link
                   href={`/staff/users/${u.id}`}
-                  className="text-blue-600 hover:underline"
+                  className="text-green-600 hover:underline"
                 >
                   {u.name}
                 </Link>

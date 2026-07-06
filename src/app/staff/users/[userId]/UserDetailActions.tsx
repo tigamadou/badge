@@ -108,7 +108,7 @@ export function UserDetailActions({
           <button
             onClick={changeRole}
             disabled={busy}
-            className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
+            className="rounded bg-green-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
           >
             Changer le role
           </button>

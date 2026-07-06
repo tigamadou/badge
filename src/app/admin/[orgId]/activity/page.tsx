@@ -16,14 +16,14 @@ export default async function ActivityPage({
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Journal d&apos;activité</h1>
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-slate-500">
         Les actions marquées{" "}
         <span className="px-1 rounded bg-amber-100 text-amber-800">staff</span> sont effectuées par
         le staff applicatif.
       </p>
 
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">Date</th>
             <th className="px-3 py-2">Type</th>
@@ -34,7 +34,7 @@ export default async function ActivityPage({
         <tbody>
           {logs.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+              <td colSpan={4} className="px-3 py-4 text-center text-slate-500">
                 Aucune activité.
               </td>
             </tr>
@@ -53,7 +53,7 @@ export default async function ActivityPage({
                 )}
               </td>
               <td className="px-3 py-2">{l.user?.email ?? "—"}</td>
-              <td className="px-3 py-2 text-xs text-gray-600">
+              <td className="px-3 py-2 text-xs text-slate-600">
                 <pre className="whitespace-pre-wrap font-mono">
                   {JSON.stringify(l.details, null, 0)}
                 </pre>

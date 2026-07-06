@@ -27,16 +27,16 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Mon profil</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Mon profil</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Ces informations sont enregistrées sur votre compte et utilisées pour vos inscriptions.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-gray-700">
+      <div className="bg-white rounded-lg border border-slate-200 p-4 text-sm text-slate-700">
         <p>
           <strong>Email :</strong> {user.email}{" "}
-          <span className="text-xs text-gray-500">(non modifiable)</span>
+          <span className="text-xs text-slate-500">(non modifiable)</span>
         </p>
         <p className="mt-1">
           <strong>Nom du compte :</strong> {user.name}

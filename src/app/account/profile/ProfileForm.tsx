@@ -103,7 +103,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 bg-white rounded-lg border border-gray-200 p-6">
+    <form onSubmit={handleSubmit} className="space-y-5 bg-white rounded-lg border border-slate-200 p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label="Prénom"
@@ -129,7 +129,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
       />
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 mb-1">
           Photo (JPEG, PNG, WebP, max 5 Mo)
         </label>
         <input
@@ -139,7 +139,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
           disabled={uploadingPhoto}
           className="text-sm"
         />
-        {uploadingPhoto && <p className="text-xs text-gray-600 mt-1">Envoi en cours...</p>}
+        {uploadingPhoto && <p className="text-xs text-slate-600 mt-1">Envoi en cours...</p>}
         {photo && (
           <p className="text-xs text-emerald-700 mt-1 break-all">
             Photo enregistrée : {photo}
@@ -149,13 +149,13 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
             Type de pièce d&apos;identité
           </label>
           <select
             value={idDocumentType}
             onChange={(e) => setIdDocumentType(e.target.value)}
-            className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            className="block w-full rounded border border-slate-300 px-3 py-2 text-sm"
             required
           >
             {ID_DOC_TYPES.map((t) => (
@@ -175,7 +175,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-slate-700 mb-1">
           Pièce d&apos;identité (PDF, JPEG, PNG, WebP, max 5 Mo)
         </label>
         <input
@@ -185,7 +185,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
           disabled={uploadingDoc}
           className="text-sm"
         />
-        {uploadingDoc && <p className="text-xs text-gray-600 mt-1">Envoi en cours...</p>}
+        {uploadingDoc && <p className="text-xs text-slate-600 mt-1">Envoi en cours...</p>}
         {idDocument && (
           <p className="text-xs text-emerald-700 mt-1 break-all">
             Document enregistré : {idDocument}

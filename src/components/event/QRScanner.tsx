@@ -92,7 +92,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
     ? last.authorized
       ? "border-green-400 bg-green-50"
       : "border-red-400 bg-red-50"
-    : "border-gray-200 bg-white";
+    : "border-slate-200 bg-white";
 
   return (
     <div className="space-y-4 max-w-2xl">
@@ -134,7 +134,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
                 <div className="font-semibold">
                   {last.registration.firstName} {last.registration.lastName}
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-slate-600">
                   Catégorie : #{last.registration.category.number} {last.registration.category.name}
                 </div>
                 <div className="text-sm">Statut : {last.registration.status}</div>
@@ -142,14 +142,14 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
             )}
           </>
         ) : (
-          <div className="text-sm text-gray-500">Aucun scan pour le moment.</div>
+          <div className="text-sm text-slate-500">Aucun scan pour le moment.</div>
         )}
       </div>
 
       <section>
         <h3 className="font-semibold mb-2">Historique session</h3>
         <ul className="bg-white border rounded divide-y text-sm">
-          {history.length === 0 && <li className="px-3 py-2 text-gray-500">—</li>}
+          {history.length === 0 && <li className="px-3 py-2 text-slate-500">—</li>}
           {history.map((h, i) => (
             <li key={i} className="px-3 py-2 flex justify-between">
               <span>{h.registration ? `${h.registration.firstName} ${h.registration.lastName}` : h.error ?? "?"}</span>

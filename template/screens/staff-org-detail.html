@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Détail organisation</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "orgs", user: { name: "Marie Dubois", role: "SUPER_ADMIN" }, crumbs: ["Staff", "Organisations", "Salon Tech"] };</script>
+<div id="page" data-screen-label="15 Staff détail organisation">
+
+  <a class="link" href="staff-orgs.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Organisations</a>
+  <div class="page-head" style="margin-top:12px;">
+    <div class="flex gap16" style="align-items:center;"><span class="org-logo" style="width:48px;height:48px;font-size:18px;">ST</span><div><h1>Salon Tech</h1><p class="sub mono">salon-tech · 3 événements · 1 248 inscriptions</p></div></div>
+    <a class="btn btn-primary" href="org-dashboard.html"><span data-ico="external-link" data-size="16"></span> Entrer dans l'organisation</a>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Vue d'ensemble</button>
+    <button class="tab" data-tab="members">Membres</button>
+    <button class="tab" data-tab="quotas">Quotas</button>
+    <button class="tab" data-tab="settings">Paramètres</button>
+    <button class="tab" data-tab="activity">Activité</button>
+  </div>
+
+  <div data-panel="overview">
+    <div class="stat-grid">
+      <div class="statcard"><p class="lbl">Événements</p><p class="val">3</p><p class="sub">2 actifs</p></div>
+      <div class="statcard"><p class="lbl">Inscriptions</p><p class="val">1 248</p><p class="sub">982 approuvées</p></div>
+      <div class="statcard"><p class="lbl">Membres</p><p class="val">7</p><p class="sub">1 OWNER</p></div>
+      <div class="statcard"><p class="lbl">Badges imprimés</p><p class="val">640</p><p class="sub">51% des approuvées</p></div>
+    </div>
+    <div class="card card-pad" style="margin-top:24px;max-width:640px;">
+      <h3 class="ds-h2" style="margin:0 0 8px;">Quotas</h3>
+      <div class="quota"><div class="qh"><span class="lbl">Stockage</span><span class="val">3,2 / 10 Go</span></div><div class="qbar"><div class="qfill" style="width:32%;"></div></div></div>
+      <div class="quota" style="margin-bottom:0;"><div class="qh"><span class="lbl">Événements</span><span class="val">3 / 10</span></div><div class="qbar"><div class="qfill" style="width:30%;"></div></div></div>
+    </div>
+  </div>
+
+  <div data-panel="members" hidden>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Membre</th><th>E-mail</th><th>Rôle</th></tr></thead>
+        <tbody>
+          <tr><td class="cell-name">Marie Dubois</td><td class="cell-meta">marie.dubois@salontech.fr</td><td><span class="role-badge">OWNER</span></td></tr>
+          <tr><td class="cell-name">Julien Roy</td><td class="cell-meta">julien.roy@salontech.fr</td><td><span class="role-badge slate">MANAGER</span></td></tr>
+          <tr><td class="cell-name">Sophie Bernard</td><td class="cell-meta">sophie.bernard@salontech.fr</td><td><span class="role-badge amber">AUDITOR</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div data-panel="quotas" hidden>
+    <div class="card card-pad" style="max-width:640px;">
+      <h3 class="ds-h2" style="margin:0 0 4px;">Ajuster les quotas</h3>
+      <p class="desc" style="margin-bottom:18px;color:var(--fg3);font-size:13px;">Modifiables uniquement par le staff.</p>
+      <div class="row-2"><div class="field"><label>Stockage (Go)</label><input class="input" value="10" /></div><div class="field"><label>Événements max.</label><input class="input" value="10" /></div></div>
+      <button class="btn btn-primary"><span data-ico="check" data-size="16"></span> Enregistrer les quotas</button>
+    </div>
+  </div>
+
+  <div data-panel="settings" hidden>
+    <div class="card card-pad" style="max-width:640px;margin-bottom:24px;">
+      <h3 class="ds-h2" style="margin:0 0 18px;">Paramètres</h3>
+      <div class="row-2"><div class="field"><label>Nom</label><input class="input" value="Salon Tech" /></div><div class="field"><label>Slug</label><input class="input mono" value="salon-tech" /></div></div>
+      <div class="field" style="margin-bottom:0;"><label>E-mail de contact</label><input class="input" value="contact@salontech.fr" /></div>
+    </div>
+    <div class="card card-pad" style="max-width:640px;border-color:var(--rose-200);">
+      <h3 class="ds-h2" style="margin:0 0 6px;color:var(--rose-700);">Zone de danger</h3>
+      <p class="ds-body" style="margin:0 0 14px;">Cette action est irréversible et supprimera tous les événements associés. Saisissez le slug pour confirmer.</p>
+      <div class="input-group" style="max-width:420px;"><input class="input mono" placeholder="salon-tech" /><button class="btn btn-danger"><span data-ico="trash-2" data-size="16"></span> Supprimer définitivement</button></div>
+    </div>
+  </div>
+
+  <div data-panel="activity" hidden>
+    <div class="card card-pad">
+      <div class="tl">
+        <div class="tl-item"><span class="tl-dot ok"></span><div class="tl-t">Événement « Salon Tech 2026 » créé</div><div class="tl-s">Julien Roy · il y a 3 j</div></div>
+        <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">Quota stockage relevé à 10 Go</div><div class="tl-s">Marie Dubois (staff) · il y a 5 j</div></div>
+        <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">Membre ajouté — Sophie Bernard (AUDITOR)</div><div class="tl-s">Marie Dubois · il y a 1 sem.</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      var name = t.getAttribute('data-tab');
+      document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== name; });
+    });
+  });
+</script>
+</body>
+</html>

@@ -73,8 +73,8 @@ docker compose -f docker-compose.dev.yml up -d --build
 
 | Service | Port | Description |
 |---------|------|-------------|
-| app | 3000 | Next.js avec hot reload |
-| mysql | 3306 | Base de donnees MySQL |
+| app | 3785 | Next.js avec hot reload |
+| mysql | 33060 | Base de donnees MySQL |
 | phpmyadmin | 8080 | Interface admin BDD |
 | mailpit | 8025 | Interface de capture d'emails |
 

@@ -50,8 +50,8 @@ export default async function AccountHomePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Bonjour {user?.name}</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Bonjour {user?.name}</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Retrouvez ici vos inscriptions et votre profil.
         </p>
       </div>
@@ -65,7 +65,7 @@ export default async function AccountHomePage() {
           </p>
           <Link
             href="/account/profile/complete"
-            className="inline-block mt-3 bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-semibold"
+            className="inline-block mt-3 bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold"
           >
             Compléter mon profil
           </Link>
@@ -73,9 +73,9 @@ export default async function AccountHomePage() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Mes inscriptions</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-3">Mes inscriptions</h2>
         {registrations.length === 0 ? (
-          <p className="text-sm text-gray-600 bg-white rounded-lg border border-gray-200 p-6">
+          <p className="text-sm text-slate-600 bg-white rounded-lg border border-slate-200 p-6">
             Vous n&apos;avez pas encore d&apos;inscription. Visitez la page d&apos;un événement pour
             vous inscrire.
           </p>
@@ -84,11 +84,11 @@ export default async function AccountHomePage() {
             {registrations.map((r) => (
               <li
                 key={r.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between gap-4"
+                className="bg-white border border-slate-200 rounded-lg p-4 flex items-center justify-between gap-4"
               >
                 <div>
-                  <p className="font-semibold text-gray-900">{r.event.title}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-semibold text-slate-900">{r.event.title}</p>
+                  <p className="text-sm text-slate-600">
                     {formatDate(r.event.date)} · {r.event.location} · {r.category.name}
                   </p>
                   {r.status === "REJECTED" && r.rejectionReason && (
@@ -103,7 +103,7 @@ export default async function AccountHomePage() {
                   </span>
                   <Link
                     href={`/account/registrations/${r.id}`}
-                    className="text-sm text-indigo-600 hover:underline"
+                    className="text-sm text-green-600 hover:underline"
                   >
                     Détail
                   </Link>

@@ -53,7 +53,7 @@ export function MemberTable({
       </div>
       {inviting && <MemberInviteForm orgId={orgId} eventId={eventId} onDone={refresh} onCancel={() => setInviting(false)} />}
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2">Nom</th>
             <th className="px-3 py-2">Email</th>
@@ -65,7 +65,7 @@ export function MemberTable({
         <tbody>
           {members.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+              <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
                 Aucun membre. Invitez le premier opérateur.
               </td>
             </tr>
@@ -86,7 +86,7 @@ export function MemberTable({
                   <option value="VIEWER">Observateur</option>
                 </select>
               </td>
-              <td className="px-3 py-2 text-xs text-gray-500">
+              <td className="px-3 py-2 text-xs text-slate-500">
                 {new Date(m.createdAt).toLocaleDateString("fr-FR")}
               </td>
               <td className="px-3 py-2 text-right">

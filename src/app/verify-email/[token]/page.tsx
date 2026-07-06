@@ -36,38 +36,38 @@ export default async function VerifyEmailPage({
   const result = await verifyToken(token, resolveBaseUrl());
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-lg shadow p-8 text-center space-y-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-5 py-10">
+      <div className="w-full max-w-[400px] rounded-2xl border border-slate-200 bg-white p-8 text-center space-y-4">
         <div className="flex justify-center mb-2">
-          <Image src="/logo.png" alt="Logo" width={120} height={120} className="h-20 w-auto object-contain" />
+          <Image src="/logo.png" alt="Badge" width={120} height={120} className="h-20 w-auto object-contain" />
         </div>
         {result.ok ? (
           <>
-            <h1 className="text-xl font-bold text-green-700">
+            <h1 className="text-[22px] font-semibold text-green-700">
               {result.alreadyVerified ? "Email déjà confirmé" : "Email confirmé"}
             </h1>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-slate-700">
               Votre adresse email est désormais vérifiée. Vous pouvez vous connecter à votre compte.
             </p>
             <Link
               href="/login"
-              className="inline-block mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-semibold"
+              className="inline-block mt-2 bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700"
             >
               Se connecter
             </Link>
           </>
         ) : (
           <>
-            <h1 className="text-xl font-bold text-red-600">Lien invalide ou expiré</h1>
-            <p className="text-sm text-gray-700">
+            <h1 className="text-[22px] font-semibold text-red-600">Lien invalide ou expiré</h1>
+            <p className="text-sm text-slate-700">
               Ce lien de confirmation est invalide ou a expiré. Vous pouvez vous inscrire à nouveau
               ou demander un nouveau lien depuis la page de connexion.
             </p>
             <div className="space-x-3">
-              <Link href="/register" className="text-indigo-600 underline text-sm">
+              <Link href="/register" className="text-green-600 hover:underline text-sm">
                 S&apos;inscrire à nouveau
               </Link>
-              <Link href="/login" className="text-indigo-600 underline text-sm">
+              <Link href="/login" className="text-green-600 hover:underline text-sm">
                 Se connecter
               </Link>
             </div>

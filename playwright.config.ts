@@ -12,8 +12,8 @@ import { defineConfig, devices } from "@playwright/test";
 //      yarn playwright install chromium   # premiere fois
 //      yarn playwright test --ui          # ou: make test-e2e-ui
 //    Sans PLAYWRIGHT_CHROMIUM_EXECUTABLE, Playwright utilise le chromium
-//    qu'il a installe localement. L'app dev doit tourner sur localhost:3000
-//    (make dev).
+//    qu'il a installe localement. L'app dev doit tourner sur localhost:3785
+//    (make dev) ; ce mode passe PLAYWRIGHT_BASE_URL=http://localhost:3785.
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const CHROMIUM_EXEC = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 

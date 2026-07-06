@@ -31,7 +31,7 @@ export function BadgeDownloadV2({
         />
       }
       fileName={fileName}
-      className="inline-block rounded bg-blue-600 text-white px-3 py-1.5 text-sm hover:bg-blue-700"
+      className="inline-block rounded bg-green-600 text-white px-3 py-1.5 text-sm hover:bg-green-700"
     >
       {({ loading }) => (loading ? "Préparation..." : "Télécharger le badge PDF")}
     </PDFDownloadLink>

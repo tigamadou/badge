@@ -169,7 +169,7 @@ export function UserCreationForm({
       <button
         type="submit"
         disabled={busy || !form.email.trim() || !form.name.trim()}
-        className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
+        className="rounded bg-green-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
       >
         {busy ? "Creation..." : "Creer l'utilisateur"}
       </button>

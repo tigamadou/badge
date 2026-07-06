@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Détail d'une inscription</title>
+<link rel="stylesheet" href="assets/badge.css" />
+<style>
+  .acct-top { display: flex; align-items: center; padding: 16px 28px; background: #fff; border-bottom: 1px solid var(--border-card); position: sticky; top: 0; z-index: 5; }
+  .acct-top img { height: 28px; }
+  .acct-top .sp { flex: 1; }
+  .acct-top .nav { display: flex; gap: 4px; margin-left: 28px; }
+  .acct-top .nav a { font-size: 14px; color: var(--fg2); text-decoration: none; padding: 7px 12px; border-radius: 8px; font-weight: 500; }
+  .acct-top .nav a.on { background: var(--accent-nav-bg); color: var(--green-700); }
+  .acct-top .nav a:hover { background: var(--slate-100); }
+  .acct-wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
+</style>
+</head>
+<body>
+  <div data-screen-label="11 Participant détail inscription">
+    <div class="acct-top">
+      <img src="assets/logo.svg" alt="Badge" />
+      <nav class="nav"><a class="on" href="participant-dashboard.html">Mes inscriptions</a><a href="participant-profil.html">Profil</a></nav>
+      <span class="sp"></span>
+      <div class="user-chip"><span class="nm" style="font-size:14px;color:var(--fg2);">Camille Laurent</span><span class="avatar">CL</span></div>
+    </div>
+
+    <div class="acct-wrap">
+      <a class="link" href="participant-dashboard.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Mes inscriptions</a>
+      <div class="between" style="margin:14px 0 24px;align-items:flex-start;">
+        <div>
+          <h1 style="font-size:22px;font-weight:600;color:var(--fg1);margin:0 0 6px;">ExpoPro Lyon</h1>
+          <div class="ds-meta"><span data-ico="map-pin" data-size="12" style="vertical-align:-2px;"></span> Eurexpo, Lyon · <span data-ico="calendar" data-size="12" style="vertical-align:-2px;"></span> 22–23 sept. 2026</div>
+        </div>
+        <span class="status status-rejected"><span data-ico="x" data-size="12"></span> Rejetée</span>
+      </div>
+
+      <!-- Encart motif de rejet -->
+      <div class="alert alert-err" style="display:flex;gap:12px;align-items:flex-start;">
+        <span data-ico="alert-triangle" data-size="18" style="flex:none;margin-top:1px;"></span>
+        <div style="flex:1;">
+          <div style="font-weight:600;margin-bottom:3px;">Inscription rejetée — justificatif illisible</div>
+          <div style="line-height:1.5;">Le document fourni n'a pas pu être vérifié. Merci de soumettre une pièce d'identité lisible et en cours de validité.</div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:12px;"><span data-ico="pencil" data-size="14"></span> Modifier et resoumettre</button>
+        </div>
+      </div>
+
+      <div class="grid-2col" style="margin-top:24px;">
+        <div class="stack" style="gap:24px;">
+          <div class="card">
+            <div class="card-head"><h3>Récapitulatif</h3></div>
+            <div class="card-pad" style="padding-top:16px;">
+              <div class="list-row"><span class="ds-body" style="width:140px;color:var(--fg3);">Nom complet</span><span class="ds-value">Camille Laurent</span></div>
+              <div class="list-row"><span class="ds-body" style="width:140px;color:var(--fg3);">Catégorie</span><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></div>
+              <div class="list-row"><span class="ds-body" style="width:140px;color:var(--fg3);">E-mail</span><span class="ds-value">camille.laurent@exemple.fr</span></div>
+              <div class="list-row"><span class="ds-body" style="width:140px;color:var(--fg3);">Pièce d'identité</span><span class="ds-value">CNI · n° 0000 0000</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h3>Pièces fournies</h3></div>
+            <div class="card-pad" style="display:flex;gap:14px;padding-top:16px;">
+              <div class="filebox" style="flex:1;"><span class="thumb"><span data-ico="image" data-size="20"></span></span><div><div class="fb-t">Photo</div><div class="fb-s">photo.jpg · 1,8 Mo</div></div></div>
+              <div class="filebox" style="flex:1;"><span class="thumb"><span data-ico="file-text" data-size="20"></span></span><div><div class="fb-t">Justificatif</div><div class="fb-s">cni.pdf · 3,1 Mo</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-pad">
+          <h3 class="ds-h2" style="margin:0 0 18px;">Suivi</h3>
+          <div class="tl">
+            <div class="tl-item"><span class="tl-dot danger"></span><div class="tl-t">Inscription rejetée</div><div class="tl-s">22 août 2026 · 14:32 — justificatif illisible</div></div>
+            <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">En cours de vérification</div><div class="tl-s">21 août 2026 · 09:10</div></div>
+            <div class="tl-item"><span class="tl-dot ok"></span><div class="tl-t">Inscription soumise</div><div class="tl-s">20 août 2026 · 18:45</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

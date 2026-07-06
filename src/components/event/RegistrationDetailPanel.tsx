@@ -81,7 +81,7 @@ export function RegistrationDetailPanel({
         <h2 className="text-xl font-semibold">
           {r.firstName} {r.lastName}
         </h2>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-slate-600">
           {r.email} — {r.structure}
         </div>
         <div className="text-sm">
@@ -95,7 +95,7 @@ export function RegistrationDetailPanel({
         <div className="text-sm">
           Statut : {r.status}
           {r.badgePrinted && (
-            <span className="ml-2 text-xs text-gray-500">
+            <span className="ml-2 text-xs text-slate-500">
               — badge imprimé le {new Date(r.badgePrintedAt!).toLocaleString("fr-FR")}
             </span>
           )}
@@ -119,18 +119,18 @@ export function RegistrationDetailPanel({
         <h3 className="font-semibold">Pièces jointes</h3>
         <div className="flex gap-4 flex-wrap">
           {r.photo ? (
-            <a href={`/api/files/${r.photo}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
+            <a href={`/api/files/${r.photo}`} target="_blank" rel="noreferrer" className="text-sm text-green-600 hover:underline">
               Voir la photo
             </a>
           ) : (
-            <span className="text-sm text-gray-500">Pas de photo</span>
+            <span className="text-sm text-slate-500">Pas de photo</span>
           )}
           {r.idDocument ? (
-            <a href={`/api/files/${r.idDocument}`} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
+            <a href={`/api/files/${r.idDocument}`} target="_blank" rel="noreferrer" className="text-sm text-green-600 hover:underline">
               Voir la pièce d&apos;identité
             </a>
           ) : (
-            <span className="text-sm text-gray-500">Pas de pièce d&apos;identité</span>
+            <span className="text-sm text-slate-500">Pas de pièce d&apos;identité</span>
           )}
         </div>
       </div>

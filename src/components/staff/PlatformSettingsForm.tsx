@@ -179,7 +179,7 @@ export function PlatformSettingsForm({
       <button
         onClick={save}
         disabled={busy}
-        className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
+        className="rounded bg-green-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
       >
         {busy ? "Enregistrement..." : "Enregistrer les parametres"}
       </button>

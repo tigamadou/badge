@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Créer une organisation</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "orgs", user: { name: "Marie Dubois", role: "SUPER_ADMIN" }, crumbs: ["Staff", "Organisations", "Créer"] };</script>
+<div id="page" data-screen-label="14 Staff création organisation">
+
+  <a class="link" href="staff-orgs.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Organisations</a>
+  <div class="page-head" style="margin-top:12px;">
+    <div><h1>Créer une organisation</h1><p class="sub">Renseignez les informations de la nouvelle organisation</p></div>
+  </div>
+
+  <div class="card card-pad form-narrow" style="max-width:760px;">
+    <div class="form-section">
+      <h3>Identité</h3>
+      <div class="row-2">
+        <div class="field"><label>Nom de l'organisation <span class="req">*</span></label><input class="input" placeholder="Ex. Salon Tech" /></div>
+        <div class="field"><label>Slug <span class="req">*</span></label><div class="input-group"><input class="input mono" placeholder="salon-tech" /></div><p class="help">Identifiant unique dans les URL.</p></div>
+      </div>
+      <div class="field" style="margin-bottom:0;"><label>Logo</label><div class="dropzone" style="padding:18px;"><div class="dz-ic" data-ico="image" data-size="22"></div><div class="dz-t">Importer un logo</div><div class="dz-s">PNG ou SVG · 2 Mo max</div></div></div>
+    </div>
+
+    <div class="form-section">
+      <h3>Adresse</h3>
+      <div class="field"><label>Adresse</label><input class="input" placeholder="N° et rue" /></div>
+      <div class="row-2">
+        <div class="field" style="margin-bottom:0;"><label>Code postal</label><input class="input" placeholder="75015" /></div>
+        <div class="field" style="margin-bottom:0;"><label>Ville</label><input class="input" placeholder="Paris" /></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Administratif</h3>
+      <div class="row-2">
+        <div class="field" style="margin-bottom:0;"><label>SIRET</label><input class="input mono" placeholder="000 000 000 00000" /></div>
+        <div class="field" style="margin-bottom:0;"><label>N° TVA</label><input class="input mono" placeholder="FR00 000000000" /></div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Contact</h3>
+      <div class="row-2">
+        <div class="field" style="margin-bottom:0;"><label>E-mail de contact <span class="req">*</span></label><input class="input" type="email" placeholder="contact@org.fr" /></div>
+        <div class="field" style="margin-bottom:0;"><label>Téléphone</label><input class="input" type="tel" placeholder="01 23 45 67 89" /></div>
+      </div>
+    </div>
+
+    <div class="form-section" style="border-bottom:0;">
+      <h3>Quotas</h3>
+      <p class="desc">Limites allouées à l'organisation.</p>
+      <div class="row-2">
+        <div class="field" style="margin-bottom:0;"><label>Stockage (Go)</label><input class="input" value="10" /></div>
+        <div class="field" style="margin-bottom:0;"><label>Événements max.</label><input class="input" value="10" /></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="between" style="max-width:760px;margin-top:20px;">
+    <button class="btn btn-secondary">Annuler</button>
+    <button class="btn btn-primary"><span data-ico="check" data-size="16"></span> Créer l'organisation</button>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

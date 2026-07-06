@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { AuthCard } from "@/components/auth/AuthCard";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -47,71 +47,64 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-lg shadow p-8">
-        <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="Logo" width={120} height={120} className="h-20 w-auto object-contain" />
+    <AuthCard title="Créer un compte">
+      {done ? (
+        <div className="space-y-4 text-center">
+          <p className="text-green-700 font-medium">Compte créé.</p>
+          <p className="text-sm text-slate-700">
+            Nous vous avons envoyé un email à <strong>{email}</strong> pour confirmer votre adresse.
+            Cliquez sur le lien reçu pour activer votre compte.
+          </p>
+          <p className="text-sm">
+            <Link href="/login" className="text-green-600 hover:underline">Retour à la connexion</Link>
+          </p>
         </div>
-        <h1 className="text-xl font-bold text-center mb-6">Créer un compte</h1>
-
-        {done ? (
-          <div className="space-y-4 text-center">
-            <p className="text-green-700 font-medium">Compte créé.</p>
-            <p className="text-sm text-gray-700">
-              Nous vous avons envoyé un email à <strong>{email}</strong> pour confirmer votre adresse.
-              Cliquez sur le lien reçu pour activer votre compte.
-            </p>
-            <p className="text-sm">
-              <Link href="/login" className="text-indigo-600 underline">Retour à la connexion</Link>
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Nom complet"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoComplete="name"
-            />
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            <Input
-              label="Mot de passe (min. 6 caractères)"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-            />
-            <Input
-              label="Confirmer le mot de passe"
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-              autoComplete="new-password"
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Création..." : "Créer mon compte"}
-            </Button>
-            <p className="text-sm text-center text-gray-600">
-              Déjà inscrit ?{" "}
-              <Link href="/login" className="text-indigo-600 underline">
-                Se connecter
-              </Link>
-            </p>
-          </form>
-        )}
-      </div>
-    </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Nom complet"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoComplete="name"
+          />
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+          <Input
+            label="Mot de passe (min. 6 caractères)"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+          />
+          <Input
+            label="Confirmer le mot de passe"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            autoComplete="new-password"
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Création..." : "Créer mon compte"}
+          </Button>
+          <p className="text-sm text-center text-slate-600">
+            Déjà inscrit ?{" "}
+            <Link href="/login" className="text-green-600 hover:underline">
+              Se connecter
+            </Link>
+          </p>
+        </form>
+      )}
+    </AuthCard>
   );
 }

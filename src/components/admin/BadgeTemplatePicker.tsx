@@ -69,16 +69,16 @@ export default function BadgeTemplatePicker({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-md border border-gray-200 bg-white p-3 text-sm">
+      <div className="rounded-md border border-slate-200 bg-white p-3 text-sm">
         <p>
           <strong>Template effectif :</strong> {effectiveId}{" "}
-          <span className="text-gray-500">(niveau {LEVEL_LABEL[effectiveLevel]})</span>
+          <span className="text-slate-500">(niveau {LEVEL_LABEL[effectiveLevel]})</span>
         </p>
         {canClearToInherit && currentValue !== null && (
           <button
             onClick={() => patch(null)}
             disabled={pending}
-            className="mt-2 text-sm text-indigo-700 underline disabled:opacity-50"
+            className="mt-2 text-sm text-green-700 underline disabled:opacity-50"
           >
             Utiliser le defaut herite
           </button>
@@ -95,10 +95,10 @@ export default function BadgeTemplatePicker({
               data-testid={`template-card-${tpl.id}`}
               data-selected={isCurrent ? "true" : "false"}
               className={`rounded-lg border p-4 bg-white space-y-3 ${
-                isCurrent ? "border-indigo-500 ring-2 ring-indigo-200" : "border-gray-200"
+                isCurrent ? "border-green-500 ring-2 ring-green-200" : "border-slate-200"
               }`}
             >
-              <div className="aspect-[4/3] bg-gray-50 rounded overflow-hidden flex items-center justify-center">
+              <div className="aspect-[4/3] bg-slate-50 rounded overflow-hidden flex items-center justify-center">
                 <Image
                   src={tpl.previewSrc}
                   alt={`Apercu ${tpl.label}`}
@@ -108,19 +108,19 @@ export default function BadgeTemplatePicker({
                 />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">{tpl.label}</h3>
-                <p className="text-xs text-gray-500 mt-1">
+                <h3 className="font-semibold text-slate-900">{tpl.label}</h3>
+                <p className="text-xs text-slate-500 mt-1">
                   Format {tpl.pageSize.width} x {tpl.pageSize.height} -- {tpl.pages}{" "}
                   page{tpl.pages > 1 ? "s" : ""}
                 </p>
-                <p className="text-sm text-gray-700 mt-2">{tpl.description}</p>
+                <p className="text-sm text-slate-700 mt-2">{tpl.description}</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => patch(tpl.id)}
                   disabled={pending || isCurrent}
                   data-testid={`select-${tpl.id}`}
-                  className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm font-semibold disabled:opacity-50"
+                  className="bg-green-600 text-white px-4 py-1.5 rounded text-sm font-semibold disabled:opacity-50"
                 >
                   {isCurrent ? "Selectionne" : "Selectionner"}
                 </button>

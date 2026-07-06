@@ -58,15 +58,15 @@ export default function RegisterEventForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Catégorie</label>
         <div className="space-y-2">
           {categories.map((c) => (
             <label
               key={c.id}
               className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${
                 categoryId === c.id
-                  ? "border-indigo-500 bg-indigo-50"
-                  : "border-gray-200 bg-white hover:border-gray-300"
+                  ? "border-green-500 bg-green-50"
+                  : "border-slate-200 bg-white hover:border-slate-300"
               }`}
             >
               <input
@@ -75,19 +75,19 @@ export default function RegisterEventForm({
                 value={c.id}
                 checked={categoryId === c.id}
                 onChange={() => setCategoryId(c.id)}
-                className="text-indigo-600"
+                className="text-green-600"
               />
               <span
                 className="inline-block h-3 w-3 rounded-full"
                 style={{ backgroundColor: c.color }}
               />
-              <span className="text-sm text-gray-900">{c.name}</span>
+              <span className="text-sm text-slate-900">{c.name}</span>
             </label>
           ))}
         </div>
       </div>
 
-      <label className="flex items-start gap-2 text-sm text-gray-700">
+      <label className="flex items-start gap-2 text-sm text-slate-700">
         <input
           type="checkbox"
           checked={accepted}

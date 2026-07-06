@@ -87,7 +87,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
         </div>
       </div>
       <table className="w-full bg-white border rounded text-sm">
-        <thead className="bg-gray-50 text-left">
+        <thead className="bg-slate-50 text-left">
           <tr>
             <th className="px-3 py-2 w-8"></th>
             <th className="px-3 py-2">Nom</th>
@@ -118,7 +118,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
               <td className="px-3 py-2 text-right">
                 <Link
                   href={`/admin/${orgId}/events/${eventId}/badges/${r.id}`}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-green-600 hover:underline"
                 >
                   Voir
                 </Link>
