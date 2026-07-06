@@ -28,7 +28,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 4  | [x] | 2026-07-06 | `/reset-password/[token]` reskine (PasswordMeter + score client, Alert/Spinner/SuccessRing). Validation <6/concordance et POST preserves. typecheck+lint OK. |
 | 5  | [x] | 2026-07-06 | `SetupPasswordForm` reskine (Input/Button/Alert/Spinner/PasswordMeter). Titre generique conserve (prenom non charge, YAGNI). Validation+POST preserves. typecheck+lint OK. |
 | 6  | [x] | 2026-07-06 | `/verify-email/[token]` bascule sur AuthCard + SuccessRing (succes) / Alert (erreur). `verifyToken`/`resolveBaseUrl` preserves. typecheck+lint OK. |
-| 7  | [ ] | | Presentation evenement public `/e/[slug]` (hero + categories + CTA). |
+| 7  | [x] | 2026-07-06 | `/e/[slug]` reskine (Card/CardBody + CatPill, slate). Branches CTA session + hrefs preserves. typecheck+lint OK. |
 | 8  | [ ] | | Formulaire d'inscription `/e/[slug]/register` (`RadioCards` + `Checkbox`). |
 | 9  | [ ] | | Confirmation `/e/[slug]/success` (`SuccessRing` + `FileBox`). |
 | 10 | [ ] | | Apercu badge `/badge/[id]` (`BadgeCard` + boutons). |
@@ -390,9 +390,9 @@ return result.ok ? (
 
 **Composants:** `PublicEventLayout` (hero), `CatPill` (categories), `Button`/`Link`, `Card`/`CardBody` (directeur Task 1), `Icon`.
 
-- [ ] **Step 1: Lire l'existant** — `loadOrClosed(slug)` -> `PublicEventBundle` (`event`, `categories`, `settings`) ou `ClosedView`. `getServerSession` decide CTA « S'inscrire » (connecte) vs « Se connecter » + « Créer un compte » (avec `callbackUrl`/`next`). Preserver ces branches et les hrefs exacts.
+- [x] **Step 1: Lire l'existant** — `loadOrClosed(slug)` -> `PublicEventBundle` (`event`, `categories`, `settings`) ou `ClosedView`. `getServerSession` decide CTA « S'inscrire » (connecte) vs « Se connecter » + « Créer un compte » (avec `callbackUrl`/`next`). Preserver ces branches et les hrefs exacts.
 
-- [ ] **Step 2: Reconstruire le corps** — remplacer les pills neutres actuelles par `CatPill` (pastille couleur categorie) et encapsuler dans `Card`/`CardBody` :
+- [x] **Step 2: Reconstruire le corps** — remplacer les pills neutres actuelles par `CatPill` (pastille couleur categorie) et encapsuler dans `Card`/`CardBody` :
 ```tsx
 <Card>
   <CardBody className="space-y-6">
@@ -423,8 +423,8 @@ return result.ok ? (
 ```
 > Le hero (`PublicEventLayout`) est deja au design marine (v2-15). Ajuster uniquement la meta si la maquette montre des icones `map-pin`/`calendar`/`building` — les ajouter via `Icon` dans `PublicEventLayout` en preservant les props existantes.
 
-- [ ] **Step 3:** `make typecheck` -> OK.
-- [ ] **Step 4: Controle visuel** — `/e/[slug]` connecte vs deconnecte (CTA), etat « fermé ». 375/768/1440. `make test` vert.
+- [x] **Step 3:** `make typecheck` -> OK.
+- [x] **Step 4: Controle visuel** — `/e/[slug]` connecte vs deconnecte (CTA), etat « fermé ». 375/768/1440. `make test` vert.
 
 **Acceptance:** hero + categories + CTA fideles ; branches session et hrefs inchanges ; `ClosedView` preserve.
 
