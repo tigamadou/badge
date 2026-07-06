@@ -29,7 +29,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 4  | [x] | 2026-07-06 | `RegistrationForm` reskine (Card + FormSection Identite/Categorie RadioCards/Piece + Alert/Spinner). Categories sans couleur (select expose id/name/number). State/submit/validation preserves. typecheck+lint OK. |
 | 5  | [x] | 2026-07-06 | Vue agregee VIEWER reskine (StatGrid 3 + Card repartition CatPill + total). Queries/role/notFound preserves, non nominatif. typecheck+lint OK. |
 | 6  | [x] | 2026-07-06 | `BadgeListTable` reskine (filtre habille, BatchBar + Checkbox, table CatPill/Tag). Selection/batchPrint/openBatchPdf/load preserves. typecheck+lint OK. |
-| 7  | [ ] | | Impression batch (`badges/print/page.tsx`) — Spinner + ProgressBar + grille MiniBadge. |
+| 7  | [x] | 2026-07-06 | `BadgeBatchPanel` reskine (Card progression Spinner+ProgressBar + grille MiniBadge incrementale, puis PDFViewer). Fetches/QR/BadgeBatchExportV2 preserves. typecheck+lint OK. |
 | 8  | [ ] | | Apercu badge (`badges/[badgeId]/page.tsx`) — BadgeCard + panneaux Actions/Informations. |
 | 9  | [ ] | | Template badge event (`settings/badge/page.tsx`) — Switch heritage + galerie tpl + BadgeCard. |
 | 10 | [ ] | | Categories (`categories/page.tsx`) — Table + CatDot + Switch + Modal edition. |
@@ -328,8 +328,8 @@ Ecran d'impression par lot (role PRINTER via `EventPrinterShell`) : Card de prog
 **Composants:** `Card`/`CardBody`, `Spinner`, `ProgressBar`, `Toolbar`, `Checkbox`, `MiniBadge`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `BadgeBatchPanel.tsx` : etat de selection, progression d'impression, appels d'impression. Ne rien changer.
-- [ ] **Step 2: Reconstruire le JSX** : Card de progression avec `Spinner` (pendant impression) + `ProgressBar pct={done/total*100}` + compteur `mono` "8/12" ; `Toolbar` avec `Checkbox` "Tout selectionner" + boutons Exporter/Imprimer ; grille responsive de `MiniBadge` (chacun avec un `Checkbox` de selection en overlay). Extrait representatif :
+- [x] **Step 1: Lire et preserver** `BadgeBatchPanel.tsx` : etat de selection, progression d'impression, appels d'impression. Ne rien changer.
+- [x] **Step 2: Reconstruire le JSX** : Card de progression avec `Spinner` (pendant impression) + `ProgressBar pct={done/total*100}` + compteur `mono` "8/12" ; `Toolbar` avec `Checkbox` "Tout selectionner" + boutons Exporter/Imprimer ; grille responsive de `MiniBadge` (chacun avec un `Checkbox` de selection en overlay). Extrait representatif :
 
 ```tsx
 <Card>
@@ -353,9 +353,9 @@ Ecran d'impression par lot (role PRINTER via `EventPrinterShell`) : Card de prog
 </div>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-badge-batch.html` sur 375/768/1440 en role PRINTER. Verifier : progression, grille de MiniBadge (colonnes responsives), selection visible, `EventPrinterShell` intact. Etats : rien a imprimer (EmptyState), impression en cours (Spinner + ProgressBar), terminee (SuccessRing optionnel).
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-badge-batch.html` sur 375/768/1440 en role PRINTER. Verifier : progression, grille de MiniBadge (colonnes responsives), selection visible, `EventPrinterShell` intact. Etats : rien a imprimer (EmptyState), impression en cours (Spinner + ProgressBar), terminee (SuccessRing optionnel).
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** ecran batch fidele (progression + grille MiniBadge) ; selection et impression preserves ; shell PRINTER intact ; typecheck + tests verts.
 
