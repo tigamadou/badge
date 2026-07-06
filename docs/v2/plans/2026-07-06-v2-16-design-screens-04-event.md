@@ -26,7 +26,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 1  | [x] | 2026-07-06 | Dashboard evenement reskine (StatGrid 4+3, Card 10 dernieres + StatusBadge, alerte quota). Branche OPERATOR habillee. MiniChart omis (pas de serie 30j). Queries/role preserves. typecheck+lint OK. |
 | 2  | [x] | 2026-07-06 | `RegistrationTable` reskine (toolbar habillee, CatPill, StatusBadge ui, table rounded-xl, pager). Handlers/fetch/export preserves. BatchBar non ajoutee (pas de selection/endpoint batch dans la logique). typecheck+lint OK. |
 | 3  | [x] | 2026-07-06 | Detail inscription reskine : `RegistrationDetailPanel` (Card/KeyValue/CatPill/StatusBadge/Alert/FileBox), `RegistrationActions` (boutons + modal DS), `RegistrationHistory` (Timeline), page back-link. Tous handlers/server actions preserves. typecheck+lint OK. |
-| 4  | [ ] | | Inscription manuelle (`registrations/new/page.tsx`) — FormSection + RadioCards + Dropzone. |
+| 4  | [x] | 2026-07-06 | `RegistrationForm` reskine (Card + FormSection Identite/Categorie RadioCards/Piece + Alert/Spinner). Categories sans couleur (select expose id/name/number). State/submit/validation preserves. typecheck+lint OK. |
 | 5  | [ ] | | Vue agregee VIEWER (`registrations/overview/page.tsx`) — StatGrid + repartition non nominative. |
 | 6  | [ ] | | Liste badges (`badges/page.tsx`) — Toolbar + Table + Checkbox. |
 | 7  | [ ] | | Impression batch (`badges/print/page.tsx`) — Spinner + ProgressBar + grille MiniBadge. |
@@ -245,8 +245,8 @@ Formulaire d'inscription cote staff : FormSection "Identite" (champs), FormSecti
 **Composants:** `Card`/`CardBody`, `FormSection`, `Input` (primitive), `RadioCards`, `Dropzone`/`FileBox`, `Button`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** `RegistrationForm.tsx` : state des champs, validation, `onSubmit` (server action de creation), upload des pieces (reutilise `FileUploadField`). Ne rien changer.
-- [ ] **Step 2: Reconstruire le JSX** : `FormSection` "Identité" avec les `Input` existants ; `FormSection` "Catégorie" rendue via `RadioCards` (options = categories de l'event, `color` = hex categorie, valeur branchee sur l'etat existant) ; zone documents via `Dropzone` (habille l'upload existant — ne pas reinventer) + `FileBox` par fichier depose. Bouton de soumission `Button` primary. Extrait representatif :
+- [x] **Step 1: Lire et preserver** `RegistrationForm.tsx` : state des champs, validation, `onSubmit` (server action de creation), upload des pieces (reutilise `FileUploadField`). Ne rien changer.
+- [x] **Step 2: Reconstruire le JSX** : `FormSection` "Identité" avec les `Input` existants ; `FormSection` "Catégorie" rendue via `RadioCards` (options = categories de l'event, `color` = hex categorie, valeur branchee sur l'etat existant) ; zone documents via `Dropzone` (habille l'upload existant — ne pas reinventer) + `FileBox` par fichier depose. Bouton de soumission `Button` primary. Extrait representatif :
 
 ```tsx
 <FormSection title="Catégorie" description="Sélectionnez la catégorie du participant.">
@@ -259,9 +259,9 @@ Formulaire d'inscription cote staff : FormSection "Identite" (champs), FormSecti
 </FormSection>
 ```
 
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-inscription-create.html` sur 375/768/1440. Verifier : RadioCards responsive (auto-fill), option selectionnee bordure verte + check, Dropzone hover vert, FileBox apres depot. Etats : erreurs de validation (messages sous champs), depot invalide (type/taille), submit en cours (bouton disabled).
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-inscription-create.html` sur 375/768/1440. Verifier : RadioCards responsive (auto-fill), option selectionnee bordure verte + check, Dropzone hover vert, FileBox apres depot. Etats : erreurs de validation (messages sous champs), depot invalide (type/taille), submit en cours (bouton disabled).
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** formulaire fidele (Identite + RadioCards + Dropzone) ; validation, upload et creation preserves ; typecheck + tests verts.
 

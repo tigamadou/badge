@@ -14,7 +14,10 @@ export default async function NewRegistrationPage({
   });
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Nouvelle inscription</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Inscription manuelle</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Créer une inscription directement</p>
+      </div>
       <RegistrationForm orgId={orgId} eventId={eventId} categories={categories} />
     </div>
   );
