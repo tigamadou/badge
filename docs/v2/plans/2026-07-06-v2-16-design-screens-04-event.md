@@ -27,7 +27,7 @@ Legende : `[ ]` pending, `[~]` in_progress, `[x]` completed, `[-]` abandoned.
 | 2  | [x] | 2026-07-06 | `RegistrationTable` reskine (toolbar habillee, CatPill, StatusBadge ui, table rounded-xl, pager). Handlers/fetch/export preserves. BatchBar non ajoutee (pas de selection/endpoint batch dans la logique). typecheck+lint OK. |
 | 3  | [x] | 2026-07-06 | Detail inscription reskine : `RegistrationDetailPanel` (Card/KeyValue/CatPill/StatusBadge/Alert/FileBox), `RegistrationActions` (boutons + modal DS), `RegistrationHistory` (Timeline), page back-link. Tous handlers/server actions preserves. typecheck+lint OK. |
 | 4  | [x] | 2026-07-06 | `RegistrationForm` reskine (Card + FormSection Identite/Categorie RadioCards/Piece + Alert/Spinner). Categories sans couleur (select expose id/name/number). State/submit/validation preserves. typecheck+lint OK. |
-| 5  | [ ] | | Vue agregee VIEWER (`registrations/overview/page.tsx`) — StatGrid + repartition non nominative. |
+| 5  | [x] | 2026-07-06 | Vue agregee VIEWER reskine (StatGrid 3 + Card repartition CatPill + total). Queries/role/notFound preserves, non nominatif. typecheck+lint OK. |
 | 6  | [ ] | | Liste badges (`badges/page.tsx`) — Toolbar + Table + Checkbox. |
 | 7  | [ ] | | Impression batch (`badges/print/page.tsx`) — Spinner + ProgressBar + grille MiniBadge. |
 | 8  | [ ] | | Apercu badge (`badges/[badgeId]/page.tsx`) — BadgeCard + panneaux Actions/Informations. |
@@ -280,11 +280,11 @@ Variante role VIEWER de la liste : **donnees non nominatives**, repartition par 
 **Composants:** `StatGrid`/`StatCard`, `Card`/`CardHead`/`CardBody`, `Table`, `CatPill`, `StatusBadge`, `Icon`.
 
 **Steps:**
-- [ ] **Step 1: Lire et preserver** la page : requetes d'agregation (counts par categorie/statut). Verifier qu'aucune donnee nominative n'est chargee ; **ne pas** en ajouter. Conserver la garde de role.
-- [ ] **Step 2: Reconstruire le JSX** : `StatGrid cols={4}` avec les totaux agreges, puis Card "Répartition par catégorie" avec une `Table` (une ligne par categorie : `CatPill`, effectif, `StatusBadge` de repartition). Aucun champ `snapshotFirstName`/`snapshotEmail` dans le rendu.
-- [ ] **Step 3:** `make typecheck` — Expected: OK.
-- [ ] **Step 4: Controle visuel** contre `event-inscriptions-viewer.html` sur 375/768/1440 en role VIEWER. Verifier : banniere lecture seule presente (shell), statcards, table de repartition, **zero donnee nominative**. Etat vide (aucune inscription -> EmptyState).
-- [ ] **Step 5:** `make test` — Expected: vert.
+- [x] **Step 1: Lire et preserver** la page : requetes d'agregation (counts par categorie/statut). Verifier qu'aucune donnee nominative n'est chargee ; **ne pas** en ajouter. Conserver la garde de role.
+- [x] **Step 2: Reconstruire le JSX** : `StatGrid cols={4}` avec les totaux agreges, puis Card "Répartition par catégorie" avec une `Table` (une ligne par categorie : `CatPill`, effectif, `StatusBadge` de repartition). Aucun champ `snapshotFirstName`/`snapshotEmail` dans le rendu.
+- [x] **Step 3:** `make typecheck` — Expected: OK.
+- [x] **Step 4: Controle visuel** contre `event-inscriptions-viewer.html` sur 375/768/1440 en role VIEWER. Verifier : banniere lecture seule presente (shell), statcards, table de repartition, **zero donnee nominative**. Etat vide (aucune inscription -> EmptyState).
+- [x] **Step 5:** `make test` — Expected: vert.
 
 **Acceptance:** vue agregee fidele, strictement non nominative ; banniere lecture seule intacte ; typecheck + tests verts.
 

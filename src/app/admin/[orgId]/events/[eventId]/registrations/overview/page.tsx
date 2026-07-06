@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole } from "@/lib/auth-helpers";
+import { StatCard, StatGrid } from "@/components/ui/StatCard";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { CatPill } from "@/components/ui/Labels";
 
 type Props = {
   params: Promise<{ orgId: string; eventId: string }>;
@@ -49,67 +52,42 @@ export default async function RegistrationsOverviewPage({ params }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Vue d&apos;ensemble — {event.title}</h1>
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Vue d&apos;ensemble</h1>
+        <p className="mt-0.5 text-sm text-slate-400">{event.title} — répartition non nominative</p>
+      </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <KpiCard label="En attente" value={pending} color="amber" />
-        <KpiCard label="Approuvees" value={approved} color="green" />
-        <KpiCard label="Rejetees" value={rejected} color="red" />
-      </section>
+      <StatGrid cols={3}>
+        <StatCard label="En attente" value={pending} icon="clock" />
+        <StatCard label="Approuvées" value={approved} icon="user-check" />
+        <StatCard label="Rejetées" value={rejected} icon="x" />
+      </StatGrid>
 
-      <section className="bg-white border rounded p-4">
-        <h2 className="font-semibold mb-3">Par categorie</h2>
-        {categories.length === 0 ? (
-          <p className="text-sm text-slate-500">Aucune categorie.</p>
-        ) : (
-          <ul className="space-y-2">
-            {categories.map((c) => (
-              <li key={c.id} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <span
-                    className="inline-block w-3 h-3 rounded"
-                    style={{ backgroundColor: c.color }}
-                  />
-                  <span>
-                    #{c.number} {c.name}
-                  </span>
-                </span>
-                <span className="font-mono">{c._count.registrations}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <Card>
+        <CardHead title="Répartition par catégorie" />
+        <CardBody className="divide-y divide-slate-100 !py-0">
+          {categories.length === 0 ? (
+            <p className="py-4 text-sm text-slate-400">Aucune catégorie.</p>
+          ) : (
+            categories.map((c) => (
+              <div key={c.id} className="flex items-center justify-between py-3 text-sm">
+                <CatPill color={c.color} label={`#${c.number} ${c.name}`} />
+                <span className="font-mono tabular-nums text-slate-600">{c._count.registrations}</span>
+              </div>
+            ))
+          )}
+        </CardBody>
+      </Card>
 
-      <section className="bg-white border rounded p-4">
-        <h2 className="font-semibold mb-1">Total comptabilise</h2>
-        <p className="text-sm text-slate-600">
-          {totalCountable} inscription(s) (PENDING + APPROVED). Les rejets ne sont
-          pas comptabilises dans le quota.
-        </p>
-      </section>
-    </div>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: "amber" | "green" | "red";
-}) {
-  const colorClasses: Record<typeof color, string> = {
-    amber: "bg-amber-50 border-amber-200 text-amber-900",
-    green: "bg-green-50 border-green-200 text-green-900",
-    red: "bg-red-50 border-red-200 text-red-900",
-  };
-  return (
-    <div className={`rounded border p-4 ${colorClasses[color]}`}>
-      <div className="text-xs uppercase tracking-wide">{label}</div>
-      <div className="text-3xl font-bold mt-1">{value}</div>
+      <Card>
+        <CardHead title="Total comptabilisé" />
+        <CardBody>
+          <p className="text-sm text-slate-600">
+            <span className="text-2xl font-semibold tabular-nums text-slate-900">{totalCountable}</span> inscription(s)
+            (PENDING + APPROVED). Les rejets ne sont pas comptabilisés dans le quota.
+          </p>
+        </CardBody>
+      </Card>
     </div>
   );
 }
