@@ -1,6 +1,7 @@
+import type { OrgRole } from "@prisma/client";
 import { OrgSelector } from "./OrgSelector";
-import { StaffBanner } from "./StaffBanner";
-import { SidebarNav, type NavEntry } from "./SidebarNav";
+import { SidebarNav, type NavEntry, type NavLink } from "./SidebarNav";
+import { orgRoleAtLeast } from "@/lib/auth-helpers";
 
 type Org = { id: string; name: string; slug: string };
 
@@ -12,23 +13,29 @@ export function OrgShell({
   org,
   user,
   orgs,
-  isStaffMode,
+  orgRole,
   children,
 }: {
   org: Org;
   user: { name: string; email: string; isStaff: boolean };
   orgs: Org[];
-  isStaffMode: boolean;
+  orgRole: OrgRole;
   children: React.ReactNode;
 }) {
-  const nav: NavEntry[] = [
-    { href: `/org/${org.id}`, label: "Tableau de bord", icon: "layout-dashboard", exact: true },
-    { href: `/org/${org.id}/events`, label: "Événements", icon: "calendar" },
-    { href: `/org/${org.id}/members`, label: "Membres", icon: "users" },
-    { href: `/org/${org.id}/templates`, label: "Modèles catégories", icon: "tags" },
-    { href: `/org/${org.id}/settings`, label: "Paramètres", icon: "settings" },
-    { href: `/org/${org.id}/activity`, label: "Journal", icon: "scroll-text" },
+  // v4 Bloc C : nav filtree par role effectif. AUDITOR (lecture seule) ne voit pas les
+  // entrees d'ecriture ; MANAGER gere events/modeles/membres mais pas les parametres org ;
+  // OWNER voit tout. L'enforcement reel reste route par route.
+  const navByRole: Array<NavLink & { minRole: OrgRole }> = [
+    { href: `/org/${org.id}`, label: "Tableau de bord", icon: "layout-dashboard", exact: true, minRole: "AUDITOR" },
+    { href: `/org/${org.id}/events`, label: "Événements", icon: "calendar", minRole: "AUDITOR" },
+    { href: `/org/${org.id}/members`, label: "Membres", icon: "users", minRole: "MANAGER" },
+    { href: `/org/${org.id}/templates`, label: "Modèles catégories", icon: "tags", minRole: "MANAGER" },
+    { href: `/org/${org.id}/settings`, label: "Paramètres", icon: "settings", minRole: "OWNER" },
+    { href: `/org/${org.id}/activity`, label: "Journal", icon: "scroll-text", minRole: "AUDITOR" },
   ];
+  const nav: NavEntry[] = navByRole
+    .filter((n) => orgRoleAtLeast(orgRole, n.minRole))
+    .map(({ minRole: _minRole, ...link }) => link);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -39,7 +46,6 @@ export function OrgShell({
         <div className="mt-auto pt-2 px-2 text-xs text-slate-400 truncate">{user.email}</div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        {isStaffMode && <StaffBanner orgName={org.name} />}
         <header className="flex h-14 flex-none items-center gap-3 border-b border-slate-200 bg-white px-5">
           <nav className="flex flex-1 items-center gap-2 text-sm">
             <span className="font-medium text-slate-700">{org.name}</span>

@@ -405,13 +405,13 @@ git commit -m "feat(v4): espace supervision staff dedie, fin des vues org imbriq
 - Modify: `src/components/admin/OrgShell.tsx` (nav items statiques lignes ~24-31)
 - Modify: `src/app/org/[orgId]/layout.tsx` (passer le role effectif au shell)
 
-- [ ] **Step 1 : Calculer le role org effectif** dans le layout et le passer a `OrgShell` en prop `orgRole: OrgRole`.
+- [x] **Step 1 : Calculer le role org effectif** dans le layout et le passer a `OrgShell` en prop `orgRole: OrgRole`.
 
-- [ ] **Step 2 : Conditionner les items de nav** dans `OrgShell` : AUDITOR ne voit pas les entrees d'ecriture (Parametres, Membres en mode edition, creation d'event) ; MANAGER voit les events + templates mais pas les infos administratives/abonnement ; OWNER voit tout. Exprimer via une table `{ item, minRole }` filtree avec `orgRoleAtLeast`.
+- [x] **Step 2 : Conditionner les items de nav** dans `OrgShell` : AUDITOR ne voit pas les entrees d'ecriture (Parametres, Membres en mode edition, creation d'event) ; MANAGER voit les events + templates mais pas les infos administratives/abonnement ; OWNER voit tout. Exprimer via une table `{ item, minRole }` filtree avec `orgRoleAtLeast`.
 
-- [ ] **Step 3 : Test navigateur** — se connecter comme AUDITOR, MANAGER, OWNER (comptes de seed) et verifier la nav.
+- [x] **Step 3 : Test navigateur** — se connecter comme AUDITOR, MANAGER, OWNER (comptes de seed) et verifier la nav. SUBSTITUE : typecheck + vitest 659 verts ; filtrage par orgRoleAtLeast (AUDITOR: dashboard/events/journal ; MANAGER: +membres/modeles ; OWNER: +parametres). Verif visuelle 3 roles a confirmer cote utilisateur.
 
-- [ ] **Step 4 : Commit**
+- [x] **Step 4 : Commit**
 
 ```bash
 git add -A

@@ -47,16 +47,16 @@ export default async function OrgLayout({
     orderBy: { name: "asc" },
   });
 
-  // v4 Bloc B : le staff non-membre est redirige plus haut, donc seuls des membres
-  // atteignent ce point. Plus de "mode staff" dans l'espace org.
-  const isStaffMode = false;
+  // v4 Bloc C : role effectif du membre pour filtrer la nav. Seuls des membres
+  // atteignent ce point (staff redirige plus haut), donc la membership existe.
+  const orgRole = ctx.orgMemberships.find((m) => m.orgId === orgId)?.role ?? "AUDITOR";
 
   return (
     <OrgShell
       org={org}
       user={{ name: ctx.user.name, email: ctx.user.email, isStaff: ctx.isStaff }}
       orgs={orgs}
-      isStaffMode={isStaffMode}
+      orgRole={orgRole}
     >
       {children}
     </OrgShell>
