@@ -57,6 +57,8 @@ const inviteSchema = z
       .email()
       .transform((s) => s.toLowerCase().trim()),
     name: z.string().min(1).max(120),
+    // v4 Task 4.2 : le staff choisit le role du membre invite (defaut OWNER pour retrocompat).
+    role: z.enum(["OWNER", "MANAGER", "AUDITOR"]).default("OWNER"),
   })
   .strict();
 
@@ -77,7 +79,7 @@ export const POST = withStaffAuth(
         { status: 400 },
       );
     }
-    const { email, name } = parsed.data;
+    const { email, name, role } = parsed.data;
 
     let user = await prisma.user.findUnique({ where: { email } });
     let isNewUser = false;
@@ -108,40 +110,40 @@ export const POST = withStaffAuth(
       where: { userId_orgId: { userId: user.id, orgId } },
     });
     if (existing) {
-      if (existing.role === "OWNER") {
-        return NextResponse.json({ ok: true, alreadyOwner: true });
+      if (existing.role === role) {
+        return NextResponse.json({ ok: true, alreadyMember: true });
       }
-      // Upgrade existing membership to OWNER.
+      // Ajuste le role du membership existant au role choisi par le staff.
       await prisma.orgMembership.update({
         where: { id: existing.id },
-        data: { role: "OWNER" },
+        data: { role },
       });
       await logActivity({
         type: "MEMBERSHIP_ROLE_CHANGED",
         userId: session.user.id,
         orgId,
         targetId: user.id,
-        details: { from: existing.role, to: "OWNER", scope: "org" },
+        details: { from: existing.role, to: role, scope: "org" },
         req,
       });
       return NextResponse.json({ ok: true, upgraded: true });
     }
 
-    await prisma.orgMembership.create({ data: { userId: user.id, orgId, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: user.id, orgId, role } });
     await logActivity({
       type: "MEMBERSHIP_ADDED",
       userId: session.user.id,
       orgId,
       targetId: user.id,
-      details: { role: "OWNER", isNewUser, viaStaff: true },
+      details: { role, isNewUser, viaStaff: true },
       req,
     });
 
     if (isNewUser) {
       try {
-        await sendUserInvitation(user.id, { orgId, role: "OWNER" });
+        await sendUserInvitation(user.id, { orgId, role });
       } catch (err) {
-        console.error("[staff invite owner] email failed", err);
+        console.error("[staff invite member] email failed", err);
       }
     }
 

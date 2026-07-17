@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PlatformOrgMemberInviteForm } from "@/components/platform/PlatformOrgMemberInviteForm";
 
 const ROLE_LABEL: Record<string, string> = {
   OWNER: "Propriétaire",
@@ -26,6 +27,7 @@ export default async function OrgMembersSupervisionPage({
 
   return (
     <div className="space-y-4">
+      <PlatformOrgMemberInviteForm orgId={orgId} />
       <h2 className="text-base font-semibold text-slate-800">Membres ({members.length})</h2>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-sm">
