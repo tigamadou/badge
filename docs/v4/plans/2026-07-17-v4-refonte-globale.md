@@ -919,16 +919,16 @@ git commit -m "feat(v4): abonnements plan+subscription remplacant les quotas, en
 
 ### Task 7.1 : Documentation d'architecture v4
 
-- [ ] **Step 1 : `docs/v4/README.md`** — index, vue d'ensemble des 7 chantiers, etat d'avancement (lier ce plan).
-- [ ] **Step 2 : `docs/v4/architecture.md`** — nouvelle arbo des espaces (`/platform`, `/org/[orgId]`, `/org/[orgId]/event/[eventId]`), note sur le namespace API (`/api/platform`, `/api/org`, event garde `events/[eventId]`), RBAC inchange, garde-fous. Documenter la strategie de migration du retrait des colonnes `quota*` vis-a-vis de v1 prod.
-- [ ] **Step 3 : Features** — `abonnements.md` (modele, resolution, enforcement, facturation manuelle), `espaces-separes.md` (supervision staff, fin des vues imbriquees), `stockage-s3.md` (driver MinIO, cles, securisation /api/files) — lier a la spec v3-01.
+- [x] **Step 1 : `docs/v4/README.md`** — index, vue d'ensemble des 7 chantiers, etat d'avancement (lier ce plan).
+- [x] **Step 2 : `docs/v4/architecture.md`** — nouvelle arbo des espaces (`/platform`, `/org/[orgId]`, `/org/[orgId]/event/[eventId]`), note sur le namespace API (`/api/platform`, `/api/org`, event garde `events/[eventId]`), RBAC inchange, garde-fous. Documenter la strategie de migration du retrait des colonnes `quota*` vis-a-vis de v1 prod.
+- [x] **Step 3 : Features** — `abonnements.md` (modele, resolution, enforcement, facturation manuelle), `espaces-separes.md` (supervision staff, fin des vues imbriquees), `stockage-s3.md` (driver MinIO, cles, securisation /api/files) — lier a la spec v3-01.
 
 ### Task 7.2 : Mise a jour de l'index et nettoyage
 
-- [ ] **Step 1 : `docs/README.md`** — ajouter la ligne v4 (statut "En construction"), decaler v2/v3 si besoin.
-- [ ] **Step 2 : Nettoyage** — verifier qu'aucun dead code identifie ne subsiste : `rg -n "UserForm|FileUploadField|event-quota|quotaMax|/api/admin|/api/staff|/admin/|href=\"/staff" src` — Attendu : 0.
-- [ ] **Step 3 : Verification finale** : `make lint && make typecheck && make test`. Test navigateur du golden path complet en `https://badge.local`.
-- [ ] **Step 4 : Commit**
+- [x] **Step 1 : `docs/README.md`** — ajouter la ligne v4 (statut "En construction"), decaler v2/v3 si besoin.
+- [ ] **Step 2 : Nettoyage** — verifier qu'aucun dead code identifie ne subsiste : `rg -n "UserForm|FileUploadField|event-quota|quotaMax|/api/admin|/api/staff|/admin/|href=\"/staff" src` — Attendu : 0. PARTIEL : UserForm=0, /api/admin=/api/staff=/admin routes=0 (rename propre). quotaMax (91) et event-quota (4) restent car Phase 6 (abonnements) pas encore livree -- a re-verifier apres Phase 6.
+- [ ] **Step 3 : Verification finale** : `make lint && make typecheck && make test`. Test navigateur du golden path complet en `https://badge.local`. PARTIEL : etat courant typecheck 0 erreur + vitest 660/660 ; golden path visuel et verif finale a refaire une fois Phase 5.3/5.4 + Phase 6 livrees.
+- [x] **Step 4 : Commit**
 
 ```bash
 git add -A
