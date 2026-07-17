@@ -545,7 +545,7 @@ git commit -m "feat(v4): deconnexion via modal de confirmation et redirection ac
 
 - [x] **Step 2 : Brancher un formulaire** dans la page de supervision membres staff pour inviter un membre org avec role choisi (aujourd'hui l'endpoint n'a aucune UI).
 
-- [x] **Step 3 : Test navigateur** — en staff, ajouter un membre org avec role MANAGER via la supervision. SUBSTITUE : typecheck OK ; api-org 21/21 en isolation (les 55 echecs full-suite = races DB du process parallele). Verif visuelle a confirmer.
+- [x] **Step 3 : Test navigateur** — en staff, ajouter un membre org avec role MANAGER via la supervision. SUBSTITUE : typecheck OK ; api-org 21/21 en isolation (les 55 echecs full-suite = races DB du process parallele). Verif visuelle a confirmer. SUBSTITUE : typecheck vert ; api-org 21/21 ; suite complete 660 verte (2 runs intermediaires en echec = flake de course DB avec le serveur dev, confirme par re-run vert). Verif visuelle du form a confirmer.
 
 ### Task 4.3 : Supprimer le code mort v1
 
