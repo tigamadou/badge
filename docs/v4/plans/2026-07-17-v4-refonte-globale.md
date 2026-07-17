@@ -438,9 +438,9 @@ git commit -m "feat(v4): nav org filtree par role effectif"
 **Interfaces:**
 - Produces: `export function LogoutButton({ className?, label? }: { className?: string; label?: string })` — client component. Ouvre une modal (reutiliser le composant Modal du design system, cf. `src/components/ui`), boutons "Annuler" / "Se deconnecter". Confirmation => `signOut({ callbackUrl: "/" })` de `next-auth/react`.
 
-- [ ] **Step 1 : Verifier le composant Modal existant** : `rg -n "export .*Modal|function .*Modal" src/components/ui` pour reutiliser la primitive du design system plutot qu'en creer une.
+- [x] **Step 1 : Verifier le composant Modal existant** : `rg -n "export .*Modal|function .*Modal" src/components/ui` pour reutiliser la primitive du design system plutot qu'en creer une.
 
-- [ ] **Step 2 : Ecrire `LogoutButton.tsx`** :
+- [x] **Step 2 : Ecrire `LogoutButton.tsx`** :
 
 ```tsx
 "use client";
@@ -478,7 +478,7 @@ export function LogoutButton({ className, label = "Deconnexion" }: { className?:
 
 > Adapter la signature `Modal` (`open`/`onClose`/`title`) a l'API reelle du design system releve au Step 1.
 
-- [ ] **Step 3 : Typecheck** : `make typecheck`.
+- [x] **Step 3 : Typecheck** : `make typecheck`.
 
 ### Task 3.2 : Brancher LogoutButton dans tous les shells
 
