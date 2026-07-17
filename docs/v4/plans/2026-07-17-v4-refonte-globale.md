@@ -55,7 +55,7 @@ Ordre justifie : la Phase 2 (renommage `/staff`->`/platform`, `/admin`->`/org`) 
 **Files:**
 - Modify: `Caddyfile.dev`
 
-- [ ] **Step 1 : Reecrire `Caddyfile.dev`** en retirant le prefixe `http://` (ce qui active l'auto-HTTPS) et en forcant la CA interne de Caddy :
+- [x] **Step 1 : Reecrire `Caddyfile.dev`** en retirant le prefixe `http://` (ce qui active l'auto-HTTPS) et en forcant la CA interne de Caddy :
 
 ```
 badge.local {
@@ -74,7 +74,7 @@ mail.badge.local {
 }
 ```
 
-- [ ] **Step 2 : Verifier la syntaxe** (le conteneur caddy valide au demarrage) : `docker compose -f docker-compose.dev.yml exec caddy caddy validate --config /etc/caddy/Caddyfile` — Attendu : `Valid configuration`.
+- [x] **Step 2 : Verifier la syntaxe** (le conteneur caddy valide au demarrage) : `docker compose -f docker-compose.dev.yml exec caddy caddy validate --config /etc/caddy/Caddyfile` — Attendu : `Valid configuration`. NOTE : le bind mount du conteneur en cours sert une copie tronquee (cache VirtioFS) ; validation confirmee via conteneur ephemere `docker run --rm -i caddy:2-alpine sh -c 'cat > /tmp/Caddyfile; caddy validate --config /tmp/Caddyfile --adapter caddyfile' < Caddyfile.dev` => `Valid configuration`.
 
 ### Task 1.2 : Exposer le port 443 et persister les certificats en dev
 
