@@ -1,10 +1,18 @@
-# Spec v3-01 — Stockage S3 (MinIO) et backups hebdomadaires
+# Spec v4 — Stockage S3 (MinIO) et backups hebdomadaires
 
-> **Statut** : conception validée — 2026-05-31
+> **Statut** : conception validée — 2026-05-31 (migrée depuis l'ancienne spec v3-01 lors du nettoyage doc du 2026-07-17)
 > **Type** : nouvelle infrastructure (stockage + sauvegarde)
-> **Périmètre** : v3 uniquement (extension v2)
-> **Spec maîtresse** : [`docs/v2/specs/2026-05-28-v2-master-design.md`](../../v2/specs/2026-05-28-v2-master-design.md)
-> **Specs liées (futures)** : v3-02 (observabilité/logs centralisés), v3-03 (queue jobs asynchrones)
+> **Périmètre** : v4
+> **Plan d'implémentation** : [`docs/v4/plans/2026-07-17-v4-refonte-globale.md`](../plans/2026-07-17-v4-refonte-globale.md) (Phase 5 — Stockage MinIO/S3)
+>
+> **Note de provenance** : ce document provient de l'ancienne spec `v3-01`. Les
+> versions v1/v2/v3 de la documentation ont été supprimées le 2026-07-17 ; les
+> chemins `docs/v2/...` et `docs/v3/...` cités plus bas sont **historiques** et ne
+> pointent plus vers des fichiers existants. Pour l'implémentation effective côté
+> code (driver `src/lib/storage.ts`, service MinIO Docker, sécurisation
+> `/api/files`), c'est le **plan v4 Phase 5** qui fait autorité. Le volet
+> backups/restore/age décrit ici reste une référence de conception à réactiver
+> le moment venu.
 
 ## Contexte et objectifs
 
