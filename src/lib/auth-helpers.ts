@@ -69,8 +69,17 @@ export function orgRoleAtLeast(actual: OrgRole, required: OrgRole): boolean {
 
 // Verifie le niveau MINIMUM en suivant la chaine OWNER > MANAGER > AUDITOR.
 // Un OWNER satisfait MANAGER et AUDITOR ; un MANAGER satisfait AUDITOR.
-export function hasOrgRole(ctx: UserContext, orgId: string, role: OrgRole): boolean {
-  if (ctx.isStaff) return true;
+// Le staff n'obtient le role org QUE si `allowStaff` est explicitement demande
+// (v4 Bloc B : le staff supervise via /platform, il ne "descend" plus dans /org).
+// Les routes API metier passent { allowStaff: true } pour conserver le pouvoir staff ;
+// le layout de pages /org appelle sans allowStaff pour rediriger le staff vers /platform.
+export function hasOrgRole(
+  ctx: UserContext,
+  orgId: string,
+  role: OrgRole,
+  opts: { allowStaff?: boolean } = {},
+): boolean {
+  if (opts.allowStaff && ctx.isStaff) return true;
   return ctx.orgMemberships.some(
     (m) => m.orgId === orgId && orgRoleAtLeast(m.role, role),
   );

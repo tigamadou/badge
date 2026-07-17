@@ -292,7 +292,7 @@ git commit -m "refactor(v4): renomme espaces staff->platform et admin->org, even
 **Interfaces:**
 - Produces: `hasOrgRole(ctx, orgId, role, { allowStaff?: boolean })` — le parametre `allowStaff` par defaut `false`. Les routes API metier passent `{ allowStaff: true }` pour conserver le pouvoir d'action staff ; le **layout de pages `/org`** appelle sans `allowStaff` => le staff sans membership org est redirige vers son espace `/platform`.
 
-- [ ] **Step 1 : Ecrire le test** du nouveau comportement dans `src/lib/__tests__/auth-helpers.test.ts` :
+- [x] **Step 1 : Ecrire le test** du nouveau comportement dans `src/lib/__tests__/auth-helpers.test.ts` :
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -314,9 +314,9 @@ describe("hasOrgRole allowStaff", () => {
 });
 ```
 
-- [ ] **Step 2 : Lancer le test, verifier l'echec** : `make test -- auth-helpers` (ou `docker compose ... exec app yarn vitest run auth-helpers`). Attendu : FAIL (signature actuelle sans options, bypass staff toujours true).
+- [x] **Step 2 : Lancer le test, verifier l'echec** : `make test -- auth-helpers` (ou `docker compose ... exec app yarn vitest run auth-helpers`). Attendu : FAIL (signature actuelle sans options, bypass staff toujours true).
 
-- [ ] **Step 3 : Modifier `hasOrgRole`** dans `src/lib/auth-helpers.ts` :
+- [x] **Step 3 : Modifier `hasOrgRole`** dans `src/lib/auth-helpers.ts` :
 
 ```ts
 export function hasOrgRole(
@@ -332,7 +332,7 @@ export function hasOrgRole(
 }
 ```
 
-- [ ] **Step 4 : Propager `allowStaff: true` dans les guards API** — dans `src/lib/auth-guards.ts:42-50` (`requireOrgRole`), ajouter le pouvoir staff explicite :
+- [x] **Step 4 : Propager `allowStaff: true` dans les guards API** — dans `src/lib/auth-guards.ts:42-50` (`requireOrgRole`), ajouter le pouvoir staff explicite :
 
 ```ts
 export async function requireOrgRole(userId: string, orgId: string, role: OrgRole): Promise<void> {
@@ -342,7 +342,7 @@ export async function requireOrgRole(userId: string, orgId: string, role: OrgRol
 }
 ```
 
-- [ ] **Step 5 : Modifier le layout `/org/[orgId]`** pour rediriger le staff sans membership vers son espace supervision. Remplacer le controle actuel (`!hasOrgRole(...) && !ctx.isStaff -> redirect`) par :
+- [x] **Step 5 : Modifier le layout `/org/[orgId]`** pour rediriger le staff sans membership vers son espace supervision. Remplacer le controle actuel (`!hasOrgRole(...) && !ctx.isStaff -> redirect`) par :
 
 ```ts
 // Le staff ne consulte plus l'espace org : il a /platform/organizations/[orgId].
@@ -355,7 +355,7 @@ if (!isMember) {
 
 Supprimer le flag `isStaffMode` et la `StaffBanner` de cet espace (l'espace org n'est plus rendu au staff).
 
-- [ ] **Step 6 : Lancer les tests** : `make test -- auth-helpers` — Attendu : PASS. Puis `make typecheck`.
+- [x] **Step 6 : Lancer les tests** : `make test -- auth-helpers` — Attendu : PASS. Puis `make typecheck`.
 
 ### Task 2.6 : Construire le shell de supervision staff
 

@@ -79,9 +79,18 @@ describe("hasOrgRole", () => {
     const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "AUDITOR" }] });
     expect(hasOrgRole(ctx, "o1", "MANAGER")).toBe(false);
   });
-  it("returns true for staff regardless of membership", () => {
+  it("staff without allowStaff does NOT get org role by default", () => {
     const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_SUPPORT" });
-    expect(hasOrgRole(ctx, "any", "OWNER")).toBe(true);
+    expect(hasOrgRole(ctx, "any", "OWNER")).toBe(false);
+  });
+  it("staff gets org role only when allowStaff is true", () => {
+    const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_SUPPORT" });
+    expect(hasOrgRole(ctx, "any", "OWNER", { allowStaff: true })).toBe(true);
+  });
+  it("member keeps its role regardless of the allowStaff flag", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
+    expect(hasOrgRole(ctx, "o1", "MANAGER")).toBe(true);
+    expect(hasOrgRole(ctx, "o1", "MANAGER", { allowStaff: true })).toBe(true);
   });
   it("returns false if no membership and not staff", () => {
     expect(hasOrgRole(baseCtx(), "o1", "OWNER")).toBe(false);

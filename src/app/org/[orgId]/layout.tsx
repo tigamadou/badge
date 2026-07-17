@@ -26,10 +26,12 @@ export default async function OrgLayout({
   });
   if (!org) notFound();
 
-  // ADR 2026-06-01 (v2-14 Task 2) : layout org accessible aux 3 roles -- la matrice
-  // de permissions est appliquee route par route. Auparavant OWNER-only par mesure
-  // conservatrice, ce qui bloquait MANAGER/AUDITOR de l'espace org entierement.
-  if (!hasOrgRole(ctx, orgId, "AUDITOR") && !ctx.isStaff) {
+  // v4 Bloc B : fin des vues imbriquees. Le staff ne "descend" plus dans l'espace org ;
+  // il supervise via /platform/organizations/[orgId]. Seuls les membres org (OWNER/MANAGER/
+  // AUDITOR) accedent a /org ; la matrice de permissions est appliquee route par route.
+  const isMember = hasOrgRole(ctx, orgId, "AUDITOR"); // sans allowStaff
+  if (!isMember) {
+    if (ctx.isStaff) redirect(`/platform/organizations/${orgId}`);
     redirect("/select");
   }
 
@@ -45,7 +47,9 @@ export default async function OrgLayout({
     orderBy: { name: "asc" },
   });
 
-  const isStaffMode = ctx.isStaff && !ctx.orgMemberships.some((m) => m.orgId === orgId);
+  // v4 Bloc B : le staff non-membre est redirige plus haut, donc seuls des membres
+  // atteignent ce point. Plus de "mode staff" dans l'espace org.
+  const isStaffMode = false;
 
   return (
     <OrgShell
