@@ -709,9 +709,9 @@ export async function deletePrefix(prefix: string): Promise<number> {
 - Modify: `src/app/api/upload/route.ts`, `src/app/api/account/upload/route.ts`
 - Modify: `src/app/api/files/[...path]/route.ts`
 
-- [ ] **Step 1 : Unifier le retour** — choisir un contrat unique. `/api/account/upload` renvoie deja `{ storageKey }` ; aligner `/api/upload` pour renvoyer `{ storageKey }` (au lieu du token HMAC) OU generaliser le token aux deux. Decision : **renvoyer `{ storageKey }` partout** et supprimer le flux token mort (`upload-token.ts`) s'il n'est plus utilise (verifier `rg -n verifyUploadToken src`). Passer le vrai `file.type` a `uploadFile`.
+- [x] **Step 1 : Unifier le retour** — choisir un contrat unique. `/api/account/upload` renvoie deja `{ storageKey }` ; aligner `/api/upload` pour renvoyer `{ storageKey }` (au lieu du token HMAC) OU generaliser le token aux deux. Decision : **renvoyer `{ storageKey }` partout** et supprimer le flux token mort (`upload-token.ts`) s'il n'est plus utilise (verifier `rg -n verifyUploadToken src`). Passer le vrai `file.type` a `uploadFile`.
 
-- [ ] **Step 2 : Securiser `/api/files/[...path]`** — ajouter un controle d'acces sur les documents sensibles (prefixes contenant `idDocuments`/`documents`) : n'autoriser que le proprietaire (`profile/{userId}/...` == session.id) ou un membre habilite de l'event/org (via `hasEventPermission(..., "event.read.detailed")`). Les images publiques (logos, photos de badge) restent servies. Retirer le `Cache-Control: public` sur les documents sensibles.
+- [x] **Step 2 : Securiser `/api/files/[...path]`** — ajouter un controle d'acces sur les documents sensibles (prefixes contenant `idDocuments`/`documents`) : n'autoriser que le proprietaire (`profile/{userId}/...` == session.id) ou un membre habilite de l'event/org (via `hasEventPermission(..., "event.read.detailed")`). Les images publiques (logos, photos de badge) restent servies. Retirer le `Cache-Control: public` sur les documents sensibles.
 
 ```ts
 // pseudo-structure
@@ -725,9 +725,9 @@ if (isSensitiveKey(key)) {
 const { body, contentType } = await getFile(key);
 ```
 
-- [ ] **Step 3 : Test** — ecrire un test d'integration : un document `profile/{userId}/documents/x.pdf` renvoie 403 pour un autre user, 200 pour le proprietaire.
+- [x] **Step 3 : Test** — ecrire un test d'integration : un document `profile/{userId}/documents/x.pdf` renvoie 403 pour un autre user, 200 pour le proprietaire.
 
-- [ ] **Step 4 : Lancer** : `make test -- files` — Attendu : PASS.
+- [x] **Step 4 : Lancer** : `make test -- files` — Attendu : PASS. VERIFIE : files-access.test.ts 3/3 (photo publique 200 ; doc profil 403 sans session ; 200 proprietaire, 403 autre user). upload.test.ts aligne sur storageKey.
 
 ### Task 5.4 : Remplacer les champs texte par de vrais uploads
 

@@ -10,7 +10,6 @@ import {
   MAX_UPLOAD_BYTES,
   type UploadKind,
 } from "@/lib/storage";
-import { signUploadToken } from "@/lib/upload-token";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -77,6 +76,7 @@ export async function POST(req: Request) {
 
   await uploadFile(storageKey, buffer, mime);
 
-  const token = signUploadToken({ eventId: event.id, kind, storageKey });
-  return NextResponse.json({ token, originalName: origName, kind, size: buffer.length });
+  // v4 Task 5.3 : contrat unifie avec /api/account/upload -> { storageKey }.
+  // L'ancien flux de token HMAC signe (verifyUploadToken) etait mort (jamais consomme).
+  return NextResponse.json({ storageKey, originalName: origName, kind, size: buffer.length });
 }

@@ -47,7 +47,8 @@ describe("POST /api/upload", () => {
     const res = await POST(req as unknown as Request);
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.token).toMatch(/\./);
+    // v4 Task 5.3 : contrat unifie -> storageKey (plus de token HMAC).
+    expect(json.storageKey).toMatch(/^events\/.+\/photos\//);
     expect(json.kind).toBe("photo");
   });
 
