@@ -114,6 +114,14 @@ volumes:
 
 ### Task 1.3 : Aligner l'URL de base de l'app en dev
 
+> BLOCAGE (2026-07-17) : le root `.env` (gitignore) porte `NEXTAUTH_URL=http://localhost:3000`
+> et est charge APRES `docker/compose.dev.env` dans `docker-compose.dev.yml`, donc il ecrase
+> la valeur. Rendre le changement effectif exige d'editer le `.env` local (fichier "demander
+> avant" de CLAUDE.md) et de recreer le conteneur `app` (invalide les sessions). En attente de
+> decision utilisateur (option A). Livrable committable = passer `compose.dev.env` a
+> `https://badge.local` ; verification (liens email https via Mailpit) impossible sans lever le
+> blocage. Boxes laissees decochees.
+
 **Files:**
 - Modify: `docker/compose.dev.env` (ligne `NEXTAUTH_URL`)
 
@@ -133,7 +141,7 @@ NEXTAUTH_URL=https://badge.local
 - Modify: `README.md` (section pre-requis dev)
 - Create: `docs/v4/installation.md`
 
-- [ ] **Step 1 : Ajouter au README** la procedure pour faire confiance a la racine CA de Caddy sur l'hote (sinon le navigateur affiche un avertissement). Extraire le root cert du conteneur :
+- [x] **Step 1 : Ajouter au README** la procedure pour faire confiance a la racine CA de Caddy sur l'hote (sinon le navigateur affiche un avertissement). Extraire le root cert du conteneur :
 
 ```bash
 docker compose -f docker-compose.dev.yml cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
@@ -143,9 +151,9 @@ sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keyc
 
 Rappeler que `/etc/hosts` doit contenir `127.0.0.1 badge.local pma.badge.local mail.badge.local`.
 
-- [ ] **Step 2 : Creer `docs/v4/installation.md`** avec la section "HTTPS local" reprenant ces etapes + la liste des URLs `https://*.badge.local`.
+- [x] **Step 2 : Creer `docs/v4/installation.md`** avec la section "HTTPS local" reprenant ces etapes + la liste des URLs `https://*.badge.local`.
 
-- [ ] **Step 3 : Test navigateur** — ouvrir `https://badge.local`, confirmer le cadenas vert (apres confiance CA) et l'absence d'avertissement. Se connecter, verifier qu'aucune boucle de redirection NextAuth n'apparait.
+- [ ] **Step 3 : Test navigateur** — ouvrir `https://badge.local`, confirmer le cadenas vert (apres confiance CA) et l'absence d'avertissement. Se connecter, verifier qu'aucune boucle de redirection NextAuth n'apparait. BLOQUE/PARTIEL (2026-07-17) : le service https est prouve en CLI (`curl http://badge.local` => 308 https, `curl -k https://badge.local` => 200, issuer = Caddy Local Authority). Le cadenas vert exige la confiance CA (action manuelle utilisateur, cf. installation.md), et le login sans boucle NextAuth depend de Task 1.3 (bloquee : NEXTAUTH_URL). A finaliser cote utilisateur.
 
 - [ ] **Step 4 : Commit**
 
