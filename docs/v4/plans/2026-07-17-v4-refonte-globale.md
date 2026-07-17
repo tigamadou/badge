@@ -589,7 +589,7 @@ git commit -m "feat(v4): choix du role a l'invitation de membre org et owners, s
 
 > ATTENTION : modification `docker-compose*.yml` et `.env*` — actions a risque, demander confirmation.
 
-- [ ] **Step 1 : Ajouter le service `minio`** a `docker-compose.dev.yml` (ports 9000/9001 exposes en dev) :
+- [x] **Step 1 : Ajouter le service `minio`** a `docker-compose.dev.yml` (ports 9000/9001 exposes en dev) :
 
 ```yaml
   minio:
@@ -607,9 +607,9 @@ git commit -m "feat(v4): choix du role a l'invitation de membre org et owners, s
 
 Declarer `minio_data_dev:` dans `volumes:`. Ajouter `minio` aux `depends_on` de `app`.
 
-- [ ] **Step 2 : Idem en prod** (`docker-compose.yml`) sans exposer les ports sur Internet (reseau interne uniquement), volume `minio_data`.
+- [x] **Step 2 : Idem en prod** (`docker-compose.yml`) sans exposer les ports sur Internet (reseau interne uniquement), volume `minio_data`.
 
-- [ ] **Step 3 : Definir les variables** dans `docker/compose.dev.env` :
+- [x] **Step 3 : Definir les variables** dans `docker/compose.dev.env` :
 
 ```
 S3_ENDPOINT=http://minio:9000
@@ -619,7 +619,7 @@ S3_SECRET_KEY=minioadmin
 S3_BUCKET=badge-dev
 ```
 
-- [ ] **Step 4 : Creer le bucket** au demarrage (job `mc` ou creation applicative lazy). Choix simple : creation lazy dans `storage.ts` (Task 5.2, `ensureBucket`). Demarrer : `make dev-down && make dev`, verifier la console MinIO `http://localhost:9001`.
+- [x] **Step 4 : Creer le bucket** au demarrage (job `mc` ou creation applicative lazy). Choix simple : creation lazy dans `storage.ts` (Task 5.2, `ensureBucket`). Demarrer : `make dev-down && make dev`, verifier la console MinIO `http://localhost:9001`. FAIT : service demarre additivement `docker compose -f docker-compose.dev.yml up -d minio` (health/live=200, ports 9000/9001). Bucket cree en lazy par storage.ts (Task 5.2).
 
 ### Task 5.2 : Reecrire le driver storage en S3
 

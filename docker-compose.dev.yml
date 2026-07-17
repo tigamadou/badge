@@ -15,6 +15,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   mysql:
     image: mysql:8
@@ -49,6 +51,18 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data_dev:/data
+
   caddy:
     image: caddy:2-alpine
     ports:
@@ -67,3 +81,4 @@ volumes:
   mysql_data:
   caddy_data_dev:
   caddy_config_dev:
+  minio_data_dev:

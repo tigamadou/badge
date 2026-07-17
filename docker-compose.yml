@@ -63,8 +63,22 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # v4 Task 5.1 : stockage objet S3-compatible. Aucun port publie sur Internet ;
+  # joignable uniquement via le reseau Docker interne (depuis `app`). Console 9001
+  # accessible via tunnel SSH temporaire si besoin.
+  minio:
+    container_name: badge-minio
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env.production
+    volumes:
+      - minio_data:/data
+    restart: unless-stopped
+
 volumes:
   mysql_data:
   uploads_data:
   caddy_data:
   caddy_config:
+  minio_data:
