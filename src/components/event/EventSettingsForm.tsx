@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/FormControls";
 import { Alert } from "@/components/ui/Feedback";
+import { Dropzone, FileBox } from "@/components/ui/FileBox";
 
 type Initial = {
   event: {
@@ -34,10 +35,28 @@ export function EventSettingsForm({
   const [location, setLocation] = useState(initial.event.location);
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
   const [logo, setLogo] = useState<string | null>(initial.event.logo);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
   const [contactEmail, setContactEmail] = useState(initial.settings.contactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(initial.settings.contactPhone ?? "");
   const [msg, setMsg] = useState<string | null>(null);
+
+  async function uploadLogo(files: FileList) {
+    const file = files[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+    setUploadingLogo(false);
+    if (!res.ok) {
+      setMsg("Échec de l'envoi du logo.");
+      return;
+    }
+    const { storageKey } = await res.json();
+    setLogo(storageKey);
+  }
 
   async function saveEvent(e: React.FormEvent) {
     e.preventDefault();
@@ -79,12 +98,29 @@ export function EventSettingsForm({
             <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} />
             <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-            <Input
-              label="Logo (chemin uploads/…)"
-              value={logo ?? ""}
-              onChange={(e) => setLogo(e.target.value || null)}
-              placeholder="uploads/.../logo.png"
-            />
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-slate-700">Logo</span>
+              {logo ? (
+                <FileBox
+                  icon="file"
+                  thumbUrl={`/api/files/${logo}`}
+                  title="Logo de l'événement"
+                  subtitle={logo}
+                  action={
+                    <Button type="button" variant="secondary" onClick={() => setLogo(null)}>
+                      Retirer
+                    </Button>
+                  }
+                />
+              ) : (
+                <Dropzone
+                  onFiles={uploadLogo}
+                  accept="image/jpeg,image/png,image/webp"
+                  title={uploadingLogo ? "Envoi…" : "Déposer un logo ou cliquer"}
+                  subtitle="JPEG, PNG ou WebP — 5 Mo max"
+                />
+              )}
+            </div>
             <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
             <p className="text-xs text-slate-400">
               Slug : <code className="font-mono text-slate-600">{initial.event.slug}</code> (modifiable par le staff

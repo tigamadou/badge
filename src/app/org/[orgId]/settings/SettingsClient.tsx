@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Dropzone, FileBox } from "@/components/ui/FileBox";
 
 type OrgForm = {
   name: string;
@@ -32,10 +33,28 @@ export function SettingsClient({
 }) {
   const [org, setOrg] = useState<OrgForm>(initialOrg);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   function set<K extends keyof OrgForm>(key: K, value: OrgForm[K]) {
     setOrg((o) => ({ ...o, [key]: value }));
+  }
+
+  async function uploadLogo(files: FileList) {
+    const file = files[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+    setUploadingLogo(false);
+    if (!res.ok) {
+      setMsg({ ok: false, text: "Échec de l'envoi du logo." });
+      return;
+    }
+    const { storageKey } = await res.json();
+    set("logo", storageKey);
   }
 
   async function save() {
@@ -89,12 +108,29 @@ export function SettingsClient({
                 <Input label="Slug" value={org.slug} disabled />
                 <p className="mt-1 text-xs text-slate-400">Modifiable par le staff uniquement.</p>
               </div>
-              <Input
-                label="Logo (URL)"
-                placeholder="/uploads/logo.png"
-                value={org.logo ?? ""}
-                onChange={(e) => set("logo", e.target.value || null)}
-              />
+              <div className="space-y-2">
+                <span className="block text-sm font-medium text-slate-700">Logo</span>
+                {org.logo ? (
+                  <FileBox
+                    icon="file"
+                    thumbUrl={`/api/files/${org.logo}`}
+                    title="Logo de l'organisation"
+                    subtitle={org.logo}
+                    action={
+                      <Button type="button" variant="secondary" onClick={() => set("logo", null)}>
+                        Retirer
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <Dropzone
+                    onFiles={uploadLogo}
+                    accept="image/jpeg,image/png,image/webp"
+                    title={uploadingLogo ? "Envoi…" : "Déposer un logo ou cliquer"}
+                    subtitle="JPEG, PNG ou WebP — 5 Mo max"
+                  />
+                )}
+              </div>
             </div>
           </FormSection>
 

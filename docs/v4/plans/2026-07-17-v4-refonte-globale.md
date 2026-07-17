@@ -737,9 +737,9 @@ const { body, contentType } = await getFile(key);
 - Modify: `src/components/event/RegistrationForm.tsx` (photo/document inscription admin)
 - Reutiliser: `src/components/ui/FileBox.tsx` (`Dropzone`) et le pattern de `src/app/account/profile/ProfileForm.tsx` (upload -> storageKey -> champ cache).
 
-- [ ] **Step 1 : Logo org** — dans `SettingsClient.tsx`, remplacer l'`Input` texte "Logo (URL)" par un `Dropzone` qui POST `/api/upload` (ou une route logo dediee `kind=logo` acceptant les images), recupere `storageKey`, l'affiche via `FileBox`, et l'envoie dans le PATCH settings (champ `logo`).
+- [x] **Step 1 : Logo org** — dans `SettingsClient.tsx`, remplacer l'`Input` texte "Logo (URL)" par un `Dropzone` qui POST `/api/upload` (ou une route logo dediee `kind=logo` acceptant les images), recupere `storageKey`, l'affiche via `FileBox`, et l'envoie dans le PATCH settings (champ `logo`). FAIT : endpoint dedie POST /api/org/[orgId]/upload (images, auth MANAGER, cle orgs/{orgId}/images/...) + Dropzone/FileBox.
 
-- [ ] **Step 2 : Logo event** — meme traitement dans `EventSettingsForm.tsx` (champ `logo`).
+- [x] **Step 2 : Logo event** — meme traitement dans `EventSettingsForm.tsx` (champ `logo`).
 
 - [ ] **Step 3 : Inscription admin** — dans `src/components/event/RegistrationForm.tsx` (le formulaire reellement utilise), remplacer les `Input` "Chemin photo"/"Chemin document" par des `Dropzone` uploadant vers une route event (`/api/upload?context=event:{slug}&kind=photo|document`), stockant les `storageKey` retournes.
 
