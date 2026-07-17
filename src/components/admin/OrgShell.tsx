@@ -2,6 +2,7 @@ import type { OrgRole } from "@prisma/client";
 import { OrgSelector } from "./OrgSelector";
 import { SidebarNav, type NavEntry, type NavLink } from "./SidebarNav";
 import { orgRoleAtLeast } from "@/lib/auth-helpers";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 type Org = { id: string; name: string; slug: string };
 
@@ -43,7 +44,10 @@ export function OrgShell({
         <div className="mb-1 px-2 text-base font-semibold text-white">Badge</div>
         <div className="mb-3 px-2 text-sm font-medium text-white/80">{org.name}</div>
         <SidebarNav items={nav} />
-        <div className="mt-auto pt-2 px-2 text-xs text-slate-400 truncate">{user.email}</div>
+        <div className="mt-auto flex flex-col gap-1 pt-2">
+          <LogoutButton className="flex w-full items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white" />
+          <div className="px-2 text-xs text-slate-400 truncate">{user.email}</div>
+        </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 flex-none items-center gap-3 border-b border-slate-200 bg-white px-5">

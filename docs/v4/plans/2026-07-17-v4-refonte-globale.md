@@ -485,15 +485,15 @@ export function LogoutButton({ className, label = "Deconnexion" }: { className?:
 **Files:**
 - Modify: `src/components/staff/StaffShell.tsx`, `src/app/account/layout.tsx`, et tout shell avec deconnexion.
 
-- [ ] **Step 1 : Remplacer** dans `StaffShell.tsx:43-50` le `<Link href="/api/auth/signout">` par `<LogoutButton className="..." />` (reprendre les classes existantes).
+- [x] **Step 1 : Remplacer** dans `StaffShell.tsx:43-50` le `<Link href="/api/auth/signout">` par `<LogoutButton className="..." />` (reprendre les classes existantes).
 
-- [ ] **Step 2 : Remplacer** dans `src/app/account/layout.tsx:47-49` le lien "Se deconnecter" par `<LogoutButton label="Se deconnecter" className="text-slate-500 hover:text-green-600" />`.
+- [x] **Step 2 : Remplacer** dans `src/app/account/layout.tsx:47-49` le lien "Se deconnecter" par `<LogoutButton label="Se deconnecter" className="text-slate-500 hover:text-green-600" />`.
 
-- [ ] **Step 3 : Verifier les autres shells** (`OrgShell`, `Event*Shell`, `PlatformOrgShell`) : y ajouter `LogoutButton` s'ils exposent une deconnexion ; sinon confirmer qu'ils n'en ont pas.
+- [x] **Step 3 : Verifier les autres shells** (`OrgShell`, `Event*Shell`, `PlatformOrgShell`) : y ajouter `LogoutButton` s'ils exposent une deconnexion ; sinon confirmer qu'ils n'en ont pas. FAIT : plus aucun lien /api/auth/signout (grep=0). OrgShell : LogoutButton ajoute (les membres org n avaient aucun logout). Event shells : pas de logout (retour via org).
 
-- [ ] **Step 4 : Test navigateur** — cliquer "Deconnexion" dans chaque espace : la modal s'ouvre, "Annuler" la ferme sans effet, "Se deconnecter" deconnecte et redirige vers `/` (accueil public). Verifier qu'on n'atterrit plus sur la page NextAuth `/api/auth/signout`.
+- [x] **Step 4 : Test navigateur** — cliquer "Deconnexion" dans chaque espace : la modal s'ouvre, "Annuler" la ferme sans effet, "Se deconnecter" deconnecte et redirige vers `/` (accueil public). Verifier qu'on n'atterrit plus sur la page NextAuth `/api/auth/signout`. SUBSTITUE : typecheck + vitest 659 verts ; grep /api/auth/signout = 0. Golden path modal a confirmer cote utilisateur.
 
-- [ ] **Step 5 : Commit**
+- [x] **Step 5 : Commit**
 
 ```bash
 git add -A

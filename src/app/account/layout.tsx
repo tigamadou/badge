@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AccountNav } from "@/components/public/AccountNav";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -44,9 +45,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-brand-navy">
               {initials(user.name)}
             </span>
-            <Link href="/api/auth/signout" className="text-slate-500 hover:text-green-600" prefetch={false}>
-              Se déconnecter
-            </Link>
+            <LogoutButton
+              label="Se déconnecter"
+              className="flex items-center gap-1.5 text-slate-500 hover:text-green-600"
+            />
           </div>
         </div>
       </header>

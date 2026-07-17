@@ -1,7 +1,6 @@
-import Link from "next/link";
 import type { StaffRole } from "@prisma/client";
-import { LogOut } from "lucide-react";
 import { SidebarNav, type NavEntry } from "@/components/admin/SidebarNav";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 
 const NAV: NavEntry[] = [
   { href: "/platform", label: "Tableau de bord", icon: "layout-dashboard", exact: true },
@@ -40,14 +39,7 @@ export function StaffShell({
         <div className="mb-3 px-2 text-base font-semibold text-white">Badge</div>
         <SidebarNav items={NAV} />
         <div className="mt-auto pt-2">
-          <Link
-            href="/api/auth/signout"
-            prefetch={false}
-            className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <LogOut size={18} strokeWidth={1.5} className="shrink-0" />
-            Déconnexion
-          </Link>
+          <LogoutButton className="flex w-full items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white" />
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
