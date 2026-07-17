@@ -552,10 +552,10 @@ git commit -m "feat(v4): deconnexion via modal de confirmation et redirection ac
 **Files:**
 - Delete: `src/components/admin/UserForm.tsx`
 
-- [ ] **Step 1 : Confirmer 0 usage** : `rg -n "UserForm" src` — Attendu : uniquement des auto-references dans le fichier lui-meme.
-- [ ] **Step 2 : Supprimer** `git rm src/components/admin/UserForm.tsx`.
-- [ ] **Step 3 : Typecheck + lint** : `make typecheck && make lint`.
-- [ ] **Step 4 : Commit**
+- [x] **Step 1 : Confirmer 0 usage** : `rg -n "UserForm" src` — Attendu : uniquement des auto-references dans le fichier lui-meme.
+- [x] **Step 2 : Supprimer** `git rm src/components/admin/UserForm.tsx`.
+- [x] **Step 3 : Typecheck + lint** : `make typecheck && make lint`.
+- [x] **Step 4 : Commit**
 
 ```bash
 git add -A
