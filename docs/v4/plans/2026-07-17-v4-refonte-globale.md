@@ -114,18 +114,15 @@ volumes:
 
 ### Task 1.3 : Aligner l'URL de base de l'app en dev
 
-> BLOCAGE (2026-07-17) : le root `.env` (gitignore) porte `NEXTAUTH_URL=http://localhost:3000`
-> et est charge APRES `docker/compose.dev.env` dans `docker-compose.dev.yml`, donc il ecrase
-> la valeur. Rendre le changement effectif exige d'editer le `.env` local (fichier "demander
-> avant" de CLAUDE.md) et de recreer le conteneur `app` (invalide les sessions). En attente de
-> decision utilisateur (option A). Livrable committable = passer `compose.dev.env` a
-> `https://badge.local` ; verification (liens email https via Mailpit) impossible sans lever le
-> blocage. Boxes laissees decochees.
+> RESOLU (2026-07-17) : le root `.env` local a ete aligne sur `NEXTAUTH_URL=https://badge.local`
+> (fichier gitignore, non committe) et le conteneur `app` tourne avec cette valeur
+> (`docker compose ... exec app printenv NEXTAUTH_URL` => `https://badge.local`). Livrable
+> committable = `docker/compose.dev.env` a `https://badge.local`.
 
 **Files:**
 - Modify: `docker/compose.dev.env` (ligne `NEXTAUTH_URL`)
 
-- [ ] **Step 1 : Passer `NEXTAUTH_URL` a l'URL https** dans `docker/compose.dev.env` :
+- [x] **Step 1 : Passer `NEXTAUTH_URL` a l'URL https** dans `docker/compose.dev.env` :
 
 ```
 NEXTAUTH_URL=https://badge.local
@@ -133,7 +130,7 @@ NEXTAUTH_URL=https://badge.local
 
 (La cascade `buildBaseUrl` de `src/lib/mail-helpers.ts:32` consommera cette valeur ; le fallback `http://localhost:3000` reste inchange pour les runs hors docker.)
 
-- [ ] **Step 2 : Verifier** que les emails et badges pointent en https : demarrer l'app, declencher un email (ex. mot de passe oublie via `http`/`https://badge.local/forgot-password`) et verifier dans Mailpit (`https://mail.badge.local`) que les liens commencent par `https://badge.local`.
+- [x] **Step 2 : Verifier** que les emails et badges pointent en https : demarrer l'app, declencher un email (ex. mot de passe oublie via `http`/`https://badge.local/forgot-password`) et verifier dans Mailpit (`https://mail.badge.local`) que les liens commencent par `https://badge.local`. VERIFIE : `curl -k -X POST https://badge.local/api/auth/forgot-password -d '{"email":"admin@badge.local"}'` => `{"ok":true}` ; lien Mailpit = `https://badge.local/reset-password/...`.
 
 ### Task 1.4 : Documenter la confiance de la CA Caddy
 
