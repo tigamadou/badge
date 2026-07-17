@@ -59,7 +59,7 @@ async function scaffold(): Promise<Scaffold> {
   return { admin, operator, org, event };
 }
 
-describe("GET /api/admin/[orgId]/events/[eventId]/activity", () => {
+describe("GET /api/org/[orgId]/events/[eventId]/activity", () => {
   beforeEach(cleanup);
 
   it("ADMIN sees all activity for the event", async () => {
@@ -73,9 +73,9 @@ describe("GET /api/admin/[orgId]/events/[eventId]/activity", () => {
     });
     await withSession({ id: admin.id, email: admin.email, name: admin.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/activity/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/activity/route");
     const res = await GET(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/activity`),
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/activity`),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.status).toBe(200);
@@ -101,9 +101,9 @@ describe("GET /api/admin/[orgId]/events/[eventId]/activity", () => {
       isStaff: false,
     });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/activity/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/activity/route");
     const res = await GET(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/activity`),
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/activity`),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.status).toBe(200);
@@ -127,10 +127,10 @@ describe("GET /api/admin/[orgId]/events/[eventId]/activity", () => {
     });
     await withSession({ id: admin.id, email: admin.email, name: admin.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/activity/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/activity/route");
     const res = await GET(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/activity?type=BADGE_SCANNED`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/activity?type=BADGE_SCANNED`,
       ),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
@@ -161,9 +161,9 @@ describe("GET /api/admin/[orgId]/events/[eventId]/activity", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/activity/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/activity/route");
     const res = await GET(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/activity`),
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/activity`),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.status).toBe(403);
@@ -181,10 +181,10 @@ describe("GET /api/admin/[orgId]/events/[eventId]/activity", () => {
     });
     await withSession({ id: admin.id, email: admin.email, name: admin.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/activity/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/activity/route");
     const res = await GET(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/activity?page=2&limit=2`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/activity?page=2&limit=2`,
       ),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );

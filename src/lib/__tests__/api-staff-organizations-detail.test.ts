@@ -44,10 +44,10 @@ function uniqueSlug(prefix = "o") {
 }
 
 // ===========================================================
-// GET /api/staff/organizations/[orgId]
+// GET /api/platform/organizations/[orgId]
 // ===========================================================
 
-describe("GET /api/staff/organizations/[orgId]", () => {
+describe("GET /api/platform/organizations/[orgId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -59,9 +59,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(401);
@@ -76,9 +76,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
@@ -91,9 +91,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
       data: { name: "Detail", slug, legalName: "Detail SARL" },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     const json = await res.json();
@@ -107,9 +107,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
   it("returns 404 for unknown org", async () => {
     await makeStaff();
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations/unknown",
+      "http://localhost/api/platform/organizations/unknown",
     );
     const res = await GET(req, {
       params: Promise.resolve({ orgId: "unknown" }),
@@ -119,10 +119,10 @@ describe("GET /api/staff/organizations/[orgId]", () => {
 });
 
 // ===========================================================
-// PATCH /api/staff/organizations/[orgId]
+// PATCH /api/platform/organizations/[orgId]
 // ===========================================================
 
-describe("PATCH /api/staff/organizations/[orgId]", () => {
+describe("PATCH /api/platform/organizations/[orgId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -134,9 +134,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ name: "Y" }),
@@ -155,9 +155,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ name: "Y" }),
@@ -176,9 +176,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ name: "Y" }),
@@ -199,9 +199,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "Old", slug: slugA },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -259,9 +259,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -289,9 +289,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -316,9 +316,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
     });
     await prisma.organization.create({ data: { name: "B", slug: slugB } });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${a.id}`,
+      `http://localhost/api/platform/organizations/${a.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ slug: slugB }),
@@ -334,9 +334,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
   it("returns 404 for unknown org", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations/unknown",
+      "http://localhost/api/platform/organizations/unknown",
       {
         method: "PATCH",
         body: JSON.stringify({ name: "X" }),
@@ -354,7 +354,7 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
 // POST archive + restore
 // ===========================================================
 
-describe("POST /api/staff/organizations/[orgId]/archive", () => {
+describe("POST /api/platform/organizations/[orgId]/archive", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -367,10 +367,10 @@ describe("POST /api/staff/organizations/[orgId]/archive", () => {
     });
 
     const { POST } = await import(
-      "@/app/api/staff/organizations/[orgId]/archive/route"
+      "@/app/api/platform/organizations/[orgId]/archive/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}/archive`,
+      `http://localhost/api/platform/organizations/${org.id}/archive`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
@@ -396,10 +396,10 @@ describe("POST /api/staff/organizations/[orgId]/archive", () => {
     });
 
     const { POST } = await import(
-      "@/app/api/staff/organizations/[orgId]/archive/route"
+      "@/app/api/platform/organizations/[orgId]/archive/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}/archive`,
+      `http://localhost/api/platform/organizations/${org.id}/archive`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
@@ -407,7 +407,7 @@ describe("POST /api/staff/organizations/[orgId]/archive", () => {
   });
 });
 
-describe("POST /api/staff/organizations/[orgId]/restore", () => {
+describe("POST /api/platform/organizations/[orgId]/restore", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -425,10 +425,10 @@ describe("POST /api/staff/organizations/[orgId]/restore", () => {
     });
 
     const { POST } = await import(
-      "@/app/api/staff/organizations/[orgId]/restore/route"
+      "@/app/api/platform/organizations/[orgId]/restore/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}/restore`,
+      `http://localhost/api/platform/organizations/${org.id}/restore`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
@@ -448,10 +448,10 @@ describe("POST /api/staff/organizations/[orgId]/restore", () => {
 });
 
 // ===========================================================
-// DELETE /api/staff/organizations/[orgId]
+// DELETE /api/platform/organizations/[orgId]
 // ===========================================================
 
-describe("DELETE /api/staff/organizations/[orgId]", () => {
+describe("DELETE /api/platform/organizations/[orgId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -465,10 +465,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "x-confirm": `delete-${slug}` },
@@ -492,10 +492,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       { method: "DELETE" },
     );
     const res = await DELETE(req, {
@@ -533,10 +533,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "x-confirm": `delete-${slug}` },
@@ -573,10 +573,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "content-type": "application/json" },
@@ -597,10 +597,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "x-confirm": "delete-not-the-slug" },
@@ -616,10 +616,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     await makeStaff("SUPER_ADMIN");
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations/unknown",
+      "http://localhost/api/platform/organizations/unknown",
       {
         method: "DELETE",
         headers: { "x-confirm": "delete-anything" },

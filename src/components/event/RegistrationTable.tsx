@@ -33,7 +33,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
     if (status) params.set("status", status);
     if (q) params.set("q", q);
     params.set("page", String(page));
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/registrations?${params}`);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations?${params}`);
     const json = await res.json();
     startTransition(() => {
       setRows(json.registrations);
@@ -46,7 +46,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
   }, [load]);
 
   function exportCsv() {
-    window.location.href = `/api/admin/${orgId}/events/${eventId}/registrations/export`;
+    window.location.href = `/api/org/${orgId}/events/${eventId}/registrations/export`;
   }
 
   return (
@@ -83,7 +83,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
             <Icon name="download" size={16} /> Exporter
           </Button>
           <Link
-            href={`/admin/${orgId}/events/${eventId}/registrations/new`}
+            href={`/org/${orgId}/events/${eventId}/registrations/new`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
           >
             <Icon name="plus" size={16} /> Inscription
@@ -115,7 +115,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
               <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
                 <td className="px-4 py-3">
                   <Link
-                    href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`}
+                    href={`/org/${orgId}/events/${eventId}/registrations/${r.id}`}
                     className="text-sm font-medium text-slate-900 hover:text-green-600"
                   >
                     {r.firstName} {r.lastName}
@@ -133,7 +133,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/admin/${orgId}/events/${eventId}/registrations/${r.id}`}
+                    href={`/org/${orgId}/events/${eventId}/registrations/${r.id}`}
                     className="text-[13px] font-medium text-green-600 hover:underline"
                   >
                     Détail

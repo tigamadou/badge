@@ -17,7 +17,7 @@ test.describe("Staff > platform settings", () => {
     const newPort = 2587;
     const newFrom = `noreply-${Date.now()}@v2-11-e2e.test`;
 
-    const res = await page.request.patch("/api/staff/settings", {
+    const res = await page.request.patch("/api/platform/settings", {
       data: { smtpHost: newHost, smtpPort: newPort, smtpFrom: newFrom },
     });
     expect(res.status()).toBe(200);
@@ -56,7 +56,7 @@ test.describe("Staff > platform settings", () => {
     const admin = await loginAsStaff(page, { role: "SUPER_ADMIN", scope: "settings-secret" });
 
     const secret = `s3cret-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const res = await page.request.patch("/api/staff/settings", {
+    const res = await page.request.patch("/api/platform/settings", {
       data: { smtpPassword: secret },
     });
     expect(res.status()).toBe(200);
@@ -74,11 +74,11 @@ test.describe("Staff > platform settings", () => {
     expect(JSON.stringify(details)).not.toContain(secret);
   });
 
-  test("Test SMTP envoie un mail au staff (POST /api/staff/settings/test-smtp)", async ({ page }) => {
+  test("Test SMTP envoie un mail au staff (POST /api/platform/settings/test-smtp)", async ({ page }) => {
     const admin = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "settings-smtp-test" });
     await mailpit.clear();
 
-    const res = await page.request.post("/api/staff/settings/test-smtp", {
+    const res = await page.request.post("/api/platform/settings/test-smtp", {
       data: { to: admin.email },
     });
     expect(res.status()).toBe(200);
@@ -98,10 +98,10 @@ test.describe("Staff > platform settings", () => {
     expect(details?.ok).toBe(true);
   });
 
-  test("Secrets jamais retournes par GET /api/staff/settings", async ({ page }) => {
+  test("Secrets jamais retournes par GET /api/platform/settings", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "settings-get" });
 
-    const res = await page.request.get("/api/staff/settings");
+    const res = await page.request.get("/api/platform/settings");
     expect(res.status()).toBe(200);
     const body = await res.json();
 
@@ -116,7 +116,7 @@ test.describe("Staff > platform settings", () => {
   test("Selection badge template platform (default-v1 OK, template inconnu -> 400 UNKNOWN_TEMPLATE)", async ({ page }) => {
     const admin = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "settings-badge" });
 
-    const ok = await page.request.patch("/api/staff/settings/badge", {
+    const ok = await page.request.patch("/api/platform/settings/badge", {
       data: { badgeTemplateId: "default-v1" },
     });
     expect(ok.status()).toBe(200);
@@ -134,7 +134,7 @@ test.describe("Staff > platform settings", () => {
       userId: admin.id,
     });
 
-    const ko = await page.request.patch("/api/staff/settings/badge", {
+    const ko = await page.request.patch("/api/platform/settings/badge", {
       data: { badgeTemplateId: "ghost-template" },
     });
     expect(ko.status()).toBe(400);

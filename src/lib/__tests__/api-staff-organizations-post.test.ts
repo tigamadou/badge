@@ -39,7 +39,7 @@ async function cleanDb() {
   await prisma.user.deleteMany();
 }
 
-describe("POST /api/staff/organizations", () => {
+describe("POST /api/platform/organizations", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -48,8 +48,8 @@ describe("POST /api/staff/organizations", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -65,8 +65,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects STAFF_OBSERVER with 403", async () => {
     await makeStaff("STAFF_OBSERVER");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -82,8 +82,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects STAFF_SUPPORT with 403", async () => {
     await makeStaff("STAFF_SUPPORT");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -99,8 +99,8 @@ describe("POST /api/staff/organizations", () => {
   it("STAFF_ADMIN creates org + new OWNER user + membership + invite token", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme Corp",
@@ -147,8 +147,8 @@ describe("POST /api/staff/organizations", () => {
   it("SUPER_ADMIN can also create org", async () => {
     await makeStaff("SUPER_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "SuperOrg",
@@ -173,8 +173,8 @@ describe("POST /api/staff/organizations", () => {
     });
     expect(existing.inviteToken).toBeNull();
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Beta",
@@ -206,8 +206,8 @@ describe("POST /api/staff/organizations", () => {
     await makeStaff("STAFF_ADMIN");
     await prisma.organization.create({ data: { name: "Acme", slug: "acme" } });
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -225,8 +225,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects missing name with 400", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         ownerEmail: "owner@acme.com",
@@ -241,8 +241,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects invalid ownerEmail with 400", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -258,8 +258,8 @@ describe("POST /api/staff/organizations", () => {
   it("accepts and persists all admin fields", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Full",

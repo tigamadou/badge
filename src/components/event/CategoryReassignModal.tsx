@@ -27,7 +27,7 @@ export function CategoryReassignModal({
   async function submit() {
     setBusy(true);
     setErr(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reassignToCategoryId: target }),
@@ -37,7 +37,7 @@ export function CategoryReassignModal({
       setBusy(false);
       return;
     }
-    const del = await fetch(`/api/admin/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
+    const del = await fetch(`/api/org/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
       method: "DELETE",
     });
     if (!del.ok) {

@@ -126,7 +126,7 @@ export function JournalEntryDetail({
             <CardBody className="space-y-3">
               {org && (
                 <Link
-                  href={`/staff/organizations/${org.id}`}
+                  href={`/platform/organizations/${org.id}`}
                   className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 hover:border-slate-300"
                 >
                   <OrgLogo name={org.name} size={30} />

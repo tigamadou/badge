@@ -37,8 +37,8 @@ export function CategoryTemplateForm({
     e.preventDefault();
     setErr(null);
     const url = initial
-      ? `/api/admin/${orgId}/templates/${initial.id}`
-      : `/api/admin/${orgId}/templates`;
+      ? `/api/org/${orgId}/templates/${initial.id}`
+      : `/api/org/${orgId}/templates`;
     const res = await fetch(url, {
       method: initial ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },

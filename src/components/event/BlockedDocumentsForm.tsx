@@ -24,7 +24,7 @@ export function BlockedDocumentsForm({
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/blocked-documents`);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-documents`);
     if (!res.ok) return;
     const j = (await res.json()) as {
       blocked: Array<{ id: string; documentNumber: string; reason: string | null; createdAt: string }>;
@@ -40,7 +40,7 @@ export function BlockedDocumentsForm({
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/blocked-documents`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-documents`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ documentNumber: doc, reason: reason || undefined }),
@@ -58,7 +58,7 @@ export function BlockedDocumentsForm({
 
   async function remove(id: string) {
     if (!confirm("Retirer ce document de la liste de blocage ?")) return;
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/blocked-documents/${id}`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-documents/${id}`, {
       method: "DELETE",
     });
     if (res.ok) await refresh();

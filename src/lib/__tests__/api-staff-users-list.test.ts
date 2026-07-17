@@ -43,7 +43,7 @@ function uniqueSlug(prefix = "u") {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
 
-describe("GET /api/staff/users", () => {
+describe("GET /api/platform/users", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -52,8 +52,8 @@ describe("GET /api/staff/users", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
@@ -64,8 +64,8 @@ describe("GET /api/staff/users", () => {
     });
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -73,8 +73,8 @@ describe("GET /api/staff/users", () => {
   it("STAFF_OBSERVER can read (read-only allowed)", async () => {
     await makeStaff("STAFF_OBSERVER");
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
   });
@@ -85,8 +85,8 @@ describe("GET /api/staff/users", () => {
       data: { email: "c@x", password: "SECRET", name: "Client" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -111,8 +111,8 @@ describe("GET /api/staff/users", () => {
       data: { email: "c@x", password: "x", name: "Client" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users?type=staff");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?type=staff");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -126,8 +126,8 @@ describe("GET /api/staff/users", () => {
       data: { email: "c@x", password: "x", name: "Client" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users?type=client");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?type=client");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -144,8 +144,8 @@ describe("GET /api/staff/users", () => {
       data: { email: "bob@x", password: "x", name: "Bob" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users?q=alice");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?q=alice");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -162,8 +162,8 @@ describe("GET /api/staff/users", () => {
       data: { email: "u2@x", password: "x", name: "David" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users?q=Charlie");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?q=Charlie");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -183,8 +183,8 @@ describe("GET /api/staff/users", () => {
       data: { userId: u.id, orgId: org.id, role: "OWNER" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users?q=withorg");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?q=withorg");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -205,9 +205,9 @@ describe("GET /api/staff/users", () => {
       });
     }
 
-    const { GET } = await import("@/app/api/staff/users/route");
+    const { GET } = await import("@/app/api/platform/users/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/users?type=client&page=1&pageSize=3",
+      "http://localhost/api/platform/users?type=client&page=1&pageSize=3",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -234,8 +234,8 @@ describe("GET /api/staff/users", () => {
       },
     });
 
-    const { GET } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users?archived=true");
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?archived=true");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 

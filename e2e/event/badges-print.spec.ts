@@ -44,7 +44,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
 
     await loginAs(page, admin);
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/badges/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
     await expectPdfResponse(res, { minBytes: 3000 });
     expect(res.headers()["x-template-id"]).toBeTruthy();
@@ -74,7 +74,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
 
     await loginAs(page, printer);
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/badges/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
     // requireEventRole VIEWER rejette PRINTER (hierarchie partielle).
     expect(res.status()).toBe(403);
@@ -99,7 +99,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
 
     await loginAs(page, admin);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/print`,
+      `/api/org/${orgId}/events/${eventId}/registrations/print`,
       { data: { ids: [reg.id] } },
     );
     expect(res.status()).toBe(200);
@@ -141,7 +141,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
     }
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/print`,
+      `/api/org/${orgId}/events/${eventId}/registrations/print`,
       { data: { ids: regs.map((r) => r.id) } },
     );
     expect(res.status()).toBe(200);
@@ -179,7 +179,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
 
     await loginAs(page, admin);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/print`,
+      `/api/org/${orgId}/events/${eventId}/registrations/print`,
       { data: { ids: [reg.id] } },
     );
     expect(res.status()).toBe(200);
@@ -213,7 +213,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
 
     // 1. Sans override : header x-template-id provient du fallback (org ou platform).
     const r1 = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/badges/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
     await expectPdfResponse(r1, { minBytes: 3000 });
     const fallbackId = r1.headers()["x-template-id"];
@@ -221,26 +221,26 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
 
     // 2. Override event -> recto-verso-v1.
     const patch = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/settings/badge`,
+      `/api/org/${orgId}/events/${eventId}/settings/badge`,
       { data: { badgeTemplateId: "recto-verso-v1" } },
     );
     expect(patch.status()).toBe(200);
 
     const r2 = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/badges/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
     await expectPdfResponse(r2, { minBytes: 3000 });
     expect(r2.headers()["x-template-id"]).toBe("recto-verso-v1");
 
     // 3. Clear override -> retour au fallback initial.
     const patchNull = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/settings/badge`,
+      `/api/org/${orgId}/events/${eventId}/settings/badge`,
       { data: { badgeTemplateId: null } },
     );
     expect(patchNull.status()).toBe(200);
 
     const r3 = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/badges/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
     await expectPdfResponse(r3, { minBytes: 3000 });
     expect(r3.headers()["x-template-id"]).toBe(fallbackId);

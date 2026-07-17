@@ -78,10 +78,10 @@ async function seedSettings(overrides: Partial<{
 }
 
 // =====================================================
-//  GET /api/staff/settings
+//  GET /api/platform/settings
 // =====================================================
 
-describe("GET /api/staff/settings", () => {
+describe("GET /api/platform/settings", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -89,8 +89,8 @@ describe("GET /api/staff/settings", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
@@ -100,8 +100,8 @@ describe("GET /api/staff/settings", () => {
       data: { email: "c@x", password: "x", name: "C" },
     });
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -120,8 +120,8 @@ describe("GET /api/staff/settings", () => {
       recaptchaSecretKey: "ANOTHER_SECRET",
     });
 
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -141,8 +141,8 @@ describe("GET /api/staff/settings", () => {
   it("creates a singleton on the fly when missing", async () => {
     await makeStaff("STAFF_OBSERVER");
 
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -157,10 +157,10 @@ describe("GET /api/staff/settings", () => {
 });
 
 // =====================================================
-//  PATCH /api/staff/settings
+//  PATCH /api/platform/settings
 // =====================================================
 
-describe("PATCH /api/staff/settings", () => {
+describe("PATCH /api/platform/settings", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -169,8 +169,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "new" }),
       headers: { "content-type": "application/json" },
@@ -181,8 +181,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("STAFF_OBSERVER cannot patch (403)", async () => {
     await makeStaff("STAFF_OBSERVER");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "new" }),
       headers: { "content-type": "application/json" },
@@ -193,8 +193,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("STAFF_SUPPORT cannot patch (403)", async () => {
     await makeStaff("STAFF_SUPPORT");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "new" }),
       headers: { "content-type": "application/json" },
@@ -208,8 +208,8 @@ describe("PATCH /api/staff/settings", () => {
   // log sans valeurs secretes.
   it("SUPER_ADMIN updates SMTP + reCAPTCHA fields, logs PLATFORM_SETTINGS_UPDATED without secret values", async () => {
     await makeStaff("SUPER_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({
         smtpHost: "smtp.new",
@@ -266,8 +266,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("SUPER_ADMIN can also patch", async () => {
     await makeStaff("SUPER_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "smtp.super" }),
       headers: { "content-type": "application/json" },
@@ -281,8 +281,8 @@ describe("PATCH /api/staff/settings", () => {
     await seedSettings({ smtpPassword: "EXISTING_PWD" });
     await makeStaff("STAFF_ADMIN");
 
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "h2", smtpPassword: "" }),
       headers: { "content-type": "application/json" },
@@ -307,8 +307,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("rejects unknown fields with 400 (strict schema)", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "h", unknownField: "x" }),
       headers: { "content-type": "application/json" },
@@ -324,8 +324,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("rejects empty body with 400 (NOTHING_TO_UPDATE)", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({}),
       headers: { "content-type": "application/json" },
@@ -336,10 +336,10 @@ describe("PATCH /api/staff/settings", () => {
 });
 
 // =====================================================
-//  POST /api/staff/settings/test-smtp
+//  POST /api/platform/settings/test-smtp
 // =====================================================
 
-describe("POST /api/staff/settings/test-smtp", () => {
+describe("POST /api/platform/settings/test-smtp", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -348,8 +348,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "ok@example.com" }),
       headers: { "content-type": "application/json" },
@@ -360,8 +360,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_OBSERVER cannot test SMTP (403)", async () => {
     await makeStaff("STAFF_OBSERVER");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "ok@example.com" }),
       headers: { "content-type": "application/json" },
@@ -372,8 +372,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_SUPPORT cannot test SMTP (403)", async () => {
     await makeStaff("STAFF_SUPPORT");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "ok@example.com" }),
       headers: { "content-type": "application/json" },
@@ -384,8 +384,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_ADMIN sends test SMTP to provided email (200)", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "target@example.com" }),
       headers: { "content-type": "application/json" },
@@ -399,8 +399,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_ADMIN falls back to own session email when no body.to", async () => {
     const admin = await makeStaff("STAFF_ADMIN");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({}),
       headers: { "content-type": "application/json" },
@@ -413,8 +413,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("returns 400 for invalid email format", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "not-an-email" }),
       headers: { "content-type": "application/json" },

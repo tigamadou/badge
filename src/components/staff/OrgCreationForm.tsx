@@ -54,7 +54,7 @@ export function OrgCreationForm() {
     if (form.quotaMaxRegistrations) payload.quotaMaxRegistrations = Number(form.quotaMaxRegistrations);
     if (form.quotaMaxStorageMB) payload.quotaMaxStorageMB = Number(form.quotaMaxStorageMB);
 
-    const res = await fetch("/api/staff/organizations", {
+    const res = await fetch("/api/platform/organizations", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -62,7 +62,7 @@ export function OrgCreationForm() {
     setSubmitting(false);
     if (res.ok) {
       const json = await res.json();
-      router.push(`/staff/organizations/${json.org.id}`);
+      router.push(`/platform/organizations/${json.org.id}`);
     } else {
       const json = await res.json().catch(() => ({}));
       setError(json.error ?? "Erreur à la création.");
@@ -136,7 +136,7 @@ export function OrgCreationForm() {
       </Card>
 
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="secondary" onClick={() => router.push("/staff/organizations")}>
+        <Button type="button" variant="secondary" onClick={() => router.push("/platform/organizations")}>
           Annuler
         </Button>
         <Button type="submit" className="flex items-center justify-center gap-2" disabled={!canSubmit}>

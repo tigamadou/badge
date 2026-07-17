@@ -43,9 +43,9 @@ describe("OWNER journey (smoke)", () => {
       user: { id: owner.id, email: owner.email, name: owner.name, isStaff: false },
     } as never);
 
-    const { POST: createEvent } = await import("@/app/api/admin/[orgId]/events/route");
+    const { POST: createEvent } = await import("@/app/api/org/[orgId]/events/route");
     const r1 = await createEvent(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events`, {
         method: "POST",
         body: JSON.stringify({ title: "Conf 2026", location: "Paris", date: "2026-12-15" }),
         headers: { "content-type": "application/json" },
@@ -56,9 +56,9 @@ describe("OWNER journey (smoke)", () => {
     const eventCreated = (await r1.json()) as { event: { id: string; slug: string } };
     expect(eventCreated.event.slug).toBe("conf-2026");
 
-    const { POST: inviteOwner } = await import("@/app/api/admin/[orgId]/members/route");
+    const { POST: inviteOwner } = await import("@/app/api/org/[orgId]/members/route");
     const r2 = await inviteOwner(
-      new NextRequest(`http://localhost/api/admin/${org.id}/members`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/members`, {
         method: "POST",
         body: JSON.stringify({ email: "bob@acme.test", name: "Bob" }),
         headers: { "content-type": "application/json" },
@@ -69,11 +69,11 @@ describe("OWNER journey (smoke)", () => {
     expect(vi.mocked(sendUserInvitation)).toHaveBeenCalledTimes(1);
 
     const { POST: archive } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/archive/route"
+      "@/app/api/org/[orgId]/events/[eventId]/archive/route"
     );
     const r3 = await archive(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${eventCreated.event.id}/archive`,
+        `http://localhost/api/org/${org.id}/events/${eventCreated.event.id}/archive`,
         { method: "POST" },
       ),
       { params: Promise.resolve({ orgId: org.id, eventId: eventCreated.event.id }) },
@@ -112,9 +112,9 @@ describe("OWNER journey (smoke)", () => {
       user: { id: staff.id, email: staff.email, name: staff.name, isStaff: true },
     } as never);
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
     await PATCH(
-      new NextRequest(`http://localhost/api/admin/${org.id}`, {
+      new NextRequest(`http://localhost/api/org/${org.id}`, {
         method: "PATCH",
         body: JSON.stringify({ name: "Acme-2" }),
         headers: { "content-type": "application/json" },

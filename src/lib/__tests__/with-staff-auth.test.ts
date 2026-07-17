@@ -19,7 +19,7 @@ describe("withStaffAuth", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
     const handler = withStaffAuth(async () => new Response("ok"));
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
@@ -32,7 +32,7 @@ describe("withStaffAuth", () => {
     } as never);
 
     const handler = withStaffAuth(async () => new Response("ok"));
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -46,7 +46,7 @@ describe("withStaffAuth", () => {
     } as never);
 
     const handler = withStaffAuth(async () => new Response("ok"), { minRole: "STAFF_ADMIN" });
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -64,7 +64,7 @@ describe("withStaffAuth", () => {
       received = { userId: ctx.session.user.id, isStaff: ctx.session.user.isStaff };
       return new Response("ok");
     });
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
 
     expect(res.status).toBe(200);
@@ -80,7 +80,7 @@ describe("withStaffAuth", () => {
     } as never);
 
     const handler = withStaffAuth(async () => new Response("ok"), { minRole: "STAFF_ADMIN" });
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
   });

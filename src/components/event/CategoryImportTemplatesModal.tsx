@@ -22,7 +22,7 @@ export function CategoryImportTemplatesModal({
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/admin/${orgId}/templates`)
+    fetch(`/api/org/${orgId}/templates`)
       .then((r) => r.json())
       .then((j) => setTemplates(j.templates ?? []))
       .catch(() => setErr("Impossible de charger les modèles."));
@@ -36,7 +36,7 @@ export function CategoryImportTemplatesModal({
     if (selected.length === 0) return;
     setBusy(true);
     setErr(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/categories/import-templates`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/import-templates`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ templateIds: selected }),

@@ -64,8 +64,8 @@ async function runChecks(): Promise<CheckResult[]> {
     assert(body.length > 0, "Body vide");
   });
 
-  await record(`HTTP GET ${baseUrl}/staff sans session`, async () => {
-    const res = await fetch(`${baseUrl}/staff`, { redirect: "manual" });
+  await record(`HTTP GET ${baseUrl}/platform sans session`, async () => {
+    const res = await fetch(`${baseUrl}/platform`, { redirect: "manual" });
     // NextAuth peut repondre 200 (HTML de redirect cote client) ou 302/307 (server redirect)
     assert(
       [200, 302, 307].includes(res.status),

@@ -27,8 +27,8 @@ export function OrgSelector({
   const current = orgs.find((o) => o.id === currentOrgId);
 
   function switchTo(orgId: string) {
-    const newPath = pathname.replace(/^\/admin\/[^/]+/, `/admin/${orgId}`);
-    router.push(newPath || `/admin/${orgId}`);
+    const newPath = pathname.replace(/^\/admin\/[^/]+/, `/org/${orgId}`);
+    router.push(newPath || `/org/${orgId}`);
     setOpen(false);
   }
 
@@ -63,7 +63,7 @@ export function OrgSelector({
             {isStaff && (
               <li className="border-t">
                 <button
-                  onClick={() => router.push("/staff")}
+                  onClick={() => router.push("/platform")}
                   className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                 >
                   Toutes les organisations (mode staff)

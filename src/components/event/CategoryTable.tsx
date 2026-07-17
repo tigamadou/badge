@@ -35,7 +35,7 @@ export function CategoryTable({
   const [reassign, setReassign] = useState<Cat | null>(null);
 
   async function refresh() {
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/categories`);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories`);
     const json = await res.json();
     setCats(json.categories);
     setEditing(null);
@@ -50,7 +50,7 @@ export function CategoryTable({
       return;
     }
     if (!confirm(`Supprimer la catégorie « ${c.name} » ?`)) return;
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/categories/${c.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/${c.id}`, { method: "DELETE" });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
       if (json.code === "CATEGORY_HAS_REGISTRATIONS") {

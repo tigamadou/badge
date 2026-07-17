@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PROTECTED_PREFIXES = ["/admin", "/staff", "/profile"];
-const STAFF_ONLY_PREFIXES = ["/staff"];
-const API_PROTECTED_PREFIXES = ["/api/admin", "/api/staff", "/api/profile"];
-const API_STAFF_ONLY_PREFIXES = ["/api/staff"];
+const PROTECTED_PREFIXES = ["/org", "/platform", "/profile"];
+const STAFF_ONLY_PREFIXES = ["/platform"];
+const API_PROTECTED_PREFIXES = ["/api/org", "/api/platform", "/api/profile"];
+const API_STAFF_ONLY_PREFIXES = ["/api/platform"];
 
 function pathStartsWithAny(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
@@ -51,11 +51,11 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/admin/:path*",
-    "/staff/:path*",
+    "/org/:path*",
+    "/platform/:path*",
     "/profile/:path*",
-    "/api/admin/:path*",
-    "/api/staff/:path*",
+    "/api/org/:path*",
+    "/api/platform/:path*",
     "/api/profile/:path*",
   ],
 };

@@ -89,9 +89,9 @@ describe("Badges API — GET /registrations contract used by /badges page", () =
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
     const res = await GET(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations?status=APPROVED&limit=100`),
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations?status=APPROVED&limit=100`),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.status).toBe(200);
@@ -149,7 +149,7 @@ describe("Badges API — POST /registrations/print", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
     );
     const res = await POST(
       new NextRequest(`http://localhost/x`, {
@@ -196,7 +196,7 @@ describe("Badges API — POST /registrations/print", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
     );
     const res = await POST(
       new NextRequest(`http://localhost/x`, {
@@ -236,7 +236,7 @@ describe("Badges API — POST /registrations/print", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
     );
     const res = await POST(
       new NextRequest(`http://localhost/x`, {

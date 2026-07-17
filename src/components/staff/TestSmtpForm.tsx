@@ -15,7 +15,7 @@ export function TestSmtpForm({ defaultEmail }: { defaultEmail?: string }) {
   async function run() {
     setBusy(true);
     setMsg(null);
-    const res = await fetch("/api/staff/settings/test-smtp", {
+    const res = await fetch("/api/platform/settings/test-smtp", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(to ? { to } : {}),

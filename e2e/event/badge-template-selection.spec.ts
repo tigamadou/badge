@@ -29,7 +29,7 @@ test.describe("v2-12 selection template badge (event-admin)", () => {
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
 
     // Va sur la page de selection de template
-    await page.goto(`/admin/${orgId}/events/${eventId}/settings/badge`);
+    await page.goto(`/org/${orgId}/events/${eventId}/settings/badge`);
     await expect(page.getByRole("heading", { name: /template de badge/i })).toBeVisible();
 
     // Au depart : carte default-v1 et recto-verso-v1 affichees, aucune selectionnee

@@ -124,7 +124,7 @@ test.describe("Badge public verify + download", () => {
     // bloquee sur "Chargement..." en attendant la response 404.
     //
     // Le PDF du badge est genere cote admin via
-    // /api/admin/[orgId]/events/[eventId]/badges/[id] et requiert une session
+    // /api/org/[orgId]/events/[eventId]/badges/[id] et requiert une session
     // EventMember PRINTER/ADMIN. Pour un participant, il n'existe pas de route
     // publique de download de badge en v2 actuellement.
     //

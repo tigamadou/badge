@@ -42,7 +42,7 @@ export function EventSettingsForm({
   async function saveEvent(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ title, location, date, logo, registrationOpen }),
@@ -53,7 +53,7 @@ export function EventSettingsForm({
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/settings`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/settings`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

@@ -24,7 +24,7 @@ export function BlockedEmailsForm({
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/blocked-emails`);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails`);
     if (!res.ok) return;
     const j = (await res.json()) as { blocked: Array<{ id: string; email: string; reason: string | null; createdAt: string }> };
     setRows(
@@ -38,7 +38,7 @@ export function BlockedEmailsForm({
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/blocked-emails`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, reason: reason || undefined }),
@@ -56,7 +56,7 @@ export function BlockedEmailsForm({
 
   async function remove(id: string) {
     if (!confirm("Retirer cet email de la liste de blocage ?")) return;
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/blocked-emails/${id}`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails/${id}`, {
       method: "DELETE",
     });
     if (res.ok) await refresh();

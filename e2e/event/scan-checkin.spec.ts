@@ -38,7 +38,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/scan/verify`,
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
       { data: { payload: `https://app.test/verify/${reg.id}` } },
     );
     expect(res.status()).toBe(200);
@@ -79,7 +79,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/scan/verify`,
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
       { data: { payload: reg.id } },
     );
     expect(res.status()).toBe(200);
@@ -119,7 +119,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/scan/verify`,
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
       { data: { payload: reg.id } },
     );
     expect(res.status()).toBe(200);
@@ -160,7 +160,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/scan/verify`,
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
       { data: { payload: foreignReg.id } },
     );
     expect(res.status()).toBe(404);
@@ -189,7 +189,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/scan/verify`,
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
       { data: { payload: "BADGE-INEXISTANT-XYZ" } },
     );
     expect(res.status()).toBe(404);
@@ -228,7 +228,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/checkin`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/checkin`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -253,7 +253,7 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
 
     await loginAs(page, operator);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/scan/verify`,
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
       { data: { payload: "" } },
     );
     expect(res.status()).toBe(400);

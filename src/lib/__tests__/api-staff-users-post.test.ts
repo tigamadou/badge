@@ -43,7 +43,7 @@ function uniqueSlug(prefix = "o") {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
 
-describe("POST /api/staff/users", () => {
+describe("POST /api/platform/users", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -52,8 +52,8 @@ describe("POST /api/staff/users", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "x@y.com", name: "X", type: "client" }),
       headers: { "content-type": "application/json" },
@@ -65,8 +65,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_OBSERVER cannot create (403)", async () => {
     await makeStaff("STAFF_OBSERVER");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "x@y.com", name: "X", type: "client" }),
       headers: { "content-type": "application/json" },
@@ -78,8 +78,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_SUPPORT cannot create staff user (403)", async () => {
     await makeStaff("STAFF_SUPPORT");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "new-staff@x.com",
@@ -96,8 +96,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_SUPPORT can create client user (201)", async () => {
     await makeStaff("STAFF_SUPPORT");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "client@x.com", name: "Client", type: "client" }),
       headers: { "content-type": "application/json" },
@@ -112,8 +112,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_ADMIN cannot create STAFF_ADMIN (403)", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "promo@x.com",
@@ -130,8 +130,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_ADMIN cannot create SUPER_ADMIN (403)", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "sa@x.com",
@@ -148,8 +148,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_ADMIN can create STAFF_SUPPORT (201)", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "supp@x.com",
@@ -170,8 +170,8 @@ describe("POST /api/staff/users", () => {
   it("STAFF_ADMIN can create STAFF_OBSERVER (201)", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "obs@x.com",
@@ -191,8 +191,8 @@ describe("POST /api/staff/users", () => {
   it("SUPER_ADMIN can create STAFF_ADMIN (201)", async () => {
     await makeStaff("SUPER_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "admin@x.com",
@@ -212,8 +212,8 @@ describe("POST /api/staff/users", () => {
   it("SUPER_ADMIN can create SUPER_ADMIN (201)", async () => {
     await makeStaff("SUPER_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "newsa@x.com",
@@ -236,8 +236,8 @@ describe("POST /api/staff/users", () => {
       data: { name: "Linked", slug: uniqueSlug("linked") },
     });
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "linked@x.com",
@@ -264,8 +264,8 @@ describe("POST /api/staff/users", () => {
       data: { name: "L", slug: uniqueSlug("logged") },
     });
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({
         email: "log@x.com",
@@ -288,8 +288,8 @@ describe("POST /api/staff/users", () => {
   it("generates inviteToken on the created User", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "invite@x.com", name: "Invite", type: "client" }),
       headers: { "content-type": "application/json" },
@@ -312,8 +312,8 @@ describe("POST /api/staff/users", () => {
       data: { email: "dup@x.com", password: "x", name: "Dup" },
     });
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "dup@x.com", name: "Dup2", type: "client" }),
       headers: { "content-type": "application/json" },
@@ -325,8 +325,8 @@ describe("POST /api/staff/users", () => {
   it("returns 400 on invalid body (missing fields)", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "not-an-email", type: "client" }),
       headers: { "content-type": "application/json" },
@@ -338,8 +338,8 @@ describe("POST /api/staff/users", () => {
   it("returns 400 when staff type without staffRole", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/users/route");
-    const req = new NextRequest("http://localhost/api/staff/users", {
+    const { POST } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users", {
       method: "POST",
       body: JSON.stringify({ email: "x@y", name: "X", type: "staff" }),
       headers: { "content-type": "application/json" },

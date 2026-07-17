@@ -43,7 +43,7 @@ function uniqueSlug(prefix = "act") {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 }
 
-describe("GET /api/staff/activity", () => {
+describe("GET /api/platform/activity", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -51,8 +51,8 @@ describe("GET /api/staff/activity", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { GET } = await import("@/app/api/staff/activity/route");
-    const req = new NextRequest("http://localhost/api/staff/activity");
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest("http://localhost/api/platform/activity");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
@@ -62,8 +62,8 @@ describe("GET /api/staff/activity", () => {
       data: { email: "c@x", password: "x", name: "C" },
     });
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    const { GET } = await import("@/app/api/staff/activity/route");
-    const req = new NextRequest("http://localhost/api/staff/activity");
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest("http://localhost/api/platform/activity");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -87,8 +87,8 @@ describe("GET /api/staff/activity", () => {
       data: { type: "USER_UPDATED", userId: u.id, createdAt: t3 },
     });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
-    const req = new NextRequest("http://localhost/api/staff/activity");
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest("http://localhost/api/platform/activity");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -111,8 +111,8 @@ describe("GET /api/staff/activity", () => {
       data: { type: "USER_LOGIN", userId: u.id },
     });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
-    const req = new NextRequest("http://localhost/api/staff/activity");
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest("http://localhost/api/platform/activity");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -130,9 +130,9 @@ describe("GET /api/staff/activity", () => {
     await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id } });
     await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id } });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/activity?type=USER_LOGIN",
+      "http://localhost/api/platform/activity?type=USER_LOGIN",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -163,9 +163,9 @@ describe("GET /api/staff/activity", () => {
       data: { type: "ORG_UPDATED", userId: u.id, orgId: orgB.id },
     });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/activity?orgId=${orgA.id}`,
+      `http://localhost/api/platform/activity?orgId=${orgA.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -185,9 +185,9 @@ describe("GET /api/staff/activity", () => {
     await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u1.id } });
     await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u2.id } });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/activity?userId=${u1.id}`,
+      `http://localhost/api/platform/activity?userId=${u1.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -226,9 +226,9 @@ describe("GET /api/staff/activity", () => {
       },
     });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/activity?staffActor=true",
+      "http://localhost/api/platform/activity?staffActor=true",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -249,9 +249,9 @@ describe("GET /api/staff/activity", () => {
       data: { type: "USER_LOGIN", userId: u.id, staffActor: true },
     });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/activity?staffActor=false",
+      "http://localhost/api/platform/activity?staffActor=false",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -278,9 +278,9 @@ describe("GET /api/staff/activity", () => {
       data: { type: "USER_LOGIN", userId: u.id, createdAt: t3 },
     });
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/activity?from=2025-06-01T00:00:00Z&to=2025-07-01T00:00:00Z",
+      "http://localhost/api/platform/activity?from=2025-06-01T00:00:00Z&to=2025-07-01T00:00:00Z",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -307,9 +307,9 @@ describe("GET /api/staff/activity", () => {
       });
     }
 
-    const { GET } = await import("@/app/api/staff/activity/route");
+    const { GET } = await import("@/app/api/platform/activity/route");
     const req1 = new NextRequest(
-      "http://localhost/api/staff/activity?page=1&pageSize=2",
+      "http://localhost/api/platform/activity?page=1&pageSize=2",
     );
     const res1 = await GET(req1, { params: Promise.resolve({}) });
     const j1 = await res1.json();
@@ -319,7 +319,7 @@ describe("GET /api/staff/activity", () => {
     expect(j1.pageSize).toBe(2);
 
     const req2 = new NextRequest(
-      "http://localhost/api/staff/activity?page=3&pageSize=2",
+      "http://localhost/api/platform/activity?page=3&pageSize=2",
     );
     const res2 = await GET(req2, { params: Promise.resolve({}) });
     const j2 = await res2.json();

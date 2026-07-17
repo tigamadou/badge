@@ -21,7 +21,7 @@ describe("withOrgAuth", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
     const handler = withOrgAuth("OWNER", async () => new Response("ok"));
-    const req = new NextRequest("http://localhost/api/admin/org-1");
+    const req = new NextRequest("http://localhost/api/org/org-1");
     const res = await handler(req, { params: Promise.resolve({ orgId: "org-1" }) });
     expect(res.status).toBe(401);
   });
@@ -34,7 +34,7 @@ describe("withOrgAuth", () => {
     } as never);
 
     const handler = withOrgAuth("OWNER", async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`);
     const res = await handler(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
   });
@@ -52,7 +52,7 @@ describe("withOrgAuth", () => {
       received = { orgId: ctx.orgId, userId: ctx.session.user.id, isStaff: ctx.session.user.isStaff };
       return new Response("ok");
     });
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`);
     const res = await handler(req, { params: Promise.resolve({ orgId: org.id }) });
 
     expect(res.status).toBe(200);
@@ -69,7 +69,7 @@ describe("withOrgAuth", () => {
     } as never);
 
     const handler = withOrgAuth("OWNER", async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`);
     const res = await handler(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(200);
   });

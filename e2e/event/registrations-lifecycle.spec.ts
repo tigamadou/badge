@@ -44,7 +44,7 @@ test.describe("T22 Registrations lifecycle (approve/reject + mail + audit + PDF)
     await mailpit.clear();
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
     );
     expect(res.status()).toBe(200);
 
@@ -70,7 +70,7 @@ test.describe("T22 Registrations lifecycle (approve/reject + mail + audit + PDF)
 
     // PDF du badge
     const pdfRes = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/badges/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
     await expectPdfResponse(pdfRes, { minBytes: 3000 });
     expect(pdfRes.headers()["x-template-id"]).toBeTruthy();
@@ -95,7 +95,7 @@ test.describe("T22 Registrations lifecycle (approve/reject + mail + audit + PDF)
     await mailpit.clear();
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/reject`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/reject`,
       { data: { reason: "Document illisible", details: "Photo floue" } },
     );
     expect(res.status()).toBe(200);
@@ -144,7 +144,7 @@ test.describe("T22 Registrations lifecycle (approve/reject + mail + audit + PDF)
 
     // 1er approve : envoie mail
     const r1 = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
     );
     expect(r1.status()).toBe(200);
 
@@ -158,7 +158,7 @@ test.describe("T22 Registrations lifecycle (approve/reject + mail + audit + PDF)
 
     // 2eme approve : 200 alreadyApproved (court-circuit avant sendStatusNotification)
     const r2 = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
     );
     expect(r2.status()).toBe(200);
     const body2 = await r2.json();
@@ -193,7 +193,7 @@ test.describe("T22 Registrations lifecycle (approve/reject + mail + audit + PDF)
     await loginAs(page, admin);
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
     );
     expect(res.status()).toBe(200);
 

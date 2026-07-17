@@ -125,8 +125,8 @@ describe("GET /registrations", () => {
     await mkReg(event.id, cat.id, { status: "APPROVED" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations?status=PENDING`);
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations?status=PENDING`);
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     const json = await res.json();
     expect(json.registrations).toHaveLength(1);
@@ -139,8 +139,8 @@ describe("GET /registrations", () => {
     await mkReg(event.id, cat.id, { email: "fatim@x.test", firstName: "Fatim" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations?q=Amadou`);
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations?q=Amadou`);
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     const json = await res.json();
     expect(json.registrations).toHaveLength(1);
@@ -161,8 +161,8 @@ describe("GET /registrations", () => {
     await mkReg(event.id, cat.id);
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations`);
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`);
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(200);
   });
@@ -177,8 +177,8 @@ describe("POST /registrations (manual creation)", () => {
     const participant = await mkParticipantUser("manual");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
       method: "POST",
       body: JSON.stringify({
         categoryId: cat.id,
@@ -209,8 +209,8 @@ describe("POST /registrations (manual creation)", () => {
     const participant = await mkParticipantUser("op-blocked");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
       method: "POST",
       body: JSON.stringify({
         categoryId: cat.id,
@@ -231,7 +231,7 @@ describe("POST /registrations/[regId]/approve", () => {
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
     const res = await POST(
       new NextRequest(`http://localhost/api/.../approve`, { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -261,7 +261,7 @@ describe("POST /registrations/[regId]/approve", () => {
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -286,7 +286,7 @@ describe("POST /registrations/[regId]/approve", () => {
     const r = await mkReg(event.id, cat.id);
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -304,7 +304,7 @@ describe("POST /registrations/[regId]/reject", () => {
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
@@ -326,7 +326,7 @@ describe("POST /registrations/[regId]/reject", () => {
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
@@ -347,7 +347,7 @@ describe("POST /registrations/[regId]/print", () => {
     const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -364,7 +364,7 @@ describe("POST /registrations/[regId]/print", () => {
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -387,7 +387,7 @@ describe("POST /registrations/[regId]/print", () => {
     const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -410,7 +410,7 @@ describe("POST /registrations/[regId]/print", () => {
     const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -429,7 +429,7 @@ describe("PATCH /registrations/[regId]", () => {
     const r = await mkReg(event.id, cat.id, { firstName: "Old" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
     const res = await PATCH(
       new NextRequest("http://localhost/x", {
         method: "PATCH",
@@ -455,7 +455,7 @@ describe("POST /registrations/[regId]/block-email", () => {
     const r = await mkReg(event.id, cat.id, { email: "block@x.test" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
@@ -479,7 +479,7 @@ describe("GET /registrations/[regId]/duplicates", () => {
     const r2 = await mkReg(event.id, cat.id, { email: "dup@x.test" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/duplicates/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/duplicates/route");
     const res = await GET(
       new NextRequest("http://localhost/x"),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r1.id } as never) },
@@ -498,9 +498,9 @@ describe("GET /registrations/export (CSV)", () => {
     await mkReg(event.id, cat.id, { firstName: "Amadou", lastName: "Diallo" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/export/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/export/route");
     const res = await GET(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations/export`),
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations/export`),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.headers.get("content-type")).toContain("text/csv");
@@ -547,8 +547,8 @@ describe("Quota — admin bypass with audit", () => {
     const newParticipant = await mkParticipantUser("second");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
       method: "POST",
       body: JSON.stringify({
         categoryId: cat.id,
@@ -583,7 +583,7 @@ describe("POST /registrations/[regId]/checkin", () => {
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/checkin/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/checkin/route");
     const res = await POST(
       new NextRequest("http://localhost/x", { method: "POST" }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },

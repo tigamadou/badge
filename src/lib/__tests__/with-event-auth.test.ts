@@ -41,7 +41,7 @@ describe("withEventAuth", () => {
     const { org, event } = await setup();
     vi.mocked(getServerSession).mockResolvedValue(null);
     const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -54,7 +54,7 @@ describe("withEventAuth", () => {
     mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/missing`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/missing`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: "missing" }),
     });
@@ -68,7 +68,7 @@ describe("withEventAuth", () => {
     mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${otherOrg.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${otherOrg.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: otherOrg.id, eventId: event.id }),
     });
@@ -81,7 +81,7 @@ describe("withEventAuth", () => {
     mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -101,7 +101,7 @@ describe("withEventAuth", () => {
       captured = { eventId: ctx.eventId, orgId: ctx.orgId, effectiveRole: ctx.effectiveRole };
       return new Response("ok");
     });
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -119,7 +119,7 @@ describe("withEventAuth", () => {
     mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const handler = withEventAuth({ minRole: "ADMIN" }, async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -137,7 +137,7 @@ describe("withEventAuth", () => {
       captured = ctx.effectiveRole;
       return new Response("ok");
     });
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -157,7 +157,7 @@ describe("withEventAuth", () => {
       captured = ctx.effectiveRole;
       return new Response("ok");
     });
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -175,7 +175,7 @@ describe("withEventAuth", () => {
     mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -197,7 +197,7 @@ describe("withEventAuth", () => {
       { minRole: "OPERATOR", allowArchived: true },
       async () => new Response("ok"),
     );
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
@@ -216,7 +216,7 @@ describe("withEventAuth", () => {
       { minRole: "ADMIN", requireRegistrationOpen: true },
       async () => new Response("ok"),
     );
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`);
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
     const res = await handler(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });

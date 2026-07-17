@@ -53,7 +53,7 @@ export function UserCreationForm({
       payload.orgRole = form.orgRole;
     }
 
-    const res = await fetch("/api/staff/users", {
+    const res = await fetch("/api/platform/users", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -61,7 +61,7 @@ export function UserCreationForm({
     setBusy(false);
     if (res.ok) {
       const json = await res.json();
-      router.push(`/staff/users/${json.user.id}`);
+      router.push(`/platform/users/${json.user.id}`);
     } else if (res.status === 409) {
       setMsg("E-mail déjà utilisé.");
     } else {
@@ -174,7 +174,7 @@ export function UserCreationForm({
       </Card>
 
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="secondary" onClick={() => router.push("/staff/users")}>
+        <Button type="button" variant="secondary" onClick={() => router.push("/platform/users")}>
           Annuler
         </Button>
         <Button

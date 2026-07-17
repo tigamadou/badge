@@ -38,7 +38,7 @@ test.describe("T15 Org events", () => {
     await loginAs(page, owner);
 
     // Step 1 : titre + date + lieu (le wizard suggere un slug automatique).
-    await page.goto(`/admin/${orgId}/events/new`);
+    await page.goto(`/org/${orgId}/events/new`);
     await page.getByPlaceholder("Titre").fill("E2E Event Wizard");
     // L'input date est un type="date" : on injecte une date ISO valide.
     const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000)
@@ -67,7 +67,7 @@ test.describe("T15 Org events", () => {
 
     // Redirection vers /settings de l'event cree.
     await page.waitForURL(
-      new RegExp(`/admin/${orgId}/events/[^/]+/settings`),
+      new RegExp(`/org/${orgId}/events/[^/]+/settings`),
       { timeout: 8000 },
     );
 
@@ -107,7 +107,7 @@ test.describe("T15 Org events", () => {
     });
 
     const res = await request.post(
-      `/api/admin/${orgId}/events/${event.id}/archive`,
+      `/api/org/${orgId}/events/${event.id}/archive`,
     );
     expect(res.status()).toBe(200);
 
@@ -145,7 +145,7 @@ test.describe("T15 Org events", () => {
     });
 
     const res = await request.post(
-      `/api/admin/${orgId}/events/${event.id}/restore`,
+      `/api/org/${orgId}/events/${event.id}/restore`,
     );
     expect(res.status()).toBe(200);
 
@@ -192,7 +192,7 @@ test.describe("T15 Org events", () => {
       },
     });
 
-    const res = await request.post(`/api/admin/${orgId}/events`, {
+    const res = await request.post(`/api/org/${orgId}/events`, {
       data: {
         title: "Quota 3",
         date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
@@ -223,7 +223,7 @@ test.describe("T15 Org events", () => {
     const b = await createTestOrgWithOwner({ scope: "slug-b" });
     await loginAs(page, b.owner);
 
-    const res = await request.post(`/api/admin/${b.orgId}/events`, {
+    const res = await request.post(`/api/org/${b.orgId}/events`, {
       data: {
         title: "Slug B",
         date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),

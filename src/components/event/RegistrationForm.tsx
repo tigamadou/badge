@@ -55,8 +55,8 @@ export function RegistrationForm({
     setBusy(true);
     setErr(null);
     const url = initial
-      ? `/api/admin/${orgId}/events/${eventId}/registrations/${initial.id}`
-      : `/api/admin/${orgId}/events/${eventId}/registrations`;
+      ? `/api/org/${orgId}/events/${eventId}/registrations/${initial.id}`
+      : `/api/org/${orgId}/events/${eventId}/registrations`;
     const res = await fetch(url, {
       method: initial ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },
@@ -79,7 +79,7 @@ export function RegistrationForm({
       return;
     }
     const json = await res.json();
-    router.push(`/admin/${orgId}/events/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
+    router.push(`/org/${orgId}/events/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
   }
 
   return (

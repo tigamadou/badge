@@ -81,7 +81,7 @@ export function EventCreationWizard({
     if (mode === "template") body.templateIds = selectedTemplates;
     if (mode === "manual") body.manualCategories = manualCats;
 
-    const res = await fetch(`/api/admin/${orgId}/events`, {
+    const res = await fetch(`/api/org/${orgId}/events`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -100,7 +100,7 @@ export function EventCreationWizard({
       return;
     }
     const json = (await res.json()) as { event: { id: string; slug: string } };
-    router.push(`/admin/${orgId}/events/${json.event.id}/settings`);
+    router.push(`/org/${orgId}/events/${json.event.id}/settings`);
   }
 
   function addManualCategory() {

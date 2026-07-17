@@ -48,7 +48,7 @@ export function RegistrationDetailPanel({
 
   async function blockEmail() {
     if (!confirm(`Bloquer l'email ${r.email} sur cet événement ?`)) return;
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${r.id}/block-email`, {
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}/block-email`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reason: "Bloqué via le détail inscription" }),
@@ -58,7 +58,7 @@ export function RegistrationDetailPanel({
 
   async function blockDocument() {
     if (!confirm(`Bloquer le document ${r.idDocumentNumber} ?`)) return;
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${r.id}/block-document`, {
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}/block-document`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reason: "Bloqué via le détail inscription" }),
@@ -67,7 +67,7 @@ export function RegistrationDetailPanel({
   }
 
   async function toggleAllAccess() {
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${r.id}/all-access`, {
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}/all-access`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ allAccessGranted: !r.allAccessGranted }),
@@ -78,8 +78,8 @@ export function RegistrationDetailPanel({
   async function remove() {
     if (!confirm(`Supprimer définitivement l'inscription de ${r.firstName} ${r.lastName} ?`)) return;
     setBusy(true);
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${r.id}`, { method: "DELETE" });
-    router.push(`/admin/${orgId}/events/${eventId}/registrations`);
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}`, { method: "DELETE" });
+    router.push(`/org/${orgId}/events/${eventId}/registrations`);
   }
 
   return (
@@ -156,7 +156,7 @@ export function RegistrationDetailPanel({
             <Button variant="secondary" onClick={toggleAllAccess} disabled={busy}>
               {r.allAccessGranted ? "Retirer ALL ACCESS" : "Activer ALL ACCESS"}
             </Button>
-            <Link href={`/admin/${orgId}/events/${eventId}/badges/${r.id}`}>
+            <Link href={`/org/${orgId}/events/${eventId}/badges/${r.id}`}>
               <Button variant="secondary">Voir le badge</Button>
             </Link>
             <Button variant="secondary" onClick={blockEmail} disabled={busy}>

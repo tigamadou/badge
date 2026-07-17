@@ -17,7 +17,7 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
     e.preventDefault();
     setLoading(true);
     setErr(null);
-    const res = await fetch(`/api/admin/${orgId}/members`, {
+    const res = await fetch(`/api/org/${orgId}/members`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, name }),

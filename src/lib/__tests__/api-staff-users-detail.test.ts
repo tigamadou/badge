@@ -40,10 +40,10 @@ async function cleanDb() {
 }
 
 // ===========================================================
-// GET /api/staff/users/[userId]
+// GET /api/platform/users/[userId]
 // ===========================================================
 
-describe("GET /api/staff/users/[userId]", () => {
+describe("GET /api/platform/users/[userId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -55,8 +55,8 @@ describe("GET /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`);
+    const { GET } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`);
     const res = await GET(req, { params: Promise.resolve({ userId: t.id }) });
     expect(res.status).toBe(401);
   });
@@ -67,8 +67,8 @@ describe("GET /api/staff/users/[userId]", () => {
     });
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${u.id}`);
+    const { GET } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${u.id}`);
     const res = await GET(req, { params: Promise.resolve({ userId: u.id }) });
     expect(res.status).toBe(403);
   });
@@ -79,8 +79,8 @@ describe("GET /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "SECRET", name: "T" },
     });
 
-    const { GET } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`);
+    const { GET } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`);
     const res = await GET(req, { params: Promise.resolve({ userId: t.id }) });
     const json = await res.json();
 
@@ -92,18 +92,18 @@ describe("GET /api/staff/users/[userId]", () => {
   it("returns 404 for unknown user", async () => {
     await makeStaff();
 
-    const { GET } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest("http://localhost/api/staff/users/unknown");
+    const { GET } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest("http://localhost/api/platform/users/unknown");
     const res = await GET(req, { params: Promise.resolve({ userId: "unknown" }) });
     expect(res.status).toBe(404);
   });
 });
 
 // ===========================================================
-// PATCH /api/staff/users/[userId]
+// PATCH /api/platform/users/[userId]
 // ===========================================================
 
-describe("PATCH /api/staff/users/[userId]", () => {
+describe("PATCH /api/platform/users/[userId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -115,8 +115,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ name: "Y" }),
       headers: { "content-type": "application/json" },
@@ -131,8 +131,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "x", name: "Old" },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ name: "New" }),
       headers: { "content-type": "application/json" },
@@ -153,8 +153,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "STAFF_SUPPORT" }),
       headers: { "content-type": "application/json" },
@@ -175,8 +175,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
     });
     withSession({ id: self.id, email: self.email, name: self.name, isStaff: true });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${self.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${self.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "STAFF_OBSERVER" }),
       headers: { "content-type": "application/json" },
@@ -197,8 +197,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "STAFF_SUPPORT" }),
       headers: { "content-type": "application/json" },
@@ -225,8 +225,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "STAFF_ADMIN" }),
       headers: { "content-type": "application/json" },
@@ -247,8 +247,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "SUPER_ADMIN" }),
       headers: { "content-type": "application/json" },
@@ -269,8 +269,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "STAFF_SUPPORT" }),
       headers: { "content-type": "application/json" },
@@ -291,8 +291,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "PATCH",
       body: JSON.stringify({ staffRole: "STAFF_ADMIN" }),
       headers: { "content-type": "application/json" },
@@ -319,8 +319,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
       },
     });
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${target.id}`, {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${target.id}`, {
       method: "PATCH",
       body: JSON.stringify({ archived: true }),
       headers: { "content-type": "application/json" },
@@ -332,8 +332,8 @@ describe("PATCH /api/staff/users/[userId]", () => {
   it("returns 404 for unknown user on PATCH", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { PATCH } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest("http://localhost/api/staff/users/unknown", {
+    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest("http://localhost/api/platform/users/unknown", {
       method: "PATCH",
       body: JSON.stringify({ name: "Y" }),
       headers: { "content-type": "application/json" },
@@ -344,10 +344,10 @@ describe("PATCH /api/staff/users/[userId]", () => {
 });
 
 // ===========================================================
-// POST /api/staff/users/[userId]/reset-password
+// POST /api/platform/users/[userId]/reset-password
 // ===========================================================
 
-describe("POST /api/staff/users/[userId]/reset-password", () => {
+describe("POST /api/platform/users/[userId]/reset-password", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -359,9 +359,9 @@ describe("POST /api/staff/users/[userId]/reset-password", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { POST } = await import("@/app/api/staff/users/[userId]/reset-password/route");
+    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/users/${t.id}/reset-password`,
+      `http://localhost/api/platform/users/${t.id}/reset-password`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
@@ -374,9 +374,9 @@ describe("POST /api/staff/users/[userId]/reset-password", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { POST } = await import("@/app/api/staff/users/[userId]/reset-password/route");
+    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/users/${t.id}/reset-password`,
+      `http://localhost/api/platform/users/${t.id}/reset-password`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
@@ -389,9 +389,9 @@ describe("POST /api/staff/users/[userId]/reset-password", () => {
       data: { email: "t@x", password: "old", name: "T" },
     });
 
-    const { POST } = await import("@/app/api/staff/users/[userId]/reset-password/route");
+    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/users/${t.id}/reset-password`,
+      `http://localhost/api/platform/users/${t.id}/reset-password`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
@@ -414,9 +414,9 @@ describe("POST /api/staff/users/[userId]/reset-password", () => {
   it("returns 404 for unknown user on reset-password", async () => {
     await makeStaff("STAFF_SUPPORT");
 
-    const { POST } = await import("@/app/api/staff/users/[userId]/reset-password/route");
+    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/users/unknown/reset-password",
+      "http://localhost/api/platform/users/unknown/reset-password",
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ userId: "unknown" }) });
@@ -435,9 +435,9 @@ describe("POST /api/staff/users/[userId]/reset-password", () => {
       },
     });
 
-    const { POST } = await import("@/app/api/staff/users/[userId]/reset-password/route");
+    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/users/${t.id}/reset-password`,
+      `http://localhost/api/platform/users/${t.id}/reset-password`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
@@ -446,10 +446,10 @@ describe("POST /api/staff/users/[userId]/reset-password", () => {
 });
 
 // ===========================================================
-// DELETE /api/staff/users/[userId] (soft-delete)
+// DELETE /api/platform/users/[userId] (soft-delete)
 // ===========================================================
 
-describe("DELETE /api/staff/users/[userId]", () => {
+describe("DELETE /api/platform/users/[userId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -461,8 +461,8 @@ describe("DELETE /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { DELETE } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ userId: t.id }) });
@@ -475,8 +475,8 @@ describe("DELETE /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { DELETE } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ userId: t.id }) });
@@ -489,8 +489,8 @@ describe("DELETE /api/staff/users/[userId]", () => {
       data: { email: "t@x", password: "x", name: "T" },
     });
 
-    const { DELETE } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${t.id}`, {
+    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ userId: t.id }) });
@@ -518,8 +518,8 @@ describe("DELETE /api/staff/users/[userId]", () => {
     });
     withSession({ id: self.id, email: self.email, name: self.name, isStaff: true });
 
-    const { DELETE } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${self.id}`, {
+    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${self.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ userId: self.id }) });
@@ -538,8 +538,8 @@ describe("DELETE /api/staff/users/[userId]", () => {
       },
     });
 
-    const { DELETE } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/staff/users/${sa.id}`, {
+    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/platform/users/${sa.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ userId: sa.id }) });
@@ -549,8 +549,8 @@ describe("DELETE /api/staff/users/[userId]", () => {
   it("returns 404 for unknown user on DELETE", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { DELETE } = await import("@/app/api/staff/users/[userId]/route");
-    const req = new NextRequest("http://localhost/api/staff/users/unknown", {
+    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
+    const req = new NextRequest("http://localhost/api/platform/users/unknown", {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ userId: "unknown" }) });

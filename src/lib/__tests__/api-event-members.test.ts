@@ -51,7 +51,7 @@ async function cleanup() {
   vi.mocked(sendUserInvitation).mockClear();
 }
 
-describe("POST /api/admin/[orgId]/events/[eventId]/members (invite)", () => {
+describe("POST /api/org/[orgId]/events/[eventId]/members (invite)", () => {
   beforeEach(cleanup);
 
   it("adds membership when user exists by email", async () => {
@@ -59,8 +59,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/members (invite)", () => {
     const existing = await prisma.user.create({ data: { email: "op@x.test", password: "x", name: "Op" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/members`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
       method: "POST",
       body: JSON.stringify({ email: "op@x.test", role: "OPERATOR" }),
       headers: { "content-type": "application/json" },
@@ -77,8 +77,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/members (invite)", () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/members`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
       method: "POST",
       body: JSON.stringify({ email: "newuser@x.test", name: "New User", role: "ADMIN" }),
       headers: { "content-type": "application/json" },
@@ -99,8 +99,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/members (invite)", () => {
     await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "OPERATOR" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/members`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
       method: "POST",
       body: JSON.stringify({ email: "dup@x.test", role: "ADMIN" }),
       headers: { "content-type": "application/json" },
@@ -119,8 +119,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/members (invite)", () => {
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/members`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
       method: "POST",
       body: JSON.stringify({ email: "y@x.test", role: "OPERATOR" }),
       headers: { "content-type": "application/json" },
@@ -130,7 +130,7 @@ describe("POST /api/admin/[orgId]/events/[eventId]/members (invite)", () => {
   });
 });
 
-describe("DELETE /api/admin/[orgId]/events/[eventId]/members/[membershipId]", () => {
+describe("DELETE /api/org/[orgId]/events/[eventId]/members/[membershipId]", () => {
   beforeEach(cleanup);
 
   it("removes membership and logs MEMBERSHIP_REMOVED", async () => {
@@ -139,8 +139,8 @@ describe("DELETE /api/admin/[orgId]/events/[eventId]/members/[membershipId]", ()
     const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "OPERATOR" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { DELETE } = await import("@/app/api/admin/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/members/${m.id}`, { method: "DELETE" });
+    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, { method: "DELETE" });
     const res = await DELETE(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
     });

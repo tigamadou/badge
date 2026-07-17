@@ -65,7 +65,7 @@ export function PlatformSettingsForm({
     if (form.smtpPassword) payload.smtpPassword = form.smtpPassword;
     if (form.recaptchaSecretKey) payload.recaptchaSecretKey = form.recaptchaSecretKey;
 
-    const res = await fetch("/api/staff/settings", {
+    const res = await fetch("/api/platform/settings", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),

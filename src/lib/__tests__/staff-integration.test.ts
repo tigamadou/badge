@@ -41,9 +41,9 @@ describe("Espace staff — criteres d'acceptation v2-02", () => {
     });
     await asUser({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET, POST } = await import("@/app/api/staff/organizations/route");
+    const { GET, POST } = await import("@/app/api/platform/organizations/route");
     let res = await GET(
-      new NextRequest("http://localhost/api/staff/organizations"),
+      new NextRequest("http://localhost/api/platform/organizations"),
       { params: Promise.resolve({}) },
     );
     expect(res.status).toBe(403);
@@ -59,13 +59,13 @@ describe("Espace staff — criteres d'acceptation v2-02", () => {
     });
     await asUser({ id: obs.id, email: obs.email, name: obs.name, isStaff: true });
     res = await GET(
-      new NextRequest("http://localhost/api/staff/organizations"),
+      new NextRequest("http://localhost/api/platform/organizations"),
       { params: Promise.resolve({}) },
     );
     expect(res.status).toBe(200);
 
     res = await POST(
-      new NextRequest("http://localhost/api/staff/organizations", {
+      new NextRequest("http://localhost/api/platform/organizations", {
         method: "POST",
         body: JSON.stringify({ name: "X", ownerEmail: "x@x.com", ownerName: "X" }),
         headers: { "content-type": "application/json" },
@@ -87,9 +87,9 @@ describe("Espace staff — criteres d'acceptation v2-02", () => {
     });
     await asUser({ id: admin.id, email: admin.email, name: admin.name, isStaff: true });
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
+    const { POST } = await import("@/app/api/platform/organizations/route");
     const res = await POST(
-      new NextRequest("http://localhost/api/staff/organizations", {
+      new NextRequest("http://localhost/api/platform/organizations", {
         method: "POST",
         body: JSON.stringify({
           name: "AC3",
@@ -127,9 +127,9 @@ describe("Espace staff — criteres d'acceptation v2-02", () => {
     });
     await asUser({ id: obs.id, email: obs.email, name: obs.name, isStaff: true });
 
-    const { GET } = await import("@/app/api/staff/settings/route");
+    const { GET } = await import("@/app/api/platform/settings/route");
     const res = await GET(
-      new NextRequest("http://localhost/api/staff/settings"),
+      new NextRequest("http://localhost/api/platform/settings"),
       { params: Promise.resolve({}) },
     );
     const text = await res.text();
@@ -149,10 +149,10 @@ describe("Espace staff — criteres d'acceptation v2-02", () => {
     });
     await asUser({ id: admin.id, email: admin.email, name: admin.name, isStaff: true });
 
-    const { POST } = await import("@/app/api/staff/users/route");
+    const { POST } = await import("@/app/api/platform/users/route");
     const before = Date.now();
     const res = await POST(
-      new NextRequest("http://localhost/api/staff/users", {
+      new NextRequest("http://localhost/api/platform/users", {
         method: "POST",
         body: JSON.stringify({ email: "invited@x.com", name: "Inv", type: "client" }),
         headers: { "content-type": "application/json" },

@@ -16,7 +16,7 @@ test.describe("Staff > journal d'activite", () => {
   test("STAFF_OBSERVER consulte le journal global", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "activity-observer" });
 
-    await page.goto("/staff/activity");
+    await page.goto("/platform/activity");
     await expect(
       page.getByRole("heading", { name: /journal d'activite/i }),
     ).toBeVisible();
@@ -43,7 +43,7 @@ test.describe("Staff > journal d'activite", () => {
       ],
     });
 
-    const res = await page.request.get("/api/staff/activity?type=ORG_CREATED&pageSize=200");
+    const res = await page.request.get("/api/platform/activity?type=ORG_CREATED&pageSize=200");
     expect(res.status()).toBe(200);
     const body = await res.json();
     const activities = body.activities as { type: string }[];
@@ -78,7 +78,7 @@ test.describe("Staff > journal d'activite", () => {
     });
 
     const res = await page.request.get(
-      `/api/staff/activity?staffActor=true&orgId=${orgId}&pageSize=200`,
+      `/api/platform/activity?staffActor=true&orgId=${orgId}&pageSize=200`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -106,7 +106,7 @@ test.describe("Staff > journal d'activite", () => {
     await getDb().activityLog.createMany({ data: seedData });
 
     const page1 = await page.request.get(
-      `/api/staff/activity?type=USER_LOGIN&orgId=${orgId}&page=1&pageSize=50`,
+      `/api/platform/activity?type=USER_LOGIN&orgId=${orgId}&page=1&pageSize=50`,
     );
     expect(page1.status()).toBe(200);
     const body1 = await page1.json();
@@ -114,7 +114,7 @@ test.describe("Staff > journal d'activite", () => {
     expect(body1.total).toBeGreaterThanOrEqual(55);
 
     const page2 = await page.request.get(
-      `/api/staff/activity?type=USER_LOGIN&orgId=${orgId}&page=2&pageSize=50`,
+      `/api/platform/activity?type=USER_LOGIN&orgId=${orgId}&page=2&pageSize=50`,
     );
     expect(page2.status()).toBe(200);
     const body2 = await page2.json();
@@ -129,7 +129,7 @@ test.describe("Staff > journal d'activite", () => {
   test("Type invalide -> 400 INVALID_TYPE", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "activity-bad-type" });
 
-    const res = await page.request.get("/api/staff/activity?type=bogus");
+    const res = await page.request.get("/api/platform/activity?type=bogus");
     expect(res.status()).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("INVALID_TYPE");

@@ -51,7 +51,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       profile: true,
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations`,
       { data: { userId: target.id, categoryId: ctx.categoryId } },
     );
     expect(res.status()).toBe(403);
@@ -66,7 +66,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-reg-del",
     });
     const res = await page.request.delete(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}`,
     );
     expect(res.status()).toBe(403);
   });
@@ -80,7 +80,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-block",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/block-email`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/block-email`,
       { data: {} },
     );
     expect(res.status()).toBe(403);
@@ -95,7 +95,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-export",
     });
     const res = await page.request.get(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/export`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/export`,
     );
     expect(res.status()).toBe(403);
   });
@@ -109,7 +109,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-cat",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/categories`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/categories`,
       { data: { name: "VIP", color: "#ff0000", number: 99 } },
     );
     expect(res.status()).toBe(403);
@@ -124,7 +124,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-invite",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/members`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/members`,
       { data: { email: `nope-${Date.now()}@v2-11-e2e.test`, role: "VIEWER" } },
     );
     expect(res.status()).toBe(403);
@@ -139,7 +139,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-settings",
     });
     const res = await page.request.patch(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/settings`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/settings`,
       { data: { contactEmail: "x@x.test" } },
     );
     expect(res.status()).toBe(403);
@@ -154,7 +154,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-op-archive",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/archive`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/archive`,
     );
     expect(res.status()).toBe(403);
   });
@@ -170,7 +170,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-printer-scan",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/scan/verify`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/scan/verify`,
       { data: { payload: ctx.regId } },
     );
     expect(res.status()).toBe(403);
@@ -185,7 +185,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-printer-detail",
     });
     const res = await page.request.get(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}`,
     );
     expect(res.status()).toBe(403);
   });
@@ -199,7 +199,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-printer-approve",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
     );
     expect(res.status()).toBe(403);
   });
@@ -215,7 +215,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-viewer-approve",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
     );
     expect(res.status()).toBe(403);
   });
@@ -229,7 +229,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-viewer-scan",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/scan/verify`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/scan/verify`,
       { data: { payload: ctx.regId } },
     );
     expect(res.status()).toBe(403);
@@ -244,7 +244,7 @@ test.describe("Event RBAC matrix (ADMIN / OPERATOR / PRINTER / VIEWER)", () => {
       scope: "rbac-viewer-detail",
     });
     const res = await page.request.get(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}`,
     );
     expect(res.status()).toBe(403);
   });
@@ -267,7 +267,7 @@ test.describe("Event RBAC inheritance (org -> event)", () => {
       scope: "rbac-inherit-owner",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
     );
     expect(res.status()).toBe(200);
     const fresh = await getDb().registration.findUnique({
@@ -286,7 +286,7 @@ test.describe("Event RBAC inheritance (org -> event)", () => {
       scope: "rbac-inherit-manager",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
     );
     expect(res.status()).toBe(200);
   });
@@ -301,7 +301,7 @@ test.describe("Event RBAC inheritance (org -> event)", () => {
       scope: "rbac-inherit-auditor",
     });
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
     );
     expect(res.status()).toBe(403);
   });
@@ -316,7 +316,7 @@ test.describe("Event RBAC inheritance (org -> event)", () => {
     });
     await loginAs(page, staff);
     const res = await page.request.post(
-      `/api/admin/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
+      `/api/org/${ctx.orgId}/events/${ctx.eventId}/registrations/${ctx.regId}/approve`,
     );
     expect(res.status()).toBe(200);
 

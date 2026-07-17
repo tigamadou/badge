@@ -35,14 +35,14 @@ export function MemberTable({
   const [inviting, setInviting] = useState(false);
 
   async function refresh() {
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/members`);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/members`);
     const json = await res.json();
     setMembers(json.members);
     setInviting(false);
   }
 
   async function setRole(m: Member, role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER") {
-    await fetch(`/api/admin/${orgId}/events/${eventId}/members/${m.id}`, {
+    await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role }),
@@ -52,7 +52,7 @@ export function MemberTable({
 
   async function remove(m: Member) {
     if (!confirm(`Retirer ${m.user.email} ?`)) return;
-    await fetch(`/api/admin/${orgId}/events/${eventId}/members/${m.id}`, { method: "DELETE" });
+    await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, { method: "DELETE" });
     refresh();
   }
 

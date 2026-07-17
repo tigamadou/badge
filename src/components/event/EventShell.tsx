@@ -25,7 +25,7 @@ export function EventShell({
   user: { name: string; email: string };
   children: React.ReactNode;
 }) {
-  const base = `/admin/${org.id}/events/${event.id}`;
+  const base = `/org/${org.id}/events/${event.id}`;
   const nav: NavEntry[] = [
     { href: base, label: "Tableau de bord", icon: "layout-dashboard", exact: true },
     { href: `${base}/registrations`, label: "Inscriptions", icon: "user-check" },
@@ -44,7 +44,7 @@ export function EventShell({
         <div className="mb-3 px-2 text-base font-semibold text-white">Badge</div>
         <div className="mb-3 px-2">
           <Link
-            href={`/admin/${org.id}/events`}
+            href={`/org/${org.id}/events`}
             className="mb-1.5 inline-flex items-center gap-1 text-xs text-slate-400 transition-colors hover:text-slate-200"
           >
             <ArrowLeft size={13} strokeWidth={1.5} /> {org.name}

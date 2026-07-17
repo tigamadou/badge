@@ -32,7 +32,7 @@ test.describe("Event members", () => {
     const inviteEmail = `e2e-invite-new-${Date.now()}@v2-11-e2e.test`;
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/members`,
+      `/api/org/${orgId}/events/${eventId}/members`,
       {
         data: { email: inviteEmail, name: "Mariam Kone", role: "OPERATOR" },
       },
@@ -91,7 +91,7 @@ test.describe("Event members", () => {
     const beforeCount = await getDb().user.count();
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/members`,
+      `/api/org/${orgId}/events/${eventId}/members`,
       {
         data: { email: existing.email, role: "VIEWER" },
       },
@@ -125,7 +125,7 @@ test.describe("Event members", () => {
     });
 
     const res = await page.request.delete(
-      `/api/admin/${orgId}/events/${eventId}/members/${membership.id}`,
+      `/api/org/${orgId}/events/${eventId}/members/${membership.id}`,
     );
     expect(res.status()).toBe(204);
 
@@ -153,7 +153,7 @@ test.describe("Event members", () => {
       data: { userId: m1.id, eventId, role: "OPERATOR" },
     });
 
-    await page.goto(`/admin/${orgId}/events/${eventId}/members`);
+    await page.goto(`/org/${orgId}/events/${eventId}/members`);
     await expect(page.getByRole("heading", { name: /membres/i })).toBeVisible();
     // En-tetes attendues.
     await expect(page.getByRole("columnheader", { name: /nom/i })).toBeVisible();

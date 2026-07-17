@@ -25,7 +25,7 @@ async function makeStaff(staffRole: StaffRoleStr = "STAFF_ADMIN") {
   return u;
 }
 
-describe("GET /api/staff/organizations", () => {
+describe("GET /api/platform/organizations", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.eventMembership.deleteMany();
@@ -43,8 +43,8 @@ describe("GET /api/staff/organizations", () => {
       data: { name: "Archived", slug: "arch", archived: true, archivedAt: new Date() },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -63,8 +63,8 @@ describe("GET /api/staff/organizations", () => {
       data: { name: "Archived", slug: "arch", archived: true, archivedAt: new Date() },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations?archived=true");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations?archived=true");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -77,8 +77,8 @@ describe("GET /api/staff/organizations", () => {
     await prisma.organization.create({ data: { name: "Acme Corp", slug: "acme" } });
     await prisma.organization.create({ data: { name: "Other Inc", slug: "other" } });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations?q=Acme");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations?q=Acme");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -91,8 +91,8 @@ describe("GET /api/staff/organizations", () => {
     await prisma.organization.create({ data: { name: "Acme Corp", slug: "acme" } });
     await prisma.organization.create({ data: { name: "Other Inc", slug: "other" } });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations?q=other");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations?q=other");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -108,9 +108,9 @@ describe("GET /api/staff/organizations", () => {
       });
     }
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
+    const { GET } = await import("@/app/api/platform/organizations/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations?page=2&pageSize=2",
+      "http://localhost/api/platform/organizations?page=2&pageSize=2",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
@@ -143,8 +143,8 @@ describe("GET /api/staff/organizations", () => {
     // Re-arm session (the membership user creation does not change session)
     withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -156,8 +156,8 @@ describe("GET /api/staff/organizations", () => {
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -165,8 +165,8 @@ describe("GET /api/staff/organizations", () => {
   it("rejects unauthenticated requests with 401", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
@@ -175,8 +175,8 @@ describe("GET /api/staff/organizations", () => {
     await makeStaff("SUPER_ADMIN");
     await prisma.organization.create({ data: { name: "Active", slug: "active" } });
 
-    const { GET } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations");
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
   });

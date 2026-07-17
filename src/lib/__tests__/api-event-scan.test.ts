@@ -83,7 +83,7 @@ describe("POST /scan/verify", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/scan/verify/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
@@ -122,7 +122,7 @@ describe("POST /scan/verify", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/scan/verify/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
@@ -166,7 +166,7 @@ describe("POST /scan/verify", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/scan/verify/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
@@ -203,7 +203,7 @@ describe("POST /scan/verify", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/scan/verify/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",

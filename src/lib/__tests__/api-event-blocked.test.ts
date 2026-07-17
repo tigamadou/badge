@@ -57,9 +57,9 @@ describe("/blocked-emails", () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
         method: "POST",
         body: JSON.stringify({ email: "spam@x.test", reason: "spam" }),
         headers: { "content-type": "application/json" },
@@ -77,10 +77,10 @@ describe("/blocked-emails", () => {
     expect((log?.details as { action?: string } | null)?.action).toBe("blocked-email-added");
 
     const { DELETE } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-emails/[id]/route"
     );
     const r2 = await DELETE(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails/${json.blocked.id}`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails/${json.blocked.id}`, {
         method: "DELETE",
       }),
       {
@@ -98,9 +98,9 @@ describe("/blocked-emails", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
         method: "POST",
         body: JSON.stringify({ email: "dup@x.test" }),
         headers: { "content-type": "application/json" },
@@ -132,9 +132,9 @@ describe("/blocked-emails", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
         method: "POST",
         body: JSON.stringify({ email: "x@x.test" }),
         headers: { "content-type": "application/json" },
@@ -153,10 +153,10 @@ describe("/blocked-documents", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-documents/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
     );
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-documents`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, {
         method: "POST",
         body: JSON.stringify({ documentNumber: "DOC-XX", reason: "faux" }),
         headers: { "content-type": "application/json" },
@@ -173,11 +173,11 @@ describe("/blocked-documents", () => {
 
     const created = await prisma.blockedDocument.findFirst({ where: { eventId: event.id } });
     const { DELETE } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-documents/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/[id]/route"
     );
     const r2 = await DELETE(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/blocked-documents/${created!.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents/${created!.id}`,
         { method: "DELETE" },
       ),
       {
@@ -215,11 +215,11 @@ describe("/blocked-documents", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-documents/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
     );
     const res = await POST(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/blocked-documents`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`,
         {
           method: "POST",
           body: JSON.stringify({ documentNumber: "D1" }),

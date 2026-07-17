@@ -22,12 +22,12 @@ export function OrgShell({
   children: React.ReactNode;
 }) {
   const nav: NavEntry[] = [
-    { href: `/admin/${org.id}`, label: "Tableau de bord", icon: "layout-dashboard", exact: true },
-    { href: `/admin/${org.id}/events`, label: "Événements", icon: "calendar" },
-    { href: `/admin/${org.id}/members`, label: "Membres", icon: "users" },
-    { href: `/admin/${org.id}/templates`, label: "Modèles catégories", icon: "tags" },
-    { href: `/admin/${org.id}/settings`, label: "Paramètres", icon: "settings" },
-    { href: `/admin/${org.id}/activity`, label: "Journal", icon: "scroll-text" },
+    { href: `/org/${org.id}`, label: "Tableau de bord", icon: "layout-dashboard", exact: true },
+    { href: `/org/${org.id}/events`, label: "Événements", icon: "calendar" },
+    { href: `/org/${org.id}/members`, label: "Membres", icon: "users" },
+    { href: `/org/${org.id}/templates`, label: "Modèles catégories", icon: "tags" },
+    { href: `/org/${org.id}/settings`, label: "Paramètres", icon: "settings" },
+    { href: `/org/${org.id}/activity`, label: "Journal", icon: "scroll-text" },
   ];
 
   return (

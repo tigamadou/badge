@@ -31,7 +31,7 @@ test.describe("Event settings", () => {
     const newLocation = "Yamoussoukro";
     const newDate = new Date(Date.now() + 60 * 24 * 3600 * 1000).toISOString();
 
-    const res = await page.request.patch(`/api/admin/${orgId}/events/${eventId}`, {
+    const res = await page.request.patch(`/api/org/${orgId}/events/${eventId}`, {
       data: {
         title: newTitle,
         location: newLocation,
@@ -70,7 +70,7 @@ test.describe("Event settings", () => {
     await loginAs(page, admin);
 
     const res = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/settings`,
+      `/api/org/${orgId}/events/${eventId}/settings`,
       {
         data: {
           contactEmail: "contact@e2e-event.test",
@@ -105,7 +105,7 @@ test.describe("Event settings", () => {
     await loginAs(page, admin);
 
     const res = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/settings/badge`,
+      `/api/org/${orgId}/events/${eventId}/settings/badge`,
       {
         data: { badgeTemplateId: "default-v1" },
       },
@@ -141,7 +141,7 @@ test.describe("Event settings", () => {
     });
 
     const res = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/settings/badge`,
+      `/api/org/${orgId}/events/${eventId}/settings/badge`,
       {
         data: { badgeTemplateId: null },
       },
@@ -171,7 +171,7 @@ test.describe("Event settings", () => {
     await loginAs(page, admin);
 
     const res = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/settings`,
+      `/api/org/${orgId}/events/${eventId}/settings`,
       {
         data: { smtpHost: "smtp.example.com" },
       },

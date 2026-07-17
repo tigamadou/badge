@@ -53,10 +53,10 @@ describe("ADMIN journey (smoke)", () => {
 
     // 1. OWNER cree une categorie (heritage OWNER -> ADMIN sur l'event)
     const { POST: createCat } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/categories/route"
+      "@/app/api/org/[orgId]/events/[eventId]/categories/route"
     );
     const r1 = await createCat(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories`, {
         method: "POST",
         body: JSON.stringify({ name: "VIP", color: "#ff0000", number: 1 }),
         headers: { "content-type": "application/json" },
@@ -86,10 +86,10 @@ describe("ADMIN journey (smoke)", () => {
       },
     });
     const { POST: createReg } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/route"
     );
     const r2 = await createReg(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
         method: "POST",
         body: JSON.stringify({
           categoryId: cat!.id,
@@ -106,11 +106,11 @@ describe("ADMIN journey (smoke)", () => {
 
     // 3. Print badge
     const { POST: print } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route"
     );
     const r3 = await print(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/registrations/${regId}/print`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/registrations/${regId}/print`,
         { method: "POST" },
       ),
       {
@@ -193,10 +193,10 @@ describe("OPERATOR restrictions (smoke)", () => {
 
     // scan : autorise (OPERATOR a permission BADGE_SCAN)
     const { POST: scan } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/scan/verify/route"
+      "@/app/api/org/[orgId]/events/[eventId]/scan/verify/route"
     );
     const rscan = await scan(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/scan/verify`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/scan/verify`, {
         method: "POST",
         body: JSON.stringify({ payload: reg.id }),
         headers: { "content-type": "application/json" },
@@ -208,11 +208,11 @@ describe("OPERATOR restrictions (smoke)", () => {
     // ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur registration.approve.
     // L'ancien comportement "OPERATOR cannot approve" est supprime.
     const { POST: approve } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/approve/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route"
     );
     const rapp = await approve(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/registrations/${reg.id}/approve`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/registrations/${reg.id}/approve`,
         { method: "POST" },
       ),
       {
@@ -223,11 +223,11 @@ describe("OPERATOR restrictions (smoke)", () => {
 
     // PATCH registration : 403
     const { PATCH } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/[regId]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route"
     );
     const rpatch = await PATCH(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/registrations/${reg.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/registrations/${reg.id}`,
         {
           method: "PATCH",
           body: JSON.stringify({ firstName: "X" }),
@@ -242,11 +242,11 @@ describe("OPERATOR restrictions (smoke)", () => {
 
     // DELETE category : 403
     const { DELETE } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/categories/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/categories/[id]/route"
     );
     const rdel = await DELETE(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/categories/${cat.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/categories/${cat.id}`,
         { method: "DELETE" },
       ),
       {
@@ -285,9 +285,9 @@ describe("Staff acting on event (smoke)", () => {
     });
     await withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/route");
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
     const res = await PATCH(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
         method: "PATCH",
         body: JSON.stringify({ title: "Renamed" }),
         headers: { "content-type": "application/json" },

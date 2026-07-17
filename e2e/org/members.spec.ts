@@ -23,7 +23,7 @@ test.describe("T16 Org members", () => {
     await mailpit.clear();
 
     const inviteeEmail = `e2e-invitee-new-${Date.now()}@v2-11-e2e.test`;
-    const res = await request.post(`/api/admin/${orgId}/members`, {
+    const res = await request.post(`/api/org/${orgId}/members`, {
       data: { email: inviteeEmail, name: "Invitee Manager", role: "MANAGER" },
     });
     expect(res.status()).toBe(201);
@@ -72,7 +72,7 @@ test.describe("T16 Org members", () => {
 
     await loginAs(page, owner);
 
-    const res = await request.post(`/api/admin/${orgId}/members`, {
+    const res = await request.post(`/api/org/${orgId}/members`, {
       data: { email: existing.email, name: existing.name, role: "AUDITOR" },
     });
     // Le route renvoie 201 pour nouveau + 200 pour deja-existant alreadyMember,
@@ -112,7 +112,7 @@ test.describe("T16 Org members", () => {
     });
 
     const res = await request.patch(
-      `/api/admin/${orgId}/members/${manager.id}`,
+      `/api/org/${orgId}/members/${manager.id}`,
       { data: { role: "AUDITOR" } },
     );
     expect(res.status()).toBe(200);
@@ -138,7 +138,7 @@ test.describe("T16 Org members", () => {
     await loginAs(page, owner);
 
     const res = await request.delete(
-      `/api/admin/${orgId}/members/${owner.id}`,
+      `/api/org/${orgId}/members/${owner.id}`,
     );
     expect(res.status()).toBe(409);
     const json = await res.json();
@@ -157,7 +157,7 @@ test.describe("T16 Org members", () => {
     await loginAs(page, owner);
 
     const res = await request.patch(
-      `/api/admin/${orgId}/members/${owner.id}`,
+      `/api/org/${orgId}/members/${owner.id}`,
       { data: { role: "MANAGER" } },
     );
     expect(res.status()).toBe(409);

@@ -4,11 +4,11 @@ import { LogOut } from "lucide-react";
 import { SidebarNav, type NavEntry } from "@/components/admin/SidebarNav";
 
 const NAV: NavEntry[] = [
-  { href: "/staff", label: "Tableau de bord", icon: "layout-dashboard", exact: true },
-  { href: "/staff/organizations", label: "Organisations", icon: "building-2" },
-  { href: "/staff/users", label: "Utilisateurs", icon: "users" },
-  { href: "/staff/settings", label: "Paramètres", icon: "settings" },
-  { href: "/staff/activity", label: "Journal", icon: "scroll-text" },
+  { href: "/platform", label: "Tableau de bord", icon: "layout-dashboard", exact: true },
+  { href: "/platform/organizations", label: "Organisations", icon: "building-2" },
+  { href: "/platform/users", label: "Utilisateurs", icon: "users" },
+  { href: "/platform/settings", label: "Paramètres", icon: "settings" },
+  { href: "/platform/activity", label: "Journal", icon: "scroll-text" },
 ];
 
 const ROLE_LABEL: Record<StaffRole, string> = {

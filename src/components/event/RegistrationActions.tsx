@@ -24,7 +24,7 @@ export function RegistrationActions({
 
   async function approve() {
     setBusy(true);
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${registrationId}/approve`, { method: "POST" });
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${registrationId}/approve`, { method: "POST" });
     setBusy(false);
     onChanged();
   }
@@ -33,7 +33,7 @@ export function RegistrationActions({
     e.preventDefault();
     if (!reason) return;
     setBusy(true);
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${registrationId}/reject`, {
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${registrationId}/reject`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reason, details: details || undefined }),
@@ -45,7 +45,7 @@ export function RegistrationActions({
 
   async function print() {
     setBusy(true);
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${registrationId}/print`, { method: "POST" });
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${registrationId}/print`, { method: "POST" });
     setBusy(false);
     onChanged();
   }

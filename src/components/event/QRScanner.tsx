@@ -35,7 +35,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
 
   async function verifyPayload(payload: string) {
     setBusy(true);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/scan/verify`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/scan/verify`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ payload }),

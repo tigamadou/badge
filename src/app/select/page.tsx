@@ -30,13 +30,13 @@ export default async function SelectPage() {
   });
 
   if (!ctx.isStaff && orgs.length === 1) {
-    redirect(`/admin/${orgs[0].id}`);
+    redirect(`/org/${orgs[0].id}`);
   }
   if (!ctx.isStaff && orgs.length === 0) {
     redirect("/profile?message=no-org");
   }
   if (ctx.isStaff && orgs.length === 0) {
-    redirect("/staff");
+    redirect("/platform");
   }
 
   return (
@@ -49,7 +49,7 @@ export default async function SelectPage() {
           {orgs.map((o) => (
             <PickCard
               key={o.id}
-              href={`/admin/${o.id}`}
+              href={`/org/${o.id}`}
               logo={<OrgLogo name={o.name} />}
               title={o.name}
               subtitle={o.slug}
@@ -57,7 +57,7 @@ export default async function SelectPage() {
             />
           ))}
           {ctx.isStaff && (
-            <PickCardDashed href="/staff" icon="shield" label="Toutes les organisations · Mode staff" />
+            <PickCardDashed href="/platform" icon="shield" label="Toutes les organisations · Mode staff" />
           )}
         </div>
       </div>

@@ -27,7 +27,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
 
   async function load() {
     setBusy(true);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/registrations?status=APPROVED&limit=100`);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations?status=APPROVED&limit=100`);
     const json = await res.json();
     let r: Row[] = json.registrations ?? [];
     if (filter === "printed") r = r.filter((x) => x.badgePrinted);
@@ -52,7 +52,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
 
   async function batchPrint() {
     if (selected.size === 0) return;
-    await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/print`, {
+    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/print`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ids: Array.from(selected) }),
@@ -64,7 +64,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
   function openBatchPdf() {
     if (selected.size === 0) return;
     const ids = Array.from(selected).join(",");
-    window.open(`/admin/${orgId}/events/${eventId}/badges/print?ids=${encodeURIComponent(ids)}`, "_blank");
+    window.open(`/org/${orgId}/events/${eventId}/badges/print?ids=${encodeURIComponent(ids)}`, "_blank");
   }
 
   return (
@@ -137,7 +137,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/admin/${orgId}/events/${eventId}/badges/${r.id}`}
+                    href={`/org/${orgId}/events/${eventId}/badges/${r.id}`}
                     className="inline-flex items-center gap-1 text-[13px] font-medium text-green-600 hover:underline"
                   >
                     <Icon name="eye" size={14} /> Voir

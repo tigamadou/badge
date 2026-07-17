@@ -23,7 +23,7 @@ test.describe("Event archive / restore", () => {
     await loginAs(page, owner);
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/archive`,
+      `/api/org/${orgId}/events/${eventId}/archive`,
     );
     expect(res.status()).toBe(200);
 
@@ -55,7 +55,7 @@ test.describe("Event archive / restore", () => {
     });
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/restore`,
+      `/api/org/${orgId}/events/${eventId}/restore`,
     );
     expect(res.status()).toBe(200);
 
@@ -119,7 +119,7 @@ test.describe("Event archive / restore", () => {
     });
 
     const response = await page.goto(
-      `/admin/${orgId}/events/${eventId}/registrations`,
+      `/org/${orgId}/events/${eventId}/registrations`,
     );
     expect(response?.status()).toBeLessThan(400);
     await expect(page.getByRole("heading", { name: /inscriptions/i })).toBeVisible();
@@ -140,7 +140,7 @@ test.describe("Event archive / restore", () => {
     await loginAs(page, user);
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/archive`,
+      `/api/org/${orgId}/events/${eventId}/archive`,
     );
     expect(res.status()).toBe(403);
   });

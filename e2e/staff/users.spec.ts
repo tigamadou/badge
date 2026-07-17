@@ -23,7 +23,7 @@ test.describe("Staff > users CRUD", () => {
     await mailpit.clear();
 
     const email = `e2e-client-${Date.now()}@v2-11-e2e.test`;
-    const res = await page.request.post("/api/staff/users", {
+    const res = await page.request.post("/api/platform/users", {
       data: {
         email,
         name: "Client E2E",
@@ -63,7 +63,7 @@ test.describe("Staff > users CRUD", () => {
     await mailpit.clear();
 
     const email = `e2e-staff-${Date.now()}@v2-11-e2e.test`;
-    const res = await page.request.post("/api/staff/users", {
+    const res = await page.request.post("/api/platform/users", {
       data: {
         email,
         name: "Staff E2E",
@@ -98,7 +98,7 @@ test.describe("Staff > users CRUD", () => {
     });
 
     const res = await page.request.post(
-      `/api/staff/users/${target.id}/reset-password`,
+      `/api/platform/users/${target.id}/reset-password`,
     );
     expect(res.status()).toBe(200);
 
@@ -123,7 +123,7 @@ test.describe("Staff > users CRUD", () => {
     const target = await createTestUser({ scope: "users-archive-target", verified: true });
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "users-archive" });
 
-    const res = await page.request.delete(`/api/staff/users/${target.id}`);
+    const res = await page.request.delete(`/api/platform/users/${target.id}`);
     expect(res.status()).toBe(204);
 
     const after = await getDb().user.findUnique({
@@ -165,7 +165,7 @@ test.describe("Staff > users CRUD", () => {
 
       await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "lone-super-actor" });
 
-      const res = await page.request.delete(`/api/staff/users/${lone.id}`);
+      const res = await page.request.delete(`/api/platform/users/${lone.id}`);
       expect(res.status()).toBe(409);
       const body = await res.json();
       expect(body.error).toBe("LAST_SUPER_ADMIN");
@@ -185,7 +185,7 @@ test.describe("Staff > users CRUD", () => {
     const target = await createTestStaff({ role: "STAFF_SUPPORT", scope: "users-promote-target" });
     await loginAsStaff(page, { role: "SUPER_ADMIN", scope: "users-promote" });
 
-    const res = await page.request.patch(`/api/staff/users/${target.id}`, {
+    const res = await page.request.patch(`/api/platform/users/${target.id}`, {
       data: { staffRole: "STAFF_ADMIN" },
     });
     expect(res.status()).toBe(200);
@@ -203,7 +203,7 @@ test.describe("Staff > users CRUD", () => {
   test("Cannot change self role (PATCH son propre staffRole -> 403)", async ({ page }) => {
     const me = await loginAsStaff(page, { role: "SUPER_ADMIN", scope: "users-self" });
 
-    const res = await page.request.patch(`/api/staff/users/${me.id}`, {
+    const res = await page.request.patch(`/api/platform/users/${me.id}`, {
       data: { staffRole: "STAFF_OBSERVER" },
     });
     expect(res.status()).toBe(403);

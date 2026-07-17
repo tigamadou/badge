@@ -30,7 +30,7 @@ export function BadgeBatchPanel({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const evtRes = await fetch(`/api/admin/${orgId}/events/${eventId}`);
+      const evtRes = await fetch(`/api/org/${orgId}/events/${eventId}`);
       if (!evtRes.ok) return;
       const evtJson = await evtRes.json();
       if (cancelled) return;
@@ -40,7 +40,7 @@ export function BadgeBatchPanel({
         logo: evtJson.event.logo ?? null,
       });
       for (const id of ids) {
-        const r = await fetch(`/api/admin/${orgId}/events/${eventId}/registrations/${id}`);
+        const r = await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${id}`);
         if (!r.ok) continue;
         const j = await r.json();
         const reg = j.registration;

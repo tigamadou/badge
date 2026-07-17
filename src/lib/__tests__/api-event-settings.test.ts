@@ -33,7 +33,7 @@ async function seedAdmin() {
   return { u, org, event };
 }
 
-describe("PATCH /api/admin/[orgId]/events/[eventId]", () => {
+describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.registration.deleteMany();
@@ -49,8 +49,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]", () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
       body: JSON.stringify({
         title: "New",
@@ -74,8 +74,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]", () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
       body: JSON.stringify({ slug: "new-slug" }),
       headers: { "content-type": "application/json" },
@@ -96,8 +96,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]", () => {
     });
     await withSession({ id: s.id, email: s.email, name: s.name, isStaff: true });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
       body: JSON.stringify({ slug: `new-slug-${stamp}` }),
       headers: { "content-type": "application/json" },
@@ -111,8 +111,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]", () => {
   it("toggle registrationOpen=true emits EVENT_REGISTRATION_OPENED log", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
       body: JSON.stringify({ registrationOpen: true }),
       headers: { "content-type": "application/json" },
@@ -132,8 +132,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]", () => {
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
       body: JSON.stringify({ title: "x" }),
       headers: { "content-type": "application/json" },
@@ -155,7 +155,7 @@ async function cleanupSettings() {
   vi.mocked(getServerSession).mockReset();
 }
 
-describe("GET /api/admin/[orgId]/events/[eventId]/settings", () => {
+describe("GET /api/org/[orgId]/events/[eventId]/settings", () => {
   beforeEach(cleanupSettings);
 
   it("returns event settings + resolved cascade preview", async () => {
@@ -181,8 +181,8 @@ describe("GET /api/admin/[orgId]/events/[eventId]/settings", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`);
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/settings/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/settings`);
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     const json = await res.json();
 
@@ -195,15 +195,15 @@ describe("GET /api/admin/[orgId]/events/[eventId]/settings", () => {
   });
 });
 
-describe("PATCH /api/admin/[orgId]/events/[eventId]/settings", () => {
+describe("PATCH /api/org/[orgId]/events/[eventId]/settings", () => {
   beforeEach(cleanupSettings);
 
   it("upserts EventSettings and audits EVENT_SETTINGS_UPDATED", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/settings/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/settings`, {
       method: "PATCH",
       body: JSON.stringify({ contactEmail: "ce@x.test", contactPhone: "+225 0101" }),
       headers: { "content-type": "application/json" },
@@ -223,8 +223,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]/settings", () => {
     await prisma.eventSettings.create({ data: { eventId: event.id, contactEmail: "old@x.test" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/settings/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/settings`, {
       method: "PATCH",
       body: JSON.stringify({ contactEmail: null }),
       headers: { "content-type": "application/json" },
@@ -238,8 +238,8 @@ describe("PATCH /api/admin/[orgId]/events/[eventId]/settings", () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/events/[eventId]/settings/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/settings`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/settings/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/settings`, {
       method: "PATCH",
       body: JSON.stringify({ smtpFrom: "leak@x.test", smtpHost: "evil.smtp", smtpPassword: "leak" }),
       headers: { "content-type": "application/json" },

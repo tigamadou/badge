@@ -45,15 +45,15 @@ async function cleanup() {
   vi.mocked(getServerSession).mockReset();
 }
 
-describe("POST /api/admin/[orgId]/events/[eventId]/categories", () => {
+describe("POST /api/org/[orgId]/events/[eventId]/categories", () => {
   beforeEach(cleanup);
 
   it("creates a category and writes audit", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories`, {
       method: "POST",
       body: JSON.stringify({ name: "VIP", color: "#ff0000", number: 1, neutralBadge: false, anonymous: false }),
       headers: { "content-type": "application/json" },
@@ -74,8 +74,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/categories", () => {
     await prisma.category.create({ data: { eventId: event.id, name: "A", color: "#ffffff", number: 1 } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories`, {
       method: "POST",
       body: JSON.stringify({ name: "B", color: "#000000", number: 1 }),
       headers: { "content-type": "application/json" },
@@ -96,8 +96,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/categories", () => {
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories`, {
       method: "POST",
       body: JSON.stringify({ name: "X", color: "#ffffff", number: 1 }),
       headers: { "content-type": "application/json" },
@@ -107,7 +107,7 @@ describe("POST /api/admin/[orgId]/events/[eventId]/categories", () => {
   });
 });
 
-describe("DELETE /api/admin/[orgId]/events/[eventId]/categories/[id]", () => {
+describe("DELETE /api/org/[orgId]/events/[eventId]/categories/[id]", () => {
   beforeEach(cleanup);
 
   it("refuses deletion when registrations linked (409 CATEGORY_HAS_REGISTRATIONS)", async () => {
@@ -139,8 +139,8 @@ describe("DELETE /api/admin/[orgId]/events/[eventId]/categories/[id]", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { DELETE } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/[id]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories/${cat.id}`, { method: "DELETE" });
+    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/[id]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories/${cat.id}`, { method: "DELETE" });
     const res = await DELETE(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, id: cat.id } as never),
     });
@@ -155,8 +155,8 @@ describe("DELETE /api/admin/[orgId]/events/[eventId]/categories/[id]", () => {
     const cat = await prisma.category.create({ data: { eventId: event.id, name: "VIP", color: "#000000", number: 1 } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { DELETE } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/[id]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories/${cat.id}`, { method: "DELETE" });
+    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/[id]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories/${cat.id}`, { method: "DELETE" });
     const res = await DELETE(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, id: cat.id } as never),
     });
@@ -166,7 +166,7 @@ describe("DELETE /api/admin/[orgId]/events/[eventId]/categories/[id]", () => {
   });
 });
 
-describe("POST /api/admin/[orgId]/events/[eventId]/categories/import-templates", () => {
+describe("POST /api/org/[orgId]/events/[eventId]/categories/import-templates", () => {
   beforeEach(cleanup);
 
   it("copies templates to categories, renumbering on collision", async () => {
@@ -181,8 +181,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/categories/import-templates",
 
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/import-templates/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories/import-templates`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/import-templates/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories/import-templates`, {
       method: "POST",
       body: JSON.stringify({ templateIds: [t1.id, t2.id] }),
       headers: { "content-type": "application/json" },
@@ -204,8 +204,8 @@ describe("POST /api/admin/[orgId]/events/[eventId]/categories/import-templates",
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/categories/import-templates/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/categories/import-templates`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/categories/import-templates/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/categories/import-templates`, {
       method: "POST",
       body: JSON.stringify({ templateIds: [t.id] }),
       headers: { "content-type": "application/json" },
@@ -252,11 +252,11 @@ describe("Category reassignment flow (critere d'acceptation #5)", () => {
 
     // 1. DELETE initial -> 409 (CATEGORY_HAS_REGISTRATIONS)
     const { DELETE } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/categories/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/categories/[id]/route"
     );
     const r1 = await DELETE(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/categories/${catFrom.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/categories/${catFrom.id}`,
         { method: "DELETE" },
       ),
       {
@@ -267,11 +267,11 @@ describe("Category reassignment flow (critere d'acceptation #5)", () => {
 
     // 2. PATCH reassignToCategoryId -> 200, deplace les inscriptions
     const { PATCH } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/categories/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/categories/[id]/route"
     );
     const r2 = await PATCH(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/categories/${catFrom.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/categories/${catFrom.id}`,
         {
           method: "PATCH",
           body: JSON.stringify({ reassignToCategoryId: catTo.id }),
@@ -287,7 +287,7 @@ describe("Category reassignment flow (critere d'acceptation #5)", () => {
     // 3. DELETE -> 204
     const r3 = await DELETE(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/categories/${catFrom.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/categories/${catFrom.id}`,
         { method: "DELETE" },
       ),
       {

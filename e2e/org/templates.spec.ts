@@ -20,7 +20,7 @@ test.describe("T17 Org category templates", () => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-create" });
     await loginAs(page, owner);
 
-    const res = await request.post(`/api/admin/${orgId}/templates`, {
+    const res = await request.post(`/api/org/${orgId}/templates`, {
       data: { name: "Tpl OWNER", color: "#FF5733", number: 1 },
     });
     expect(res.status()).toBe(201);
@@ -35,7 +35,7 @@ test.describe("T17 Org category templates", () => {
     });
   });
 
-  // Note T00.1 : la POST templates est OWNER-only (source de verite : src/app/api/admin/[orgId]/templates/route.ts).
+  // Note T00.1 : la POST templates est OWNER-only (source de verite : src/app/api/org/[orgId]/templates/route.ts).
   // La spec du plan indiquait "MANAGER cree CategoryTemplate" -- on adapte ici a la realite
   // du code : MANAGER ne peut PAS creer, le serveur retourne 403. Le cas RBAC est aussi
   // couvert dans rbac.spec.ts. Voir le livrable du rapport pour le flag.
@@ -48,7 +48,7 @@ test.describe("T17 Org category templates", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.post(`/api/admin/${orgId}/templates`, {
+    const res = await request.post(`/api/org/${orgId}/templates`, {
       data: { name: "Tpl MANAGER", color: "#00FF00", number: 5 },
     });
     expect(res.status()).toBe(403);
@@ -65,7 +65,7 @@ test.describe("T17 Org category templates", () => {
     await loginAs(page, owner);
 
     const res = await request.patch(
-      `/api/admin/${orgId}/templates/${tpl.id}`,
+      `/api/org/${orgId}/templates/${tpl.id}`,
       { data: { name: "New name", color: "#abcdef" } },
     );
     expect(res.status()).toBe(200);
@@ -94,7 +94,7 @@ test.describe("T17 Org category templates", () => {
     await loginAs(page, owner);
 
     const res = await request.delete(
-      `/api/admin/${orgId}/templates/${tpl.id}`,
+      `/api/org/${orgId}/templates/${tpl.id}`,
     );
     expect(res.status()).toBe(204);
 
@@ -122,7 +122,7 @@ test.describe("T17 Org category templates", () => {
     });
     await loginAs(page, owner);
 
-    await page.goto(`/admin/${orgId}/templates`);
+    await page.goto(`/org/${orgId}/templates`);
     await expect(page.getByRole("heading", { name: /mod[èe]les de cat[ée]gories/i })).toBeVisible();
     await expect(page.getByText("Tpl visible")).toBeVisible();
 

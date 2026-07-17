@@ -41,7 +41,7 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
                 <div className="flex items-center gap-3">
                   <OrgLogo name={o.name} size={30} />
                   <Link
-                    href={`/staff/organizations/${o.id}`}
+                    href={`/platform/organizations/${o.id}`}
                     className="text-sm font-medium text-slate-900 hover:text-green-600"
                   >
                     {o.name}
@@ -54,7 +54,7 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
               <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{o._count.events}</td>
               <td className="px-4 py-3 text-right">
                 <Link
-                  href={`/staff/organizations/${o.id}`}
+                  href={`/platform/organizations/${o.id}`}
                   aria-label={`Ouvrir ${o.name}`}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                 >

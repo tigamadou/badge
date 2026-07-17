@@ -40,7 +40,7 @@ test.describe("Event activity log", () => {
     });
 
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/activity?limit=100`,
+      `/api/org/${orgId}/events/${eventId}/activity?limit=100`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -86,7 +86,7 @@ test.describe("Event activity log", () => {
     });
 
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/activity?limit=100`,
+      `/api/org/${orgId}/events/${eventId}/activity?limit=100`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -111,7 +111,7 @@ test.describe("Event activity log", () => {
     });
 
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/activity?type=REGISTRATION_APPROVED&limit=100`,
+      `/api/org/${orgId}/events/${eventId}/activity?type=REGISTRATION_APPROVED&limit=100`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -140,7 +140,7 @@ test.describe("Event activity log", () => {
     });
 
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/activity?limit=100`,
+      `/api/org/${orgId}/events/${eventId}/activity?limit=100`,
     );
     // Comportement reel : minRole=OPERATOR, donc VIEWER recoit 403.
     // C'est ce qui garantit qu'aucune donnee nominative ne fuite vers VIEWER.
@@ -165,7 +165,7 @@ test.describe("Event activity log", () => {
     });
 
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/activity?limit=100`,
+      `/api/org/${orgId}/events/${eventId}/activity?limit=100`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();

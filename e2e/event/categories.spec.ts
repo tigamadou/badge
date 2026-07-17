@@ -25,7 +25,7 @@ test.describe("T21 Event categories", () => {
     await loginAs(page, admin);
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/categories`,
+      `/api/org/${orgId}/events/${eventId}/categories`,
       { data: { name: "Sponsor", color: "#ff8800", number: 7 } },
     );
     expect(res.status()).toBe(201);
@@ -48,7 +48,7 @@ test.describe("T21 Event categories", () => {
 
     // createTestEvent cree deja une categorie avec number=1.
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/categories`,
+      `/api/org/${orgId}/events/${eventId}/categories`,
       { data: { name: "Doublon", color: "#000000", number: 1 } },
     );
     expect(res.status()).toBe(409);
@@ -77,7 +77,7 @@ test.describe("T21 Event categories", () => {
     });
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/categories/import-templates`,
+      `/api/org/${orgId}/events/${eventId}/categories/import-templates`,
       { data: { templateIds: [tpl1.id, tpl2.id] } },
     );
     expect(res.status()).toBe(201);
@@ -109,7 +109,7 @@ test.describe("T21 Event categories", () => {
     const cat = await createTestCategory({ eventId, name: "ToEdit", number: 20 });
 
     const res = await page.request.patch(
-      `/api/admin/${orgId}/events/${eventId}/categories/${cat.id}`,
+      `/api/org/${orgId}/events/${eventId}/categories/${cat.id}`,
       { data: { name: "Edited Name" } },
     );
     expect(res.status()).toBe(200);
@@ -134,7 +134,7 @@ test.describe("T21 Event categories", () => {
     const cat = await createTestCategory({ eventId, name: "ToDelete", number: 30 });
 
     const res = await page.request.delete(
-      `/api/admin/${orgId}/events/${eventId}/categories/${cat.id}`,
+      `/api/org/${orgId}/events/${eventId}/categories/${cat.id}`,
     );
     expect(res.status()).toBe(204);
 
@@ -171,7 +171,7 @@ test.describe("T21 Event categories", () => {
     });
 
     const res = await page.request.delete(
-      `/api/admin/${orgId}/events/${eventId}/categories/${cat.id}`,
+      `/api/org/${orgId}/events/${eventId}/categories/${cat.id}`,
     );
     expect(res.status()).toBe(409);
     const body = await res.json();

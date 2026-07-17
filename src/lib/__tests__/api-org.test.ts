@@ -9,7 +9,7 @@ async function withSession(user: { id: string; email: string; name: string; isSt
   vi.mocked(getServerSession).mockResolvedValue({ user } as never);
 }
 
-describe("PATCH /api/admin/[orgId] (Task 4 — name + slug)", () => {
+describe("PATCH /api/org/[orgId] (Task 4 — name + slug)", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.orgMembership.deleteMany();
@@ -24,8 +24,8 @@ describe("PATCH /api/admin/[orgId] (Task 4 — name + slug)", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ name: "New", slug: "new-slug" }),
       headers: { "content-type": "application/json" },
@@ -45,8 +45,8 @@ describe("PATCH /api/admin/[orgId] (Task 4 — name + slug)", () => {
     const org = await prisma.organization.create({ data: { name: "Old", slug: "old" } });
     await withSession({ id: s.id, email: s.email, name: s.name, isStaff: true });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ slug: "new-slug" }),
       headers: { "content-type": "application/json" },
@@ -65,8 +65,8 @@ describe("PATCH /api/admin/[orgId] (Task 4 — name + slug)", () => {
     const org = await prisma.organization.create({ data: { name: "Old", slug: "olda" } });
     await withSession({ id: s.id, email: s.email, name: s.name, isStaff: true });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ name: "New" }),
       headers: { "content-type": "application/json" },
@@ -80,7 +80,7 @@ describe("PATCH /api/admin/[orgId] (Task 4 — name + slug)", () => {
   });
 });
 
-describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
+describe("PATCH /api/org/[orgId] — infos administratives (Task 5)", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.orgMembership.deleteMany();
@@ -95,8 +95,8 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({
         legalName: "Acme SAS",
@@ -141,8 +141,8 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
     const org = await prisma.organization.create({ data: { name: "Acme", slug: "acme-mgr" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ legalName: "Acme SAS" }),
       headers: { "content-type": "application/json" },
@@ -157,8 +157,8 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ slug: "owner-attempt" }),
       headers: { "content-type": "application/json" },
@@ -178,8 +178,8 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ quotaMaxEvents: 999 }),
       headers: { "content-type": "application/json" },
@@ -197,9 +197,9 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { PATCH } = await import("@/app/api/admin/[orgId]/route");
+    const { PATCH } = await import("@/app/api/org/[orgId]/route");
 
-    const reqSmtp = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const reqSmtp = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "smtp.example.com", smtpPassword: "secret" }),
       headers: { "content-type": "application/json" },
@@ -207,7 +207,7 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
     const resSmtp = await PATCH(reqSmtp, { params: Promise.resolve({ orgId: org.id }) });
     expect(resSmtp.status).toBe(400);
 
-    const reqCaptcha = new NextRequest(`http://localhost/api/admin/${org.id}`, {
+    const reqCaptcha = new NextRequest(`http://localhost/api/org/${org.id}`, {
       method: "PATCH",
       body: JSON.stringify({
         recaptchaEnabled: true,
@@ -221,7 +221,7 @@ describe("PATCH /api/admin/[orgId] — infos administratives (Task 5)", () => {
   });
 });
 
-describe("POST /api/admin/[orgId]/members", () => {
+describe("POST /api/org/[orgId]/members", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.orgMembership.deleteMany();
@@ -243,8 +243,8 @@ describe("POST /api/admin/[orgId]/members", () => {
       isStaff: false,
     });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/members/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/members`, {
+    const { POST } = await import("@/app/api/org/[orgId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/members`, {
       method: "POST",
       body: JSON.stringify({ email: "new@test.fr", name: "New" }),
       headers: { "content-type": "application/json" },
@@ -275,8 +275,8 @@ describe("POST /api/admin/[orgId]/members", () => {
       isStaff: false,
     });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/members/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/members`, {
+    const { POST } = await import("@/app/api/org/[orgId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/members`, {
       method: "POST",
       body: JSON.stringify({ email: "existing@test.fr", name: "E" }),
       headers: { "content-type": "application/json" },
@@ -289,7 +289,7 @@ describe("POST /api/admin/[orgId]/members", () => {
   });
 });
 
-describe("DELETE /api/admin/[orgId]/members/[userId]", () => {
+describe("DELETE /api/org/[orgId]/members/[userId]", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.orgMembership.deleteMany();
@@ -304,8 +304,8 @@ describe("DELETE /api/admin/[orgId]/members/[userId]", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { DELETE } = await import("@/app/api/admin/[orgId]/members/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/members/${u.id}`, {
+    const { DELETE } = await import("@/app/api/org/[orgId]/members/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/members/${u.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ orgId: org.id, userId: u.id }) });
@@ -322,8 +322,8 @@ describe("DELETE /api/admin/[orgId]/members/[userId]", () => {
     await prisma.orgMembership.create({ data: { userId: b.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: a.id, email: a.email, name: a.name, isStaff: false });
 
-    const { DELETE } = await import("@/app/api/admin/[orgId]/members/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/members/${b.id}`, {
+    const { DELETE } = await import("@/app/api/org/[orgId]/members/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/members/${b.id}`, {
       method: "DELETE",
     });
     const res = await DELETE(req, { params: Promise.resolve({ orgId: org.id, userId: b.id }) });
@@ -347,8 +347,8 @@ describe("Templates CRUD", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/templates/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/templates`, {
+    const { POST } = await import("@/app/api/org/[orgId]/templates/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/templates`, {
       method: "POST",
       body: JSON.stringify({ name: "Délégué", color: "#ff0000", number: 1 }),
       headers: { "content-type": "application/json" },
@@ -370,8 +370,8 @@ describe("Templates CRUD", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/templates/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/templates`, {
+    const { POST } = await import("@/app/api/org/[orgId]/templates/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/templates`, {
       method: "POST",
       body: JSON.stringify({ name: "X", color: "red", number: 1 }),
       headers: { "content-type": "application/json" },
@@ -381,7 +381,7 @@ describe("Templates CRUD", () => {
   });
 });
 
-describe("POST /api/admin/[orgId]/events", () => {
+describe("POST /api/org/[orgId]/events", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.category.deleteMany();
@@ -399,8 +399,8 @@ describe("POST /api/admin/[orgId]/events", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events`, {
       method: "POST",
       body: JSON.stringify({
         title: "Conférence Paris 2026",
@@ -427,8 +427,8 @@ describe("POST /api/admin/[orgId]/events", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: orgB.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/route");
-    const req = new NextRequest(`http://localhost/api/admin/${orgB.id}/events`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/route");
+    const req = new NextRequest(`http://localhost/api/org/${orgB.id}/events`, {
       method: "POST",
       body: JSON.stringify({ title: "X", location: "", date: "2026-12-15" }),
       headers: { "content-type": "application/json" },
@@ -455,8 +455,8 @@ describe("POST /api/admin/[orgId]/events", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events`, {
       method: "POST",
       body: JSON.stringify({ title: "Second", location: "", date: "2026-12-15" }),
       headers: { "content-type": "application/json" },
@@ -476,8 +476,8 @@ describe("POST /api/admin/[orgId]/events", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/route");
-    const req = new NextRequest(`http://localhost/api/admin/${org.id}/events`, {
+    const { POST } = await import("@/app/api/org/[orgId]/events/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events`, {
       method: "POST",
       body: JSON.stringify({
         title: "Conf Tpl",
@@ -515,9 +515,9 @@ describe("Archive/Restore events", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/archive/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/archive/route");
     const req = new NextRequest(
-      `http://localhost/api/admin/${org.id}/events/${e.id}/archive`,
+      `http://localhost/api/org/${org.id}/events/${e.id}/archive`,
       { method: "POST" },
     );
     const res = await POST(req, {
@@ -538,9 +538,9 @@ describe("Archive/Restore events", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/archive/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/archive/route");
     const req = new NextRequest(
-      `http://localhost/api/admin/${orgA.id}/events/${e.id}/archive`,
+      `http://localhost/api/org/${orgA.id}/events/${e.id}/archive`,
       { method: "POST" },
     );
     const res = await POST(req, {

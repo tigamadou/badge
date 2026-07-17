@@ -28,7 +28,7 @@ test.describe("T18 Org settings", () => {
       city: "Abidjan",
       country: "Côte d'Ivoire",
     };
-    const res = await request.patch(`/api/admin/${orgId}`, { data: payload });
+    const res = await request.patch(`/api/org/${orgId}`, { data: payload });
     expect(res.status()).toBe(200);
 
     const db = getDb();
@@ -57,7 +57,7 @@ test.describe("T18 Org settings", () => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "settings-badge" });
     await loginAs(page, owner);
 
-    const res = await request.patch(`/api/admin/${orgId}/settings/badge`, {
+    const res = await request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: "default-v1" },
     });
     expect(res.status()).toBe(200);
@@ -84,10 +84,10 @@ test.describe("T18 Org settings", () => {
     await loginAs(page, owner);
 
     // Pose d'abord un template, puis reset.
-    await request.patch(`/api/admin/${orgId}/settings/badge`, {
+    await request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: "default-v1" },
     });
-    const res = await request.patch(`/api/admin/${orgId}/settings/badge`, {
+    const res = await request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: null },
     });
     expect(res.status()).toBe(200);
@@ -100,14 +100,14 @@ test.describe("T18 Org settings", () => {
     expect(org?.badgeTemplateId).toBeNull();
   });
 
-  test("Payload SMTP rejete sur PATCH /api/admin/[orgId] -> 400", async ({
+  test("Payload SMTP rejete sur PATCH /api/org/[orgId] -> 400", async ({
     page,
     request,
   }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "settings-smtp" });
     await loginAs(page, owner);
 
-    const res = await request.patch(`/api/admin/${orgId}`, {
+    const res = await request.patch(`/api/org/${orgId}`, {
       data: { smtpHost: "smtp.example.com" },
     });
     expect(res.status()).toBe(400);
@@ -124,7 +124,7 @@ test.describe("T18 Org settings", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.patch(`/api/admin/${orgId}`, {
+    const res = await request.patch(`/api/org/${orgId}`, {
       data: { name: "Tentative MANAGER" },
     });
     expect(res.status()).toBe(403);

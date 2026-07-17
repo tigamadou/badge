@@ -32,8 +32,8 @@ export function CategoryForm({
     e.preventDefault();
     setErr(null);
     const url = initial
-      ? `/api/admin/${orgId}/events/${eventId}/categories/${initial.id}`
-      : `/api/admin/${orgId}/events/${eventId}/categories`;
+      ? `/api/org/${orgId}/events/${eventId}/categories/${initial.id}`
+      : `/api/org/${orgId}/events/${eventId}/categories`;
     const res = await fetch(url, {
       method: initial ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },

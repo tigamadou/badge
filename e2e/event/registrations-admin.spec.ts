@@ -30,7 +30,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
     await loginAs(page, admin);
 
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations`,
+      `/api/org/${orgId}/events/${eventId}/registrations`,
       { data: { userId: participant.id, categoryId } },
     );
     expect(res.status()).toBe(201);
@@ -66,7 +66,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
 
     await loginAs(page, admin);
     const blockRes = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/block-email`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/block-email`,
       { data: { reason: "Spam" } },
     );
     expect(blockRes.status()).toBe(201);
@@ -126,7 +126,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
 
     await loginAs(page, admin);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/block-document`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/block-document`,
       { data: { reason: "Doc invalide" } },
     );
     expect(res.status()).toBe(201);
@@ -189,7 +189,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
 
     await loginAs(page, admin);
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg1.id}/duplicates`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg1.id}/duplicates`,
     );
     expect(res.status()).toBe(200);
     const body = await res.json();
@@ -217,7 +217,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
 
     await loginAs(page, admin);
     const res = await page.request.post(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}/all-access`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/all-access`,
       { data: { allAccessGranted: true } },
     );
     expect(res.status()).toBe(200);
@@ -252,7 +252,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
 
     await loginAs(page, admin);
     const res = await page.request.get(
-      `/api/admin/${orgId}/events/${eventId}/registrations/export`,
+      `/api/org/${orgId}/events/${eventId}/registrations/export`,
     );
     expect(res.status()).toBe(200);
     expect(res.headers()["content-type"]).toMatch(/text\/csv/);
@@ -286,7 +286,7 @@ test.describe("T23 Registrations admin (create / block / duplicates / all-access
 
     await loginAs(page, admin);
     const res = await page.request.delete(
-      `/api/admin/${orgId}/events/${eventId}/registrations/${reg.id}`,
+      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}`,
     );
     expect(res.status()).toBe(204);
 
