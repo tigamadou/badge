@@ -83,7 +83,7 @@ mail.badge.local {
 
 > ATTENTION : modification d'un `docker-compose*.yml` — action a risque, demander confirmation avant d'appliquer.
 
-- [ ] **Step 1 : Ajouter le port 443 et des volumes de persistance** au service `caddy` :
+- [x] **Step 1 : Ajouter le port 443 et des volumes de persistance** au service `caddy` :
 
 ```yaml
   caddy:
@@ -101,7 +101,7 @@ mail.badge.local {
       - mailpit
 ```
 
-- [ ] **Step 2 : Declarer les volumes** en bas du fichier :
+- [x] **Step 2 : Declarer les volumes** en bas du fichier :
 
 ```yaml
 volumes:
@@ -110,7 +110,7 @@ volumes:
   caddy_config_dev:
 ```
 
-- [ ] **Step 3 : Redemarrer caddy** : `make dev-down && make dev`. Verifier `docker compose -f docker-compose.dev.yml ps` — caddy `Up`, 443 mappe.
+- [x] **Step 3 : Redemarrer caddy** : `make dev-down && make dev`. Verifier `docker compose -f docker-compose.dev.yml ps` — caddy `Up`, 443 mappe. NOTE : recreation ciblee non destructive `docker compose -f docker-compose.dev.yml up -d --no-deps caddy` (preserve app/mysql/mailpit). Verif CLI : `curl http://badge.local` => 308 vers https ; `curl -k https://badge.local` => 200 ; issuer cert = `Caddy Local Authority`.
 
 ### Task 1.3 : Aligner l'URL de base de l'app en dev
 

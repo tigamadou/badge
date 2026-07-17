@@ -53,8 +53,11 @@ services:
     image: caddy:2-alpine
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile.dev:/etc/caddy/Caddyfile
+      - caddy_data_dev:/data
+      - caddy_config_dev:/config
     depends_on:
       - app
       - phpmyadmin
@@ -62,3 +65,5 @@ services:
 
 volumes:
   mysql_data:
+  caddy_data_dev:
+  caddy_config_dev:
