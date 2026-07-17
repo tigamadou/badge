@@ -363,13 +363,13 @@ Supprimer le flag `isStaffMode` et la `StaffBanner` de cet espace (l'espace org 
 - Create: `src/components/platform/PlatformOrgShell.tsx`
 - Create: `src/app/platform/organizations/[orgId]/layout.tsx`
 
-- [ ] **Step 1 : Creer `PlatformOrgShell.tsx`** — un shell reprenant la charte de `StaffShell`/`SidebarNav` avec une nav propre a la supervision (Fiche, Evenements, Membres, Abonnement, Activite) et un bandeau "Supervision — lecture seule". S'inspirer de `src/components/staff/StaffShell.tsx` (structure) et `src/components/admin/OrgShell.tsx` (items) sans reutiliser les actions d'ecriture.
+- [x] **Step 1 : Creer `PlatformOrgShell.tsx`** — un shell reprenant la charte de `StaffShell`/`SidebarNav` avec une nav propre a la supervision (Fiche, Evenements, Membres, Abonnement, Activite) et un bandeau "Supervision — lecture seule". S'inspirer de `src/components/staff/StaffShell.tsx` (structure) et `src/components/admin/OrgShell.tsx` (items) sans reutiliser les actions d'ecriture. FAIT (redessine en shell interne : rendu dans le StaffShell du parent /platform/layout, pas de second sidebar ; sous-nav horizontale + bandeau).
 
 Items de nav (chemins relatifs a `/platform/organizations/${orgId}`) : `` (fiche), `/events`, `/members`, `/subscription`, `/activity`.
 
-- [ ] **Step 2 : Creer le layout** `src/app/platform/organizations/[orgId]/layout.tsx` qui garde `requireStaff(userId, "STAFF_OBSERVER")` et enveloppe les enfants dans `PlatformOrgShell`.
+- [x] **Step 2 : Creer le layout** `src/app/platform/organizations/[orgId]/layout.tsx` qui garde `requireStaff(userId, "STAFF_OBSERVER")` et enveloppe les enfants dans `PlatformOrgShell`.
 
-- [ ] **Step 3 : Typecheck** : `make typecheck`.
+- [x] **Step 3 : Typecheck** : `make typecheck`.
 
 ### Task 2.7 : Pages de supervision staff (read-only)
 
