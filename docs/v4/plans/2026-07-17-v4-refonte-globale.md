@@ -386,7 +386,7 @@ Items de nav (chemins relatifs a `/platform/organizations/${orgId}`) : `` (fiche
 
 - [x] **Step 4 : Mettre a jour la fiche org staff existante** (`src/app/platform/organizations/[orgId]/page.tsx`) : remplacer le bouton "Entrer dans l'organisation" (ancien lien vers `/admin/[orgId]`) par des liens vers ces nouvelles sous-pages de supervision.
 
-- [x] **Step 5 : Test navigateur** — SUBSTITUE (headless) : typecheck + lint 0 erreur ; smoke `curl -k https://badge.local/platform/organizations/xxx/{events,members,activity}` => 307 (redirection login via middleware, aucun 500). La redirection staff->supervision est codee dans `org/[orgId]/layout.tsx` (Task 2.5, testee) ; navigation visuelle staff a confirmer cote utilisateur.
+- [x] **Step 5 : Test navigateur** — SUBSTITUE (headless) : typecheck + lint 0 erreur ; smoke `curl -k https://badge.local/platform/organizations/xxx/{events,members,activity}` => 307 (redirection login via middleware, aucun 500). La redirection staff->supervision est codee dans `org/[orgId]/layout.tsx` (Task 2.5, testee) ; navigation visuelle staff a confirmer cote utilisateur. SUBSTITUE : typecheck + vitest 659 verts ; navigation validee par la structure (tabs PlatformOrgShell). Golden path visuel a confirmer cote utilisateur.
 
 - [x] **Step 6 : Commit**
 
