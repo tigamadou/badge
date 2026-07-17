@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () => void }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState<"OWNER" | "MANAGER" | "AUDITOR">("MANAGER");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -20,7 +21,7 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
     const res = await fetch(`/api/org/${orgId}/members`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name }),
+      body: JSON.stringify({ email, name, role }),
     });
     setLoading(false);
     if (!res.ok) {
@@ -29,12 +30,13 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
     }
     setEmail("");
     setName("");
+    setRole("MANAGER");
     onAdded();
   }
 
   return (
     <Card>
-      <CardHead title="Inviter un membre" subtitle="Un e-mail d'invitation sera envoyé (rôle OWNER)." />
+      <CardHead title="Inviter un membre" subtitle="Un e-mail d'invitation sera envoyé au rôle choisi." />
       <CardBody>
         <form onSubmit={submit} className="space-y-4">
           {err && (
@@ -52,6 +54,18 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
               required
             />
           </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700">Rôle</span>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as "OWNER" | "MANAGER" | "AUDITOR")}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
+            >
+              <option value="OWNER">Propriétaire (OWNER) — pleins pouvoirs sur l&apos;organisation</option>
+              <option value="MANAGER">Gestionnaire (MANAGER) — gère les événements</option>
+              <option value="AUDITOR">Auditeur (AUDITOR) — lecture seule</option>
+            </select>
+          </label>
           <Button type="submit" className="flex items-center justify-center gap-2" disabled={loading}>
             {loading ? (
               <>

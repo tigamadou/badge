@@ -259,6 +259,28 @@ describe("POST /api/org/[orgId]/members", () => {
     expect(m?.role).toBe("OWNER");
   });
 
+  it("applies the selected role when provided (v4 : choix du role)", async () => {
+    const inviter = await prisma.user.create({ data: { email: "i@x", password: "x", name: "I" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "m-role" } });
+    await prisma.orgMembership.create({
+      data: { userId: inviter.id, orgId: org.id, role: "OWNER" },
+    });
+    await withSession({ id: inviter.id, email: inviter.email, name: inviter.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/members/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/members`, {
+      method: "POST",
+      body: JSON.stringify({ email: "manager@test.fr", name: "Mgr", role: "MANAGER" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(201);
+
+    const u = await prisma.user.findUnique({ where: { email: "manager@test.fr" } });
+    const m = await prisma.orgMembership.findFirst({ where: { userId: u!.id, orgId: org.id } });
+    expect(m?.role).toBe("MANAGER");
+  });
+
   it("adds membership only if user already exists", async () => {
     const inviter = await prisma.user.create({ data: { email: "i@x", password: "x", name: "I" } });
     const existing = await prisma.user.create({
