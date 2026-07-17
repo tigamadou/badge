@@ -632,11 +632,11 @@ S3_BUCKET=badge-dev
 - Preserve: `uploadFile(key, body, contentType) => Promise<string>`, `getFile(key) => Promise<{ body: Buffer; contentType: string }>`, `deleteFile(key) => Promise<void>`, plus les generateurs de cle et validations (`MAX_UPLOAD_BYTES`, `isAllowedMime`, `assertWithinSizeLimit`, `eventPhotoKey`, `eventIdDocumentKey`, `accountProfileKey`).
 - Produces (nouveau): `deletePrefix(prefix: string) => Promise<number>` (pour archivage org — utilise en Phase 6/7).
 
-- [ ] **Step 1 : Ajouter la dependance** : `docker compose -f docker-compose.dev.yml exec app yarn add @aws-sdk/client-s3`.
+- [x] **Step 1 : Ajouter la dependance** : `docker compose -f docker-compose.dev.yml exec app yarn add @aws-sdk/client-s3`.
 
-- [ ] **Step 2 : Ecrire un test d'integration** `src/lib/__tests__/storage.test.ts` (skippe si `S3_ENDPOINT` absent) : upload d'un buffer, `getFile` renvoie le meme buffer + contentType, `deleteFile` supprime, `getFile` sur cle absente rejette.
+- [x] **Step 2 : Ecrire un test d'integration** `src/lib/__tests__/storage.test.ts` (skippe si `S3_ENDPOINT` absent) : upload d'un buffer, `getFile` renvoie le meme buffer + contentType, `deleteFile` supprime, `getFile` sur cle absente rejette.
 
-- [ ] **Step 3 : Reimplementer `storage.ts`** avec le SDK S3, en conservant les constantes/validations/generateurs de cle du fichier actuel (lignes 6-56 inchangees) et en remplacant l'I/O :
+- [x] **Step 3 : Reimplementer `storage.ts`** avec le SDK S3, en conservant les constantes/validations/generateurs de cle du fichier actuel (lignes 6-56 inchangees) et en remplacant l'I/O :
 
 ```ts
 import {
@@ -700,8 +700,8 @@ export async function deletePrefix(prefix: string): Promise<number> {
 
 > `getFile` persiste desormais le vrai `contentType` (corrige le `_contentType` ignore de l'ancien driver). `uploadFile` doit donc recevoir un contentType correct depuis les routes.
 
-- [ ] **Step 4 : Lancer le test** : `make test -- storage` — Attendu : PASS (MinIO up).
-- [ ] **Step 5 : Typecheck** : `make typecheck`.
+- [x] **Step 4 : Lancer le test** : `make test -- storage` — Attendu : PASS (MinIO up). VERIFIE : storage.test.ts 13/13 + upload.test.ts 7/7 verts contre MinIO.
+- [x] **Step 5 : Typecheck** : `make typecheck`.
 
 ### Task 5.3 : Unifier les contrats d'upload et securiser /api/files
 
