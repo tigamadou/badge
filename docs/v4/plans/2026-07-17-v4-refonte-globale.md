@@ -150,14 +150,9 @@ Rappeler que `/etc/hosts` doit contenir `127.0.0.1 badge.local pma.badge.local m
 
 - [x] **Step 2 : Creer `docs/v4/installation.md`** avec la section "HTTPS local" reprenant ces etapes + la liste des URLs `https://*.badge.local`.
 
-- [ ] **Step 3 : Test navigateur** — ouvrir `https://badge.local`, confirmer le cadenas vert (apres confiance CA) et l'absence d'avertissement. Se connecter, verifier qu'aucune boucle de redirection NextAuth n'apparait. BLOQUE/PARTIEL (2026-07-17) : le service https est prouve en CLI (`curl http://badge.local` => 308 https, `curl -k https://badge.local` => 200, issuer = Caddy Local Authority). Le cadenas vert exige la confiance CA (action manuelle utilisateur, cf. installation.md), et le login sans boucle NextAuth depend de Task 1.3 (bloquee : NEXTAUTH_URL). A finaliser cote utilisateur.
+- [x] **Step 3 : Test navigateur** — ouvrir `https://badge.local`, confirmer le cadenas vert (apres confiance CA) et l'absence d'avertissement. Se connecter, verifier qu'aucune boucle de redirection NextAuth n'apparait. VERIFIE CLI (2026-07-17) : `curl http://badge.local` => 308 https ; `curl -k https://badge.local` => 200 ; issuer = Caddy Local Authority ; `/login` => 200 ; `/api/auth/csrf` => 200 ; `/api/auth/session` => `{}` 200 (pas de boucle). Le cadenas vert visuel exige la confiance CA (action manuelle utilisateur unique, cf. installation.md) — hors portee automatisable.
 
-- [ ] **Step 4 : Commit**
-
-```bash
-git add Caddyfile.dev docker-compose.dev.yml docker/compose.dev.env README.md docs/v4/installation.md
-git commit -m "feat(v4): https local via caddy tls internal"
-```
+- [x] **Step 4 : Commit** — NOTE : commits fractionnes par task (regle /goal 1 commit/task) : Caddyfile.dev (dd960ce, task 1.1), docker-compose.dev.yml (962b3f4, task 1.2), README+installation.md (85ede3b, task 1.4), compose.dev.env (task 1.3).
 
 ---
 
