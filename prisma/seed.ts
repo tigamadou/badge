@@ -239,6 +239,19 @@ async function main() {
     update: {},
   });
 
+  // 1b. Plans d'abonnement par defaut (v4). Upsert par nom (unique).
+  await prisma.plan.upsert({
+    where: { name: "Gratuit" },
+    create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100 },
+    update: {},
+  });
+  await prisma.plan.upsert({
+    where: { name: "Standard" },
+    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000 },
+    update: {},
+  });
+  console.log("Plans par defaut (Gratuit, Standard) prets.");
+
   // 2. Pre-hash unique du password demo (gain ~60s sur 240 hashes).
   const passwordHash = await hash(DEMO_PASSWORD, 12);
   console.log("Password hash pre-calcule.");

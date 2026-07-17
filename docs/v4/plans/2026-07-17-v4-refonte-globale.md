@@ -820,15 +820,15 @@ model Subscription {
 }
 ```
 
-- [ ] **Step 1 : Ajouter** `Plan`, `SubscriptionStatus`, `Subscription` au schema. Ajouter la relation inverse `subscription Subscription?` sur `Organization`.
+- [x] **Step 1 : Ajouter** `Plan`, `SubscriptionStatus`, `Subscription` au schema. Ajouter la relation inverse `subscription Subscription?` sur `Organization`.
 
-- [ ] **Step 2 : Retirer** de `Organization` les champs `quotaMaxEvents`, `quotaMaxRegistrations`, `quotaMaxStorageMB` (lignes 102-104).
+- [ ] **Step 2 : Retirer** de `Organization` les champs `quotaMaxEvents`, `quotaMaxRegistrations`, `quotaMaxStorageMB` (lignes 102-104). REPORTE en fin de Phase 6 (apres migration des 91 references quotaMax) pour eviter de casser typecheck/app mid-chantier.
 
-- [ ] **Step 3 : Etendre `ActivityType`** avec les nouveaux types : `SUBSCRIPTION_CREATED`, `SUBSCRIPTION_UPDATED`, `PLAN_CREATED`, `PLAN_UPDATED`, `QUOTA_BYPASS` (si non deja present). Verifier l'enum `ActivityType` existant avant d'ajouter.
+- [x] **Step 3 : Etendre `ActivityType`** avec les nouveaux types : `SUBSCRIPTION_CREATED`, `SUBSCRIPTION_UPDATED`, `PLAN_CREATED`, `PLAN_UPDATED`, `QUOTA_BYPASS` (si non deja present). Verifier l'enum `ActivityType` existant avant d'ajouter.
 
-- [ ] **Step 4 : Appliquer le schema** — en dev : `make db-push` (recree/ajuste sans migration formelle). **Le retrait des colonnes `quota*` est destructif** : demander confirmation avant. En prod v1, ces colonnes n'existent que depuis v2 ; documenter la migration dans `docs/v4/architecture.md`.
+- [x] **Step 4 : Appliquer le schema** — en dev : `make db-push` (recree/ajuste sans migration formelle). **Le retrait des colonnes `quota*` est destructif** : demander confirmation avant. En prod v1, ces colonnes n'existent que depuis v2 ; documenter la migration dans `docs/v4/architecture.md`. FAIT en ADDITIF (Plan/Subscription ajoutes, quotaMax conserve) : non destructif. Le retrait des colonnes (Step 2) est reporte en toute fin, quand plus aucun code ne reference quotaMax -- garantit des commits coherents.
 
-- [ ] **Step 5 : Seed des plans par defaut** — ajouter au seed (`prisma/seed*` — reperer le fichier de seed) au moins deux plans : `Gratuit` (maxEvents: 1, maxParticipantsPerEvent: 100) et `Standard` (maxEvents: 10, maxParticipantsPerEvent: 1000). `make db-seed`.
+- [x] **Step 5 : Seed des plans par defaut** — ajouter au seed (`prisma/seed*` — reperer le fichier de seed) au moins deux plans : `Gratuit` (maxEvents: 1, maxParticipantsPerEvent: 100) et `Standard` (maxEvents: 10, maxParticipantsPerEvent: 1000). `make db-seed`. FAIT : plans Gratuit(1/100) et Standard(10/1000) crees directement (upsert non destructif, evite le cleanup() du seed complet). Code seed committe pour les futurs seeds.
 
 ### Task 6.2 : Helper de resolution des limites
 

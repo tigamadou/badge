@@ -110,6 +110,7 @@ model Organization {
   memberships       OrgMembership[]
   events            Event[]
   categoryTemplates CategoryTemplate[]
+  subscription      Subscription?
 }
 
 model OrgMembership {
@@ -434,4 +435,49 @@ enum ActivityType {
   PLATFORM_BLOCKED_EMAIL_REMOVED
   PLATFORM_BLOCKED_DOCUMENT_ADDED
   PLATFORM_BLOCKED_DOCUMENT_REMOVED
+
+  // v4 : abonnements (remplacent les quotas)
+  PLAN_CREATED
+  PLAN_UPDATED
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_UPDATED
+  QUOTA_BYPASS
+}
+
+// =====================================================
+//  Abonnements (v4) - remplacent les champs quota* de Organization
+// =====================================================
+
+model Plan {
+  id                      String         @id @default(cuid())
+  name                    String         @unique
+  maxEvents               Int? // null = illimite
+  maxParticipantsPerEvent Int? // null = illimite
+  archived                Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+  subscriptions           Subscription[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  orgId     String             @unique // un abonnement courant par org
+  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan               @relation(fields: [planId], references: [id])
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @default(now())
+  endDate   DateTime? // null = sans echeance
+  // Overrides par org (null = herite du plan)
+  overrideMaxEvents               Int?
+  overrideMaxParticipantsPerEvent Int?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([planId])
 }
