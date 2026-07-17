@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Dropzone, FileBox } from "@/components/ui/FileBox";
 import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { RadioCards } from "@/components/ui/RadioCards";
@@ -49,6 +50,31 @@ export function RegistrationForm({
   const [idDocument, setIdDocument] = useState<string | null>(initial?.idDocument ?? null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<"photo" | "document" | null>(null);
+
+  async function uploadReg(
+    kind: "photo" | "document",
+    files: FileList,
+    setter: (key: string) => void,
+  ) {
+    const file = files[0];
+    if (!file) return;
+    setUploading(kind);
+    setErr(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/upload?kind=${kind}`, {
+      method: "POST",
+      body: fd,
+    });
+    setUploading(null);
+    if (!res.ok) {
+      setErr("Échec de l'envoi du fichier.");
+      return;
+    }
+    const { storageKey } = await res.json();
+    setter(storageKey);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,15 +161,21 @@ export function RegistrationForm({
                   required
                 />
               </div>
-              <Input
-                label="Chemin photo (uploads/...)"
-                value={photo ?? ""}
-                onChange={(e) => setPhoto(e.target.value || null)}
+              <RegFileField
+                label="Photo"
+                storageKey={photo}
+                accept="image/jpeg,image/png,image/webp"
+                uploading={uploading === "photo"}
+                onUpload={(files) => uploadReg("photo", files, setPhoto)}
+                onClear={() => setPhoto(null)}
               />
-              <Input
-                label="Chemin pièce d'identité"
-                value={idDocument ?? ""}
-                onChange={(e) => setIdDocument(e.target.value || null)}
+              <RegFileField
+                label="Pièce d'identité"
+                storageKey={idDocument}
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                uploading={uploading === "document"}
+                onUpload={(files) => uploadReg("document", files, setIdDocument)}
+                onClear={() => setIdDocument(null)}
               />
             </div>
           </FormSection>
@@ -164,5 +196,48 @@ export function RegistrationForm({
         </Button>
       </div>
     </form>
+  );
+}
+
+function RegFileField({
+  label,
+  storageKey,
+  accept,
+  uploading,
+  onUpload,
+  onClear,
+}: {
+  label: string;
+  storageKey: string | null;
+  accept: string;
+  uploading: boolean;
+  onUpload: (files: FileList) => void;
+  onClear: () => void;
+}) {
+  const isPdf = accept.includes("pdf");
+  return (
+    <div className="space-y-2">
+      <span className="block text-sm font-medium text-slate-700">{label}</span>
+      {storageKey ? (
+        <FileBox
+          icon="file"
+          thumbUrl={isPdf ? undefined : `/api/files/${storageKey}`}
+          title={label}
+          subtitle={storageKey}
+          action={
+            <Button type="button" variant="secondary" onClick={onClear}>
+              Retirer
+            </Button>
+          }
+        />
+      ) : (
+        <Dropzone
+          onFiles={onUpload}
+          accept={accept}
+          title={uploading ? "Envoi…" : "Déposer un fichier ou cliquer"}
+          subtitle="5 Mo max"
+        />
+      )}
+    </div>
   );
 }

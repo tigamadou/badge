@@ -741,19 +741,19 @@ const { body, contentType } = await getFile(key);
 
 - [x] **Step 2 : Logo event** — meme traitement dans `EventSettingsForm.tsx` (champ `logo`).
 
-- [ ] **Step 3 : Inscription admin** — dans `src/components/event/RegistrationForm.tsx` (le formulaire reellement utilise), remplacer les `Input` "Chemin photo"/"Chemin document" par des `Dropzone` uploadant vers une route event (`/api/upload?context=event:{slug}&kind=photo|document`), stockant les `storageKey` retournes.
+- [x] **Step 3 : Inscription admin** — dans `src/components/event/RegistrationForm.tsx` (le formulaire reellement utilise), remplacer les `Input` "Chemin photo"/"Chemin document" par des `Dropzone` uploadant vers une route event (`/api/upload?context=event:{slug}&kind=photo|document`), stockant les `storageKey` retournes.
 
-- [ ] **Step 4 : Aligner les MIME cote client** sur la whitelist serveur (JPEG/PNG/WebP pour photo ; +PDF pour document) — corriger tout `accept="image/*"` trop permissif.
+- [x] **Step 4 : Aligner les MIME cote client** sur la whitelist serveur (JPEG/PNG/WebP pour photo ; +PDF pour document) — corriger tout `accept="image/*"` trop permissif.
 
-- [ ] **Step 5 : build-context.ts** — verifier que `src/lib/badge-templates/build-context.ts:59-91` lit bien les images via `getFile(key)` (S3) et non via le filesystem local. Adapter si necessaire pour produire les dataURL a partir du Buffer S3.
+- [x] **Step 5 : build-context.ts** — verifier que `src/lib/badge-templates/build-context.ts:59-91` lit bien les images via `getFile(key)` (S3) et non via le filesystem local. Adapter si necessaire pour produire les dataURL a partir du Buffer S3.
 
-- [ ] **Step 6 : Retirer le dead code** — apres bascule, `git rm src/components/public/FileUploadField.tsx` et `src/components/admin/RegistrationForm.tsx` si `rg` confirme 0 usage.
+- [x] **Step 6 : Retirer le dead code** — apres bascule, `git rm src/components/public/FileUploadField.tsx` et `src/components/admin/RegistrationForm.tsx` si `rg` confirme 0 usage.
 
-- [ ] **Step 7 : Test navigateur** — uploader un logo org, un logo event, une photo + un PDF sur une inscription admin ; verifier l'affichage, la persistance (reload), la generation de badge (photo visible), et l'acces refuse aux documents d'un autre user.
+- [x] **Step 7 : Test navigateur** — uploader un logo org, un logo event, une photo + un PDF sur une inscription admin ; verifier l'affichage, la persistance (reload), la generation de badge (photo visible), et l'acces refuse aux documents d'un autre user.
 
-- [ ] **Step 8 : Creer `.env.example`** documentant `S3_*`, `MINIO_*`, `UPLOAD_TOKEN_SECRET`, `NEXTAUTH_URL`.
+- [x] **Step 8 : Creer `.env.example`** documentant `S3_*`, `MINIO_*`, `UPLOAD_TOKEN_SECRET`, `NEXTAUTH_URL`.
 
-- [ ] **Step 9 : Commit**
+- [x] **Step 9 : Commit**
 
 ```bash
 git add -A
