@@ -378,17 +378,17 @@ Items de nav (chemins relatifs a `/platform/organizations/${orgId}`) : `` (fiche
 - Create: `src/app/platform/organizations/[orgId]/members/page.tsx`
 - Create: `src/app/platform/organizations/[orgId]/activity/page.tsx`
 
-- [ ] **Step 1 : `events/page.tsx`** — Server Component : `requireStaff`, charge `prisma.event.findMany({ where: { orgId }, ... })`, affiche un tableau read-only (titre, date, statut inscription, nb inscriptions comptables via `countCountableRegistrations`), chaque ligne liant vers... rien d'editable (pas de "Entrer dans l'org"). Si le staff doit agir sur un event, il le fait via l'API avec pouvoir staff, pas via l'espace org.
+- [x] **Step 1 : `events/page.tsx`** — Server Component : `requireStaff`, charge `prisma.event.findMany({ where: { orgId }, ... })`, affiche un tableau read-only (titre, date, statut inscription, nb inscriptions comptables via `countCountableRegistrations`), chaque ligne liant vers... rien d'editable (pas de "Entrer dans l'org"). Si le staff doit agir sur un event, il le fait via l'API avec pouvoir staff, pas via l'espace org.
 
-- [ ] **Step 2 : `members/page.tsx`** — tableau read-only des `OrgMembership` (nom, email, role, date) via `prisma.orgMembership.findMany`.
+- [x] **Step 2 : `members/page.tsx`** — tableau read-only des `OrgMembership` (nom, email, role, date) via `prisma.orgMembership.findMany`.
 
-- [ ] **Step 3 : `activity/page.tsx`** — reutiliser les composants de `src/components/activity/*` filtres sur `orgId`, en lecture seule.
+- [x] **Step 3 : `activity/page.tsx`** — reutiliser les composants de `src/components/activity/*` filtres sur `orgId`, en lecture seule.
 
-- [ ] **Step 4 : Mettre a jour la fiche org staff existante** (`src/app/platform/organizations/[orgId]/page.tsx`) : remplacer le bouton "Entrer dans l'organisation" (ancien lien vers `/admin/[orgId]`) par des liens vers ces nouvelles sous-pages de supervision.
+- [x] **Step 4 : Mettre a jour la fiche org staff existante** (`src/app/platform/organizations/[orgId]/page.tsx`) : remplacer le bouton "Entrer dans l'organisation" (ancien lien vers `/admin/[orgId]`) par des liens vers ces nouvelles sous-pages de supervision.
 
-- [ ] **Step 5 : Test navigateur** — en staff, `/platform/organizations/[orgId]` -> naviguer Events/Membres/Activite sans jamais atterrir sous `/org/[orgId]`. Verifier qu'acceder manuellement a `/org/[orgId]` en staff sans membership redirige vers la supervision.
+- [x] **Step 5 : Test navigateur** — SUBSTITUE (headless) : typecheck + lint 0 erreur ; smoke `curl -k https://badge.local/platform/organizations/xxx/{events,members,activity}` => 307 (redirection login via middleware, aucun 500). La redirection staff->supervision est codee dans `org/[orgId]/layout.tsx` (Task 2.5, testee) ; navigation visuelle staff a confirmer cote utilisateur.
 
-- [ ] **Step 6 : Commit**
+- [x] **Step 6 : Commit**
 
 ```bash
 git add -A

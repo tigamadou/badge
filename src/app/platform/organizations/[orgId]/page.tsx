@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 
@@ -9,9 +8,7 @@ import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { QuotaBar } from "@/components/ui/QuotaBar";
 import { KeyValue } from "@/components/ui/JournalBlocks";
-import { OrgLogo } from "@/components/ui/PickCard";
 import { Tag } from "@/components/ui/Labels";
-import { Icon } from "@/components/ui/Icon";
 import { OrgDetailActions } from "./OrgDetailActions";
 
 export default async function OrgDetailPage({
@@ -72,38 +69,16 @@ export default async function OrgDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/platform/organizations"
-        className="inline-flex items-center gap-1 text-[13px] text-slate-400 hover:text-slate-600"
-      >
-        <Icon name="arrow-left" size={13} /> Organisations
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <OrgLogo name={org.name} size={48} />
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">{org.name}</h1>
-            <p className="mt-0.5 font-mono text-[13px] text-slate-400">
-              {org.slug} · {org._count.events} événement(s)
-            </p>
-            {org.archived && (
-              <div className="mt-1.5">
-                <Tag icon="archive">
-                  Archivée{org.archivedAt ? ` le ${new Date(org.archivedAt).toLocaleDateString("fr-FR")}` : ""}
-                </Tag>
-              </div>
-            )}
-          </div>
-        </div>
-        {/* ADR 2026-06-01 (v2-14 Task 5) : acces direct a l'espace org en mode staff. */}
-        <Link
-          href={`/org/${org.id}`}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
-        >
-          <Icon name="external-link" size={16} /> Entrer dans l&apos;organisation
-        </Link>
-      </div>
+      {/* v4 Bloc B : plus de bouton "Entrer dans l'organisation". Le staff supervise en
+          lecture seule via les onglets (PlatformOrgShell) ; il agit via l'API (pouvoir staff). */}
+      <p className="font-mono text-[13px] text-slate-400">
+        {org.slug} · {org._count.events} événement(s)
+      </p>
+      {org.archived && (
+        <Tag icon="archive">
+          Archivée{org.archivedAt ? ` le ${new Date(org.archivedAt).toLocaleDateString("fr-FR")}` : ""}
+        </Tag>
+      )}
 
       <StatGrid cols={3}>
         <StatCard label="Événements" value={org._count.events} icon="calendar" />
