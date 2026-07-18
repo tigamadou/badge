@@ -140,6 +140,20 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
     expect(details.value).toBeNull();
   });
 
+  it("returns 400 INVALID_BODY for a malformed JSON body", async () => {
+    const { org } = await makeOrgWithMember("MANAGER");
+    const { PATCH } = await import("../route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/settings/badge`, {
+      method: "PATCH",
+      body: "{not-json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_BODY");
+  });
+
   it("MANAGER with unknown templateId -> 400 UNKNOWN_TEMPLATE", async () => {
     const { org } = await makeOrgWithMember("MANAGER");
     const { PATCH } = await import("../route");
@@ -151,5 +165,15 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
 
     const reloaded = await prisma.organization.findUnique({ where: { id: org.id } });
     expect(reloaded?.badgeTemplateId).toBeNull();
+  });
+
+  it("rethrows a non-AuthError from requireOrgRole", async () => {
+    const { org } = await makeOrgWithMember("MANAGER");
+    const spy = vi.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("db boom"));
+
+    const { PATCH } = await import("../route");
+    const req = makeReq(org.id, { badgeTemplateId: "default-v1" });
+    await expect(PATCH(req, { params: Promise.resolve({ orgId: org.id }) })).rejects.toThrow("db boom");
+    spy.mockRestore();
   });
 });

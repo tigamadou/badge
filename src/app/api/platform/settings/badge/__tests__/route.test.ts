@@ -139,4 +139,29 @@ describe("PATCH /api/platform/settings/badge", () => {
     });
     expect(reloaded?.badgeTemplateId).toBe("default-v1");
   });
+
+  it("returns 400 INVALID_BODY for a malformed JSON body", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const { PATCH } = await import("../route");
+    const req = new NextRequest("http://localhost/api/platform/settings/badge", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: "{not-json",
+    });
+    const res = await PATCH(req);
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_BODY");
+  });
+
+  it("rethrows a non-AuthError raised while checking the staff role", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const spy = vi
+      .spyOn(prisma.user, "findUnique")
+      .mockRejectedValueOnce(new Error("boom-badge-role"));
+    const { PATCH } = await import("../route");
+    const req = makeReq({ badgeTemplateId: "default-v1" });
+    await expect(PATCH(req)).rejects.toThrow("boom-badge-role");
+    spy.mockRestore();
+  });
 });

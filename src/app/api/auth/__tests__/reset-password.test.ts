@@ -13,6 +13,14 @@ function makeReq(body: unknown): NextRequest {
   });
 }
 
+function makeRawReq(rawBody: string): NextRequest {
+  return new NextRequest("http://localhost/api/auth/reset-password", {
+    method: "POST",
+    body: rawBody,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 describe("POST /api/auth/reset-password", () => {
   beforeEach(() => {
     resetRateLimitForTests();
@@ -95,5 +103,25 @@ describe("POST /api/auth/reset-password", () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 INVALID_BODY when the JSON body is malformed (req.json() rejects)", async () => {
+    const { POST } = await import("@/app/api/auth/reset-password/route");
+    const res = await POST(makeRawReq("{not-json"));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 429 RATE_LIMITED after exceeding the request quota", async () => {
+    const { POST } = await import("@/app/api/auth/reset-password/route");
+    let last;
+    for (let i = 0; i < 11; i++) {
+      last = await POST(makeReq({ token: "quota-token", password: "newPassword123" }));
+    }
+    expect(last!.status).toBe(429);
+    const json = await last!.json();
+    expect(json.code).toBe("RATE_LIMITED");
+    expect(last!.headers.get("Retry-After")).toBeTruthy();
   });
 });

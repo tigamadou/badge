@@ -255,6 +255,60 @@ describe("POST /api/platform/organizations", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the request body is malformed JSON", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
+      method: "POST",
+      body: "{not-json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+  });
+
+  it("falls back to slug 'org' when the name has no alphanumeric characters", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "!!!",
+        ownerEmail: "noalnum@x.com",
+        ownerName: "Owner",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+    expect(res.status).toBe(201);
+    expect(json.org.slug).toBe("org");
+  });
+
+  it("falls back to the owner email as name when ownerName is omitted", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "NoOwnerName",
+        ownerEmail: "NoName@x.com",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(201);
+
+    const owner = await prisma.user.findUnique({
+      where: { email: "noname@x.com" },
+    });
+    expect(owner).not.toBeNull();
+    expect(owner?.name).toBe("noname@x.com");
+  });
+
   it("accepts and persists all admin fields", async () => {
     await makeStaff("STAFF_ADMIN");
 

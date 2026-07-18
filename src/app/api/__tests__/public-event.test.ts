@@ -1,7 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { GET } from "@/app/api/public/events/[slug]/route";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
+
+// Mock partiel (fallback sur l'implementation reelle) pour exercer la branche de
+// rethrow d'une erreur inattendue (non-PublicEventError), impossible a provoquer
+// avec de vraies donnees seules.
+vi.mock("@/lib/public-event", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/public-event")>();
+  return { ...actual, loadPublicEventBySlug: vi.fn(actual.loadPublicEventBySlug) };
+});
+import { loadPublicEventBySlug } from "@/lib/public-event";
+import { GET } from "@/app/api/public/events/[slug]/route";
 
 beforeEach(async () => {
   resetRateLimitForTests();
@@ -45,5 +54,22 @@ describe("GET /api/public/events/[slug]", () => {
     expect(json.categories).toHaveLength(1);
     expect("smtpPassword" in json.settings).toBe(false);
     expect("recaptchaSecretKey" in json.settings).toBe(false);
+  });
+
+  it("returns 429 after 10 requests within the rate-limit window", async () => {
+    for (let i = 0; i < 10; i++) {
+      await GET(new Request("http://t/x") as unknown as Request, { params: Promise.resolve({ slug: "whatever" }) });
+    }
+    const res = await GET(new Request("http://t/x") as unknown as Request, { params: Promise.resolve({ slug: "whatever" }) });
+    expect(res.status).toBe(429);
+    const json = await res.json();
+    expect(json.code).toBe("RATE_LIMITED");
+  });
+
+  it("rethrows an unexpected (non-PublicEventError) error", async () => {
+    vi.mocked(loadPublicEventBySlug).mockRejectedValueOnce(new Error("boom-public-event"));
+    await expect(
+      GET(new Request("http://t/x") as unknown as Request, { params: Promise.resolve({ slug: "whatever" }) }),
+    ).rejects.toThrow("boom-public-event");
   });
 });

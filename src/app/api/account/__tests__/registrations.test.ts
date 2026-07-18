@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
@@ -139,11 +139,75 @@ describe("GET /api/account/registrations", () => {
     expect(json.registrations).toHaveLength(1);
     expect(json.registrations[0].id).toBe("REG-A");
   });
+
+  describe("unexpected prisma failure", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("rethrows a non-AuthError raised while loading registrations", async () => {
+      const me = await createCompleteUser("me@v2-11-acctreg-rethrow.test");
+      await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+      vi.spyOn(prisma.registration, "findMany").mockRejectedValueOnce(
+        new Error("boom-registrations-list"),
+      );
+
+      const { GET } = await import("@/app/api/account/registrations/route");
+      await expect(
+        GET(new NextRequest("http://localhost/api/account/registrations")),
+      ).rejects.toThrow("boom-registrations-list");
+    });
+  });
 });
 
 describe("GET /api/account/registrations/[id]", () => {
   beforeEach(() => {
     vi.mocked(getServerSession).mockReset();
+  });
+
+  it("returns 401 without session", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+    const { GET } = await import("@/app/api/account/registrations/[id]/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/account/registrations/whatever"),
+      { params: Promise.resolve({ id: "whatever" }) },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when the registration does not exist", async () => {
+    const me = await createCompleteUser("me@v2-11-acctreg-detail-404.test");
+    await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/account/registrations/[id]/route");
+    const res = await GET(
+      new NextRequest("http://localhost/api/account/registrations/does-not-exist"),
+      { params: Promise.resolve({ id: "does-not-exist" }) },
+    );
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.code).toBe("NOT_FOUND");
+  });
+
+  describe("unexpected prisma failure", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("rethrows a non-AuthError raised while loading the registration", async () => {
+      const me = await createCompleteUser("me@v2-11-acctreg-detail-rethrow.test");
+      await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+      vi.spyOn(prisma.registration, "findUnique").mockRejectedValueOnce(
+        new Error("boom-registration-detail"),
+      );
+
+      const { GET } = await import("@/app/api/account/registrations/[id]/route");
+      await expect(
+        GET(new NextRequest("http://localhost/api/account/registrations/REG-X"), {
+          params: Promise.resolve({ id: "REG-X" }),
+        }),
+      ).rejects.toThrow("boom-registration-detail");
+    });
   });
 
   it("returns 403 when the registration belongs to another user", async () => {
@@ -236,6 +300,131 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
     expect(res.status).toBe(409);
     const json = await res.json();
     expect(json.code).toBe("INVALID_STATE");
+  });
+
+  it("returns 404 when the registration does not exist", async () => {
+    const me = await createCompleteUser("me@v2-11-acctreg-resub-404.test");
+    await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/account/registrations/[id]/resubmit/route"
+    );
+    const res = await POST(
+      new NextRequest("http://localhost/api/account/registrations/does-not-exist/resubmit", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ id: "does-not-exist" }) },
+    );
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 400 PROFILE_INCOMPLETE when the participant profile is not complete", async () => {
+    const me = await prisma.user.create({
+      data: {
+        email: "incomplete@v2-11-acctreg-resub.test",
+        password: "x",
+        name: "Incomplete",
+        // Profil volontairement incomplet : firstName/lastName/structure/etc. manquants.
+      },
+    });
+    const { event, category } = await seedEventBundle("acctreg-resub-incomplete");
+    const reg = await createRegistration({
+      id: "REG-INCOMPLETE",
+      userId: me.id,
+      eventId: event.id,
+      categoryId: category.id,
+      status: "REJECTED",
+      email: me.email,
+    });
+    await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/account/registrations/[id]/resubmit/route"
+    );
+    const res = await POST(
+      new NextRequest(`http://localhost/api/account/registrations/${reg.id}/resubmit`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ id: reg.id }) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("PROFILE_INCOMPLETE");
+
+    // La registration reste inchangee (toujours REJECTED).
+    const untouched = await prisma.registration.findUnique({ where: { id: reg.id } });
+    expect(untouched?.status).toBe("REJECTED");
+  });
+
+  describe("unexpected prisma / defensive failures", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("returns 404 NOT_FOUND if the owning user disappears between the ownership check and the profile lookup", async () => {
+      // Cas normalement impossible en base reelle : Registration.userId est une FK
+      // `onDelete: Restrict` vers User, donc un user avec une registration ne peut
+      // jamais etre supprime. On simule cette incoherence via un spy cible sur
+      // prisma.user.findUnique (meme technique que src/lib/__tests__/auth.test.ts et
+      // src/lib/__tests__/slugify-event.test.ts) pour couvrir la branche defensive
+      // `if (!user)` (route.ts l.47-48) qu'aucun flux reel ne peut atteindre.
+      const me = await createCompleteUser("me@v2-11-acctreg-resub-ghost.test");
+      const { event, category } = await seedEventBundle("acctreg-resub-ghost");
+      const reg = await createRegistration({
+        id: "REG-GHOST-USER",
+        userId: me.id,
+        eventId: event.id,
+        categoryId: category.id,
+        status: "REJECTED",
+        email: me.email,
+      });
+      await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+      vi.spyOn(prisma.user, "findUnique").mockResolvedValueOnce(null);
+
+      const { POST } = await import(
+        "@/app/api/account/registrations/[id]/resubmit/route"
+      );
+      const res = await POST(
+        new NextRequest(`http://localhost/api/account/registrations/${reg.id}/resubmit`, {
+          method: "POST",
+        }),
+        { params: Promise.resolve({ id: reg.id }) },
+      );
+      expect(res.status).toBe(404);
+      const json = await res.json();
+      expect(json.code).toBe("NOT_FOUND");
+    });
+
+    it("rethrows a non-AuthError raised while persisting the resubmission", async () => {
+      const me = await createCompleteUser("me@v2-11-acctreg-resub-rethrow.test");
+      const { event, category } = await seedEventBundle("acctreg-resub-rethrow");
+      const reg = await createRegistration({
+        id: "REG-RETHROW",
+        userId: me.id,
+        eventId: event.id,
+        categoryId: category.id,
+        status: "REJECTED",
+        email: me.email,
+      });
+      await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+      vi.spyOn(prisma.registration, "update").mockRejectedValueOnce(
+        new Error("boom-resubmit"),
+      );
+
+      const { POST } = await import(
+        "@/app/api/account/registrations/[id]/resubmit/route"
+      );
+      await expect(
+        POST(
+          new NextRequest(`http://localhost/api/account/registrations/${reg.id}/resubmit`, {
+            method: "POST",
+          }),
+          { params: Promise.resolve({ id: reg.id }) },
+        ),
+      ).rejects.toThrow("boom-resubmit");
+    });
   });
 
   it("returns 403 when the registration belongs to another user", async () => {

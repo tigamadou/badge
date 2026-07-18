@@ -180,4 +180,36 @@ describe("GET /api/platform/organizations", () => {
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
   });
+
+  it("falls back to default page/pageSize when the query params are not numeric", async () => {
+    await makeStaff();
+    await prisma.organization.create({ data: { name: "Active", slug: "active" } });
+
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/organizations?page=abc&pageSize=xyz",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.page).toBe(1);
+    expect(json.pageSize).toBe(20);
+  });
+
+  it("clamps zero/negative page and pageSize to a minimum of 1", async () => {
+    await makeStaff();
+    await prisma.organization.create({ data: { name: "Active", slug: "active" } });
+
+    const { GET } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/organizations?page=0&pageSize=-5",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.page).toBe(1);
+    expect(json.pageSize).toBe(1);
+  });
 });

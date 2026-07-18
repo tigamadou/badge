@@ -80,4 +80,14 @@ describe("GET /api/public/verify/[badgeId]", () => {
     const res = await GET(new Request("http://t") as unknown as Request, { params: Promise.resolve({ badgeId: "000000000000" }) });
     expect(res.status).toBe(404);
   });
+
+  it("returns 429 after 10 requests within the rate-limit window", async () => {
+    for (let i = 0; i < 10; i++) {
+      await GET(new Request("http://t") as unknown as Request, { params: Promise.resolve({ badgeId: "any" }) });
+    }
+    const res = await GET(new Request("http://t") as unknown as Request, { params: Promise.resolve({ badgeId: "any" }) });
+    expect(res.status).toBe(429);
+    const json = await res.json();
+    expect(json.code).toBe("RATE_LIMITED");
+  });
 });

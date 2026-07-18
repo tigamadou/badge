@@ -327,4 +327,213 @@ describe("GET /api/platform/activity", () => {
     expect(j2.total).toBe(5);
     expect(j2.page).toBe(3);
   });
+
+  it("defaults page/pageSize to 1/50 when query params are not numeric", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `bad-${Date.now()}@x`, password: "x", name: "Bad" },
+    });
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id } });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?page=abc&pageSize=xyz",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.page).toBe(1);
+    expect(json.pageSize).toBe(50);
+  });
+
+  it("returns 400 INVALID_TYPE for a malformed type param", async () => {
+    await makeStaff();
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?type=userLogin",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("INVALID_TYPE");
+  });
+
+  it("filters by eventId", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `ev-${Date.now()}@x`, password: "x", name: "Ev" },
+    });
+    const org = await prisma.organization.create({
+      data: { name: "EvOrg", slug: uniqueSlug("evorg") },
+    });
+    const eventA = await prisma.event.create({
+      data: {
+        orgId: org.id,
+        title: "A",
+        slug: uniqueSlug("ea"),
+        location: "L",
+        date: new Date(),
+      },
+    });
+    const eventB = await prisma.event.create({
+      data: {
+        orgId: org.id,
+        title: "B",
+        slug: uniqueSlug("eb"),
+        location: "L",
+        date: new Date(),
+      },
+    });
+    await prisma.activityLog.create({
+      data: { type: "EVENT_UPDATED", userId: u.id, eventId: eventA.id },
+    });
+    await prisma.activityLog.create({
+      data: { type: "EVENT_UPDATED", userId: u.id, eventId: eventB.id },
+    });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/activity?eventId=${eventA.id}`,
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(json.activities.length).toBe(1);
+    expect(json.activities[0].eventId).toBe(eventA.id);
+  });
+
+  it("ignores the date filter (branches else de if(from) et if(to)) when neither from nor to is provided", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `nodate-${Date.now()}@x`, password: "x", name: "NoDate" },
+    });
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id } });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest("http://localhost/api/platform/activity?page=1");
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.activities.length).toBe(1);
+  });
+
+  it("applies only the 'to' bound (lte) when 'from' is an invalid date", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `dr1-${Date.now()}@x`, password: "x", name: "D1" },
+    });
+    const t1 = new Date("2025-01-01T00:00:00Z");
+    const t2 = new Date("2025-06-01T00:00:00Z");
+    await prisma.activityLog.create({
+      data: { type: "USER_LOGIN", userId: u.id, createdAt: t1 },
+    });
+    await prisma.activityLog.create({
+      data: { type: "USER_LOGIN", userId: u.id, createdAt: t2 },
+    });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?from=not-a-date&to=2025-03-01T00:00:00Z",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    // 'from' invalide est ignore (Number.isNaN) -> seule la borne 'to' filtre.
+    expect(json.activities.length).toBe(1);
+    expect(new Date(json.activities[0].createdAt).toISOString()).toBe(
+      t1.toISOString(),
+    );
+  });
+
+  it("applies only the 'from' bound (gte) when 'to' is an invalid date", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `dr2-${Date.now()}@x`, password: "x", name: "D2" },
+    });
+    const t1 = new Date("2025-01-01T00:00:00Z");
+    const t2 = new Date("2025-06-01T00:00:00Z");
+    await prisma.activityLog.create({
+      data: { type: "USER_LOGIN", userId: u.id, createdAt: t1 },
+    });
+    await prisma.activityLog.create({
+      data: { type: "USER_LOGIN", userId: u.id, createdAt: t2 },
+    });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?from=2025-03-01T00:00:00Z&to=not-a-date",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    // 'to' invalide est ignore (Number.isNaN) -> seule la borne 'from' filtre.
+    expect(json.activities.length).toBe(1);
+    expect(new Date(json.activities[0].createdAt).toISOString()).toBe(
+      t2.toISOString(),
+    );
+  });
+
+  it("applies only the 'to' bound when 'from' is absent (else de if(from))", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `dr3-${Date.now()}@x`, password: "x", name: "D3" },
+    });
+    const t1 = new Date("2025-01-01T00:00:00Z");
+    const t2 = new Date("2025-06-01T00:00:00Z");
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id, createdAt: t1 } });
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id, createdAt: t2 } });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    // Seul 'to' fourni : on entre dans le bloc `if (from || to)` mais `if (from)` prend son else.
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?to=2025-03-01T00:00:00Z",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+    expect(json.activities.length).toBe(1);
+    expect(new Date(json.activities[0].createdAt).toISOString()).toBe(t1.toISOString());
+  });
+
+  it("applies only the 'from' bound when 'to' is absent (else de if(to))", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `dr4-${Date.now()}@x`, password: "x", name: "D4" },
+    });
+    const t1 = new Date("2025-01-01T00:00:00Z");
+    const t2 = new Date("2025-06-01T00:00:00Z");
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id, createdAt: t1 } });
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id, createdAt: t2 } });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    // Seul 'from' fourni : on entre dans le bloc mais `if (to)` prend son else.
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?from=2025-03-01T00:00:00Z",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+    expect(json.activities.length).toBe(1);
+    expect(new Date(json.activities[0].createdAt).toISOString()).toBe(t2.toISOString());
+  });
+
+  it("ignores the date filter entirely when both from and to are invalid", async () => {
+    await makeStaff();
+    const u = await prisma.user.create({
+      data: { email: `dr3-${Date.now()}@x`, password: "x", name: "D3" },
+    });
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id } });
+    await prisma.activityLog.create({ data: { type: "USER_LOGIN", userId: u.id } });
+
+    const { GET } = await import("@/app/api/platform/activity/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/activity?from=nope&to=nope-too",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(json.activities.length).toBe(2);
+  });
 });

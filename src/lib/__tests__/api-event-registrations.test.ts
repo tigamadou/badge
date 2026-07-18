@@ -147,6 +147,25 @@ describe("GET /registrations", () => {
     expect(json.registrations[0].snapshotFirstName).toBe("Amadou");
   });
 
+  it("filters by categoryId", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const otherCat = await prisma.category.create({
+      data: { eventId: event.id, name: "Other", color: "#111111", number: 2 },
+    });
+    await mkReg(event.id, cat.id);
+    await mkReg(event.id, otherCat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(
+      `http://localhost/api/org/${org.id}/events/${event.id}/registrations?categoryId=${cat.id}`,
+    );
+    const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    const json = await res.json();
+    expect(json.registrations).toHaveLength(1);
+    expect(json.registrations[0].category.id).toBe(cat.id);
+  });
+
   it("OPERATOR can read list (defense in depth: scan needs participant infos)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const u = await prisma.user.create({
@@ -221,6 +240,127 @@ describe("POST /registrations (manual creation)", () => {
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(403);
   });
+
+  it("returns 400 VALIDATION when the JSON body is malformed", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: "{not-json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("VALIDATION");
+  });
+
+  it("returns 400 INVALID_CATEGORY when categoryId is unknown", async () => {
+    const { u, org, event } = await seedAdmin();
+    const participant = await mkParticipantUser("bad-cat");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: "unknown-cat", email: participant.email }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_CATEGORY");
+  });
+
+  it("creates a registration by userId (not email)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const participant = await mkParticipantUser("by-id");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: cat.id, userId: participant.id }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(201);
+    const r = await prisma.registration.findFirst({ where: { eventId: event.id, userId: participant.id } });
+    expect(r).not.toBeNull();
+  });
+
+  it("returns 404 USER_NOT_FOUND when userId does not exist", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: cat.id, userId: "does-not-exist" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.error).toBe("USER_NOT_FOUND");
+  });
+
+  it("returns 400 PROFILE_INCOMPLETE when the participant profile is not filled", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const incomplete = await prisma.user.create({
+      data: { email: `incomplete-${stamp}@x.test`, password: "x", name: "Incomplete", emailVerifiedAt: new Date() },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: cat.id, email: incomplete.email }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("PROFILE_INCOMPLETE");
+  });
+
+  it("returns 409 ALREADY_REGISTERED when the user already has a registration for this event", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const participant = await mkParticipantUser("dup-manual");
+    const existing = await prisma.registration.create({
+      data: {
+        id: `R-${Math.random().toString(36).slice(2, 12)}`,
+        eventId: event.id,
+        categoryId: cat.id,
+        userId: participant.id,
+        snapshotEmail: participant.email,
+        snapshotLastName: "L",
+        snapshotFirstName: "F",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: `D-${Math.random().toString(36).slice(2, 10)}`,
+        snapshotIdDocument: "uploads/test/doc.pdf",
+        status: "APPROVED",
+      },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: cat.id, email: participant.email }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("ALREADY_REGISTERED");
+    expect(json.registrationId).toBe(existing.id);
+  });
 });
 
 describe("POST /registrations/[regId]/approve", () => {
@@ -293,6 +433,70 @@ describe("POST /registrations/[regId]/approve", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it("returns alreadyApproved=true without re-approving or emailing", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.alreadyApproved).toBe(true);
+    expect(vi.mocked(sendStatusNotification)).not.toHaveBeenCalled();
+  });
+
+  it("swallows a sendStatusNotification failure and still returns 200", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    vi.mocked(sendStatusNotification).mockRejectedValueOnce(new Error("smtp down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it("returns 404 when regId does not exist", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the registration belongs to another event", async () => {
+    const { u, org, event } = await seedAdmin();
+    const otherEvent = await prisma.event.create({
+      data: { orgId: org.id, title: "Other", slug: `other-approve-${Date.now()}`, location: "L", date: new Date() },
+    });
+    const otherCat = await prisma.category.create({
+      data: { eventId: otherEvent.id, name: "V", color: "#000000", number: 1 },
+    });
+    const r = await mkReg(otherEvent.id, otherCat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /registrations/[regId]/reject", () => {
@@ -336,6 +540,60 @@ describe("POST /registrations/[regId]/reject", () => {
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
     );
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when the JSON body is malformed (req.json() rejects)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when regId does not exist", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reason: "x" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("swallows a sendStatusNotification failure and still returns 200", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    vi.mocked(sendStatusNotification).mockRejectedValueOnce(new Error("smtp down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reason: "x" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
   });
 });
 
@@ -417,6 +675,35 @@ describe("POST /registrations/[regId]/print", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it("returns 404 when regId does not exist", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("swallows a sendBadgePrintedNotification failure and still returns 200", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    vi.mocked(sendBadgePrintedNotification).mockRejectedValueOnce(new Error("smtp down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/print/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
 });
 
 describe("PATCH /registrations/[regId]", () => {
@@ -445,6 +732,260 @@ describe("PATCH /registrations/[regId]", () => {
     const log = await prisma.activityLog.findFirst({ where: { type: "REGISTRATION_UPDATED", targetId: r.id } });
     expect(log).not.toBeNull();
   });
+
+  it("returns 400 when the JSON body is malformed (req.json() rejects)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/x", {
+        method: "PATCH",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 VALIDATION for an invalid field", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/x", {
+        method: "PATCH",
+        body: JSON.stringify({ snapshotEmail: "not-an-email" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when regId does not exist", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/x", {
+        method: "PATCH",
+        body: JSON.stringify({ snapshotFirstName: "New" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 INVALID_CATEGORY when categoryId does not belong to the event", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id);
+    const otherEvent = await prisma.event.create({
+      data: { orgId: org.id, title: "Other", slug: `other-patch-${Date.now()}`, location: "L", date: new Date() },
+    });
+    const otherCat = await prisma.category.create({
+      data: { eventId: otherEvent.id, name: "V", color: "#000000", number: 1 },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/x", {
+        method: "PATCH",
+        body: JSON.stringify({ categoryId: otherCat.id }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_CATEGORY");
+  });
+
+  it("moves the registration to another category of the same event (200)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id);
+    const otherCat = await prisma.category.create({
+      data: { eventId: event.id, name: "Other", color: "#ffffff", number: 2 },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/x", {
+        method: "PATCH",
+        body: JSON.stringify({ categoryId: otherCat.id }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.registration.categoryId).toBe(otherCat.id);
+
+    const after = await prisma.registration.findUnique({ where: { id: r.id } });
+    expect(after?.categoryId).toBe(otherCat.id);
+  });
+
+  it("OPERATOR cannot PATCH (403)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-op-patch-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-op-patch-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await PATCH(
+      new NextRequest("http://localhost/x", {
+        method: "PATCH",
+        body: JSON.stringify({ snapshotFirstName: "New" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /registrations/[regId]", () => {
+  beforeEach(cleanup);
+
+  it("returns the registration with its category", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await GET(
+      new NextRequest("http://localhost/x"),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.registration.id).toBe(r.id);
+    expect(json.registration.category.id).toBe(cat.id);
+  });
+
+  it("returns 404 for an unknown regId", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await GET(
+      new NextRequest("http://localhost/x"),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the registration belongs to another event", async () => {
+    const { u, org, event } = await seedAdmin();
+    const otherEvent = await prisma.event.create({
+      data: { orgId: org.id, title: "Other", slug: `other-get-${Date.now()}`, location: "L", date: new Date() },
+    });
+    const otherCat = await prisma.category.create({
+      data: { eventId: otherEvent.id, name: "V", color: "#000000", number: 1 },
+    });
+    const r = await mkReg(otherEvent.id, otherCat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await GET(
+      new NextRequest("http://localhost/x"),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("VIEWER cannot read the detail (403, minRole=OPERATOR)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `vw-${stamp}@x.test`, password: "x", name: "Vw", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-vw-get-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-vw-get-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "VIEWER" } });
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await GET(
+      new NextRequest("http://localhost/x"),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("DELETE /registrations/[regId]", () => {
+  beforeEach(cleanup);
+
+  it("deletes the registration and audits", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { email: "todelete@x.test" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await DELETE(
+      new NextRequest("http://localhost/x", { method: "DELETE" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(204);
+    const after = await prisma.registration.findUnique({ where: { id: r.id } });
+    expect(after).toBeNull();
+    const log = await prisma.activityLog.findFirst({ where: { type: "REGISTRATION_DELETED", targetId: r.id } });
+    expect((log?.details as { email?: string })?.email).toBe("todelete@x.test");
+  });
+
+  it("returns 404 when regId does not exist", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await DELETE(
+      new NextRequest("http://localhost/x", { method: "DELETE" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("OPERATOR cannot delete (403)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-op-del-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-op-del-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({ data: { eventId: event.id, name: "V", color: "#000000", number: 1 } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const res = await DELETE(
+      new NextRequest("http://localhost/x", { method: "DELETE" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("POST /registrations/[regId]/block-email", () => {
@@ -467,6 +1008,99 @@ describe("POST /registrations/[regId]/block-email", () => {
     expect(res.status).toBe(201);
     const blocked = await prisma.blockedEmail.findFirst({ where: { eventId: event.id, email: "block@x.test" } });
     expect(blocked).not.toBeNull();
+  });
+
+  it("returns 404 when regId does not exist", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("is idempotent when the email is already blocked for the event (P2002 swallowed)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { email: "already-blocked@x.test" });
+    await prisma.blockedEmail.create({ data: { eventId: event.id, email: "already-blocked@x.test", reason: "prior" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reason: "spam again" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(201);
+    const count = await prisma.blockedEmail.count({ where: { eventId: event.id, email: "already-blocked@x.test" } });
+    expect(count).toBe(1);
+  });
+
+  it("defaults to no reason when the JSON body is malformed", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { email: "malformed-body@x.test" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(201);
+    const blocked = await prisma.blockedEmail.findFirst({ where: { eventId: event.id, email: "malformed-body@x.test" } });
+    expect(blocked?.reason).toBeNull();
+  });
+
+  // Distinct de "JSON malformed" ci-dessus : ici le JSON est valide mais le champ
+  // `reason` a un type invalide -> parsed.success === false -> branche `: null` du ternaire.
+  it("defaults to no reason when reason has an invalid type (schema validation fails)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { email: "invalid-type@x.test" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reason: 12345 }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(201);
+    const blocked = await prisma.blockedEmail.findFirst({ where: { eventId: event.id, email: "invalid-type@x.test" } });
+    expect(blocked?.reason).toBeNull();
+  });
+
+  it("rethrows when blockedEmail.create fails with a non-P2002 error", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { email: "rethrow-email@x.test" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const err = Object.assign(new Error("db down"), { code: "P2003" });
+    const spy = vi.spyOn(prisma.blockedEmail, "create").mockRejectedValueOnce(err);
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/block-email/route");
+    await expect(
+      POST(
+        new NextRequest("http://localhost/x", {
+          method: "POST",
+          body: JSON.stringify({ reason: "x" }),
+          headers: { "content-type": "application/json" },
+        }),
+        { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+      ),
+    ).rejects.toThrow("db down");
+    spy.mockRestore();
   });
 });
 
@@ -598,5 +1232,94 @@ describe("POST /registrations/[regId]/checkin", () => {
     const log = await prisma.activityLog.findFirst({ where: { type: "BADGE_SCANNED" } });
     expect(log?.userId).toBe(u.id);
     expect(log?.eventId).toBe(event.id);
+  });
+
+  it("returns 404 FOREIGN_EVENT when regId does not belong to the event", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `op-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-ci-404-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-ci-404-${stamp}`, location: "L", date: new Date() },
+    });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/checkin/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.code).toBe("FOREIGN_EVENT");
+  });
+});
+
+describe("POST /registrations/print (batch)", () => {
+  beforeEach(cleanup);
+
+  it("returns 400 VALIDATION when the JSON body is malformed", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/print/route");
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations/print`, {
+        method: "POST",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 VALIDATION when ids is empty", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/print/route");
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations/print`, {
+        method: "POST",
+        body: JSON.stringify({ ids: [] }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("marks the approved registrations printed, logs BADGE_BATCH_PRINTED, and swallows a mail failure", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r1 = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    const r2 = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    const pending = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    vi.mocked(sendBadgePrintedNotification).mockRejectedValueOnce(new Error("smtp down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/print/route");
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations/print`, {
+        method: "POST",
+        body: JSON.stringify({ ids: [r1.id, r2.id, pending.id] }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.printed).toBe(2);
+    const after1 = await prisma.registration.findUnique({ where: { id: r1.id } });
+    const afterPending = await prisma.registration.findUnique({ where: { id: pending.id } });
+    expect(after1?.badgePrinted).toBe(true);
+    expect(afterPending?.badgePrinted).toBe(false);
+    const log = await prisma.activityLog.findFirst({ where: { type: "BADGE_BATCH_PRINTED", eventId: event.id } });
+    expect((log?.details as { count?: number })?.count).toBe(2);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
   });
 });

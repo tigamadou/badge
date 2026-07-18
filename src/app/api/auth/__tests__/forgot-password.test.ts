@@ -22,6 +22,15 @@ vi.mock("@/lib/recaptcha", () => ({
 }));
 
 import { sendAccountPasswordReset } from "@/lib/mail";
+import { verifyRecaptcha } from "@/lib/recaptcha";
+
+function makeRawReq(rawBody: string): NextRequest {
+  return new NextRequest("http://localhost/api/auth/forgot-password", {
+    method: "POST",
+    body: rawBody,
+    headers: { "content-type": "application/json" },
+  });
+}
 
 async function seedPlatform() {
   await prisma.platformSettings.upsert({
@@ -132,5 +141,42 @@ describe("POST /api/auth/forgot-password", () => {
     expect(vi.mocked(sendAccountPasswordReset)).not.toHaveBeenCalled();
     const updated = await prisma.user.findUnique({ where: { id: u.id } });
     expect(updated?.passwordResetToken).toBeNull();
+  });
+
+  it("returns 400 INVALID_BODY when the email is malformed", async () => {
+    const { POST } = await import("@/app/api/auth/forgot-password/route");
+    const res = await POST(makeReq({ email: "not-an-email" }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 INVALID_BODY when the JSON body is malformed (req.json() rejects)", async () => {
+    const { POST } = await import("@/app/api/auth/forgot-password/route");
+    const res = await POST(makeRawReq("{not-json"));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 RECAPTCHA_* when recaptcha verification fails", async () => {
+    vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "REJECTED" });
+    const { POST } = await import("@/app/api/auth/forgot-password/route");
+    const res = await POST(makeReq({ email: "whoever@v2-11-forgot.test" }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("RECAPTCHA_REJECTED");
+  });
+
+  it("returns 429 RATE_LIMITED after exceeding the request quota", async () => {
+    const { POST } = await import("@/app/api/auth/forgot-password/route");
+    let last;
+    for (let i = 0; i < 6; i++) {
+      last = await POST(makeReq({ email: "quota@v2-11-forgot.test" }));
+    }
+    expect(last!.status).toBe(429);
+    const json = await last!.json();
+    expect(json.code).toBe("RATE_LIMITED");
+    expect(last!.headers.get("Retry-After")).toBeTruthy();
   });
 });

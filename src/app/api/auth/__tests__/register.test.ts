@@ -23,6 +23,15 @@ vi.mock("@/lib/recaptcha", () => ({
 }));
 
 import { sendAccountVerifyEmail } from "@/lib/mail";
+import { verifyRecaptcha } from "@/lib/recaptcha";
+
+function makeRawReq(rawBody: string): NextRequest {
+  return new NextRequest("http://localhost/api/auth/register", {
+    method: "POST",
+    body: rawBody,
+    headers: { "content-type": "application/json" },
+  });
+}
 
 async function seedPlatform() {
   await prisma.platformSettings.upsert({
@@ -150,5 +159,66 @@ describe("POST /api/auth/register", () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 INVALID_BODY when the JSON body is malformed (req.json() rejects)", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(makeRawReq("{not-json"));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 RECAPTCHA_* when recaptcha verification fails", async () => {
+    vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "LOW_SCORE" });
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(
+      makeReq({
+        email: "recaptcha-ko@v2-11-register.test",
+        password: "password123",
+        name: "Ko",
+      }),
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("RECAPTCHA_LOW_SCORE");
+    const user = await prisma.user.findUnique({
+      where: { email: "recaptcha-ko@v2-11-register.test" },
+    });
+    expect(user).toBeNull();
+  });
+
+  it("returns 403 EMAIL_BLOCKED when the email is platform-blocked", async () => {
+    const email = "blocked@v2-11-register.test";
+    await prisma.blockedEmail.create({
+      data: { email, eventId: null, reason: "test" },
+    });
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(
+      makeReq({ email, password: "password123", name: "Blocked" }),
+    );
+    expect(res.status).toBe(403);
+    const json = await res.json();
+    expect(json.code).toBe("EMAIL_BLOCKED");
+    const user = await prisma.user.findUnique({ where: { email } });
+    expect(user).toBeNull();
+  });
+
+  it("returns 429 RATE_LIMITED after exceeding the request quota", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    let last;
+    for (let i = 0; i < 11; i++) {
+      last = await POST(
+        makeReq({
+          email: `quota-${i}@v2-11-register.test`,
+          password: "password123",
+          name: "Quota",
+        }),
+      );
+    }
+    expect(last!.status).toBe(429);
+    const json = await last!.json();
+    expect(json.code).toBe("RATE_LIMITED");
+    expect(last!.headers.get("Retry-After")).toBeTruthy();
   });
 });

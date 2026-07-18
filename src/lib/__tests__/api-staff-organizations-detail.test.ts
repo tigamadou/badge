@@ -301,6 +301,75 @@ describe("PATCH /api/platform/organizations/[orgId]", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the request body is malformed JSON", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "X", slug: uniqueSlug() },
+    });
+
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}`,
+      {
+        method: "PATCH",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      },
+    );
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 NOTHING_TO_UPDATE when the body is an empty object", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "X", slug: uniqueSlug() },
+    });
+
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json" },
+      },
+    );
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id }),
+    });
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("NOTHING_TO_UPDATE");
+  });
+
+  it("rethrows a non-P2002/P2025 prisma error", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "X", slug: uniqueSlug() },
+    });
+
+    const spy = vi
+      .spyOn(prisma.organization, "update")
+      .mockRejectedValueOnce(Object.assign(new Error("db boom"), { code: "P2003" }));
+
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name: "Y" }),
+        headers: { "content-type": "application/json" },
+      },
+    );
+    await expect(
+      PATCH(req, { params: Promise.resolve({ orgId: org.id }) }),
+    ).rejects.toThrow("db boom");
+    spy.mockRestore();
+  });
+
   it("returns 409 on slug collision", async () => {
     await makeStaff("STAFF_ADMIN");
     const slugA = uniqueSlug("a");
@@ -399,6 +468,43 @@ describe("POST /api/platform/organizations/[orgId]/archive", () => {
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
   });
+
+  it("returns 404 for an unknown org (real P2025)", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/archive/route"
+    );
+    const req = new NextRequest(
+      "http://localhost/api/platform/organizations/unknown/archive",
+      { method: "POST" },
+    );
+    const res = await POST(req, { params: Promise.resolve({ orgId: "unknown" }) });
+    expect(res.status).toBe(404);
+  });
+
+  it("rethrows a non-P2025 prisma error", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "A", slug: uniqueSlug("arch") },
+    });
+
+    const spy = vi
+      .spyOn(prisma.organization, "update")
+      .mockRejectedValueOnce(Object.assign(new Error("db boom"), { code: "P2003" }));
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/archive/route"
+    );
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}/archive`,
+      { method: "POST" },
+    );
+    await expect(
+      POST(req, { params: Promise.resolve({ orgId: org.id }) }),
+    ).rejects.toThrow("db boom");
+    spy.mockRestore();
+  });
 });
 
 describe("POST /api/platform/organizations/[orgId]/restore", () => {
@@ -438,6 +544,48 @@ describe("POST /api/platform/organizations/[orgId]/restore", () => {
       where: { type: "ORG_RESTORED", orgId: org.id },
     });
     expect(log).not.toBeNull();
+  });
+
+  it("returns 404 for an unknown org (real P2025)", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/restore/route"
+    );
+    const req = new NextRequest(
+      "http://localhost/api/platform/organizations/unknown/restore",
+      { method: "POST" },
+    );
+    const res = await POST(req, { params: Promise.resolve({ orgId: "unknown" }) });
+    expect(res.status).toBe(404);
+  });
+
+  it("rethrows a non-P2025 prisma error", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: {
+        name: "R",
+        slug: uniqueSlug("rest"),
+        archived: true,
+        archivedAt: new Date(),
+      },
+    });
+
+    const spy = vi
+      .spyOn(prisma.organization, "update")
+      .mockRejectedValueOnce(Object.assign(new Error("db boom"), { code: "P2003" }));
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/restore/route"
+    );
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}/restore`,
+      { method: "POST" },
+    );
+    await expect(
+      POST(req, { params: Promise.resolve({ orgId: org.id }) }),
+    ).rejects.toThrow("db boom");
+    spy.mockRestore();
   });
 });
 

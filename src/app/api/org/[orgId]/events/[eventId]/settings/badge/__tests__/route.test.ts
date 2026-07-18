@@ -175,6 +175,35 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/settings/badge", () => {
     expect(details.value).toBeNull();
   });
 
+  it("ADMIN with a malformed JSON body -> 400 INVALID_BODY", async () => {
+    // Exerce `req.json().catch(() => null)` (raw=null) puis l'echec zod qui en decoule :
+    // bodySchema exige `badgeTemplateId` (string ou null), donc `null` echoue le parse.
+    const { org, event } = await makeEventWithMember("OWNER", "ADMIN");
+    const { PATCH } = await import("../route");
+    const req = new NextRequest(
+      `http://localhost/api/org/${org.id}/events/${event.id}/settings/badge`,
+      { method: "PATCH", body: "not-json{", headers: { "content-type": "application/json" } },
+    );
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id }),
+    });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_BODY");
+  });
+
+  it("ADMIN with wrong-shaped body (number instead of string) -> 400 INVALID_BODY", async () => {
+    const { org, event } = await makeEventWithMember("OWNER", "ADMIN");
+    const { PATCH } = await import("../route");
+    const req = makeReq(org.id, event.id, { badgeTemplateId: 123 });
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id }),
+    });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_BODY");
+  });
+
   it("ADMIN with unknown templateId -> 400 UNKNOWN_TEMPLATE", async () => {
     const { org, event } = await makeEventWithMember("OWNER", "ADMIN");
     const { PATCH } = await import("../route");

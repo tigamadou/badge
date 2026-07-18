@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -101,5 +101,239 @@ describe("Plans + Subscription platform API", () => {
       where: { type: "SUBSCRIPTION_UPDATED", orgId: org.id },
     });
     expect(updated).not.toBeNull();
+  });
+});
+
+describe("GET /api/platform/plans", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  it("lists non-archived plans by default (no ?archived)", async () => {
+    await asStaff("STAFF_OBSERVER");
+    const active = await prisma.plan.create({ data: { name: `active-${Date.now()}` } });
+    const archived = await prisma.plan.create({
+      data: { name: `archived-${Date.now()}`, archived: true },
+    });
+    const { GET } = await import("@/app/api/platform/plans/route");
+    const res = await GET(req("/api/platform/plans", "GET"), { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
+    const { plans } = await res.json();
+    const ids = plans.map((p: { id: string }) => p.id);
+    expect(ids).toContain(active.id);
+    expect(ids).not.toContain(archived.id);
+  });
+
+  it("lists archived plans with ?archived=true", async () => {
+    await asStaff("STAFF_OBSERVER");
+    const active = await prisma.plan.create({ data: { name: `active2-${Date.now()}` } });
+    const archived = await prisma.plan.create({
+      data: { name: `archived2-${Date.now()}`, archived: true },
+    });
+    const { GET } = await import("@/app/api/platform/plans/route");
+    const res = await GET(req("/api/platform/plans?archived=true", "GET"), {
+      params: Promise.resolve({}),
+    });
+    expect(res.status).toBe(200);
+    const { plans } = await res.json();
+    const ids = plans.map((p: { id: string }) => p.id);
+    expect(ids).toContain(archived.id);
+    expect(ids).not.toContain(active.id);
+  });
+});
+
+describe("POST /api/platform/plans — validation, defaults, conflicts", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns 400 for malformed JSON body", async () => {
+    await asStaff();
+    const { POST } = await import("@/app/api/platform/plans/route");
+    const res = await POST(
+      new NextRequest("http://localhost/api/platform/plans", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{not-json",
+      }),
+      { params: Promise.resolve({}) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("defaults maxEvents/maxParticipantsPerEvent to null when omitted", async () => {
+    await asStaff();
+    const { POST } = await import("@/app/api/platform/plans/route");
+    const name = `no-limits-${Date.now()}`;
+    const res = await POST(req("/api/platform/plans", "POST", { name }), {
+      params: Promise.resolve({}),
+    });
+    expect(res.status).toBe(201);
+    const { plan } = await res.json();
+    expect(plan.maxEvents).toBeNull();
+    expect(plan.maxParticipantsPerEvent).toBeNull();
+  });
+
+  it("returns 409 NAME_TAKEN when the name is already used", async () => {
+    await asStaff();
+    const name = `dup-${Date.now()}`;
+    await prisma.plan.create({ data: { name } });
+    const { POST } = await import("@/app/api/platform/plans/route");
+    const res = await POST(req("/api/platform/plans", "POST", { name }), {
+      params: Promise.resolve({}),
+    });
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("NAME_TAKEN");
+  });
+
+  it("rethrows a non-P2002 prisma error", async () => {
+    await asStaff();
+    const spy = vi
+      .spyOn(prisma.plan, "create")
+      .mockRejectedValueOnce(Object.assign(new Error("db-fail"), { code: "P2003" }));
+    const { POST } = await import("@/app/api/platform/plans/route");
+    await expect(
+      POST(req("/api/platform/plans", "POST", { name: `spy-${Date.now()}` }), {
+        params: Promise.resolve({}),
+      }),
+    ).rejects.toThrow("db-fail");
+    spy.mockRestore();
+  });
+});
+
+describe("PUT /api/platform/organizations/[orgId]/subscription — validation & not-found", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  it("rejects malformed JSON body with 400", async () => {
+    await asStaff();
+    const org = await prisma.organization.create({
+      data: { name: "OrgBad", slug: `orgbad-${Date.now()}` },
+    });
+    const { PUT } = await import(
+      "@/app/api/platform/organizations/[orgId]/subscription/route"
+    );
+    const res = await PUT(
+      new NextRequest(
+        `http://localhost/api/platform/organizations/${org.id}/subscription`,
+        {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: "{not-json",
+        },
+      ),
+      { params: Promise.resolve({ orgId: org.id }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects an invalid startDate with 400 VALIDATION", async () => {
+    await asStaff();
+    const org = await prisma.organization.create({
+      data: { name: "OrgDate", slug: `orgdate-${Date.now()}` },
+    });
+    const plan = await prisma.plan.create({ data: { name: `plan-date-${Date.now()}` } });
+    const { PUT } = await import(
+      "@/app/api/platform/organizations/[orgId]/subscription/route"
+    );
+    const res = await PUT(
+      req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
+        planId: plan.id,
+        status: "ACTIVE",
+        startDate: "not-a-date",
+      }),
+      { params: Promise.resolve({ orgId: org.id }) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("VALIDATION");
+  });
+
+  it("returns 404 ORG_NOT_FOUND for an unknown orgId", async () => {
+    await asStaff();
+    const plan = await prisma.plan.create({ data: { name: `plan-orgnf-${Date.now()}` } });
+    const { PUT } = await import(
+      "@/app/api/platform/organizations/[orgId]/subscription/route"
+    );
+    const res = await PUT(
+      req(`/api/platform/organizations/ghost-org/subscription`, "PUT", {
+        planId: plan.id,
+        status: "ACTIVE",
+      }),
+      { params: Promise.resolve({ orgId: "ghost-org" }) },
+    );
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.error).toBe("ORG_NOT_FOUND");
+  });
+
+  it("returns 404 PLAN_NOT_FOUND for an unknown planId", async () => {
+    await asStaff();
+    const org = await prisma.organization.create({
+      data: { name: "OrgPlanNf", slug: `orgplannf-${Date.now()}` },
+    });
+    const { PUT } = await import(
+      "@/app/api/platform/organizations/[orgId]/subscription/route"
+    );
+    const res = await PUT(
+      req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
+        planId: "ghost-plan",
+        status: "ACTIVE",
+      }),
+      { params: Promise.resolve({ orgId: org.id }) },
+    );
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.error).toBe("PLAN_NOT_FOUND");
+  });
+
+  it("creates a subscription with an explicit startDate (provided branch)", async () => {
+    await asStaff();
+    const org = await prisma.organization.create({
+      data: { name: "OrgStart", slug: `orgstart-${Date.now()}` },
+    });
+    const plan = await prisma.plan.create({ data: { name: `plan-start-${Date.now()}` } });
+    const { PUT } = await import(
+      "@/app/api/platform/organizations/[orgId]/subscription/route"
+    );
+    const res = await PUT(
+      req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
+        planId: plan.id,
+        status: "ACTIVE",
+        startDate: "2020-06-15",
+      }),
+      { params: Promise.resolve({ orgId: org.id }) },
+    );
+    expect(res.status).toBe(200);
+    const { subscription } = await res.json();
+    expect(new Date(subscription.startDate).toISOString().slice(0, 10)).toBe("2020-06-15");
+  });
+
+  it("creates a subscription without startDate (falls back to prisma @default(now()))", async () => {
+    await asStaff();
+    const org = await prisma.organization.create({
+      data: { name: "OrgNoStart", slug: `orgnostart-${Date.now()}` },
+    });
+    const plan = await prisma.plan.create({ data: { name: `plan-nostart-${Date.now()}` } });
+    const before = Date.now();
+    const { PUT } = await import(
+      "@/app/api/platform/organizations/[orgId]/subscription/route"
+    );
+    const res = await PUT(
+      req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
+        planId: plan.id,
+        status: "ACTIVE",
+      }),
+      { params: Promise.resolve({ orgId: org.id }) },
+    );
+    expect(res.status).toBe(200);
+    const { subscription } = await res.json();
+    expect(new Date(subscription.startDate).getTime()).toBeGreaterThanOrEqual(before - 1000);
   });
 });

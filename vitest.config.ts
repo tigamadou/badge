@@ -20,8 +20,8 @@ export default defineConfig({
     exclude: ["node_modules", "dist", ".next", "e2e/**"],
     coverage: {
       provider: "v8",
-      // Perimetre v4-02 : couverture unitaire ciblee sur la logique metier de src/lib.
-      include: ["src/lib/**"],
+      // Perimetre v4-02 : lib (unitaire) + routes API (integration).
+      include: ["src/lib/**", "src/app/api/**"],
       exclude: [
         "src/lib/**/__tests__/**",
         // prisma.ts : singleton client Prisma trivial (instanciation), rien a tester.
@@ -32,8 +32,12 @@ export default defineConfig({
         // Templates React-PDF (rendu) : couverts par build-context + E2E generation badge,
         // pas par l'unitaire (cf. plan : composants React couverts par E2E).
         "src/lib/badge-templates/**/template.tsx",
+        // Wrapper NextAuth trivial : delegue tout a NextAuth(authOptions). La logique
+        // metier (authorize, callbacks) vit dans src/lib/auth.ts (couvert 100%) et le
+        // flux login est couvert en E2E. Rien de testable en unitaire ici.
+        "src/app/api/auth/\\[...nextauth\\]/route.ts",
       ],
-      reporter: ["text-summary", "text"],
+      reporter: ["text-summary", "text", "json-summary", "json"],
       thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
     },
   },

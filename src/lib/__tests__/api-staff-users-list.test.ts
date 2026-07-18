@@ -246,4 +246,51 @@ describe("GET /api/platform/users", () => {
       json.users.find((u: { email: string }) => u.email === "a@x"),
     ).toBeUndefined();
   });
+
+  it("archived=all returns both active and archived users (no archived filter)", async () => {
+    await makeStaff();
+    await prisma.user.create({
+      data: { email: "active@x", password: "x", name: "Active" },
+    });
+    await prisma.user.create({
+      data: {
+        email: "archived@x",
+        password: "x",
+        name: "Archived",
+        archived: true,
+        archivedAt: new Date(),
+      },
+    });
+
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest("http://localhost/api/platform/users?archived=all");
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(
+      json.users.find((u: { email: string }) => u.email === "active@x"),
+    ).toBeDefined();
+    expect(
+      json.users.find((u: { email: string }) => u.email === "archived@x"),
+    ).toBeDefined();
+  });
+
+  it("defaults page/pageSize to 1/20 when query params are not numeric", async () => {
+    await makeStaff();
+    await prisma.user.create({
+      data: { email: "p@x", password: "x", name: "P" },
+    });
+
+    const { GET } = await import("@/app/api/platform/users/route");
+    const req = new NextRequest(
+      "http://localhost/api/platform/users?page=abc&pageSize=xyz",
+    );
+    const res = await GET(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.page).toBe(1);
+    expect(json.pageSize).toBe(20);
+  });
 });

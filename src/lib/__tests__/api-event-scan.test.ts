@@ -61,6 +61,79 @@ async function cleanup() {
 describe("POST /scan/verify", () => {
   beforeEach(cleanup);
 
+  it("returns 401 without session", async () => {
+    const { org, event } = await seedOperator();
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ payload: "REG-X" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 VALIDATION on malformed JSON body", async () => {
+    const { u, org, event } = await seedOperator();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("VALIDATION");
+  });
+
+  it("returns 400 VALIDATION when payload is missing", async () => {
+    const { u, org, event } = await seedOperator();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("VALIDATION");
+  });
+
+  it("unknown badge -> 404 NOT_FOUND + BADGE_SCANNED log with result not-found", async () => {
+    const { u, org, event } = await seedOperator();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ payload: "REG-DOES-NOT-EXIST" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.code).toBe("NOT_FOUND");
+
+    const log = await prisma.activityLog.findFirst({ where: { type: "BADGE_SCANNED", eventId: event.id } });
+    expect((log?.details as { result?: string } | null)?.result).toBe("not-found");
+  });
+
   it("APPROVED badge -> authorized=true + BADGE_SCANNED log", async () => {
     const { u, org, event, cat } = await seedOperator();
     const p = await mkParticipant("ok");
