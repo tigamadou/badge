@@ -10,7 +10,7 @@
 - **Integration API** : chaque route de `src/app/api/**` a au minimum : 1 golden path (200/201/204), 1 cas 401 (non authentifie), 1 cas 403 par frontiere de role (matrice RBAC), 1 cas 400 (validation), 1 cas 404 le cas echeant, et l'assertion `logActivity` pour toute action sensible.
 - **E2E** : chaque page de `src/app/**/page.tsx` a au moins 1 spec de rendu + 1 spec par interaction utilisateur (formulaire, bouton d'action, filtre, navigation), y compris etats vides et erreurs 403/404 en navigation.
 
-**Architecture :** Next.js 16 App Router + Prisma 6 + MySQL 8, espaces v4 separes (`/platform`, `/org/[orgId]`, `/org/[orgId]/events/[eventId]`), HTTPS local Caddy (`https://badge.local`), stockage MinIO/S3, abonnements (Plan/Subscription). Tests dans le conteneur Docker dev (`make dev` prealable).
+**Architecture :** Next.js 16 App Router + Prisma 6 + MySQL 8, **trois workspaces v4 top-level non imbriques** (`/platform`, `/org/[orgId]`, `/event/[eventId]` — cf. refonte Bloc D), selecteur de workspace post-login (`/select`), HTTPS local Caddy (`https://badge.local`), stockage MinIO/S3, abonnements (Plan/Subscription). Les URL **API** restent sous `/api/org/[orgId]/events/[eventId]`. Tests dans le conteneur Docker dev (`make dev` prealable).
 
 **Tech Stack tests :** Vitest 4 (+ `@vitest/coverage-v8` a installer), Playwright (chromium systeme dans le conteneur, mode UI depuis l'hote), Mailpit (assertions email), MinIO (assertions storage), GitHub Actions.
 
@@ -58,7 +58,16 @@ Ordre justifie : impossible de viser 100% E2E (Phase 3) sur une suite qui a deja
 
 ### Task 0.3 — Resorption des echecs : 0 rouge
 
-- [ ] **Step 1 : Corriger** les echecs categorie (a), (b), (c) spec par spec (selecteurs, chemins, flux logout modal v4, uploads MinIO).
+> ✅ **BLOCAGE ARCHITECTURE RESOLU (decision 2026-07-18).** La categorie (d) bloquante (membre
+> event-only redirige hors de son evenement par le layout org parent) est tranchee : **de-nesting
+> complet de l'espace evenement en workspace top-level `/event/[eventId]`** + selecteur de workspace.
+> **ORDRE IMPOSE :** implementer d'abord le **Bloc D du plan refonte**
+> (`docs/v4/plans/2026-07-17-v4-refonte-globale.md`, Phase 2 Bloc D — Tasks 2.9 a 2.13) qui de-neste
+> l'event et supprime la cascade de redirect, PUIS reprendre cette Task 0.3 sur une base saine
+> (les chemins e2e event deviennent `/event/[eventId]`, cf. Phase 3 Task 3.4). Ne pas tenter de
+> fermer 0.3 avant que le Bloc D soit livre : la suite E2E ne peut pas passer au vert sinon.
+
+- [ ] **Step 1 : Corriger** les echecs categorie (a), (b), (c) spec par spec (selecteurs, chemins `/event/[eventId]`, flux logout modal v4, uploads MinIO).
 - [ ] **Step 2 : Pour la categorie (d)** (regressions app reelles) : documenter chacune dans la note, corriger l'app si trivial, sinon creer une entree dediee en fin de plan et l'implementer avant de fermer la phase.
 - [ ] **Step 3 : Verify** : `make test-e2e` -> 0 echec, 0 skip non justifie. Reporter le compte exact dans la note.
 
@@ -126,7 +135,7 @@ Convention : 1 fichier spec par page ou groupe coherent, dans `e2e/{public,accou
 - [ ] **Step 1 :** dashboard (KPI, etat vide), `/events` + `/events/new` (wizard, quota/limite d'abonnement, slug collision), `/members` (invitation avec choix de role v4 OWNER/MANAGER/AUDITOR, changement de role, suppression, garde-fou dernier OWNER en UI), `/settings` + `/settings/badge` (formulaires, cascade heritage), `/templates` (CRUD UI complet), `/subscription` (v4 : plan affiche, limites, barres de progression, alerte > 80%), `/activity` + `/activity/[logId]`.
 - [ ] **Step 2 : Verify** : specs vertes pour OWNER, MANAGER, AUDITOR (nav filtree par role).
 
-### Task 3.4 — Espace evenement `/org/[orgId]/events/[eventId]`
+### Task 3.4 — Espace evenement `/event/[eventId]` (workspace top-level, cf. refonte Bloc D)
 
 - [ ] **Step 1 :** dashboard par role (ADMIN/OPERATOR/PRINTER/VIEWER), `/registrations` (recherche, filtres statut/categorie, pagination, tri — via l'UI), `/registrations/new` (formulaire, validation), `/registrations/[regId]` (approve/reject avec motif, block email/document, all-access, doublons, checkin — boutons UI), `/registrations/overview`.
 - [ ] **Step 2 :** `/badges` + `/badges/[badgeId]` + `/badges/print` (galerie, previsualisation, impression batch UI, cascade template), `/categories` (CRUD via modales, import templates org), `/blocked-emails` + `/blocked-documents` (liste + deblocage UI), `/members` (invitation, retrait), `/scan` (saisie manuelle : success / invalid / already-scanned), `/settings` + `/settings/badge`, `/activity` + `/activity/[logId]`, archivage/restauration d'event (OWNER).
@@ -237,6 +246,82 @@ auth-register(4), auth-setup-password(3), badge-public(2), event-register(1), se
 **Conclusion Task 0.1 :** le fix prioritaire (Task 0.3) est une correction du selecteur du
 helper partage `loginAs` ("Email" -> "Adresse e-mail"), qui devrait debloquer ~159 echecs
 d'un coup et reveler les categories (a)/(b) sous-jacentes pour traitement.
+
+### Task 0.3 — progression et blocages (working tree, non committe : Verify globale non atteinte)
+
+Fixes appliques et VERIFIES (dans l'arbre de travail, pas encore committes car la
+Verify de 0.3 = suite complete a 0 rouge n'est pas atteinte) :
+- `e2e/helpers/auth.ts` : `getByLabel("Email")` -> `getByLabel(/e-?mail/i)`. Debloque le
+  login partage => les ~159 echecs a 30s passent l'etape login (verifie).
+- `e2e/event/dashboard.spec.ts` (ADMIN) : `getByRole("heading", {name:/tableau de bord/i})`
+  -> `getByText(/tableau de bord de l'evenement/i).first()`. La page reskinee met le titre
+  d'evenement en `<h1>` et "Tableau de bord de l'evenement" en `<p>` (sous-titre). ADMIN
+  passe (verifie, KPI toujours asserts, non affaibli).
+
+Blocage ouvert (arbitrage c vs d — decision humaine requise) :
+- `e2e/event/dashboard.spec.ts` OPERATOR/PRINTER/VIEWER : `page.goto(.../events/[eventId])`
+  renvoie `net::ERR_ABORTED` UNIQUEMENT pour les roles non-admin (ADMIN OK). Le layout
+  event (`src/app/org/[orgId]/events/[eventId]/layout.tsx`) ne redirige pas ces roles : il
+  rend des shells dedies `EventOperatorShell`/`EventPrinterShell`/`EventViewerShell` (Server
+  Components, sans redirect ni router client). L'abort de navigation cible-role est donc un
+  **candidat regression (categorie d)** a investiguer (rendu de la vue operateur/printer/
+  viewer), pas une simple derive de selecteur. A trancher avant de fermer 0.3.
+
+Diagnostic approfondi de l'ERR_ABORTED non-admin (causes ecartees) : PAS un 500 (aucune
+erreur serveur dans les logs app au rendu operateur) ; PAS du timing de compilation Next dev
+(re-run apres compilation = meme abort deterministe) ; PAS un redirect (ni le layout, ni la
+page `page.tsx`, ni `EventOperatorShell` — Server Component pur, Links only — ne redirigent ;
+`waitUntil:"commit"` n'aide pas => abort au niveau reponse). Piste a instruire via la trace
+Playwright (`test-results/.../trace.zip`) + intention design : interaction fixture possible —
+`createTestEventMember({role:"OPERATOR"})` cree aussi une OrgMembership AUDITOR, or
+`effectiveEventRole` donne priorite a l'org (AUDITOR -> "VIEWER") sur l'EventMembership
+(OPERATOR). A verifier : role effectif reellement resolu + cause exacte de l'abort. Releve
+d'une decision humaine (fixture a corriger vs comportement app a ajuster vs test a adapter).
+
+Finding complementaire (2e passe) : les 3 tests non-admin qui abortent (OPERATOR/PRINTER/
+VIEWER de `dashboard.spec.ts`) partagent tous une OrgMembership AUDITOR posee par la fixture
+`createTestEventMember` ; or `effectiveEventRole` donne priorite a l'org (AUDITOR -> "VIEWER")
+sur l'EventMembership. Consequence : les 3 resolvent en VIEWER et rendent tous
+`EventViewerShell` (Server Component pur, sans redirect) — les tests "OPERATOR"/"PRINTER"
+**n'exercent donc jamais** leur role event (bug de conception de la fixture, arbitrage RBAC
+a trancher). Cause exacte de l'`ERR_ABORTED` (au-dela de la resolution de role) : trace reseau inspectee
+(`trace.zip` -> `0-trace.network`) => la requete de navigation event est **avortee sans
+reponse serveur** (`time:-1`, aucune entree response), la ou ADMIN obtient un rendu complet.
+Ecarte une redirection/500 serveur normale ; pointe vers un abort client / soft-nav RSC dont
+la cause exige un debogage runtime (PWDEBUG ou logs serveur cibles). Decision humaine requise :
+corriger la fixture (ne pas coupler org AUDITOR) vs. adapter les attentes des tests au
+routage/role effectif reel, puis re-diagnostiquer l'abort sur la base saine.
+
+*** CORRECTION / ROOT CAUSE CONFIRMEE (supersede les 2 hypotheses ci-dessus) ***
+La theorie "fixture couple org AUDITOR" est FAUSSE : `createTestEventMember` a un flag
+`attachOrgAuditor` OPT-IN (defaut falsy) et `dashboard.spec.ts` ne le passe pas => les users
+OPERATOR/PRINTER/VIEWER sont de PURS event-members (EventMembership seule, aucune
+OrgMembership). Egalement faux : "pas de redirect". Cause reelle CONFIRMEE (categorie d,
+REGRESSION APP) : `src/app/org/[orgId]/layout.tsx` (v4 Bloc B) calcule
+`isMember = hasOrgRole(ctx, orgId, "AUDITOR")` puis `redirect("/select")` si non-membre.
+Or l'espace evenement est physiquement imbrique sous `/org/[orgId]/events/[eventId]`, donc ce
+layout parent s'applique AUSSI aux pages event. Un membre event-only (OPERATOR/PRINTER/VIEWER
+sans OrgMembership) n'a pas de role org => `isMember=false` => redirect SSR => `page.goto`
+renvoie `ERR_ABORTED` (redirect gere en soft-nav, d'ou l'absence de reponse dans la trace).
+ADMIN passe car `makeEventAdminUser` cree un membre avec role org (OWNER) => `isMember=true`.
+
+Impact reel (pas seulement tests) : TOUT operateur/imprimeur/lecteur d'evenement qui n'est
+pas aussi membre de l'organisation est REDIRIGE hors de son propre evenement -> les roles
+event dedies (et leurs shells Operator/Printer/Viewer) sont inaccessibles en v4. Bug de prod.
+
+Correctif NON trivial (arbitrage architecture, decision humaine) : le org layout doit laisser
+passer les membres d'un evenement de l'org vers les routes `/events/[eventId]/**` sans exposer
+les pages org-level aux non-membres org. Options : (a) elargir le gate `isMember` pour inclure
+"membre d'un event de cette org" ET re-gater les pages org-level (dashboard/members/settings)
+individuellement ; (b) sortir l'espace event de sous `/org/[orgId]` (revenir sur l'imbrication
+URL de la refonte) ; (c) deplacer tout le controle d'acces event dans le event layout et
+neutraliser le gate org pour le sous-arbre event. Chaque option a des consequences RBAC a
+trancher avec l'intention design de la refonte v4 (Bloc B "fin des vues imbriquees").
+
+Nature du reste de 0.3 : ~40 specs a adapter a la DOM reskinee v4, chacune avec un arbitrage
+(c : selecteur a mettre a jour / d : regression app a corriger et documenter ici). Chaque
+iteration de verification = run complet ~1.4h. Travail iteratif a supervision humaine ;
+non drainable mecaniquement.
 
 ### Mesure coverage initiale (Task 1.x)
 

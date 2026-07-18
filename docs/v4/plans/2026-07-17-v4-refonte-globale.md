@@ -158,14 +158,30 @@ Rappeler que `/etc/hosts` doit contenir `127.0.0.1 badge.local pma.badge.local m
 
 # PHASE 2 — Separation complete des espaces + renommage des routes
 
-**But :** Trois espaces distincts, sans reutilisation des vues du niveau inferieur :
+**But :** Trois espaces (workspaces) **physiquement independants, sans AUCUNE imbrication d'URL** :
 - `/platform/**` — staff applicatif (ex-`/staff`)
-- `/org/[orgId]/**` — espace organisation (ex-`/admin/[orgId]`, hors events)
-- `/org/[orgId]/event/[eventId]/**` — espace evenement (ex-`/admin/[orgId]/events/[eventId]`)
+- `/org/[orgId]/**` — espace organisation (ex-`/admin/[orgId]`) : dashboard, **liste** des events, membres, settings, templates, abonnement, activite
+- `/event/[eventId]/**` — espace evenement **top-level** (plus sous `/org`) : dashboard, registrations, badges, scan, categories, membres, settings, activite
 
-Et deux nouvelles surfaces de **consultation dediee** :
-- Le staff consulte une org via des pages **propres** sous `/platform/organizations/[orgId]/**` (supervision, read-only), sans "descendre" dans `/org`.
-- L'org consulte un event via l'espace event `/org/[orgId]/event/[eventId]/**` avec un shell adapte (deja amorce par les shells Operator/Printer/Viewer), sans reutiliser un espace "membre event" separe.
+> **DECISION ARCHITECTURE 2026-07-18 (supersede l'imbrication livree en Bloc A/B) :** l'espace
+> evenement devient une route **top-level** `/event/[eventId]`, plus un enfant de `/org/[orgId]`.
+> Motif : tant que l'event etait imbrique sous `/org/[orgId]/events/[eventId]`, le layout parent
+> `org/[orgId]/layout.tsx` s'appliquait aussi aux pages event et **redirigeait tout membre
+> event-only** (OPERATOR/PRINTER/VIEWER sans OrgMembership) hors de son propre evenement
+> (regression de prod confirmee, cf. plan tests v4-02 Task 0.3). En sortant l'event de l'org,
+> chaque layout gere son PROPRE controle d'acces, sans cascade. C'est la vraie "fin des vues
+> imbriquees". Mise en oeuvre : **Bloc D** ci-dessous (les Blocs A/B/C restent l'historique livre ;
+> Bloc D corrige l'imbrication et le gate fautif). Note : les URL **API** restent sous
+> `/api/org/[orgId]/events/[eventId]` (non visibles, chaque route fait son propre
+> `requireEventPermission`) — seules les routes de **pages** sont de-nestees.
+
+Et deux surfaces d'entree/consultation :
+- **Sélecteur de workspace** apres connexion (`/select` generalise) : liste les workspaces
+  accessibles (Plateforme, Orgs, Evenements) ; **redirection directe s'il n'y en a qu'un**,
+  sinon page de choix. Remplace le hack `resolveHomeRedirect`/localStorage.
+- Le staff consulte une org via des pages **propres** sous `/platform/organizations/[orgId]/**`
+  (supervision, read-only) ; il ouvre un evenement via le **meme** espace `/event/[eventId]`
+  avec une **banniere "mode staff"** (`effectiveEventRole` renvoie deja `STAFF`).
 
 **Sous-decision actee :** on renomme egalement les namespaces API (`/api/staff`->`/api/platform`, `/api/admin`->`/api/org`) pour la coherence "renommage complet". C'est le gros du churn ; il se fait par un enchainement mecanique verifie (git mv + remplacement des call sites) suivi d'un lint+typecheck+test complet.
 
@@ -355,6 +371,13 @@ if (!isMember) {
 
 Supprimer le flag `isStaffMode` et la `StaffBanner` de cet espace (l'espace org n'est plus rendu au staff).
 
+> ⚠️ **SUPERSEDE PAR LE BLOC D (2026-07-18).** Ce gate est correct pour les pages **org-level**,
+> mais tant que l'espace event est imbrique sous `/org/[orgId]/events/[eventId]`, ce meme layout
+> s'applique AUSSI aux pages event et redirige les membres **event-only** hors de leur evenement
+> (regression de prod). Le Bloc D de-neste l'event (`/event/[eventId]` top-level) : ce gate ne
+> garde alors plus QUE les pages org-level, et l'event a son propre gate. Ne pas revenir sur ce
+> Step 5 tel quel ; appliquer le Bloc D.
+
 - [x] **Step 6 : Lancer les tests** : `make test -- auth-helpers` — Attendu : PASS. Puis `make typecheck`.
 
 ### Task 2.6 : Construire le shell de supervision staff
@@ -416,6 +439,112 @@ git commit -m "feat(v4): espace supervision staff dedie, fin des vues org imbriq
 ```bash
 git add -A
 git commit -m "feat(v4): nav org filtree par role effectif"
+```
+
+## Bloc D — De-nesting de l'espace evenement (workspace top-level) + selecteur de workspace
+
+**But :** Corriger l'imbrication livree en Bloc A/B. L'espace evenement devient une route
+**top-level** `/event/[eventId]/**` avec son propre controle d'acces ; le gate org ne garde plus
+que les pages org-level ; un **selecteur de workspace** gere l'entree post-login. Resout la
+regression "membre event-only redirige hors de son evenement" (plan tests v4-02 Task 0.3).
+
+**Etat de depart (livre) :** pages event sous `src/app/org/[orgId]/events/[eventId]/**` (pluriel,
+imbrique) ; `src/app/org/[orgId]/layout.tsx` redirige les non-membres org (cascade fautive sur les
+pages event) ; `/select` = selecteur d'org uniquement ; entree post-login via
+`resolveHomeRedirect` (`src/lib/org-redirect.ts`) + hint localStorage.
+
+**Fichiers du perimetre :**
+- git mv : `src/app/org/[orgId]/events/[eventId]/**` -> `src/app/event/[eventId]/**` (la **liste**
+  `src/app/org/[orgId]/events/{page.tsx,new/page.tsx}` RESTE dans l'espace org).
+- Modify : `src/app/event/[eventId]/layout.tsx` (resout orgId depuis l'event, gate propre), pages
+  event (threading orgId aux client components qui appellent l'API), shells event.
+- Modify : `src/app/org/[orgId]/layout.tsx` (le gate ne concerne plus que les pages org-level).
+- Modify : tous les liens `/org/[orgId]/events/[eventId]/...` -> `/event/[eventId]/...` (composants,
+  layouts, e2e).
+- Modify : `src/app/select/page.tsx` + `OrgSelector` -> selecteur de workspace ; `src/lib/org-redirect.ts`.
+- API : **inchangee** (`/api/org/[orgId]/events/[eventId]` conserve).
+
+### Task 2.9 : De-nester les pages de l'espace evenement
+
+**Files:**
+- git mv `src/app/org/[orgId]/events/[eventId]` -> `src/app/event/[eventId]`
+
+- [ ] **Step 1 : Deplacer le sous-arbre event** (la liste et la creation restent sous org) :
+
+```bash
+cd /Users/amadou/Devs/projects/badge
+git mv "src/app/org/[orgId]/events/[eventId]" "src/app/event/[eventId]"
+# verifier que la liste org reste : src/app/org/[orgId]/events/page.tsx et /new/page.tsx existent toujours
+test -f "src/app/org/[orgId]/events/page.tsx" && test -d "src/app/event/[eventId]" && echo OK
+```
+
+- [ ] **Step 2 : Typecheck** : `make typecheck` — des erreurs sont attendues (param `[orgId]` disparu du sous-arbre event ; corrigees Task 2.10). Noter la liste.
+
+### Task 2.10 : Auth propre a chaque workspace (fin de la cascade)
+
+**Files:**
+- Modify: `src/app/event/[eventId]/layout.tsx`
+- Modify: `src/app/org/[orgId]/layout.tsx`
+- Modify: pages/shells event qui utilisaient le param `[orgId]`
+
+**Interfaces:**
+- Le layout event ne recoit plus `orgId` par l'URL : il le resout depuis l'event
+  (`prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true, ... } })`), calcule
+  `effectiveEventRole(ctx, eventId, orgId)` et **redirige vers `/select` (ou 404) si `null`**. Le
+  role `STAFF` rend l'espace avec la banniere staff. `orgId` resolu est **threade en prop** aux
+  pages/client-components qui construisent les URLs API `/api/org/${orgId}/events/${eventId}/...`.
+
+- [ ] **Step 1 : Ecrire/adapter le test** du gate event dans `src/lib/__tests__/auth-helpers.test.ts` (ou test de layout) : un `EventMembership` OPERATOR **sans** OrgMembership doit donner `effectiveEventRole != null` (pas de redirect). Verifier que `effectiveEventRole` (deja existant) couvre : event-only, heritage org, staff.
+
+- [ ] **Step 2 : Reecrire `src/app/event/[eventId]/layout.tsx`** — resoudre `event` (donc `orgId`) par Prisma ; `const role = effectiveEventRole(ctx, eventId, event.orgId)` ; `if (!role) redirect("/select")` ; sinon selectionner le shell par role (ADMIN/OPERATOR/PRINTER/VIEWER/STAFF) comme aujourd'hui, en passant `orgId` aux shells. Banniere "mode staff" si `role === "STAFF"`.
+
+- [ ] **Step 3 : Threader `orgId`** dans les pages event et leurs client components (recherche des `params.orgId` disparus ; les remplacer par l'`orgId` resolu de l'event, passe en prop). Les fetch restent `/api/org/${orgId}/events/${eventId}/...`.
+
+- [ ] **Step 4 : Simplifier `src/app/org/[orgId]/layout.tsx`** — ce layout ne garde plus que les pages org-level. Conserver `const isMember = hasOrgRole(ctx, orgId, "AUDITOR")` + redirect staff->supervision / non-membre->`/select`. **Plus aucune page event ne passe par ce layout** (elles sont hors `/org`), donc la cascade fautive disparait mecaniquement.
+
+- [ ] **Step 5 : Typecheck** : `make typecheck` — 0 erreur.
+
+### Task 2.11 : Repointer tous les liens de navigation vers `/event/[eventId]`
+
+**Files:**
+- Modify: composants/layouts/shells + specs e2e referencant `/org/[orgId]/events/[eventId]`
+
+- [ ] **Step 1 : Inventaire** : `rg -n "/org/\[?orgId\]?/events/|/org/\$\{orgId\}/events/|org/.*?/events/" src e2e | wc -l` et lister les fichiers (liste des events, cartes event, back-links, OrgShell, EventShells, redirections post-action).
+
+- [ ] **Step 2 : Remplacer** les liens **de page** vers un evenement precis : `/org/${orgId}/events/${eventId}/...` -> `/event/${eventId}/...`. **Ne pas** toucher aux URLs **API** (`/api/org/${orgId}/events/${eventId}`) ni a la **liste** org (`/org/${orgId}/events`). Faire les remplacements de facon ancree (backtick/quote) puis relire chaque `git diff`.
+
+- [ ] **Step 3 : Back-link "revenir a l'organisation"** — dans les shells event, ajouter/mettre a jour le lien contextuel vers `/org/${orgId}` (orgId resolu de l'event). Verifier le fil d'Ariane.
+
+- [ ] **Step 4 : Specs e2e** — mettre a jour les chemins `/org/[orgId]/events/[eventId]` -> `/event/[eventId]` dans `e2e/event/**` et helpers de navigation.
+
+- [ ] **Step 5 : Verify** : `rg -n "/org/[^\"'\`]*/events/[^\"'\`]*/" src e2e` ne retourne plus que des URLs **API** et la **liste** org (aucun lien de page vers un event imbrique). `make typecheck && make lint`.
+
+### Task 2.12 : Selecteur de workspace post-login
+
+**Files:**
+- Modify: `src/app/select/page.tsx`, `OrgSelector` (-> `WorkspaceSelector`)
+- Modify: `src/lib/org-redirect.ts` (`resolveHomeRedirect`)
+
+**Interfaces:**
+- `resolveHomeRedirect(ctx)` : construit la liste des workspaces accessibles = `{ platform? , orgs[] , events[] }` (staff => platform ; `orgMemberships` => orgs ; `eventMemberships` **sans** org parent deja liste => events). **1 seul workspace => redirect direct** vers son URL (`/platform`, `/org/[orgId]`, ou `/event/[eventId]`). **>= 2 => `/select`**.
+
+- [ ] **Step 1 : Ecrire le test** de `resolveHomeRedirect` : staff seul -> `/platform` ; 1 org -> `/org/[orgId]` ; 1 event-only -> `/event/[eventId]` ; multi -> `/select`. Aucun workspace -> `/account` (participant) ou `/login` selon l'existant.
+
+- [ ] **Step 2 : Implementer** la resolution multi-workspace et la regle "un seul => direct".
+
+- [ ] **Step 3 : Generaliser `/select`** en `WorkspaceSelector` : sections Plateforme (si staff) / Organisations / Evenements, chaque tuile liant vers l'URL du workspace. Reutiliser `PickCard`/`card-grid`.
+
+- [ ] **Step 4 : Verify** : `make test -- org-redirect` PASS ; test navigateur — un compte multi-workspace voit le selecteur, un compte mono-workspace entre direct ; un membre event-only atteint `/event/[eventId]` sans etre redirige.
+
+### Task 2.13 : Verification de bout en bout + commit
+
+- [ ] **Step 1 : Regression ciblee** — le scenario du bug : un `EventMembership` OPERATOR **sans** OrgMembership ouvre `/event/[eventId]` et voit le shell operateur (plus de redirect). Verifier ADMIN/OPERATOR/PRINTER/VIEWER/STAFF.
+- [ ] **Step 2 : Verifications** : `make lint && make typecheck && make test` verts.
+- [ ] **Step 3 : Commit**
+
+```bash
+git add -A
+git commit -m "refactor(v4): de-neste l'espace evenement en workspace top-level, selecteur de workspace"
 ```
 
 ---
