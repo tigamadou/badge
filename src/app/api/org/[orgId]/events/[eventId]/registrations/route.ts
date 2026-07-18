@@ -78,10 +78,8 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     return NextResponse.json({ error: "INVALID_CATEGORY" }, { status: 400 });
   }
 
-  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { date: true } });
-  if (!event) {
-    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-  }
+  // withEventAuth a deja garanti l'existence de l'event.
+  const event = await prisma.event.findUniqueOrThrow({ where: { id: eventId }, select: { date: true } });
 
   const user = parsed.data.userId
     ? await prisma.user.findUnique({

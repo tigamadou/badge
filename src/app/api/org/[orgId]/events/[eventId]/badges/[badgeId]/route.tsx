@@ -33,15 +33,13 @@ export const GET = withEventAuth(
     // permission badge.print n'est pas satisfaite.
     const { hasEventPermission } = await import("@/lib/auth-helpers");
     const { loadUserContext } = await import("@/lib/user-context");
-    const ctx = await loadUserContext(session.user.id);
-    if (!ctx) {
-      return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
-    }
-    const event0 = await prisma.event.findUnique({
+    // withEventAuth garantit deja session valide + event existant.
+    const ctx = (await loadUserContext(session.user.id))!;
+    const event0 = await prisma.event.findUniqueOrThrow({
       where: { id: eventId },
       select: { orgId: true },
     });
-    if (!event0 || !hasEventPermission(ctx, eventId, event0.orgId, "badge.print")) {
+    if (!hasEventPermission(ctx, eventId, event0.orgId, "badge.print")) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }
 
@@ -71,17 +69,14 @@ export const GET = withEventAuth(
       organization,
       platform,
     );
-    let template = getTemplate(resolvedId);
-    if (!template) {
+    const primary = getTemplate(resolvedId);
+    if (!primary) {
       console.warn(
         `[badges] templateId "${resolvedId}" orphelin du registry -- fallback "${DEFAULT_TEMPLATE_ID}"`,
       );
-      template = getTemplate(DEFAULT_TEMPLATE_ID);
     }
-    if (!template) {
-      // Cas impossible (default-v1 toujours present) mais on echoue proprement.
-      return NextResponse.json({ error: "NO_TEMPLATE" }, { status: 500 });
-    }
+    // default-v1 est toujours present dans le registry (invariant garanti).
+    const template = primary ?? getTemplate(DEFAULT_TEMPLATE_ID)!;
 
     const templateCtx = await buildTemplateContext({
       id: registration.id,

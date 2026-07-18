@@ -6,7 +6,8 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
-  const event = await prisma.event.findUnique({
+  // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
+  const event = await prisma.event.findUniqueOrThrow({
     where: { id: eventId },
     select: {
       id: true,
@@ -23,7 +24,6 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       _count: { select: { registrations: true, categories: true, memberships: true } },
     },
   });
-  if (!event) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   return NextResponse.json({ event });
 });
 

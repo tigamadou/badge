@@ -86,11 +86,9 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Construit l'objet de mise a jour en ne touchant que les champs explicitement passes.
-    const data: Record<string, string> = {};
-    for (const [k, v] of Object.entries(parsed.data)) {
-      if (typeof v === "string") data[k] = v;
-    }
+    // Zod omet les champs optionnels absents : parsed.data ne contient que les
+    // champs explicitement passes, tous de type string. On l'utilise directement.
+    const data = parsed.data;
 
     // ADR 2026-06-01 (v2-14 Task 7) : check blocage document plateforme si
     // idDocumentNumber est modifie. eventId=NULL = blocage global.

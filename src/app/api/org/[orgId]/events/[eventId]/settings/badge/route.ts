@@ -17,8 +17,8 @@ export const PATCH = withEventAuth(
   async (req, { orgId, eventId, session }) => {
     const { hasEventPermission } = await import("@/lib/auth-helpers");
     const { loadUserContext } = await import("@/lib/user-context");
-    const ctx = await loadUserContext(session.user.id);
-    if (!ctx) return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
+    // withEventAuth garantit deja session valide + user existant.
+    const ctx = (await loadUserContext(session.user.id))!;
     if (!hasEventPermission(ctx, eventId, orgId, "event.settings.update")) {
       return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
     }

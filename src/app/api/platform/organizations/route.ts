@@ -82,6 +82,7 @@ async function nextAvailableSlug(base: string): Promise<string> {
   ) {
     candidate = `${base}-${n}`;
     n += 1;
+    /* v8 ignore next -- garde-fou anti-boucle infinie : exigerait 1000 collisions de slug reelles */
     if (n > 999) throw new Error("Could not allocate slug");
   }
   return candidate;

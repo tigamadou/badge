@@ -40,7 +40,8 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { eventId })
     );
   }
   const buffer = Buffer.from(await file.arrayBuffer());
-  const filename = `${randomUUID()}${EXT[mime] ?? ""}`;
+  // mime est deja restreint aux cles de EXT par isAllowedMime ci-dessus.
+  const filename = `${randomUUID()}${EXT[mime]}`;
   const storageKey =
     kind === "photo" ? eventPhotoKey(eventId, filename) : eventIdDocumentKey(eventId, filename);
   await uploadFile(storageKey, buffer, mime);

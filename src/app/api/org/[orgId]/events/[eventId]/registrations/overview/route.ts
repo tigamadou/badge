@@ -19,11 +19,10 @@ export const GET = withEventAuth({ minRole: "VIEWER" }, async (_req, { eventId }
       _count: { _all: true },
     }),
     (async () => {
-      const event = await prisma.event.findUnique({
+      const event = await prisma.event.findUniqueOrThrow({
         where: { id: eventId },
         select: { orgId: true },
       });
-      if (!event) return null;
       const { maxParticipantsPerEvent } = await resolveOrgLimits(event.orgId);
       return maxParticipantsPerEvent;
     })(),
@@ -44,7 +43,7 @@ export const GET = withEventAuth({ minRole: "VIEWER" }, async (_req, { eventId }
     },
     byCategory: byCategory.map((row) => ({
       categoryId: row.categoryId,
-      category: catById.get(row.categoryId) ?? null,
+      category: catById.get(row.categoryId)!,
       count: row._count._all,
     })),
     quota: {

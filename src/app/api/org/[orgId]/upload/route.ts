@@ -28,7 +28,8 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId }) => {
     );
   }
   const buffer = Buffer.from(await file.arrayBuffer());
-  const storageKey = `orgs/${orgId}/images/${randomUUID()}${EXT[mime] ?? ".jpg"}`;
+  // mime est deja restreint aux cles de EXT par isAllowedMime ci-dessus.
+  const storageKey = `orgs/${orgId}/images/${randomUUID()}${EXT[mime]}`;
   await uploadFile(storageKey, buffer, mime);
   return NextResponse.json({ storageKey });
 });

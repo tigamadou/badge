@@ -10,7 +10,13 @@ import { getFile } from "@/lib/storage";
 // Cles sensibles : `profile/{userId}/documents/...` (compte participant) et
 // `events/{eventId}/idDocuments/...` (piece jointe a une inscription). Les photos et
 // logos restent publics (ils apparaissent sur les badges / pages publiques).
-type FileClass = { sensitive: boolean; profileUserId?: string; eventId?: string };
+// Union discriminee : un fichier sensible est TOUJOURS soit un document de profil
+// (profileUserId), soit un document d'evenement (eventId). Le type garantit qu'un
+// des deux est present quand sensitive vaut true.
+type SensitiveFile =
+  | { sensitive: true; profileUserId: string; eventId?: undefined }
+  | { sensitive: true; eventId: string; profileUserId?: undefined };
+type FileClass = { sensitive: false } | SensitiveFile;
 
 function classify(key: string): FileClass {
   const profileDoc = key.match(/^profile\/([^/]+)\/documents\//);
@@ -20,20 +26,18 @@ function classify(key: string): FileClass {
   return { sensitive: false };
 }
 
-async function canRead(userId: string, c: FileClass): Promise<boolean> {
+async function canRead(userId: string, c: SensitiveFile): Promise<boolean> {
   const ctx = await loadUserContext(userId);
   if (!ctx) return false;
   if (ctx.isStaff) return true;
-  if (c.profileUserId) return c.profileUserId === userId;
-  if (c.eventId) {
-    const event = await prisma.event.findUnique({
-      where: { id: c.eventId },
-      select: { orgId: true },
-    });
-    if (!event) return false;
-    return hasEventPermission(ctx, c.eventId, event.orgId, "event.read.detailed");
-  }
-  return false;
+  if (c.eventId === undefined) return c.profileUserId === userId;
+  // Sinon c'est un document d'evenement : eventId est garanti par le type.
+  const event = await prisma.event.findUnique({
+    where: { id: c.eventId },
+    select: { orgId: true },
+  });
+  if (!event) return false;
+  return hasEventPermission(ctx, c.eventId, event.orgId, "event.read.detailed");
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
