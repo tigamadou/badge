@@ -86,6 +86,14 @@ describe("requireRegistrationOwner", () => {
     expect(result.registration).toEqual({ id: reg.id, userId: owner.id, status: "PENDING" });
   });
 
+  it("email/name vides si absents de la session (fallback ?? \"\")", async () => {
+    const owner = await prisma.user.create({ data: { email: "owner3@x", password: "x", name: "O" } });
+    const reg = await createRegistration(owner.id);
+    mockSession({ id: owner.id }); // session sans email ni name
+    const result = await requireRegistrationOwner(reg.id);
+    expect(result.user).toMatchObject({ id: owner.id, email: "", name: "" });
+  });
+
   it("uses AuthError for the thrown errors", async () => {
     mockSession(null);
     await expect(requireRegistrationOwner("reg-x")).rejects.toBeInstanceOf(AuthError);

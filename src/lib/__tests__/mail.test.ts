@@ -429,6 +429,13 @@ describe("sendStatusNotification", () => {
     expect(sent[0].html).toContain("approuvée");
   });
 
+  it("does nothing when registration not found (logs only)", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendStatusNotification("missing-id");
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
   // v2-11 : plus de editToken. Le lien pointe vers /account/registrations/[id]
   // (login requis cote participant).
   it("sends rejection email with reason and account link", async () => {

@@ -116,4 +116,11 @@ describe("readFileAsDataUrl (implementation reelle via storage)", () => {
     const url = await __TEST__.readFileAsDataUrl("x/y.inconnu", "");
     expect(url.startsWith("data:application/octet-stream;base64,")).toBe(true);
   });
+
+  it("resolveBaseUrl : sans baseUrl explicite, retombe sur l'env / le fallback", async () => {
+    vi.mocked(getFile).mockResolvedValue({ body: Buffer.from("x"), contentType: "image/png" });
+    // Pas de baseUrl -> resolveBaseUrl utilise BASE_URL/NEXTAUTH_URL/localhost.
+    const ctx = await buildTemplateContext(baseRegistration);
+    expect(ctx.badge.verifyUrl).toMatch(/\/verify\/REG-001$/);
+  });
 });
