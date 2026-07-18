@@ -56,11 +56,11 @@ test.describe("T20 Event dashboard", () => {
     });
     await loginAs(page, printer);
 
-    // Comportement reel : pas de redirection cote layout/page. PRINTER atterrit
-    // sur le dashboard standard (KPI). Le badge effectiveRole = PRINTER doit etre
-    // visible dans l'en-tete EventShell. La navigation /badges est accessible.
+    // v4 Bloc D : le membre PRINTER (event-only, sans role org) atteint bien son
+    // evenement (plus de redirect cascade). Il obtient le shell dedie PRINTER,
+    // reconnaissable a l'en-tete "Impression — <titre>". La nav /badges est accessible.
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByText("PRINTER", { exact: true })).toBeVisible();
+    await expect(page.getByText(/impression —/i)).toBeVisible();
 
     // Le lien "Badges" est present dans la sidebar.
     const badgesLink = page.getByRole("link", { name: /^badges$/i });
@@ -85,7 +85,8 @@ test.describe("T20 Event dashboard", () => {
     await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
     await expect(page.getByText(/en attente/i).first()).toBeVisible();
     await expect(page.getByText(/approuvées/i).first()).toBeVisible();
-    // Le badge effectiveRole = VIEWER doit apparaitre dans l'en-tete.
-    await expect(page.getByText("VIEWER", { exact: true })).toBeVisible();
+    // v4 Bloc D : le membre VIEWER (event-only) atteint son evenement et obtient le
+    // shell dedie VIEWER, reconnaissable a l'en-tete "Lecture — <titre>".
+    await expect(page.getByText(/lecture —/i)).toBeVisible();
   });
 });
