@@ -83,6 +83,7 @@ async function ensureBucket(): Promise<void> {
       try {
         await s3.send(new HeadBucketCommand({ Bucket: BUCKET }));
       } catch {
+        /* v8 ignore next -- creation de bucket : exercee seulement sur un bucket absent (CI MinIO vierge) */
         await s3.send(new CreateBucketCommand({ Bucket: BUCKET }));
       }
     })();

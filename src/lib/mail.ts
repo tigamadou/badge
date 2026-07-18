@@ -230,7 +230,8 @@ function escapeText(s: string): string {
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;",
-      })[ch] ?? ch,
+        // La regex ne matche que ces 5 cles : l'acces est toujours defini.
+      })[ch]!,
   );
 }
 

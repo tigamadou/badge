@@ -8,7 +8,8 @@ const HTML_ESCAPES: Record<string, string> = {
 
 export function escapeHtml(input: string): string {
   if (!input) return "";
-  return input.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch] ?? ch);
+  // La regex ne matche que des cles de HTML_ESCAPES : l'acces est toujours defini.
+  return input.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
 }
 
 // En v2, `smtpFrom` est toujours celui de PlatformSettings (pas de cascade SMTP).

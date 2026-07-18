@@ -25,17 +25,14 @@ export function formatBadgeName(firstName: string, lastName: string): string {
     }
   }
 
-  // All first names abbreviated but still too long — drop initials from right
+  // All first names abbreviated but still too long — drop initials from right.
+  // La boucle verifie l'etat "initiale unique + nom" a sa derniere iteration
+  // (length passe a 1) : inutile de le re-tester ensuite.
   while (shortened.length > 1) {
     shortened.pop();
     if (buildName(shortened).length <= MAX_BADGE_NAME_LENGTH) {
       return buildName(shortened);
     }
-  }
-
-  // Single initial + lastName
-  if (buildName(shortened).length <= MAX_BADGE_NAME_LENGTH) {
-    return buildName(shortened);
   }
 
   // lastName alone
