@@ -169,7 +169,13 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     return NextResponse.json({ event: { id: event.id, slug: event.slug } }, { status: 201 });
   } catch (err) {
     const e = err as { code?: string; meta?: { target?: unknown } };
-    if (e.code === "P2002" && Array.isArray(e.meta?.target) && e.meta.target.includes("slug")) {
+    // P2002 (unique) : selon le connecteur, `meta.target` est un tableau de champs
+    // (Postgres : ["slug"]) OU une chaine = nom d'index (MySQL : "Event_slug_key").
+    const target = e.meta?.target;
+    const isSlugConflict = Array.isArray(target)
+      ? target.includes("slug")
+      : typeof target === "string" && target.toLowerCase().includes("slug");
+    if (e.code === "P2002" && isSlugConflict) {
       return NextResponse.json({ error: "SLUG_TAKEN" }, { status: 409 });
     }
     throw err;
