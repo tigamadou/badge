@@ -482,7 +482,26 @@ Colonnes = % lignes / branches / fonctions. `✅` = deja a 100/100/100.
 
 ### Tableau page -> spec (Task 3.6)
 
-(A alimenter.)
+Croisement 2026-07-19 : **69 pages** `page.tsx`. Apres realignement de la suite existante
+(164 -> 0 echec) et ajout de **5 fichiers de rendu** dediés, **68/69 pages** ont au moins un
+spec de navigation/rendu (le `/` restant est un faux-negatif de la detection regex : il est
+teste dans `e2e/public/marketing.spec.ts` via `page.goto(path)` indirect). Couverture de
+**rendu** des pages : complete.
+
+Nouveaux fichiers de rendu :
+- `e2e/public/marketing.spec.ts` — 8 pages statiques marketing/legales (/, a-propos, fonctionnalites, tarifs, contact, cgu, confidentialite, mentions-legales).
+- `e2e/public/misc-render.spec.ts` — /register/success, /styleguide.
+- `e2e/event/pages-render.spec.ts` — 11 pages event (activity[/logId], badges[/badgeId,/print], blocked-*, categories, registrations[/regId,/new,/overview], scan).
+- `e2e/org/pages-render.spec.ts` — 8 pages org + /select + /account/profile/complete.
+- `e2e/platform/pages-render.spec.ts` — 11 pages platform (organizations/[orgId]/*, plans, settings[/badge], users[/[userId],/new], activity/[logId]).
+
+**Reserve** : ce croisement garantit **>=1 spec de rendu par page** (Tasks 3.x Step "render").
+La couverture exhaustive des **interactions** par page (chaque bouton/filtre/formulaire) n'est
+pas integralement mesuree — a completer si l'objectif "1 spec par interaction" est vise.
+
+**BUG PROD corrige au passage** (accord utilisateur) : `platform/organizations/[orgId]/subscription`
+renvoyait 500 pour toute org avec abonnement (Server Component appelant `isoDay` du module client
+`SubscriptionForm`). `isoDay` deplace vers `src/lib/format-date.ts` (module partage), +3 tests unitaires.
 
 ### Comptes finaux (Task 6.2)
 
