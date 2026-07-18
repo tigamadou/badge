@@ -843,13 +843,13 @@ model Subscription {
   - `assertCanCreateEvent(orgId: string): Promise<void>` — throw si `!active` ou si `event.count({ orgId, archived: false }) >= maxEvents`.
   - `assertCanRegister(eventId: string): Promise<void>` — resout l'org de l'event, throw si `!active` ou si `countCountableRegistrations(eventId) >= maxParticipantsPerEvent` (comptage PAR EVENT).
 
-- [ ] **Step 1 : Ecrire les tests** dans `src/lib/__tests__/subscription.test.ts` couvrant : resolution herite du plan ; override gagne ; abonnement expire => `active=false` ; limite events atteinte => `EVENT_LIMIT` ; limite participants par event atteinte => `PARTICIPANT_LIMIT` ; limites `null` => jamais bloquant.
+- [x] **Step 1 : Ecrire les tests** dans `src/lib/__tests__/subscription.test.ts` couvrant : resolution herite du plan ; override gagne ; abonnement expire => `active=false` ; limite events atteinte => `EVENT_LIMIT` ; limite participants par event atteinte => `PARTICIPANT_LIMIT` ; limites `null` => jamais bloquant.
 
-- [ ] **Step 2 : Lancer, verifier l'echec** : `make test -- subscription` — Attendu : FAIL (module absent).
+- [x] **Step 2 : Lancer, verifier l'echec** : `make test -- subscription` — Attendu : FAIL (module absent).
 
-- [ ] **Step 3 : Implementer `src/lib/subscription.ts`**. Reutiliser `countCountableRegistrations` de `src/lib/event-quota.ts` (comptage PENDING+APPROVED par event) — le deplacer dans `subscription.ts` si on supprime `event-quota.ts`. `assertCanRegister` compte desormais **par event** (`where: { eventId }`), corrigeant l'incoherence org-scope actuelle.
+- [x] **Step 3 : Implementer `src/lib/subscription.ts`**. Reutiliser `countCountableRegistrations` de `src/lib/event-quota.ts` (comptage PENDING+APPROVED par event) — le deplacer dans `subscription.ts` si on supprime `event-quota.ts`. `assertCanRegister` compte desormais **par event** (`where: { eventId }`), corrigeant l'incoherence org-scope actuelle.
 
-- [ ] **Step 4 : Lancer** : `make test -- subscription` — Attendu : PASS.
+- [x] **Step 4 : Lancer** : `make test -- subscription` — Attendu : PASS.
 
 ### Task 6.3 : Brancher l'enforcement
 
