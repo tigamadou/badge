@@ -16,14 +16,14 @@ test.describe("T16 Org members", () => {
     await disconnectDb();
   });
 
-  test("OWNER invite nouvel user comme MANAGER", async ({ page, request }) => {
+  test("OWNER invite nouvel user comme MANAGER", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-new" });
     await loginAs(page, owner);
 
     await mailpit.clear();
 
     const inviteeEmail = `e2e-invitee-new-${Date.now()}@v2-11-e2e.test`;
-    const res = await request.post(`/api/org/${orgId}/members`, {
+    const res = await page.request.post(`/api/org/${orgId}/members`, {
       data: { email: inviteeEmail, name: "Invitee Manager", role: "MANAGER" },
     });
     expect(res.status()).toBe(201);
@@ -65,14 +65,13 @@ test.describe("T16 Org members", () => {
 
   test("OWNER invite user existant comme AUDITOR (pas de USER_CREATED)", async ({
     page,
-    request,
   }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-existing" });
     const existing = await createTestUser({ scope: "existing-aud", verified: true });
 
     await loginAs(page, owner);
 
-    const res = await request.post(`/api/org/${orgId}/members`, {
+    const res = await page.request.post(`/api/org/${orgId}/members`, {
       data: { email: existing.email, name: existing.name, role: "AUDITOR" },
     });
     // Le route renvoie 201 pour nouveau + 200 pour deja-existant alreadyMember,
@@ -100,7 +99,7 @@ test.describe("T16 Org members", () => {
     });
   });
 
-  test("OWNER change role MANAGER -> AUDITOR via PATCH", async ({ page, request }) => {
+  test("OWNER change role MANAGER -> AUDITOR via PATCH", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-role-change" });
     await loginAs(page, owner);
 
@@ -111,7 +110,7 @@ test.describe("T16 Org members", () => {
       data: { userId: manager.id, orgId, role: "MANAGER" },
     });
 
-    const res = await request.patch(
+    const res = await page.request.patch(
       `/api/org/${orgId}/members/${manager.id}`,
       { data: { role: "AUDITOR" } },
     );
@@ -133,11 +132,11 @@ test.describe("T16 Org members", () => {
     expect(details?.to).toBe("AUDITOR");
   });
 
-  test("Cannot remove last OWNER -> 409 LAST_OWNER", async ({ page, request }) => {
+  test("Cannot remove last OWNER -> 409 LAST_OWNER", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-last-rm" });
     await loginAs(page, owner);
 
-    const res = await request.delete(
+    const res = await page.request.delete(
       `/api/org/${orgId}/members/${owner.id}`,
     );
     expect(res.status()).toBe(409);
@@ -152,11 +151,11 @@ test.describe("T16 Org members", () => {
     expect(still?.role).toBe("OWNER");
   });
 
-  test("Cannot demote last OWNER -> 409 LAST_OWNER", async ({ page, request }) => {
+  test("Cannot demote last OWNER -> 409 LAST_OWNER", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-last-demote" });
     await loginAs(page, owner);
 
-    const res = await request.patch(
+    const res = await page.request.patch(
       `/api/org/${orgId}/members/${owner.id}`,
       { data: { role: "MANAGER" } },
     );

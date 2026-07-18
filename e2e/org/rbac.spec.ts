@@ -22,7 +22,7 @@ test.describe("T19 Org RBAC", () => {
 
   // -- Tests negatifs --------------------------------------------------------
 
-  test("MANAGER POST /members -> 403", async ({ page, request }) => {
+  test("MANAGER POST /members -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-mgr-invite" });
     const manager = await createTestOrgMember({
       scope: "rbac-mgr",
@@ -31,7 +31,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.post(`/api/org/${orgId}/members`, {
+    const res = await page.request.post(`/api/org/${orgId}/members`, {
       data: {
         email: `e2e-fail-${Date.now()}@v2-11-e2e.test`,
         name: "x",
@@ -41,7 +41,7 @@ test.describe("T19 Org RBAC", () => {
     expect(res.status()).toBe(403);
   });
 
-  test("MANAGER PATCH /api/org/[orgId] -> 403", async ({ page, request }) => {
+  test("MANAGER PATCH /api/org/[orgId] -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-mgr-patch" });
     const manager = await createTestOrgMember({
       scope: "rbac-mgr-patch-u",
@@ -50,13 +50,13 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.patch(`/api/org/${orgId}`, {
+    const res = await page.request.patch(`/api/org/${orgId}`, {
       data: { name: "Forbidden update" },
     });
     expect(res.status()).toBe(403);
   });
 
-  test("AUDITOR POST /events -> 403", async ({ page, request }) => {
+  test("AUDITOR POST /events -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-events" });
     const auditor = await createTestOrgMember({
       scope: "rbac-aud-events-u",
@@ -65,7 +65,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.post(`/api/org/${orgId}/events`, {
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
       data: {
         title: "Forbidden",
         date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
@@ -75,7 +75,7 @@ test.describe("T19 Org RBAC", () => {
     expect(res.status()).toBe(403);
   });
 
-  test("AUDITOR POST /templates -> 403", async ({ page, request }) => {
+  test("AUDITOR POST /templates -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-tpl" });
     const auditor = await createTestOrgMember({
       scope: "rbac-aud-tpl-u",
@@ -84,13 +84,13 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.post(`/api/org/${orgId}/templates`, {
+    const res = await page.request.post(`/api/org/${orgId}/templates`, {
       data: { name: "Forbidden", color: "#abcdef", number: 1 },
     });
     expect(res.status()).toBe(403);
   });
 
-  test("AUDITOR POST /members -> 403", async ({ page, request }) => {
+  test("AUDITOR POST /members -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-mem" });
     const auditor = await createTestOrgMember({
       scope: "rbac-aud-mem-u",
@@ -99,7 +99,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.post(`/api/org/${orgId}/members`, {
+    const res = await page.request.post(`/api/org/${orgId}/members`, {
       data: {
         email: `e2e-aud-mem-${Date.now()}@v2-11-e2e.test`,
         name: "x",
@@ -111,7 +111,6 @@ test.describe("T19 Org RBAC", () => {
 
   test("MANAGER PATCH /settings/badge -> 200 (autorise par la spec)", async ({
     page,
-    request,
   }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-mgr-badge" });
     const manager = await createTestOrgMember({
@@ -121,7 +120,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.patch(`/api/org/${orgId}/settings/badge`, {
+    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: "default-v1" },
     });
     expect(res.status()).toBe(200);
@@ -134,7 +133,7 @@ test.describe("T19 Org RBAC", () => {
     expect(org?.badgeTemplateId).toBe("default-v1");
   });
 
-  test("AUDITOR PATCH /settings/badge -> 403", async ({ page, request }) => {
+  test("AUDITOR PATCH /settings/badge -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-badge" });
     const auditor = await createTestOrgMember({
       scope: "rbac-aud-badge-u",
@@ -143,7 +142,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.patch(`/api/org/${orgId}/settings/badge`, {
+    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: "default-v1" },
     });
     expect(res.status()).toBe(403);
@@ -151,7 +150,7 @@ test.describe("T19 Org RBAC", () => {
 
   // -- Tests positifs lecture (post T00.1) ----------------------------------
 
-  test("MANAGER GET /api/org/[orgId] -> 200", async ({ page, request }) => {
+  test("MANAGER GET /api/org/[orgId] -> 200", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-mgr-getorg" });
     const manager = await createTestOrgMember({
       scope: "rbac-mgr-getorg-u",
@@ -160,13 +159,13 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.get(`/api/org/${orgId}`);
+    const res = await page.request.get(`/api/org/${orgId}`);
     expect(res.status()).toBe(200);
     const json = await res.json();
     expect(json.org?.id).toBe(orgId);
   });
 
-  test("AUDITOR GET /api/org/[orgId] -> 200", async ({ page, request }) => {
+  test("AUDITOR GET /api/org/[orgId] -> 200", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-getorg" });
     const auditor = await createTestOrgMember({
       scope: "rbac-aud-getorg-u",
@@ -175,13 +174,12 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.get(`/api/org/${orgId}`);
+    const res = await page.request.get(`/api/org/${orgId}`);
     expect(res.status()).toBe(200);
   });
 
   test("AUDITOR GET /api/org/[orgId]/templates -> 200", async ({
     page,
-    request,
   }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-gettpl" });
     const auditor = await createTestOrgMember({
@@ -191,7 +189,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.get(`/api/org/${orgId}/templates`);
+    const res = await page.request.get(`/api/org/${orgId}/templates`);
     expect(res.status()).toBe(200);
     const json = await res.json();
     expect(Array.isArray(json.templates)).toBe(true);
@@ -199,7 +197,6 @@ test.describe("T19 Org RBAC", () => {
 
   test("AUDITOR GET /api/org/[orgId]/events -> 200", async ({
     page,
-    request,
   }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-getev" });
     const auditor = await createTestOrgMember({
@@ -209,7 +206,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.get(`/api/org/${orgId}/events`);
+    const res = await page.request.get(`/api/org/${orgId}/events`);
     expect(res.status()).toBe(200);
     const json = await res.json();
     expect(Array.isArray(json.events)).toBe(true);
@@ -225,7 +222,6 @@ test.describe("T19 Org RBAC", () => {
   //   ajuster l'assertion a toBe(200).
   test("AUDITOR GET /api/org/[orgId]/activity (bug app : actuellement 403)", async ({
     page,
-    request,
   }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-getact" });
     const auditor = await createTestOrgMember({
@@ -235,7 +231,7 @@ test.describe("T19 Org RBAC", () => {
     });
     await loginAs(page, auditor);
 
-    const res = await request.get(`/api/org/${orgId}/activity`);
+    const res = await page.request.get(`/api/org/${orgId}/activity`);
     // BUG APP : devrait etre 200 selon la spec T19 (lecture activity ouverte
     // aux 3 roles org). En realite la route est OWNER-only, donc 403.
     expect(res.status()).toBe(403);
@@ -245,7 +241,6 @@ test.describe("T19 Org RBAC", () => {
 
   test("Staff sans OrgMembership accede /org/[orgId] avec banniere et PATCH avec staffActor=true", async ({
     page,
-    request,
   }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-staff-banner" });
     const staff = await loginAsStaff(page, {
@@ -261,7 +256,7 @@ test.describe("T19 Org RBAC", () => {
 
     // Action mutative : PATCH /api/org/[orgId] -> succes avec staffActor=true.
     const newName = "E2E Org via staff";
-    const res = await request.patch(`/api/org/${orgId}`, {
+    const res = await page.request.patch(`/api/org/${orgId}`, {
       data: { name: newName },
     });
     expect(res.status()).toBe(200);

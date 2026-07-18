@@ -15,7 +15,7 @@ test.describe("T18 Org settings", () => {
     await disconnectDb();
   });
 
-  test("OWNER modifie infos org via PATCH", async ({ page, request }) => {
+  test("OWNER modifie infos org via PATCH", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "settings-info" });
     await loginAs(page, owner);
 
@@ -28,7 +28,7 @@ test.describe("T18 Org settings", () => {
       city: "Abidjan",
       country: "Côte d'Ivoire",
     };
-    const res = await request.patch(`/api/org/${orgId}`, { data: payload });
+    const res = await page.request.patch(`/api/org/${orgId}`, { data: payload });
     expect(res.status()).toBe(200);
 
     const db = getDb();
@@ -52,12 +52,11 @@ test.describe("T18 Org settings", () => {
 
   test("OWNER selectionne badge template org (default-v1)", async ({
     page,
-    request,
   }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "settings-badge" });
     await loginAs(page, owner);
 
-    const res = await request.patch(`/api/org/${orgId}/settings/badge`, {
+    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: "default-v1" },
     });
     expect(res.status()).toBe(200);
@@ -79,15 +78,15 @@ test.describe("T18 Org settings", () => {
     expect(details?.value).toBe("default-v1");
   });
 
-  test("OWNER reset badge template org (null)", async ({ page, request }) => {
+  test("OWNER reset badge template org (null)", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "settings-badge-null" });
     await loginAs(page, owner);
 
     // Pose d'abord un template, puis reset.
-    await request.patch(`/api/org/${orgId}/settings/badge`, {
+    await page.request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: "default-v1" },
     });
-    const res = await request.patch(`/api/org/${orgId}/settings/badge`, {
+    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
       data: { badgeTemplateId: null },
     });
     expect(res.status()).toBe(200);
@@ -102,12 +101,11 @@ test.describe("T18 Org settings", () => {
 
   test("Payload SMTP rejete sur PATCH /api/org/[orgId] -> 400", async ({
     page,
-    request,
   }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "settings-smtp" });
     await loginAs(page, owner);
 
-    const res = await request.patch(`/api/org/${orgId}`, {
+    const res = await page.request.patch(`/api/org/${orgId}`, {
       data: { smtpHost: "smtp.example.com" },
     });
     expect(res.status()).toBe(400);
@@ -115,7 +113,7 @@ test.describe("T18 Org settings", () => {
     expect(json.error).toBe("VALIDATION");
   });
 
-  test("MANAGER ne peut pas editer infos org -> 403", async ({ page, request }) => {
+  test("MANAGER ne peut pas editer infos org -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "settings-mgr-403" });
     const manager = await createTestOrgMember({
       scope: "settings-mgr",
@@ -124,7 +122,7 @@ test.describe("T18 Org settings", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.patch(`/api/org/${orgId}`, {
+    const res = await page.request.patch(`/api/org/${orgId}`, {
       data: { name: "Tentative MANAGER" },
     });
     expect(res.status()).toBe(403);

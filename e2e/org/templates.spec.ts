@@ -16,11 +16,11 @@ test.describe("T17 Org category templates", () => {
     await disconnectDb();
   });
 
-  test("OWNER cree CategoryTemplate via API", async ({ page, request }) => {
+  test("OWNER cree CategoryTemplate via API", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-create" });
     await loginAs(page, owner);
 
-    const res = await request.post(`/api/org/${orgId}/templates`, {
+    const res = await page.request.post(`/api/org/${orgId}/templates`, {
       data: { name: "Tpl OWNER", color: "#FF5733", number: 1 },
     });
     expect(res.status()).toBe(201);
@@ -39,7 +39,7 @@ test.describe("T17 Org category templates", () => {
   // La spec du plan indiquait "MANAGER cree CategoryTemplate" -- on adapte ici a la realite
   // du code : MANAGER ne peut PAS creer, le serveur retourne 403. Le cas RBAC est aussi
   // couvert dans rbac.spec.ts. Voir le livrable du rapport pour le flag.
-  test("MANAGER tente de creer un CategoryTemplate -> 403", async ({ page, request }) => {
+  test("MANAGER tente de creer un CategoryTemplate -> 403", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "tpl-mgr-create" });
     const manager = await createTestOrgMember({
       scope: "tpl-mgr",
@@ -48,13 +48,13 @@ test.describe("T17 Org category templates", () => {
     });
     await loginAs(page, manager);
 
-    const res = await request.post(`/api/org/${orgId}/templates`, {
+    const res = await page.request.post(`/api/org/${orgId}/templates`, {
       data: { name: "Tpl MANAGER", color: "#00FF00", number: 5 },
     });
     expect(res.status()).toBe(403);
   });
 
-  test("OWNER edite CategoryTemplate via PATCH", async ({ page, request }) => {
+  test("OWNER edite CategoryTemplate via PATCH", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-edit" });
     const tpl = await createTestCategoryTemplate({
       orgId,
@@ -64,7 +64,7 @@ test.describe("T17 Org category templates", () => {
     });
     await loginAs(page, owner);
 
-    const res = await request.patch(
+    const res = await page.request.patch(
       `/api/org/${orgId}/templates/${tpl.id}`,
       { data: { name: "New name", color: "#abcdef" } },
     );
@@ -83,7 +83,7 @@ test.describe("T17 Org category templates", () => {
     });
   });
 
-  test("OWNER supprime CategoryTemplate via DELETE", async ({ page, request }) => {
+  test("OWNER supprime CategoryTemplate via DELETE", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-delete" });
     const tpl = await createTestCategoryTemplate({
       orgId,
@@ -93,7 +93,7 @@ test.describe("T17 Org category templates", () => {
     });
     await loginAs(page, owner);
 
-    const res = await request.delete(
+    const res = await page.request.delete(
       `/api/org/${orgId}/templates/${tpl.id}`,
     );
     expect(res.status()).toBe(204);

@@ -89,7 +89,7 @@ test.describe("T15 Org events", () => {
     });
   });
 
-  test("OWNER archive event", async ({ page, request }) => {
+  test("OWNER archive event", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "events-archive" });
     await loginAs(page, owner);
 
@@ -106,7 +106,7 @@ test.describe("T15 Org events", () => {
       },
     });
 
-    const res = await request.post(
+    const res = await page.request.post(
       `/api/org/${orgId}/events/${event.id}/archive`,
     );
     expect(res.status()).toBe(200);
@@ -127,7 +127,7 @@ test.describe("T15 Org events", () => {
     });
   });
 
-  test("OWNER restaure event archive", async ({ page, request }) => {
+  test("OWNER restaure event archive", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "events-restore" });
     await loginAs(page, owner);
 
@@ -144,7 +144,7 @@ test.describe("T15 Org events", () => {
       },
     });
 
-    const res = await request.post(
+    const res = await page.request.post(
       `/api/org/${orgId}/events/${event.id}/restore`,
     );
     expect(res.status()).toBe(200);
@@ -164,7 +164,7 @@ test.describe("T15 Org events", () => {
     });
   });
 
-  test("Limite events du plan atteinte -> 409 EVENT_LIMIT", async ({ page, request }) => {
+  test("Limite events du plan atteinte -> 409 EVENT_LIMIT", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({
       scope: "events-quota",
       quotaMaxEvents: 2,
@@ -192,7 +192,7 @@ test.describe("T15 Org events", () => {
       },
     });
 
-    const res = await request.post(`/api/org/${orgId}/events`, {
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
       data: {
         title: "Quota 3",
         date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
@@ -204,7 +204,7 @@ test.describe("T15 Org events", () => {
     expect(json.code).toBe("EVENT_LIMIT");
   });
 
-  test("Slug collision globale -> 409 SLUG_TAKEN", async ({ page, request }) => {
+  test("Slug collision globale -> 409 SLUG_TAKEN", async ({ page }) => {
     // Org A + event "shared-slug".
     const a = await createTestOrgWithOwner({ scope: "slug-a" });
     const sharedSlug = `e2e-shared-${Date.now()}`;
@@ -223,7 +223,7 @@ test.describe("T15 Org events", () => {
     const b = await createTestOrgWithOwner({ scope: "slug-b" });
     await loginAs(page, b.owner);
 
-    const res = await request.post(`/api/org/${b.orgId}/events`, {
+    const res = await page.request.post(`/api/org/${b.orgId}/events`, {
       data: {
         title: "Slug B",
         date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
