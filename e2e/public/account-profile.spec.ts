@@ -40,7 +40,9 @@ test.describe("Account profile edit", () => {
 
   test("upload photo persists and serves via /api/files", async ({ page }) => {
     const fixtures = ensureFixtures();
-    const user = await createTestUser({ scope: "profile-upload-photo", verified: true });
+    // profile:true pre-remplit les champs requis (firstName, idDocumentType/Number...) :
+    // sans eux, la validation HTML5 native du formulaire bloque la soumission (pas de PUT).
+    const user = await createTestUser({ scope: "profile-upload-photo", verified: true, profile: true });
     await loginAs(page, user);
     await page.goto("/account/profile");
 
@@ -68,7 +70,8 @@ test.describe("Account profile edit", () => {
 
   test("upload document PDF persists and serves", async ({ page }) => {
     const fixtures = ensureFixtures();
-    const user = await createTestUser({ scope: "profile-upload-pdf", verified: true });
+    // profile:true : cf. test upload photo (champs requis pre-remplis pour permettre la sauvegarde).
+    const user = await createTestUser({ scope: "profile-upload-pdf", verified: true, profile: true });
     await loginAs(page, user);
     await page.goto("/account/profile");
 
