@@ -2,7 +2,7 @@
         prod prod-down prod-build prod-logs prod-seed \
         prod-db-reset  prod-db-push \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests \
-        test test-e2e test-e2e-ui lint typecheck build logs \
+        test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         upload deploy download-uploads download-db
 
@@ -102,6 +102,20 @@ rollback-prod:
 # ============================================================
 test:
 	docker compose -f docker-compose.dev.yml exec app yarn vitest run
+
+# Tests unitaires cibles sur la logique metier de src/lib (sous-ensemble de `test`).
+test-unit:
+	docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib
+
+# Suite Vitest complete avec rapport de couverture V8 (seuils 100% = gate, cf. vitest.config.ts).
+test-coverage:
+	docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage
+
+# Chaine de verification complete : s'arrete au premier echec (ordre des prerequis).
+# NB : `test` vide la base dev -> relancer `make db-seed` ensuite pour l'app manuelle.
+# Les tests e2e seedent leurs propres fixtures (e2e/helpers/db.ts), non impactes par le vidage.
+test-all: lint typecheck test test-e2e
+	@echo "OK : lint + typecheck + vitest + e2e passes."
 
 test-e2e:
 	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."
