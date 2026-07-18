@@ -38,3 +38,36 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Prose des pages legales/documentaires du site public (LegalLayout). */
+.legal-prose h2 {
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+  font-size: 19px;
+  font-weight: 600;
+  color: #0f172a;
+}
+.legal-prose p {
+  margin-bottom: 0.875rem;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #334155;
+}
+.legal-prose ul {
+  margin-bottom: 0.875rem;
+  padding-left: 22px;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #334155;
+}
+.legal-prose a {
+  font-weight: 500;
+  color: var(--accent);
+}
+.legal-prose a:hover {
+  text-decoration: underline;
+}

@@ -46,6 +46,11 @@ import {
   Archive,
   Copy,
   CreditCard,
+  CheckCircle,
+  Building,
+  ChevronDown,
+  SlidersHorizontal,
+  Minus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -102,6 +107,11 @@ const ICONS = {
   "external-link": ExternalLink,
   send: Send,
   smartphone: Smartphone,
+  "check-circle": CheckCircle,
+  building: Building,
+  "chevron-down": ChevronDown,
+  sliders: SlidersHorizontal,
+  minus: Minus,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
