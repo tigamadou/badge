@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatEventDate } from "@/lib/format-date";
+import { formatEventDate, isoDay } from "@/lib/format-date";
 
 describe("formatEventDate", () => {
   it("formats a Date object as `<day> <Month> . <year>`", () => {
@@ -23,5 +23,19 @@ describe("formatEventDate", () => {
     labels.forEach((label, month) => {
       expect(formatEventDate(new Date(2026, month, 1))).toBe(`1 ${label} . 2026`);
     });
+  });
+});
+
+describe("isoDay", () => {
+  it("renvoie une chaine vide pour null", () => {
+    expect(isoDay(null)).toBe("");
+  });
+
+  it("formate un Date en YYYY-MM-DD (UTC)", () => {
+    expect(isoDay(new Date("2026-03-14T10:30:00Z"))).toBe("2026-03-14");
+  });
+
+  it("accepte une chaine ISO", () => {
+    expect(isoDay("2026-12-31T23:00:00Z")).toBe("2026-12-31");
   });
 });

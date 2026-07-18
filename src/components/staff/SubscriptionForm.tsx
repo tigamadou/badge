@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { isoDay } from "@/lib/format-date";
 
 export type PlanOption = { id: string; name: string };
 export type SubscriptionState = {
@@ -12,11 +13,6 @@ export type SubscriptionState = {
   overrideMaxEvents: string;
   overrideMaxParticipantsPerEvent: string;
 } | null;
-
-function isoDay(d: Date | string | null): string {
-  if (!d) return "";
-  return new Date(d).toISOString().slice(0, 10);
-}
 
 export function SubscriptionForm({
   orgId,
@@ -159,4 +155,3 @@ export function SubscriptionForm({
   );
 }
 
-export { isoDay };

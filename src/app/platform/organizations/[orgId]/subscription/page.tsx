@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { SubscriptionForm, isoDay } from "@/components/staff/SubscriptionForm";
+import { SubscriptionForm } from "@/components/staff/SubscriptionForm";
+import { isoDay } from "@/lib/format-date";
 import { Icon } from "@/components/ui/Icon";
 
 export default async function OrgSubscriptionPage({
