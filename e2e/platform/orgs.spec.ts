@@ -29,8 +29,8 @@ test.describe("Staff > organizations CRUD", () => {
     await page.getByLabel(/Nom complet du OWNER/i).fill("Awa OWNER");
     await page.getByRole("button", { name: /creer l'organisation/i }).click();
 
-    // Le form redirige vers /staff/organizations/[orgId] apres succes.
-    await page.waitForURL(/\/staff\/organizations\/[a-z0-9-]+/i, { timeout: 10_000 });
+    // Le form redirige vers /platform/organizations/[orgId] apres succes.
+    await page.waitForURL(/\/platform\/organizations\/[a-z0-9-]+/i, { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: orgName })).toBeVisible();
 
     // BDD : org + user OWNER + OrgMembership.
@@ -71,7 +71,7 @@ test.describe("Staff > organizations CRUD", () => {
   });
 
   test("STAFF_ADMIN met a jour name + contactEmail via PATCH API", async ({ page }) => {
-    // Note : v2-13 n'a pas de form UI d'edition org dans /staff/organizations/[orgId]
+    // Note : v2-13 n'a pas de form UI d'edition org dans /platform/organizations/[orgId]
     // (la page est read-only + actions archive/restore/delete). On exerce donc
     // l'endpoint PATCH /api/platform/organizations/[orgId] directement.
     const { orgId } = await createTestOrgWithOwner({ scope: "orgs-update" });

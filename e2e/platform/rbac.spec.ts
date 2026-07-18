@@ -37,10 +37,10 @@ test.describe("Staff > matrice RBAC", () => {
     expect(body.error).toBe("INSUFFICIENT_STAFF_ROLE");
   });
 
-  test("STAFF_OBSERVER : UI /staff/organizations/new (bouton creation present mais POST 403)", async ({
+  test("STAFF_OBSERVER : UI /platform/organizations/new (bouton creation present mais POST 403)", async ({
     page,
   }) => {
-    // La page /staff/organizations/new est accessible (le layout exige seulement
+    // La page /platform/organizations/new est accessible (le layout exige seulement
     // staffRole; la creation reelle est gardee cote API). On verifie donc que
     // l'API renvoie 403 quand l'observer tente le POST direct via le form
     // (par requete page.request).

@@ -243,7 +243,7 @@ test.describe("T19 Org RBAC", () => {
 
   // -- Bonus : staff sans OrgMembership accede via "Mode staff" --------------
 
-  test("Staff sans OrgMembership accede /admin/[orgId] avec banniere et PATCH avec staffActor=true", async ({
+  test("Staff sans OrgMembership accede /org/[orgId] avec banniere et PATCH avec staffActor=true", async ({
     page,
     request,
   }) => {
@@ -253,7 +253,7 @@ test.describe("T19 Org RBAC", () => {
       scope: "rbac-staff",
     });
 
-    // UI : visite /admin/[orgId], la banniere "Mode staff" doit etre visible
+    // UI : visite /org/[orgId], la banniere "Mode staff" doit etre visible
     // (rendue par OrgShell quand isStaffMode=true, ce qui est le cas car le
     // staff n'a aucune OrgMembership).
     await page.goto(`/org/${orgId}`);

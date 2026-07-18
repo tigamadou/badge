@@ -125,7 +125,7 @@ test.describe("Event activity log", () => {
   test("VIEWER : la response ne fuite pas snapshotEmail/Phone/Document", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "activity-viewer" });
     // VIEWER seul (sans OrgMembership OWNER) -- accede au GET via l'API uniquement,
-    // car le layout admin /admin/[orgId] redirige les non-OWNER.
+    // car le layout admin /org/[orgId] redirige les non-OWNER.
     const viewer = await loginAsEventMember(page, {
       orgId,
       eventId,

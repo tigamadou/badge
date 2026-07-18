@@ -110,7 +110,7 @@ test.describe("T17 Org category templates", () => {
     });
   });
 
-  test("UI /admin/[orgId]/templates affiche le tableau et permet de creer", async ({
+  test("UI /org/[orgId]/templates affiche le tableau et permet de creer", async ({
     page,
   }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-ui" });

@@ -52,9 +52,9 @@ Ordre justifie : impossible de viser 100% E2E (Phase 3) sur une suite qui a deja
 
 ### Task 0.2 — Alignement structurel v4 de la suite
 
-- [ ] **Step 1 : Renommer** `e2e/staff/` -> `e2e/platform/` (`git mv`), aligner les imports et le `playwright.config.ts` (projects/testDir si references).
-- [ ] **Step 2 : Verifier les helpers** `e2e/helpers/auth.ts` et `db.ts` : URLs `/platform`, `/org/[orgId]`, `/api/platform`, `/api/org`, baseURL HTTPS (`https://badge.local` ou variable existante), `ignoreHTTPSErrors: true` si CA locale non fiable dans le conteneur.
-- [ ] **Step 3 : Verify** : `rg -n "/staff|/admin|/api/staff|/api/admin" e2e/` retourne 0 occurrence (hors commentaires historiques).
+- [x] **Step 1 : Renommer** `e2e/staff/` -> `e2e/platform/` (`git mv`), aligner les imports et le `playwright.config.ts` (projects/testDir si references). → `git mv` fait ; imports relatifs (`../helpers`) inchanges (meme profondeur) ; `playwright.config.ts` `testDir:"./e2e"` sans reference par dossier (aucun changement).
+- [x] **Step 2 : Verifier les helpers** `e2e/helpers/auth.ts` et `db.ts` : URLs `/platform`, `/org/[orgId]`, `/api/platform`, `/api/org`, baseURL HTTPS (`https://badge.local` ou variable existante), `ignoreHTTPSErrors: true` si CA locale non fiable dans le conteneur. → helpers propres (0 vieux chemin) ; `auth.ts` navigue via `/login`, `db.ts` seed via Prisma (pas d'API HTTP). baseURL in-conteneur = `http://localhost:3000` (fonctionne, GET /login=200) ; HTTPS `badge.local` reserve au mode UI hote — pas de changement requis.
+- [x] **Step 3 : Verify** : `rg -n "/staff|/admin|/api/staff|/api/admin" e2e/` retourne 0 occurrence (hors commentaires historiques). → 0 occurrence. Bug corrige au passage : `platform/orgs.spec.ts` `waitForURL` pointait encore `/staff/organizations`.
 
 ### Task 0.3 — Resorption des echecs : 0 rouge
 

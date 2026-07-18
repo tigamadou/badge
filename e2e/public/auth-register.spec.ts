@@ -57,8 +57,8 @@ test.describe("Account register & verify email", () => {
     await page.getByLabel("Mot de passe").fill(user.password);
     await page.getByRole("button", { name: /se connecter/i }).click();
 
-    // Apres login, NextAuth redirige vers /admin par defaut (cf src/app/login/page.tsx).
-    // Pour un compte participant simple, /admin renvoie en 403 ou redirection — on
+    // Apres login, NextAuth redirige vers /org par defaut (cf src/app/login/page.tsx).
+    // Pour un compte participant simple, /org renvoie en 403 ou redirection — on
     // accepte n'importe quelle URL hors /login.
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
   });

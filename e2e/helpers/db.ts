@@ -496,7 +496,7 @@ export async function createTestEvent(opts: {
 }
 
 // v2-12 : cree un user staff avec EventMembership ADMIN sur un event donne.
-// Utile pour les E2E qui accedent aux pages /admin/[orgId]/events/[eventId]/*.
+// Utile pour les E2E qui accedent aux pages /org/[orgId]/event/[eventId]/*.
 export async function makeEventAdminUser(opts: {
   scope: string;
   eventId: string;
