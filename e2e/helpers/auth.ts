@@ -16,7 +16,9 @@ export async function loginAs(
   user: { email: string; password: string },
 ): Promise<void> {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(user.email);
+  // Le formulaire /login reskine libelle le champ "Adresse e-mail" (regex robuste
+  // pour tolerer d'eventuelles variantes "Email"/"E-mail").
+  await page.getByLabel(/e-?mail/i).fill(user.email);
   await page.getByLabel("Mot de passe").fill(user.password);
   await page.getByRole("button", { name: /se connecter/i }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
