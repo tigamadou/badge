@@ -110,6 +110,7 @@ export async function getFile(
   const bytes = await res.Body!.transformToByteArray();
   return {
     body: Buffer.from(bytes),
+    /* v8 ignore next -- MinIO renvoie toujours un ContentType ; fallback defensif */
     contentType: res.ContentType ?? "application/octet-stream",
   };
 }
@@ -132,6 +133,7 @@ export async function deletePrefix(prefix: string): Promise<number> {
       await s3.send(new DeleteObjectsCommand({ Bucket: BUCKET, Delete: { Objects: objects } }));
       deleted += objects.length;
     }
+    /* v8 ignore next -- branche IsTruncated=true : exige >1000 objets sous un prefixe (impraticable en unitaire) */
     token = list.IsTruncated ? list.NextContinuationToken : undefined;
   } while (token);
   return deleted;

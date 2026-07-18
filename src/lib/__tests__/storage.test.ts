@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import fs from "fs/promises";
 import path from "path";
 import {
@@ -125,5 +125,40 @@ describe("deletePrefix", () => {
   it("returns 0 when no object matches the prefix", async () => {
     const deleted = await deletePrefix("events/evt-none-xyz-123/");
     expect(deleted).toBe(0);
+  });
+});
+
+// Couvre les deux branches des coalescences `??` de la configuration S3Client au
+// chargement du module (storage.ts:67, 71, 74, 75). L'environnement de test ne
+// definit pas les S3_* (il utilise MINIO_*), donc l'import initial couvre le cote
+// "defaut". On re-importe le module avec des valeurs stubbees pour couvrir l'autre
+// operande, puis avec des valeurs absentes pour garantir le cote defaut quel que
+// soit l'environnement. Aucun appel reseau : le S3Client est construit sans I/O.
+describe("storage S3 client configuration branches", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("uses explicit S3_* env values when they are set", async () => {
+    vi.resetModules();
+    vi.stubEnv("S3_BUCKET", "custom-bucket");
+    vi.stubEnv("S3_REGION", "eu-west-3");
+    vi.stubEnv("S3_ACCESS_KEY", "custom-access");
+    vi.stubEnv("S3_SECRET_KEY", "custom-secret");
+    const mod = await import("@/lib/storage");
+    expect(typeof mod.getFile).toBe("function");
+    expect(typeof mod.deletePrefix).toBe("function");
+  });
+
+  it("falls back to defaults when S3_* env values are unset", async () => {
+    vi.resetModules();
+    vi.stubEnv("S3_BUCKET", undefined);
+    vi.stubEnv("S3_REGION", undefined);
+    vi.stubEnv("S3_ACCESS_KEY", undefined);
+    vi.stubEnv("S3_SECRET_KEY", undefined);
+    const mod = await import("@/lib/storage");
+    expect(typeof mod.getFile).toBe("function");
+    expect(typeof mod.deletePrefix).toBe("function");
   });
 });

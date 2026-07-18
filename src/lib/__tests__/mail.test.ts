@@ -462,6 +462,28 @@ describe("sendStatusNotification", () => {
     expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
   });
 
+  // Couvre les branches fausses des ternaires reasonBlock/detailsBlock
+  // (mail.ts:356-359) : rejet sans motif ni details renseignes -> blocs vides.
+  it("sends rejection email without reason nor details blocks", async () => {
+    const reg = await makeReg("REJECTED");
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendStatusNotification(reg.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toContain("rejetée");
+    expect(sent[0].html).not.toContain("Motif :");
+    expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
+  });
+
   it("does nothing when status is PENDING", async () => {
     const reg = await makeReg("REJECTED");
     await prisma.registration.update({ where: { id: reg.id }, data: { status: "PENDING" } });
@@ -835,6 +857,15 @@ describe("resolveTransporter branding branches", () => {
     expect(r.orgName).toBeUndefined();
   });
 
+  // Couvre la branche fausse de `if (org)` (mail.ts:74) : orgId fourni mais
+  // organisation introuvable -> pas de branding, retour aux defauts plateforme.
+  it("returns platform defaults when the org id does not exist", async () => {
+    const r = await resolveTransporter({ orgId: "does-not-exist" });
+    expect(r.from).toBe("noreply@badge.local");
+    expect(r.orgName).toBeUndefined();
+    expect(r.logoUrl).toBeUndefined();
+  });
+
   // Couvre dans resolveTransporterImpl (mail.ts:95-104) : la branche `auth` (smtpUser
   // ET smtpPassword non vides) et les fallbacks `smtpHost || "localhost"`,
   // `smtpPort || 587`, `smtpFrom || "noreply@badge.local"`.
@@ -1007,6 +1038,27 @@ describe("sendBadgePrintedNotification branches", () => {
 
     expect(sent).toHaveLength(1);
     expect(sent[0].html).not.toContain("Pour toute question concernant le retrait");
+  });
+
+  // Couvre la branche fausse du ternaire contactPhone (mail.ts:419) : bloc contact
+  // rendu (contactEmail present) mais sans ligne Tel (contactPhone vide).
+  it("renders only the email row when only contactEmail is set", async () => {
+    const reg = await makePrintedReg("REG-BPB-EM", "bpb-em");
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "contact@org.com",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendBadgePrintedNotification(reg.id);
+
+    expect(sent[0].html).toContain("Pour toute question concernant le retrait");
+    expect(sent[0].html).toContain("contact@org.com");
+    expect(sent[0].html).not.toContain("Tél :");
   });
 
   it("renders only the phone row when only contactPhone is set", async () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { buildTemplateContext, __TEST__, type RegistrationForContext } from "../build-context";
 
 // Mock du driver de stockage pour exercer le VRAI readFileAsDataUrl (indirection
@@ -99,6 +99,10 @@ describe("readFileAsDataUrl (implementation reelle via storage)", () => {
     vi.restoreAllMocks();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("utilise le contentType renvoye par le storage quand il est significatif", async () => {
     vi.mocked(getFile).mockResolvedValue({ body: Buffer.from("abc"), contentType: "image/png" });
     const url = await __TEST__.readFileAsDataUrl("events/x/photos/a.jpg", "");
@@ -122,5 +126,28 @@ describe("readFileAsDataUrl (implementation reelle via storage)", () => {
     // Pas de baseUrl -> resolveBaseUrl utilise BASE_URL/NEXTAUTH_URL/localhost.
     const ctx = await buildTemplateContext(baseRegistration);
     expect(ctx.badge.verifyUrl).toMatch(/\/verify\/REG-001$/);
+  });
+
+  it("resolveBaseUrl : utilise BASE_URL quand il est defini (2e operande du ||)", async () => {
+    vi.mocked(getFile).mockResolvedValue({ body: Buffer.from("x"), contentType: "image/png" });
+    vi.stubEnv("BASE_URL", "https://from-base-env.test");
+    const ctx = await buildTemplateContext(baseRegistration);
+    expect(ctx.badge.verifyUrl).toBe("https://from-base-env.test/verify/REG-001");
+  });
+
+  it("resolveBaseUrl : retombe sur NEXTAUTH_URL quand BASE_URL est vide (3e operande)", async () => {
+    vi.mocked(getFile).mockResolvedValue({ body: Buffer.from("x"), contentType: "image/png" });
+    vi.stubEnv("BASE_URL", "");
+    vi.stubEnv("NEXTAUTH_URL", "https://from-nextauth-env.test");
+    const ctx = await buildTemplateContext(baseRegistration);
+    expect(ctx.badge.verifyUrl).toBe("https://from-nextauth-env.test/verify/REG-001");
+  });
+
+  it("resolveBaseUrl : retombe sur localhost quand BASE_URL et NEXTAUTH_URL sont vides", async () => {
+    vi.mocked(getFile).mockResolvedValue({ body: Buffer.from("x"), contentType: "image/png" });
+    vi.stubEnv("BASE_URL", "");
+    vi.stubEnv("NEXTAUTH_URL", "");
+    const ctx = await buildTemplateContext(baseRegistration);
+    expect(ctx.badge.verifyUrl).toBe("http://localhost:3000/verify/REG-001");
   });
 });
