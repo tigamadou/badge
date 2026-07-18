@@ -325,7 +325,74 @@ non drainable mecaniquement.
 
 ### Mesure coverage initiale (Task 1.x)
 
-(A alimenter.)
+Baseline 2026-07-18 : `src/lib` ~80% lignes / 71% branches. Final Phase 1 :
+**100% / 100% / 100% / 100%** (lignes/branches/fonctions/statements), gate
+`vitest run --coverage` vert (exit 0). 98 fichiers de test verts.
+
+---
+
+## HANDOFF — reprise en nouvelle session (etat au 2026-07-18)
+
+**Branche :** `feat/design_implementation`. Tout est committe (voir `git log`). Non
+committes (a laisser) : `scripts/run-plans.sh`, `.plan-logs/`, `Todo.md` (outillage boucle).
+
+### Ce qui est FAIT dans cette session
+- **Refonte v4 Bloc D (de-nesting event)** : espace evenement passe en top-level
+  `/event/[eventId]`, selecteur de workspace `/select`, regression "membre event-only
+  redirige hors de son event" corrigee (prouvee E2E : `e2e/event/dashboard.spec.ts` 4/4).
+  Commits `7f2863f`, `f632cea`. Plan refonte 100% (133/133).
+- **Site public / marketing** : landing + fonctionnalites, tarifs, a-propos, contact
+  (+ `/api/contact`), 3 pages legales, chrome partage. Route group `src/app/(marketing)/`.
+  Plan `2026-07-18-v4-site-public-marketing.md` 100% (85/85). Commits `0c3f998`, `e0692b6`.
+- **SMTP dev** : `PlatformSettings` en base dev repointe sur `mailpit:1025` (le seed a
+  deja la bonne valeur ; c'etait un artefact runtime). Le formulaire contact delivre.
+- **Phase 1 (couverture unitaire lib) : TERMINEE a 100%.** Tasks 1.1-1.2 cochees.
+  Config coverage dans `vitest.config.ts` (provider v8, include `src/lib/**`, seuils 100%,
+  exclusions justifiees). Du code mort defensif a ete retire de la PROD **avec l'accord
+  explicite de l'utilisateur** (format-badge-name if redondant, mail/mail-helpers `?? ch`,
+  `v8 ignore` sur branches S3 defensives). Commits `86ce77e`, `d27ce91`, `09dea4a`,
+  `5fbf69c`, `88d963c`, `aac6848`, `91ce109`.
+
+### CONTRAINTES A HONORER (imperatif utilisateur)
+1. **Les tests ne modifient JAMAIS le code de production.** Si couvrir une ligne exige
+   de toucher `src/` (hors `__tests__`) ou revele un bug -> **s'arreter et demander**,
+   ne pas modifier la prod. (L'exception dead-code de cette session a ete validee au cas
+   par cas ; toute nouvelle modif prod requiert un accord frais.)
+2. **Ne jamais committer sans demande explicite** de l'utilisateur dans la session.
+
+### PIEGES TECHNIQUES appris (a reutiliser)
+- **Base MySQL unique partagee entre tests et DEV** (`vitest.config` `fileParallelism:false`,
+  reset global `src/test-setup.ts` en `beforeEach` qui `deleteMany` ~14 modeles) :
+  (1) **ne jamais lancer deux runs vitest en parallele** ; les agents delegues **ecrivent
+  les tests sans les executer**, l'agent principal fait UNE passe `yarn vitest run --coverage`
+  de verif a la fin. (2) **Chaque `make test` VIDE les donnees de dev** -> relancer
+  `make db-seed` ensuite (comptes seed, password `123456`). Symptome typique : `badge.local`
+  redirige vers `/login` (session valide mais user supprime -> `loadUserContext` null ->
+  `resolveHomeRedirect(null)` = `/login`). Une base de test separee serait souhaitable (v3).
+- **next-auth v4** : le vrai `authorize` est dans `authOptions.providers[0].options.authorize`
+  (le `.authorize` de premier niveau est un stub `() => null`).
+- Modeles a mocker si on mocke `@/lib/prisma` : le reset global appelle `deleteMany` sur
+  ~14 modeles -> preferer la **vraie DB** (pattern des tests lib existants) plutot qu'un
+  mock partiel de prisma.
+- `Registration.id` n'a pas de `@default` -> fournir un `id` explicite a `registration.create`.
+
+### PROCHAINE ETAPE : Phase 2 — Integration API 100% (76 routes)
+1. **Task 2.1 (mesure)** : ajouter `src/app/api/**` a `coverage.include` de
+   `vitest.config.ts`, lancer `yarn vitest run --coverage`, lister les routes/lignes sous
+   100%. Beaucoup de routes ont deja des tests (`src/lib/__tests__/api-*.test.ts`).
+2. **Tasks 2.2-2.4 (combler)** par namespace : `auth`/`account`/public, `org/**`,
+   `platform/**`. Pour chaque route : golden path (2xx), 401, 403 par frontiere de role,
+   400 (validation), 404 le cas echeant, assertion `logActivity`. Reutiliser les helpers
+   et le style des `api-*.test.ts` existants. Deleguer l'ECRITURE a des agents paralleles
+   (write-only, no run), puis UNE passe de verif.
+3. Puis Phases 3 (E2E, gros/lent — Bloc D deja livre donc Task 0.3 debloquee), 4-5 (Make +
+   CI), 6 (doc).
+
+### Etat Phase 0 Task 0.3 (E2E)
+Le blocage architecture est leve (Bloc D). `e2e/helpers/auth.ts` (fix login) et
+`e2e/event/dashboard.spec.ts` sont committes et verts. Il reste ~40 specs E2E a realigner
+sur le DOM v4 reskine + chemins `/event/[eventId]` (categorie (c)). Chaque run E2E complet
+~1.4h -> travail iteratif supervise.
 
 ### Matrice API (Task 2.1)
 
