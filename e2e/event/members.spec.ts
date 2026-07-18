@@ -50,10 +50,10 @@ test.describe("Event members", () => {
     });
     expect(membership?.role).toBe("OPERATOR");
 
-    // Mail d'invitation.
+    // Mail d'invitation : sendUserInvitation envoie le sujet "Bienvenue sur Badge".
     await mailpit.expectMail({
       to: inviteEmail,
-      subjectPattern: /(invitation|événement|evenement)/i,
+      subjectPattern: /bienvenue/i,
     });
 
     // Audit USER_CREATED + MEMBERSHIP_ADDED (scope event).

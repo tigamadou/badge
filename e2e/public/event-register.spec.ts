@@ -36,10 +36,10 @@ test.describe("Event registration flow", () => {
     await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
     await page.getByRole("radio", { name: /visiteur/i }).check();
     await page.getByRole("checkbox").last().check();
-    await page.getByRole("button", { name: /valider mon inscription/i }).click();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
 
     await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
-    await expect(page.getByText(/votre inscription a bien été enregistrée/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /inscription enregistrée/i })).toBeVisible();
 
     const reg = await getLatestRegistrationForUser(user.id);
     expect(reg).not.toBeNull();
