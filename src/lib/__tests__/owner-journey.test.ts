@@ -34,7 +34,13 @@ describe("OWNER journey (smoke)", () => {
       data: { email: "owner@acme.test", password: "x", name: "O" },
     });
     const org = await prisma.organization.create({
-      data: { name: "Acme", slug: "acme", quotaMaxEvents: 10 },
+      data: { name: "Acme", slug: "acme" },
+    });
+    const plan = await prisma.plan.create({
+      data: { name: "plan-acme", maxEvents: 10, maxParticipantsPerEvent: null },
+    });
+    await prisma.subscription.create({
+      data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
     });
     await prisma.orgMembership.create({
       data: { userId: owner.id, orgId: org.id, role: "OWNER" },

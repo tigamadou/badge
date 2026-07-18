@@ -9,6 +9,13 @@ async function withSession(user: { id: string; email: string; name: string; isSt
   vi.mocked(getServerSession).mockResolvedValue({ user } as never);
 }
 
+async function activatePlan(orgId: string, maxEvents: number | null = null) {
+  const plan = await prisma.plan.create({
+    data: { name: `p-${orgId}`, maxEvents, maxParticipantsPerEvent: null },
+  });
+  await prisma.subscription.create({ data: { orgId, planId: plan.id, status: "ACTIVE" } });
+}
+
 describe("PATCH /api/org/[orgId] (Task 4 — name + slug)", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
@@ -418,6 +425,7 @@ describe("POST /api/org/[orgId]/events", () => {
   it("creates event with unique slug and registrationOpen=false", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "ev-o" } });
+    await activatePlan(org.id);
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
@@ -443,6 +451,7 @@ describe("POST /api/org/[orgId]/events", () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const orgA = await prisma.organization.create({ data: { name: "A", slug: "a-o" } });
     const orgB = await prisma.organization.create({ data: { name: "B", slug: "b-o" } });
+    await activatePlan(orgB.id);
     await prisma.event.create({
       data: { orgId: orgA.id, title: "X", slug: "x", location: "", date: new Date() },
     });
@@ -460,11 +469,12 @@ describe("POST /api/org/[orgId]/events", () => {
     expect(event?.slug).toBe("x-2");
   });
 
-  it("refuses creation when quotaMaxEvents is reached (409 QUOTA_EXCEEDED)", async () => {
+  it("refuses creation when the plan event limit is reached (409 EVENT_LIMIT)", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const org = await prisma.organization.create({
-      data: { name: "O", slug: "q-o", quotaMaxEvents: 1 },
+      data: { name: "O", slug: "q-o" },
     });
+    await activatePlan(org.id, 1);
     await prisma.event.create({
       data: {
         orgId: org.id,
@@ -486,12 +496,13 @@ describe("POST /api/org/[orgId]/events", () => {
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(409);
     const json = await res.json();
-    expect(json.code).toBe("QUOTA_EXCEEDED");
+    expect(json.code).toBe("EVENT_LIMIT");
   });
 
   it("copies CategoryTemplate to Category when templateIds provided", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "tpl-ev-o" } });
+    await activatePlan(org.id);
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
     const tpl = await prisma.categoryTemplate.create({
       data: { orgId: org.id, name: "Délégué", color: "#ff0000", number: 1 },

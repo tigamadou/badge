@@ -858,15 +858,15 @@ model Subscription {
 - Modify: `src/app/api/events/[slug]/register/route.ts`
 - Modify: `src/app/api/org/[orgId]/events/[eventId]/registrations/route.ts`
 
-- [ ] **Step 1 : Creation d'event** — remplacer le bloc quota actuel (`org?.quotaMaxEvents != null ...`) par `try { await assertCanCreateEvent(orgId) } catch (e) { if (e instanceof SubscriptionError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.httpStatus }) }`. Conserver le bypass staff : si l'appelant est staff, journaliser `logActivity({ type: "QUOTA_BYPASS", staffActor: true, ... })` et ne pas bloquer.
+- [x] **Step 1 : Creation d'event** — remplacer le bloc quota actuel (`org?.quotaMaxEvents != null ...`) par `try { await assertCanCreateEvent(orgId) } catch (e) { if (e instanceof SubscriptionError) return NextResponse.json({ error: e.message, code: e.code }, { status: e.httpStatus }) }`. Conserver le bypass staff : si l'appelant est staff, journaliser `logActivity({ type: "QUOTA_BYPASS", staffActor: true, ... })` et ne pas bloquer.
 
-- [ ] **Step 2 : Inscription publique** — remplacer le bloc quota (`register/route.ts:124-134`) par `assertCanRegister(event.id)` (429 sur `PARTICIPANT_LIMIT`, 403/409 sur inactif). Le message utilisateur reste "Inscriptions completes." pour `PARTICIPANT_LIMIT`.
+- [x] **Step 2 : Inscription publique** — remplacer le bloc quota (`register/route.ts:124-134`) par `assertCanRegister(event.id)` (429 sur `PARTICIPANT_LIMIT`, 403/409 sur inactif). Le message utilisateur reste "Inscriptions completes." pour `PARTICIPANT_LIMIT`.
 
-- [ ] **Step 3 : Inscription admin** — conserver le comportement de bypass audite : calculer si on depasse la limite resolue et logger `quotaBypass` dans `logActivity` (adapter le calcul a `resolveOrgLimits`).
+- [x] **Step 3 : Inscription admin** — conserver le comportement de bypass audite : calculer si on depasse la limite resolue et logger `quotaBypass` dans `logActivity` (adapter le calcul a `resolveOrgLimits`).
 
-- [ ] **Step 4 : Supprimer** `src/lib/event-quota.ts` si tout son contenu utile a migre vers `subscription.ts` (`rg -n "event-quota" src` doit etre vide apres). Mettre a jour les imports des dashboards.
+- [x] **Step 4 : Supprimer** `src/lib/event-quota.ts` si tout son contenu utile a migre vers `subscription.ts` (`rg -n "event-quota" src` doit etre vide apres). Mettre a jour les imports des dashboards.
 
-- [ ] **Step 5 : Tests** : `make test` (integration events + register) — Attendu : les tests de quota migres passent avec la nouvelle semantique par event.
+- [x] **Step 5 : Tests** : `make test` (integration events + register) — Attendu : les tests de quota migres passent avec la nouvelle semantique par event.
 
 ### Task 6.4 : UI plateforme — catalogue de plans + assignation d'abonnement
 

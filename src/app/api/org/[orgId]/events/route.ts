@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
+import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
@@ -78,17 +79,23 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
   }
   const data = parsed.data;
 
-  const org = await prisma.organization.findUnique({
-    where: { id: orgId },
-    select: { quotaMaxEvents: true },
-  });
-  if (org?.quotaMaxEvents != null) {
-    const count = await prisma.event.count({ where: { orgId, archived: false } });
-    if (count >= org.quotaMaxEvents) {
-      return NextResponse.json(
-        { error: "Quota d'événements atteint", code: "QUOTA_EXCEEDED" },
-        { status: 409 },
-      );
+  try {
+    await assertCanCreateEvent(orgId);
+  } catch (e) {
+    if (e instanceof SubscriptionError) {
+      if (session.user.isStaff) {
+        await logActivity({
+          type: "QUOTA_BYPASS",
+          userId: session.user.id,
+          orgId,
+          details: { action: "EVENT_CREATE", code: e.code },
+          req,
+        });
+      } else {
+        return NextResponse.json({ error: e.message, code: e.code }, { status: e.httpStatus });
+      }
+    } else {
+      throw e;
     }
   }
 

@@ -519,7 +519,13 @@ describe("Quota — admin bypass with audit", () => {
       data: { email: `a-${stamp}@x.test`, password: "x", name: "A", emailVerifiedAt: new Date() },
     });
     const org = await prisma.organization.create({
-      data: { name: "O", slug: `qq-o-${stamp}`, quotaMaxRegistrations: 1 },
+      data: { name: "O", slug: `qq-o-${stamp}` },
+    });
+    const plan = await prisma.plan.create({
+      data: { name: `plan-${stamp}`, maxEvents: null, maxParticipantsPerEvent: 1 },
+    });
+    await prisma.subscription.create({
+      data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
     });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: `qq-e-${stamp}`, location: "L", date: new Date() },

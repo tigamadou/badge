@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { generateId } from "@/lib/generate-id";
-import { countCountableRegistrations } from "@/lib/event-quota";
+import { countCountableRegistrations, resolveOrgLimits } from "@/lib/subscription";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (req, { eventId }) => {
@@ -152,12 +152,9 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     },
   });
 
-  const orgRow = await prisma.organization.findUnique({
-    where: { id: orgId },
-    select: { quotaMaxRegistrations: true },
-  });
+  const { maxParticipantsPerEvent } = await resolveOrgLimits(orgId);
   const after = await countCountableRegistrations(eventId);
-  const quotaBypass = orgRow?.quotaMaxRegistrations != null && after > orgRow.quotaMaxRegistrations;
+  const quotaBypass = maxParticipantsPerEvent != null && after > maxParticipantsPerEvent;
 
   await logActivity({
     type: "REGISTRATION_CREATED",

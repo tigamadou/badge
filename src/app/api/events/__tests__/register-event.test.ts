@@ -58,6 +58,12 @@ async function seedEvent(slug: string) {
   const org = await prisma.organization.create({
     data: { name: "Org", slug: `org-${slug}` },
   });
+  const plan = await prisma.plan.create({
+    data: { name: `plan-${slug}`, maxEvents: null, maxParticipantsPerEvent: null },
+  });
+  await prisma.subscription.create({
+    data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
+  });
   const event = await prisma.event.create({
     data: {
       orgId: org.id,

@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole } from "@/lib/auth-helpers";
-import { countCountableRegistrations } from "@/lib/event-quota";
+import { countCountableRegistrations } from "@/lib/subscription";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";

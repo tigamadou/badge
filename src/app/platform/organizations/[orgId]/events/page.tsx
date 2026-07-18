@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { countCountableRegistrations } from "@/lib/event-quota";
+import { countCountableRegistrations } from "@/lib/subscription";
 import { Tag } from "@/components/ui/Labels";
 
 // v4 Bloc B : liste read-only des evenements d'une org, pour la supervision staff.
