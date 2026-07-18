@@ -116,20 +116,17 @@ test.describe("Staff > matrice RBAC", () => {
     expect(body.error).toBe("INSUFFICIENT_STAFF_ROLE");
   });
 
-  test("STAFF_ADMIN : PATCH /api/platform/settings smtpPassword est accepte (pas de 403 en v2-13)", async ({
+  test("STAFF_ADMIN : PATCH /api/platform/settings smtpPassword -> 403 (SUPER_ADMIN requis)", async ({
     page,
   }) => {
-    // Le code actuel autorise STAFF_ADMIN a poser smtpPassword (route gardee par
-    // minRole: STAFF_ADMIN, sans verif supplementaire sur ce champ). On valide
-    // donc le comportement reel : 200 + audit smtpPasswordChanged=true.
-    // Note : la spec initiale du plan v2-13 prevoyait un 403 SUPER_ADMIN_REQUIRED
-    // mais aucun garde-fou n'a ete implemente cote serveur pour ce cas. A
-    // documenter comme ecart spec/impl.
+    // ADR 2026-06-01 : seul SUPER_ADMIN peut ecrire smtpPassword / recaptchaSecretKey.
+    // Le garde-fou est desormais implemente cote serveur -> STAFF_ADMIN recoit 403.
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "rbac-admin-smtppwd" });
     const res = await page.request.patch("/api/platform/settings", {
       data: { smtpPassword: `pw-${Date.now()}` },
     });
-    expect(res.status()).toBe(200);
+    expect(res.status()).toBe(403);
+    expect((await res.json()).error).toBe("FORBIDDEN_SECRET_CHANGE");
   });
 
   test("Tout staff : GET /api/platform/activity -> 200", async ({ page }) => {

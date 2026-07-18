@@ -43,13 +43,13 @@ test.describe("Auth setup-password (invite token)", () => {
 
     await page.getByLabel("Nouveau mot de passe").fill(newPassword);
     await page.getByLabel("Confirmer le mot de passe").fill(newPassword);
-    await page.getByRole("button", { name: /configurer le mot de passe/i }).click();
+    await page.getByRole("button", { name: /activer mon compte/i }).click();
 
     // Apres succes, le form redirige vers /login?email=...
     await page.waitForURL(/\/login/, { timeout: 8000 });
 
     // Login OK avec le nouveau mot de passe
-    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel(/adresse e-mail/i).fill(user.email);
     await page.getByLabel("Mot de passe").fill(newPassword);
     await page.getByRole("button", { name: /se connecter/i }).click();
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });

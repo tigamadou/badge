@@ -23,14 +23,14 @@ test.describe("v2-12 selection template badge (event-admin)", () => {
 
     // Login
     await page.goto("/login");
-    await page.getByLabel("Email").fill(admin.email);
+    await page.getByLabel("Adresse e-mail").fill(admin.email);
     await page.getByLabel("Mot de passe").fill(admin.password);
     await page.getByRole("button", { name: /se connecter/i }).click();
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
 
     // Va sur la page de selection de template
     await page.goto(`/event/${eventId}/settings/badge`);
-    await expect(page.getByRole("heading", { name: /template de badge/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /modèle de badge/i })).toBeVisible();
 
     // Au depart : carte default-v1 et recto-verso-v1 affichees, aucune selectionnee
     await expect(page.getByTestId("template-card-default-v1")).toBeVisible();
@@ -51,7 +51,7 @@ test.describe("v2-12 selection template badge (event-admin)", () => {
     ).toHaveAttribute("data-selected", "true");
 
     // Clear (heritage)
-    await page.getByRole("button", { name: /utiliser le defaut herite/i }).click();
+    await page.getByRole("button", { name: /utiliser le défaut hérité/i }).click();
     await expect(page.getByTestId("save-success")).toBeVisible();
     const afterClear = await getEventBadgeTemplateId(eventId);
     expect(afterClear).toBeNull();

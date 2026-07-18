@@ -38,28 +38,34 @@ test.describe("T15 Org events", () => {
     await loginAs(page, owner);
 
     // Step 1 : titre + date + lieu (le wizard suggere un slug automatique).
+    // Les champs sont desormais des <Input label="..."> (pas de placeholder) :
+    // on cible via getByLabel plutot que getByPlaceholder.
     await page.goto(`/org/${orgId}/events/new`);
-    await page.getByPlaceholder("Titre").fill("E2E Event Wizard");
+    await page.getByLabel("Titre").fill("E2E Event Wizard");
     // L'input date est un type="date" : on injecte une date ISO valide.
     const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000)
       .toISOString()
       .slice(0, 10);
     await page.locator('input[type="date"]').fill(futureIso);
-    await page.getByPlaceholder("Lieu").fill("Abidjan");
-    await page.getByRole("button", { name: /^suivant$/i }).click();
+    await page.getByLabel("Lieu").fill("Abidjan");
+    await page.getByRole("button", { name: /^continuer$/i }).click();
 
     // Step 2 : selectionne les 2 templates en mode "template". Le wizard UI ne
     // permet pas templates + manuel simultanement -- on selectionne juste les
     // 2 templates ici (la spec API supporterait les deux modes mais l'UI non).
-    await page.getByRole("button", { name: /partir d'un mod[èe]le/i }).click();
+    // Le bouton du Segmented affiche "Depuis un modele" (mode "template" est
+    // deja selectionne par defaut, ce clic est un no-op idempotent).
+    await page.getByRole("button", { name: /depuis un mod[èe]le/i }).click();
     expect(tpl1.id).toBeTruthy();
     expect(tpl2.id).toBeTruthy();
-    await page.locator(`label:has-text("VIP")`).locator("input[type=checkbox]").check();
+    // Le composant Checkbox custom rend un <button role="checkbox"> (plus de
+    // <input type=checkbox> natif) ; Playwright .check() supporte le role ARIA.
+    await page.locator(`label:has-text("VIP")`).locator('[role="checkbox"]').check();
     await page
       .locator(`label:has-text("Standard")`)
-      .locator("input[type=checkbox]")
+      .locator('[role="checkbox"]')
       .check();
-    await page.getByRole("button", { name: /^suivant$/i }).click();
+    await page.getByRole("button", { name: /^continuer$/i }).click();
 
     // Step 3 : recap + creation.
     await expect(page.getByText(/r[ée]cap/i)).toBeVisible();

@@ -31,7 +31,7 @@ test.describe("Account register & verify email", () => {
     const user = await createTestUser({ scope: "login-unverified", verified: false });
 
     await page.goto("/login");
-    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel(/adresse e-mail/i).fill(user.email);
     await page.getByLabel("Mot de passe").fill(user.password);
     await page.getByRole("button", { name: /se connecter/i }).click();
 
@@ -45,7 +45,7 @@ test.describe("Account register & verify email", () => {
     const plainToken = await seedEmailVerifyToken(user.id);
 
     await page.goto(`/verify-email/${plainToken}`);
-    await expect(page.getByText(/email confirmé/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /adresse vérifiée/i })).toBeVisible();
 
     // Verifie la persistance en BDD
     const updated = await getUserById(user.id);
@@ -53,7 +53,7 @@ test.describe("Account register & verify email", () => {
 
     // Login OK maintenant
     await page.getByRole("link", { name: /se connecter/i }).click();
-    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel(/adresse e-mail/i).fill(user.email);
     await page.getByLabel("Mot de passe").fill(user.password);
     await page.getByRole("button", { name: /se connecter/i }).click();
 
@@ -103,7 +103,7 @@ test.describe("Account register & verify email", () => {
 
     // 1ere visite : confirme l'email
     await page.goto(`/verify-email/${plainToken}`);
-    await expect(page.getByText(/email confirmé/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /adresse vérifiée/i })).toBeVisible();
 
     // 2eme visite avec le meme token : la BDD a clear le hash, donc match negatif.
     await page.goto(`/verify-email/${plainToken}`);

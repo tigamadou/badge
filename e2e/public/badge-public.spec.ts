@@ -38,7 +38,7 @@ test.describe("Badge public verify + download", () => {
     await markBadgePrinted(regId);
 
     await page.goto(`/verify/${regId}`);
-    await expect(page.getByRole("heading", { name: /accès autorisé/i })).toBeVisible();
+    await expect(page.getByText(/badge valide/i)).toBeVisible();
     await expect(page.getByText(/awa\s+diallo/i)).toBeVisible();
     await expect(page.getByText(/ensea/i)).toBeVisible();
     await expect(page.getByText(/salon e2e/i)).toBeVisible();
@@ -63,7 +63,7 @@ test.describe("Badge public verify + download", () => {
     await markBadgePrinted(regId);
 
     await page.goto(`/verify/${regId}`);
-    await expect(page.getByRole("heading", { name: /accès autorisé/i })).toBeVisible();
+    await expect(page.getByText(/badge valide/i)).toBeVisible();
     // Le nom du participant est masque pour les categories anonymes.
     await expect(page.getByText(/awa\s+diallo/i)).toHaveCount(0);
   });
@@ -83,7 +83,7 @@ test.describe("Badge public verify + download", () => {
     });
 
     await page.goto(`/verify/${regId}`);
-    await expect(page.getByRole("heading", { name: /badge non valide/i })).toBeVisible();
+    await expect(page.getByText(/badge non valide/i)).toBeVisible();
   });
 
   test("/verify/[badgeId] for unknown id returns 404 page", async ({ page }) => {

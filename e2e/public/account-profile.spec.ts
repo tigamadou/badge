@@ -48,7 +48,7 @@ test.describe("Account profile edit", () => {
     await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
 
     // Attend la fin de l'upload : l'UI affiche "Photo enregistrée : profile/<userId>/photos/...".
-    await expect(page.getByText(/photo enregistrée\s*:/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 10_000 });
 
     // Sauvegarde pour persister le storageKey dans la BDD User.photo.
     await page.getByRole("button", { name: /enregistrer/i }).click();
@@ -76,7 +76,7 @@ test.describe("Account profile edit", () => {
       'input[type="file"][accept*="application/pdf"]',
       fixtures.pdf,
     );
-    await expect(page.getByText(/document enregistré\s*:/i)).toBeVisible({
+    await expect(page.getByText(/document enregistré/i)).toBeVisible({
       timeout: 10_000,
     });
 
@@ -170,12 +170,12 @@ test.describe("Account profile edit", () => {
 
     // Upload photo + document pour atteindre 100% des champs requis.
     await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
-    await expect(page.getByText(/photo enregistrée\s*:/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 10_000 });
     await page.setInputFiles(
       'input[type="file"][accept*="application/pdf"]',
       fixtures.pdf,
     );
-    await expect(page.getByText(/document enregistré\s*:/i)).toBeVisible({
+    await expect(page.getByText(/document enregistré/i)).toBeVisible({
       timeout: 10_000,
     });
 

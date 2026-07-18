@@ -18,7 +18,7 @@ test.describe("Staff > journal d'activite", () => {
 
     await page.goto("/platform/activity");
     await expect(
-      page.getByRole("heading", { name: /journal d'activite/i }),
+      page.getByRole("heading", { name: /journal d'activité/i }),
     ).toBeVisible();
     // La page comporte un select "Type" (filtre).
     await expect(page.locator("select[name=type]")).toBeVisible();

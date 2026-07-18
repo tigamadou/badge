@@ -220,9 +220,7 @@ test.describe("T19 Org RBAC", () => {
   //   d'abaisser ce check (a confirmer), on documente le bug ici en testant
   //   le comportement reel. Si l'app est corrigee plus tard (passage a AUDITOR),
   //   ajuster l'assertion a toBe(200).
-  test("AUDITOR GET /api/org/[orgId]/activity (bug app : actuellement 403)", async ({
-    page,
-  }) => {
+  test("AUDITOR GET /api/org/[orgId]/activity -> 200", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "rbac-aud-getact" });
     const auditor = await createTestOrgMember({
       scope: "rbac-aud-getact-u",
@@ -232,9 +230,8 @@ test.describe("T19 Org RBAC", () => {
     await loginAs(page, auditor);
 
     const res = await page.request.get(`/api/org/${orgId}/activity`);
-    // BUG APP : devrait etre 200 selon la spec T19 (lecture activity ouverte
-    // aux 3 roles org). En realite la route est OWNER-only, donc 403.
-    expect(res.status()).toBe(403);
+    // v4 : lecture de l'activity ouverte aux 3 roles org (route withOrgAuth("AUDITOR")).
+    expect(res.status()).toBe(200);
   });
 
   // -- Bonus : staff sans OrgMembership accede via "Mode staff" --------------
@@ -248,11 +245,11 @@ test.describe("T19 Org RBAC", () => {
       scope: "rbac-staff",
     });
 
-    // UI : visite /org/[orgId], la banniere "Mode staff" doit etre visible
-    // (rendue par OrgShell quand isStaffMode=true, ce qui est le cas car le
-    // staff n'a aucune OrgMembership).
+    // v4 (Bloc B/D, fin des vues imbriquees) : un staff sans OrgMembership qui
+    // visite /org/[orgId] est redirige vers la vue plateforme de l'organisation
+    // (/platform/organizations/[orgId]) qui porte le chrome staff.
     await page.goto(`/org/${orgId}`);
-    await expect(page.getByText(/mode staff/i)).toBeVisible();
+    await page.waitForURL(new RegExp(`/platform/organizations/${orgId}`), { timeout: 8000 });
 
     // Action mutative : PATCH /api/org/[orgId] -> succes avec staffActor=true.
     const newName = "E2E Org via staff";

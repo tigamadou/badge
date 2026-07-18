@@ -50,6 +50,19 @@ test.describe("Staff > platform settings", () => {
     expect(details?.smtpPasswordChanged).toBe(false);
     // Aucune valeur de secret dans l'audit.
     expect(JSON.stringify(details)).not.toContain("smtpPassword:");
+
+    // Ce test pose volontairement un smtpHost/Port bidon (hors mailpit) pour
+    // verifier l'audit. On restaure une config SMTP valide (mailpit, seed par
+    // defaut) pour ne pas casser les tests suivants qui envoient reellement
+    // des mails via ce singleton PlatformSettings partage (voir prisma/seed.ts).
+    await getDb().platformSettings.update({
+      where: { id: "singleton" },
+      data: {
+        smtpHost: "mailpit",
+        smtpPort: 1025,
+        smtpFrom: "noreply@badge.local",
+      },
+    });
   });
 
   test("SUPER_ADMIN modifie smtpPassword (audit smtpPasswordChanged=true, valeur non auditee)", async ({ page }) => {

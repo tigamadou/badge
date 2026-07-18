@@ -34,7 +34,7 @@ test.describe("Event registration flow", () => {
     await page.getByRole("link", { name: /s'inscrire à cet événement/i }).click();
 
     await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
-    await page.getByLabel(/visiteur/i).check();
+    await page.getByRole("radio", { name: /visiteur/i }).check();
     await page.getByRole("checkbox").last().check();
     await page.getByRole("button", { name: /valider mon inscription/i }).click();
 

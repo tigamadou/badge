@@ -23,10 +23,10 @@ test.describe("Account password reset (forgot + reset)", () => {
 
     // 1. Demande de reset
     await page.goto("/forgot-password");
-    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel(/adresse e-mail/i).fill(user.email);
     await page.getByRole("button", { name: /envoyer le lien/i }).click();
     await expect(
-      page.getByText(/vous recevrez un email avec un lien de réinitialisation/i),
+      page.getByText(/un lien de réinitialisation a été envoyé/i),
     ).toBeVisible();
 
     // 2. Mail recu
@@ -49,7 +49,7 @@ test.describe("Account password reset (forgot + reset)", () => {
 
     // 4. Login avec le nouveau mot de passe
     await page.getByRole("link", { name: /se connecter/i }).click();
-    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel(/adresse e-mail/i).fill(user.email);
     await page.getByLabel("Mot de passe").fill(newPassword);
     await page.getByRole("button", { name: /se connecter/i }).click();
     await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });

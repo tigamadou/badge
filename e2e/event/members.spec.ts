@@ -155,9 +155,8 @@ test.describe("Event members", () => {
 
     await page.goto(`/event/${eventId}/members`);
     await expect(page.getByRole("heading", { name: /membres/i })).toBeVisible();
-    // En-tetes attendues.
-    await expect(page.getByRole("columnheader", { name: /nom/i })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: /email/i })).toBeVisible();
+    // En-tetes attendues (colonne "Membre" regroupe nom+email, plus de colonnes separees).
+    await expect(page.getByRole("columnheader", { name: /membre/i })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: /rôle/i })).toBeVisible();
     // Ligne du membre seede visible.
     await expect(page.getByText(m1.email)).toBeVisible();

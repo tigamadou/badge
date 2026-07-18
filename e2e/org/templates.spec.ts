@@ -39,7 +39,7 @@ test.describe("T17 Org category templates", () => {
   // La spec du plan indiquait "MANAGER cree CategoryTemplate" -- on adapte ici a la realite
   // du code : MANAGER ne peut PAS creer, le serveur retourne 403. Le cas RBAC est aussi
   // couvert dans rbac.spec.ts. Voir le livrable du rapport pour le flag.
-  test("MANAGER tente de creer un CategoryTemplate -> 403", async ({ page }) => {
+  test("MANAGER cree un CategoryTemplate -> 201 (autorise en v4)", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "tpl-mgr-create" });
     const manager = await createTestOrgMember({
       scope: "tpl-mgr",
@@ -48,10 +48,12 @@ test.describe("T17 Org category templates", () => {
     });
     await loginAs(page, manager);
 
+    // v4 : la creation de modeles de categorie est ouverte a MANAGER (route
+    // withOrgAuth("MANAGER")), plus reservee a OWNER.
     const res = await page.request.post(`/api/org/${orgId}/templates`, {
       data: { name: "Tpl MANAGER", color: "#00FF00", number: 5 },
     });
-    expect(res.status()).toBe(403);
+    expect(res.status()).toBe(201);
   });
 
   test("OWNER edite CategoryTemplate via PATCH", async ({ page }) => {
@@ -126,9 +128,9 @@ test.describe("T17 Org category templates", () => {
     await expect(page.getByRole("heading", { name: /mod[èe]les de cat[ée]gories/i })).toBeVisible();
     await expect(page.getByText("Tpl visible")).toBeVisible();
 
-    // Bouton "Nouveau modele" expose le form (inline) ; on verifie sa presence
-    // sans necessairement soumettre (le form complet est couvert par les tests
-    // API plus haut).
-    await expect(page.getByRole("button", { name: /nouveau mod[èe]le/i })).toBeVisible();
+    // Bouton "Ajouter" (ex "Nouveau modele") ouvre la modale de creation ; on
+    // verifie sa presence sans necessairement soumettre (le form complet est
+    // couvert par les tests API plus haut).
+    await expect(page.getByRole("button", { name: /^ajouter$/i })).toBeVisible();
   });
 });

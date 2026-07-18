@@ -25,9 +25,9 @@ test.describe("Staff > organizations CRUD", () => {
 
     await page.goto("/platform/organizations/new");
     await page.getByLabel(/Nom de l'organisation/i).fill(orgName);
-    await page.getByLabel(/Email du OWNER/i).fill(ownerEmail);
+    await page.getByLabel(/E-mail du OWNER/i).fill(ownerEmail);
     await page.getByLabel(/Nom complet du OWNER/i).fill("Awa OWNER");
-    await page.getByRole("button", { name: /creer l'organisation/i }).click();
+    await page.getByRole("button", { name: /créer l'organisation/i }).click();
 
     // Le form redirige vers /platform/organizations/[orgId] apres succes.
     await page.waitForURL(/\/platform\/organizations\/[a-z0-9-]+/i, { timeout: 10_000 });
