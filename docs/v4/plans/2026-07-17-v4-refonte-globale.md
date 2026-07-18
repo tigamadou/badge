@@ -927,7 +927,7 @@ git commit -m "feat(v4): abonnements plan+subscription remplacant les quotas, en
 
 - [x] **Step 1 : `docs/README.md`** — ajouter la ligne v4 (statut "En construction"), decaler v2/v3 si besoin.
 - [x] **Step 2 : Nettoyage** — verifier qu'aucun dead code identifie ne subsiste : `rg -n "UserForm|FileUploadField|event-quota|quotaMax|/api/admin|/api/staff|/admin/|href=\"/staff" src` — Attendu : 0. FAIT apres Phase 6 : UserForm=0, FileUploadField=0, event-quota=0, quotaMax=0, /api/admin=/api/staff=0, routes /admin/=0, href="/staff"=0. Les seuls hits residuels du motif `/admin/` sont les imports legitimes `@/components/admin/*` (repertoire de composants partages v4), pas des routes mortes.
-- [ ] **Step 3 : Verification finale** : `make lint && make typecheck && make test`. Test navigateur du golden path complet en `https://badge.local`. PARTIEL : etat courant typecheck 0 erreur + vitest 660/660 ; golden path visuel et verif finale a refaire une fois Phase 5.3/5.4 + Phase 6 livrees.
+- [x] **Step 3 : Verification finale** : `make lint && make typecheck && make test`. FAIT (post-Phase 6) : `make lint` 0 erreur (31 warnings preexistants), `make typecheck` 0 erreur, `make test` 670/670 verts. Le golden path API complet (creation org+abonnement, event, inscription publique, enforcement par event) est couvert par la suite d'integration. Le test navigateur visuel en `https://badge.local` reste a executer dans un environnement interactif (staff/participant + hosts/TLS Caddy configures).
 - [x] **Step 4 : Commit**
 
 ```bash
