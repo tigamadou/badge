@@ -99,10 +99,6 @@ model Organization {
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
 
-  quotaMaxEvents        Int?
-  quotaMaxRegistrations Int?
-  quotaMaxStorageMB     Int?
-
   // v2-12 : id de template de badge override pour cette org (null = heritage platform).
   // Note (2026-05-31) : OrgSettings supprime, ce champ vit directement sur Organization.
   badgeTemplateId       String?

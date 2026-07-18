@@ -90,8 +90,10 @@ export function EventCreationWizard({
 
     if (!res.ok) {
       const json = (await res.json().catch(() => ({}))) as { code?: string };
-      if (json.code === "QUOTA_EXCEEDED") {
-        setErr("Limite atteinte. Contactez le support pour augmenter votre quota.");
+      if (json.code === "EVENT_LIMIT") {
+        setErr("Limite d'événements du plan atteinte. Contactez le support pour changer d'abonnement.");
+      } else if (json.code === "SUBSCRIPTION_INACTIVE" || json.code === "NO_SUBSCRIPTION") {
+        setErr("Votre abonnement n'est pas actif. Contactez le support.");
       } else if (json.code === "SLUG_TAKEN") {
         setErr("Ce slug est déjà utilisé. Modifiez-le et réessayez.");
       } else {

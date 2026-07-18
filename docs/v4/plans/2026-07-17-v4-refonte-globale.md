@@ -822,7 +822,7 @@ model Subscription {
 
 - [x] **Step 1 : Ajouter** `Plan`, `SubscriptionStatus`, `Subscription` au schema. Ajouter la relation inverse `subscription Subscription?` sur `Organization`.
 
-- [ ] **Step 2 : Retirer** de `Organization` les champs `quotaMaxEvents`, `quotaMaxRegistrations`, `quotaMaxStorageMB` (lignes 102-104). REPORTE en fin de Phase 6 (apres migration des 91 references quotaMax) pour eviter de casser typecheck/app mid-chantier.
+- [x] **Step 2 : Retirer** de `Organization` les champs `quotaMaxEvents`, `quotaMaxRegistrations`, `quotaMaxStorageMB` (lignes 102-104). REPORTE en fin de Phase 6 (apres migration des 91 references quotaMax) pour eviter de casser typecheck/app mid-chantier. FAIT : champs retires du schema + `prisma generate` ; toutes les references (src, e2e, seed) migrees vers les abonnements ; `rg quotaMax src` vide, typecheck + 670 tests verts. **Le DROP physique des colonnes en base** (`prisma db push --accept-data-loss`) est destructif et laisse a la validation explicite de l'utilisateur ; les colonnes orphelines en base sont sans effet (ignorees par Prisma).
 
 - [x] **Step 3 : Etendre `ActivityType`** avec les nouveaux types : `SUBSCRIPTION_CREATED`, `SUBSCRIPTION_UPDATED`, `PLAN_CREATED`, `PLAN_UPDATED`, `QUOTA_BYPASS` (si non deja present). Verifier l'enum `ActivityType` existant avant d'ajouter.
 

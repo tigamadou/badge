@@ -164,7 +164,7 @@ test.describe("T15 Org events", () => {
     });
   });
 
-  test("Quota events atteint -> 409 QUOTA_EXCEEDED", async ({ page, request }) => {
+  test("Limite events du plan atteinte -> 409 EVENT_LIMIT", async ({ page, request }) => {
     const { orgId, owner } = await createTestOrgWithOwner({
       scope: "events-quota",
       quotaMaxEvents: 2,
@@ -201,7 +201,7 @@ test.describe("T15 Org events", () => {
     });
     expect(res.status()).toBe(409);
     const json = await res.json();
-    expect(json.code).toBe("QUOTA_EXCEEDED");
+    expect(json.code).toBe("EVENT_LIMIT");
   });
 
   test("Slug collision globale -> 409 SLUG_TAKEN", async ({ page, request }) => {

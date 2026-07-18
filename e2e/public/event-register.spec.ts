@@ -116,14 +116,13 @@ test.describe("Event registration flow", () => {
     expect(body.code).toBe("EMAIL_BLOCKED");
   });
 
-  test("org quotaMaxRegistrations enforced (429 QUOTA_EXCEEDED)", async ({ page }) => {
-    // On cree un event avec quota=1 puis on tente 2 registrations. La 2e doit
-    // echouer. Note: la route renvoie 429 (cf src/app/api/events/[slug]/register/route.ts:127),
-    // pas 409.
+  test("plan participant limit enforced per event (429 PARTICIPANT_LIMIT)", async ({ page }) => {
+    // On cree un event dont le plan limite a 1 participant/event puis on tente 2
+    // registrations. La 2e doit echouer (429, cf assertCanRegister).
     const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-quota" });
-    await getDb().organization.updateMany({
-      where: { events: { some: { id: eventId } } },
-      data: { quotaMaxRegistrations: 1 },
+    await getDb().plan.updateMany({
+      where: { subscriptions: { some: { org: { events: { some: { id: eventId } } } } } },
+      data: { maxParticipantsPerEvent: 1 },
     });
 
     // Premier user OK (PENDING compte dans le quota).
@@ -152,6 +151,6 @@ test.describe("Event registration flow", () => {
     });
     expect(res.status()).toBe(429);
     const body = await res.json();
-    expect(body.code).toBe("QUOTA_EXCEEDED");
+    expect(body.code).toBe("PARTICIPANT_LIMIT");
   });
 });

@@ -162,6 +162,8 @@ export async function createTestStaff(opts: {
 // Ne cree aucun event ; c'est le minimum pour tester les flows org-only.
 export async function createTestOrgWithOwner(opts: {
   scope: string;
+  // Limites du plan attache a l'org (null/omis = illimite). quotaMaxRegistrations
+  // est desormais une limite de participants PAR EVENT (abonnements v4).
   quotaMaxEvents?: number;
   quotaMaxRegistrations?: number;
 }): Promise<{ orgId: string; owner: TestUser }> {
@@ -171,9 +173,17 @@ export async function createTestOrgWithOwner(opts: {
     data: {
       name: `E2E Org ${opts.scope}`,
       slug: `e2e-org-${slugSuffix}`,
-      quotaMaxEvents: opts.quotaMaxEvents ?? null,
-      quotaMaxRegistrations: opts.quotaMaxRegistrations ?? null,
     },
+  });
+  const plan = await prisma.plan.create({
+    data: {
+      name: `e2e-plan-${slugSuffix}`,
+      maxEvents: opts.quotaMaxEvents ?? null,
+      maxParticipantsPerEvent: opts.quotaMaxRegistrations ?? null,
+    },
+  });
+  await prisma.subscription.create({
+    data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
   });
   const owner = await createTestUser({ scope: `org-owner-${opts.scope}`, verified: true });
   await prisma.orgMembership.create({
@@ -457,6 +467,12 @@ export async function createTestEvent(opts: {
   const slug = `e2e-${opts.scope}-${Date.now()}`;
   const org = await prisma.organization.create({
     data: { name: "E2E Org", slug: `e2e-org-${opts.scope}-${Date.now()}` },
+  });
+  const plan = await prisma.plan.create({
+    data: { name: `e2e-plan-${opts.scope}-${Date.now()}`, maxEvents: null, maxParticipantsPerEvent: null },
+  });
+  await prisma.subscription.create({
+    data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
   });
   const event = await prisma.event.create({
     data: {

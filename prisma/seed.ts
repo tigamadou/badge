@@ -49,19 +49,17 @@ const ORGS: Array<{
   city: string;
   taxId: string;
   archived?: boolean;
-  quotaMaxEvents?: number | null;
-  quotaMaxRegistrations?: number | null;
 }> = [
   { slug: "acme", name: "Acme Corporation", legalName: "Acme SARL", city: "Abidjan", taxId: "CI-001-001" },
-  { slug: "globex", name: "Globex Industries", legalName: "Globex SA", city: "Yamoussoukro", taxId: "CI-001-002", quotaMaxEvents: 10 },
+  { slug: "globex", name: "Globex Industries", legalName: "Globex SA", city: "Yamoussoukro", taxId: "CI-001-002" },
   { slug: "initech", name: "Initech", legalName: "Initech SARL", city: "Bouake", taxId: "CI-001-003" },
-  { slug: "umbrella", name: "Umbrella Corp", legalName: "Umbrella SA", city: "Daloa", taxId: "CI-001-004", quotaMaxRegistrations: 500 },
+  { slug: "umbrella", name: "Umbrella Corp", legalName: "Umbrella SA", city: "Daloa", taxId: "CI-001-004" },
   { slug: "stark", name: "Stark Industries", legalName: "Stark Innov. SARL", city: "San-Pedro", taxId: "CI-001-005" },
   { slug: "wayne", name: "Wayne Enterprises", legalName: "Wayne SARL", city: "Korhogo", taxId: "CI-001-006" },
   { slug: "cyberdyne", name: "Cyberdyne Systems", legalName: "Cyberdyne SA", city: "Man", taxId: "CI-001-007" },
   { slug: "soylent", name: "Soylent Corp", legalName: "Soylent SARL", city: "Divo", taxId: "CI-001-008", archived: true },
   { slug: "massive", name: "Massive Dynamic", legalName: "Massive Dyn. SA", city: "Gagnoa", taxId: "CI-001-009" },
-  { slug: "tyrell", name: "Tyrell Corp", legalName: "Tyrell SARL", city: "Anyama", taxId: "CI-001-010", quotaMaxEvents: 5, quotaMaxRegistrations: 200 },
+  { slug: "tyrell", name: "Tyrell Corp", legalName: "Tyrell SARL", city: "Anyama", taxId: "CI-001-010" },
 ];
 
 const FIRST_NAMES = [
@@ -335,8 +333,6 @@ async function main() {
         website: `https://${orgDef.slug}.example.ci`,
         contactEmail: `contact@${orgDef.slug}.example.ci`,
         contactPhone: `+225 27 22 ${randInt(10, 99)} ${randInt(10, 99)} ${randInt(10, 99)}`,
-        quotaMaxEvents: orgDef.quotaMaxEvents ?? null,
-        quotaMaxRegistrations: orgDef.quotaMaxRegistrations ?? null,
         archived: orgDef.archived ?? false,
         archivedAt: orgDef.archived ? new Date() : null,
       },
