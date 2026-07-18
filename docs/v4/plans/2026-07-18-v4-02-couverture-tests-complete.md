@@ -77,15 +77,15 @@ Ordre justifie : impossible de viser 100% E2E (Phase 3) sur une suite qui a deja
 
 ### Task 1.1 — Outillage coverage
 
-- [ ] **Step 1 : Installer** `@vitest/coverage-v8` en devDependency (`docker compose -f docker-compose.dev.yml exec app yarn add -D @vitest/coverage-v8`).
-- [ ] **Step 2 : Configurer** `vitest.config.ts` : `coverage.provider = "v8"`, `include: ["src/lib/**"]`, exclusions justifiees en commentaire (au minimum `src/lib/prisma.ts`), `thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 }`.
-- [ ] **Step 3 : Verify** : `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage` produit un rapport (echec attendu sur les seuils a ce stade : c'est la mesure de depart, noter les % par module dans la note).
+- [x] **Step 1 : Installer** `@vitest/coverage-v8` en devDependency (`docker compose -f docker-compose.dev.yml exec app yarn add -D @vitest/coverage-v8`).
+- [x] **Step 2 : Configurer** `vitest.config.ts` : `coverage.provider = "v8"`, `include: ["src/lib/**"]`, exclusions justifiees en commentaire (au minimum `src/lib/prisma.ts`), `thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 }`.
+- [x] **Step 3 : Verify** : `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage` produit un rapport (echec attendu sur les seuils a ce stade : c'est la mesure de depart, noter les % par module dans la note).
 
 ### Task 1.2 — Combler les trous unitaires
 
-- [ ] **Step 1 : Lister** les modules `src/lib/` sous 100% depuis le rapport (attendus : branches non couvertes de `auth-guards`, `subscription`, `storage`, `settings`, `mail`, `activity-log`, `format-*`, `generate-id`, `qrcode`, `image-to-dataurl`).
-- [ ] **Step 2 : Ecrire les tests manquants** module par module dans `src/lib/__tests__/`, en couvrant les branches d'erreur (entrees invalides, cascades null, garde-fous `assertNotLastOwner`/`assertNotLastSuperAdmin`, expiration d'abonnement, limites null).
-- [ ] **Step 3 : Verify** : `yarn vitest run --coverage` passe les seuils 100% sur `src/lib/**` sans exclusion ajoutee sans justification ecrite.
+- [x] **Step 1 : Lister** les modules `src/lib/` sous 100% depuis le rapport (attendus : branches non couvertes de `auth-guards`, `subscription`, `storage`, `settings`, `mail`, `activity-log`, `format-*`, `generate-id`, `qrcode`, `image-to-dataurl`).
+- [x] **Step 2 : Ecrire les tests manquants** module par module dans `src/lib/__tests__/`, en couvrant les branches d'erreur (entrees invalides, cascades null, garde-fous `assertNotLastOwner`/`assertNotLastSuperAdmin`, expiration d'abonnement, limites null).
+- [x] **Step 3 : Verify** : `yarn vitest run --coverage` passe les seuils 100% sur `src/lib/**` sans exclusion ajoutee sans justification ecrite.
 
 ---
 
