@@ -12,9 +12,6 @@ import { Icon } from "@/components/ui/Icon";
 type FormState = {
   name: string;
   slug: string;
-  quotaMaxEvents: string;
-  quotaMaxRegistrations: string;
-  quotaMaxStorageMB: string;
   ownerEmail: string;
   ownerName: string;
 };
@@ -22,9 +19,6 @@ type FormState = {
 const INITIAL_FORM: FormState = {
   name: "",
   slug: "",
-  quotaMaxEvents: "",
-  quotaMaxRegistrations: "",
-  quotaMaxStorageMB: "",
   ownerEmail: "",
   ownerName: "",
 };
@@ -50,9 +44,6 @@ export function OrgCreationForm() {
     };
     if (form.ownerName.trim()) payload.ownerName = form.ownerName.trim();
     if (form.slug.trim()) payload.slug = form.slug.trim();
-    if (form.quotaMaxEvents) payload.quotaMaxEvents = Number(form.quotaMaxEvents);
-    if (form.quotaMaxRegistrations) payload.quotaMaxRegistrations = Number(form.quotaMaxRegistrations);
-    if (form.quotaMaxStorageMB) payload.quotaMaxStorageMB = Number(form.quotaMaxStorageMB);
 
     const res = await fetch("/api/platform/organizations", {
       method: "POST",
@@ -81,7 +72,10 @@ export function OrgCreationForm() {
 
       <Card>
         <div className="px-6">
-          <FormSection title="Organisation" description="Identité et quotas de l'organisation.">
+          <FormSection
+            title="Organisation"
+            description="Identité de l'organisation. L'abonnement (plan + limites) se gère après création depuis la fiche de l'organisation."
+          >
             <div className="space-y-4">
               <Input label="Nom de l'organisation" value={form.name} onChange={(e) => set("name", e.target.value)} required />
               <Input
@@ -90,26 +84,6 @@ export function OrgCreationForm() {
                 onChange={(e) => set("slug", e.target.value)}
                 placeholder="acme-corp"
               />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Input
-                  label="Quota événements"
-                  type="number"
-                  value={form.quotaMaxEvents}
-                  onChange={(e) => set("quotaMaxEvents", e.target.value)}
-                />
-                <Input
-                  label="Quota inscriptions"
-                  type="number"
-                  value={form.quotaMaxRegistrations}
-                  onChange={(e) => set("quotaMaxRegistrations", e.target.value)}
-                />
-                <Input
-                  label="Quota stockage (Mo)"
-                  type="number"
-                  value={form.quotaMaxStorageMB}
-                  onChange={(e) => set("quotaMaxStorageMB", e.target.value)}
-                />
-              </div>
             </div>
           </FormSection>
 

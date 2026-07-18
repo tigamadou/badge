@@ -95,7 +95,6 @@ describe("Espace staff — criteres d'acceptation v2-02", () => {
           name: "AC3",
           ownerEmail: "owner-ac3@x.com",
           ownerName: "Owner",
-          quotaMaxEvents: 10,
         }),
         headers: { "content-type": "application/json" },
       }),

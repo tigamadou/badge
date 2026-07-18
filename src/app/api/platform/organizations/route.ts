@@ -101,9 +101,6 @@ const createOrgSchema = z.object({
   logo: z.string().max(500).nullable().optional(),
   contactEmail: z.string().email().nullable().optional(),
   contactPhone: z.string().min(3).max(40).nullable().optional(),
-  quotaMaxEvents: z.number().int().positive().nullable().optional(),
-  quotaMaxRegistrations: z.number().int().positive().nullable().optional(),
-  quotaMaxStorageMB: z.number().int().positive().nullable().optional(),
   ownerEmail: z.string().email(),
   ownerName: z.string().min(1).max(120).optional(),
 });
@@ -133,9 +130,6 @@ export const POST = withStaffAuth(
       logo,
       contactEmail,
       contactPhone,
-      quotaMaxEvents,
-      quotaMaxRegistrations,
-      quotaMaxStorageMB,
       ownerEmail,
       ownerName,
     } = parsed.data;
@@ -159,9 +153,6 @@ export const POST = withStaffAuth(
           logo: logo ?? null,
           contactEmail: contactEmail ?? null,
           contactPhone: contactPhone ?? null,
-          quotaMaxEvents: quotaMaxEvents ?? null,
-          quotaMaxRegistrations: quotaMaxRegistrations ?? null,
-          quotaMaxStorageMB: quotaMaxStorageMB ?? null,
         },
       });
 

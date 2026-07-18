@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
+import { resolveOrgLimits } from "@/lib/subscription";
 
 // ADR 2026-06-01 (v2-14 Task 4) : vue agregee pour role VIEWER (et au-dessus).
 // Retourne UNIQUEMENT des chiffres -- aucune coordonnee nominative (email, nom,
@@ -20,9 +21,11 @@ export const GET = withEventAuth({ minRole: "VIEWER" }, async (_req, { eventId }
     (async () => {
       const event = await prisma.event.findUnique({
         where: { id: eventId },
-        select: { orgId: true, organization: { select: { quotaMaxRegistrations: true } } },
+        select: { orgId: true },
       });
-      return event?.organization?.quotaMaxRegistrations ?? null;
+      if (!event) return null;
+      const { maxParticipantsPerEvent } = await resolveOrgLimits(event.orgId);
+      return maxParticipantsPerEvent;
     })(),
   ]);
 

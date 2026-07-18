@@ -28,9 +28,6 @@ export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
       archived: true,
       archivedAt: true,
       createdAt: true,
-      quotaMaxEvents: true,
-      quotaMaxRegistrations: true,
-      quotaMaxStorageMB: true,
       _count: {
         select: {
           events: true,
@@ -68,9 +65,6 @@ const patchSchema = z
       .max(60)
       .regex(/^[a-z0-9-]+$/)
       .optional(),
-    quotaMaxEvents: z.number().int().min(0).nullable().optional(),
-    quotaMaxRegistrations: z.number().int().min(0).nullable().optional(),
-    quotaMaxStorageMB: z.number().int().min(0).nullable().optional(),
   })
   .strict();
 
@@ -89,12 +83,7 @@ const OWNER_FIELDS = [
   "contactPhone",
 ] as const;
 
-const STAFF_FIELDS = [
-  "slug",
-  "quotaMaxEvents",
-  "quotaMaxRegistrations",
-  "quotaMaxStorageMB",
-] as const;
+const STAFF_FIELDS = ["slug"] as const;
 
 export const PATCH = withOrgAuth("OWNER", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);

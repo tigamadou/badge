@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole } from "@/lib/auth-helpers";
-import { countCountableRegistrations } from "@/lib/subscription";
+import { countCountableRegistrations, resolveOrgLimits } from "@/lib/subscription";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -29,7 +29,6 @@ export default async function EventDashboardPage({
       id: true,
       orgId: true,
       title: true,
-      organization: { select: { quotaMaxRegistrations: true } },
     },
   });
   if (!event || event.orgId !== orgId) redirect("/select");
@@ -86,8 +85,9 @@ export default async function EventDashboardPage({
       countCountableRegistrations(eventId),
     ]);
 
-  const quotaMax = event.organization.quotaMaxRegistrations;
-  const quotaPct = quotaMax != null ? Math.round((quota30d / quotaMax) * 100) : null;
+  const { maxParticipantsPerEvent: participantLimit } = await resolveOrgLimits(orgId);
+  const quotaPct =
+    participantLimit != null ? Math.round((quota30d / participantLimit) * 100) : null;
 
   return (
     <div className="space-y-6">
@@ -114,7 +114,7 @@ export default async function EventDashboardPage({
         <StatCard label="Scans total" value={scansTotal} icon="scan-line" />
         <StatCard
           label="Quota inscriptions"
-          value={quotaMax != null ? `${quota30d} / ${quotaMax}` : "—"}
+          value={participantLimit != null ? `${quota30d} / ${participantLimit}` : "—"}
           icon="user-check"
         />
       </StatGrid>

@@ -31,6 +31,7 @@ export function OrgShell({
     { href: `/org/${org.id}/events`, label: "Événements", icon: "calendar", minRole: "AUDITOR" },
     { href: `/org/${org.id}/members`, label: "Membres", icon: "users", minRole: "MANAGER" },
     { href: `/org/${org.id}/templates`, label: "Modèles catégories", icon: "tags", minRole: "MANAGER" },
+    { href: `/org/${org.id}/subscription`, label: "Abonnement", icon: "credit-card", minRole: "MANAGER" },
     { href: `/org/${org.id}/settings`, label: "Paramètres", icon: "settings", minRole: "OWNER" },
     { href: `/org/${org.id}/activity`, label: "Journal", icon: "scroll-text", minRole: "AUDITOR" },
   ];

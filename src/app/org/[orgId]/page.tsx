@@ -7,6 +7,7 @@ import { Timeline, TimelineItem } from "@/components/ui/Timeline";
 import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { logKind } from "@/lib/activity-labels";
+import { resolveOrgLimits } from "@/lib/subscription";
 
 export default async function OrgDashboardPage({
   params,
@@ -15,7 +16,7 @@ export default async function OrgDashboardPage({
 }) {
   const { orgId } = await params;
 
-  const [eventsActive, eventsArchived, registrationsThisMonth, latestEvents, recentActivity, org] =
+  const [eventsActive, eventsArchived, registrationsThisMonth, latestEvents, recentActivity, limits] =
     await Promise.all([
       prisma.event.count({ where: { orgId, archived: false } }),
       prisma.event.count({ where: { orgId, archived: true } }),
@@ -37,20 +38,13 @@ export default async function OrgDashboardPage({
         take: 10,
         select: { id: true, type: true, createdAt: true, staffActor: true, details: true },
       }),
-      prisma.organization.findUnique({
-        where: { id: orgId },
-        select: { quotaMaxEvents: true, quotaMaxRegistrations: true },
-      }),
+      resolveOrgLimits(orgId),
     ]);
 
-  const eventsPct =
-    org?.quotaMaxEvents != null ? Math.round((eventsActive / org.quotaMaxEvents) * 100) : null;
-  const regsPct =
-    org?.quotaMaxRegistrations != null
-      ? Math.round((registrationsThisMonth / org.quotaMaxRegistrations) * 100)
-      : null;
+  const maxEvents = limits.maxEvents;
+  const eventsPct = maxEvents != null ? Math.round((eventsActive / maxEvents) * 100) : null;
 
-  const quotaWarning = (eventsPct != null && eventsPct > 80) || (regsPct != null && regsPct > 80);
+  const quotaWarning = eventsPct != null && eventsPct > 80;
 
   return (
     <div className="space-y-6">
@@ -72,7 +66,7 @@ export default async function OrgDashboardPage({
         <StatCard label="Inscriptions ce mois" value={registrationsThisMonth.toLocaleString("fr-FR")} icon="user-check" />
         <StatCard
           label="Quota événements"
-          value={org?.quotaMaxEvents != null ? `${eventsActive} / ${org.quotaMaxEvents}` : "—"}
+          value={maxEvents != null ? `${eventsActive} / ${maxEvents}` : "—"}
           icon="hard-drive"
         />
       </StatGrid>

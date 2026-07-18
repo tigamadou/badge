@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { prisma } from "@/lib/prisma";
+import { resolveOrgLimits } from "@/lib/subscription";
 import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
@@ -41,9 +43,7 @@ export default async function OrgDetailPage({
       archived: true,
       archivedAt: true,
       createdAt: true,
-      quotaMaxEvents: true,
-      quotaMaxRegistrations: true,
-      quotaMaxStorageMB: true,
+      subscription: { select: { status: true, endDate: true, plan: { select: { name: true } } } },
       memberships: {
         where: { role: "OWNER" },
         select: {
@@ -67,6 +67,8 @@ export default async function OrgDetailPage({
   });
   if (!org) notFound();
 
+  const limits = await resolveOrgLimits(org.id);
+
   return (
     <div className="space-y-6">
       {/* v4 Bloc B : plus de bouton "Entrer dans l'organisation". Le staff supervise en
@@ -84,24 +86,38 @@ export default async function OrgDetailPage({
         <StatCard label="Événements" value={org._count.events} icon="calendar" />
         <StatCard label="OWNERs" value={org._count.memberships} icon="users" />
         <StatCard
-          label="Stockage max"
-          value={org.quotaMaxStorageMB ? `${org.quotaMaxStorageMB} Mo` : "Illimité"}
-          icon="hard-drive"
+          label="Plan"
+          value={org.subscription?.plan.name ?? "Aucun"}
+          icon="credit-card"
         />
       </StatGrid>
 
       <Card>
-        <CardHead title="Quotas" />
+        <CardHead
+          title="Abonnement"
+          action={
+            <Link
+              href={`/platform/organizations/${org.id}/subscription`}
+              className="text-[13px] font-medium text-green-600 hover:underline"
+            >
+              Gérer
+            </Link>
+          }
+        />
         <CardBody>
           <QuotaBar
             label="Événements"
-            valueText={`${org._count.events} / ${org.quotaMaxEvents ?? "∞"}`}
-            pct={org.quotaMaxEvents ? Math.round((org._count.events / org.quotaMaxEvents) * 100) : 0}
+            valueText={`${org._count.events} / ${limits.maxEvents ?? "∞"}`}
+            pct={limits.maxEvents ? Math.round((org._count.events / limits.maxEvents) * 100) : 0}
           />
           <KeyValue
             items={[
-              { label: "Quota inscriptions", value: org.quotaMaxRegistrations?.toString() ?? "Illimité" },
-              { label: "Quota stockage", value: org.quotaMaxStorageMB ? `${org.quotaMaxStorageMB} Mo` : "Illimité" },
+              { label: "Statut", value: org.subscription?.status ?? "Aucun abonnement" },
+              {
+                label: "Participants / event",
+                value: limits.maxParticipantsPerEvent?.toString() ?? "Illimité",
+              },
+              { label: "Actif", value: limits.active ? "Oui" : "Non" },
             ]}
           />
         </CardBody>

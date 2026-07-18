@@ -216,9 +216,6 @@ describe("PATCH /api/platform/organizations/[orgId]", () => {
           website: "https://new.example",
           contactEmail: "c@new.example",
           contactPhone: "+33102",
-          quotaMaxEvents: 50,
-          quotaMaxRegistrations: 1000,
-          quotaMaxStorageMB: 512,
         }),
         headers: { "content-type": "application/json" },
       },
@@ -242,9 +239,6 @@ describe("PATCH /api/platform/organizations/[orgId]", () => {
     expect(updated?.website).toBe("https://new.example");
     expect(updated?.contactEmail).toBe("c@new.example");
     expect(updated?.contactPhone).toBe("+33102");
-    expect(updated?.quotaMaxEvents).toBe(50);
-    expect(updated?.quotaMaxRegistrations).toBe(1000);
-    expect(updated?.quotaMaxStorageMB).toBe(512);
 
     const log = await prisma.activityLog.findFirst({
       where: { type: "ORG_UPDATED", orgId: org.id },

@@ -177,27 +177,6 @@ describe("PATCH /api/org/[orgId] — infos administratives (Task 5)", () => {
     expect(after?.slug).toBe("keep-slug");
   });
 
-  it("OWNER cannot edit quotaMaxEvents (silently ignored, only staff can)", async () => {
-    const u = await prisma.user.create({ data: { email: "o3@x", password: "x", name: "O3" } });
-    const org = await prisma.organization.create({
-      data: { name: "Acme", slug: "keep-quota", quotaMaxEvents: 5 },
-    });
-    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ quotaMaxEvents: 999 }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
-    expect(res.status).toBe(400);
-
-    const after = await prisma.organization.findUnique({ where: { id: org.id } });
-    expect(after?.quotaMaxEvents).toBe(5);
-  });
-
   it("rejects legacy SMTP and reCAPTCHA fields with HTTP 400 (defense in depth)", async () => {
     const u = await prisma.user.create({ data: { email: "o4@x", password: "x", name: "O4" } });
     const org = await prisma.organization.create({ data: { name: "Acme", slug: "no-secrets" } });

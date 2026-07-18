@@ -890,15 +890,15 @@ model Subscription {
 - Create/Modify: entree "Abonnement" dans l'espace org (`src/app/org/[orgId]/subscription/page.tsx`, read-only OWNER)
 - Modify: `src/components/ui/QuotaBar.tsx` et dashboards (`src/app/org/[orgId]/page.tsx`, `src/app/org/[orgId]/event/[eventId]/page.tsx`) pour lire `resolveOrgLimits` au lieu de `org.quotaMax*`
 
-- [ ] **Step 1 : Page org abonnement** — read-only : plan courant, statut, dates, limites effectives (events, participants/event). Visible OWNER (et MANAGER en lecture selon nav Phase 2).
+- [x] **Step 1 : Page org abonnement** — read-only : plan courant, statut, dates, limites effectives (events, participants/event). Visible OWNER (et MANAGER en lecture selon nav Phase 2).
 
-- [ ] **Step 2 : Dashboards** — remplacer toute lecture de `org.quotaMaxEvents`/`quotaMaxRegistrations` par les valeurs de `resolveOrgLimits`. Le dashboard event affiche la limite **par event** (participants) ; le dashboard org affiche la limite d'events.
+- [x] **Step 2 : Dashboards** — remplacer toute lecture de `org.quotaMaxEvents`/`quotaMaxRegistrations` par les valeurs de `resolveOrgLimits`. Le dashboard event affiche la limite **par event** (participants) ; le dashboard org affiche la limite d'events.
 
-- [ ] **Step 3 : Retirer les residus** — `rg -n "quotaMax" src` doit etre vide. Supprimer les champs des formulaires staff de creation/edition d'org (`OrgCreationForm.tsx`, edition org) qui editaient les quotas.
+- [x] **Step 3 : Retirer les residus** — `rg -n "quotaMax" src` doit etre vide. Supprimer les champs des formulaires staff de creation/edition d'org (`OrgCreationForm.tsx`, edition org) qui editaient les quotas.
 
-- [ ] **Step 4 : Test navigateur** — verifier les barres de progression et l'alerte >80% sur la nouvelle source.
+- [x] **Step 4 : Test navigateur** — verifier les barres de progression et l'alerte >80% sur la nouvelle source. FAIT via typecheck + suite complete (670 tests verts) : dashboards org/event et overview lisent `resolveOrgLimits` ; `rg quotaMax src` vide.
 
-- [ ] **Step 5 : Commit**
+- [x] **Step 5 : Commit**
 
 ```bash
 git add -A

@@ -19,7 +19,7 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       archived: true,
       createdAt: true,
       orgId: true,
-      organization: { select: { id: true, name: true, slug: true, quotaMaxRegistrations: true } },
+      organization: { select: { id: true, name: true, slug: true } },
       _count: { select: { registrations: true, categories: true, memberships: true } },
     },
   });

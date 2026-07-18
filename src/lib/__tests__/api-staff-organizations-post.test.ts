@@ -273,9 +273,6 @@ describe("POST /api/platform/organizations", () => {
         website: "https://full.example",
         contactEmail: "contact@full.example",
         contactPhone: "+33123456789",
-        quotaMaxEvents: 100,
-        quotaMaxRegistrations: 5000,
-        quotaMaxStorageMB: 2048,
         ownerEmail: "full-owner@x.com",
         ownerName: "Full Owner",
       }),
@@ -297,8 +294,5 @@ describe("POST /api/platform/organizations", () => {
     expect(org?.website).toBe("https://full.example");
     expect(org?.contactEmail).toBe("contact@full.example");
     expect(org?.contactPhone).toBe("+33123456789");
-    expect(org?.quotaMaxEvents).toBe(100);
-    expect(org?.quotaMaxRegistrations).toBe(5000);
-    expect(org?.quotaMaxStorageMB).toBe(2048);
   });
 });
