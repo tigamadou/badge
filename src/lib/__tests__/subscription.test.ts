@@ -154,4 +154,31 @@ describe("assertCanRegister", () => {
     });
     await expect(assertCanRegister(event.id)).resolves.toBeUndefined();
   });
+
+  it("throws SUBSCRIPTION_INACTIVE when the subscription is inactive", async () => {
+    const org = await makeOrgWithPlan({
+      slug: "r3",
+      status: "CANCELLED",
+      maxEvents: 10,
+      maxParticipantsPerEvent: 5,
+    });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "r3-evt", location: "x", date: new Date() },
+    });
+    await expect(assertCanRegister(event.id)).rejects.toMatchObject({
+      code: "SUBSCRIPTION_INACTIVE",
+    });
+  });
+
+  it("returns without error when the event does not exist", async () => {
+    await expect(assertCanRegister("nonexistent-event")).resolves.toBeUndefined();
+  });
+
+  it("null maxParticipantsPerEvent never blocks", async () => {
+    const org = await makeOrgWithPlan({ slug: "r4", maxEvents: 10, maxParticipantsPerEvent: null });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "r4-evt", location: "x", date: new Date() },
+    });
+    await expect(assertCanRegister(event.id)).resolves.toBeUndefined();
+  });
 });

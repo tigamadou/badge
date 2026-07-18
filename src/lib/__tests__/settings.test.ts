@@ -146,6 +146,24 @@ describe("getPlatformPublicRecaptcha", () => {
   });
 });
 
+describe("platform settings singleton missing", () => {
+  beforeEach(async () => {
+    await prisma.platformSettings.deleteMany();
+  });
+
+  it("getPlatformSmtp throws when the singleton is absent", async () => {
+    await expect(getPlatformSmtp()).rejects.toThrow(/singleton is missing/);
+  });
+
+  it("getPlatformRecaptcha throws when the singleton is absent", async () => {
+    await expect(getPlatformRecaptcha()).rejects.toThrow(/singleton is missing/);
+  });
+
+  it("getPlatformPublicRecaptcha throws when the singleton is absent", async () => {
+    await expect(getPlatformPublicRecaptcha()).rejects.toThrow(/singleton is missing/);
+  });
+});
+
 describe("resolvePublicSettings", () => {
   beforeEach(async () => {
     await prisma.platformSettings.deleteMany();

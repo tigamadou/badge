@@ -7,6 +7,7 @@ import {
   hasEventPermission,
 } from "@/lib/auth-helpers";
 import type { UserContext } from "@/types/auth";
+import type { OrgRole } from "@prisma/client";
 
 const baseCtx = (over: Partial<UserContext> = {}): UserContext => ({
   user: { id: "u1", email: "u@x", name: "U" },
@@ -139,6 +140,23 @@ describe("effectiveEventRole", () => {
     });
     expect(effectiveEventRole(ctx, "e1", "o1")).toBe("STAFF");
   });
+  it("falls through to event membership when the org role is unrecognized", () => {
+    // Branche defensive l.106 (else) : org membership present mais role hors enum
+    // (ni OWNER/MANAGER ni AUDITOR) => on ne derive rien de l'org et on lit l'event.
+    const ctx = baseCtx({
+      orgMemberships: [{ orgId: "o1", role: "UNKNOWN" as unknown as OrgRole }],
+      eventMemberships: [{ eventId: "e1", role: "PRINTER" }],
+    });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("PRINTER");
+  });
+
+  it("returns null when the org role is unrecognized and no event membership", () => {
+    const ctx = baseCtx({
+      orgMemberships: [{ orgId: "o1", role: "UNKNOWN" as unknown as OrgRole }],
+    });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBeNull();
+  });
+
   it("returns null when no rights", () => {
     expect(effectiveEventRole(baseCtx(), "e1", "o1")).toBeNull();
   });

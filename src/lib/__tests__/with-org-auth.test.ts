@@ -26,6 +26,19 @@ describe("withOrgAuth", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 400 when orgId is missing from params", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "u1", email: "u@x", name: "U", isStaff: false },
+    } as never);
+
+    const handler = withOrgAuth("OWNER", async () => new Response("ok"));
+    const req = new NextRequest("http://localhost/api/org/");
+    const res = await handler(req, { params: Promise.resolve({ orgId: "" }) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Missing orgId");
+  });
+
   it("returns 403 when user is not OWNER and not staff", async () => {
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "o1" } });

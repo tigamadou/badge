@@ -33,6 +33,16 @@ describe("formatFromAddress", () => {
       "Badge <noreply@badge.local>",
     );
   });
+  it("keeps smtpFrom as-is when it already has `Name <email>` even with a label", () => {
+    // label present => on depasse l.18 ; smtpFrom contient < et > => branche l.19 vraie.
+    expect(formatFromAddress("Badge <noreply@badge.local>", "Org Acme")).toBe(
+      "Badge <noreply@badge.local>",
+    );
+  });
+  it("wraps with the label when smtpFrom has `<` but not `>`", () => {
+    // includes("<") vrai mais includes(">") faux => operande droit de l.19 evalue a faux.
+    expect(formatFromAddress("weird<addr", "Org Acme")).toBe('"Org Acme" <weird<addr>');
+  });
 });
 
 describe("formatFrenchDate", () => {

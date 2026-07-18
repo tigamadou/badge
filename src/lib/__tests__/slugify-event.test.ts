@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { slugifyEvent, uniqueEventSlug } from "@/lib/slugify-event";
 
@@ -53,5 +53,25 @@ describe("uniqueEventSlug", () => {
     });
     const slug = await uniqueEventSlug("X");
     expect(slug).toBe("x-3");
+  });
+
+  it("falls back to `event` when the title has no slug-able character", async () => {
+    // slugifyEvent("!!!") === "" => branche `|| "event"` (l.14).
+    const slug = await uniqueEventSlug("!!!");
+    expect(slug).toBe("event");
+  });
+
+  describe("when slug allocation is exhausted", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("throws after 1000 collisions (l.24)", async () => {
+      // On simule une collision systematique sans creer 1000 events reels.
+      vi.spyOn(prisma.event, "findUnique").mockResolvedValue({ id: "taken" } as never);
+      await expect(uniqueEventSlug("Conférence Paris")).rejects.toThrow(
+        "Slug allocation exhausted",
+      );
+    });
   });
 });

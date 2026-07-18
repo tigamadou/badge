@@ -48,6 +48,34 @@ describe("withEventAuth", () => {
     expect(res.status).toBe(401);
   });
 
+  it("returns 400 when eventId is missing from params", async () => {
+    const { org } = await setup();
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/`);
+    const res = await handler(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: "" }),
+    });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Missing orgId or eventId");
+  });
+
+  it("returns 400 when orgId is missing from params", async () => {
+    const { event } = await setup();
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
+    const req = new NextRequest(`http://localhost/api/org//events/${event.id}`);
+    const res = await handler(req, {
+      params: Promise.resolve({ orgId: "", eventId: event.id }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("returns 404 when event does not exist", async () => {
     const { org } = await setup();
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
