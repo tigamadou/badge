@@ -16,8 +16,9 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 
 - [Plan d'implementation unique](plans/2026-07-17-v4-refonte-globale.md) — tracker de progression en tete.
 - [Plan couverture de tests complete](plans/2026-07-18-v4-02-couverture-tests-complete.md) — unitaire 100% lib, integration 100% API, E2E 100% pages, cibles make, CI GitHub Actions.
+- [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
-- [Installation](installation.md) — env, services, HTTPS local.
+- [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
 - [Spec stockage S3/MinIO](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01).
 
 ## Etat d'avancement
@@ -30,5 +31,6 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 | Roles a la creation (item 5) | Livre |
 | Stockage MinIO/S3 (item 6) | Driver S3 livre ; securisation `/api/files` et champs upload en cours |
 | Abonnements (items 2+3) | A faire |
+| Couverture de tests (plan v4-02) | Unitaire lib + integration API a **100%** (gate vert) ; cibles make + CI livrees ; E2E (Phase 3) a faire |
 
 Voir la section `## Progression` du plan pour le detail task par task.

@@ -100,18 +100,18 @@ Inventaire de reference (78 routes `src/app/api/**/route.ts`) : namespaces `auth
 
 ### Task 2.2 — Namespace auth + account + public
 
-- [ ] **Step 1 : Completer** les tests d'integration des routes `auth/*` (register, verify-email, forgot/reset/setup-password : idempotence token, expiration, rate-limit), `account/*` (profile, registrations, resubmit, upload : mimes, 5 Mo, proprietaire vs autre user), publiques (`events/[slug]/register` : BlockedEmail, BlockedDocument, event archive, limites d'abonnement ; `files/[...path]` : ACL photo publique vs document prive ; `public/verify` : anonyme vs nominatif).
-- [ ] **Step 2 : Verify** : matrice Task 2.1 verte sur ces namespaces ; `make test` vert.
+- [x] **Step 1 : Completer** les tests d'integration des routes `auth/*` (register, verify-email, forgot/reset/setup-password : idempotence token, expiration, rate-limit), `account/*` (profile, registrations, resubmit, upload : mimes, 5 Mo, proprietaire vs autre user), publiques (`events/[slug]/register` : BlockedEmail, BlockedDocument, event archive, limites d'abonnement ; `files/[...path]` : ACL photo publique vs document prive ; `public/verify` : anonyme vs nominatif). → 2026-07-18. 17 routes du namespace a 100/100/100 (hors `[...nextauth]` exclu). 3 agents write-only paralleles + verif. Detail : `.plan-logs/report-2.2-*.md`.
+- [x] **Step 2 : Verify** : matrice Task 2.1 verte sur ces namespaces ; `make test` vert. → 881 tests verts, typecheck OK. 4 branches mortes defensives **simplifiees en prod avec accord utilisateur** (choix "simplifier/retirer") : `account/upload`+`upload` (`instanceof Blob`→`instanceof File`, retrait ternaire `? file.name : "upload"`), `account/profile` (boucle-avec-garde `typeof v==="string"` → `const data = parsed.data`, zod omet deja les optionnels absents), `files/[...path]` (`FileClass` en union discriminee, elimine le `return false` final inatteignable). `auth/[...nextauth]` exclu du coverage (wrapper NextAuth trivial, justifie dans `vitest.config.ts`).
 
 ### Task 2.3 — Namespace org (org, events, registrations, categories, members, blocklists, settings, templates, subscription, upload)
 
-- [ ] **Step 1 : Completer** la matrice RBAC OWNER/MANAGER/AUDITOR + roles event ADMIN/OPERATOR/PRINTER/VIEWER + staff (staffActor=true) sur chaque route ; cycle de vie complet registration (create/approve/reject/checkin/print/all-access/duplicates/export/block-*) ; garde-fous (LAST_OWNER, SLUG_TAKEN, NUMBER_TAKEN, CATEGORY_HAS_REGISTRATIONS, limites d'abonnement EVENT_LIMIT/PARTICIPANT_LIMIT).
-- [ ] **Step 2 : Verify** : matrice verte sur `org/**` ; `make test` vert ; toute action sensible a son assertion d'audit.
+- [x] **Step 1 : Completer** la matrice RBAC OWNER/MANAGER/AUDITOR + roles event ADMIN/OPERATOR/PRINTER/VIEWER + staff (staffActor=true) sur chaque route ; cycle de vie complet registration (create/approve/reject/checkin/print/all-access/duplicates/export/block-*) ; garde-fous (LAST_OWNER, SLUG_TAKEN, NUMBER_TAKEN, CATEGORY_HAS_REGISTRATIONS, limites d'abonnement EVENT_LIMIT/PARTICIPANT_LIMIT). → 2026-07-18. TOUTES les routes `org/**` a 100/100/100. 2 vagues d'agents write-only (4 batches + 4 closers + 1 micro-closer). Rethrows couverts via spy mono-appel ; corps malformes ; conflits P2002 array/string. Rapports : `.plan-logs/report-2.3-*.md`, `.plan-logs/report-2.3-closers.md`.
+- [x] **Step 2 : Verify** : matrice verte sur `org/**` ; `make test` vert ; toute action sensible a son assertion d'audit. → 1099 tests verts, typecheck OK. **BUG REEL corrige (accord utilisateur)** : POST `/org/[orgId]/events` renvoyait 500 au lieu de 409 `SLUG_TAKEN` sur MySQL (`meta.target` = chaine nom d'index, pas tableau de champs) → handler P2002 rendu compatible MySQL+Postgres. **8 branches mortes simplifiees (accord utilisateur, comme 2.2)** : gardes `if(!event)`/`if(!ctx)` redondantes post-auth → `findUniqueOrThrow`/assertion ; `NO_TEMPLATE` 500 impossible retire ; `EXT[mime] ?? …` mort retire ; `catById.get() ?? null` (FK garantie). Fixes de test : fixture badges VIEWER (etait OWNER org), test pagination activity flaky (`createdAt` distincts).
 
 ### Task 2.4 — Namespace platform (organizations, owners, subscription, users, plans, settings, blocklists, activity)
 
-- [ ] **Step 1 : Completer** : hierarchie SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER sur chaque route ; owners (POST/DELETE, garde-fou dernier owner) ; plans/subscription (CRUD, assignation, expiration) ; blocklists globales (CRUD + effet sur une inscription) ; settings (secrets jamais retournes, test-smtp) ; garde-fou dernier SUPER_ADMIN.
-- [ ] **Step 2 : Verify** : matrice verte sur `platform/**` ; `make test` vert ; aucun secret (hash, smtpPassword, recaptchaSecretKey, tokens non hashes) dans aucune reponse testee.
+- [x] **Step 1 : Completer** : hierarchie SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER sur chaque route ; owners (POST/DELETE, garde-fou dernier owner) ; plans/subscription (CRUD, assignation, expiration) ; blocklists globales (CRUD + effet sur une inscription) ; settings (secrets jamais retournes, test-smtp) ; garde-fou dernier SUPER_ADMIN. → 2026-07-18. 4 agents write-only + 1 micro-closer. Routes a 0% desormais couvertes : blocklists globales (4 nouveaux fichiers), owners/owners[userId], plans/[planId]. Rapports : `.plan-logs/report-2.4-platform.md`.
+- [x] **Step 2 : Verify** : matrice verte sur `platform/**` ; `make test` vert ; aucun secret (hash, smtpPassword, recaptchaSecretKey, tokens non hashes) dans aucune reponse testee. → **Gate coverage EXIT=0**. 1224 tests verts, typecheck OK. Couverture globale (lib+api) **100/100/100/100**. Seule modif prod : `/* v8 ignore */` sur `organizations/route.ts:85` (garde-fou anti-boucle `n>999` d'allocation de slug : vrai garde-fou de securite, conserve plutot que retire — a valider si retrait souhaite).
 
 ---
 
@@ -160,9 +160,9 @@ Convention : 1 fichier spec par page ou groupe coherent, dans `e2e/{public,accou
 
 ### Task 4.1 — Cibles de test completes
 
-- [ ] **Step 1 : Verifier l'existant** : `test` (vitest), `test-e2e` (CLI conteneur), `test-e2e-ui` (UI hote) existent deja — ne pas les dupliquer.
-- [ ] **Step 2 : Ajouter au Makefile** : `test-unit` (vitest `src/lib`), `test-coverage` (vitest run --coverage), `test-all` (lint + typecheck + test + test-e2e, s'arrete au premier echec). Declarer dans `.PHONY`.
-- [ ] **Step 3 : Verify** : `make test-unit`, `make test-coverage`, `make test-all` fonctionnent depuis l'hote (conteneurs demarres) ; `make help` (si present) ou l'en-tete du Makefile documente les cibles.
+- [x] **Step 1 : Verifier l'existant** : `test` (vitest), `test-e2e` (CLI conteneur), `test-e2e-ui` (UI hote) existent deja — ne pas les dupliquer. → verifie.
+- [x] **Step 2 : Ajouter au Makefile** : `test-unit` (vitest `src/lib`), `test-coverage` (vitest run --coverage), `test-all` (lint + typecheck + test + test-e2e, s'arrete au premier echec). Declarer dans `.PHONY`. → ajoutes + `.PHONY` mis a jour. Commentaires sur le vidage DB par `test` et le self-seed e2e.
+- [x] **Step 3 : Verify** : `make test-unit`, `make test-coverage`, `make test-all` fonctionnent depuis l'hote (conteneurs demarres). → `make test-unit` = 865 tests verts ; `make -n test-all` = ordre correct lint→typecheck→vitest→e2e ; `test-coverage` deja eprouvee en Phase 2 (gate EXIT=0).
 
 ---
 
@@ -172,18 +172,14 @@ Interpretation actee : "sur chaque migration" = sur chaque push et chaque pull r
 
 ### Task 5.1 — Workflow CI
 
-- [ ] **Step 1 : Creer** `.github/workflows/ci.yml` : declencheurs `pull_request` + `push` sur `development` ; 4 jobs paralleles bloquants :
-  1. `lint` — `yarn lint` (ESLint, 0 erreur ; warnings toleres au niveau baseline).
-  2. `typecheck` — `yarn tsc --noEmit`.
-  3. `unit-integration` — service MySQL 8 (+ variables d'env de test), `prisma db push`, seed minimal, `yarn vitest run --coverage` (seuils = gate).
-  4. `e2e` — services MySQL + Mailpit + MinIO, build Next standalone ou serveur dev, `yarn playwright test` (chromium), upload de `playwright-report/` en artefact en cas d'echec.
-- [ ] **Step 2 : Cache** : yarn (`actions/setup-node` cache), navigateurs Playwright.
-- [ ] **Step 3 : Verify** : workflow syntaxiquement valide (`actionlint` si disponible, sinon relecture) ; pousser sur une branche de test UNIQUEMENT si l'utilisateur le demande ; sinon verification locale des memes commandes (`make test-all`).
+- [x] **Step 1 : Creer** `.github/workflows/ci.yml` : declencheurs `pull_request` + `push` sur `development` ; 4 jobs paralleles bloquants (lint / typecheck / unit-integration MySQL+coverage-gate / e2e MySQL+Mailpit+MinIO+build+playwright, artefact `playwright-report` si echec). → cree.
+- [x] **Step 2 : Cache** : yarn (`actions/setup-node` cache: yarn) ; navigateurs Playwright installes via `playwright install --with-deps chromium`. → fait. `concurrency` ajoute (annule les runs obsoletes).
+- [x] **Step 3 : Verify** : workflow syntaxiquement valide (parse YAML dans le conteneur : 4 jobs, triggers OK, services OK). **Non pousse** (pas de demande utilisateur). NB : le job `e2e` restera rouge tant que la Phase 3 n'est pas verte — documente dans le workflow et `installation.md`.
 
 ### Task 5.2 — Protection de branche (manuel utilisateur)
 
-- [ ] **Step 1 : Documenter** dans `docs/v4/installation.md` la configuration GitHub a faire a la main : `development` protegee, les 4 checks requis, interdiction du push direct.
-- [ ] **Step 2 : Verify** : la doc decrit checks et chemin de configuration ; signaler a l'utilisateur que l'activation est une action manuelle de sa part.
+- [x] **Step 1 : Documenter** dans `docs/v4/installation.md` la configuration GitHub a faire a la main : `development` protegee, les checks requis, interdiction du push direct. → section "Integration continue > Protection de branche" ajoutee.
+- [x] **Step 2 : Verify** : la doc decrit checks et chemin de configuration ; activation = action manuelle de l'admin du depot (signale dans la doc et au fil de session).
 
 ---
 
@@ -191,14 +187,14 @@ Interpretation actee : "sur chaque migration" = sur chaque push et chaque pull r
 
 ### Task 6.1 — Doc v4
 
-- [ ] **Step 1 : Mettre a jour** `docs/v4/README.md` (reference de ce plan + statut), `docs/v4/installation.md` (cibles make, workflow CI, pre-requis Playwright/MinIO), et creer `docs/v4/features/politique-tests.md` (3 couches, seuils, conventions specs E2E, matrice RBAC).
-- [ ] **Step 2 : Verify** : liens relatifs valides ; conventions de langue respectees.
+- [x] **Step 1 : Mettre a jour** `docs/v4/README.md` (reference de ce plan + statut), `docs/v4/installation.md` (cibles make, workflow CI, pre-requis Playwright/MinIO), et creer `docs/v4/features/politique-tests.md` (3 couches, seuils, conventions specs E2E, matrice RBAC). → fait.
+- [x] **Step 2 : Verify** : liens relatifs valides ; conventions de langue respectees. → tous les liens resolvent (verifie) ; francais ASCII conforme au style des fichiers.
 
 ### Task 6.2 — Verification finale
 
-- [ ] **Step 1 :** `make test-all` -> lint 0 erreur, typecheck 0 erreur, vitest 100% vert avec seuils coverage, Playwright 100% vert.
-- [ ] **Step 2 :** Croisement final : 78 routes API toutes presentes dans la matrice Task 2.1 verte ; 62 pages toutes mappees a une spec (tableau Task 3.6) ; aucun `test.skip`/`test.fixme` sans justification ecrite dans la note.
-- [ ] **Step 3 :** Mettre a jour la section "Notes d'execution" ci-dessous avec les comptes finaux (nb tests par couche, % coverage, duree des suites).
+- [~] **Step 1 :** `make test-all` -> lint 0 erreur, typecheck 0 erreur, vitest 100% vert avec seuils coverage, Playwright 100% vert. → **Partiel** : lint 0 erreur, typecheck 0 erreur, **vitest gate coverage EXIT=0 (1224 tests, 100/100/100/100)**. Playwright (E2E) **en attente de la Phase 3** — non encore vert.
+- [ ] **Step 2 :** Croisement final : 76 routes API toutes presentes dans la matrice Task 2.1 verte (FAIT pour l'API) ; 62 pages toutes mappees a une spec (tableau Task 3.6, **en attente Phase 3**) ; aucun `test.skip`/`test.fixme` sans justification ecrite.
+- [ ] **Step 3 :** Mettre a jour la section "Notes d'execution" avec les comptes finaux (nb tests par couche, % coverage, duree des suites). → **partiel** : voir "Mesure coverage" ci-dessus (Phase 1+2). Comptes E2E a completer apres Phase 3.
 
 ---
 
@@ -396,7 +392,93 @@ sur le DOM v4 reskine + chemins `/event/[eventId]` (categorie (c)). Chaque run E
 
 ### Matrice API (Task 2.1)
 
-(A alimenter.)
+Mesure baseline 2026-07-18 (post-Phase 1), coverage V8 avec `src/app/api/**` ajoute au
+perimetre (`vitest.config.ts` `coverage.include`). **77 fichiers route** (76 `route.ts` +
+1 `route.tsx` badges). Global API+lib : **73.5% lignes / 71.6% branches / 69.5% fonctions**
+(la lib reste a 100%). **4 routes deja a 100/100/100**, **73 a completer**. Numeros de lignes
+non couvertes par route : `.plan-logs/api-uncovered-lines.json`. Log : `.plan-logs/api-coverage-baseline.log`.
+
+Colonnes = % lignes / branches / fonctions. `✅` = deja a 100/100/100.
+
+| Route | L% | B% | F% |
+|---|---|---|---|
+| `account/profile` | 82.85 | 56.25 | 75 |
+| `account/registrations` | 85.71 | 50 | 100 |
+| `account/registrations/[id]` | 66.66 | 50 | 100 |
+| `account/registrations/[id]/resubmit` | 82.6 | 70 | 100 |
+| `account/upload` | 0 | 0 | 0 |
+| `auth/[...nextauth]` | 0 | 100 | 0 |
+| `auth/forgot-password` | 86.95 | 78.57 | 50 |
+| `auth/register` | 89.65 | 75 | 50 |
+| `auth/reset-password` | 94.44 | 90 | 50 |
+| `auth/setup-password` | 100 | 100 | 50 |
+| `auth/verify-email` | 90 | 81.81 | 50 |
+| `contact` | 0 | 0 | 0 |
+| `events/[slug]/register` | 72.88 | 42.3 | 33.33 |
+| `files/[...path]` | 76 | 63.63 | 100 |
+| `org/[orgId]` | 78.57 | 71.42 | 33.33 |
+| `org/[orgId]/activity` | 0 | 0 | 0 |
+| `org/[orgId]/events` | 62.5 | 51.42 | 71.42 |
+| `org/[orgId]/events/[eventId]` | 75.86 | 75 | 33.33 |
+| `org/[orgId]/events/[eventId]/activity` ✅ | 100 | 100 | 100 |
+| `org/[orgId]/events/[eventId]/archive` | 78.57 | 62.5 | 100 |
+| `org/[orgId]/events/[eventId]/badges/[badgeId]` | 85.29 | 68.75 | 83.33 |
+| `org/[orgId]/events/[eventId]/blocked-documents` | 61.11 | 33.33 | 33.33 |
+| `org/[orgId]/events/[eventId]/blocked-documents/[id]` | 87.5 | 75 | 100 |
+| `org/[orgId]/events/[eventId]/blocked-emails` | 77.77 | 66.66 | 33.33 |
+| `org/[orgId]/events/[eventId]/blocked-emails/[id]` | 87.5 | 75 | 100 |
+| `org/[orgId]/events/[eventId]/categories` | 80 | 41.66 | 33.33 |
+| `org/[orgId]/events/[eventId]/categories/[id]` | 69.23 | 54.54 | 66.66 |
+| `org/[orgId]/events/[eventId]/categories/import-templates` | 75 | 62.5 | 85.71 |
+| `org/[orgId]/events/[eventId]/members` | 82.14 | 70 | 33.33 |
+| `org/[orgId]/events/[eventId]/members/[membershipId]` | 42.85 | 30 | 33.33 |
+| `org/[orgId]/events/[eventId]/registrations` | 86.66 | 76.66 | 75 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]` | 45.16 | 25 | 25 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/all-access` | 0 | 0 | 0 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/approve` | 84.61 | 83.33 | 100 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/block-document` | 0 | 0 | 0 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/block-email` | 85.71 | 50 | 50 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/checkin` | 87.5 | 75 | 100 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/duplicates` ✅ | 100 | 100 | 100 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/print` | 84.61 | 83.33 | 100 |
+| `org/[orgId]/events/[eventId]/registrations/[regId]/reject` | 87.5 | 75 | 50 |
+| `org/[orgId]/events/[eventId]/registrations/export` ✅ | 100 | 100 | 100 |
+| `org/[orgId]/events/[eventId]/registrations/overview` | 0 | 0 | 0 |
+| `org/[orgId]/events/[eventId]/registrations/print` | 86.66 | 50 | 66.66 |
+| `org/[orgId]/events/[eventId]/restore` | 0 | 0 | 0 |
+| `org/[orgId]/events/[eventId]/scan/verify` | 85 | 80 | 66.66 |
+| `org/[orgId]/events/[eventId]/settings` | 100 | 75 | 66.66 |
+| `org/[orgId]/events/[eventId]/settings/badge` | 94.44 | 80 | 50 |
+| `org/[orgId]/events/[eventId]/upload` | 0 | 0 | 0 |
+| `org/[orgId]/members` | 80 | 60 | 40 |
+| `org/[orgId]/members/[userId]` | 32.55 | 23.07 | 33.33 |
+| `org/[orgId]/settings/badge` | 90 | 80 | 50 |
+| `org/[orgId]/templates` | 83.33 | 100 | 33.33 |
+| `org/[orgId]/templates/[id]` | 0 | 0 | 0 |
+| `org/[orgId]/upload` | 0 | 0 | 0 |
+| `platform/activity` | 96.96 | 79.16 | 100 |
+| `platform/blocked-documents` | 0 | 0 | 0 |
+| `platform/blocked-documents/[id]` | 0 | 0 | 0 |
+| `platform/blocked-emails` | 0 | 0 | 0 |
+| `platform/blocked-emails/[id]` | 0 | 0 | 0 |
+| `platform/organizations` | 100 | 90 | 83.33 |
+| `platform/organizations/[orgId]` | 95.12 | 87.5 | 75 |
+| `platform/organizations/[orgId]/archive` | 60 | 0 | 100 |
+| `platform/organizations/[orgId]/owners` | 0 | 0 | 0 |
+| `platform/organizations/[orgId]/owners/[userId]` | 0 | 0 | 0 |
+| `platform/organizations/[orgId]/restore` | 60 | 0 | 100 |
+| `platform/organizations/[orgId]/subscription` | 80.95 | 75 | 50 |
+| `platform/plans` | 55 | 37.5 | 33.33 |
+| `platform/plans/[planId]` | 0 | 0 | 0 |
+| `platform/settings` | 100 | 100 | 80 |
+| `platform/settings/badge` | 94.73 | 87.5 | 50 |
+| `platform/settings/test-smtp` | 66.66 | 50 | 50 |
+| `platform/users` | 96.22 | 88.52 | 80 |
+| `platform/users/[userId]` | 78.37 | 77.77 | 75 |
+| `platform/users/[userId]/reset-password` ✅ | 100 | 100 | 100 |
+| `public/events/[slug]` | 85.71 | 66.66 | 100 |
+| `public/verify/[badgeId]` | 100 | 90 | 100 |
+| `upload` | 91.89 | 75 | 100 |
 
 ### Tableau page -> spec (Task 3.6)
 
