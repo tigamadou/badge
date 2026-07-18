@@ -160,7 +160,7 @@ export default async function HomePage() {
                   </tbody>
                 </table>
               </BrowserMock>
-              <div className="pointer-events-none absolute -bottom-8 -right-4 hidden origin-bottom-right rotate-[4deg] scale-[0.42] drop-shadow-2xl lg:block">
+              <div className="pointer-events-none absolute -bottom-12 -right-12 hidden origin-bottom-right rotate-[5deg] scale-[0.4] drop-shadow-2xl xl:block">
                 <BadgeCredential />
               </div>
             </div>
