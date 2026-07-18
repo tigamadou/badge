@@ -5,6 +5,7 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 const NAV: NavEntry[] = [
   { href: "/platform", label: "Tableau de bord", icon: "layout-dashboard", exact: true },
   { href: "/platform/organizations", label: "Organisations", icon: "building-2" },
+  { href: "/platform/plans", label: "Plans", icon: "credit-card" },
   { href: "/platform/users", label: "Utilisateurs", icon: "users" },
   { href: "/platform/settings", label: "Paramètres", icon: "settings" },
   { href: "/platform/activity", label: "Journal", icon: "scroll-text" },

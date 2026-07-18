@@ -45,6 +45,7 @@ import {
   Tag,
   Archive,
   Copy,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -95,6 +96,7 @@ const ICONS = {
   tag: Tag,
   archive: Archive,
   copy: Copy,
+  "credit-card": CreditCard,
   "arrow-right": ArrowRight,
   "chevron-right": ChevronRight,
   "external-link": ExternalLink,

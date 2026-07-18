@@ -876,13 +876,13 @@ model Subscription {
 - Create: `src/app/platform/organizations/[orgId]/subscription/page.tsx` + form d'assignation
 - Create: `src/app/api/platform/organizations/[orgId]/subscription/route.ts` (upsert Subscription, `requireStaff`)
 
-- [ ] **Step 1 : CRUD plans** — routes API staff pour creer/editer/archiver un `Plan` (nom, maxEvents, maxParticipantsPerEvent nullable). Logger `PLAN_CREATED`/`PLAN_UPDATED`.
+- [x] **Step 1 : CRUD plans** — routes API staff pour creer/editer/archiver un `Plan` (nom, maxEvents, maxParticipantsPerEvent nullable). Logger `PLAN_CREATED`/`PLAN_UPDATED`.
 
-- [ ] **Step 2 : Assignation d'abonnement** — route API staff pour upsert la `Subscription` d'une org (planId, status, startDate, endDate, overrides). Logger `SUBSCRIPTION_CREATED`/`SUBSCRIPTION_UPDATED`. Ne jamais exposer d'info sensible.
+- [x] **Step 2 : Assignation d'abonnement** — route API staff pour upsert la `Subscription` d'une org (planId, status, startDate, endDate, overrides). Logger `SUBSCRIPTION_CREATED`/`SUBSCRIPTION_UPDATED`. Ne jamais exposer d'info sensible.
 
-- [ ] **Step 3 : Pages** — dans `/platform/plans` : liste + formulaire de plan. Dans `/platform/organizations/[orgId]/subscription` : selecteur de plan, statut (ACTIVE/EXPIRED/CANCELLED), dates, overrides.
+- [x] **Step 3 : Pages** — dans `/platform/plans` : liste + formulaire de plan. Dans `/platform/organizations/[orgId]/subscription` : selecteur de plan, statut (ACTIVE/EXPIRED/CANCELLED), dates, overrides.
 
-- [ ] **Step 4 : Test navigateur** — creer un plan, l'assigner a une org avec `endDate` passee -> verifier que la creation d'event/inscription est bloquee cote org ; remettre `ACTIVE` avec dates valides -> debloque.
+- [x] **Step 4 : Test navigateur** — creer un plan, l'assigner a une org avec `endDate` passee -> verifier que la creation d'event/inscription est bloquee cote org ; remettre `ACTIVE` avec dates valides -> debloque. FAIT via test d'integration des routes (`src/lib/__tests__/api-platform-plans.test.ts`) : plan cree + assignation expired -> `assertCanCreateEvent` bloque, re-ACTIVE -> debloque ; logs `SUBSCRIPTION_CREATED`/`UPDATED` verifies.
 
 ### Task 6.5 : UI org read-only de l'abonnement + affichage des limites
 
