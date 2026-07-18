@@ -10,9 +10,8 @@ export default async function HomePage() {
   if (!session?.user?.id) return <LandingView />;
 
   const ctx = await loadUserContext(session.user.id);
-  // Note : `lastOrgId` est persiste cote client en localStorage et n'est pas lisible
-  // cote serveur. La logique sans hint est appliquee ici ; `OrgSelector` cote client
-  // gere la navigation entre orgs apres connexion.
-  const target = resolveHomeRedirect(ctx, null);
+  // v4 Bloc D : redirection vers l'unique workspace accessible, ou vers le
+  // selecteur `/select` si l'utilisateur en a plusieurs.
+  const target = resolveHomeRedirect(ctx);
   redirect(target);
 }

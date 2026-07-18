@@ -64,7 +64,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
   function openBatchPdf() {
     if (selected.size === 0) return;
     const ids = Array.from(selected).join(",");
-    window.open(`/org/${orgId}/events/${eventId}/badges/print?ids=${encodeURIComponent(ids)}`, "_blank");
+    window.open(`/event/${eventId}/badges/print?ids=${encodeURIComponent(ids)}`, "_blank");
   }
 
   return (
@@ -137,7 +137,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/org/${orgId}/events/${eventId}/badges/${r.id}`}
+                    href={`/event/${eventId}/badges/${r.id}`}
                     className="inline-flex items-center gap-1 text-[13px] font-medium text-green-600 hover:underline"
                   >
                     <Icon name="eye" size={14} /> Voir

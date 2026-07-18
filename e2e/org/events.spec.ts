@@ -67,7 +67,7 @@ test.describe("T15 Org events", () => {
 
     // Redirection vers /settings de l'event cree.
     await page.waitForURL(
-      new RegExp(`/org/${orgId}/events/[^/]+/settings`),
+      new RegExp(`/event/[^/]+/settings`),
       { timeout: 8000 },
     );
 

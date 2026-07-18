@@ -5,32 +5,36 @@ import { resolveHomeRedirect } from "@/lib/org-redirect";
 function makeCtx(partial: {
   isStaff: boolean;
   orgMemberships?: { orgId: string; role: "OWNER" | "MANAGER" | "AUDITOR" }[];
+  eventMemberships?: { eventId: string; role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER" }[];
 }): UserContext {
   return {
     user: { id: "u1", email: "u@x.test", name: "U" },
     isStaff: partial.isStaff,
     staffRole: partial.isStaff ? "STAFF_SUPPORT" : null,
     orgMemberships: partial.orgMemberships ?? [],
-    eventMemberships: [],
+    eventMemberships: partial.eventMemberships ?? [],
   };
 }
 
 describe("resolveHomeRedirect", () => {
   it("returns /login if no userContext", () => {
-    expect(resolveHomeRedirect(null, null)).toBe("/login");
+    expect(resolveHomeRedirect(null)).toBe("/login");
   });
 
-  it("returns /platform if user is staff with no lastOrg", () => {
-    expect(resolveHomeRedirect(makeCtx({ isStaff: true }), null)).toBe("/platform");
+  it("returns /platform if staff-only (single workspace)", () => {
+    expect(resolveHomeRedirect(makeCtx({ isStaff: true }))).toBe("/platform");
   });
 
   it("returns /org/[orgId] if single org and not staff", () => {
     expect(
-      resolveHomeRedirect(
-        makeCtx({ isStaff: false, orgMemberships: [{ orgId: "o1", role: "OWNER" }] }),
-        null,
-      ),
+      resolveHomeRedirect(makeCtx({ isStaff: false, orgMemberships: [{ orgId: "o1", role: "OWNER" }] })),
     ).toBe("/org/o1");
+  });
+
+  it("returns /event/[eventId] if single event membership and no org", () => {
+    expect(
+      resolveHomeRedirect(makeCtx({ isStaff: false, eventMemberships: [{ eventId: "e1", role: "OPERATOR" }] })),
+    ).toBe("/event/e1");
   });
 
   it("returns /select if multi-org and not staff", () => {
@@ -43,40 +47,29 @@ describe("resolveHomeRedirect", () => {
             { orgId: "o2", role: "OWNER" },
           ],
         }),
-        null,
       ),
     ).toBe("/select");
   });
 
-  it("uses lastOrgId hint if still valid", () => {
+  it("returns /select if staff also member of an org (multiple workspaces)", () => {
+    expect(
+      resolveHomeRedirect(makeCtx({ isStaff: true, orgMemberships: [{ orgId: "o1", role: "OWNER" }] })),
+    ).toBe("/select");
+  });
+
+  it("returns /select if org membership and a separate event membership", () => {
     expect(
       resolveHomeRedirect(
         makeCtx({
           isStaff: false,
-          orgMemberships: [
-            { orgId: "o1", role: "OWNER" },
-            { orgId: "o2", role: "OWNER" },
-          ],
+          orgMemberships: [{ orgId: "o1", role: "AUDITOR" }],
+          eventMemberships: [{ eventId: "e9", role: "PRINTER" }],
         }),
-        "o2",
       ),
-    ).toBe("/org/o2");
+    ).toBe("/select");
   });
 
-  it("ignores lastOrgId if user lost membership", () => {
-    expect(
-      resolveHomeRedirect(
-        makeCtx({ isStaff: false, orgMemberships: [{ orgId: "o1", role: "OWNER" }] }),
-        "o-gone",
-      ),
-    ).toBe("/org/o1");
-  });
-
-  it("staff with lastOrgId hint goes there", () => {
-    expect(resolveHomeRedirect(makeCtx({ isStaff: true }), "o-any")).toBe("/org/o-any");
-  });
-
-  it("returns /profile if not staff and no org", () => {
-    expect(resolveHomeRedirect(makeCtx({ isStaff: false }), null)).toBe("/profile?message=no-org");
+  it("returns /account if not staff and no workspace", () => {
+    expect(resolveHomeRedirect(makeCtx({ isStaff: false }))).toBe("/account");
   });
 });

@@ -119,7 +119,7 @@ test.describe("Event archive / restore", () => {
     });
 
     const response = await page.goto(
-      `/org/${orgId}/events/${eventId}/registrations`,
+      `/event/${eventId}/registrations`,
     );
     expect(response?.status()).toBeLessThan(400);
     await expect(page.getByRole("heading", { name: /inscriptions/i })).toBeVisible();

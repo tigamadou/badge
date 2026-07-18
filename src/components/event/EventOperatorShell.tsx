@@ -14,7 +14,7 @@ export function EventOperatorShell({
   user: { name: string; email: string };
   children: React.ReactNode;
 }) {
-  const base = `/org/${org.id}/events/${event.id}`;
+  const base = `/event/${event.id}`;
   return (
     <div className="flex h-screen overflow-hidden">
       <aside className="flex w-56 flex-none flex-col gap-1 bg-brand-navy px-3 py-4">

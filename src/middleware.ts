@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const PROTECTED_PREFIXES = ["/org", "/platform", "/profile"];
+const PROTECTED_PREFIXES = ["/org", "/event", "/platform", "/profile"];
 const STAFF_ONLY_PREFIXES = ["/platform"];
 const API_PROTECTED_PREFIXES = ["/api/org", "/api/platform", "/api/profile"];
 const API_STAFF_ONLY_PREFIXES = ["/api/platform"];
@@ -52,6 +52,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/org/:path*",
+    "/event/:path*",
     "/platform/:path*",
     "/profile/:path*",
     "/api/org/:path*",

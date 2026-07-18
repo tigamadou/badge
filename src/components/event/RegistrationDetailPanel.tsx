@@ -79,7 +79,7 @@ export function RegistrationDetailPanel({
     if (!confirm(`Supprimer définitivement l'inscription de ${r.firstName} ${r.lastName} ?`)) return;
     setBusy(true);
     await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}`, { method: "DELETE" });
-    router.push(`/org/${orgId}/events/${eventId}/registrations`);
+    router.push(`/event/${eventId}/registrations`);
   }
 
   return (
@@ -156,7 +156,7 @@ export function RegistrationDetailPanel({
             <Button variant="secondary" onClick={toggleAllAccess} disabled={busy}>
               {r.allAccessGranted ? "Retirer ALL ACCESS" : "Activer ALL ACCESS"}
             </Button>
-            <Link href={`/org/${orgId}/events/${eventId}/badges/${r.id}`}>
+            <Link href={`/event/${eventId}/badges/${r.id}`}>
               <Button variant="secondary">Voir le badge</Button>
             </Link>
             <Button variant="secondary" onClick={blockEmail} disabled={busy}>

@@ -25,7 +25,7 @@ export function EventShell({
   user: { name: string; email: string };
   children: React.ReactNode;
 }) {
-  const base = `/org/${org.id}/events/${event.id}`;
+  const base = `/event/${event.id}`;
   const nav: NavEntry[] = [
     { href: base, label: "Tableau de bord", icon: "layout-dashboard", exact: true },
     { href: `${base}/registrations`, label: "Inscriptions", icon: "user-check" },

@@ -19,8 +19,8 @@ test.describe("T20 Event dashboard", () => {
     const admin = await makeEventAdminUser({ scope: "dash-admin", eventId, orgId });
     await loginAs(page, admin);
 
-    await page.goto(`/org/${orgId}/events/${eventId}`);
-    await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
+    await page.goto(`/event/${eventId}`);
+    await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
     // KPI 4 statuts + badges imprimes
     await expect(page.getByText(/en attente/i).first()).toBeVisible();
     await expect(page.getByText(/approuvées/i).first()).toBeVisible();
@@ -38,7 +38,7 @@ test.describe("T20 Event dashboard", () => {
     });
     await loginAs(page, operator);
 
-    await page.goto(`/org/${orgId}/events/${eventId}`);
+    await page.goto(`/event/${eventId}`);
     await expect(page.getByRole("heading", { name: /tableau de bord opérateur/i })).toBeVisible();
     await expect(page.getByText(/mes scans/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /ouvrir le scanner/i })).toBeVisible();
@@ -59,14 +59,14 @@ test.describe("T20 Event dashboard", () => {
     // Comportement reel : pas de redirection cote layout/page. PRINTER atterrit
     // sur le dashboard standard (KPI). Le badge effectiveRole = PRINTER doit etre
     // visible dans l'en-tete EventShell. La navigation /badges est accessible.
-    await page.goto(`/org/${orgId}/events/${eventId}`);
+    await page.goto(`/event/${eventId}`);
     await expect(page.getByText("PRINTER", { exact: true })).toBeVisible();
 
     // Le lien "Badges" est present dans la sidebar.
     const badgesLink = page.getByRole("link", { name: /^badges$/i });
     await expect(badgesLink).toBeVisible();
     await badgesLink.click();
-    await page.waitForURL(new RegExp(`/org/${orgId}/events/${eventId}/badges`), {
+    await page.waitForURL(new RegExp(`/event/${eventId}/badges`), {
       timeout: 8000,
     });
   });
@@ -81,8 +81,8 @@ test.describe("T20 Event dashboard", () => {
     });
     await loginAs(page, viewer);
 
-    await page.goto(`/org/${orgId}/events/${eventId}`);
-    await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
+    await page.goto(`/event/${eventId}`);
+    await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
     await expect(page.getByText(/en attente/i).first()).toBeVisible();
     await expect(page.getByText(/approuvées/i).first()).toBeVisible();
     // Le badge effectiveRole = VIEWER doit apparaitre dans l'en-tete.

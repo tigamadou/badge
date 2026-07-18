@@ -90,7 +90,7 @@ export default async function OrgDashboardPage({
               latestEvents.map((e) => (
                 <Link
                   key={e.id}
-                  href={`/org/${orgId}/events/${e.id}`}
+                  href={`/event/${e.id}`}
                   className="flex items-center justify-between gap-3 py-3 text-sm hover:text-green-600"
                 >
                   <span className="text-slate-900">{e.title}</span>

@@ -65,7 +65,7 @@ export default async function EventsListPage({
               >
                 <td className="px-4 py-3">
                   <Link
-                    href={`/org/${orgId}/events/${e.id}`}
+                    href={`/event/${e.id}`}
                     className="text-sm font-medium text-slate-900 hover:text-green-600"
                   >
                     {e.title}
@@ -94,7 +94,7 @@ export default async function EventsListPage({
                 </td>
                 <td className="px-4 py-3 text-right">
                   <Link
-                    href={`/org/${orgId}/events/${e.id}/settings`}
+                    href={`/event/${e.id}/settings`}
                     className="text-[13px] font-medium text-green-600 hover:underline"
                   >
                     Configurer

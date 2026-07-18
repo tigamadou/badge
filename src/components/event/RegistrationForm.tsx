@@ -105,7 +105,7 @@ export function RegistrationForm({
       return;
     }
     const json = await res.json();
-    router.push(`/org/${orgId}/events/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
+    router.push(`/event/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
   }
 
   return (

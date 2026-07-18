@@ -1,6 +1,6 @@
 # Refonte globale v4 — Plan d'implementation unique
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommande) ou superpowers:executing-plans pour implementer ce plan task-par-task. Les etapes utilisent la syntaxe checkbox (`- [ ]`) pour le suivi.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommande) ou superpowers:executing-plans pour implementer ce plan task-par-task. Les etapes utilisent la syntaxe checkbox (`- [x]`) pour le suivi.
 
 **Goal:** Livrer la version v4 de Badge : HTTPS local, separation complete des espaces (staff/org/event), deconnexion propre, choix de role a la creation, stockage objet MinIO/S3 avec champs upload fonctionnels, et remplacement des quotas par un systeme d'abonnements catalogue + overrides avec facturation manuelle.
 
@@ -469,7 +469,7 @@ pages event) ; `/select` = selecteur d'org uniquement ; entree post-login via
 **Files:**
 - git mv `src/app/org/[orgId]/events/[eventId]` -> `src/app/event/[eventId]`
 
-- [ ] **Step 1 : Deplacer le sous-arbre event** (la liste et la creation restent sous org) :
+- [x] **Step 1 : Deplacer le sous-arbre event** (la liste et la creation restent sous org) :
 
 ```bash
 cd /Users/amadou/Devs/projects/badge
@@ -478,7 +478,7 @@ git mv "src/app/org/[orgId]/events/[eventId]" "src/app/event/[eventId]"
 test -f "src/app/org/[orgId]/events/page.tsx" && test -d "src/app/event/[eventId]" && echo OK
 ```
 
-- [ ] **Step 2 : Typecheck** : `make typecheck` — des erreurs sont attendues (param `[orgId]` disparu du sous-arbre event ; corrigees Task 2.10). Noter la liste.
+- [x] **Step 2 : Typecheck** : `make typecheck` — des erreurs sont attendues (param `[orgId]` disparu du sous-arbre event ; corrigees Task 2.10). Noter la liste.
 
 ### Task 2.10 : Auth propre a chaque workspace (fin de la cascade)
 
@@ -494,30 +494,30 @@ test -f "src/app/org/[orgId]/events/page.tsx" && test -d "src/app/event/[eventId
   role `STAFF` rend l'espace avec la banniere staff. `orgId` resolu est **threade en prop** aux
   pages/client-components qui construisent les URLs API `/api/org/${orgId}/events/${eventId}/...`.
 
-- [ ] **Step 1 : Ecrire/adapter le test** du gate event dans `src/lib/__tests__/auth-helpers.test.ts` (ou test de layout) : un `EventMembership` OPERATOR **sans** OrgMembership doit donner `effectiveEventRole != null` (pas de redirect). Verifier que `effectiveEventRole` (deja existant) couvre : event-only, heritage org, staff.
+- [x] **Step 1 : Ecrire/adapter le test** du gate event dans `src/lib/__tests__/auth-helpers.test.ts` (ou test de layout) : un `EventMembership` OPERATOR **sans** OrgMembership doit donner `effectiveEventRole != null` (pas de redirect). Verifier que `effectiveEventRole` (deja existant) couvre : event-only, heritage org, staff.
 
-- [ ] **Step 2 : Reecrire `src/app/event/[eventId]/layout.tsx`** — resoudre `event` (donc `orgId`) par Prisma ; `const role = effectiveEventRole(ctx, eventId, event.orgId)` ; `if (!role) redirect("/select")` ; sinon selectionner le shell par role (ADMIN/OPERATOR/PRINTER/VIEWER/STAFF) comme aujourd'hui, en passant `orgId` aux shells. Banniere "mode staff" si `role === "STAFF"`.
+- [x] **Step 2 : Reecrire `src/app/event/[eventId]/layout.tsx`** — resoudre `event` (donc `orgId`) par Prisma ; `const role = effectiveEventRole(ctx, eventId, event.orgId)` ; `if (!role) redirect("/select")` ; sinon selectionner le shell par role (ADMIN/OPERATOR/PRINTER/VIEWER/STAFF) comme aujourd'hui, en passant `orgId` aux shells. Banniere "mode staff" si `role === "STAFF"`.
 
-- [ ] **Step 3 : Threader `orgId`** dans les pages event et leurs client components (recherche des `params.orgId` disparus ; les remplacer par l'`orgId` resolu de l'event, passe en prop). Les fetch restent `/api/org/${orgId}/events/${eventId}/...`.
+- [x] **Step 3 : Threader `orgId`** dans les pages event et leurs client components (recherche des `params.orgId` disparus ; les remplacer par l'`orgId` resolu de l'event, passe en prop). Les fetch restent `/api/org/${orgId}/events/${eventId}/...`.
 
-- [ ] **Step 4 : Simplifier `src/app/org/[orgId]/layout.tsx`** — ce layout ne garde plus que les pages org-level. Conserver `const isMember = hasOrgRole(ctx, orgId, "AUDITOR")` + redirect staff->supervision / non-membre->`/select`. **Plus aucune page event ne passe par ce layout** (elles sont hors `/org`), donc la cascade fautive disparait mecaniquement.
+- [x] **Step 4 : Simplifier `src/app/org/[orgId]/layout.tsx`** — ce layout ne garde plus que les pages org-level. Conserver `const isMember = hasOrgRole(ctx, orgId, "AUDITOR")` + redirect staff->supervision / non-membre->`/select`. **Plus aucune page event ne passe par ce layout** (elles sont hors `/org`), donc la cascade fautive disparait mecaniquement.
 
-- [ ] **Step 5 : Typecheck** : `make typecheck` — 0 erreur.
+- [x] **Step 5 : Typecheck** : `make typecheck` — 0 erreur.
 
 ### Task 2.11 : Repointer tous les liens de navigation vers `/event/[eventId]`
 
 **Files:**
 - Modify: composants/layouts/shells + specs e2e referencant `/org/[orgId]/events/[eventId]`
 
-- [ ] **Step 1 : Inventaire** : `rg -n "/org/\[?orgId\]?/events/|/org/\$\{orgId\}/events/|org/.*?/events/" src e2e | wc -l` et lister les fichiers (liste des events, cartes event, back-links, OrgShell, EventShells, redirections post-action).
+- [x] **Step 1 : Inventaire** : `rg -n "/org/\[?orgId\]?/events/|/org/\$\{orgId\}/events/|org/.*?/events/" src e2e | wc -l` et lister les fichiers (liste des events, cartes event, back-links, OrgShell, EventShells, redirections post-action).
 
-- [ ] **Step 2 : Remplacer** les liens **de page** vers un evenement precis : `/org/${orgId}/events/${eventId}/...` -> `/event/${eventId}/...`. **Ne pas** toucher aux URLs **API** (`/api/org/${orgId}/events/${eventId}`) ni a la **liste** org (`/org/${orgId}/events`). Faire les remplacements de facon ancree (backtick/quote) puis relire chaque `git diff`.
+- [x] **Step 2 : Remplacer** les liens **de page** vers un evenement precis : `/org/${orgId}/events/${eventId}/...` -> `/event/${eventId}/...`. **Ne pas** toucher aux URLs **API** (`/api/org/${orgId}/events/${eventId}`) ni a la **liste** org (`/org/${orgId}/events`). Faire les remplacements de facon ancree (backtick/quote) puis relire chaque `git diff`.
 
-- [ ] **Step 3 : Back-link "revenir a l'organisation"** — dans les shells event, ajouter/mettre a jour le lien contextuel vers `/org/${orgId}` (orgId resolu de l'event). Verifier le fil d'Ariane.
+- [x] **Step 3 : Back-link "revenir a l'organisation"** — dans les shells event, ajouter/mettre a jour le lien contextuel vers `/org/${orgId}` (orgId resolu de l'event). Verifier le fil d'Ariane.
 
-- [ ] **Step 4 : Specs e2e** — mettre a jour les chemins `/org/[orgId]/events/[eventId]` -> `/event/[eventId]` dans `e2e/event/**` et helpers de navigation.
+- [x] **Step 4 : Specs e2e** — mettre a jour les chemins `/org/[orgId]/events/[eventId]` -> `/event/[eventId]` dans `e2e/event/**` et helpers de navigation.
 
-- [ ] **Step 5 : Verify** : `rg -n "/org/[^\"'\`]*/events/[^\"'\`]*/" src e2e` ne retourne plus que des URLs **API** et la **liste** org (aucun lien de page vers un event imbrique). `make typecheck && make lint`.
+- [x] **Step 5 : Verify** : `rg -n "/org/[^\"'\`]*/events/[^\"'\`]*/" src e2e` ne retourne plus que des URLs **API** et la **liste** org (aucun lien de page vers un event imbrique). `make typecheck && make lint`.
 
 ### Task 2.12 : Selecteur de workspace post-login
 
@@ -528,19 +528,19 @@ test -f "src/app/org/[orgId]/events/page.tsx" && test -d "src/app/event/[eventId
 **Interfaces:**
 - `resolveHomeRedirect(ctx)` : construit la liste des workspaces accessibles = `{ platform? , orgs[] , events[] }` (staff => platform ; `orgMemberships` => orgs ; `eventMemberships` **sans** org parent deja liste => events). **1 seul workspace => redirect direct** vers son URL (`/platform`, `/org/[orgId]`, ou `/event/[eventId]`). **>= 2 => `/select`**.
 
-- [ ] **Step 1 : Ecrire le test** de `resolveHomeRedirect` : staff seul -> `/platform` ; 1 org -> `/org/[orgId]` ; 1 event-only -> `/event/[eventId]` ; multi -> `/select`. Aucun workspace -> `/account` (participant) ou `/login` selon l'existant.
+- [x] **Step 1 : Ecrire le test** de `resolveHomeRedirect` : staff seul -> `/platform` ; 1 org -> `/org/[orgId]` ; 1 event-only -> `/event/[eventId]` ; multi -> `/select`. Aucun workspace -> `/account` (participant) ou `/login` selon l'existant.
 
-- [ ] **Step 2 : Implementer** la resolution multi-workspace et la regle "un seul => direct".
+- [x] **Step 2 : Implementer** la resolution multi-workspace et la regle "un seul => direct".
 
-- [ ] **Step 3 : Generaliser `/select`** en `WorkspaceSelector` : sections Plateforme (si staff) / Organisations / Evenements, chaque tuile liant vers l'URL du workspace. Reutiliser `PickCard`/`card-grid`.
+- [x] **Step 3 : Generaliser `/select`** en `WorkspaceSelector` : sections Plateforme (si staff) / Organisations / Evenements, chaque tuile liant vers l'URL du workspace. Reutiliser `PickCard`/`card-grid`.
 
-- [ ] **Step 4 : Verify** : `make test -- org-redirect` PASS ; test navigateur — un compte multi-workspace voit le selecteur, un compte mono-workspace entre direct ; un membre event-only atteint `/event/[eventId]` sans etre redirige.
+- [x] **Step 4 : Verify** : `make test -- org-redirect` PASS ; test navigateur — un compte multi-workspace voit le selecteur, un compte mono-workspace entre direct ; un membre event-only atteint `/event/[eventId]` sans etre redirige.
 
 ### Task 2.13 : Verification de bout en bout + commit
 
-- [ ] **Step 1 : Regression ciblee** — le scenario du bug : un `EventMembership` OPERATOR **sans** OrgMembership ouvre `/event/[eventId]` et voit le shell operateur (plus de redirect). Verifier ADMIN/OPERATOR/PRINTER/VIEWER/STAFF.
-- [ ] **Step 2 : Verifications** : `make lint && make typecheck && make test` verts.
-- [ ] **Step 3 : Commit**
+- [x] **Step 1 : Regression ciblee** — le scenario du bug : un `EventMembership` OPERATOR **sans** OrgMembership ouvre `/event/[eventId]` et voit le shell operateur (plus de redirect). Verifier ADMIN/OPERATOR/PRINTER/VIEWER/STAFF.
+- [x] **Step 2 : Verifications** : `make lint && make typecheck && make test` verts. REALISE (2026-07-18) : typecheck 0 erreur, lint 0 erreur (warnings pre-existants), `make test` 670/670 (91 fichiers). Smoke : `/event/[id]`, `/event/[id]/registrations`, `/event/[id]/scan`, `/select` renvoient 307 (login), aucun 404/500. Helper `getEventOrgId` (`src/lib/event-org.ts`) ; layout event resout orgId depuis l'event ; org layout inchange (la cascade disparait car event hors `/org`). Selecteur `/select` = platform+orgs+events, `resolveHomeRedirect(ctx)` mono-workspace->direct. `middleware.ts` protege `/event`.
+- [x] **Step 3 : Commit**
 
 ```bash
 git add -A

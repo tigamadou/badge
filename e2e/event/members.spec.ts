@@ -153,7 +153,7 @@ test.describe("Event members", () => {
       data: { userId: m1.id, eventId, role: "OPERATOR" },
     });
 
-    await page.goto(`/org/${orgId}/events/${eventId}/members`);
+    await page.goto(`/event/${eventId}/members`);
     await expect(page.getByRole("heading", { name: /membres/i })).toBeVisible();
     // En-tetes attendues.
     await expect(page.getByRole("columnheader", { name: /nom/i })).toBeVisible();

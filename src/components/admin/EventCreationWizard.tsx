@@ -102,7 +102,7 @@ export function EventCreationWizard({
       return;
     }
     const json = (await res.json()) as { event: { id: string; slug: string } };
-    router.push(`/org/${orgId}/events/${json.event.id}/settings`);
+    router.push(`/event/${json.event.id}/settings`);
   }
 
   function addManualCategory() {
