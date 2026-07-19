@@ -495,9 +495,17 @@ Nouveaux fichiers de rendu :
 - `e2e/org/pages-render.spec.ts` — 8 pages org + /select + /account/profile/complete.
 - `e2e/platform/pages-render.spec.ts` — 11 pages platform (organizations/[orgId]/*, plans, settings[/badge], users[/[userId],/new], activity/[logId]).
 
-**Reserve** : ce croisement garantit **>=1 spec de rendu par page** (Tasks 3.x Step "render").
-La couverture exhaustive des **interactions** par page (chaque bouton/filtre/formulaire) n'est
-pas integralement mesuree — a completer si l'objectif "1 spec par interaction" est vise.
+**Interactions primaires** (scope valide 2026-07-19) : au-dela du rendu, ajout de tests d'INTERACTION
+UI pour l'action principale + filtre + etat vide de chaque page interactive, en assertant l'effet
+(BDD/audit/mail/session) — pas juste le clic. Nouveaux fichiers :
+- `e2e/org/interactions.spec.ts` (9) — invite/retrait membre, infos org, template badge, CRUD CategoryTemplate via modale, etats vides.
+- `e2e/event/interactions.spec.ts` (12) — categorie via modale, inscription manuelle, scan manuel, blocage email/document, filtre statut, approve/reject UI, impression par lot.
+- `e2e/platform/interactions.spec.ts` (9) — creation user client/staff, reset password + archivage, filtre users, CRUD plan, settings non-secret, template badge, assignation abonnement.
+- `e2e/transverse/logout.spec.ts` (2) — modal de deconnexion (annuler / confirmer -> session effacee).
+
+**Reserve** : ce niveau couvre l'interaction PRINCIPALE par page (choix utilisateur). La couverture
+de CHAQUE bouton/champ secondaire n'est pas visee (rendements decroissants ; les actions secondaires
+sont majoritairement couvertes en integration API a 100%).
 
 **BUG PROD corrige au passage** (accord utilisateur) : `platform/organizations/[orgId]/subscription`
 renvoyait 500 pour toute org avec abonnement (Server Component appelant `isoDay` du module client
