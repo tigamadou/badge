@@ -57,3 +57,6 @@ next-env.d.ts
 
 # v2-12 : preview PNG copies au build (sources versionnees, copies non)
 /public/badge-previews/
+
+.plan-logs
+.superpowers

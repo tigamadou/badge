@@ -173,7 +173,7 @@ test.describe("T15 Org events", () => {
   test("Limite events du plan atteinte -> 409 EVENT_LIMIT", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({
       scope: "events-quota",
-      quotaMaxEvents: 2,
+      maxEvents: 2,
     });
     await loginAs(page, owner);
 

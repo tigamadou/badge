@@ -162,10 +162,10 @@ export async function createTestStaff(opts: {
 // Ne cree aucun event ; c'est le minimum pour tester les flows org-only.
 export async function createTestOrgWithOwner(opts: {
   scope: string;
-  // Limites du plan attache a l'org (null/omis = illimite). quotaMaxRegistrations
-  // est desormais une limite de participants PAR EVENT (abonnements v4).
-  quotaMaxEvents?: number;
-  quotaMaxRegistrations?: number;
+  // Limites du plan attache a l'org (null/omis = illimite).
+  // maxParticipantsPerEvent est une limite de participants PAR EVENT (abonnements v4).
+  maxEvents?: number;
+  maxParticipantsPerEvent?: number;
 }): Promise<{ orgId: string; owner: TestUser }> {
   const prisma = db();
   const slugSuffix = `${opts.scope}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
@@ -178,8 +178,8 @@ export async function createTestOrgWithOwner(opts: {
   const plan = await prisma.plan.create({
     data: {
       name: `e2e-plan-${slugSuffix}`,
-      maxEvents: opts.quotaMaxEvents ?? null,
-      maxParticipantsPerEvent: opts.quotaMaxRegistrations ?? null,
+      maxEvents: opts.maxEvents ?? null,
+      maxParticipantsPerEvent: opts.maxParticipantsPerEvent ?? null,
     },
   });
   await prisma.subscription.create({

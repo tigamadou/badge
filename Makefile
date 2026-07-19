@@ -128,9 +128,14 @@ test-e2e:
 #   - yarn install (cote hote)
 #   - yarn playwright install chromium (telecharge le binaire local, une seule fois)
 # Sans PLAYWRIGHT_CHROMIUM_EXECUTABLE, Playwright utilise son chromium integre.
+# Les helpers e2e (db.ts, mailpit.ts) tournent dans le process Node de l'hote :
+# ils doivent viser les ports exposes sur localhost, pas les hostnames internes
+# du reseau Docker (mysql, mailpit) qui ne resolvent que dans les containers.
 test-e2e-ui:
 	@echo "Lancement de Playwright en mode UI depuis l'hote (fenetre Electron)."
 	@echo "L'app dev doit tourner sur localhost:3785 (make dev)."
+	DATABASE_URL="mysql://root:password@localhost:33060/badge" \
+	MAILPIT_URL="http://localhost:8025" \
 	PLAYWRIGHT_BASE_URL=http://localhost:3785 yarn playwright test --ui
 
 validate-badge-templates:

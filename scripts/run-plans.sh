@@ -28,11 +28,13 @@
 #
 # Usage:
 #   ./scripts/run-plans.sh
-#   PLANS_DIRNAME=plans MODEL=claude-sonnet-5 MAX_ITER=500 ./scripts/run-plans.sh
+#   PLANS_DIRNAME=plans MODEL=claude-sonnet-5 EFFORT=low MAX_ITER=500 ./scripts/run-plans.sh
 #   WORKDIR=/path/to/another/repo ./scripts/run-plans.sh
+#   FRESH=1 ./scripts/run-plans.sh          # new Claude session (no --continue)
+#   EFFORT=medium ./scripts/run-plans.sh   # raise if low effort skips needed reasoning
 #
-# Stop: Ctrl-C; automatically when no box remains unchecked; or after STALL_LIMIT
-# consecutive turns without progress (no additional box checked).
+# Stop: Ctrl-C; no unchecked box left; STALL_LIMIT consecutive turns without
+# progress; or MAX_ITER.
 
 set -u
 
@@ -40,6 +42,7 @@ set -u
 WORKDIR="${WORKDIR:-$PWD}"                        # target repo = current directory
 PLANS_DIRNAME="${PLANS_DIRNAME:-plans}"  # name of the folders to scan (any parent)
 MODEL="${MODEL:-claude-opus-4-8}"
+EFFORT="${EFFORT:-low}"              # low|medium|high|xhigh|max — low = fewer thinking tokens
 MAX_ITER="${MAX_ITER:-300}"          # safety cap (number of re-launches)
 MAX_TURNS="${MAX_TURNS:-200}"        # max turns per invocation
 COOLDOWN="${COOLDOWN:-10}"           # normal pause between two re-launches (s)
@@ -48,6 +51,7 @@ STALL_LIMIT="${STALL_LIMIT:-4}"      # consecutive no-progress turns before givi
 LOGDIR="${LOGDIR:-$WORKDIR/.plan-logs}"
 STREAM="${STREAM:-1}"                # 1 = watch everything live (tools, reasoning); 0 = final output only
 PERMISSION_MODE="${PERMISSION_MODE:-bypassPermissions}"  # full autonomy; set to "default" to confirm
+FRESH="${FRESH:-0}"                  # 1 = skip --continue (new Claude session)
 
 # Every folder named "$PLANS_DIRNAME" in the repo, whatever its parent
 # (node_modules, .git and the log dir are excluded).
@@ -119,55 +123,86 @@ count_pending_plans() {
   echo "$n"
 }
 
-# Detect a REAL usage/rate limit. Anchor on the stream-json error envelope
-# (final "is_error":true event) AND/OR API-specific technical strings absent from
-# normal business content, NOT on free words (the log holds the whole flow: text,
-# reasoning, file contents read). Avoid false positives when content mentions
-# "rate limit", "429"...
+# Detect a REAL usage/rate/session limit. Prefer structured stream-json signals
+# (absent from normal business content). Claude Code emits e.g.:
+#   {"type":"rate_limit_event","rate_limit_info":{"status":"rejected","resetsAt":…}}
+#   "error":"rate_limit" / "api_error_status":429
+#   result text: "You've hit your session limit · resets 2:50am (…)"
+# Avoid bare words like "429" alone (false positives in file contents).
 hit_usage_limit() {
-  tail -n 30 "$1" | grep -qiE 'rate_limit_error|overloaded_error' && return 0
-  tail -n 20 "$1" | grep -qE '"is_error"[[:space:]]*:[[:space:]]*true' \
-    && tail -n 20 "$1" | grep -qiE 'usage limit|too many requests|overloaded|quota'
+  local log="$1"
+  # Precise: rate_limit_info.status == rejected (not overageStatus:"rejected")
+  grep -qE '"rate_limit_info"[[:space:]]*:[[:space:]]*\{[^}]*"status"[[:space:]]*:[[:space:]]*"rejected"' "$log" && return 0
+  grep -qE '"error"[[:space:]]*:[[:space:]]*"rate_limit"' "$log" && return 0
+  grep -qE '"api_error_status"[[:space:]]*:[[:space:]]*429' "$log" && return 0
+  grep -qiE 'rate_limit_error|overloaded_error' "$log" && return 0
+  # Human-readable envelope (stream-json result or text mode)
+  grep -qE '"is_error"[[:space:]]*:[[:space:]]*true' "$log" \
+    && grep -qiE 'session limit|usage limit|too many requests|overloaded|quota' "$log" && return 0
+  # Text-only output (STREAM=0): no JSON envelope
+  grep -qiE "You've hit your (session|usage) limit" "$log"
 }
 
-# Terseness directive injected into the system prompt to save tokens.
-TERSE="Be extremely terse in your prose. No preamble, no recap, no explanation of \
-what you are about to do. Act directly through tools. One line maximum between two \
-actions. Only write sentences when strictly necessary."
+# Seconds to sleep until the quota resets. Prefer resetsAt (unix) from the
+# rate_limit_event; fall back to LIMIT_SLEEP when absent (e.g. text mode).
+# Adds a small buffer so the first re-launch is not still rejected.
+limit_sleep_seconds() {
+  local log="$1"
+  local resets_at now sleep_s
+  resets_at=$(grep -oE '"resetsAt"[[:space:]]*:[[:space:]]*[0-9]+' "$log" \
+    | tail -n1 | grep -oE '[0-9]+$' || true)
+  if [[ -n "$resets_at" ]]; then
+    now=$(date +%s)
+    sleep_s=$((resets_at - now + 60))   # +60s buffer after reset
+    if (( sleep_s < 60 )); then
+      sleep_s=60                         # already past / clock skew → retry soon
+    fi
+    echo "$sleep_s"
+    return
+  fi
+  echo "$LIMIT_SLEEP"
+}
 
-# Goal (focuses the model; the loop itself decides when to stop, via folder state).
-GOAL="Execute every plan file found in every folder named '$PLANS_DIRNAME' in this \
-repo until no task box remains unchecked, honoring the verification steps written \
-inside each plan."
+# Sleep while printing a live HH:MM:SS countdown on one line (Ctrl-C still works).
+countdown_sleep() {
+  local total="$1" left h m s
+  left=$total
+  while (( left > 0 )); do
+    h=$((left / 3600))
+    m=$(((left % 3600) / 60))
+    s=$((left % 60))
+    printf '\r   ⏱  resume in %02d:%02d:%02d  ' "$h" "$m" "$s"
+    sleep 1
+    left=$((left - 1))
+  done
+  printf '\r   ⏱  resume in 00:00:00 — relaunching.\n'
+}
 
-# Working prompt: one invocation must advance AS FAR AS POSSIBLE (ideally finish
-# everything), not just one task. Fully agnostic: no technology imposed.
+# Absolute silence: zero assistant prose (biggest output-token saver).
+TERSE="TOKEN BUDGET — CRITICAL:
+- Emit ZERO assistant text. No preamble, recap, plan, status, apology, or summary.
+- Tools only. If a text block is unavoidable, max 5 words (e.g. DONE or BLOCKED:<reason>).
+- Do NOT narrate. Do NOT quote file contents in text. Do NOT restate the plan.
+- Do NOT use Task/subagents/parallel agents. Do NOT invoke long skills.
+- Do NOT explore broadly: open only files required for the current step.
+- Prefer Edit/Patch over rewriting whole files. Prefer targeted greps over full reads."
+
+# Goal (short — re-sent every iteration; keep input tokens low).
+GOAL="Drain every '$PLANS_DIRNAME' folder: tick all '- [ ]' boxes. Follow each plan's Verify steps."
+
+# Compact work prompt (agnostic). Rules only — no fluff.
 read -r -d '' PROMPT <<EOF
 /goal $GOAL
 
-Strictly follow the repo's conventions (root CLAUDE.md / AGENTS.md if present):
-code style, testing policy, commit format and signature.
+Silence. Tools only. Honor repo CLAUDE.md/AGENTS.md (style, tests, commits).
 
-Work loop — DO NOT STOP after a single task or a single plan, keep going:
-1. Find every folder named "$PLANS_DIRNAME" in the repo (excluding node_modules and
-   .git) and list their *.md plan files (README.md excluded). While any plan holds
-   an unchecked box "- [ ]", take the OLDEST one (filename order is chronological;
-   on a tie, full path order).
-2. Execute it task by task with the superpowers:executing-plans skill: follow the
-   plan's steps in order (test first if it is TDD, otherwise the described
-   procedure), run the "Verify" checks exactly as written IN the plan, and tick
-   each step "- [ ]" -> "- [x]" as you go.
-3. COMMIT RULE (mandatory): the moment a task's steps all pass, make EXACTLY ONE
-   git commit containing that task's changes — following the repo's commit
-   conventions — BEFORE starting the next task. Never batch several tasks into one
-   commit; never leave a completed task uncommitted; never commit a task whose
-   verification failed.
-4. When all of a plan's boxes are checked, apply the plan's closing instruction
-   (the plan itself says whether to delete it or leave it checked). Then move
-   IMMEDIATELY to the next plan. Continue while any unchecked box remains.
+Loop (do not stop after one task/plan):
+1. Oldest plan *.md under any '$PLANS_DIRNAME/' (skip README, node_modules, .git) with unchecked '- [ ]'.
+2. Do its next unchecked task in order (TDD: test first if plan says so). Run Verify exactly as written. Tick '- [ ]'→'- [x]'.
+3. On pass: exactly ONE git commit for that task (repo commit rules), then next task. Never batch commits. Never commit a failed Verify.
+4. Plan done → apply its closing instruction (delete or leave checked) → next plan.
 
-Never advance past a task whose verification fails. One commit per completed task.
-Go as far as possible in this invocation; the supervisor will re-launch you if needed.
+Stop only if Verify fails. Go as far as possible; supervisor re-launches.
 EOF
 
 mkdir -p "$LOGDIR"
@@ -175,10 +210,15 @@ mkdir -p "$LOGDIR"
 echo "▶ Autonomous plan execution"
 echo "  Repo    : $WORKDIR"
 echo "  Plans   : folders named '$PLANS_DIRNAME' → $(list_plans_dirs | wc -l | tr -d ' ') folder(s), $(count_pending_plans) pending plan(s), $(count_pending_boxes) box(es) to check"
-echo "  Model   : $MODEL   Permissions: $PERMISSION_MODE"
+echo "  Model   : $MODEL   Effort: $EFFORT   Permissions: $PERMISSION_MODE"
+echo "  Session : $([[ "$FRESH" == "1" ]] && echo "FRESH (no --continue)" || echo "continue previous")"
 echo "  Logs    : $LOGDIR"
 
 stall=0
+use_continue=1
+if [[ "$FRESH" == "1" ]]; then
+  use_continue=0
+fi
 
 for ((i = 1; i <= MAX_ITER; i++)); do
   # === Stop authority: no box left unchecked -> done. ===
@@ -194,29 +234,44 @@ for ((i = 1; i <= MAX_ITER; i++)); do
   echo ""
   echo "=== Iteration $i / $MAX_ITER — $TS — boxes left: $current ==="
 
+  continue_args=()
+  if [[ "$use_continue" == "1" ]]; then
+    continue_args=(--continue)
+  else
+    echo "  (fresh session — not using --continue)"
+    use_continue=1   # subsequent iterations resume this new session
+  fi
+
   # --continue: resume the previous session (context preserved, auto-compacted).
   if [[ "$STREAM" == "1" ]]; then
     claude -p "$PROMPT" \
-      --continue \
+      "${continue_args[@]}" \
       --model "$MODEL" \
+      --effort "$EFFORT" \
       --max-turns "$MAX_TURNS" \
       --permission-mode "$PERMISSION_MODE" \
       --append-system-prompt "$TERSE" \
       --verbose --output-format stream-json 2>&1 | tee "$LOG" | format_stream
   else
     claude -p "$PROMPT" \
-      --continue \
+      "${continue_args[@]}" \
       --model "$MODEL" \
+      --effort "$EFFORT" \
       --max-turns "$MAX_TURNS" \
       --permission-mode "$PERMISSION_MODE" \
       --append-system-prompt "$TERSE" \
       --output-format text 2>&1 | tee "$LOG"
   fi
 
-  # Usage limit: long pause then re-launch WITHOUT counting as a stall.
+  # Usage / session limit: sleep until resetsAt (or LIMIT_SLEEP), then re-launch.
+  # Do NOT count as a stall — the model could not work.
   if hit_usage_limit "$LOG"; then
-    echo "⏳ Usage limit hit. Pausing ${LIMIT_SLEEP}s before re-launch…"
-    sleep "$LIMIT_SLEEP"
+    sleep_s="$(limit_sleep_seconds "$LOG")"
+    resume_at="$(date -v+"${sleep_s}S" '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null \
+      || date -d "+${sleep_s} seconds" '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null \
+      || echo "in ${sleep_s}s")"
+    echo "⏳ Session/usage limit hit. Pausing ${sleep_s}s (~$((sleep_s / 60)) min) — resume ~ ${resume_at} ..."
+    countdown_sleep "$sleep_s"
     continue
   fi
 
