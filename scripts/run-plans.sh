@@ -123,6 +123,40 @@ count_pending_plans() {
   echo "$n"
 }
 
+# Total task boxes across all plans = checked + unchecked ("- [ ]" | "- [x]" |
+# "- [~]" | "- [-]"). Same "- [" prefix as the completion signal, so table cells
+# like "| [ ] |" are NOT counted — only real task/step boxes. Dynamic (recomputed
+# each turn), so it stays correct if a plan is added or (ephemeral) deleted.
+count_total_boxes() {
+  local n=0 f
+  while IFS= read -r f; do
+    n=$((n + $(grep -cE '^[[:space:]]*- \[[ xX~-]\]' "$f" 2>/dev/null || true)))
+  done < <(list_plan_files)
+  echo "$n"
+}
+
+# Render an ASCII progress bar over the TOTAL number of tasks (done/total).
+# done = total - pending. Printed once per turn (no sticky positioning: the
+# stream-json output owns the terminal, so a fixed bottom line is not reliable).
+render_progress() {
+  local width=40 total pending done pct filled i bar=""
+  total="$(count_total_boxes)"
+  pending="$(count_pending_boxes)"
+  if (( total <= 0 )); then
+    printf '   progression : [%*s] (aucune tache)\n' "$width" "" | tr ' ' '.'
+    return
+  fi
+  done=$((total - pending))
+  (( done < 0 )) && done=0
+  pct=$((done * 100 / total))
+  filled=$((done * width / total))
+  for ((i = 0; i < width; i++)); do
+    if (( i < filled )); then bar+="#"; else bar+="."; fi
+  done
+  printf '   progression : [%s] %3d%%  (%d/%d taches, %d restantes)\n' \
+    "$bar" "$pct" "$done" "$total" "$pending"
+}
+
 # Detect a REAL usage/rate/session limit. Prefer structured stream-json signals
 # (absent from normal business content). Claude Code emits e.g.:
 #   {"type":"rate_limit_event","rate_limit_info":{"status":"rejected","resetsAt":…}}
@@ -213,6 +247,7 @@ echo "  Plans   : folders named '$PLANS_DIRNAME' → $(list_plans_dirs | wc -l |
 echo "  Model   : $MODEL   Effort: $EFFORT   Permissions: $PERMISSION_MODE"
 echo "  Session : $([[ "$FRESH" == "1" ]] && echo "FRESH (no --continue)" || echo "continue previous")"
 echo "  Logs    : $LOGDIR"
+render_progress
 
 stall=0
 use_continue=1
@@ -233,6 +268,7 @@ for ((i = 1; i <= MAX_ITER; i++)); do
   LOG="$LOGDIR/iter-$(printf '%03d' "$i")-$TS.log"
   echo ""
   echo "=== Iteration $i / $MAX_ITER — $TS — boxes left: $current ==="
+  render_progress
 
   continue_args=()
   if [[ "$use_continue" == "1" ]]; then
