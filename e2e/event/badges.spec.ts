@@ -8,7 +8,6 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
@@ -139,7 +138,7 @@ test.describe("Event — Badges", () => {
       categoryId,
       status: "APPROVED",
     });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/badges/${reg.id}`);
     await expect(page.getByRole("link", { name: /voir l'inscription/i })).toBeVisible();
@@ -159,7 +158,7 @@ test.describe("Event — Badges", () => {
       categoryId,
       status: "APPROVED",
     });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     // /badges/print est un apercu PDF : pas de bouton d'action.
     const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id}`);
@@ -171,7 +170,7 @@ test.describe("Event — Badges", () => {
   test("Etat vide : aucun badge a imprimer", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "bdg-empty" });
     const admin = await makeEventAdminUser({ scope: "bdg-empty", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/badges`);
     await expect(page.getByText(/aucun badge/i)).toBeVisible();

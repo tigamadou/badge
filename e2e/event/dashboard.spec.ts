@@ -9,7 +9,7 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 
 // Page Tableau de bord evenement — /event/[eventId]
 // Accessible a tous les roles event, mais le SHELL differe : ADMIN/STAFF voient la
@@ -24,7 +24,7 @@ test.describe("Event — Tableau de bord", () => {
   test("ADMIN voit dashboard complet avec KPI", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "dash-admin" });
     const admin = await makeEventAdminUser({ scope: "dash-admin", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
@@ -43,7 +43,7 @@ test.describe("Event — Tableau de bord", () => {
       eventId,
       role: "OPERATOR",
     });
-    await loginAs(page, operator);
+    await loginAndEnter(page, operator, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByRole("heading", { name: /tableau de bord opérateur/i })).toBeVisible();
@@ -61,7 +61,7 @@ test.describe("Event — Tableau de bord", () => {
       eventId,
       role: "PRINTER",
     });
-    await loginAs(page, printer);
+    await loginAndEnter(page, printer, { kind: "event", id: eventId });
 
     // v4 Bloc D : le membre PRINTER (event-only, sans role org) atteint bien son
     // evenement (plus de redirect cascade). Il obtient le shell dedie PRINTER,
@@ -86,7 +86,7 @@ test.describe("Event — Tableau de bord", () => {
       eventId,
       role: "VIEWER",
     });
-    await loginAs(page, viewer);
+    await loginAndEnter(page, viewer, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
@@ -102,7 +102,7 @@ test.describe("Event — Tableau de bord", () => {
   test("Etat vide : aucune inscription", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "dash-empty" });
     const admin = await makeEventAdminUser({ scope: "dash-empty", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/aucune inscription pour le moment/i)).toBeVisible();
@@ -129,7 +129,7 @@ test.describe("Event — Tableau de bord", () => {
       });
     }
     const admin = await makeEventAdminUser({ scope: "dash-quota", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/quota d'inscriptions dépasse 80/i)).toBeVisible();
@@ -138,7 +138,7 @@ test.describe("Event — Tableau de bord", () => {
   test("Quota sous le seuil : pas de banniere", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "dash-noquota" });
     const admin = await makeEventAdminUser({ scope: "dash-noquota", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/quota d'inscriptions dépasse 80/i)).toHaveCount(0);
@@ -160,7 +160,7 @@ test.describe("Event — Tableau de bord", () => {
       status: "PENDING",
     });
     const admin = await makeEventAdminUser({ scope: "dash-nav", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await page.getByRole("link", { name: /tout voir/i }).first().click();
