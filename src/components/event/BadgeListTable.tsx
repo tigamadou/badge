@@ -11,7 +11,6 @@ type Row = {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
   badgePrinted: boolean;
   allAccessGranted: boolean;
   category: { name: string; color: string; number: number };
@@ -27,7 +26,10 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
 
   async function load() {
     setBusy(true);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations?status=APPROVED&limit=100`);
+    // Endpoint badges dedie : garde par la permission badge.print (accessible au
+    // PRINTER, contrairement a /registrations garde par minRole OPERATOR) et DTO
+    // minimal (pas d'email ni de structure).
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/badges`);
     const json = await res.json();
     let r: Row[] = json.registrations ?? [];
     if (filter === "printed") r = r.filter((x) => x.badgePrinted);

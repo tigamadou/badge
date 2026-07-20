@@ -23,25 +23,14 @@ async function getPlatformBadgeTemplateId(): Promise<{ badgeTemplateId: string }
   return platform;
 }
 
+// Garde par la permission atomique `badge.print` (cf. matrice multi-tenancy-rbac.md).
+// Auparavant `minRole: "VIEWER"` verrouillait en amont et rejetait un PRINTER pur
+// avant meme le check de permission — la hierarchie de roles ne satisfait jamais
+// PRINTER. La permission est la source de verite.
 export const GET = withEventAuth(
-  { minRole: "VIEWER", allowArchived: true },
-  async (_req, { orgId: _orgId, eventId, session }, extra) => {
+  { permission: "badge.print", allowArchived: true },
+  async (_req, { orgId: _orgId, eventId }, extra) => {
     const { badgeId } = (await extra.params) as Params;
-
-    // Permission atomique : badge.print (cf. matrice multi-tenancy-rbac.md).
-    // VIEWER suffit pour le decodage de la route ; on rejette ensuite si la
-    // permission badge.print n'est pas satisfaite.
-    const { hasEventPermission } = await import("@/lib/auth-helpers");
-    const { loadUserContext } = await import("@/lib/user-context");
-    // withEventAuth garantit deja session valide + event existant.
-    const ctx = (await loadUserContext(session.user.id))!;
-    const event0 = await prisma.event.findUniqueOrThrow({
-      where: { id: eventId },
-      select: { orgId: true },
-    });
-    if (!hasEventPermission(ctx, eventId, event0.orgId, "badge.print")) {
-      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
-    }
 
     const registration = await prisma.registration.findUnique({
       where: { id: badgeId },

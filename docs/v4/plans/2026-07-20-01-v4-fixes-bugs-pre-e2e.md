@@ -39,7 +39,7 @@
 | Task | Bug | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | verify-email : self-fetch SSR -> helper direct | [x] | 2026-07-20 | Helper `consumeEmailVerifyToken` + page sans self-fetch + route deleguee. Durcissement `blocked`. 1234 vitest verts, 7/7 e2e auth-register (2 ex-fixme actifs). |
-| 2 | PRINTER : endpoint badges dedie + garde par permission | [ ] | | |
+| 2 | PRINTER : endpoint badges dedie + garde par permission | [x] | 2026-07-20 | Mode `permission` sur `withEventAuth` ; endpoint `GET /badges` (DTO minimal, sans email/structure) ; `badges/[badgeId]` et `registrations/print` gardes par `badge.print` ; client repointe. 26/26 vitest cibles, 6/6 e2e badges-print (PRINTER pur 200). Contrat 403 : `FORBIDDEN` -> `EVENT_FORBIDDEN` (code standard withEventAuth, aucun consommateur client). |
 | 3 | /badge/[id] : suppression de la page orpheline | [ ] | | |
 | 4 | Verification finale + MAJ du plan E2E + doc | [ ] | | |
 
@@ -219,7 +219,7 @@ return NextResponse.json({ ok: true, alreadyVerified: r.status === "already-veri
 - Produces (endpoint) : `GET /api/org/[orgId]/events/[eventId]/badges` -> `{ registrations: BadgeRow[] }` avec `BadgeRow = { id, firstName, lastName, badgePrinted, allAccessGranted, category: { name, color, number } }` (**sans email ni structure** — moindre privilege).
 - Produces (garde) : `withEventAuth({ permission: "badge.print" }, handler)` en plus de `withEventAuth({ minRole })`.
 
-- [ ] **Step 1 : Ajouter le mode `permission` a `withEventAuth`.** `src/lib/with-event-auth.ts` :
+- [x] **Step 1 : Ajouter le mode `permission` a `withEventAuth`.** `src/lib/with-event-auth.ts` :
 
 ```ts
 import { AuthError, requireEventRole, requireEventPermission, getEffectiveEventRole } from "@/lib/auth-guards";
@@ -254,7 +254,7 @@ try {
 
 > Verifier la signature reelle de `requireEventPermission` dans `src/lib/auth-guards.ts` (le CLAUDE.md la liste parmi les helpers). Si elle prend `(userId, eventId, permission)` et throw `AuthError` comme `requireEventRole`, l'usage ci-dessus est direct ; sinon l'adapter (ex. charger le contexte + `hasEventPermission`).
 
-- [ ] **Step 2 : Ecrire le test d'integration de l'endpoint badges (echoue).** `.../badges/__tests__/route.test.ts` (harness d'integration du repo ; vraie MySQL) : un **PRINTER pur** (event membership PRINTER, sans org membership) obtient **200** sur `GET .../badges` avec un DTO **sans email** ; un **VIEWER** obtient **403** ; le DTO ne contient que les APPROVED.
+- [x] **Step 2 : Ecrire le test d'integration de l'endpoint badges (echoue).** `.../badges/__tests__/route.test.ts` (harness d'integration du repo ; vraie MySQL) : un **PRINTER pur** (event membership PRINTER, sans org membership) obtient **200** sur `GET .../badges` avec un DTO **sans email** ; un **VIEWER** obtient **403** ; le DTO ne contient que les APPROVED.
 
 ```ts
 // golden : PRINTER pur -> 200, liste APPROVED, DTO minimal (pas d'email)
@@ -262,9 +262,9 @@ try {
 // (adapter seedEvent/seedEventMember/callRoute au harness d'integration voisin)
 ```
 
-- [ ] **Step 3 : Lancer, verifier l'echec.** Run : `make test -- badges/__tests__/route.test.ts` — Expected : FAIL (route absente).
+- [x] **Step 3 : Lancer, verifier l'echec.** Run : `make test -- badges/__tests__/route.test.ts` — Expected : FAIL (route absente).
 
-- [ ] **Step 4 : Creer l'endpoint dedie.** `.../badges/route.ts` :
+- [x] **Step 4 : Creer l'endpoint dedie.** `.../badges/route.ts` :
 
 ```ts
 import { NextResponse } from "next/server";
@@ -300,21 +300,21 @@ export const GET = withEventAuth({ permission: "badge.print", allowArchived: tru
 
 > Confirmer les noms de colonnes snapshot dans `prisma/schema.prisma` (le rapport cite `snapshotFirstName`/`snapshotLastName`). Pas de `logActivity` (lecture pour impression, pas un scan).
 
-- [ ] **Step 5 : Corriger les deux routes badges existantes.**
+- [x] **Step 5 : Corriger les deux routes badges existantes.**
   - `.../badges/[badgeId]/route.tsx` (L26-27) : passer de `withEventAuth({ minRole: "VIEWER" })` a `withEventAuth({ permission: "badge.print" })`. Retirer le double-verrou : le check `hasEventPermission(..., "badge.print")` interne (L42-44) devient redondant avec la garde — le garder OU le retirer, mais ne plus bloquer par `minRole VIEWER` en amont.
   - `.../registrations/print/route.ts` : passer la garde a `withEventAuth({ permission: "badge.print" })`.
 
-- [ ] **Step 6 : Pointer le client sur le nouvel endpoint.** `src/components/event/BadgeListTable.tsx` :
+- [x] **Step 6 : Pointer le client sur le nouvel endpoint.** `src/components/event/BadgeListTable.tsx` :
   - L30 : `fetch(`/api/org/${orgId}/events/${eventId}/badges`)` (au lieu de `registrations?status=APPROVED&limit=100`).
   - Type `Row` (L10-18) : **retirer `email`** (plus renvoye ; verifier qu'il n'est pas affiche/utilise ailleurs dans le composant, sinon adapter).
 
-- [ ] **Step 7 : Inverser le test E2E.** `e2e/event/badges-print.spec.ts` (L53-81) : le PRINTER pur doit desormais obtenir **200** sur `GET .../badges` (et le PDF) ; retirer les notes « discrepance » (L16-23, L79) et le commentaire « requireEventRole VIEWER rejette PRINTER ».
+- [x] **Step 7 : Inverser le test E2E.** `e2e/event/badges-print.spec.ts` (L53-81) : le PRINTER pur doit desormais obtenir **200** sur `GET .../badges` (et le PDF) ; retirer les notes « discrepance » (L16-23, L79) et le commentaire « requireEventRole VIEWER rejette PRINTER ».
 
-- [ ] **Step 8 : Lancer le test d'integration + E2E.** Run : `make test -- badges/__tests__/route.test.ts` — Expected : PASS. Puis `... yarn playwright test e2e/event/badges-print.spec.ts` — Expected : PASS (PRINTER 200).
+- [x] **Step 8 : Lancer le test d'integration + E2E.** Run : `make test -- badges/__tests__/route.test.ts` — Expected : PASS. Puis `... yarn playwright test e2e/event/badges-print.spec.ts` — Expected : PASS (PRINTER 200).
 
-- [ ] **Step 9 : Verifier globalement.** Run : `make lint && make typecheck && make test`. Verifier qu'aucune autre route ne regressait (les autres appels a `withEventAuth({ minRole })` restent valides — `minRole` est desormais optionnel mais toujours supporte).
+- [x] **Step 9 : Verifier globalement.** Run : `make lint && make typecheck && make test`. Verifier qu'aucune autre route ne regressait (les autres appels a `withEventAuth({ minRole })` restent valides — `minRole` est desormais optionnel mais toujours supporte).
 
-- [ ] **Step 10 : Verification navigateur.** Connecter un utilisateur **PRINTER pur** sur un event : `https://badge.local/event/<id>/badges` affiche la liste des badges (plus de liste vide silencieuse), « Marquer imprimes » et l'apercu PDF fonctionnent.
+- [x] **Step 10 : Verification navigateur.** Connecter un utilisateur **PRINTER pur** sur un event : `https://badge.local/event/<id>/badges` affiche la liste des badges (plus de liste vide silencieuse), « Marquer imprimes » et l'apercu PDF fonctionnent.
 
 - [ ] **Step 11 : Commit** (si demande) : `fix(v4): acces PRINTER aux badges via permission badge.print (endpoint dedie)`.
 

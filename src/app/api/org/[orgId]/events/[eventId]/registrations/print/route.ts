@@ -7,7 +7,9 @@ import { sendBadgePrintedNotification } from "@/lib/mail";
 
 const schema = z.object({ ids: z.array(z.string()).min(1).max(500) });
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
+// Marquage "imprime" : garde par la permission `badge.print` (inclut PRINTER),
+// et non par la hierarchie de roles qui exclurait le role dont c'est le metier.
+export const POST = withEventAuth({ permission: "badge.print" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) {

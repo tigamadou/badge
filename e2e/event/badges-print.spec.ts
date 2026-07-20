@@ -13,14 +13,10 @@ import { loginAs } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
 import { expectPdfResponse } from "../helpers/pdf";
 
-// Notes (cf. rapport T24) :
-// - La route GET /badges/[badgeId] declare minRole: "VIEWER" puis check
-//   hasEventPermission badge.print. Or `requireEventRole(userId, eventId, "VIEWER")`
-//   REFUSE un PRINTER pur (hierarchie partielle). Resultat : PRINTER renvoie 403
-//   avant meme d'atteindre le check de permission badge.print. On utilise donc
-//   ADMIN pour les telechargements PDF en E2E.
-// - Les routes /registrations/print (lot) et /registrations/[regId]/print
-//   exigent minRole: "ADMIN" -- pas PRINTER. Idem, on utilise ADMIN.
+// Notes : le parcours badges (liste, PDF, marquage imprime) est garde par la
+// permission `badge.print` (ADMIN, OPERATOR, PRINTER) et non par la hierarchie
+// minRole, qui ne satisfait jamais un PRINTER pur. La liste passe par l'endpoint
+// dedie GET /badges (DTO minimal, sans email ni structure).
 test.describe("T24 Badges print + PDF + template cascade", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
@@ -50,7 +46,7 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
     expect(res.headers()["x-template-id"]).toBeTruthy();
   });
 
-  test("PRINTER pur (sans org membership) est REFUSE sur GET /badges (cf. note discrepance)", async ({
+  test("PRINTER pur (sans org membership) accede a la liste et au PDF (badge.print)", async ({
     page,
   }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "pdf-printer" });
@@ -73,11 +69,19 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
     });
 
     await loginAs(page, printer);
+
+    // Liste des badges : endpoint dedie garde par badge.print, DTO minimal.
+    const list = await page.request.get(`/api/org/${orgId}/events/${eventId}/badges`);
+    expect(list.status()).toBe(200);
+    const json = await list.json();
+    expect(json.registrations.some((r: { id: string }) => r.id === reg.id)).toBe(true);
+    expect(json.registrations[0]).not.toHaveProperty("email");
+
+    // PDF individuel : meme permission.
     const res = await page.request.get(
       `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
     );
-    // requireEventRole VIEWER rejette PRINTER (hierarchie partielle).
-    expect(res.status()).toBe(403);
+    expect(res.status()).toBe(200);
   });
 
   test("ADMIN marque une registration APPROVED comme imprimee (POST /registrations/print)", async ({
