@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { slugify } from "@/lib/slugify";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
@@ -59,17 +60,6 @@ export const GET = withStaffAuth(async (req) => {
 // =====================================================
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function slugifyName(name: string): string {
-  const slug = name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-  return slug || "org";
-}
 
 async function nextAvailableSlug(base: string): Promise<string> {
   let candidate = base;
@@ -135,7 +125,7 @@ export const POST = withStaffAuth(
       ownerName,
     } = parsed.data;
 
-    const baseSlug = slug ?? slugifyName(name);
+    const baseSlug = slug ?? slugify(name);
     const finalSlug = await nextAvailableSlug(baseSlug);
 
     const result = await prisma.$transaction(async (tx) => {

@@ -1,13 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { slugify } from "@/lib/slugify";
 
+// Delegue au helper partage. Longueur large et fallback "event" : le slug
+// d'evenement n'etait historiquement ni tronque a 60 ni replie sur "org".
 export function slugifyEvent(input: string): string {
-  return input
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-");
+  return slugify(input, { maxLength: 200, fallback: "event" });
 }
 
 export async function uniqueEventSlug(title: string): Promise<string> {

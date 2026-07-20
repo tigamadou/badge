@@ -83,7 +83,7 @@ docs/v4/README.md                                # statuts items 2/3
 | Task | Intitule | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Periodicite : schema + helper de calcul des dates | [x] | 2026-07-20 | Enum `SubscriptionPeriod` + champ `period` nullable ; `PERIOD_DAYS` + `computeSubscriptionDates`. db-push OK (ajout non destructif). 4/4 vitest. |
-| 2 | Helper `slugify` isomorphe partage (DRY) | [ ] | | |
+| 2 | Helper `slugify` isomorphe partage (DRY) | [x] | 2026-07-20 | `src/lib/slugify.ts` pur (importable client) ; `slugify-event` delegue ; `slugifyName` local retire de la route org. 14/14 slug + 24/24 organizations. |
 | 3 | Form creation org : slug readonly + preview live | [ ] | | |
 | 4 | Attribution d'abonnement pilotee par la periode | [ ] | | |
 | 5 | Blocage de l'espace org sans abonnement actif | [ ] | | |
@@ -228,7 +228,7 @@ git commit -m "feat(v4): periodicite abonnement (enum + calcul des dates)"
   - **Pur** (aucun import Prisma/serveur) pour etre importable depuis un Client Component.
 - Consumes : `slugify-event.ts` et la route org l'appellent ; `nextAvailableSlug`/`uniqueEventSlug` (unicite via Prisma) restent cote serveur inchanges.
 
-- [ ] **Step 1 : Ecrire le test (echoue)**
+- [x] **Step 1 : Ecrire le test (echoue)**
 
 Creer `src/lib/__tests__/slugify.test.ts` :
 
@@ -257,12 +257,12 @@ describe("slugify", () => {
 });
 ```
 
-- [ ] **Step 2 : Lancer, verifier l'echec**
+- [x] **Step 2 : Lancer, verifier l'echec**
 
 Run : `make test -- src/lib/__tests__/slugify.test.ts`
 Expected : FAIL — module `@/lib/slugify` introuvable.
 
-- [ ] **Step 3 : Implementer `src/lib/slugify.ts`**
+- [x] **Step 3 : Implementer `src/lib/slugify.ts`**
 
 ```ts
 // Slugify isomorphe (client + serveur), sans dependance Prisma.
@@ -284,7 +284,7 @@ export function slugify(
 }
 ```
 
-- [ ] **Step 4 : Deleguer `slugify-event.ts`**
+- [x] **Step 4 : Deleguer `slugify-event.ts`**
 
 Dans `src/lib/slugify-event.ts`, remplacer le corps de `slugifyEvent` par une delegation (l'event n'a ni troncature ni fallback historiquement — on conserve ce comportement en passant une longueur large et un fallback vide-securise) :
 
@@ -298,7 +298,7 @@ export function slugifyEvent(input: string): string {
 
 Garder `uniqueEventSlug` inchange (il consomme `slugifyEvent`).
 
-- [ ] **Step 5 : Reutiliser dans la route org**
+- [x] **Step 5 : Reutiliser dans la route org**
 
 Dans `src/app/api/platform/organizations/route.ts` :
 - Ajouter en tete : `import { slugify } from "@/lib/slugify";`
@@ -312,19 +312,19 @@ const finalSlug = await nextAvailableSlug(baseSlug);
 
 Laisser `nextAvailableSlug` et `SLUG_RE` en place.
 
-- [ ] **Step 6 : Lancer les tests concernes + regression**
+- [x] **Step 6 : Lancer les tests concernes + regression**
 
 Run : `make test -- src/lib/__tests__/slugify.test.ts`
 Expected : PASS (5 tests).
 Run : `make test -- src/lib/__tests__/slugify-event.test.ts` (si le fichier existe)
 Expected : PASS (comportement event inchange).
 
-- [ ] **Step 7 : Typecheck**
+- [x] **Step 7 : Typecheck**
 
 Run : `make typecheck`
 Expected : succes.
 
-- [ ] **Step 8 : Commit** (si demande)
+- [x] **Step 8 : Commit** (si demande)
 
 ```bash
 git add src/lib/slugify.ts src/lib/__tests__/slugify.test.ts src/lib/slugify-event.ts src/app/api/platform/organizations/route.ts
