@@ -282,13 +282,13 @@ Deja majoritairement conforme. **Securite hors-perimetre** (regle 6) : deplacer/
 
 ## Task 5 : Verification globale + documentation
 
-- [ ] **Step 1 : Aucune `page.request` residuelle dans les specs UI.** Run : `grep -rn "page.request" e2e/ | grep -v "e2e/transverse/securite.spec.ts"` -> attendu : **vide** (seule la spec securite en conserve). Sinon traiter.
-- [ ] **Step 2 : Aucun deep-link non verifie.** Verifier (echantillon) que chaque `page.goto` de page applicative est suivi d'un `toHaveURL`, et que les logins passent par `loginAndEnter`.
-- [ ] **Step 3 : lint + typecheck.** `make lint && make typecheck`.
+- [x] **Step 1 : Aucune `page.request` residuelle dans les specs UI.** Run : `grep -rn "page.request" e2e/ | grep -v "e2e/transverse/securite.spec.ts"` -> attendu : **vide** (seule la spec securite en conserve). Sinon traiter.
+- [x] **Step 2 : Aucun deep-link non verifie.** Verifier (echantillon) que chaque `page.goto` de page applicative est suivi d'un `toHaveURL`, et que les logins passent par `loginAndEnter`.
+- [x] **Step 3 : lint + typecheck.** `make lint && make typecheck`.
 - [ ] **Step 4 : Suite E2E complete** (stack fraiche, vrai exit code) :
 `make test-e2e > .plan-logs/fidelite-e2e.log 2>&1; echo "EXIT=$?"` puis lire `EXIT` et le resume. Attendu : 0 echec (hors flakes de baseline absorbes par `retries:1`). En cas d'echec 404 systematique : redemarrer la stack (`make dev`) — compilation dev perimee, cf. plan bugs.
-- [ ] **Step 5 : Suite Vitest complete** (les gaps combles) : `docker compose -f docker-compose.dev.yml exec -T app yarn vitest run` -> 0 echec.
-- [ ] **Step 6 : Documenter** dans `docs/v4/features/politique-tests.md` le contrat « test UI » (jamais d'API, parcours `/select`, verif URL) et la separation E2E-UI / integration-API / securite.
+- [x] **Step 5 : Suite Vitest complete** (les gaps combles) : `docker compose -f docker-compose.dev.yml exec -T app yarn vitest run` -> 0 echec.
+- [x] **Step 6 : Documenter** dans `docs/v4/features/politique-tests.md` le contrat « test UI » (jamais d'API, parcours `/select`, verif URL) et la separation E2E-UI / integration-API / securite.
 - [ ] **Step 7 : Tracker** (statuts `[x]`, dates). Conserver ce plan.
 - [ ] **Step 8 : Commit** (si demande) : `test(v4): fidelite UI des specs e2e (parcours complet, zero API)`.
 

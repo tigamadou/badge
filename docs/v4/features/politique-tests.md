@@ -63,10 +63,22 @@ une **base MySQL unique** avec reset en `beforeEach`. Consequences :
   transversaux (`pages-render`, `rbac`, `interactions`) ont ete **dissous** et
   redistribues ; le residu d'entree dans l'espace vit dans un `access.spec.ts`
   par espace. Detail complet : [`e2e/README.md`](../../../e2e/README.md).
-- **UI-first, API pour l'inatteignable** : toute action disposant d'une UI se teste
-  via l'interaction reelle. On ne passe par `page.request.*` que pour ce que l'UI
-  ne peut pas produire (403 par role, 409 garde-fou, 400 validation, 413/415
-  upload) ou pour les endpoints sans surface UI.
+- **Contrat « test UI » (fidelite, plan 2026-07-20-04)** :
+  - **JAMAIS de `page.request.*` dans une spec UI.** Toute action passe par
+    l'interface (`click`/`fill`/`check`/`selectOption`/`setInputFiles`). Le seed
+    des pre-conditions via `db.ts` et les assertions via DB/Mailpit/audit restent
+    autorises.
+  - **Parcours de connexion complet** via `loginAndEnter` (`e2e/helpers/nav.ts`) :
+    si l'utilisateur a >= 2 espaces (ex. OWNER org + ADMIN event) il passe par
+    `/select` et clique la carte ; sinon redirection auto. On **verifie l'URL** a
+    chaque etape (`toHaveURL`).
+  - **Chaque action assert sa reponse** — succes (feedback UI + effet DB/mail/audit)
+    ou echec (message d'erreur UI + absence d'effet).
+  - **Gardes de role → assertion UI** (bouton masque, nav absente, redirection,
+    message). Les 403/409/validation **sans surface UI** sont deportes en
+    integration Vitest, jamais laisses en `page.request` dans une spec UI.
+  - **Hors-perimetre UI** : securite/anti-abus sans parcours (rate-limit 429,
+    cookie efface/falsifie) vivent dans `e2e/transverse/security.spec.ts`.
 - Reutiliser `e2e/helpers/` (auth, db, mailpit, pdf, audit) et `e2e/fixtures/`
   avant d'en creer de nouveaux.
 - Les tests E2E **seedent leurs propres fixtures** (via Prisma) et ne dependent pas
