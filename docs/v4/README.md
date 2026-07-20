@@ -34,6 +34,7 @@ Trois plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apr
 | Roles a la creation (item 5) | Livre |
 | Stockage MinIO/S3 (item 6) | Driver S3 livre ; securisation `/api/files` et champs upload en cours |
 | Abonnements (items 2+3) | Livre — catalogue `Plan` + `Subscription`, periodicite (30/365 j) pilotant les dates, slug org auto en lecture seule, blocage de l'espace org sans abonnement actif |
-| Couverture de tests (plan v4-02) | Unitaire lib + integration API a **100%** (gate vert) ; cibles make + CI livrees ; E2E (Phase 3) a faire |
+| Couverture de tests | Unitaire lib + integration API a **100%** (gate vert) ; cibles make + CI livrees |
+| Reorganisation E2E par page | Livre — **un fichier par page** sur les 4 espaces (org 8, event 13, platform 15, public 12, transverse 2). Les fichiers transversaux `pages-render`/`rbac`/`interactions` sont dissous. Convention : [`e2e/README.md`](../../e2e/README.md) |
 
 Voir la section `## Progression` du plan pour le detail task par task.

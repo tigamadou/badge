@@ -55,11 +55,25 @@ une **base MySQL unique** avec reset en `beforeEach`. Consequences :
 - **Perimetre** : chaque page `src/app/**/page.tsx` a au moins 1 spec de rendu + 1 spec
   par interaction utilisateur (formulaire, bouton d'action, filtre, navigation), y
   compris etats vides et erreurs 403/404 en navigation.
-- **Convention** : 1 fichier spec par page ou groupe coherent, dans
-  `e2e/{public,account,org,event,platform,transverse}/`. Reutiliser `e2e/helpers/`
-  (auth, db, mailpit, pdf, audit) et `e2e/fixtures/` avant d'en creer de nouveaux.
+- **Convention : UN FICHIER PAR PAGE**, nomme d'apres son segment de route —
+  `e2e/<espace>/<page>.spec.ts` (espaces : `org`, `event`, `platform`, `public`,
+  + `transverse` pour ce qui traverse tous les layouts). Chaque fichier est
+  **auto-suffisant** : rendu, actions UI, gardes de role (positives ET negatives),
+  garde-fous metier et etats limites de SA page y vivent. Les anciens fichiers
+  transversaux (`pages-render`, `rbac`, `interactions`) ont ete **dissous** et
+  redistribues ; le residu d'entree dans l'espace vit dans un `access.spec.ts`
+  par espace. Detail complet : [`e2e/README.md`](../../../e2e/README.md).
+- **UI-first, API pour l'inatteignable** : toute action disposant d'une UI se teste
+  via l'interaction reelle. On ne passe par `page.request.*` que pour ce que l'UI
+  ne peut pas produire (403 par role, 409 garde-fou, 400 validation, 413/415
+  upload) ou pour les endpoints sans surface UI.
+- Reutiliser `e2e/helpers/` (auth, db, mailpit, pdf, audit) et `e2e/fixtures/`
+  avant d'en creer de nouveaux.
 - Les tests E2E **seedent leurs propres fixtures** (via Prisma) et ne dependent pas
   du seed global.
+- **Isolation de l'etat global** : une spec qui mute un etat partage (ex.
+  `PlatformSettings`) doit en prendre un snapshot et le restaurer dans `afterAll`,
+  sinon elle casse les specs suivantes.
 
 ## Matrice RBAC (frontieres a tester)
 

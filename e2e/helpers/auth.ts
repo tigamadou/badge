@@ -21,7 +21,9 @@ export async function loginAs(
   await page.getByLabel(/e-?mail/i).fill(user.email);
   await page.getByLabel("Mot de passe").fill(user.password);
   await page.getByRole("button", { name: /se connecter/i }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 8000 });
+  // 20 s (au lieu de 8) : sous la charge d'un run complet sequentiel (workers=1),
+  // le POST callback NextAuth + la redirection peuvent depasser 8 s -> flakes.
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20000 });
 }
 
 // Cree un staff avec le role demande, login dans la page, et retourne l'user.

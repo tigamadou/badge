@@ -42,6 +42,10 @@
 2. **Verify-email golden path** — le self-fetch SSR est remplace par le helper `consumeEmailVerifyToken()` appele directement (pattern `setup-password`). Les deux `test.fixme` de `e2e/public/auth-register.spec.ts` sont **actifs**. **-> Task 4.3 : plus de `fixme` a prevoir.**
 3. **PRINTER sur `/badges`** — le parcours badges est garde par la permission `badge.print` (et non `minRole`), avec un **endpoint dedie `GET .../badges`** a DTO minimal. Un PRINTER pur obtient **200**. **-> Task 2.6 : la « discrepance » est levee ; tester la liste via le nouvel endpoint, et noter que le 403 renvoie desormais `EVENT_FORBIDDEN`.**
 
+### Bug decouvert pendant l'execution — NON corrige (fix separe requis)
+
+4. **Liste des inscriptions event — colonnes Nom/E-mail vides.** La route `GET /api/org/[orgId]/events/[eventId]/registrations` renvoie `snapshotFirstName` / `snapshotLastName` / `snapshotEmail`, mais `src/components/event/RegistrationTable.tsx` lit `r.firstName` / `r.lastName` / `r.email` -> les colonnes Nom et E-mail s'affichent vides dans l'UI. Test laisse en `test.fixme` (`e2e/event/registrations.spec.ts:57`) conformement a la regle « les tests ne modifient pas `src/` ». **A corriger dans un plan/fix separe** (mapper `snapshot*` -> `firstName/lastName/email` dans le DTO de la route ou dans le composant).
+
 ## Definition of coverage (DoD d'un fichier `<page>.spec.ts`)
 
 Une page-spec est « complete » quand elle contient, pour sa page :
@@ -108,7 +112,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 4.10 | public/event-register (+ success) | [x] | 2026-07-20 | `e2e/public/event-register.spec.ts` : CTA, inscription, profil incomplet, deja inscrit, event archive, EMAIL_BLOCKED, PARTICIPANT_LIMIT, + page de SUCCES et DOCUMENT_BLOCKED (lacunes comblees). 9/9 verts. |
 | 4.11 | public/badge-verify | [x] | 2026-07-20 | `badge-public.spec.ts` renomme `badge-verify.spec.ts` : /verify/[badgeId] uniquement (la page /badge/[id] a ete supprimee par le plan 01). Plus aucun skip. |
 | 4.12 | public/misc (styleguide) + security transverse | [x] | 2026-07-20 | `misc.spec.ts` reduit au styleguide ; `security.spec.ts` deplace en `e2e/transverse/` (cookies) apres migration du XSS vers account et du rate-limit vers register. Les 2 skips vides (limitations v2) remplaces par des notes. 78 passed / 0 skip. |
-| 5 | Nettoyage final, verification globale, doc | [ ] | | |
+| 5 | Nettoyage final, verification globale, doc | [~] | 2026-07-20 | Anti-perte OK (256->364 tests), fichiers dissous supprimes, lint+typecheck verts, doc a jour, 4e bug (RegistrationTable snapshot) trace en fixme. Suite complete : 361 passed / 8 flakes de login (passent en isolation 49/49) -> durcissement applique (loginAs 20s + retries:1), revalidation run complet a refaire. |
 
 ---
 

@@ -21,7 +21,10 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // 1 retry meme en local : absorbe les flakes residuels de timing (login lent
+  // sous charge du run complet sequentiel). Un test qui passe au retry n'est pas
+  // une regression.
+  retries: 1,
   workers: 1,
   reporter: process.env.CI ? "github" : "list",
   use: {
