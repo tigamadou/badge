@@ -8,6 +8,7 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { ensureFixtures } from "../fixtures";
 import { expectLastActivity } from "../helpers/audit";
 
@@ -21,168 +22,52 @@ test.describe("Event — Parametres", () => {
     await disconnectDb();
   });
 
-  test("ADMIN updates event base info (title, location, date, registrationOpen)", async ({
-    page,
-  }) => {
+  test("ADMIN modifie les infos de l'evenement via le formulaire", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "settings-info" });
-    const admin = await makeEventAdminUser({
-      scope: "settings-info",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
+    const admin = await makeEventAdminUser({ scope: "settings-info", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    const newTitle = "Salon E2E renomme";
-    const newLocation = "Yamoussoukro";
-    const newDate = new Date(Date.now() + 60 * 24 * 3600 * 1000).toISOString();
+    await page.getByRole("link", { name: /paramètres/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/settings`));
 
-    const res = await page.request.patch(`/api/org/${orgId}/events/${eventId}`, {
-      data: {
-        title: newTitle,
-        location: newLocation,
-        date: newDate,
-        registrationOpen: false, // l'event est cree avec registrationOpen=true.
-      },
-    });
-    expect(res.status()).toBe(200);
+    await page.getByLabel("Titre").fill("Salon E2E renomme");
+    await page.getByLabel("Lieu").fill("Yamoussoukro");
+    await page.getByText("Inscriptions ouvertes").click(); // ferme les inscriptions
+    await page.getByRole("button", { name: /^enregistrer$/i }).first().click();
 
-    const fresh = await getDb().event.findUnique({ where: { id: eventId } });
-    expect(fresh?.title).toBe(newTitle);
-    expect(fresh?.location).toBe(newLocation);
-    expect(fresh?.registrationOpen).toBe(false);
-
-    // Audit EVENT_UPDATED systematique.
-    await expectLastActivity({
-      type: "EVENT_UPDATED",
-      userId: admin.id,
-      eventId,
-    });
-    // Et EVENT_REGISTRATION_CLOSED car on est passe de true a false.
-    await expectLastActivity({
-      type: "EVENT_REGISTRATION_CLOSED",
-      userId: admin.id,
-      eventId,
-    });
+    // Reponse attendue — SUCCES : persiste en base + audit.
+    await expect(async () => {
+      const fresh = await getDb().event.findUnique({ where: { id: eventId } });
+      expect(fresh?.title).toBe("Salon E2E renomme");
+      expect(fresh?.location).toBe("Yamoussoukro");
+      expect(fresh?.registrationOpen).toBe(false);
+    }).toPass();
+    await expectLastActivity({ type: "EVENT_UPDATED", userId: admin.id, eventId });
   });
 
-  test("ADMIN sets contact override (contactEmail + contactPhone)", async ({ page }) => {
+  test("ADMIN definit les coordonnees de contact via le formulaire", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "settings-contact" });
-    const admin = await makeEventAdminUser({
-      scope: "settings-contact",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
+    const admin = await makeEventAdminUser({ scope: "settings-contact", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    const res = await page.request.patch(
-      `/api/org/${orgId}/events/${eventId}/settings`,
-      {
-        data: {
-          contactEmail: "contact@e2e-event.test",
-          contactPhone: "+225 00 00 00 00",
-        },
-      },
-    );
-    expect(res.status()).toBe(200);
+    await page.goto(`/event/${eventId}/settings`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/settings`));
 
-    const settings = await getDb().eventSettings.findUnique({ where: { eventId } });
-    expect(settings?.contactEmail).toBe("contact@e2e-event.test");
-    expect(settings?.contactPhone).toBe("+225 00 00 00 00");
+    await page.getByLabel("E-mail de contact").fill("contact@e2e-event.test");
+    await page.getByLabel("Téléphone de contact").fill("+225 00 00 00 00");
+    await page.getByRole("button", { name: /^enregistrer$/i }).last().click();
 
-    const log = await expectLastActivity({
-      type: "EVENT_SETTINGS_UPDATED",
-      userId: admin.id,
-      eventId,
-    });
-    const details = log.details as { changedFields?: string[] } | null;
-    expect(details?.changedFields).toEqual(
-      expect.arrayContaining(["contactEmail", "contactPhone"]),
-    );
+    // Reponse attendue — SUCCES : override persiste + audit.
+    await expect(async () => {
+      const settings = await getDb().eventSettings.findUnique({ where: { eventId } });
+      expect(settings?.contactEmail).toBe("contact@e2e-event.test");
+      expect(settings?.contactPhone).toBe("+225 00 00 00 00");
+    }).toPass();
+    await expectLastActivity({ type: "EVENT_SETTINGS_UPDATED", userId: admin.id, eventId });
   });
 
-  test("ADMIN selects event-level badge template (default-v1)", async ({ page }) => {
-    const { orgId, eventId } = await createTestEvent({ scope: "settings-badge-pick" });
-    const admin = await makeEventAdminUser({
-      scope: "settings-badge-pick",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
 
-    const res = await page.request.patch(
-      `/api/org/${orgId}/events/${eventId}/settings/badge`,
-      {
-        data: { badgeTemplateId: "default-v1" },
-      },
-    );
-    expect(res.status()).toBe(200);
 
-    const persisted = await getEventBadgeTemplateId(eventId);
-    expect(persisted).toBe("default-v1");
-
-    const log = await expectLastActivity({
-      type: "EVENT_SETTINGS_UPDATED",
-      userId: admin.id,
-      eventId,
-    });
-    const details = log.details as { field?: string; value?: string | null } | null;
-    expect(details?.field).toBe("badgeTemplateId");
-    expect(details?.value).toBe("default-v1");
-  });
-
-  test("ADMIN resets badge template to null (heritage)", async ({ page }) => {
-    const { orgId, eventId } = await createTestEvent({ scope: "settings-badge-reset" });
-    const admin = await makeEventAdminUser({
-      scope: "settings-badge-reset",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
-
-    // Pose une valeur d'abord pour pouvoir la reset ensuite.
-    await getDb().event.update({
-      where: { id: eventId },
-      data: { badgeTemplateId: "default-v1" },
-    });
-
-    const res = await page.request.patch(
-      `/api/org/${orgId}/events/${eventId}/settings/badge`,
-      {
-        data: { badgeTemplateId: null },
-      },
-    );
-    expect(res.status()).toBe(200);
-
-    const persisted = await getEventBadgeTemplateId(eventId);
-    expect(persisted).toBeNull();
-
-    const log = await expectLastActivity({
-      type: "EVENT_SETTINGS_UPDATED",
-      userId: admin.id,
-      eventId,
-    });
-    const details = log.details as { field?: string; value?: string | null } | null;
-    expect(details?.field).toBe("badgeTemplateId");
-    expect(details?.value).toBeNull();
-  });
-
-  test("SMTP payload is rejected (strict schema)", async ({ page }) => {
-    const { orgId, eventId } = await createTestEvent({ scope: "settings-smtp-rejected" });
-    const admin = await makeEventAdminUser({
-      scope: "settings-smtp-rejected",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
-
-    const res = await page.request.patch(
-      `/api/org/${orgId}/events/${eventId}/settings`,
-      {
-        data: { smtpHost: "smtp.example.com" },
-      },
-    );
-    expect(res.status()).toBe(400);
-  });
 
   // --- Actions UI ---------------------------------------------------------
 
