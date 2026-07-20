@@ -82,7 +82,7 @@ docs/v4/README.md                                # statuts items 2/3
 
 | Task | Intitule | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Periodicite : schema + helper de calcul des dates | [ ] | | |
+| 1 | Periodicite : schema + helper de calcul des dates | [x] | 2026-07-20 | Enum `SubscriptionPeriod` + champ `period` nullable ; `PERIOD_DAYS` + `computeSubscriptionDates`. db-push OK (ajout non destructif). 4/4 vitest. |
 | 2 | Helper `slugify` isomorphe partage (DRY) | [ ] | | |
 | 3 | Form creation org : slug readonly + preview live | [ ] | | |
 | 4 | Attribution d'abonnement pilotee par la periode | [ ] | | |
@@ -106,7 +106,7 @@ docs/v4/README.md                                # statuts items 2/3
   - `export const PERIOD_DAYS: Record<SubscriptionPeriod, number>` = `{ MONTHLY: 30, ANNUAL: 365 }`
   - `export function computeSubscriptionDates(period: SubscriptionPeriod, from?: Date): { startDate: Date; endDate: Date }`
 
-- [ ] **Step 1 : Ecrire le test de calcul des dates (echoue)**
+- [x] **Step 1 : Ecrire le test de calcul des dates (echoue)**
 
 Creer `src/lib/__tests__/subscription-period.test.ts` :
 
@@ -139,12 +139,12 @@ describe("computeSubscriptionDates", () => {
 });
 ```
 
-- [ ] **Step 2 : Lancer le test, verifier l'echec**
+- [x] **Step 2 : Lancer le test, verifier l'echec**
 
 Run : `make test -- src/lib/__tests__/subscription-period.test.ts`
 Expected : FAIL — `computeSubscriptionDates`/`PERIOD_DAYS` non exportes.
 
-- [ ] **Step 3 : Modifier le schema Prisma**
+- [x] **Step 3 : Modifier le schema Prisma**
 
 Dans `prisma/schema.prisma`, apres l'enum `SubscriptionStatus` (L457-461), ajouter :
 
@@ -163,12 +163,12 @@ Dans `model Subscription` (apres `endDate DateTime?`, L471), ajouter :
   period    SubscriptionPeriod?
 ```
 
-- [ ] **Step 4 : Pousser le schema en base de dev**
+- [x] **Step 4 : Pousser le schema en base de dev**
 
 Run : `make db-push`
 Expected : « Your database is now in sync with your Prisma schema » + client regenere. (Action non destructive : ajout de colonne nullable + enum.)
 
-- [ ] **Step 5 : Implementer le helper**
+- [x] **Step 5 : Implementer le helper**
 
 Dans `src/lib/subscription.ts`, en tete de module (apres les imports), ajouter :
 
@@ -194,17 +194,17 @@ export function computeSubscriptionDates(
 }
 ```
 
-- [ ] **Step 6 : Lancer le test, verifier le succes**
+- [x] **Step 6 : Lancer le test, verifier le succes**
 
 Run : `make test -- src/lib/__tests__/subscription-period.test.ts`
 Expected : PASS (4 tests).
 
-- [ ] **Step 7 : Typecheck**
+- [x] **Step 7 : Typecheck**
 
 Run : `make typecheck`
 Expected : succes (le client Prisma regenere expose `SubscriptionPeriod`).
 
-- [ ] **Step 8 : Commit** (uniquement si l'utilisateur le demande)
+- [x] **Step 8 : Commit** (uniquement si l'utilisateur le demande)
 
 ```bash
 git add prisma/schema.prisma src/lib/subscription.ts src/lib/__tests__/subscription-period.test.ts

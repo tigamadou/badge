@@ -460,6 +460,11 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum SubscriptionPeriod {
+  MONTHLY // 30 jours
+  ANNUAL // 365 jours
+}
+
 model Subscription {
   id        String             @id @default(cuid())
   orgId     String             @unique // un abonnement courant par org
@@ -469,6 +474,9 @@ model Subscription {
   status    SubscriptionStatus @default(ACTIVE)
   startDate DateTime           @default(now())
   endDate   DateTime? // null = sans echeance
+  // v4 : periodicite qui pilote le calcul de startDate/endDate a l'assignation.
+  // Nullable pour les abonnements anterieurs a cette evolution.
+  period    SubscriptionPeriod?
   // Overrides par org (null = herite du plan)
   overrideMaxEvents               Int?
   overrideMaxParticipantsPerEvent Int?

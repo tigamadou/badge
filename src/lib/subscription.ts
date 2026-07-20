@@ -1,4 +1,23 @@
 import { prisma } from "@/lib/prisma";
+import type { SubscriptionPeriod } from "@prisma/client";
+
+// Duree d'un abonnement selon sa periode (jours calendaires).
+export const PERIOD_DAYS: Record<SubscriptionPeriod, number> = {
+  MONTHLY: 30,
+  ANNUAL: 365,
+};
+
+// Calcule les bornes d'un abonnement a partir de sa periode. `startDate` par
+// defaut = maintenant ; `endDate` = startDate + duree de la periode.
+export function computeSubscriptionDates(
+  period: SubscriptionPeriod,
+  from: Date = new Date(),
+): { startDate: Date; endDate: Date } {
+  const startDate = new Date(from);
+  const endDate = new Date(from);
+  endDate.setUTCDate(endDate.getUTCDate() + PERIOD_DAYS[period]);
+  return { startDate, endDate };
+}
 
 export type SubscriptionErrorCode =
   | "NO_SUBSCRIPTION"
