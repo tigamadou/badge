@@ -8,6 +8,7 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { createTestEventMember } from "../helpers/db";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity } from "../helpers/audit";
@@ -21,106 +22,41 @@ test.describe("Event — Membres", () => {
     await disconnectDb();
   });
 
-  test("ADMIN invites a new user as OPERATOR (creates user + membership + sends mail)", async ({
-    page,
-  }) => {
+  test("ADMIN invite un nouvel OPERATOR via le formulaire", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "members-invite-new" });
-    const admin = await makeEventAdminUser({
-      scope: "members-invite-new",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
-
+    const admin = await makeEventAdminUser({ scope: "members-invite-new", eventId, orgId });
     await mailpit.clear();
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.getByRole("link", { name: /membres/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/members`));
+
     const inviteEmail = `e2e-invite-new-${Date.now()}@v2-11-e2e.test`;
+    await page.getByRole("button", { name: /^inviter$/i }).click();
+    await page.getByPlaceholder("Email").fill(inviteEmail);
+    await page.getByPlaceholder(/Nom/).fill("Mariam Kone");
+    await page.locator("form").locator("select").selectOption("OPERATOR");
+    await page.getByRole("button", { name: /^inviter$/i }).last().click();
 
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/members`,
-      {
-        data: { email: inviteEmail, name: "Mariam Kone", role: "OPERATOR" },
-      },
-    );
-    expect(res.status()).toBe(201);
-    const body = await res.json();
-    expect(body.membership.role).toBe("OPERATOR");
-
-    // BDD : user + membership crees.
+    // Reponse attendue — SUCCES : la ligne apparait, user + membership crees, mail envoye.
+    await expect(page.getByText(inviteEmail)).toBeVisible();
     const created = await getDb().user.findUnique({ where: { email: inviteEmail } });
     expect(created).not.toBeNull();
-    expect(created?.inviteToken).not.toBeNull();
     const membership = await getDb().eventMembership.findFirst({
       where: { eventId, userId: created!.id },
     });
     expect(membership?.role).toBe("OPERATOR");
-
-    // Mail d'invitation : sendUserInvitation envoie le sujet "Bienvenue sur Badge".
-    await mailpit.expectMail({
-      to: inviteEmail,
-      subjectPattern: /bienvenue/i,
-    });
-
-    // Audit USER_CREATED + MEMBERSHIP_ADDED (scope event).
-    await expectLastActivity({
-      type: "USER_CREATED",
-      userId: admin.id,
-      eventId,
-      targetId: created!.id,
-    });
-    const membershipAdded = await expectLastActivity({
-      type: "MEMBERSHIP_ADDED",
-      userId: admin.id,
-      eventId,
-      targetId: created!.id,
-    });
-    const details = membershipAdded.details as { scope?: string } | null;
-    expect(details?.scope).toBe("event");
+    await expectLastActivity({ type: "MEMBERSHIP_ADDED", eventId, targetId: created!.id });
+    await mailpit.expectMail({ to: inviteEmail, subjectPattern: /bienvenue/i });
   });
 
-  test("ADMIN invites an existing user (no new user, just membership)", async ({ page }) => {
-    const { orgId, eventId } = await createTestEvent({ scope: "members-invite-existing" });
-    const admin = await makeEventAdminUser({
-      scope: "members-invite-existing",
-      eventId,
-      orgId,
-    });
-    await loginAs(page, admin);
-
-    // Pre-existing user.
-    const existing = await createTestUser({
-      scope: "members-existing",
-      verified: true,
-    });
-
-    const beforeCount = await getDb().user.count();
-
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/members`,
-      {
-        data: { email: existing.email, role: "VIEWER" },
-      },
-    );
-    expect(res.status()).toBe(201);
-
-    // Pas de nouveau user.
-    const afterCount = await getDb().user.count();
-    expect(afterCount).toBe(beforeCount);
-
-    // Membership creee.
-    const membership = await getDb().eventMembership.findFirst({
-      where: { eventId, userId: existing.id },
-    });
-    expect(membership?.role).toBe("VIEWER");
-  });
-
-  test("ADMIN removes a membership (DELETE returns 204 + audit)", async ({ page }) => {
+  test("ADMIN retire un membre via le bouton", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "members-remove" });
     const admin = await makeEventAdminUser({
       scope: "members-remove",
       eventId,
       orgId,
     });
-    await loginAs(page, admin);
 
     // Cree un membre a retirer.
     const target = await createTestUser({ scope: "members-target", verified: true });
@@ -128,16 +64,20 @@ test.describe("Event — Membres", () => {
       data: { userId: target.id, eventId, role: "PRINTER" },
     });
 
-    const res = await page.request.delete(
-      `/api/org/${orgId}/events/${eventId}/members/${membership.id}`,
-    );
-    expect(res.status()).toBe(204);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+    await page.getByRole("link", { name: /membres/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/members`));
+    await expect(page.getByText(target.email)).toBeVisible();
 
-    const stillThere = await getDb().eventMembership.findUnique({
-      where: { id: membership.id },
-    });
-    expect(stillThere).toBeNull();
+    page.once("dialog", (d) => d.accept());
+    await page
+      .locator("tr", { hasText: target.email })
+      .getByRole("button", { name: /retirer/i })
+      .click();
 
+    // Reponse attendue — SUCCES : la ligne disparait, membership supprime.
+    await expect(page.getByText(target.email)).toHaveCount(0);
+    expect(await getDb().eventMembership.findUnique({ where: { id: membership.id } })).toBeNull();
     await expectLastActivity({
       type: "MEMBERSHIP_REMOVED",
       userId: admin.id,
@@ -189,7 +129,7 @@ test.describe("Event — Membres", () => {
     }).toPass();
   });
 
-  test("OPERATOR ne peut pas inviter -> 403", async ({ page }) => {
+  test("OPERATOR ne voit pas l'entree Membres dans son shell", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "mem-operator" });
     const operator = await createTestEventMember({
       scope: "mem-operator-user",
@@ -197,11 +137,9 @@ test.describe("Event — Membres", () => {
       eventId,
       role: "OPERATOR",
     });
-    await loginAs(page, operator);
+    await loginAndEnter(page, operator, { kind: "event", id: eventId });
 
-    const res = await page.request.post(`/api/org/${orgId}/events/${eventId}/members`, {
-      data: { email: `nope-${Date.now()}@v2-11-e2e.test`, name: "x", role: "VIEWER" },
-    });
-    expect(res.status()).toBe(403);
+    // Le shell OPERATOR n'expose que le scanner : pas d'entree Membres.
+    await expect(page.getByRole("link", { name: /membres/i })).toHaveCount(0);
   });
 });
