@@ -55,7 +55,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 1.3 | org/members | [x] | 2026-07-20 | Fait avec la Task 0 (page de reference). Fusionne rendu + 3 actions UI + etat protege + 6 gardes API. |
 | 1.4 | org/templates | [x] | 2026-07-20 | `e2e/org/templates.spec.ts` : rendu, CRUD UI (modales + confirm), etat vide, MANAGER 201 / AUDITOR 403 / lecture 200, scoping 404. Commentaire contradictoire corrige. 9/9 verts. |
 | 1.5 | org/subscription | [x] | 2026-07-20 | `e2e/org/subscription.spec.ts` : rendu (plan/statut/periode/limites), MANAGER OK, AUDITOR redirige, illimite, sans abonnement, echu. 6/6 verts. |
-| 1.6 | org/settings (+ badge) | [ ] | | |
+| 1.6 | org/settings (+ badge) | [x] | 2026-07-20 | `e2e/org/settings.spec.ts` : rendu (slug disabled), edition UI, upload logo UI (lacune comblee), selection template UI, reset heritage, UNKNOWN_TEMPLATE, SMTP 400, MANAGER voit la page mais PATCH 403, AUDITOR redirige. 12/12 verts. |
 | 1.7 | org/activity (+ detail) | [x] | 2026-07-20 | `e2e/org/activity.spec.ts` : rendu, AUDITOR page+API, etat vide, tag staff, navigation detail, scoping 404 cross-org (lacunes comblees). 7/7 verts. |
 | 1.8 | org/access + suppression transverses org | [ ] | | |
 | 2.1 | event/dashboard | [ ] | | |
