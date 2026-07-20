@@ -62,7 +62,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 2.2 | event/registrations (liste) | [ ] | | |
 | 2.3 | event/registrations-new | [ ] | | |
 | 2.4 | event/registration-detail | [ ] | | |
-| 2.5 | event/registrations-overview | [ ] | | |
+| 2.5 | event/registrations-overview | [x] | 2026-07-20 | `e2e/event/registrations-overview.spec.ts` : acces VIEWER effectif, comptes agreges exacts (total = PENDING+APPROVED, rejets exclus), repartition par categorie, non-exposition PII, etat vide. Lacunes comblees. 6/6 verts. |
 | 2.6 | event/badges (+ detail + print) | [ ] | | |
 | 2.7 | event/categories | [ ] | | |
 | 2.8 | event/members | [ ] | | |
