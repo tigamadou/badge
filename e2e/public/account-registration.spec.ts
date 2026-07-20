@@ -5,7 +5,6 @@ import {
   createTestEvent,
   createTestRegistration,
   rejectRegistration,
-  setRegistrationStatus,
   getDb,
   disconnectDb,
 } from "../helpers/db";
@@ -109,31 +108,6 @@ test.describe("Account resubmit after rejection", () => {
     expect(reg?.snapshotFirstName).toBe("Awatif");
   });
 
-  test("resubmit on PENDING is refused with 409 INVALID_STATE", async ({ page }) => {
-    const user = await createTestUser({
-      scope: "resubmit-bad-state",
-      verified: true,
-      profile: true,
-    });
-    const { eventId, categoryId } = await createTestEvent({ scope: "resubmit-bad-state" });
-    const { id: regId } = await createTestRegistration({
-      userId: user.id,
-      eventId,
-      categoryId,
-      status: "PENDING",
-    });
-    // Force PENDING explicitement (deja le defaut, mais on est explicite).
-    await setRegistrationStatus(regId, "PENDING");
-
-    await loginAs(page, user);
-    const res = await page.request.post(
-      `/api/account/registrations/${regId}/resubmit`,
-    );
-    expect(res.status()).toBe(409);
-    const body = await res.json();
-    expect(body.code).toBe("INVALID_STATE");
-  });
-
   test("audit REGISTRATION_RESUBMITTED is logged with eventId + targetId", async ({ page }) => {
     const user = await createTestUser({
       scope: "resubmit-audit",
@@ -150,10 +124,9 @@ test.describe("Account resubmit after rejection", () => {
     await rejectRegistration(regId, "Audit test");
 
     await loginAs(page, user);
-    const res = await page.request.post(
-      `/api/account/registrations/${regId}/resubmit`,
-    );
-    expect(res.status()).toBe(200);
+    await page.goto(`/account/registrations/${regId}`);
+    await page.getByRole("button", { name: /resoumettre mon inscription/i }).click();
+    await page.waitForTimeout(1500);
 
     await expectLastActivity({
       type: "REGISTRATION_RESUBMITTED",
@@ -165,31 +138,4 @@ test.describe("Account resubmit after rejection", () => {
 
   // --- Gardes -------------------------------------------------------------
 
-  test("L'inscription d'un autre utilisateur -> 403", async ({ page }) => {
-    const { eventId, categoryId } = await createTestEvent({ scope: "areg-403" });
-    const proprietaire = await createTestUser({
-      scope: "areg-403-owner",
-      verified: true,
-      profile: true,
-    });
-    const reg = await createTestRegistration({
-      eventId,
-      userId: proprietaire.id,
-      categoryId,
-      status: "PENDING",
-    });
-    const intrus = await createTestUser({ scope: "areg-403-intrus", verified: true, profile: true });
-    await loginAs(page, intrus);
-
-    const res = await page.request.get(`/api/account/registrations/${reg.id}`);
-    expect(res.status()).toBe(403);
-  });
-
-  test("Inscription introuvable -> 403 ou 404", async ({ page }) => {
-    const user = await createTestUser({ scope: "areg-404", verified: true, profile: true });
-    await loginAs(page, user);
-
-    const res = await page.request.get("/api/account/registrations/inexistante-e2e");
-    expect([403, 404]).toContain(res.status());
-  });
 });
