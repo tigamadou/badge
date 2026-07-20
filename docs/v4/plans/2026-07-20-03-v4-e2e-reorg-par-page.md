@@ -68,7 +68,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 2.8 | event/members | [ ] | | |
 | 2.9 | event/scan | [x] | 2026-07-20 | `scan-checkin.spec.ts` renomme `scan.spec.ts` : API verify/checkin + saisie manuelle UI (migree d'interactions) + gardes VIEWER/PRINTER 403 + acces ADMIN. Scan camera non automatisable (documente). 12/12 verts. |
 | 2.10 | event/settings (+ badge) | [ ] | | |
-| 2.11 | event/activity (+ detail) | [ ] | | |
+| 2.11 | event/activity (+ detail) | [x] | 2026-07-20 | `e2e/event/activity.spec.ts` : feed ADMIN, filtre OPERATOR serveur, non-fuite PII, + rendus page/detail migres de pages-render et etat vide. 8/8 verts. |
 | 2.12 | event/blocklist | [x] | 2026-07-20 | `e2e/event/blocklist.spec.ts` : deux onglets, redirection /blocked-documents, ajout+retrait e-mail et document via UI avec audit, garde OPERATOR 403. 5/5 verts. |
 | 2.13 | event/access + suppression transverses event | [ ] | | |
 | 3.1 | platform/dashboard | [ ] | | |

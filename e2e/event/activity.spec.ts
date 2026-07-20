@@ -18,7 +18,11 @@ type ActivityLogResponseItem = {
   user: { name: string; email: string } | null;
 };
 
-test.describe("Event activity log", () => {
+// Page Journal — /event/[eventId]/activity et /event/[eventId]/activity/[logId]
+// Rôles : STAFF/ADMIN voient tout ; OPERATOR ne voit que ses propres BADGE_SCANNED
+// (filtre serveur). Lecture seule. La reponse ne doit jamais contenir de PII
+// (snapshotEmail / Phone / Document).
+test.describe("Event — Journal", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -177,5 +181,38 @@ test.describe("Event activity log", () => {
       expect(log).not.toHaveProperty("snapshotIdDocument");
       expect(log).not.toHaveProperty("snapshotIdDocumentNumber");
     }
+  });
+
+  // --- Rendu des pages ----------------------------------------------------
+
+  test("ADMIN voit la page Journal", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "act-page" });
+    const admin = await makeEventAdminUser({ scope: "act-page", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/activity`);
+    await expect(page.getByRole("heading", { name: /journal d'activité/i })).toBeVisible();
+  });
+
+  test("ADMIN voit le detail d'une entree", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "act-page-detail" });
+    const admin = await makeEventAdminUser({ scope: "act-page-detail", eventId, orgId });
+    const log = await getDb().activityLog.create({
+      data: { type: "REGISTRATION_CREATED", eventId, userId: admin.id },
+    });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/activity/${log.id}`);
+    // describeActivity("REGISTRATION_CREATED") => "Inscription créée" (h1).
+    await expect(page.getByRole("heading", { name: /inscription créée/i })).toBeVisible();
+  });
+
+  test("Etat vide : aucune activite", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "act-empty" });
+    const admin = await makeEventAdminUser({ scope: "act-empty", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/activity`);
+    await expect(page.getByText(/aucune activité/i)).toBeVisible();
   });
 });
