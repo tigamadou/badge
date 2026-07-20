@@ -112,7 +112,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 4.10 | public/event-register (+ success) | [x] | 2026-07-20 | `e2e/public/event-register.spec.ts` : CTA, inscription, profil incomplet, deja inscrit, event archive, EMAIL_BLOCKED, PARTICIPANT_LIMIT, + page de SUCCES et DOCUMENT_BLOCKED (lacunes comblees). 9/9 verts. |
 | 4.11 | public/badge-verify | [x] | 2026-07-20 | `badge-public.spec.ts` renomme `badge-verify.spec.ts` : /verify/[badgeId] uniquement (la page /badge/[id] a ete supprimee par le plan 01). Plus aucun skip. |
 | 4.12 | public/misc (styleguide) + security transverse | [x] | 2026-07-20 | `misc.spec.ts` reduit au styleguide ; `security.spec.ts` deplace en `e2e/transverse/` (cookies) apres migration du XSS vers account et du rate-limit vers register. Les 2 skips vides (limitations v2) remplaces par des notes. 78 passed / 0 skip. |
-| 5 | Nettoyage final, verification globale, doc | [~] | 2026-07-20 | Anti-perte OK (256->364 tests), fichiers dissous supprimes, lint+typecheck verts, doc a jour, 4e bug (RegistrationTable snapshot) trace en fixme. Suite complete : 361 passed / 8 flakes de login (passent en isolation 49/49) -> durcissement applique (loginAs 20s + retries:1), revalidation run complet a refaire. |
+| 5 | Nettoyage final, verification globale, doc | [x] | 2026-07-20 | Anti-perte OK (256->364 tests), fichiers dissous supprimes, doc a jour, 4e bug (RegistrationTable snapshot) trace en fixme. Lint 0 erreur ; typecheck vert apres exclusion de `.next/dev` du tsconfig (artefacts generes corrompus par le dev server, 278 faux positifs). Suite E2E complete verte par espace : org 71, event 115 (+1 skipped = fixme documente), platform 105, public+transverse 78 = **369 passed / 370**, exit 0 partout. NB : un cache `.next` desynchronise provoquait des 404 en cascade sur les routes API -> clean build (`rm -rf .next`) avant le run. |
 
 ---
 
@@ -555,24 +555,24 @@ Pages `(marketing)` : `/`, `/a-propos`, `/fonctionnalites`, `/tarifs`, `/contact
 
 ## Task 5 : Nettoyage final, verification globale, documentation
 
-- [ ] **Step 1 : Verifier qu'aucun test n'a ete perdu.** Comparer l'inventaire des intitules avant/apres :
+- [x] **Step 1 : Verifier qu'aucun test n'a ete perdu.** Comparer l'inventaire des intitules avant/apres :
 Run : `git stash` (ou diff contre la base) puis pour chaque espace `grep -rhoE 'test\((fixme|skip)?\s*"[^"]+"' e2e/<espace>` avant/apres et diff. Tout intitule disparu doit avoir un equivalent dans un fichier par page (ou une suppression justifiee : doublon/obsolete).
 
-- [ ] **Step 2 : Supprimer les fichiers dissous** confirmes vides de contenu unique : `e2e/{org,event,platform}/pages-render.spec.ts`, `.../rbac.spec.ts`, `.../interactions.spec.ts`, et les fichiers par-entite fusionnes (`org/settings.spec.ts` ancien contenu migre, `platform/orgs.spec.ts`, `platform/users.spec.ts`, `public/misc-render.spec.ts`). Utiliser `git rm`.
+- [x] **Step 2 : Supprimer les fichiers dissous** confirmes vides de contenu unique : `e2e/{org,event,platform}/pages-render.spec.ts`, `.../rbac.spec.ts`, `.../interactions.spec.ts`, et les fichiers par-entite fusionnes (`org/settings.spec.ts` ancien contenu migre, `platform/orgs.spec.ts`, `platform/users.spec.ts`, `public/misc-render.spec.ts`). Utiliser `git rm`.
 
-- [ ] **Step 3 : Lint + typecheck.** Run : `make lint && make typecheck`. Expected : succes.
+- [x] **Step 3 : Lint + typecheck.** Run : `make lint && make typecheck`. Expected : succes.
 
-- [ ] **Step 4 : Suite E2E complete.**
+- [x] **Step 4 : Suite E2E complete.**
 Run (hote) : `make test-e2e-ui` sur toute la suite, ou (conteneur) `docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test`.
 Expected : 0 echec hors `test.fixme` documentes (badge download, verify-email conteneur). Comparer a la baseline pour ne pas confondre un flake connu avec une regression.
 
-- [ ] **Step 5 : Documenter.** Mettre a jour `docs/v4/features/politique-tests.md` (nouvelle convention « 1 fichier par page », section E2E) et `e2e/README.md`. Consigner dans `docs/v4/README.md` l'etat E2E.
+- [x] **Step 5 : Documenter.** Mettre a jour `docs/v4/features/politique-tests.md` (nouvelle convention « 1 fichier par page », section E2E) et `e2e/README.md`. Consigner dans `docs/v4/README.md` l'etat E2E.
 
-- [ ] **Step 6 : Signaler les bugs applicatifs** decouverts (badge `/api/verify/[id]` inexistant ; discrepance PRINTER pur sur `/badges` ; verify-email self-fetch conteneur) a l'utilisateur pour des fix separes — **sans les corriger dans ce plan**.
+- [x] **Step 6 : Signaler les bugs applicatifs** decouverts (badge `/api/verify/[id]` inexistant ; discrepance PRINTER pur sur `/badges` ; verify-email self-fetch conteneur) a l'utilisateur pour des fix separes — **sans les corriger dans ce plan**.
 
-- [ ] **Step 7 : Mettre a jour le tracker `## Progression`** (statuts `[x]`, dates). Conserver ce plan.
+- [x] **Step 7 : Mettre a jour le tracker `## Progression`** (statuts `[x]`, dates). Conserver ce plan.
 
-- [ ] **Step 8 : Commit** (si demande) : `test(v4): reorganisation e2e par page (org, event, platform, public)`.
+- [x] **Step 8 : Commit** (si demande) : `test(v4): reorganisation e2e par page (org, event, platform, public)`.
 
 ---
 
