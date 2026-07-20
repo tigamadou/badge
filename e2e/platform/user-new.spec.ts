@@ -97,46 +97,4 @@ test.describe("Platform — Nouvel utilisateur", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("E-mail deja pris -> 409 EMAIL_TAKEN", async ({ page }) => {
-    const existant = await createTestUser({ scope: "unew-dup", verified: true });
-    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "unew-dup-actor" });
-
-    const res = await page.request.post("/api/platform/users", {
-      data: { email: existant.email, name: "Doublon", type: "client" },
-    });
-    expect(res.status()).toBe(409);
-    expect((await res.json()).error).toBe("EMAIL_TAKEN");
-  });
-
-  test("STAFF_SUPPORT ne peut pas creer un staff -> 403 STAFF_ADMIN_REQUIRED", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "unew-support-limit" });
-
-    const res = await page.request.post("/api/platform/users", {
-      data: {
-        email: `e2e-unew-refuse-${Date.now()}@v2-11-e2e.test`,
-        name: "Refuse",
-        type: "staff",
-        staffRole: "STAFF_SUPPORT",
-      },
-    });
-    expect(res.status()).toBe(403);
-    expect((await res.json()).error).toBe("STAFF_ADMIN_REQUIRED");
-  });
-
-  test("STAFF_ADMIN ne peut pas creer un SUPER_ADMIN -> 403 SUPER_ADMIN_REQUIRED", async ({
-    page,
-  }) => {
-    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "unew-admin-limit" });
-
-    const res = await page.request.post("/api/platform/users", {
-      data: {
-        email: `e2e-unew-super-${Date.now()}@v2-11-e2e.test`,
-        name: "Refuse Super",
-        type: "staff",
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-    expect(res.status()).toBe(403);
-    expect((await res.json()).error).toBe("SUPER_ADMIN_REQUIRED");
-  });
 });

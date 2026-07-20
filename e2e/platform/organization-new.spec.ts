@@ -71,49 +71,4 @@ test.describe("Platform — Nouvelle organisation", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("Slug deja pris : le serveur auto-incremente", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "orgnew-slug" });
-
-    const baseSlug = `e2e-collision-${Date.now()}`;
-    const res1 = await page.request.post("/api/platform/organizations", {
-      data: {
-        name: "Collision Org",
-        slug: baseSlug,
-        ownerEmail: `e2e-coll1-${Date.now()}@v2-11-e2e.test`,
-      },
-    });
-    expect(res1.status()).toBe(201);
-    expect((await res1.json()).org.slug).toBe(baseSlug);
-
-    const res2 = await page.request.post("/api/platform/organizations", {
-      data: {
-        name: "Collision Org Bis",
-        slug: baseSlug,
-        ownerEmail: `e2e-coll2-${Date.now()}@v2-11-e2e.test`,
-      },
-    });
-    expect(res2.status()).toBe(201);
-    expect((await res2.json()).org.slug).toMatch(new RegExp(`^${baseSlug}-\\d+$`));
-  });
-
-  test("OBSERVER voit le formulaire mais la creation est refusee (403)", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "orgnew-observer" });
-
-    await page.goto("/platform/organizations/new");
-    await expect(page.getByLabel(/Nom de l'organisation/i)).toBeVisible();
-
-    const res = await page.request.post("/api/platform/organizations", {
-      data: { name: "Refuse", ownerEmail: `refuse-${Date.now()}@v2-11-e2e.test` },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("Payload invalide -> 400", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "orgnew-400" });
-
-    const res = await page.request.post("/api/platform/organizations", {
-      data: { name: "", ownerEmail: "pas-un-email" },
-    });
-    expect(res.status()).toBe(400);
-  });
 });

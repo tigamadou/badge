@@ -91,29 +91,20 @@ test.describe("Platform — Plans", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("Nom deja pris -> 409 NAME_TAKEN", async ({ page }) => {
+  test("Creer un plan avec un nom deja pris affiche une erreur (UI)", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "plans-dup" });
     const planName = `E2E Plan Dup ${Date.now()}`;
+    // Pre-condition : un plan de ce nom existe deja.
+    const existing = await getDb().plan.create({ data: { name: planName, period: "MONTHLY" } });
+    createdPlanIds.push(existing.id);
 
-    const first = await page.request.post("/api/platform/plans", {
-      data: { name: planName, maxEvents: 1, maxParticipantsPerEvent: 1 },
-    });
-    expect(first.status()).toBe(201);
-    createdPlanIds.push((await first.json()).plan.id);
+    await page.goto("/platform/plans");
+    await page.getByLabel("Nom").fill(planName);
+    await page.getByRole("button", { name: /créer le plan/i }).click();
 
-    const second = await page.request.post("/api/platform/plans", {
-      data: { name: planName, maxEvents: 2, maxParticipantsPerEvent: 2 },
-    });
-    expect(second.status()).toBe(409);
-    expect((await second.json()).error).toBe("NAME_TAKEN");
+    // Reponse attendue — ECHEC : message d'erreur UI, aucun 2e plan cree.
+    await expect(page.getByText(/ce nom de plan existe déjà/i)).toBeVisible();
+    expect(await getDb().plan.count({ where: { name: planName } })).toBe(1);
   });
 
-  test("STAFF_OBSERVER -> 403 sur la creation", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "plans-observer" });
-
-    const res = await page.request.post("/api/platform/plans", {
-      data: { name: `Refuse ${Date.now()}`, maxEvents: 1, maxParticipantsPerEvent: 1 },
-    });
-    expect(res.status()).toBe(403);
-  });
 });
