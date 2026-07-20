@@ -385,6 +385,26 @@ describe("POST /registrations/[regId]/approve", () => {
     expect(log?.eventId).toBe(event.id);
   });
 
+  it("reactivates a REJECTED registration and clears the rejection reason", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "REJECTED" });
+    await prisma.registration.update({
+      where: { id: r.id },
+      data: { rejectionReason: "Piece illisible" },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    const after = await prisma.registration.findUnique({ where: { id: r.id } });
+    expect(after?.status).toBe("APPROVED");
+    expect(after?.rejectionReason).toBeNull();
+  });
+
   // ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur registration.approve.
   // Test inverse de l'ancien "OPERATOR cannot approve (403)" supprime.
   it("OPERATOR can approve (200)", async () => {
