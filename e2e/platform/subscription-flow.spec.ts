@@ -33,6 +33,51 @@ test.describe("Parcours abonnement org", () => {
     await expect(slugField).toHaveAttribute("readonly", "");
   });
 
+  test("parcours complet : creation org -> fiche detail -> attribution d'un plan", async ({
+    page,
+  }) => {
+    const staff = await createTestStaff({ scope: "full-flow", role: "STAFF_ADMIN" });
+    const plan = await getDb().plan.create({
+      data: { name: `e2e-full-${Date.now()}`, maxEvents: 3, maxParticipantsPerEvent: 50 },
+    });
+    await loginAs(page, staff);
+
+    // 1. Creation (le slug est genere automatiquement).
+    await page.goto("/platform/organizations/new");
+    const orgName = `Org Flow ${Date.now()}`;
+    await page.getByLabel("Nom de l'organisation").fill(orgName);
+    await page.getByLabel("E-mail du OWNER").fill(`owner-full-${Date.now()}@v2-11-e2e.test`);
+    await page.getByRole("button", { name: /Créer l'organisation/ }).click();
+
+    // 2. Redirection vers la fiche detail de l'org creee.
+    // Le lookahead exclut /organizations/new (la page courante), qui matcherait
+    // sinon le motif et ferait resoudre waitForURL immediatement.
+    await page.waitForURL(/\/platform\/organizations\/(?!new$)[^/]+$/);
+    const orgId = page.url().split("/").pop()!;
+    await expect(page.getByText(orgName).first()).toBeVisible();
+
+    // A ce stade l'org n'a aucun abonnement.
+    expect(await getDb().subscription.findUnique({ where: { orgId } })).toBeNull();
+
+    // 3. Attribution d'un plan depuis l'onglet Abonnement.
+    await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByLabel("Plan").selectOption(plan.id);
+    await page.getByLabel("Période").selectOption("ANNUAL");
+    await page.getByLabel("Statut").selectOption("ACTIVE");
+    await page.getByRole("button", { name: /Enregistrer/ }).click();
+
+    // 4. L'abonnement est actif, avec les dates calculees depuis la periode.
+    await expect(async () => {
+      const sub = await getDb().subscription.findUnique({ where: { orgId } });
+      expect(sub?.status).toBe("ACTIVE");
+      expect(sub?.period).toBe("ANNUAL");
+      expect(sub?.planId).toBe(plan.id);
+      expect(
+        Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000),
+      ).toBe(365);
+    }).toPass();
+  });
+
   test("attribution d'un plan mensuel : endDate calculee a +30 jours", async ({ page }) => {
     const staff = await createTestStaff({ scope: "sub-assign", role: "STAFF_ADMIN" });
     const { orgId } = await createTestOrgWithOwner({ scope: "sub-assign" });

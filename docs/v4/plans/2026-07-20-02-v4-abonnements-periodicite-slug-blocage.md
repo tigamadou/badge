@@ -87,7 +87,7 @@ docs/v4/README.md                                # statuts items 2/3
 | 3 | Form creation org : slug readonly + preview live | [x] | 2026-07-20 | Champ slug derive de `slugify(name)`, `readOnly`. Verification par E2E `subscription-flow.spec.ts` (live + accents + readonly) plutot qu'a l'oeil. |
 | 4 | Attribution d'abonnement pilotee par la periode | [x] | 2026-07-20 | PUT accepte `period` (startDate/endDate calcules serveur) ; SubscriptionForm remplace les 2 champs date par un select Periode ; periode affichee cote staff et org. 47/47 vitest, 3/3 e2e (+30j / +365j verifies en base). |
 | 5 | Blocage de l'espace org sans abonnement actif | [x] | 2026-07-20 | Middleware propage `x-pathname` ; layout org rend `SubscriptionBlockedNotice` a la place des children si `!active`, sauf `/subscription`. 5/5 e2e subscription-flow + 50/50 e2e org (aucune regression). |
-| 6 | Test E2E complet du parcours abonnement | [ ] | | |
+| 6 | Test E2E complet du parcours abonnement | [x] | 2026-07-20 | `e2e/platform/subscription-flow.spec.ts` : 6 tests (slug live/readonly, parcours creation->fiche->attribution, +30j, +365j, blocage, non-regression actif). Piege corrige : /organizations/new matchait le motif de redirection. |
 | 7 | Documentation v4 + verification finale | [ ] | | |
 
 ---
@@ -679,7 +679,7 @@ git commit -m "feat(v4): blocage espace org sans abonnement actif (hors onglet a
 - Consumes : helpers `e2e/helpers/db.ts` (`createTestStaff`, `createTestOrgWithOwner`, `createTestUser`, `getDb`), `e2e/helpers/auth.ts` (`loginAs`). UI : `/platform/organizations/new`, `/platform/organizations/[orgId]/subscription`, `/org/[orgId]`, `/org/[orgId]/subscription`.
 - Produces : couverture E2E du golden path (creation -> redirection fiche -> attribution plan+periode -> abonnement actif) et du cas bloque (org sans abonnement actif -> notice, onglet abonnement accessible).
 
-- [ ] **Step 1 : Ajouter un helper org sans abonnement actif**
+- [x] **Step 1 : Ajouter un helper org sans abonnement actif**
 
 Dans `e2e/helpers/db.ts`, etendre `createTestOrgWithOwner` avec une option `activeSubscription` (defaut `true` pour ne pas casser les specs existantes). Quand `false`, ne pas creer de `Subscription` (l'org est alors inactive) :
 
@@ -715,7 +715,7 @@ export async function createTestOrgWithOwner(opts: {
 }
 ```
 
-- [ ] **Step 2 : Ecrire le spec E2E (echoue en partie tant que Tasks 3/4/5 absentes)**
+- [x] **Step 2 : Ecrire le spec E2E (echoue en partie tant que Tasks 3/4/5 absentes)**
 
 Creer `e2e/platform/subscription-flow.spec.ts` :
 
@@ -788,18 +788,18 @@ test.describe("Parcours abonnement org", () => {
 
 > Ajuster les libelles exacts (`getByLabel("Nom")`, `"Email de l'OWNER")`, bouton `"Creer"`/`"Enregistrer"`) aux textes reels des composants. Verifier la signature de `createTestStaff` dans `db.ts`.
 
-- [ ] **Step 3 : Lancer le spec (doit passer une fois Tasks 3/4/5 livrees)**
+- [x] **Step 3 : Lancer le spec (doit passer une fois Tasks 3/4/5 livrees)**
 
 Run (depuis l'hote) : `make test-e2e-ui` puis filtrer sur `subscription-flow`, ou en CLI conteneur :
 `docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test e2e/platform/subscription-flow.spec.ts`
 Expected : 2 tests PASS.
 
-- [ ] **Step 4 : Lint + typecheck**
+- [x] **Step 4 : Lint + typecheck**
 
 Run : `make lint && make typecheck`
 Expected : succes.
 
-- [ ] **Step 5 : Commit** (si demande)
+- [x] **Step 5 : Commit** (si demande)
 
 ```bash
 git add e2e/helpers/db.ts e2e/platform/subscription-flow.spec.ts
