@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    restart: unless-stopped
     ports:
       - "3785:3000"
     volumes:
