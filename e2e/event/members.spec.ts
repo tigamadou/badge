@@ -7,7 +7,6 @@ import {
   disconnectDb,
   getDb,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { createTestEventMember } from "../helpers/db";
 import { mailpit } from "../helpers/mailpit";
@@ -89,7 +88,7 @@ test.describe("Event — Membres", () => {
   test("UI : members page displays table with name/email/role columns", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "members-ui" });
     const admin = await makeEventAdminUser({ scope: "members-ui", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     // Seed quelques membres pour rendre la table non-vide.
     const m1 = await createTestUser({ scope: "ui-m1", verified: true });
@@ -115,7 +114,7 @@ test.describe("Event — Membres", () => {
       eventId,
       role: "OPERATOR",
     });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/members`);
     const row = page.locator("tr", { hasText: member.email });

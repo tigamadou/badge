@@ -8,7 +8,7 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { ensureFixtures } from "../fixtures";
 
@@ -27,7 +27,7 @@ test.describe("Event — Inscription manuelle", () => {
   test("ADMIN voit le formulaire d'inscription manuelle", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "regnew-render" });
     const admin = await makeEventAdminUser({ scope: "regnew-render", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/new`);
     await expect(page.getByRole("heading", { name: /inscription manuelle/i })).toBeVisible();
@@ -44,7 +44,7 @@ test.describe("Event — Inscription manuelle", () => {
       verified: true,
       profile: true,
     });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/new`);
     await page.getByLabel("Prénom").fill("Ignoré");
@@ -76,7 +76,7 @@ test.describe("Event — Inscription manuelle", () => {
     const { orgId, eventId } = await createTestEvent({ scope: "regnew-photo" });
     const admin = await makeEventAdminUser({ scope: "regnew-photo", eventId, orgId });
     const fixtures = ensureFixtures();
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/new`);
     await page.locator('input[type="file"][accept*="image"]').first().setInputFiles(fixtures.jpeg);
@@ -91,7 +91,7 @@ test.describe("Event — Inscription manuelle", () => {
     const { orgId, eventId } = await createTestEvent({ scope: "regnew-doc" });
     const admin = await makeEventAdminUser({ scope: "regnew-doc", eventId, orgId });
     const fixtures = ensureFixtures();
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/new`);
     await page.locator('input[type="file"][accept*="pdf"]').first().setInputFiles(fixtures.pdf);

@@ -7,7 +7,6 @@ import {
   disconnectDb,
   getDb,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { ensureFixtures } from "../fixtures";
 import { expectLastActivity } from "../helpers/audit";
@@ -74,7 +73,7 @@ test.describe("Event — Parametres", () => {
   test("ADMIN voit la page Parametres", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "evset-render" });
     const admin = await makeEventAdminUser({ scope: "evset-render", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/settings`);
     await expect(page.getByRole("button", { name: /enregistrer/i }).first()).toBeVisible();
@@ -84,7 +83,7 @@ test.describe("Event — Parametres", () => {
     const { orgId, eventId } = await createTestEvent({ scope: "evset-logo" });
     const admin = await makeEventAdminUser({ scope: "evset-logo", eventId, orgId });
     const fixtures = ensureFixtures();
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/settings`);
     await page.locator('input[type="file"]').first().setInputFiles(fixtures.jpeg);
@@ -97,7 +96,7 @@ test.describe("Event — Parametres", () => {
   test("ADMIN choisit un modele de badge puis revient a l'heritage", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "evset-badge-ui" });
     const admin = await makeEventAdminUser({ scope: "evset-badge-ui", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/settings/badge`);
     await page.getByTestId("select-recto-verso-v1").click();
