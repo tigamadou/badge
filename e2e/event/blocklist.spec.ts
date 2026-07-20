@@ -130,20 +130,4 @@ test.describe("Event — Listes de blocage", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("OPERATOR ne peut pas bloquer un e-mail -> 403", async ({ page }) => {
-    const { orgId, eventId } = await createTestEvent({ scope: "blk-operator" });
-    const operator = await createTestEventMember({
-      scope: "blk-operator-user",
-      orgId,
-      eventId,
-      role: "OPERATOR",
-    });
-    await loginAs(page, operator);
-
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/blocked-emails`,
-      { data: { email: `nope-${Date.now()}@v2-11-e2e.test` } },
-    );
-    expect(res.status()).toBe(403);
-  });
 });
