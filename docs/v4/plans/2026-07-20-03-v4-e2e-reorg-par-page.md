@@ -56,7 +56,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 1.4 | org/templates | [ ] | | |
 | 1.5 | org/subscription | [x] | 2026-07-20 | `e2e/org/subscription.spec.ts` : rendu (plan/statut/periode/limites), MANAGER OK, AUDITOR redirige, illimite, sans abonnement, echu. 6/6 verts. |
 | 1.6 | org/settings (+ badge) | [ ] | | |
-| 1.7 | org/activity (+ detail) | [ ] | | |
+| 1.7 | org/activity (+ detail) | [x] | 2026-07-20 | `e2e/org/activity.spec.ts` : rendu, AUDITOR page+API, etat vide, tag staff, navigation detail, scoping 404 cross-org (lacunes comblees). 7/7 verts. |
 | 1.8 | org/access + suppression transverses org | [ ] | | |
 | 2.1 | event/dashboard | [ ] | | |
 | 2.2 | event/registrations (liste) | [ ] | | |
