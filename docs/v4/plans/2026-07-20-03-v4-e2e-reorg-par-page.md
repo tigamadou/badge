@@ -23,6 +23,17 @@
 - **Avant tout commit** : `make lint && make typecheck && make test-e2e` (ou run cible). Commits FR ASCII, conventional commits. **Ne jamais commit sans demande explicite de l'utilisateur** — les etapes « Commit » ne s'executent que sur demande.
 - **Conservation des plans** : ce plan est conserve (marquer la Progression, ne pas supprimer sans demande).
 
+## Bug applicatif OUVERT (decouvert le 2026-07-20, a corriger cote src/)
+
+> **Liste des inscriptions : colonnes Nom et E-mail vides.**
+> `GET /api/org/[orgId]/events/[eventId]/registrations` renvoie `snapshotFirstName`,
+> `snapshotLastName`, `snapshotEmail` (route.ts, select), mais
+> `src/components/event/RegistrationTable.tsx` lit `r.firstName`, `r.lastName`,
+> `r.email` -> `undefined`. L'utilisateur voit donc une liste sans identite.
+> Le test `e2e/event/registrations.spec.ts` « La liste affiche le nom et l'e-mail »
+> est en `test.fixme` en attendant le correctif (mapper le DTO cote route ou lire
+> les champs `snapshot*` cote composant).
+
 ## Bugs applicatifs connus — CORRIGES (plan pre-requis termine le 2026-07-20)
 
 > Le plan [`2026-07-20-01-v4-fixes-bugs-pre-e2e.md`](2026-07-20-01-v4-fixes-bugs-pre-e2e.md) a corrige les trois bugs ci-dessous. **Aucun `test.fixme`/`test.skip` de contournement ne subsiste** sur ces zones (18/18 e2e verts). Les tasks concernees de ce plan doivent en tenir compte :
@@ -59,7 +70,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 1.7 | org/activity (+ detail) | [x] | 2026-07-20 | `e2e/org/activity.spec.ts` : rendu, AUDITOR page+API, etat vide, tag staff, navigation detail, scoping 404 cross-org (lacunes comblees). 7/7 verts. |
 | 1.8 | org/access + suppression transverses org | [x] | 2026-07-20 | `e2e/org/access.spec.ts` (gates layout, staff->platform, nav par role). Tests hors-perimetre relogues : /select -> `e2e/public/select.spec.ts`, profile/complete -> `account-profile.spec.ts`. pages-render/rbac/interactions org SUPPRIMES (30 tests -> 71 repartis sur 8 pages). 81 passed / 0 echec. |
 | 2.1 | event/dashboard | [x] | 2026-07-20 | `e2e/event/dashboard.spec.ts` enrichi : 4 roles (shells distincts) + etat vide, banniere quota >80% vs sous seuil, lien Tout voir (lacunes comblees). 8/8 verts. |
-| 2.2 | event/registrations (liste) | [ ] | | |
+| 2.2 | event/registrations (liste) | [x] | 2026-07-20 | `e2e/event/registrations.spec.ts` : rendu, etat vide, filtre statut, RECHERCHE et PAGINATION (lacunes comblees), navigation detail/creation, export CSV. **1 test.fixme** : BUG APPLICATIF decouvert — l'API renvoie snapshot* mais RegistrationTable lit firstName/lastName/email -> colonnes Nom et E-mail VIDES. 8/8 verts + 1 fixme. |
 | 2.3 | event/registrations-new | [ ] | | |
 | 2.4 | event/registration-detail | [ ] | | |
 | 2.5 | event/registrations-overview | [x] | 2026-07-20 | `e2e/event/registrations-overview.spec.ts` : acces VIEWER effectif, comptes agreges exacts (total = PENDING+APPROVED, rejets exclus), repartition par categorie, non-exposition PII, etat vide. Lacunes comblees. 6/6 verts. |
