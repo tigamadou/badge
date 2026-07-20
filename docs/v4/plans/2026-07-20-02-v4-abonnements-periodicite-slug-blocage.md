@@ -84,7 +84,7 @@ docs/v4/README.md                                # statuts items 2/3
 |---|---|---|---|---|
 | 1 | Periodicite : schema + helper de calcul des dates | [x] | 2026-07-20 | Enum `SubscriptionPeriod` + champ `period` nullable ; `PERIOD_DAYS` + `computeSubscriptionDates`. db-push OK (ajout non destructif). 4/4 vitest. |
 | 2 | Helper `slugify` isomorphe partage (DRY) | [x] | 2026-07-20 | `src/lib/slugify.ts` pur (importable client) ; `slugify-event` delegue ; `slugifyName` local retire de la route org. 14/14 slug + 24/24 organizations. |
-| 3 | Form creation org : slug readonly + preview live | [ ] | | |
+| 3 | Form creation org : slug readonly + preview live | [x] | 2026-07-20 | Champ slug derive de `slugify(name)`, `readOnly`. Verification par E2E `subscription-flow.spec.ts` (live + accents + readonly) plutot qu'a l'oeil. |
 | 4 | Attribution d'abonnement pilotee par la periode | [ ] | | |
 | 5 | Blocage de l'espace org sans abonnement actif | [ ] | | |
 | 6 | Test E2E complet du parcours abonnement | [ ] | | |
@@ -342,7 +342,7 @@ git commit -m "refactor(v4): helper slugify isomorphe partage (org + event)"
 - Consumes : `slugify` (Task 2). Le slug affiche est derive du nom via `slugify(name)` ; l'unicite finale reste garantie cote serveur (`nextAvailableSlug`). En cas de collision, le serveur suffixe (`-2`) : c'est un comportement attendu, le champ n'est qu'une **preview de base**.
 - Produces : le champ `slug` du formulaire devient `readOnly`, valeur derivee ; il n'est plus saisi. La soumission continue d'envoyer `slug` (la base) au `POST /api/platform/organizations` — le serveur reste seul juge de l'unicite.
 
-- [ ] **Step 1 : Rendre le slug derive et en lecture seule**
+- [x] **Step 1 : Rendre le slug derive et en lecture seule**
 
 Dans `src/components/staff/OrgCreationForm.tsx` (`"use client"`) :
 - Importer : `import { slugify } from "@/lib/slugify";`
@@ -378,17 +378,17 @@ body: JSON.stringify({
 
 - Conserver la redirection succes existante (`router.push(\`/platform/organizations/${json.org.id}\`)`, L56).
 
-- [ ] **Step 2 : Verifier le rendu manuellement (navigateur)**
+- [x] **Step 2 : Verifier le rendu manuellement (navigateur)**
 
 Run : `make dev` (si pas deja lance), ouvrir `https://badge.local/platform/organizations/new` (connecte en staff STAFF_ADMIN).
 Attendu : en tapant « Salon Emploi 2026 » dans Nom, le champ Slug affiche `salon-emploi-2026` en temps reel, non editable (clic dans le champ n'accepte aucune frappe).
 
-- [ ] **Step 3 : Lint + typecheck**
+- [x] **Step 3 : Lint + typecheck**
 
 Run : `make lint && make typecheck`
 Expected : succes (pas de variable `slug` d'etat orpheline).
 
-- [ ] **Step 4 : Commit** (si demande)
+- [x] **Step 4 : Commit** (si demande)
 
 ```bash
 git add src/components/staff/OrgCreationForm.tsx

@@ -8,17 +8,16 @@ import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { slugify } from "@/lib/slugify";
 
 type FormState = {
   name: string;
-  slug: string;
   ownerEmail: string;
   ownerName: string;
 };
 
 const INITIAL_FORM: FormState = {
   name: "",
-  slug: "",
   ownerEmail: "",
   ownerName: "",
 };
@@ -33,6 +32,11 @@ export function OrgCreationForm() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  // Slug derive en direct du nom, en lecture seule. Le serveur reste seul juge
+  // de l'unicite : en cas de collision il suffixe (-2, -3...). C'est donc une
+  // preview du slug de base, pas une garantie.
+  const derivedSlug = slugify(form.name.trim());
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -43,7 +47,7 @@ export function OrgCreationForm() {
       ownerEmail: form.ownerEmail.trim(),
     };
     if (form.ownerName.trim()) payload.ownerName = form.ownerName.trim();
-    if (form.slug.trim()) payload.slug = form.slug.trim();
+    if (derivedSlug) payload.slug = derivedSlug;
 
     const res = await fetch("/api/platform/organizations", {
       method: "POST",
@@ -79,9 +83,11 @@ export function OrgCreationForm() {
             <div className="space-y-4">
               <Input label="Nom de l'organisation" value={form.name} onChange={(e) => set("name", e.target.value)} required />
               <Input
-                label="Slug (optionnel — généré depuis le nom si vide)"
-                value={form.slug}
-                onChange={(e) => set("slug", e.target.value)}
+                label="Slug (généré automatiquement)"
+                name="slug"
+                value={derivedSlug}
+                readOnly
+                aria-readonly="true"
                 placeholder="acme-corp"
               />
             </div>
