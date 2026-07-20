@@ -188,4 +188,12 @@ test.describe("Account profile edit", () => {
     snap = await getUserById(user.id);
     expect(snap?.participantProfileCompletedAt).not.toBeNull();
   });
+
+  test("participant sans profil voit /account/profile/complete", async ({ page }) => {
+    const user = await createTestUser({ scope: "profile-complete-render", verified: true });
+    await loginAs(page, user);
+
+    await page.goto("/account/profile/complete");
+    await expect(page.getByRole("heading", { name: /compléter votre profil/i })).toBeVisible();
+  });
 });
