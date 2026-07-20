@@ -19,7 +19,7 @@ export default async function OrgSubscriptionPage({
   const plans = await prisma.plan.findMany({
     where: { archived: false },
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, period: true },
   });
 
   const sub = org.subscription;
@@ -27,7 +27,6 @@ export default async function OrgSubscriptionPage({
     ? {
         planId: sub.planId,
         status: sub.status,
-        period: sub.period,
         overrideMaxEvents: sub.overrideMaxEvents == null ? "" : String(sub.overrideMaxEvents),
         overrideMaxParticipantsPerEvent:
           sub.overrideMaxParticipantsPerEvent == null

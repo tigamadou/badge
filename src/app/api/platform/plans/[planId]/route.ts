@@ -6,6 +6,7 @@ import { logActivity } from "@/lib/activity-log";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
+  period: z.enum(["MONTHLY", "ANNUAL"]).optional(),
   maxEvents: z.number().int().min(0).nullable().optional(),
   maxParticipantsPerEvent: z.number().int().min(0).nullable().optional(),
   archived: z.boolean().optional(),
@@ -29,6 +30,7 @@ export const PATCH = withStaffAuth<{ planId: string }>(
         where: { id: planId },
         data: {
           ...(data.name !== undefined && { name: data.name.trim() }),
+          ...(data.period !== undefined && { period: data.period }),
           ...(data.maxEvents !== undefined && { maxEvents: data.maxEvents }),
           ...(data.maxParticipantsPerEvent !== undefined && {
             maxParticipantsPerEvent: data.maxParticipantsPerEvent,

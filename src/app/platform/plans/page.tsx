@@ -10,6 +10,7 @@ export default async function PlatformPlansPage() {
   const rows: PlanRow[] = plans.map((p) => ({
     id: p.id,
     name: p.name,
+    period: p.period,
     maxEvents: p.maxEvents,
     maxParticipantsPerEvent: p.maxParticipantsPerEvent,
     archived: p.archived,

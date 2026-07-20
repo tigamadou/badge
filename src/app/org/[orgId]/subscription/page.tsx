@@ -39,8 +39,7 @@ export default async function OrgSubscriptionPage({
           status: true,
           startDate: true,
           endDate: true,
-          period: true,
-          plan: { select: { name: true } },
+          plan: { select: { name: true, period: true } },
         },
       },
     },
@@ -76,9 +75,9 @@ export default async function OrgSubscriptionPage({
               {
                 label: "Période",
                 value:
-                  sub?.period === "ANNUAL"
+                  sub?.plan.period === "ANNUAL"
                     ? "Annuel (365 jours)"
-                    : sub?.period === "MONTHLY"
+                    : sub?.plan.period === "MONTHLY"
                       ? "Mensuel (30 jours)"
                       : "—",
               },

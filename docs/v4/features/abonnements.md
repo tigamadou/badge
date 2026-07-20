@@ -9,22 +9,25 @@ Remplacer les quotas ad-hoc de `Organization` (`quotaMaxEvents`,
 
 ## Modele
 
-- `Plan` (catalogue) : `name`, `maxEvents?`, `maxParticipantsPerEvent?` (null =
-  illimite), `archived`.
+- `Plan` (catalogue) : `name`, `period` (`MONTHLY|ANNUAL`, defaut `MONTHLY`),
+  `maxEvents?`, `maxParticipantsPerEvent?` (null = illimite), `archived`.
 - `Subscription` (une par org) : `orgId` unique, `planId`, `status`
-  (`ACTIVE|EXPIRED|CANCELLED`), `period?` (`MONTHLY|ANNUAL`), `startDate`,
-  `endDate?`, overrides (`overrideMaxEvents?`,
-  `overrideMaxParticipantsPerEvent?`). **Facturation manuelle** : statut +
-  dates, **sans montant**.
+  (`ACTIVE|EXPIRED|CANCELLED`), `startDate`, `endDate?`, overrides
+  (`overrideMaxEvents?`, `overrideMaxParticipantsPerEvent?`). **Facturation
+  manuelle** : statut + dates, **sans montant**. La periode n'est PAS sur
+  l'abonnement : elle est heritee du plan choisi.
 
 ## Periodicite
 
-La **periode pilote les dates** : a chaque assignation, `startDate = maintenant`
-et `endDate = startDate + PERIOD_DAYS[period]` (`MONTHLY` = 30 j, `ANNUAL` =
-365 j), calcules cote serveur par `computeSubscriptionDates()`
-(`src/lib/subscription.ts`). Le staff ne saisit plus de dates : le formulaire
-expose un select **Periode**. `period` est nullable pour les abonnements
-anterieurs a cette evolution ; `endDate` reste la source de verite de `active`.
+La **periode est portee par le `Plan`** (offres distinctes, ex. « Pro Mensuel » /
+« Pro Annuel »). A chaque assignation d'un plan a une org, les dates de
+l'abonnement en derivent : `startDate = maintenant` et
+`endDate = startDate + PERIOD_DAYS[plan.period]` (`MONTHLY` = 30 j, `ANNUAL` =
+365 j), calcules cote serveur par `computeSubscriptionDates(plan.period)`
+(`src/lib/subscription.ts`). Le staff ne saisit ni periode ni dates dans le
+formulaire d'abonnement (la periode y est affichee en lecture seule, d'apres le
+plan) ; il choisit la periode a la **creation/edition du plan**. `endDate` reste
+la source de verite de `active`.
 - Catalogue **+ overrides par org** : override != null gagne, sinon valeur du plan.
 
 ## Resolution + enforcement
@@ -57,9 +60,10 @@ acces a Prisma, le check reste donc dans le layout).
 
 ## UI
 
-- Plateforme : CRUD des plans + assignation d'abonnement a une org (plan, statut,
-  **periode**, overrides ; dates calculees automatiquement).
-- Org : vue read-only de son abonnement (plan, statut, **periode**, dates,
+- Plateforme : CRUD des plans (nom, **periode**, limites) + assignation d'un plan
+  a une org (plan, statut, overrides ; la periode est affichee d'apres le plan et
+  les dates sont calculees automatiquement).
+- Org : vue read-only de son abonnement (plan, statut, **periode du plan**, dates,
   limites effectives).
 - Creation d'org : le **slug est genere en direct depuis le nom et en lecture
   seule** (`slugify()` isomorphe, `src/lib/slugify.ts`) ; le serveur reste seul

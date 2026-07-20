@@ -17,6 +17,7 @@ export const GET = withStaffAuth(async (req) => {
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
+  period: z.enum(["MONTHLY", "ANNUAL"]).optional(),
   maxEvents: z.number().int().min(0).nullable().optional(),
   maxParticipantsPerEvent: z.number().int().min(0).nullable().optional(),
 });
@@ -31,12 +32,13 @@ export const POST = withStaffAuth(
         { status: 400 },
       );
     }
-    const { name, maxEvents, maxParticipantsPerEvent } = parsed.data;
+    const { name, period, maxEvents, maxParticipantsPerEvent } = parsed.data;
 
     try {
       const plan = await prisma.plan.create({
         data: {
           name: name.trim(),
+          period: period ?? "MONTHLY",
           maxEvents: maxEvents ?? null,
           maxParticipantsPerEvent: maxParticipantsPerEvent ?? null,
         },
@@ -45,7 +47,7 @@ export const POST = withStaffAuth(
         type: "PLAN_CREATED",
         userId: session.user.id,
         targetId: plan.id,
-        details: { name: plan.name, maxEvents: plan.maxEvents, maxParticipantsPerEvent: plan.maxParticipantsPerEvent },
+        details: { name: plan.name, period: plan.period, maxEvents: plan.maxEvents, maxParticipantsPerEvent: plan.maxParticipantsPerEvent },
         req,
       });
       return NextResponse.json({ plan }, { status: 201 });

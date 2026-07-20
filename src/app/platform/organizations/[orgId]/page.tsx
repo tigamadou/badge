@@ -44,7 +44,7 @@ export default async function OrgDetailPage({
       archivedAt: true,
       createdAt: true,
       subscription: {
-        select: { status: true, endDate: true, period: true, plan: { select: { name: true } } },
+        select: { status: true, endDate: true, plan: { select: { name: true, period: true } } },
       },
       memberships: {
         where: { role: "OWNER" },
@@ -118,9 +118,9 @@ export default async function OrgDetailPage({
               {
                 label: "Période",
                 value:
-                  org.subscription?.period === "ANNUAL"
+                  org.subscription?.plan.period === "ANNUAL"
                     ? "Annuel"
-                    : org.subscription?.period === "MONTHLY"
+                    : org.subscription?.plan.period === "MONTHLY"
                       ? "Mensuel"
                       : "—",
               },

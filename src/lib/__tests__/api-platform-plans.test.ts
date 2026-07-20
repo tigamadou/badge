@@ -68,12 +68,11 @@ describe("Plans + Subscription platform API", () => {
     );
     const { assertCanCreateEvent, SubscriptionError } = await import("@/lib/subscription");
 
-    // Expired endDate => blocked
+    // Statut EXPIRED => abonnement inactif => creation bloquee
     const expired = await PUT(
       req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
         planId: plan.id,
-        status: "ACTIVE",
-        endDate: "2000-01-01",
+        status: "EXPIRED",
       }),
       { params: Promise.resolve({ orgId: org.id }) },
     );
@@ -85,12 +84,11 @@ describe("Plans + Subscription platform API", () => {
     });
     expect(created).not.toBeNull();
 
-    // Re-activate with valid dates => unblocked
+    // Re-activation (statut ACTIVE, dates recalculees depuis la periode) => debloque
     const active = await PUT(
       req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
         planId: plan.id,
         status: "ACTIVE",
-        endDate: null,
       }),
       { params: Promise.resolve({ orgId: org.id }) },
     );
@@ -233,20 +231,17 @@ describe("PUT /api/platform/organizations/[orgId]/subscription — validation & 
     expect(res.status).toBe(400);
   });
 
-  it("rejects an invalid startDate with 400 VALIDATION", async () => {
+  it("rejects a missing planId with 400 VALIDATION", async () => {
     await asStaff();
     const org = await prisma.organization.create({
       data: { name: "OrgDate", slug: `orgdate-${Date.now()}` },
     });
-    const plan = await prisma.plan.create({ data: { name: `plan-date-${Date.now()}` } });
     const { PUT } = await import(
       "@/app/api/platform/organizations/[orgId]/subscription/route"
     );
     const res = await PUT(
       req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
-        planId: plan.id,
         status: "ACTIVE",
-        startDate: "not-a-date",
       }),
       { params: Promise.resolve({ orgId: org.id }) },
     );
@@ -293,12 +288,14 @@ describe("PUT /api/platform/organizations/[orgId]/subscription — validation & 
     expect(json.error).toBe("PLAN_NOT_FOUND");
   });
 
-  it("creates a subscription with an explicit startDate (provided branch)", async () => {
+  it("computes dates from the plan's period (ANNUAL -> +365j)", async () => {
     await asStaff();
     const org = await prisma.organization.create({
       data: { name: "OrgStart", slug: `orgstart-${Date.now()}` },
     });
-    const plan = await prisma.plan.create({ data: { name: `plan-start-${Date.now()}` } });
+    const plan = await prisma.plan.create({
+      data: { name: `plan-start-${Date.now()}`, period: "ANNUAL" },
+    });
     const { PUT } = await import(
       "@/app/api/platform/organizations/[orgId]/subscription/route"
     );
@@ -306,13 +303,16 @@ describe("PUT /api/platform/organizations/[orgId]/subscription — validation & 
       req(`/api/platform/organizations/${org.id}/subscription`, "PUT", {
         planId: plan.id,
         status: "ACTIVE",
-        startDate: "2020-06-15",
       }),
       { params: Promise.resolve({ orgId: org.id }) },
     );
     expect(res.status).toBe(200);
     const { subscription } = await res.json();
-    expect(new Date(subscription.startDate).toISOString().slice(0, 10)).toBe("2020-06-15");
+    const days = Math.round(
+      (new Date(subscription.endDate).getTime() - new Date(subscription.startDate).getTime()) /
+        86_400_000,
+    );
+    expect(days).toBe(365);
   });
 
   it("creates a subscription without startDate (falls back to prisma @default(now()))", async () => {

@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export type PlanOption = { id: string; name: string };
 export type SubscriptionPeriodValue = "MONTHLY" | "ANNUAL";
+export type PlanOption = { id: string; name: string; period: SubscriptionPeriodValue };
 export type SubscriptionState = {
   planId: string;
   status: "ACTIVE" | "EXPIRED" | "CANCELLED";
-  period: SubscriptionPeriodValue | null;
   overrideMaxEvents: string;
   overrideMaxParticipantsPerEvent: string;
 } | null;
+
+function periodLabel(p: SubscriptionPeriodValue): string {
+  return p === "ANNUAL" ? "Annuel (365 jours)" : "Mensuel (30 jours)";
+}
 
 export function SubscriptionForm({
   orgId,
@@ -25,7 +28,6 @@ export function SubscriptionForm({
   const router = useRouter();
   const [planId, setPlanId] = useState(current?.planId ?? plans[0]?.id ?? "");
   const [status, setStatus] = useState<"ACTIVE" | "EXPIRED" | "CANCELLED">(current?.status ?? "ACTIVE");
-  const [period, setPeriod] = useState<SubscriptionPeriodValue>(current?.period ?? "MONTHLY");
   const [overrideMaxEvents, setOverrideMaxEvents] = useState(current?.overrideMaxEvents ?? "");
   const [overrideMaxParticipants, setOverrideMaxParticipants] = useState(
     current?.overrideMaxParticipantsPerEvent ?? "",
@@ -33,6 +35,8 @@ export function SubscriptionForm({
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const selectedPlan = plans.find((p) => p.id === planId) ?? null;
 
   function parseLimit(v: string): number | null {
     const t = v.trim();
@@ -51,7 +55,6 @@ export function SubscriptionForm({
       body: JSON.stringify({
         planId,
         status,
-        period,
         overrideMaxEvents: parseLimit(overrideMaxEvents),
         overrideMaxParticipantsPerEvent: parseLimit(overrideMaxParticipants),
       }),
@@ -95,20 +98,15 @@ export function SubscriptionForm({
           <option value="CANCELLED">CANCELLED</option>
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-sm">
         <span className="text-slate-600">Période</span>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as SubscriptionPeriodValue)}
-          className="rounded-lg border border-slate-300 px-3 py-2"
-        >
-          <option value="MONTHLY">Mensuel (30 jours)</option>
-          <option value="ANNUAL">Annuel (365 jours)</option>
-        </select>
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+          {selectedPlan ? periodLabel(selectedPlan.period) : "—"}
+        </p>
         <span className="text-xs text-slate-500">
-          Les dates de début et de fin sont calculées automatiquement à l&apos;enregistrement.
+          Définie par le plan. Les dates de début et de fin sont calculées à l&apos;enregistrement.
         </span>
-      </label>
+      </div>
       <div className="flex gap-3">
         <label className="flex flex-1 flex-col gap-1 text-sm">
           <span className="text-slate-600">Override max events</span>

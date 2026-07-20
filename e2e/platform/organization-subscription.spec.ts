@@ -17,10 +17,11 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await disconnectDb();
   });
 
-  async function seedPlan(scope: string) {
+  async function seedPlan(scope: string, period: "MONTHLY" | "ANNUAL" = "MONTHLY") {
     return getDb().plan.create({
       data: {
         name: `e2e-plan-${scope}-${Date.now()}`,
+        period,
         maxEvents: 5,
         maxParticipantsPerEvent: 100,
       },
@@ -36,7 +37,8 @@ test.describe("Platform — Abonnement d'une organisation", () => {
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await expect(page.getByLabel("Plan")).toBeVisible();
-    await expect(page.getByLabel("Période")).toBeVisible();
+    // La periode n'est plus saisie : elle est portee par le plan et affichee en lecture seule.
+    await expect(page.getByText("Période")).toBeVisible();
     await expect(page.getByLabel("Statut")).toBeVisible();
   });
 
@@ -49,21 +51,20 @@ test.describe("Platform — Abonnement d'une organisation", () => {
 
   // --- Actions UI ---------------------------------------------------------
 
-  test("STAFF_ADMIN reassigne un plan avec periode annuelle", async ({ page }) => {
+  test("STAFF_ADMIN assigne un plan annuel : dates calculees sur 365j", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "psub-assign" });
-    const plan = await seedPlan("psub-assign");
+    const plan = await seedPlan("psub-assign", "ANNUAL");
     const staff = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-assign-staff" });
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await page.getByLabel("Plan").selectOption(plan.id);
-    await page.getByLabel("Période").selectOption("ANNUAL");
     await page.getByLabel("Statut").selectOption("ACTIVE");
     await page.getByRole("button", { name: /enregistrer/i }).click();
 
     await expect(async () => {
       const sub = await getDb().subscription.findUnique({ where: { orgId } });
       expect(sub?.planId).toBe(plan.id);
-      expect(sub?.period).toBe("ANNUAL");
+      // La periode vient du plan (ANNUAL) -> endDate a +365j.
       expect(
         Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000),
       ).toBe(365);
@@ -79,7 +80,6 @@ test.describe("Platform — Abonnement d'une organisation", () => {
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await page.getByLabel("Plan").selectOption(plan.id);
-    await page.getByLabel("Période").selectOption("MONTHLY");
     await page.getByLabel(/override max events/i).fill("42");
     await page.getByRole("button", { name: /enregistrer/i }).click();
 
@@ -96,7 +96,6 @@ test.describe("Platform — Abonnement d'une organisation", () => {
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await page.getByLabel("Plan").selectOption(plan.id);
-    await page.getByLabel("Période").selectOption("MONTHLY");
     await page.getByLabel("Statut").selectOption("EXPIRED");
     await page.getByRole("button", { name: /enregistrer/i }).click();
 
@@ -114,7 +113,7 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "psub-observer-staff" });
 
     const res = await page.request.put(`/api/platform/organizations/${orgId}/subscription`, {
-      data: { planId: plan.id, status: "ACTIVE", period: "MONTHLY" },
+      data: { planId: plan.id, status: "ACTIVE" },
     });
     expect(res.status()).toBe(403);
   });
@@ -124,7 +123,7 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-noplan-staff" });
 
     const res = await page.request.put(`/api/platform/organizations/${orgId}/subscription`, {
-      data: { planId: "plan-inexistant", status: "ACTIVE", period: "MONTHLY" },
+      data: { planId: "plan-inexistant", status: "ACTIVE" },
     });
     expect(res.status()).toBe(404);
   });

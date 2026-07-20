@@ -38,7 +38,7 @@ test.describe("Parcours abonnement org", () => {
   }) => {
     const staff = await createTestStaff({ scope: "full-flow", role: "STAFF_ADMIN" });
     const plan = await getDb().plan.create({
-      data: { name: `e2e-full-${Date.now()}`, maxEvents: 3, maxParticipantsPerEvent: 50 },
+      data: { name: `e2e-full-${Date.now()}`, period: "ANNUAL", maxEvents: 3, maxParticipantsPerEvent: 50 },
     });
     await loginAs(page, staff);
 
@@ -62,15 +62,13 @@ test.describe("Parcours abonnement org", () => {
     // 3. Attribution d'un plan depuis l'onglet Abonnement.
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await page.getByLabel("Plan").selectOption(plan.id);
-    await page.getByLabel("Période").selectOption("ANNUAL");
     await page.getByLabel("Statut").selectOption("ACTIVE");
     await page.getByRole("button", { name: /Enregistrer/ }).click();
 
-    // 4. L'abonnement est actif, avec les dates calculees depuis la periode.
+    // 4. L'abonnement est actif ; les dates derivent de la periode du plan (ANNUAL).
     await expect(async () => {
       const sub = await getDb().subscription.findUnique({ where: { orgId } });
       expect(sub?.status).toBe("ACTIVE");
-      expect(sub?.period).toBe("ANNUAL");
       expect(sub?.planId).toBe(plan.id);
       expect(
         Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000),
@@ -82,20 +80,18 @@ test.describe("Parcours abonnement org", () => {
     const staff = await createTestStaff({ scope: "sub-assign", role: "STAFF_ADMIN" });
     const { orgId } = await createTestOrgWithOwner({ scope: "sub-assign" });
     const plan = await getDb().plan.create({
-      data: { name: `e2e-catalog-${Date.now()}`, maxEvents: 5, maxParticipantsPerEvent: 200 },
+      data: { name: `e2e-catalog-${Date.now()}`, period: "MONTHLY", maxEvents: 5, maxParticipantsPerEvent: 200 },
     });
     await loginAs(page, staff);
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await page.getByLabel("Plan").selectOption(plan.id);
-    await page.getByLabel("Période").selectOption("MONTHLY");
     await page.getByLabel("Statut").selectOption("ACTIVE");
     await page.getByRole("button", { name: /Enregistrer/ }).click();
 
     await expect(async () => {
       const sub = await getDb().subscription.findUnique({ where: { orgId } });
       expect(sub?.planId).toBe(plan.id);
-      expect(sub?.period).toBe("MONTHLY");
       const days = Math.round(
         (sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000,
       );
@@ -140,18 +136,16 @@ test.describe("Parcours abonnement org", () => {
     const staff = await createTestStaff({ scope: "sub-annual", role: "STAFF_ADMIN" });
     const { orgId } = await createTestOrgWithOwner({ scope: "sub-annual" });
     const plan = await getDb().plan.create({
-      data: { name: `e2e-catalog-y-${Date.now()}`, maxEvents: null, maxParticipantsPerEvent: null },
+      data: { name: `e2e-catalog-y-${Date.now()}`, period: "ANNUAL", maxEvents: null, maxParticipantsPerEvent: null },
     });
     await loginAs(page, staff);
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await page.getByLabel("Plan").selectOption(plan.id);
-    await page.getByLabel("Période").selectOption("ANNUAL");
     await page.getByRole("button", { name: /Enregistrer/ }).click();
 
     await expect(async () => {
       const sub = await getDb().subscription.findUnique({ where: { orgId } });
-      expect(sub?.period).toBe("ANNUAL");
       const days = Math.round(
         (sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000,
       );

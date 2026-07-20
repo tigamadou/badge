@@ -30,10 +30,10 @@ async function seedOrg() {
   return prisma.organization.create({ data: { name: "O", slug: `o-sub-${stamp}` } });
 }
 
-async function seedPlan() {
+async function seedPlan(period: "MONTHLY" | "ANNUAL" = "MONTHLY") {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   return prisma.plan.create({
-    data: { name: `plan-sub-${stamp}`, maxEvents: 5, maxParticipantsPerEvent: 100 },
+    data: { name: `plan-sub-${stamp}`, period, maxEvents: 5, maxParticipantsPerEvent: 100 },
   });
 }
 
@@ -56,63 +56,53 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     vi.mocked(getServerSession).mockReset();
   });
 
-  it("assigne un abonnement mensuel et calcule endDate = +30j", async () => {
+  it("assigne un plan mensuel et calcule endDate = +30j (periode du plan)", async () => {
     const staff = await seedStaff();
     const org = await seedOrg();
-    const plan = await seedPlan();
-    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
-
-    const res = await callPut(org.id, {
-      planId: plan.id,
-      status: "ACTIVE",
-      period: "MONTHLY",
-    });
-    expect(res.status).toBe(200);
-
-    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
-    expect(sub?.period).toBe("MONTHLY");
-    expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(30);
-  });
-
-  it("assigne un abonnement annuel et calcule endDate = +365j", async () => {
-    const staff = await seedStaff();
-    const org = await seedOrg();
-    const plan = await seedPlan();
-    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
-
-    const res = await callPut(org.id, {
-      planId: plan.id,
-      status: "ACTIVE",
-      period: "ANNUAL",
-    });
-    expect(res.status).toBe(200);
-
-    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
-    expect(sub?.period).toBe("ANNUAL");
-    expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
-  });
-
-  it("refuse une period manquante (400)", async () => {
-    const staff = await seedStaff();
-    const org = await seedOrg();
-    const plan = await seedPlan();
+    const plan = await seedPlan("MONTHLY");
     withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
 
     const res = await callPut(org.id, { planId: plan.id, status: "ACTIVE" });
+    expect(res.status).toBe(200);
+
+    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
+    expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(30);
+  });
+
+  it("assigne un plan annuel et calcule endDate = +365j (periode du plan)", async () => {
+    const staff = await seedStaff();
+    const org = await seedOrg();
+    const plan = await seedPlan("ANNUAL");
+    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
+
+    const res = await callPut(org.id, { planId: plan.id, status: "ACTIVE" });
+    expect(res.status).toBe(200);
+
+    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
+    expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
+  });
+
+  it("refuse un planId manquant (400)", async () => {
+    const staff = await seedStaff();
+    const org = await seedOrg();
+    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
+
+    const res = await callPut(org.id, { status: "ACTIVE" });
     expect(res.status).toBe(400);
   });
 
-  it("recalcule les dates lors d'une reassignation (upsert)", async () => {
+  it("recalcule les dates lors d'une reassignation selon la periode du plan", async () => {
     const staff = await seedStaff();
     const org = await seedOrg();
-    const plan = await seedPlan();
+    const planMonthly = await seedPlan("MONTHLY");
+    const planAnnual = await seedPlan("ANNUAL");
     withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
 
-    await callPut(org.id, { planId: plan.id, status: "ACTIVE", period: "MONTHLY" });
-    await callPut(org.id, { planId: plan.id, status: "ACTIVE", period: "ANNUAL" });
+    await callPut(org.id, { planId: planMonthly.id, status: "ACTIVE" });
+    await callPut(org.id, { planId: planAnnual.id, status: "ACTIVE" });
 
     const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
-    expect(sub?.period).toBe("ANNUAL");
+    expect(sub?.planId).toBe(planAnnual.id);
     expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
   });
 
@@ -121,11 +111,7 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     const plan = await seedPlan();
     withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
 
-    const res = await callPut("org-inexistant", {
-      planId: plan.id,
-      status: "ACTIVE",
-      period: "MONTHLY",
-    });
+    const res = await callPut("org-inexistant", { planId: plan.id, status: "ACTIVE" });
     expect(res.status).toBe(404);
   });
 });

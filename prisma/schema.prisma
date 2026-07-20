@@ -445,12 +445,15 @@ enum ActivityType {
 // =====================================================
 
 model Plan {
-  id                      String         @id @default(cuid())
-  name                    String         @unique
+  id                      String             @id @default(cuid())
+  name                    String             @unique
   maxEvents               Int? // null = illimite
   maxParticipantsPerEvent Int? // null = illimite
-  archived                Boolean        @default(false)
-  createdAt               DateTime       @default(now())
+  // v4 : periodicite de l'offre. Un abonnement souscrit a ce plan en herite ;
+  // elle pilote le calcul de startDate/endDate (MONTHLY=30j, ANNUAL=365j).
+  period                  SubscriptionPeriod @default(MONTHLY)
+  archived                Boolean            @default(false)
+  createdAt               DateTime           @default(now())
   subscriptions           Subscription[]
 }
 
@@ -474,9 +477,6 @@ model Subscription {
   status    SubscriptionStatus @default(ACTIVE)
   startDate DateTime           @default(now())
   endDate   DateTime? // null = sans echeance
-  // v4 : periodicite qui pilote le calcul de startDate/endDate a l'assignation.
-  // Nullable pour les abonnements anterieurs a cette evolution.
-  period    SubscriptionPeriod?
   // Overrides par org (null = herite du plan)
   overrideMaxEvents               Int?
   overrideMaxParticipantsPerEvent Int?

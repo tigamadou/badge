@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+export type PlanPeriod = "MONTHLY" | "ANNUAL";
 export type PlanRow = {
   id: string;
   name: string;
+  period: PlanPeriod;
   maxEvents: number | null;
   maxParticipantsPerEvent: number | null;
   archived: boolean;
@@ -16,9 +18,14 @@ function fmtLimit(v: number | null): string {
   return v == null ? "Illimité" : String(v);
 }
 
+function fmtPeriod(p: PlanPeriod): string {
+  return p === "ANNUAL" ? "Annuel" : "Mensuel";
+}
+
 export function PlanManager({ plans }: { plans: PlanRow[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [period, setPeriod] = useState<PlanPeriod>("MONTHLY");
   const [maxEvents, setMaxEvents] = useState("");
   const [maxParticipants, setMaxParticipants] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +46,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         name,
+        period,
         maxEvents: parseLimit(maxEvents),
         maxParticipantsPerEvent: parseLimit(maxParticipants),
       }),
@@ -50,6 +58,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
       return;
     }
     setName("");
+    setPeriod("MONTHLY");
     setMaxEvents("");
     setMaxParticipants("");
     router.refresh();
@@ -80,6 +89,17 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
             required
             className="rounded-lg border border-slate-300 px-3 py-2"
           />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-slate-600">Période</span>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as PlanPeriod)}
+            className="rounded-lg border border-slate-300 px-3 py-2"
+          >
+            <option value="MONTHLY">Mensuel (30 jours)</option>
+            <option value="ANNUAL">Annuel (365 jours)</option>
+          </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-slate-600">Max events (vide = illimité)</span>
@@ -115,6 +135,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
         <thead>
           <tr className="border-b border-slate-200 text-left text-slate-500">
             <th className="py-2">Nom</th>
+            <th className="py-2">Période</th>
             <th className="py-2">Max events</th>
             <th className="py-2">Max participants/event</th>
             <th className="py-2">Abonnements</th>
@@ -125,6 +146,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
           {plans.map((p) => (
             <tr key={p.id} className="border-b border-slate-100">
               <td className="py-2 font-medium text-slate-900">{p.name}</td>
+              <td className="py-2">{fmtPeriod(p.period)}</td>
               <td className="py-2">{fmtLimit(p.maxEvents)}</td>
               <td className="py-2">{fmtLimit(p.maxParticipantsPerEvent)}</td>
               <td className="py-2">{p.subscriptionsCount}</td>
@@ -141,7 +163,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
           ))}
           {plans.length === 0 && (
             <tr>
-              <td colSpan={5} className="py-6 text-center text-slate-400">
+              <td colSpan={6} className="py-6 text-center text-slate-400">
                 Aucun plan.
               </td>
             </tr>
