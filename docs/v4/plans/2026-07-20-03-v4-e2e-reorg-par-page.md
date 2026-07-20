@@ -85,7 +85,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 3.1 | platform/dashboard | [x] | 2026-07-20 | `e2e/platform/dashboard.spec.ts` (lacune totale comblee) : KPI globaux, acces OBSERVER et SUPER_ADMIN, etat vide, compteur coherent, liens Tout voir, redirection non-staff. 6/6 verts. |
 | 3.2 | platform/organizations-list | [x] | 2026-07-20 | `e2e/platform/organizations-list.spec.ts` (lacune comblee) : rendu, recherche q, bascule archivees, table vide, navigation creation et fiche. 6/6 verts. |
 | 3.3 | platform/organization-new | [ ] | | |
-| 3.4 | platform/organization-detail (danger UI) | [ ] | | |
+| 3.4 | platform/organization-detail (danger UI) | [x] | 2026-07-20 | `e2e/platform/organization-detail.spec.ts` : rendu, 404, ARCHIVER/RESTAURER via boutons et SUPPRESSION via la modale avec slug exact (lacunes majeures : l'UI n'etait jamais exercee, seulement l'API), bouton masque pour STAFF_ADMIN, 403 delete et archive. 7/7 verts. |
 | 3.5 | platform/organization-subscription | [ ] | | |
 | 3.6 | platform/organization-members | [ ] | | |
 | 3.7 | platform/organization-events + activity (supervision) | [ ] | | |
