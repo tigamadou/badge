@@ -3,12 +3,19 @@ import {
   cleanupE2ETestData,
   createTestEvent,
   createTestEventMember,
+  createTestRegistration,
+  createTestUser,
   disconnectDb,
+  getDb,
   makeEventAdminUser,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
 
-test.describe("T20 Event dashboard", () => {
+// Page Tableau de bord evenement — /event/[eventId]
+// Accessible a tous les roles event, mais le SHELL differe : ADMIN/STAFF voient la
+// nav complete, OPERATOR le scanner, PRINTER les badges, VIEWER la vue d'ensemble.
+// Page 100% lecture seule : KPI, banniere de quota, dernieres inscriptions.
+test.describe("Event — Tableau de bord", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -88,5 +95,75 @@ test.describe("T20 Event dashboard", () => {
     // v4 Bloc D : le membre VIEWER (event-only) atteint son evenement et obtient le
     // shell dedie VIEWER, reconnaissable a l'en-tete "Lecture — <titre>".
     await expect(page.getByText(/lecture —/i)).toBeVisible();
+  });
+
+  // --- Etats --------------------------------------------------------------
+
+  test("Etat vide : aucune inscription", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "dash-empty" });
+    const admin = await makeEventAdminUser({ scope: "dash-empty", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}`);
+    await expect(page.getByText(/aucune inscription pour le moment/i)).toBeVisible();
+  });
+
+  test("Quota d'inscriptions > 80% : banniere affichee", async ({ page }) => {
+    // Plan limite a 2 participants/event, 2 inscriptions comptables => 100%.
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "dash-quota" });
+    await getDb().plan.updateMany({
+      where: { subscriptions: { some: { org: { events: { some: { id: eventId } } } } } },
+      data: { maxParticipantsPerEvent: 2 },
+    });
+    for (let i = 0; i < 2; i++) {
+      const participant = await createTestUser({
+        scope: `dash-quota-p${i}`,
+        verified: true,
+        profile: true,
+      });
+      await createTestRegistration({
+        eventId,
+        userId: participant.id,
+        categoryId,
+        status: "APPROVED",
+      });
+    }
+    const admin = await makeEventAdminUser({ scope: "dash-quota", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}`);
+    await expect(page.getByText(/quota d'inscriptions dépasse 80/i)).toBeVisible();
+  });
+
+  test("Quota sous le seuil : pas de banniere", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "dash-noquota" });
+    const admin = await makeEventAdminUser({ scope: "dash-noquota", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}`);
+    await expect(page.getByText(/quota d'inscriptions dépasse 80/i)).toHaveCount(0);
+  });
+
+  // --- Navigation ---------------------------------------------------------
+
+  test("Le lien 'Tout voir' mene a la liste des inscriptions", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "dash-nav" });
+    const participant = await createTestUser({
+      scope: "dash-nav-p",
+      verified: true,
+      profile: true,
+    });
+    await createTestRegistration({
+      eventId,
+      userId: participant.id,
+      categoryId,
+      status: "PENDING",
+    });
+    const admin = await makeEventAdminUser({ scope: "dash-nav", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}`);
+    await page.getByRole("link", { name: /tout voir/i }).first().click();
+    await page.waitForURL(`**/event/${eventId}/registrations`);
   });
 });

@@ -58,7 +58,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 1.6 | org/settings (+ badge) | [x] | 2026-07-20 | `e2e/org/settings.spec.ts` : rendu (slug disabled), edition UI, upload logo UI (lacune comblee), selection template UI, reset heritage, UNKNOWN_TEMPLATE, SMTP 400, MANAGER voit la page mais PATCH 403, AUDITOR redirige. 12/12 verts. |
 | 1.7 | org/activity (+ detail) | [x] | 2026-07-20 | `e2e/org/activity.spec.ts` : rendu, AUDITOR page+API, etat vide, tag staff, navigation detail, scoping 404 cross-org (lacunes comblees). 7/7 verts. |
 | 1.8 | org/access + suppression transverses org | [x] | 2026-07-20 | `e2e/org/access.spec.ts` (gates layout, staff->platform, nav par role). Tests hors-perimetre relogues : /select -> `e2e/public/select.spec.ts`, profile/complete -> `account-profile.spec.ts`. pages-render/rbac/interactions org SUPPRIMES (30 tests -> 71 repartis sur 8 pages). 81 passed / 0 echec. |
-| 2.1 | event/dashboard | [ ] | | |
+| 2.1 | event/dashboard | [x] | 2026-07-20 | `e2e/event/dashboard.spec.ts` enrichi : 4 roles (shells distincts) + etat vide, banniere quota >80% vs sous seuil, lien Tout voir (lacunes comblees). 8/8 verts. |
 | 2.2 | event/registrations (liste) | [ ] | | |
 | 2.3 | event/registrations-new | [ ] | | |
 | 2.4 | event/registration-detail | [ ] | | |
