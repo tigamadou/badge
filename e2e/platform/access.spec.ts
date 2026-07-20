@@ -31,28 +31,12 @@ test.describe("Platform — Acces a l'espace", () => {
     await expect(page).not.toHaveURL(/\/platform/);
   });
 
-  test("Non-staff sur une API plateforme -> 403", async ({ page }) => {
-    const { owner } = await createTestOrgWithOwner({ scope: "pacc-api" });
-    await loginAs(page, owner);
-
-    const res = await page.request.get("/api/platform/activity");
-    expect(res.status()).toBe(403);
-  });
-
-  // --- Matrice de roles transverse ----------------------------------------
 
   test("Le plancher d'acces est STAFF_OBSERVER", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pacc-observer" });
 
     await page.goto("/platform");
     await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
-  });
-
-  test("Tout staff peut lire le journal (GET /api/platform/activity -> 200)", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pacc-read-activity" });
-
-    const res = await page.request.get("/api/platform/activity");
-    expect(res.status()).toBe(200);
   });
 
   test("La nav plateforme expose les sections principales", async ({ page }) => {

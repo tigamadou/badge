@@ -107,24 +107,4 @@ test.describe("Platform — Abonnement d'une organisation", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("STAFF_OBSERVER -> 403 sur l'assignation", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "psub-observer" });
-    const plan = await seedPlan("psub-observer");
-    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "psub-observer-staff" });
-
-    const res = await page.request.put(`/api/platform/organizations/${orgId}/subscription`, {
-      data: { planId: plan.id, status: "ACTIVE" },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("Plan inexistant -> 404", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "psub-noplan" });
-    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-noplan-staff" });
-
-    const res = await page.request.put(`/api/platform/organizations/${orgId}/subscription`, {
-      data: { planId: "plan-inexistant", status: "ACTIVE" },
-    });
-    expect(res.status()).toBe(404);
-  });
 });

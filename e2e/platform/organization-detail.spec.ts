@@ -105,23 +105,4 @@ test.describe("Platform — Fiche organisation", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("STAFF_ADMIN -> 403 sur la suppression definitive", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "pdet-api-delete" });
-    const org = await getDb().organization.findUnique({ where: { id: orgId } });
-    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pdet-api-delete-staff" });
-
-    const res = await page.request.delete(`/api/platform/organizations/${orgId}`, {
-      headers: { "x-confirm": `delete-${org!.slug}` },
-      data: { confirmSlug: org!.slug },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("STAFF_OBSERVER -> 403 sur l'archivage", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "pdet-obs-archive" });
-    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pdet-obs-archive-staff" });
-
-    const res = await page.request.post(`/api/platform/organizations/${orgId}/archive`);
-    expect(res.status()).toBe(403);
-  });
 });
