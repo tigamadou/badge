@@ -10,6 +10,7 @@ import {
   makeEventAdminUser,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { expectPdfResponse } from "../helpers/pdf";
 
@@ -105,14 +106,16 @@ test.describe("Event — Badges", () => {
       status: "APPROVED",
     });
 
-    await loginAs(page, admin);
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/print`,
-      { data: { ids: [reg.id] } },
-    );
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    expect(body.printed).toBe(1);
+    // Parcours : login -> /select (2 espaces) -> carte event -> nav Badges.
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+    await page.getByRole("link", { name: /badges/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
+
+    await page.getByRole("checkbox").first().check();
+    await page.getByRole("button", { name: /marquer imprimés/i }).click();
+
+    // Reponse attendue — SUCCES : le filtre "Non imprimés" n'affiche plus rien.
+    await expect(page.getByText(/aucun badge/i)).toBeVisible();
 
     const db = getDb();
     const updated = await db.registration.findUnique({ where: { id: reg.id } });
@@ -127,10 +130,12 @@ test.describe("Event — Badges", () => {
     expect((log.details as { count?: number })?.count).toBe(1);
   });
 
-  test("ADMIN imprime un batch de 3 registrations", async ({ page }) => {
+  // PAGE DE REFERENCE du contrat « test UI » : parcours complet (login ->
+  // /select -> carte event -> nav du shell), URL verifiee a chaque etape,
+  // action 100% UI, et reponse attendue assertee (feedback UI + DB + audit).
+  test("ADMIN imprime un batch de 3 badges (parcours UI complet)", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "print-batch" });
     const admin = await makeEventAdminUser({ scope: "print-batch", eventId, orgId });
-    await loginAs(page, admin);
 
     const regs: { id: string }[] = [];
     for (let i = 0; i < 3; i++) {
@@ -148,16 +153,27 @@ test.describe("Event — Badges", () => {
       regs.push(r);
     }
 
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/print`,
-      { data: { ids: regs.map((r) => r.id) } },
-    );
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    expect(body.printed).toBe(3);
+    // 1. Connexion : l'ADMIN a 2 espaces (OWNER org + ADMIN event) -> /select.
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    const db = getDb();
-    const printedCount = await db.registration.count({
+    // 2. Navigation par la nav du shell (pas de lien profond).
+    await page.getByRole("link", { name: /badges/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
+
+    // 3. Action 100% UI : cocher les 3 lignes puis marquer imprimes.
+    const checkboxes = page.getByRole("checkbox");
+    await expect(checkboxes).toHaveCount(3);
+    for (let i = 0; i < 3; i++) {
+      await checkboxes.nth(i).check();
+    }
+    await page.getByRole("button", { name: /marquer imprimés/i }).click();
+
+    // 4. Reponse attendue — SUCCES :
+    //    (a) feedback UI : le filtre "Non imprimés" ne montre plus aucune ligne
+    await expect(page.getByText(/aucun badge/i)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
+    //    (b) effet persistant : DB + audit
+    const printedCount = await getDb().registration.count({
       where: { id: { in: regs.map((r) => r.id) }, badgePrinted: true },
     });
     expect(printedCount).toBe(3);
@@ -255,43 +271,6 @@ test.describe("Event — Badges", () => {
   });
 
   // --- Actions UI ---------------------------------------------------------
-
-  test("ADMIN selectionne et marque des badges imprimes depuis la liste", async ({ page }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-ui-print" });
-    const admin = await makeEventAdminUser({ scope: "bdg-ui-print", eventId, orgId });
-    const p1 = await createTestUser({ scope: "bdg-ui-p1", verified: true, profile: true });
-    const p2 = await createTestUser({ scope: "bdg-ui-p2", verified: true, profile: true });
-    const reg1 = await createTestRegistration({
-      eventId,
-      userId: p1.id,
-      categoryId,
-      status: "APPROVED",
-    });
-    const reg2 = await createTestRegistration({
-      eventId,
-      userId: p2.id,
-      categoryId,
-      status: "APPROVED",
-    });
-    await loginAs(page, admin);
-
-    await page.goto(`/event/${eventId}/badges`);
-    // Filtre par defaut "Non imprimés" : les 2 badges apparaissent.
-    const checkboxes = page.getByRole("checkbox");
-    await expect(checkboxes).toHaveCount(2);
-    await checkboxes.nth(0).click();
-    await checkboxes.nth(1).click();
-
-    await page.getByRole("button", { name: /marquer imprimés/i }).click();
-
-    // Le filtre "Non imprimés" les exclut desormais.
-    await expect(page.getByText(/aucun badge/i)).toBeVisible();
-
-    const printedCount = await getDb().registration.count({
-      where: { id: { in: [reg1.id, reg2.id] }, badgePrinted: true },
-    });
-    expect(printedCount).toBe(2);
-  });
 
   test("La page de detail d'un badge s'affiche", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-detail" });

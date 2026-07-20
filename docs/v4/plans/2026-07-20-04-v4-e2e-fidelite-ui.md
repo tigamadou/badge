@@ -37,7 +37,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
-| 0.1 | Contrat + helper `loginAndEnter` + page de reference | [ ] | | |
+| 0.1 | Contrat + helper `loginAndEnter` + page de reference | [x] | 2026-07-20 | `e2e/helpers/nav.ts` (`loginAndEnter` : `/select` si multi-espaces, clic de la carte, URL assertee) ; contrat strict dans `e2e/README.md` ; `badges.spec.ts` recode en reference (batch de 3 en parcours UI complet + reponse succes UI/DB/audit), doublon de marquage retire. Verify : 9 passed. NB : `next-env.d.ts` importe `.next/dev/types/routes.d.ts`, ce qui contourne l'`exclude` du tsconfig — si le dev server corrompt cet artefact, le supprimer avant `make typecheck`. |
 | 0.2 | Controles UI manquants (archive/restore event, role membre org) | [ ] | | |
 | 0.3 | Combler les gaps d'integration Vitest (avant retrait des gardes) | [ ] | | |
 | 1 | org : convertir / retirer / URL (8 fichiers) | [ ] | | |
@@ -89,9 +89,9 @@ export async function loginAndEnter(
 ```
 > Ajuster le selecteur de carte a la structure reelle de `src/app/select/page.tsx` (liens vers `/org/[id]` / `/event/[id]` / `/platform`). Un `data-testid="workspace-<kind>-<id>"` sur chaque carte simplifierait le helper — l'ajouter cote page si besoin (petite modif `src/app/select/page.tsx`, autorisee).
 
-- [ ] **Step 1 : Ecrire `e2e/helpers/nav.ts`** (helper ci-dessus).
-- [ ] **Step 2 : Documenter le contrat** dans `e2e/README.md` (les 9 regles + la DoD).
-- [ ] **Step 3 : Recoder `e2e/event/badges.spec.ts` comme PAGE DE REFERENCE** — convertir l'impression batch en parcours UI complet :
+- [x] **Step 1 : Ecrire `e2e/helpers/nav.ts`** (helper ci-dessus).
+- [x] **Step 2 : Documenter le contrat** dans `e2e/README.md` (les 9 regles + la DoD).
+- [x] **Step 3 : Recoder `e2e/event/badges.spec.ts` comme PAGE DE REFERENCE** — convertir l'impression batch en parcours UI complet :
 
 ```ts
 test("ADMIN imprime un batch de 3 badges (parcours UI)", async ({ page }) => {
@@ -146,8 +146,8 @@ test("Retrograder le dernier OWNER affiche une erreur (parcours UI)", async ({ p
 });
 ```
 
-- [ ] **Step 4 : Lancer la reference.** Run (conteneur) : `docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test e2e/event/badges.spec.ts`. Ajuster les libelles reels (checkbox par ligne, bouton) SANS toucher `src/` (hors Task 0.2).
-- [ ] **Step 5 : Commit** (si demande) : `test(v4): contrat e2e UI + helper de parcours + reference badges`.
+- [x] **Step 4 : Lancer la reference.** Run (conteneur) : `docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test e2e/event/badges.spec.ts`. Ajuster les libelles reels (checkbox par ligne, bouton) SANS toucher `src/` (hors Task 0.2).
+- [x] **Step 5 : Commit** (si demande) : `test(v4): contrat e2e UI + helper de parcours + reference badges`.
 
 > Toutes les tasks suivantes appliquent ce gabarit. Pour chaque fichier : (a) convertir les tests « A CONVERTIR », (b) retirer les « GARDE API » (apres Task 0.3), (c) ajouter parcours `/select` + `toHaveURL` aux « MANQUE URL », (d) run vert, (e) commit si demande.
 
