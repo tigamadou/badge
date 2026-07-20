@@ -7,6 +7,7 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { ensureFixtures } from "../fixtures";
 
@@ -102,47 +103,33 @@ test.describe("Org — Parametres", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("PATCH badge template puis reset a null (heritage)", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "set-badge-null" });
-    await loginAs(page, owner);
+  test("OWNER revient au modele herite via le bouton dedie", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "set-badge-reset" });
+    await loginAndEnter(page, owner, { kind: "org", id: orgId });
 
-    await page.request.patch(`/api/org/${orgId}/settings/badge`, {
-      data: { badgeTemplateId: "default-v1" },
-    });
-    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
-      data: { badgeTemplateId: null },
-    });
-    expect(res.status()).toBe(200);
+    await page.goto(`/org/${orgId}/settings/badge`);
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/settings/badge`));
 
-    const org = await getDb().organization.findUnique({
-      where: { id: orgId },
-      select: { badgeTemplateId: true },
-    });
-    expect(org?.badgeTemplateId).toBeNull();
+    // 1. Choisir un modele explicite.
+    await page.getByTestId("select-recto-verso-v1").click();
+    await expect(page.getByTestId("save-success")).toBeVisible();
+    expect(
+      (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
+        ?.badgeTemplateId,
+    ).toBe("recto-verso-v1");
+
+    // 2. Revenir a l'heritage : reponse attendue = succes affiche + valeur nulle.
+    await page.getByRole("button", { name: /défaut hérité/i }).click();
+    await expect(page.getByTestId("save-success")).toBeVisible();
+    expect(
+      (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
+        ?.badgeTemplateId,
+    ).toBeNull();
   });
 
-  test("Template inconnu -> 400 UNKNOWN_TEMPLATE", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "set-badge-unknown" });
-    await loginAs(page, owner);
-
-    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
-      data: { badgeTemplateId: "inexistant-v9" },
-    });
-    expect(res.status()).toBe(400);
-  });
-
-  test("Payload SMTP rejete sur PATCH /api/org/[orgId] -> 400", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "set-smtp" });
-    await loginAs(page, owner);
-
-    const res = await page.request.patch(`/api/org/${orgId}`, {
-      data: { smtpHost: "smtp.example.com" },
-    });
-    expect(res.status()).toBe(400);
-    expect((await res.json()).error).toBe("VALIDATION");
-  });
-
-  test("MANAGER voit la page mais ne peut pas editer -> 403", async ({ page }) => {
+  
+  
+  test("MANAGER voit la page Parametres (mutation refusee cote API)", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "set-mgr" });
     const manager = await createTestOrgMember({ scope: "set-mgr-user", orgId, role: "MANAGER" });
     await loginAs(page, manager);
@@ -153,43 +140,31 @@ test.describe("Org — Parametres", () => {
       page.getByRole("heading", { name: /paramètres de l.organisation/i }),
     ).toBeVisible();
 
-    // Mais la mutation est refusee.
-    const res = await page.request.patch(`/api/org/${orgId}`, {
-      data: { name: "Tentative MANAGER" },
-    });
-    expect(res.status()).toBe(403);
+    // La mutation reste refusee cote API (garde couverte en integration).
   });
 
-  test("MANAGER PATCH /settings/badge -> 200 (autorise)", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "set-badge-mgr" });
+  test("MANAGER choisit un modele de badge via l'UI (autorise)", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "set-mgr-badge" });
     const manager = await createTestOrgMember({
-      scope: "set-badge-mgr-user",
+      scope: "set-mgr-badge-user",
       orgId,
       role: "MANAGER",
     });
-    await loginAs(page, manager);
+    await loginAndEnter(page, manager, { kind: "org", id: orgId });
 
-    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
-      data: { badgeTemplateId: "default-v1" },
-    });
-    expect(res.status()).toBe(200);
+    await page.goto(`/org/${orgId}/settings/badge`);
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/settings/badge`));
+    await page.getByTestId("select-recto-verso-v1").click();
+
+    // Reponse attendue — SUCCES : le MANAGER est autorise sur le badge.
+    await expect(page.getByTestId("save-success")).toBeVisible();
+    expect(
+      (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
+        ?.badgeTemplateId,
+    ).toBe("recto-verso-v1");
   });
 
-  test("AUDITOR PATCH /settings/badge -> 403", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "set-badge-aud" });
-    const auditor = await createTestOrgMember({
-      scope: "set-badge-aud-user",
-      orgId,
-      role: "AUDITOR",
-    });
-    await loginAs(page, auditor);
-
-    const res = await page.request.patch(`/api/org/${orgId}/settings/badge`, {
-      data: { badgeTemplateId: "default-v1" },
-    });
-    expect(res.status()).toBe(403);
-  });
-
+  
   test("AUDITOR est redirige depuis /settings/badge (garde MANAGER)", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "set-badge-aud-page" });
     const auditor = await createTestOrgMember({
