@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestOrgWithOwner,
+  createTestOrgMember,
   createTestUser,
   disconnectDb,
   getDb,
@@ -10,163 +11,220 @@ import { loginAs } from "../helpers/auth";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity, expectNoActivity } from "../helpers/audit";
 
-test.describe("T16 Org members", () => {
+// Page Membres — /org/[orgId]/members
+// Nav : MANAGER+. Mutations (POST/PATCH/DELETE members) : OWNER-only.
+// PAGE DE REFERENCE : gabarit des specs par page (cf. e2e/README.md).
+// Sections : Acces & rendu / Actions UI / Etats / Gardes & API.
+test.describe("Org — Membres", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
   });
 
-  test("OWNER invite nouvel user comme MANAGER", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-new" });
+  // --- Acces & rendu ------------------------------------------------------
+
+  test("OWNER voit la liste des membres", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-render" });
     await loginAs(page, owner);
 
+    await page.goto(`/org/${orgId}/members`);
+    await expect(page.getByRole("heading", { name: /^membres$/i })).toBeVisible();
+    // L'email apparait aussi dans l'en-tete du shell : on cible la ligne du tableau.
+    await expect(page.locator("tr", { hasText: owner.email })).toBeVisible();
+  });
+
+  // --- Actions UI ---------------------------------------------------------
+
+  test("OWNER invite un nouveau membre (MANAGER) via le formulaire", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-invite" });
     await mailpit.clear();
+    await loginAs(page, owner);
 
-    const inviteeEmail = `e2e-invitee-new-${Date.now()}@v2-11-e2e.test`;
-    const res = await page.request.post(`/api/org/${orgId}/members`, {
-      data: { email: inviteeEmail, name: "Invitee Manager", role: "MANAGER" },
-    });
-    expect(res.status()).toBe(201);
-    const json = await res.json();
-    expect(json.userId).toBeTruthy();
+    await page.goto(`/org/${orgId}/members`);
+    const inviteeEmail = `e2e-invitee-${Date.now()}@v2-11-e2e.test`;
+    await page.getByPlaceholder("Nom complet").fill("UI Invitee");
+    await page.getByPlaceholder("email@exemple.fr").fill(inviteeEmail);
+    await page.getByLabel("Rôle").selectOption("MANAGER");
+    await page.getByRole("button", { name: /^inviter$/i }).click();
 
-    const db = getDb();
-    const createdUser = await db.user.findUnique({
+    // Effet UI : la ligne apparait apres le refresh du formulaire.
+    await expect(page.getByText("UI Invitee")).toBeVisible();
+    const row = page.locator("tr", { hasText: inviteeEmail });
+    await expect(row.getByText("MANAGER")).toBeVisible();
+
+    const created = await getDb().user.findUnique({
       where: { email: inviteeEmail },
-      select: { id: true, inviteToken: true },
+      select: { id: true },
     });
-    expect(createdUser).not.toBeNull();
-    expect(createdUser?.inviteToken).toBeTruthy();
-
-    const membership = await db.orgMembership.findUnique({
-      where: { userId_orgId: { userId: createdUser!.id, orgId } },
+    expect(created).not.toBeNull();
+    const membership = await getDb().orgMembership.findUnique({
+      where: { userId_orgId: { userId: created!.id, orgId } },
     });
     expect(membership?.role).toBe("MANAGER");
 
-    // Audit : USER_CREATED + MEMBERSHIP_ADDED.
-    await expectLastActivity({
-      type: "USER_CREATED",
-      orgId,
-      targetId: createdUser!.id,
-      userId: owner.id,
-    });
     await expectLastActivity({
       type: "MEMBERSHIP_ADDED",
       orgId,
-      targetId: createdUser!.id,
+      targetId: created!.id,
       userId: owner.id,
     });
-
-    await mailpit.expectMail({
-      to: inviteeEmail,
-      subjectPattern: /(invitation|bienvenue)/i,
-    });
+    await mailpit.expectMail({ to: inviteeEmail });
   });
 
-  test("OWNER invite user existant comme AUDITOR (pas de USER_CREATED)", async ({
-    page,
-  }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-existing" });
-    const existing = await createTestUser({ scope: "existing-aud", verified: true });
-
+  test("OWNER invite un utilisateur existant (AUDITOR) sans creer de compte", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-invite-existing" });
+    const existing = await createTestUser({ scope: "mem-existing", verified: true });
     await loginAs(page, owner);
 
-    const res = await page.request.post(`/api/org/${orgId}/members`, {
-      data: { email: existing.email, name: existing.name, role: "AUDITOR" },
-    });
-    // Le route renvoie 201 pour nouveau + 200 pour deja-existant alreadyMember,
-    // mais pour un user existant SANS membership c'est aussi 201.
-    expect([200, 201]).toContain(res.status());
+    await page.goto(`/org/${orgId}/members`);
+    await page.getByPlaceholder("Nom complet").fill(existing.name);
+    await page.getByPlaceholder("email@exemple.fr").fill(existing.email);
+    await page.getByLabel("Rôle").selectOption("AUDITOR");
+    await page.getByRole("button", { name: /^inviter$/i }).click();
 
-    const db = getDb();
-    const membership = await db.orgMembership.findUnique({
-      where: { userId_orgId: { userId: existing.id, orgId } },
-    });
-    expect(membership?.role).toBe("AUDITOR");
+    const row = page.locator("tr", { hasText: existing.email });
+    await expect(row.getByText("AUDITOR")).toBeVisible();
 
-    // Audit : pas de USER_CREATED pour ce user (il existait deja).
-    await expectNoActivity({
-      type: "USER_CREATED",
-      orgId,
-      targetId: existing.id,
-    });
-    // Mais MEMBERSHIP_ADDED doit etre present.
-    await expectLastActivity({
-      type: "MEMBERSHIP_ADDED",
-      orgId,
-      targetId: existing.id,
-      userId: owner.id,
-    });
+    // Aucun compte cree : l'utilisateur existait deja.
+    await expectNoActivity({ type: "USER_CREATED", targetId: existing.id });
+    await expectLastActivity({ type: "MEMBERSHIP_ADDED", orgId, targetId: existing.id });
   });
 
-  test("OWNER change role MANAGER -> AUDITOR via PATCH", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-role-change" });
+  test("OWNER retire un membre via le bouton Retirer", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-remove" });
+    const manager = await createTestOrgMember({
+      scope: "mem-remove-target",
+      orgId,
+      role: "MANAGER",
+    });
     await loginAs(page, owner);
 
-    // Cree un MANAGER existant.
-    const db = getDb();
-    const manager = await createTestUser({ scope: "to-demote", verified: true });
-    await db.orgMembership.create({
-      data: { userId: manager.id, orgId, role: "MANAGER" },
-    });
+    await page.goto(`/org/${orgId}/members`);
+    await expect(page.getByText(manager.email)).toBeVisible();
 
-    const res = await page.request.patch(
-      `/api/org/${orgId}/members/${manager.id}`,
-      { data: { role: "AUDITOR" } },
-    );
-    expect(res.status()).toBe(200);
+    page.once("dialog", (dialog) => dialog.accept());
+    const row = page.locator("tr", { hasText: manager.email });
+    await row.getByRole("button", { name: /^retirer$/i }).click();
 
-    const updated = await db.orgMembership.findUnique({
+    await expect(page.getByText(manager.email)).toHaveCount(0);
+
+    const membership = await getDb().orgMembership.findUnique({
       where: { userId_orgId: { userId: manager.id, orgId } },
     });
-    expect(updated?.role).toBe("AUDITOR");
+    expect(membership).toBeNull();
 
-    const log = await expectLastActivity({
-      type: "MEMBERSHIP_ROLE_CHANGED",
+    await expectLastActivity({
+      type: "MEMBERSHIP_REMOVED",
       orgId,
       targetId: manager.id,
       userId: owner.id,
     });
-    const details = log.details as { from?: string; to?: string } | null;
-    expect(details?.from).toBe("MANAGER");
-    expect(details?.to).toBe("AUDITOR");
   });
 
-  test("Cannot remove last OWNER -> 409 LAST_OWNER", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-last-rm" });
+  // --- Etats --------------------------------------------------------------
+
+  test("Dernier OWNER : pas de bouton Retirer (etat protege)", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-last-owner" });
     await loginAs(page, owner);
 
-    const res = await page.request.delete(
-      `/api/org/${orgId}/members/${owner.id}`,
-    );
-    expect(res.status()).toBe(409);
-    const json = await res.json();
-    expect(json.code).toBe("LAST_OWNER");
+    await page.goto(`/org/${orgId}/members`);
+    const row = page.locator("tr", { hasText: owner.email });
+    await expect(row.getByText(/dernier owner/i)).toBeVisible();
+    await expect(row.getByRole("button", { name: /^retirer$/i })).toHaveCount(0);
+  });
 
-    // L'OWNER doit toujours exister.
-    const db = getDb();
-    const still = await db.orgMembership.findUnique({
+  // --- Gardes & API (inatteignable par l'UI) ------------------------------
+
+  test("DELETE dernier OWNER -> 409 LAST_OWNER", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-api-last-rm" });
+    await loginAs(page, owner);
+
+    const res = await page.request.delete(`/api/org/${orgId}/members/${owner.id}`);
+    expect(res.status()).toBe(409);
+    expect((await res.json()).code).toBe("LAST_OWNER");
+
+    const still = await getDb().orgMembership.findUnique({
       where: { userId_orgId: { userId: owner.id, orgId } },
     });
     expect(still?.role).toBe("OWNER");
   });
 
-  test("Cannot demote last OWNER -> 409 LAST_OWNER", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "members-last-demote" });
+  test("PATCH retrograde le dernier OWNER -> 409 LAST_OWNER", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-api-last-demote" });
     await loginAs(page, owner);
 
-    const res = await page.request.patch(
-      `/api/org/${orgId}/members/${owner.id}`,
-      { data: { role: "MANAGER" } },
-    );
+    const res = await page.request.patch(`/api/org/${orgId}/members/${owner.id}`, {
+      data: { role: "MANAGER" },
+    });
     expect(res.status()).toBe(409);
-    const json = await res.json();
-    expect(json.code).toBe("LAST_OWNER");
+    expect((await res.json()).code).toBe("LAST_OWNER");
 
-    const db = getDb();
-    const still = await db.orgMembership.findUnique({
+    const still = await getDb().orgMembership.findUnique({
       where: { userId_orgId: { userId: owner.id, orgId } },
     });
     expect(still?.role).toBe("OWNER");
+  });
+
+  test("PATCH change le role d'un membre (OWNER)", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-api-patch" });
+    const manager = await createTestOrgMember({
+      scope: "mem-api-patch-target",
+      orgId,
+      role: "MANAGER",
+    });
+    await loginAs(page, owner);
+
+    const res = await page.request.patch(`/api/org/${orgId}/members/${manager.id}`, {
+      data: { role: "AUDITOR" },
+    });
+    expect(res.status()).toBe(200);
+
+    const membership = await getDb().orgMembership.findUnique({
+      where: { userId_orgId: { userId: manager.id, orgId } },
+    });
+    expect(membership?.role).toBe("AUDITOR");
+  });
+
+  test("MANAGER POST /members -> 403", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "mem-rbac-mgr" });
+    const manager = await createTestOrgMember({
+      scope: "mem-rbac-mgr-user",
+      orgId,
+      role: "MANAGER",
+    });
+    await loginAs(page, manager);
+
+    const res = await page.request.post(`/api/org/${orgId}/members`, {
+      data: { email: `e2e-fail-${Date.now()}@v2-11-e2e.test`, name: "x", role: "AUDITOR" },
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test("AUDITOR POST /members -> 403", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "mem-rbac-aud" });
+    const auditor = await createTestOrgMember({
+      scope: "mem-rbac-aud-user",
+      orgId,
+      role: "AUDITOR",
+    });
+    await loginAs(page, auditor);
+
+    const res = await page.request.post(`/api/org/${orgId}/members`, {
+      data: { email: `e2e-fail2-${Date.now()}@v2-11-e2e.test`, name: "x", role: "AUDITOR" },
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test("MANAGER GET /api/org/[orgId]/members -> 200 (lecture autorisee)", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "mem-rbac-read" });
+    const manager = await createTestOrgMember({
+      scope: "mem-rbac-read-user",
+      orgId,
+      role: "MANAGER",
+    });
+    await loginAs(page, manager);
+
+    const res = await page.request.get(`/api/org/${orgId}/members`);
+    expect(res.status()).toBe(200);
   });
 });

@@ -108,11 +108,11 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 - Modify: `e2e/helpers/auth.ts` si un helper de login manque (verifier d'abord)
 - Reference: `e2e/org/members.spec.ts` (page de reference entierement recodee ci-dessous)
 
-- [ ] **Step 1 : Ecrire `e2e/README.md`** documentant la convention (repris de la section « Definition of coverage » + regle UI-first + nommage `<espace>/<page>.spec.ts` + dissolution `pages-render`/`rbac`/`interactions` + `access.spec.ts` par espace).
+- [x] **Step 1 : Ecrire `e2e/README.md`** documentant la convention (repris de la section « Definition of coverage » + regle UI-first + nommage `<espace>/<page>.spec.ts` + dissolution `pages-render`/`rbac`/`interactions` + `access.spec.ts` par espace).
 
-- [ ] **Step 2 : Verifier les helpers de login.** Confirmer que `loginAsOrgMember({orgId, role, scope})`, `loginAsEventMember({orgId, eventId, role, scope})`, `loginAsStaff({role, scope})` existent (`e2e/helpers/auth.ts`). Si un helper de login par role manque pour un espace, l'ajouter en suivant le pattern existant. (Aucun code applicatif `src/` ne doit changer.)
+- [x] **Step 2 : Verifier les helpers de login.** Confirmer que `loginAsOrgMember({orgId, role, scope})`, `loginAsEventMember({orgId, eventId, role, scope})`, `loginAsStaff({role, scope})` existent (`e2e/helpers/auth.ts`). Si un helper de login par role manque pour un espace, l'ajouter en suivant le pattern existant. (Aucun code applicatif `src/` ne doit changer.)
 
-- [ ] **Step 3 : Recoder `e2e/org/members.spec.ts` comme PAGE DE REFERENCE.** Ce fichier sert de gabarit a toutes les autres pages. Il fusionne : l'invitation UI (`interactions.spec.ts:29`), le retrait UI (`interactions.spec.ts:72`), la garde dernier OWNER UI (`interactions.spec.ts:107`), les gardes API (`members.spec.ts` L19/66/102/135/154), le RBAC (`rbac.spec.ts` L25/93/153/168), le rendu (`pages-render.spec.ts:55`).
+- [x] **Step 3 : Recoder `e2e/org/members.spec.ts` comme PAGE DE REFERENCE.** Ce fichier sert de gabarit a toutes les autres pages. Il fusionne : l'invitation UI (`interactions.spec.ts:29`), le retrait UI (`interactions.spec.ts:72`), la garde dernier OWNER UI (`interactions.spec.ts:107`), les gardes API (`members.spec.ts` L19/66/102/135/154), le RBAC (`rbac.spec.ts` L25/93/153/168), le rendu (`pages-render.spec.ts:55`).
 
 ```ts
 import { test, expect } from "@playwright/test";
@@ -226,11 +226,11 @@ test.describe("Org — Membres", () => {
 });
 ```
 
-- [ ] **Step 4 : Lancer la page de reference.**
+- [x] **Step 4 : Lancer la page de reference.**
 Run (conteneur) : `docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test e2e/org/members.spec.ts`
 Expected : tous verts. Ajuster les libelles FR reels (`getByLabel`, boutons) si un selecteur ne matche pas — SANS toucher `src/`.
 
-- [ ] **Step 5 : Commit** (si demande) : `test(v4): page de reference org/members + convention e2e par page`.
+- [x] **Step 5 : Commit** (si demande) : `test(v4): page de reference org/members + convention e2e par page`.
 
 > **Toutes les tasks suivantes appliquent EXACTEMENT ce gabarit** : un `describe` par page, sections Acces / Actions UI / Etats / Gardes & API, cleanup `afterAll`, helpers de login par role, assertions d'audit et mail quand pertinent. Pour chaque page : (a) creer/renommer le fichier cible, (b) migrer les tests existants cites, (c) creer les tests des lacunes citees, (d) supprimer les doublons cites, (e) run vert, (f) commit si demande.
 
