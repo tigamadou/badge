@@ -102,7 +102,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 4.4 | public/forgot-password + reset-password | [ ] | | |
 | 4.5 | public/setup-password | [ ] | | |
 | 4.6 | public/select | [ ] | | |
-| 4.7 | account/dashboard | [ ] | | |
+| 4.7 | account/dashboard | [x] | 2026-07-20 | `e2e/public/account.spec.ts` (lacune comblee) : liste des inscriptions, etat vide, redirection non connecte, statuts valide/rejete, navigation detail, XSS du nom echappe (migre de security). 7/7 verts. |
 | 4.8 | account/profile (+ complete) | [ ] | | |
 | 4.9 | account/registration-detail (resubmit) | [ ] | | |
 | 4.10 | public/event-register (+ success) | [ ] | | |
