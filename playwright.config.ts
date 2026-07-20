@@ -31,6 +31,13 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // Une video .webm par test, uniquement en mode UI hote (PLAYWRIGHT_VIDEO=on,
+    // pose par `make test-e2e-ui`). Off en mode conteneur pour ne pas generer
+    // 370 videos a chaque run CLI.
+    video: process.env.PLAYWRIGHT_VIDEO === "on" ? "on" : "off",
+    // Tolere le certificat de la CA interne de Caddy quand on teste via
+    // https://badge.local (mode UI hote). Sans effet en http (mode conteneur).
+    ignoreHTTPSErrors: true,
     locale: "fr-FR",
     timezoneId: "Africa/Abidjan",
   },

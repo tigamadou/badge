@@ -133,10 +133,12 @@ test-e2e:
 # du reseau Docker (mysql, mailpit) qui ne resolvent que dans les containers.
 test-e2e-ui:
 	@echo "Lancement de Playwright en mode UI depuis l'hote (fenetre Electron)."
-	@echo "L'app dev doit tourner sur localhost:3785 (make dev)."
+	@echo "Cible https://badge.local (via Caddy) : requiert /etc/hosts (127.0.0.1 badge.local)"
+	@echo "et la CA Caddy de confiance (ou ignoreHTTPSErrors, deja actif dans la config)."
 	DATABASE_URL="mysql://root:password@localhost:33060/badge" \
 	MAILPIT_URL="http://localhost:8025" \
-	PLAYWRIGHT_BASE_URL=http://localhost:3785 yarn playwright test --ui
+	PLAYWRIGHT_VIDEO=on \
+	PLAYWRIGHT_BASE_URL=https://badge.local yarn playwright test --ui
 
 validate-badge-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
