@@ -43,7 +43,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 | 1 | org : convertir / retirer / URL (8 fichiers) | [x] | 2026-07-20 | 8 fichiers : **0 page.request**. Conversions : templates (MANAGER via modale + garde AUDITOR en nav absente), members (invitation masquee hors OWNER, change-role via select, echec dernier OWNER), settings (retour heritage via bouton, MANAGER badge via picker), events (echecs metier via wizard : EVENT_LIMIT message + abonnement inactif = espace bloque + AUDITOR creation echoue). Gardes API pures retirees (couvertes en integration). SLUG_TAKEN non provocable par l'UI (slug auto-suggere) -> reste en integration. Bug d'infra corrige : PlatformSettings.smtp corrompu par un run interrompu -> restaure (mailpit:1025). Verify : org complet 60 passed. |
 | 2 | event : convertir / retirer / URL (13 fichiers) | [x] | 2026-07-20 | 13 fichiers **0 page.request**. Conversions UI : badges (impression batch/individuelle), registration-detail (mails approve/reject via boutons), scan/categories deja doublons retires. Gardes API retirees (couvertes integration) ; cas « reapprouver une REJETEE » sans surface UI -> ajoute en integration (api-event-registrations). Parcours complet : `loginAndEnter` (/select si multi-espaces via makeEventAdminUser, redirect auto pour roles event-only) + `toHaveURL` a chaque etape. Seul `loginAs` restant = test « outsider sans espace » (aucun workspace, /select N/A). Verify par fichier (flakes de charge absorbes en run isole) : access/scan/categories/blocklist 16, reg-new/settings/members 13, badges/dashboard 13, registrations 8+1skip, registration-detail 10, activity 3, overview 6. |
 | 3 | platform : convertir / retirer / URL (15 fichiers) | [x] | 2026-07-20 | 15 fichiers **0 page.request**. Retire ~25 gardes 403/409/validation (couvertes integration + gaps combles Task 0.3) ; convertit NAME_TAKEN (plans) et Test SMTP (settings) en tests UI ; conserve les nombreux tests deja conformes (archive/restore/suppression via boutons, invitations, filtres via navigation). Verify par lot : activity 7, access/orgs 24, org-new/plans/user-new 7, settings 5. |
-| 4 | public / transverse : convertir / retirer / securite (12 fichiers) | [ ] | | |
+| 4 | public / transverse : convertir / retirer / securite (12 fichiers) | [x] | 2026-07-20 | Toutes les specs UI **0 page.request**. Conversions UI : resubmit (account-registration), anti-enumeration (password-reset via formulaire), e-mail bloque (event-register -> echec formulaire). Retraits vers integration : 403/404/409 resubmit, log BADGE_SCANNED, rate-limit 429 register/forgot, participant-limit, document bloque, /api/files (restitution). `e2e/transverse/security.spec.ts` conserve les tests de securite hors-perimetre (cookie efface/falsifie). Verify : account-registration 4, badge-verify/register/account-profile 18, password-reset 5, event-register 7. |
 | 5 | Verification globale + doc | [ ] | | |
 
 ---
@@ -276,7 +276,7 @@ Deja majoritairement conforme. **Securite hors-perimetre** (regle 6) : deplacer/
 | account-profile.spec.ts | — (verifs `/api/files` = check download, tolere) | — |
 | security.spec.ts (transverse) | — | conserver (cookie efface/falsifie = securite) |
 
-- [ ] Task 4.x : traiter chaque fichier ; creer `e2e/transverse/securite.spec.ts` pour les tests rate-limit/cookie ; run vert ; commit si demande.
+- [x] Task 4.x : traiter chaque fichier ; securite conservee dans transverse/security.spec.ts (hors-perimetre). — Fait 2026-07-20 (0 page.request dans les specs UI).
 
 ---
 
