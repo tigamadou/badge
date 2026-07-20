@@ -10,7 +10,7 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
 // Page Categories — /event/[eventId]/categories
@@ -34,7 +34,7 @@ test.describe("Event — Categories", () => {
   test("ADMIN cree une categorie via la modale", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "cat-ui-create" });
     const admin = await makeEventAdminUser({ scope: "cat-ui-create", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/categories`);
     await page.getByRole("button", { name: /ajouter/i }).click();
@@ -68,7 +68,7 @@ test.describe("Event — Categories", () => {
       number: 78,
     });
     const admin = await makeEventAdminUser({ scope: "cat-ui-edit", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/categories`);
     const row = page.locator("tr", { hasText: "Cat initiale UI" });
@@ -91,7 +91,7 @@ test.describe("Event — Categories", () => {
       number: 79,
     });
     const admin = await makeEventAdminUser({ scope: "cat-ui-del", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
     page.on("dialog", (d) => d.accept());
 
     await page.goto(`/event/${eventId}/categories`);
@@ -106,7 +106,7 @@ test.describe("Event — Categories", () => {
     const { orgId, eventId } = await createTestEvent({ scope: "cat-ui-import" });
     await createTestCategoryTemplate({ orgId, name: "Modele UI", color: "#abcdef", number: 80 });
     const admin = await makeEventAdminUser({ scope: "cat-ui-import", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/categories`);
     await page.getByRole("button", { name: /importer un modèle/i }).click();
@@ -135,7 +135,7 @@ test.describe("Event — Categories", () => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "cat-ui-empty" });
     await getDb().category.delete({ where: { id: categoryId } });
     const admin = await makeEventAdminUser({ scope: "cat-ui-empty", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/categories`);
     await expect(page.getByText(/aucune catégorie/i)).toBeVisible();

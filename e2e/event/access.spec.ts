@@ -10,7 +10,8 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs, loginAsStaff } from "../helpers/auth";
+import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
 // Acces a l'espace evenement — gates du layout /event/[eventId]
@@ -51,7 +52,7 @@ test.describe("Event — Acces a l'espace", () => {
   test("Evenement introuvable -> 404", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "evacc-404" });
     const admin = await makeEventAdminUser({ scope: "evacc-404", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     const res = await page.goto("/event/event-inexistant-e2e");
     expect(res?.status()).toBe(404);
@@ -83,7 +84,7 @@ test.describe("Event — Acces a l'espace", () => {
       eventId,
       role: "OPERATOR",
     });
-    await loginAs(page, operator);
+    await loginAndEnter(page, operator, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}`);
     await expect(page.getByRole("heading", { name: /tableau de bord opérateur/i })).toBeVisible();
 
@@ -93,7 +94,7 @@ test.describe("Event — Acces a l'espace", () => {
       eventId,
       role: "PRINTER",
     });
-    await loginAs(page, printer);
+    await loginAndEnter(page, printer, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/impression —/i)).toBeVisible();
 
@@ -103,7 +104,7 @@ test.describe("Event — Acces a l'espace", () => {
       eventId,
       role: "VIEWER",
     });
-    await loginAs(page, viewer);
+    await loginAndEnter(page, viewer, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/lecture —/i)).toBeVisible();
   });
@@ -117,7 +118,7 @@ test.describe("Event — Acces a l'espace", () => {
       where: { id: eventId },
       data: { archived: true, archivedAt: new Date(), registrationOpen: false },
     });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
     await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();

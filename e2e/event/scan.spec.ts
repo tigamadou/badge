@@ -7,7 +7,6 @@ import {
   createTestUser,
   disconnectDb,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { makeEventAdminUser } from "../helpers/db";
@@ -50,9 +49,10 @@ test.describe("Event — Scanner", () => {
       categoryId,
       status: "APPROVED",
     });
-    await loginAs(page, operator);
+    await loginAndEnter(page, operator, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/scan`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/scan`));
     await page.getByRole("button", { name: /saisie manuelle/i }).click();
     await page.getByPlaceholder(/id de badge ou contenu qr/i).fill(reg.id);
     await page.getByRole("button", { name: /^vérifier$/i }).click();
@@ -86,9 +86,10 @@ test.describe("Event — Scanner", () => {
       categoryId,
       status: "REJECTED",
     });
-    await loginAs(page, operator);
+    await loginAndEnter(page, operator, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/scan`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/scan`));
     await page.getByRole("button", { name: /saisie manuelle/i }).click();
     await page.getByPlaceholder(/id de badge ou contenu qr/i).fill(reg.id);
     await page.getByRole("button", { name: /^vérifier$/i }).click();
@@ -101,9 +102,10 @@ test.describe("Event — Scanner", () => {
   test("ADMIN accede aussi au scanner", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "scan-admin" });
     const admin = await makeEventAdminUser({ scope: "scan-admin", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/scan`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/scan`));
     await expect(page.getByRole("button", { name: /saisie manuelle/i })).toBeVisible();
   });
 

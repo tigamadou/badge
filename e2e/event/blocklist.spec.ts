@@ -7,7 +7,7 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
 // Page Listes de blocage — /event/[eventId]/blocked-emails (onglets e-mails + documents)
@@ -24,7 +24,7 @@ test.describe("Event — Listes de blocage", () => {
   test("ADMIN voit les deux onglets", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "blk-render" });
     const admin = await makeEventAdminUser({ scope: "blk-render", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/blocked-emails`);
     await expect(page.getByRole("tab", { name: /e-mails/i })).toBeVisible();
@@ -34,7 +34,7 @@ test.describe("Event — Listes de blocage", () => {
   test("/blocked-documents redirige vers la page unifiee", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "blk-redirect" });
     const admin = await makeEventAdminUser({ scope: "blk-redirect", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/blocked-documents`);
     await page.waitForURL(`**/event/${eventId}/blocked-emails`);
@@ -45,7 +45,7 @@ test.describe("Event — Listes de blocage", () => {
   test("ADMIN bloque puis debloque un e-mail via l'UI", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "blk-email" });
     const admin = await makeEventAdminUser({ scope: "blk-email", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
     page.on("dialog", (d) => d.accept());
 
     const email = `blocked-ui-${Date.now()}@v2-11-e2e.test`;
@@ -87,7 +87,7 @@ test.describe("Event — Listes de blocage", () => {
   test("ADMIN bloque puis debloque un numero de piece via l'UI", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "blk-doc" });
     const admin = await makeEventAdminUser({ scope: "blk-doc", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
     page.on("dialog", (d) => d.accept());
 
     const docNumber = `UI-DOC-${Date.now()}`;
