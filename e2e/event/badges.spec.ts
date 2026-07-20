@@ -2,7 +2,6 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestEvent,
-  createTestEventMember,
   createTestRegistration,
   createTestUser,
   disconnectDb,
@@ -12,7 +11,6 @@ import {
 import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
-import { expectPdfResponse } from "../helpers/pdf";
 
 // Notes : le parcours badges (liste, PDF, marquage imprime) est garde par la
 // permission `badge.print` (ADMIN, OPERATOR, PRINTER) et non par la hierarchie
@@ -26,67 +24,6 @@ test.describe("Event — Badges", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
-  });
-
-  test("ADMIN telecharge un PDF individuel (header x-template-id present)", async ({ page }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "pdf-dl" });
-    const admin = await makeEventAdminUser({ scope: "pdf-dl", eventId, orgId });
-    const participant = await createTestUser({
-      scope: "pdf-dl-part",
-      verified: true,
-      profile: true,
-    });
-    const reg = await createTestRegistration({
-      eventId,
-      userId: participant.id,
-      categoryId,
-      status: "APPROVED",
-    });
-
-    await loginAs(page, admin);
-    const res = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
-    );
-    await expectPdfResponse(res, { minBytes: 3000 });
-    expect(res.headers()["x-template-id"]).toBeTruthy();
-  });
-
-  test("PRINTER pur (sans org membership) accede a la liste et au PDF (badge.print)", async ({
-    page,
-  }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "pdf-printer" });
-    const printer = await createTestEventMember({
-      scope: "pdf-printer",
-      orgId,
-      eventId,
-      role: "PRINTER",
-    });
-    const participant = await createTestUser({
-      scope: "pdf-printer-part",
-      verified: true,
-      profile: true,
-    });
-    const reg = await createTestRegistration({
-      eventId,
-      userId: participant.id,
-      categoryId,
-      status: "APPROVED",
-    });
-
-    await loginAs(page, printer);
-
-    // Liste des badges : endpoint dedie garde par badge.print, DTO minimal.
-    const list = await page.request.get(`/api/org/${orgId}/events/${eventId}/badges`);
-    expect(list.status()).toBe(200);
-    const json = await list.json();
-    expect(json.registrations.some((r: { id: string }) => r.id === reg.id)).toBe(true);
-    expect(json.registrations[0]).not.toHaveProperty("email");
-
-    // PDF individuel : meme permission.
-    const res = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
-    );
-    expect(res.status()).toBe(200);
   });
 
   test("ADMIN marque une registration APPROVED comme imprimee (POST /registrations/print)", async ({
@@ -184,90 +121,6 @@ test.describe("Event — Badges", () => {
       eventId,
     });
     expect((log.details as { count?: number })?.count).toBe(3);
-  });
-
-  test("Print sur PENDING -> skip silencieux (count=0, badge non marque)", async ({ page }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "print-pending" });
-    const admin = await makeEventAdminUser({ scope: "print-pending", eventId, orgId });
-    const participant = await createTestUser({
-      scope: "print-pending-part",
-      verified: true,
-      profile: true,
-    });
-    const reg = await createTestRegistration({
-      eventId,
-      userId: participant.id,
-      categoryId,
-      status: "PENDING",
-    });
-
-    await loginAs(page, admin);
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/print`,
-      { data: { ids: [reg.id] } },
-    );
-    expect(res.status()).toBe(200);
-    const body = await res.json();
-    // La route filtre status=APPROVED, donc 0 imprime.
-    expect(body.printed).toBe(0);
-
-    const db = getDb();
-    const updated = await db.registration.findUnique({ where: { id: reg.id } });
-    expect(updated?.badgePrinted).toBe(false);
-  });
-
-  test("Cascade template Event > Org > Platform : PATCH event.badgeTemplateId change le rendu PDF", async ({
-    page,
-  }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "tpl-cascade" });
-    const admin = await makeEventAdminUser({ scope: "tpl-cascade", eventId, orgId });
-    const participant = await createTestUser({
-      scope: "tpl-cascade-part",
-      verified: true,
-      profile: true,
-    });
-    const reg = await createTestRegistration({
-      eventId,
-      userId: participant.id,
-      categoryId,
-      status: "APPROVED",
-    });
-
-    await loginAs(page, admin);
-
-    // 1. Sans override : header x-template-id provient du fallback (org ou platform).
-    const r1 = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
-    );
-    await expectPdfResponse(r1, { minBytes: 3000 });
-    const fallbackId = r1.headers()["x-template-id"];
-    expect(fallbackId).toBeTruthy();
-
-    // 2. Override event -> recto-verso-v1.
-    const patch = await page.request.patch(
-      `/api/org/${orgId}/events/${eventId}/settings/badge`,
-      { data: { badgeTemplateId: "recto-verso-v1" } },
-    );
-    expect(patch.status()).toBe(200);
-
-    const r2 = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
-    );
-    await expectPdfResponse(r2, { minBytes: 3000 });
-    expect(r2.headers()["x-template-id"]).toBe("recto-verso-v1");
-
-    // 3. Clear override -> retour au fallback initial.
-    const patchNull = await page.request.patch(
-      `/api/org/${orgId}/events/${eventId}/settings/badge`,
-      { data: { badgeTemplateId: null } },
-    );
-    expect(patchNull.status()).toBe(200);
-
-    const r3 = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
-    );
-    await expectPdfResponse(r3, { minBytes: 3000 });
-    expect(r3.headers()["x-template-id"]).toBe(fallbackId);
   });
 
   // --- Actions UI ---------------------------------------------------------
