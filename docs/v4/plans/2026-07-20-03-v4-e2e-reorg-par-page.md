@@ -23,14 +23,13 @@
 - **Avant tout commit** : `make lint && make typecheck && make test-e2e` (ou run cible). Commits FR ASCII, conventional commits. **Ne jamais commit sans demande explicite de l'utilisateur** — les etapes « Commit » ne s'executent que sur demande.
 - **Conservation des plans** : ce plan est conserve (marquer la Progression, ne pas supprimer sans demande).
 
-## Bugs applicatifs connus (corriges par le plan pre-requis)
+## Bugs applicatifs connus — CORRIGES (plan pre-requis termine le 2026-07-20)
 
-> **Pre-requis** : executer d'abord [`2026-07-20-01-v4-fixes-bugs-pre-e2e.md`](2026-07-20-01-v4-fixes-bugs-pre-e2e.md), qui corrige les trois bugs ci-dessous. Une fois ce plan-la termine, retirer ici les `test.fixme`/`test.skip` correspondants (verify-email actif, PRINTER 200, page `/badge/[id]` supprimee).
+> Le plan [`2026-07-20-01-v4-fixes-bugs-pre-e2e.md`](2026-07-20-01-v4-fixes-bugs-pre-e2e.md) a corrige les trois bugs ci-dessous. **Aucun `test.fixme`/`test.skip` de contournement ne subsiste** sur ces zones (18/18 e2e verts). Les tasks concernees de ce plan doivent en tenir compte :
 
-Decouverts pendant la cartographie ; ils bloquent une couverture UI honnete de certaines pages :
-
-1. **`/badge/[id]`** (`src/app/badge/[id]/page.tsx:24`) fait `fetch('/api/verify/${id}')` — **cette route n'existe pas** (seule `/api/public/verify/[badgeId]` existe). La page reste bloquee sur « Generation… ». Le test de telechargement badge reste `test.fixme` tant que non corrige.
-2. **Verify-email golden path** : deux tests deja en `test.fixme` (`e2e/public/auth-register.spec.ts:47,101`) — self-fetch SSR vers `NEXTAUTH_URL` injoignable en conteneur. Comportement OK en prod ; laisser `fixme` documente.
+1. **`/badge/[id]`** — page orpheline **supprimee** (sa route data `/api/verify/[id]` avait disparu au nettoyage v2 et aucun lien n'y menait ; le QR pointe vers `/verify/[badgeId]`). Le composant exclusif `BadgeDownload.tsx` a suivi. **-> Task 4.11 : ne couvrir que `/verify/[badgeId]`, il n'y a plus de flux public de telechargement.**
+2. **Verify-email golden path** — le self-fetch SSR est remplace par le helper `consumeEmailVerifyToken()` appele directement (pattern `setup-password`). Les deux `test.fixme` de `e2e/public/auth-register.spec.ts` sont **actifs**. **-> Task 4.3 : plus de `fixme` a prevoir.**
+3. **PRINTER sur `/badges`** — le parcours badges est garde par la permission `badge.print` (et non `minRole`), avec un **endpoint dedie `GET .../badges`** a DTO minimal. Un PRINTER pur obtient **200**. **-> Task 2.6 : la « discrepance » est levee ; tester la liste via le nouvel endpoint, et noter que le 403 renvoie desormais `EVENT_FORBIDDEN`.**
 
 ## Definition of coverage (DoD d'un fichier `<page>.spec.ts`)
 
@@ -335,7 +334,7 @@ Etat actuel : 14 fichiers, 96 tests, dont `interactions.spec.ts` (fourre-tout 12
 - **Couvrir** : rendu liste + filtre imprimes/non ; **selection + « Marquer imprimes » UI** ; **impression par lot** (ouverture `/badges/print?ids=`) ; **telechargement PDF** du detail (`BadgeDownloadV2`, QR serveur) ; apercu lot (pas de bouton, cf. note) ; cas categorie anonyme/neutre/all-access.
 - **Migrer** : `badges-print.spec.ts` (6, API + cascade PDF) ; `interactions.spec.ts` (mark-printed UI) ; rendus de `pages-render`.
 - **Creer** : **telechargement PDF detail** (via `expectPdfResponse`), lacune.
-- **Trancher (discrepance)** : PRINTER pur (sans org membership) est **refuse** sur GET `/badges` alors que la nav Printer y pointe (`badges-print.spec.ts:53`). Ecrire le test au comportement **actuel** (403) et **signaler l'incoherence UX a l'utilisateur** (fix eventuel hors de ce plan).
+- **PRINTER (discrepance levee)** : la liste passe par l'**endpoint dedie** `GET .../badges` (DTO minimal : id, prenom, nom, `badgePrinted`, `allAccessGranted`, categorie — **pas d'email ni de structure**), garde par la permission `badge.print`. Un **PRINTER pur obtient 200** sur la liste et sur le PDF. Couvrir le negatif avec un **VIEWER -> 403 `EVENT_FORBIDDEN`** (code standard `withEventAuth`).
 
 ### Task 2.7 — `e2e/event/categories.spec.ts`
 `/event/[eventId]/categories` (ADMIN).
@@ -482,7 +481,7 @@ Pages `(marketing)` : `/`, `/a-propos`, `/fonctionnalites`, `/tarifs`, `/contact
 
 ### Task 4.3 — `e2e/public/register.spec.ts` (COMPLETER, + success + verify-email)
 `/register`, `/register/success`, `/verify-email/[token]`.
-- **Couvrir** : register -> message « verifiez votre email » ; email deja pris -> erreur FR ; rate-limit 429 ; rendu `/register/success` ; verify-email token expire -> vue invalide ; **golden path verify-email en `test.fixme`** (bug conteneur documente).
+- **Couvrir** : register -> message « verifiez votre email » ; email deja pris -> erreur FR ; rate-limit 429 ; rendu `/register/success` ; verify-email token expire -> vue invalide ; **golden path verify-email actif** (le self-fetch SSR a ete corrige — plus aucun `fixme`) ; **token consomme deux fois -> reste un succes** (idempotence `already-verified`).
 - **Migrer** : `auth-register.spec.ts` (7 + 2 fixme) ; `misc-render.spec.ts` (register/success).
 - **Supprimer** : doublon rate-limit register (garder 1, retirer celui de `security.spec.ts:111`).
 
@@ -527,9 +526,9 @@ Pages `(marketing)` : `/`, `/a-propos`, `/fonctionnalites`, `/tarifs`, `/contact
 - **Creer** : DOCUMENT_BLOCKED distinct, rendu success (lacunes).
 
 ### Task 4.11 — `e2e/public/badge-verify.spec.ts` (renomme)
-`/verify/[badgeId]` + `/badge/[id]`.
-- **Couvrir** : APPROVED non-anonyme (nom+structure) ; APPROVED anonyme (masque) ; PENDING -> invalide ; id inconnu -> 404 ; audit BADGE_SCANNED a chaque appel API ; **telechargement `/badge/[id]` -> `test.fixme`** (bug app connu, cf. section Bugs).
-- **Migrer** : `badge-public.spec.ts` (7, 1 skip -> convertir en `fixme` reference au bug).
+`/verify/[badgeId]` uniquement (la page `/badge/[id]` a ete **supprimee** : ilot orphelin, cf. section Bugs).
+- **Couvrir** : APPROVED non-anonyme (nom+structure) ; APPROVED anonyme (masque) ; PENDING -> invalide ; id inconnu -> 404 ; audit BADGE_SCANNED a chaque appel API.
+- **Migrer** : `badge-public.spec.ts` (5 tests, plus aucun skip). **Ne pas** prevoir de flux public de telechargement de badge : il n'en existe plus (le PDF se genere cote espace evenement, permission `badge.print`).
 
 ### Task 4.12 — `e2e/public/misc.spec.ts` + `e2e/transverse/`
 - **Couvrir (misc)** : `/styleguide` smoke.

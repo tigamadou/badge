@@ -2,6 +2,13 @@
 
 > Commandes et CI : [`installation.md`](../installation.md).
 
+> **Pas de contournement** : un `test.skip`/`test.fixme` n'est admis que s'il
+> reference un bug applicatif ouvert. Les trois contournements historiques
+> (verify-email en self-fetch SSR, PRINTER refuse sur les badges, page orpheline
+> `/badge/[id]`) ont ete **corriges cote code** avant la reorganisation des specs
+> E2E — cf. plan `plans/2026-07-20-01-v4-fixes-bugs-pre-e2e.md`. Un test ne doit
+> jamais etre adapte pour masquer un defaut applicatif.
+
 La couverture est organisee en **trois couches complementaires**, chacune avec un
 outil, un perimetre et un objectif de couverture propres.
 

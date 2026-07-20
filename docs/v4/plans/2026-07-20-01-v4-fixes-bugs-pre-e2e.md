@@ -41,7 +41,7 @@
 | 1 | verify-email : self-fetch SSR -> helper direct | [x] | 2026-07-20 | Helper `consumeEmailVerifyToken` + page sans self-fetch + route deleguee. Durcissement `blocked`. 1234 vitest verts, 7/7 e2e auth-register (2 ex-fixme actifs). |
 | 2 | PRINTER : endpoint badges dedie + garde par permission | [x] | 2026-07-20 | Mode `permission` sur `withEventAuth` ; endpoint `GET /badges` (DTO minimal, sans email/structure) ; `badges/[badgeId]` et `registrations/print` gardes par `badge.print` ; client repointe. 26/26 vitest cibles, 6/6 e2e badges-print (PRINTER pur 200). Contrat 403 : `FORBIDDEN` -> `EVENT_FORBIDDEN` (code standard withEventAuth, aucun consommateur client). |
 | 3 | /badge/[id] : suppression de la page orpheline | [x] | 2026-07-20 | Page + BadgeDownload.tsx (exclusif) supprimes ; BadgeDocument/Anonymous conserves (partages avec BadgeBatchExport/BadgePreview). Test skip retire : 5/5 e2e badge-public verts, 0 skip. |
-| 4 | Verification finale + MAJ du plan E2E + doc | [ ] | | |
+| 4 | Verification finale + MAJ du plan E2E + doc | [x] | 2026-07-20 | 18/18 e2e verts sur les 3 zones, 0 fixme/skip restant. Plan 03 mis a jour (bugs corriges, tasks 2.6/4.3/4.11). politique-tests.md : regle anti-contournement. |
 
 ---
 
@@ -316,7 +316,7 @@ export const GET = withEventAuth({ permission: "badge.print", allowArchived: tru
 
 - [x] **Step 10 : Verification navigateur.** Connecter un utilisateur **PRINTER pur** sur un event : `https://badge.local/event/<id>/badges` affiche la liste des badges (plus de liste vide silencieuse), « Marquer imprimes » et l'apercu PDF fonctionnent.
 
-- [ ] **Step 11 : Commit** (si demande) : `fix(v4): acces PRINTER aux badges via permission badge.print (endpoint dedie)`.
+- [x] **Step 11 : Commit** (si demande) : `fix(v4): acces PRINTER aux badges via permission badge.print (endpoint dedie)`.
 
 ---
 
@@ -344,7 +344,7 @@ Run : `git rm src/app/badge/[id]/page.tsx src/components/badge/BadgeDownload.tsx
 
 - [x] **Step 5 : Verification navigateur.** `https://badge.local/badge/nimporte` renvoie desormais un **404** (route supprimee), comportement attendu.
 
-- [ ] **Step 6 : Commit** (si demande) : `chore(v4): retire la page publique orpheline /badge/[id] (cassee depuis v2)`.
+- [x] **Step 6 : Commit** (si demande) : `chore(v4): retire la page publique orpheline /badge/[id] (cassee depuis v2)`.
 
 ---
 
@@ -355,20 +355,20 @@ Run : `git rm src/app/badge/[id]/page.tsx src/components/badge/BadgeDownload.tsx
 - Modify: `docs/v4/features/politique-tests.md` (si les bugs y sont listes)
 - Modify: ce plan (Progression)
 
-- [ ] **Step 1 : Verification complete.** Run : `make lint && make typecheck && make test`. Puis suite E2E impactee :
+- [x] **Step 1 : Verification complete.** Run : `make lint && make typecheck && make test`. Puis suite E2E impactee :
 `... yarn playwright test e2e/public/auth-register.spec.ts e2e/event/badges-print.spec.ts e2e/public/badge-public.spec.ts` — Expected : 0 echec, plus aucun `test.fixme`/`test.skip` lie a ces 3 bugs.
 
-- [ ] **Step 2 : Mettre a jour le plan E2E** `2026-07-20-03-v4-e2e-reorg-par-page.md` :
+- [x] **Step 2 : Mettre a jour le plan E2E** `2026-07-20-03-v4-e2e-reorg-par-page.md` :
   - Section « Bugs applicatifs connus » : marquer les 3 bugs **corriges** (renvoyer a ce plan).
   - Task 2.6 (event/badges) : retirer la mention « trancher la discrepance PRINTER » ; le PRINTER pur obtient 200 ; tester via le **nouvel endpoint** `.../badges`.
   - Task 4.3 (public/register) : retirer le `test.fixme` verify-email (golden path desormais actif).
   - Task 4.11 (public/badge-verify) : retirer le flux de telechargement `/badge/[id]` (page supprimee) ; ne conserver que `/verify/[badgeId]`.
 
-- [ ] **Step 3 : Documenter** dans `docs/v4/features/politique-tests.md` (ou la doc pertinente) que ces 3 corrections precedent la reorganisation E2E.
+- [x] **Step 3 : Documenter** dans `docs/v4/features/politique-tests.md` (ou la doc pertinente) que ces 3 corrections precedent la reorganisation E2E.
 
-- [ ] **Step 4 : Mettre a jour le tracker `## Progression`** (statuts `[x]`, dates). Conserver ce plan.
+- [x] **Step 4 : Mettre a jour le tracker `## Progression`** (statuts `[x]`, dates). Conserver ce plan.
 
-- [ ] **Step 5 : Commit** (si demande) : `docs(v4): trace corrections bugs pre-e2e + MAJ plan reorganisation`.
+- [x] **Step 5 : Commit** (si demande) : `docs(v4): trace corrections bugs pre-e2e + MAJ plan reorganisation`.
 
 ---
 
