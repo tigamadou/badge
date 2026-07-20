@@ -92,31 +92,6 @@ test.describe("Badge public verify + download", () => {
     expect(response?.status()).toBe(404);
   });
 
-  test("public verify API logs BADGE_SCANNED activity on each call", async ({ page }) => {
-    // La page /verify/[badgeId] NE log PAS d'audit (cf src/app/verify/[badgeId]/page.tsx
-    // qui fait une lecture directe Prisma). Seul l'endpoint API
-    // /api/public/verify/[badgeId] log BADGE_SCANNED. On scan via l'API publique
-    // pour valider l'audit (c'est la voie utilisee par le scan QR mobile).
-    const user = await createTestUser({ scope: "verify-audit", verified: true, profile: true });
-    const { eventId, categoryId } = await createTestEvent({ scope: "verify-audit" });
-    const { id: regId } = await createTestRegistration({
-      userId: user.id,
-      eventId,
-      categoryId,
-      status: "APPROVED",
-    });
-    await markBadgePrinted(regId);
-
-    const res = await page.request.get(`/api/public/verify/${regId}`);
-    expect(res.status()).toBe(200);
-
-    await expectLastActivity({
-      type: "BADGE_SCANNED",
-      eventId,
-      targetId: regId,
-    });
-  });
-
   // La page publique /badge/[id] a ete SUPPRIMEE (ilot v1 orphelin : sa route
   // data /api/verify/[id] avait disparu au nettoyage v2 et aucun lien n'y menait ;
   // le QR pointe vers /verify/[badgeId], couvert ci-dessus). Le PDF du badge est

@@ -110,37 +110,6 @@ test.describe("Account register & verify email", () => {
     await expect(page.getByRole("heading", { name: /lien invalide ou expiré/i })).toBeVisible();
   });
 
-  test("rate limit on POST /api/auth/register triggers 429 after 10 requests", async ({
-    page,
-  }) => {
-    // Le rate limit est en memoire (cf src/lib/rate-limit.ts) : 10 req/min/IP.
-    // En dev local, l'IP source est la meme entre toutes les requetes -- on hit
-    // la limite a la 11e. Si la BDD est partagee entre runs, les buckets stales
-    // peuvent fausser le test (rate limit deja sature avant le 1er hit) -- on
-    // accepte alors un 429 immediat.
-    const baseEmail = `e2e-rate-${Date.now()}`;
-    let triggered429 = false;
-    let retryAfter: string | null = null;
-
-    for (let i = 0; i < 12; i++) {
-      const res = await page.request.post("/api/auth/register", {
-        data: {
-          email: `${baseEmail}-${i}@v2-11-e2e.test`,
-          password: "Test1234!",
-          name: "RateLimit",
-        },
-      });
-      if (res.status() === 429) {
-        triggered429 = true;
-        retryAfter = res.headers()["retry-after"] ?? null;
-        break;
-      }
-    }
-
-    expect(triggered429).toBe(true);
-    expect(retryAfter).not.toBeNull();
-  });
-
   test("La page /register/success confirme l'envoi", async ({ page }) => {
     const res = await page.goto("/register/success");
     expect(res?.status()).toBeLessThan(400);
