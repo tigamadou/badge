@@ -86,9 +86,9 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 3.2 | platform/organizations-list | [x] | 2026-07-20 | `e2e/platform/organizations-list.spec.ts` (lacune comblee) : rendu, recherche q, bascule archivees, table vide, navigation creation et fiche. 6/6 verts. |
 | 3.3 | platform/organization-new | [x] | 2026-07-20 | `e2e/platform/organization-new.spec.ts` : creation UI + invitation OWNER (mail + 3 audits), auto-increment du slug, OBSERVER 403, payload 400. `orgs.spec.ts` dissous (archive/delete migres en 3.4 ; PATCH sans UI reste en Vitest). 4/4 verts. |
 | 3.4 | platform/organization-detail (danger UI) | [x] | 2026-07-20 | `e2e/platform/organization-detail.spec.ts` : rendu, 404, ARCHIVER/RESTAURER via boutons et SUPPRESSION via la modale avec slug exact (lacunes majeures : l'UI n'etait jamais exercee, seulement l'API), bouton masque pour STAFF_ADMIN, 403 delete et archive. 7/7 verts. |
-| 3.5 | platform/organization-subscription | [ ] | | |
+| 3.5 | platform/organization-subscription | [x] | 2026-07-20 | `e2e/platform/organization-subscription.spec.ts` : formulaire (plan/periode/statut), assignation ANNUAL (+365j verifie), overrides, passage EXPIRED, OBSERVER 403, plan inexistant 404. 7/7 verts. |
 | 3.6 | platform/organization-members | [x] | 2026-07-20 | `e2e/platform/organization-members.spec.ts` (lacune comblee) : invitation MANAGER et AUDITOR via le formulaire (jamais exercee), retrait OWNER 204, NOT_OWNER 409, LAST_OWNER 409, non-membre 404, OBSERVER 403. 8/8 verts. |
-| 3.7 | platform/organization-events + activity (supervision) | [ ] | | |
+| 3.7 | platform/organization-events + activity (supervision) | [x] | 2026-07-20 | `e2e/platform/organization-supervision.spec.ts` : onglets Evenements et Journal en lecture seule, etats vides, scoping du journal a l'org. 5/5 verts. |
 | 3.8 | platform/plans | [ ] | | |
 | 3.9 | platform/users-list | [ ] | | |
 | 3.10 | platform/user-new | [ ] | | |
