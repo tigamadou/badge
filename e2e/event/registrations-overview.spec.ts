@@ -9,7 +9,7 @@ import {
   disconnectDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 
 // Page Vue d'ensemble — /event/[eventId]/registrations/overview
 // Rôle mini : VIEWER (ADR v2-14). Repartition NON NOMINATIVE : aucune PII affichee.
@@ -42,9 +42,10 @@ test.describe("Event — Vue d'ensemble", () => {
       eventId,
       role: "VIEWER",
     });
-    await loginAs(page, viewer);
+    await loginAndEnter(page, viewer, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/overview`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/overview`));
     await expect(page.getByRole("heading", { name: /vue d.ensemble/i })).toBeVisible();
     await expect(page.getByText(/répartition non nominative/i)).toBeVisible();
   });
@@ -52,9 +53,10 @@ test.describe("Event — Vue d'ensemble", () => {
   test("ADMIN voit aussi la vue d'ensemble", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "ovw-admin" });
     const admin = await makeEventAdminUser({ scope: "ovw-admin", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/overview`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/overview`));
     await expect(page.getByRole("heading", { name: /vue d.ensemble/i })).toBeVisible();
   });
 
@@ -68,9 +70,10 @@ test.describe("Event — Vue d'ensemble", () => {
     await addReg(eventId, categoryId, "APPROVED", "ovw-c3");
     await addReg(eventId, categoryId, "REJECTED", "ovw-c4");
     const admin = await makeEventAdminUser({ scope: "ovw-counts", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/overview`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/overview`));
 
     // Total comptabilise : PENDING + APPROVED, les rejets sont exclus.
     await expect(page.getByText(/inscription\(s\)/)).toBeVisible();
@@ -89,9 +92,10 @@ test.describe("Event — Vue d'ensemble", () => {
     await addReg(eventId, second.id, "APPROVED", "ovw-cat2");
     await addReg(eventId, second.id, "PENDING", "ovw-cat3");
     const admin = await makeEventAdminUser({ scope: "ovw-cats", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/overview`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/overview`));
     await expect(page.getByText(/répartition par catégorie/i)).toBeVisible();
     await expect(page.getByText("#2 Presse")).toBeVisible();
   });
@@ -100,9 +104,10 @@ test.describe("Event — Vue d'ensemble", () => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "ovw-pii" });
     const participant = await addReg(eventId, categoryId, "APPROVED", "ovw-pii-p");
     const admin = await makeEventAdminUser({ scope: "ovw-pii", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/overview`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/overview`));
     await expect(page.getByText(participant.email)).toHaveCount(0);
   });
 
@@ -114,9 +119,10 @@ test.describe("Event — Vue d'ensemble", () => {
     const { getDb } = await import("../helpers/db");
     await getDb().category.delete({ where: { id: categoryId } });
     const admin = await makeEventAdminUser({ scope: "ovw-empty", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/overview`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/overview`));
     await expect(page.getByText(/aucune catégorie/i)).toBeVisible();
   });
 });
