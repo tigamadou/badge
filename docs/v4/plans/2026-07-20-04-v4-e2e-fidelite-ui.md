@@ -230,7 +230,7 @@ Pour chaque fichier, appliquer le catalogue (issu de l'audit). **Systemique a to
 
 `(*)` = retirer **seulement apres** le gap Vitest correspondant (Task 0.3).
 
-- [ ] Task 2.x : traiter chaque fichier, run vert, commit si demande.
+- [x] Task 2.x : traiter chaque fichier, run vert, commit si demande. — Fait 2026-07-20 (13 fichiers, 0 page.request, loginAndEnter + toHaveURL).
 
 ---
 
