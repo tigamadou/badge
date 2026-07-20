@@ -83,7 +83,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 2.12 | event/blocklist | [x] | 2026-07-20 | `e2e/event/blocklist.spec.ts` : deux onglets, redirection /blocked-documents, ajout+retrait e-mail et document via UI avec audit, garde OPERATOR 403. 5/5 verts. |
 | 2.13 | event/access + suppression transverses event | [x] | 2026-07-20 | `e2e/event/access.spec.ts` (gates layout, heritage org->event, shells par role, event archive). Supprimes : rbac, pages-render, interactions, archive, registrations-admin, registrations-lifecycle — contenu redistribue (negatifs par page + mails/idempotence/reactivation/doublons migres dans registration-detail). 115 passed / 0 echec. |
 | 3.1 | platform/dashboard | [x] | 2026-07-20 | `e2e/platform/dashboard.spec.ts` (lacune totale comblee) : KPI globaux, acces OBSERVER et SUPER_ADMIN, etat vide, compteur coherent, liens Tout voir, redirection non-staff. 6/6 verts. |
-| 3.2 | platform/organizations-list | [ ] | | |
+| 3.2 | platform/organizations-list | [x] | 2026-07-20 | `e2e/platform/organizations-list.spec.ts` (lacune comblee) : rendu, recherche q, bascule archivees, table vide, navigation creation et fiche. 6/6 verts. |
 | 3.3 | platform/organization-new | [ ] | | |
 | 3.4 | platform/organization-detail (danger UI) | [ ] | | |
 | 3.5 | platform/organization-subscription | [ ] | | |
