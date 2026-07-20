@@ -17,7 +17,11 @@ import { expectPdfResponse } from "../helpers/pdf";
 // permission `badge.print` (ADMIN, OPERATOR, PRINTER) et non par la hierarchie
 // minRole, qui ne satisfait jamais un PRINTER pur. La liste passe par l'endpoint
 // dedie GET /badges (DTO minimal, sans email ni structure).
-test.describe("T24 Badges print + PDF + template cascade", () => {
+// Page Badges — /event/[eventId]/badges (liste), /badges/[badgeId] (detail PDF),
+// /badges/print (apercu par lot).
+// Garde : permission `badge.print` (ADMIN, OPERATOR, PRINTER). La liste passe par
+// l'endpoint dedie GET /badges (DTO minimal, sans e-mail ni structure).
+test.describe("Event — Badges", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -248,5 +252,96 @@ test.describe("T24 Badges print + PDF + template cascade", () => {
     );
     await expectPdfResponse(r3, { minBytes: 3000 });
     expect(r3.headers()["x-template-id"]).toBe(fallbackId);
+  });
+
+  // --- Actions UI ---------------------------------------------------------
+
+  test("ADMIN selectionne et marque des badges imprimes depuis la liste", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-ui-print" });
+    const admin = await makeEventAdminUser({ scope: "bdg-ui-print", eventId, orgId });
+    const p1 = await createTestUser({ scope: "bdg-ui-p1", verified: true, profile: true });
+    const p2 = await createTestUser({ scope: "bdg-ui-p2", verified: true, profile: true });
+    const reg1 = await createTestRegistration({
+      eventId,
+      userId: p1.id,
+      categoryId,
+      status: "APPROVED",
+    });
+    const reg2 = await createTestRegistration({
+      eventId,
+      userId: p2.id,
+      categoryId,
+      status: "APPROVED",
+    });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/badges`);
+    // Filtre par defaut "Non imprimés" : les 2 badges apparaissent.
+    const checkboxes = page.getByRole("checkbox");
+    await expect(checkboxes).toHaveCount(2);
+    await checkboxes.nth(0).click();
+    await checkboxes.nth(1).click();
+
+    await page.getByRole("button", { name: /marquer imprimés/i }).click();
+
+    // Le filtre "Non imprimés" les exclut desormais.
+    await expect(page.getByText(/aucun badge/i)).toBeVisible();
+
+    const printedCount = await getDb().registration.count({
+      where: { id: { in: [reg1.id, reg2.id] }, badgePrinted: true },
+    });
+    expect(printedCount).toBe(2);
+  });
+
+  test("La page de detail d'un badge s'affiche", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-detail" });
+    const admin = await makeEventAdminUser({ scope: "bdg-detail", eventId, orgId });
+    const participant = await createTestUser({
+      scope: "bdg-detail-p",
+      verified: true,
+      profile: true,
+    });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: participant.id,
+      categoryId,
+      status: "APPROVED",
+    });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/badges/${reg.id}`);
+    await expect(page.getByRole("link", { name: /voir l'inscription/i })).toBeVisible();
+  });
+
+  test("L'apercu par lot rend les badges demandes", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-batch" });
+    const admin = await makeEventAdminUser({ scope: "bdg-batch", eventId, orgId });
+    const participant = await createTestUser({
+      scope: "bdg-batch-p",
+      verified: true,
+      profile: true,
+    });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: participant.id,
+      categoryId,
+      status: "APPROVED",
+    });
+    await loginAs(page, admin);
+
+    // /badges/print est un apercu PDF : pas de bouton d'action.
+    const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id}`);
+    expect(res?.status()).toBe(200);
+  });
+
+  // --- Etats --------------------------------------------------------------
+
+  test("Etat vide : aucun badge a imprimer", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "bdg-empty" });
+    const admin = await makeEventAdminUser({ scope: "bdg-empty", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/badges`);
+    await expect(page.getByText(/aucun badge/i)).toBeVisible();
   });
 });
