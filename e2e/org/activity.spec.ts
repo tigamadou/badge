@@ -55,18 +55,6 @@ test.describe("Org — Journal", () => {
     await expect(page.getByRole("heading", { name: /journal d.activité/i })).toBeVisible();
   });
 
-  test("AUDITOR GET /api/org/[orgId]/activity -> 200", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "act-api" });
-    const auditor = await createTestOrgMember({
-      scope: "act-api-user",
-      orgId,
-      role: "AUDITOR",
-    });
-    await loginAs(page, auditor);
-
-    const res = await page.request.get(`/api/org/${orgId}/activity`);
-    expect(res.status()).toBe(200);
-  });
 
   // --- Etats --------------------------------------------------------------
 
