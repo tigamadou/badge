@@ -34,9 +34,21 @@ type MemberApi = {
   invitedAt: string;
 };
 
-export function MembersClient({ orgId, initial }: { orgId: string; initial: Member[] }) {
+const ORG_ROLES = ["OWNER", "MANAGER", "AUDITOR"] as const;
+
+export function MembersClient({
+  orgId,
+  initial,
+  canManageRoles = false,
+}: {
+  orgId: string;
+  initial: Member[];
+  // Seul un OWNER peut changer les roles : sinon le role reste en lecture seule.
+  canManageRoles?: boolean;
+}) {
   const [members, setMembers] = useState(initial);
   const [err, setErr] = useState<string | null>(null);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   async function refresh() {
     const res = await fetch(`/api/org/${orgId}/members`);
@@ -63,6 +75,28 @@ export function MembersClient({ orgId, initial }: { orgId: string; initial: Memb
     }
     if (!res.ok) {
       setErr("Échec.");
+      return;
+    }
+    refresh();
+  }
+
+  async function changeRole(userId: string, role: string) {
+    setErr(null);
+    setBusyUserId(userId);
+    const res = await fetch(`/api/org/${orgId}/members/${userId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    setBusyUserId(null);
+    if (res.status === 409) {
+      setErr("Impossible : c'est le dernier OWNER.");
+      refresh();
+      return;
+    }
+    if (!res.ok) {
+      setErr("Échec du changement de rôle.");
+      refresh();
       return;
     }
     refresh();
@@ -107,7 +141,23 @@ export function MembersClient({ orgId, initial }: { orgId: string; initial: Memb
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <RoleBadge tone={m.role === "OWNER" ? "green" : "slate"}>{m.role}</RoleBadge>
+                    {canManageRoles ? (
+                      <select
+                        aria-label={`Rôle de ${m.email}`}
+                        value={m.role}
+                        disabled={busyUserId === m.userId}
+                        onChange={(e) => changeRole(m.userId, e.target.value)}
+                        className="rounded-lg border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
+                      >
+                        {ORG_ROLES.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <RoleBadge tone={m.role === "OWNER" ? "green" : "slate"}>{m.role}</RoleBadge>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm tabular-nums text-slate-500">
                     {new Date(m.invitedAt).toLocaleDateString("fr-FR")}

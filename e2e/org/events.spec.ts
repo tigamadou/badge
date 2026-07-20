@@ -8,6 +8,7 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
 // Page Evenements — /org/[orgId]/events (liste) et /org/[orgId]/events/new (wizard)
@@ -214,14 +215,21 @@ test.describe("Org — Evenements", () => {
     expect(res.status()).toBe(200);
   });
 
-  test("OWNER archive puis restaure un evenement", async ({ page }) => {
+  test("OWNER archive puis restaure un evenement via les boutons", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-archive" });
     const event = await mkEvent(orgId, "Event a archiver");
-    await loginAs(page, owner);
+    // Mono-espace : la redirection post-login mene directement a l'org.
+    await loginAndEnter(page, owner, { kind: "org", id: orgId });
 
-    const archived = await page.request.post(`/api/org/${orgId}/events/${event.id}/archive`);
-    expect(archived.status()).toBe(200);
+    await page.getByRole("link", { name: /événements/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/events`));
 
+    const row = page.locator("tr").filter({ hasText: "Event a archiver" });
+    page.on("dialog", (d) => d.accept()); // confirm("Archiver cet événement ?")
+    await row.getByRole("button", { name: /^archiver$/i }).click();
+
+    // Reponse attendue — SUCCES : le tag "Archivé" apparait dans la ligne.
+    await expect(row.getByText("Archivé")).toBeVisible();
     let after = await getDb().event.findUnique({
       where: { id: event.id },
       select: { archived: true, archivedAt: true, registrationOpen: true },
@@ -231,9 +239,9 @@ test.describe("Org — Evenements", () => {
     expect(after?.registrationOpen).toBe(false);
     await expectLastActivity({ type: "EVENT_ARCHIVED", orgId, eventId: event.id, userId: owner.id });
 
-    const restored = await page.request.post(`/api/org/${orgId}/events/${event.id}/restore`);
-    expect(restored.status()).toBe(200);
-
+    // Restauration via le bouton de la meme ligne.
+    await row.getByRole("button", { name: /^restaurer$/i }).click();
+    await expect(row.getByText("Archivé")).toHaveCount(0);
     after = await getDb().event.findUnique({
       where: { id: event.id },
       select: { archived: true, archivedAt: true, registrationOpen: true },

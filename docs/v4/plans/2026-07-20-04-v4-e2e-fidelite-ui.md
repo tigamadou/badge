@@ -38,7 +38,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
 | 0.1 | Contrat + helper `loginAndEnter` + page de reference | [x] | 2026-07-20 | `e2e/helpers/nav.ts` (`loginAndEnter` : `/select` si multi-espaces, clic de la carte, URL assertee) ; contrat strict dans `e2e/README.md` ; `badges.spec.ts` recode en reference (batch de 3 en parcours UI complet + reponse succes UI/DB/audit), doublon de marquage retire. Verify : 9 passed. NB : `next-env.d.ts` importe `.next/dev/types/routes.d.ts`, ce qui contourne l'`exclude` du tsconfig — si le dev server corrompt cet artefact, le supprimer avant `make typecheck`. |
-| 0.2 | Controles UI manquants (archive/restore event, role membre org) | [ ] | | |
+| 0.2 | Controles UI manquants (archive/restore event, role membre org) | [x] | 2026-07-20 | (A) `EventArchiveActions` : boutons Archiver/Restaurer par ligne sur `/org/[orgId]/events`, masques hors MANAGER+ (garde = etat UI). (B) selecteur de role inline dans `MembersClient`, rendu seulement pour un OWNER, erreur `LAST_OWNER` affichee. Tests UI ajoutes en remplacement des versions API : archive/restore via boutons, changement de role, et **echec** « dernier OWNER » (message + role inchange). Verify : 32 passed (org/members, org/events, event/badges). Helper `loginAndEnter` durci : la redirection auto mono-espace est detectee par timeout au lieu du heading. |
 | 0.3 | Combler les gaps d'integration Vitest (avant retrait des gardes) | [ ] | | |
 | 1 | org : convertir / retirer / URL (8 fichiers) | [ ] | | |
 | 2 | event : convertir / retirer / URL (13 fichiers) | [ ] | | |
@@ -160,16 +160,16 @@ Deux actions metier existent en API mais n'ont aucun controle UI ; on les ajoute
 **A. Archiver / Restaurer un evenement** (depuis l'espace org).
 - **Files:** Modify `src/app/org/[orgId]/events/page.tsx` (ou une page detail event dediee) + creer un petit client `EventArchiveActions.tsx`.
 - Ajouter, par ligne d'evenement (ou sur la page settings de l'event), un bouton **« Archiver »** (event actif) / **« Restaurer »** (event archive) avec confirmation, appelant `POST /api/org/[orgId]/events/[eventId]/archive` | `/restore` (routes existantes), puis `router.refresh()`. Respecter le role : action reservee a MANAGER+ (les routes gardent deja).
-- [ ] Step A1 : ajouter le controle + cablage aux routes existantes.
-- [ ] Step A2 : verif navigateur (archiver -> tag « Archive » ; restaurer -> retour actif).
+- [x] Step A1 : ajouter le controle + cablage aux routes existantes.
+- [x] Step A2 : verif navigateur (archiver -> tag « Archive » ; restaurer -> retour actif).
 
 **B. Changer le role d'un membre org** (inline).
 - **Files:** Modify `src/app/org/[orgId]/members/MembersClient.tsx`.
 - Remplacer le `RoleBadge` en lecture seule par un `<select>` de role (OWNER/MANAGER/AUDITOR) pour les OWNERs connectes, appelant `PATCH /api/org/[orgId]/members/[userId]` (route existante) ; garder le badge en lecture seule pour les non-OWNER. Preserver le garde-fou dernier OWNER (deja API : 409 LAST_OWNER — l'UI doit afficher l'erreur).
-- [ ] Step B1 : selecteur de role inline + cablage + gestion d'erreur UI (message sur 409).
-- [ ] Step B2 : verif navigateur (changement de role OWNER->MANAGER reflete ; retrograder le dernier OWNER -> message d'erreur, pas de crash).
+- [x] Step B1 : selecteur de role inline + cablage + gestion d'erreur UI (message sur 409).
+- [x] Step B2 : verif navigateur (changement de role OWNER->MANAGER reflete ; retrograder le dernier OWNER -> message d'erreur, pas de crash).
 
-- [ ] **Step 3 : lint + typecheck** apres A et B. Commit (si demande) : `feat(v4): controles UI archive/restore event + role membre org`.
+- [x] **Step 3 : lint + typecheck** apres A et B. Commit (si demande) : `feat(v4): controles UI archive/restore event + role membre org`.
 
 > Ces deux controles debloquent les conversions : org `events.spec.ts:217` (archive/restore) et `members.spec.ts:169`/event `members.spec.ts:169` (change-role).
 

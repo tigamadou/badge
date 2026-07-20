@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { loadUserContext } from "@/lib/user-context";
+import { hasOrgRole } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
+import { EventArchiveActions } from "./EventArchiveActions";
 
 export default async function EventsListPage({
   params,
@@ -8,6 +13,10 @@ export default async function EventsListPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  // Archiver/restaurer est reserve a MANAGER+ : on masque le controle sinon.
+  const session = await getServerSession(authOptions);
+  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
+  const canManage = ctx ? hasOrgRole(ctx, orgId, "MANAGER") : false;
   const events = await prisma.event.findMany({
     where: { orgId },
     orderBy: { date: "desc" },
@@ -93,12 +102,17 @@ export default async function EventsListPage({
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/event/${e.id}/settings`}
-                    className="text-[13px] font-medium text-green-600 hover:underline"
-                  >
-                    Configurer
-                  </Link>
+                  <span className="inline-flex items-center gap-3">
+                    <Link
+                      href={`/event/${e.id}/settings`}
+                      className="text-[13px] font-medium text-green-600 hover:underline"
+                    >
+                      Configurer
+                    </Link>
+                    {canManage && (
+                      <EventArchiveActions orgId={orgId} eventId={e.id} archived={e.archived} />
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}

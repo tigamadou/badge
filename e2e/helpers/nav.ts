@@ -29,12 +29,11 @@ export async function loginAndEnter(
   await loginAs(page, user);
   const target = targetPath(ws);
 
-  // Laisse la redirection serveur s'appliquer (mono-espace) ou /select s'afficher.
-  await page.waitForURL(
-    (url) => url.pathname === "/select" || url.pathname.startsWith(target),
-  );
-
-  if (new URL(page.url()).pathname === "/select") {
+  // Mono-espace : /select redirige cote serveur, l'atterrissage est direct.
+  // Multi-espaces : /select reste affiche et attend un choix.
+  try {
+    await page.waitForURL((url) => url.pathname.startsWith(target), { timeout: 5000 });
+  } catch {
     await expect(page).toHaveURL(/\/select$/);
     await expect(page.getByRole("heading", { name: /choisissez un espace/i })).toBeVisible();
     await page.locator(`a[href="${target}"]`).first().click();
