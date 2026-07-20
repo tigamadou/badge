@@ -14,11 +14,12 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 
 ## Documents
 
-Trois plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la date) :
+Plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la date) :
 
 - [01 — Corrections bugs pre-E2E](plans/2026-07-20-01-v4-fixes-bugs-pre-e2e.md) — **d'abord** : verify-email, acces PRINTER badges, suppression /badge/[id].
 - [02 — Abonnements (periodicite, slug auto, blocage org)](plans/2026-07-20-02-v4-abonnements-periodicite-slug-blocage.md) — tracker de progression en tete.
 - [03 — Reorganisation E2E par page](plans/2026-07-20-03-v4-e2e-reorg-par-page.md) — un fichier de specs par page, toutes les actions testees, tous les espaces (suppose 01 termine).
+- [04 — Fidelite UI des tests E2E](plans/2026-07-20-04-v4-e2e-fidelite-ui.md) — parcours UI complet (jamais d'API, /select, verif URL, reponse succes/echec assertee). Suite du 03.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
