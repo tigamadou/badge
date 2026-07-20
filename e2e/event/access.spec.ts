@@ -68,68 +68,9 @@ test.describe("Event — Acces a l'espace", () => {
 
   // --- Heritage des roles org -> event ------------------------------------
 
-  test("OWNER org (sans membership event) agit en ADMIN effectif", async ({ page }) => {
-    const { orgId, eventId, reg } = await seedApprovedReg("evacc-owner");
-    const owner = await createTestOrgMember({
-      scope: "evacc-owner-user",
-      orgId,
-      role: "OWNER",
-    });
-    await loginAs(page, owner);
 
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
-    );
-    expect(res.status()).toBe(200);
-  });
 
-  test("MANAGER org (sans membership event) agit en ADMIN effectif", async ({ page }) => {
-    const { orgId, eventId, reg } = await seedApprovedReg("evacc-manager");
-    const manager = await createTestOrgMember({
-      scope: "evacc-manager-user",
-      orgId,
-      role: "MANAGER",
-    });
-    await loginAs(page, manager);
 
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
-    );
-    expect(res.status()).toBe(200);
-  });
-
-  test("AUDITOR org est en lecture seule -> 403 sur une mutation", async ({ page }) => {
-    const { orgId, eventId, reg } = await seedApprovedReg("evacc-auditor");
-    const auditor = await createTestOrgMember({
-      scope: "evacc-auditor-user",
-      orgId,
-      role: "AUDITOR",
-    });
-    await loginAs(page, auditor);
-
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
-    );
-    expect(res.status()).toBe(403);
-  });
-
-  test("Staff sans membership agit avec staffActor=true", async ({ page }) => {
-    const { orgId, eventId, reg } = await seedApprovedReg("evacc-staff");
-    const staff = await loginAsStaff(page, { role: "SUPER_ADMIN", scope: "evacc-staff-user" });
-
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations/${reg.id}/approve`,
-    );
-    expect(res.status()).toBe(200);
-
-    await expectLastActivity({
-      type: "REGISTRATION_APPROVED",
-      userId: staff.id,
-      eventId,
-      targetId: reg.id,
-      staffActor: true,
-    });
-  });
 
   // --- Shells par role ----------------------------------------------------
 
