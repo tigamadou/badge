@@ -89,7 +89,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 3.5 | platform/organization-subscription | [x] | 2026-07-20 | `e2e/platform/organization-subscription.spec.ts` : formulaire (plan/periode/statut), assignation ANNUAL (+365j verifie), overrides, passage EXPIRED, OBSERVER 403, plan inexistant 404. 7/7 verts. |
 | 3.6 | platform/organization-members | [x] | 2026-07-20 | `e2e/platform/organization-members.spec.ts` (lacune comblee) : invitation MANAGER et AUDITOR via le formulaire (jamais exercee), retrait OWNER 204, NOT_OWNER 409, LAST_OWNER 409, non-membre 404, OBSERVER 403. 8/8 verts. |
 | 3.7 | platform/organization-events + activity (supervision) | [x] | 2026-07-20 | `e2e/platform/organization-supervision.spec.ts` : onglets Evenements et Journal en lecture seule, etats vides, scoping du journal a l'org. 5/5 verts. |
-| 3.8 | platform/plans | [ ] | | |
+| 3.8 | platform/plans | [x] | 2026-07-20 | `e2e/platform/plans.spec.ts` : rendu, creation + archive/restaure via l'UI, plan illimite, NAME_TAKEN 409 (lacune), OBSERVER 403. Etat vide non testable (catalogue global, documente). 5/5 verts. |
 | 3.9 | platform/users-list | [ ] | | |
 | 3.10 | platform/user-new | [ ] | | |
 | 3.11 | platform/user-detail | [ ] | | |
