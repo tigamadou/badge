@@ -95,7 +95,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 3.11 | platform/user-detail | [x] | 2026-07-20 | `e2e/platform/user-detail.spec.ts` : rendu, 404, actions masquees sur sa propre fiche, reset mot de passe, CHANGEMENT DE ROLE VIA UI (lacune comblee), archivage UI, self-role 403, promotion SUPER_ADMIN 403, OBSERVER 403, LAST_SUPER_ADMIN 409 (migre). `users.spec.ts` dissous. 10/10 verts. |
 | 3.12 | platform/settings (+ badge) | [x] | 2026-07-20 | `e2e/platform/settings.spec.ts` : SMTP non-secret, secret SUPER_ADMIN, test-smtp, secrets jamais renvoyes, badge template, + modification UI, toggles TLS/showSecrets, reCAPTCHA (lacunes comblees), 403 secret, redirection <STAFF_ADMIN sur /settings/badge. 10/10 verts. |
 | 3.13 | platform/activity (+ detail) | [x] | 2026-07-20 | `e2e/platform/activity.spec.ts` : type, staffActor, pagination, INVALID_TYPE, + filtres orgId / userId / plage de dates (lacunes comblees), formulaire de filtre, detail et 404. 11/11 verts. |
-| 3.14 | platform/access + suppression transverses platform | [ ] | | |
+| 3.14 | platform/access + suppression transverses platform | [x] | 2026-07-20 | `e2e/platform/access.spec.ts` (gates layout, plancher OBSERVER, nav, shell supervision). Supprimes : rbac, pages-render, interactions, orgs, users — contenu redistribue. Isolation ajoutee : snapshot/restauration de PlatformSettings (etat global) ; users-list rendu deterministe via l'URL. 105 passed / 0 echec. |
 | 4.1 | public/marketing (+ contact) | [ ] | | |
 | 4.2 | public/login | [ ] | | |
 | 4.3 | public/register (+ success + verify-email) | [ ] | | |

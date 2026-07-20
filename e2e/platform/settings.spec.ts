@@ -9,7 +9,22 @@ import { expectLastActivity } from "../helpers/audit";
 // reserves au SUPER_ADMIN (403 FORBIDDEN_SECRET_CHANGE sinon) et ne sont JAMAIS
 // renvoyes par l'API. La page badge exige STAFF_ADMIN (redirection sinon).
 test.describe("Platform — Parametres", () => {
+  // Ces specs mutent un etat GLOBAL partage (PlatformSettings). Sans restauration,
+  // elles cassent l'envoi de mails des autres specs (ex. TLS active vers Mailpit).
+  let snapshot: Record<string, unknown> | null = null;
+
+  test.beforeAll(async () => {
+    const current = await getDb().platformSettings.findFirst();
+    snapshot = current ? { ...current } : null;
+  });
+
   test.afterAll(async () => {
+    if (snapshot) {
+      const { id, ...data } = snapshot as { id: string } & Record<string, unknown>;
+      await getDb()
+        .platformSettings.update({ where: { id }, data })
+        .catch(() => undefined);
+    }
     await cleanupE2ETestData();
     await disconnectDb();
   });
