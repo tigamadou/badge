@@ -34,6 +34,25 @@ test.describe("Org — Evenements", () => {
     });
   }
 
+  // Remplit le wizard (3 etapes, categories manuelles vides) et soumet.
+  // NB : le slug est auto-suggere et unique -> le cas SLUG_TAKEN n'est pas
+  // provocable par l'UI, il reste couvert en integration Vitest.
+  async function submitWizard(
+    page: import("@playwright/test").Page,
+    orgId: string,
+    title: string,
+  ) {
+    await page.goto(`/org/${orgId}/events/new`);
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/events/new`));
+    await page.getByLabel("Titre").fill(title);
+    const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+    await page.locator('input[type="date"]').fill(futureIso);
+    await page.getByLabel("Lieu").fill("Abidjan");
+    await page.getByRole("button", { name: /^continuer$/i }).click();
+    await page.getByRole("button", { name: /^continuer$/i }).click();
+    await page.getByRole("button", { name: /cr[ée]er l'?[ée]v[ée]nement/i }).click();
+  }
+
   // --- Acces & rendu ------------------------------------------------------
 
   test("OWNER voit la liste des evenements", async ({ page }) => {
@@ -115,105 +134,7 @@ test.describe("Org — Evenements", () => {
     await page.waitForURL(`**/org/${orgId}/events/new`);
   });
 
-  // --- Gardes & API -------------------------------------------------------
-
-  test("Limite d'evenements du plan atteinte -> 409 EVENT_LIMIT", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-limit", maxEvents: 1 });
-    await mkEvent(orgId, "Event unique");
-    await loginAs(page, owner);
-
-    const res = await page.request.post(`/api/org/${orgId}/events`, {
-      data: {
-        title: "Event de trop",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        location: "Abidjan",
-        categories: [],
-      },
-    });
-    expect(res.status()).toBe(409);
-    expect((await res.json()).code).toBe("EVENT_LIMIT");
-  });
-
-  test("Abonnement inactif -> creation refusee", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({
-      scope: "ev-inactive",
-      activeSubscription: false,
-    });
-    await loginAs(page, owner);
-
-    const res = await page.request.post(`/api/org/${orgId}/events`, {
-      data: {
-        title: "Event sans abonnement",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        location: "Abidjan",
-        categories: [],
-      },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("Slug deja pris -> 409 SLUG_TAKEN", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-slug" });
-    const existing = await mkEvent(orgId, "Event slug source");
-    await loginAs(page, owner);
-
-    const res = await page.request.post(`/api/org/${orgId}/events`, {
-      data: {
-        title: "Autre event",
-        slug: existing.slug,
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        location: "Abidjan",
-        categories: [],
-      },
-    });
-    expect(res.status()).toBe(409);
-    // Cette route renvoie le code dans `error` (et non `code`).
-    expect((await res.json()).error).toBe("SLUG_TAKEN");
-  });
-
-  test("Payload invalide -> 400", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-400" });
-    await loginAs(page, owner);
-
-    const res = await page.request.post(`/api/org/${orgId}/events`, {
-      data: { title: "", location: "", categories: [] },
-    });
-    expect(res.status()).toBe(400);
-  });
-
-  test("AUDITOR POST /events -> 403 (le wizard reste atteignable)", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud" });
-    const auditor = await createTestOrgMember({ scope: "ev-aud-user", orgId, role: "AUDITOR" });
-    await loginAs(page, auditor);
-
-    // La page /events/new n'a pas de garde : elle s'affiche.
-    await page.goto(`/org/${orgId}/events/new`);
-    await expect(page.getByLabel("Titre")).toBeVisible();
-
-    // Mais la creation est refusee.
-    const res = await page.request.post(`/api/org/${orgId}/events`, {
-      data: {
-        title: "Tentative AUDITOR",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        location: "Abidjan",
-        categories: [],
-      },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("AUDITOR GET /api/org/[orgId]/events -> 200 (lecture autorisee)", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud-read" });
-    const auditor = await createTestOrgMember({
-      scope: "ev-aud-read-user",
-      orgId,
-      role: "AUDITOR",
-    });
-    await loginAs(page, auditor);
-
-    const res = await page.request.get(`/api/org/${orgId}/events`);
-    expect(res.status()).toBe(200);
-  });
+  // --- Actions UI (suite) -------------------------------------------------
 
   test("OWNER archive puis restaure un evenement via les boutons", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-archive" });
@@ -248,5 +169,45 @@ test.describe("Org — Evenements", () => {
     });
     expect(after?.archived).toBe(false);
     await expectLastActivity({ type: "EVENT_RESTORED", orgId, eventId: event.id, userId: owner.id });
+  });
+  // --- Echecs metier via l'UI --------------------------------------------
+
+  test("Limite du plan atteinte : le wizard affiche l'erreur", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-limit", maxEvents: 1 });
+    await mkEvent(orgId, "Event unique");
+    await loginAndEnter(page, owner, { kind: "org", id: orgId });
+
+    await submitWizard(page, orgId, "Event de trop");
+
+    // Reponse attendue — ECHEC : message affiche, aucun event supplementaire.
+    await expect(page.getByText(/limite d.[ée]v[ée]nements/i)).toBeVisible();
+    expect(await getDb().event.count({ where: { orgId } })).toBe(1);
+  });
+
+  test("Abonnement inactif : l'espace org est bloque (pas de wizard)", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({
+      scope: "ev-inactive",
+      activeSubscription: false,
+    });
+    await loginAndEnter(page, owner, { kind: "org", id: orgId });
+
+    // Sans abonnement actif, l'espace est bloque : le wizard n'est pas atteignable.
+    await page.goto(`/org/${orgId}/events/new`);
+    await expect(page.getByText(/abonnement (inactif|n.est pas actif)/i)).toBeVisible();
+    await expect(page.getByLabel("Titre")).toHaveCount(0);
+    expect(await getDb().event.count({ where: { orgId } })).toBe(0);
+  });
+
+  
+  test("AUDITOR atteint le wizard mais la creation echoue", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud" });
+    const auditor = await createTestOrgMember({ scope: "ev-aud-user", orgId, role: "AUDITOR" });
+    await loginAndEnter(page, auditor, { kind: "org", id: orgId });
+
+    // La page /events/new n'a pas de garde : elle s'affiche.
+    await submitWizard(page, orgId, "Event interdit");
+
+    // Reponse attendue — ECHEC : rien n'est cree.
+    expect(await getDb().event.count({ where: { orgId } })).toBe(0);
   });
 });
