@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestOrgWithOwner,
+  createTestOrgMember,
   createTestCategoryTemplate,
   disconnectDb,
   getDb,
@@ -9,81 +10,90 @@ import {
 import { loginAs } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
 
-test.describe("T15 Org events", () => {
+// Page Evenements — /org/[orgId]/events (liste) et /org/[orgId]/events/new (wizard)
+// Liste : AUDITOR (aucune garde de page). Creation : MANAGER cote API — un AUDITOR
+// atteint le wizard mais son POST est refuse.
+// Archive/restore sont declenches par API depuis cette zone (pas de bouton dans la liste).
+test.describe("Org — Evenements", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
   });
 
-  test("OWNER cree event via wizard 3 steps avec templates + categorie manuelle", async ({
-    page,
-  }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "events-create" });
-
-    // Pre-cree 2 templates orgs avant le login (visibles par le serveur a la
-    // generation de /new).
-    const tpl1 = await createTestCategoryTemplate({
-      orgId,
-      name: "VIP",
-      color: "#ff0000",
-      number: 10,
+  async function mkEvent(orgId: string, title: string, archived = false) {
+    return getDb().event.create({
+      data: {
+        orgId,
+        title,
+        slug: `e2e-ev-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+        location: "Abidjan",
+        date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+        archived,
+      },
     });
-    const tpl2 = await createTestCategoryTemplate({
-      orgId,
-      name: "Standard",
-      color: "#00ff00",
-      number: 11,
-    });
+  }
 
+  // --- Acces & rendu ------------------------------------------------------
+
+  test("OWNER voit la liste des evenements", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-render" });
+    await mkEvent(orgId, "Event Liste E2E");
     await loginAs(page, owner);
 
-    // Step 1 : titre + date + lieu (le wizard suggere un slug automatique).
-    // Les champs sont desormais des <Input label="..."> (pas de placeholder) :
-    // on cible via getByLabel plutot que getByPlaceholder.
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByRole("heading", { name: /événements/i }).first()).toBeVisible();
+    await expect(page.getByText("Event Liste E2E")).toBeVisible();
+    await expect(page.getByRole("link", { name: /créer un événement/i })).toBeVisible();
+  });
+
+  test("Etat vide : aucun evenement", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-empty" });
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByText(/aucun événement/i)).toBeVisible();
+  });
+
+  test("Un evenement archive est marque comme tel", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-archived-tag" });
+    await mkEvent(orgId, "Event Archive E2E", true);
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByText("Archivé").first()).toBeVisible();
+  });
+
+  // --- Actions UI ---------------------------------------------------------
+
+  test("OWNER cree un evenement via le wizard 3 etapes (import de modeles)", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-create" });
+    await createTestCategoryTemplate({ orgId, name: "VIP", color: "#ff0000", number: 10 });
+    await createTestCategoryTemplate({ orgId, name: "Standard", color: "#00ff00", number: 11 });
+    await loginAs(page, owner);
+
+    // Etape 1 : titre + date + lieu (le slug est suggere automatiquement).
     await page.goto(`/org/${orgId}/events/new`);
     await page.getByLabel("Titre").fill("E2E Event Wizard");
-    // L'input date est un type="date" : on injecte une date ISO valide.
-    const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     await page.locator('input[type="date"]').fill(futureIso);
     await page.getByLabel("Lieu").fill("Abidjan");
     await page.getByRole("button", { name: /^continuer$/i }).click();
 
-    // Step 2 : selectionne les 2 templates en mode "template". Le wizard UI ne
-    // permet pas templates + manuel simultanement -- on selectionne juste les
-    // 2 templates ici (la spec API supporterait les deux modes mais l'UI non).
-    // Le bouton du Segmented affiche "Depuis un modele" (mode "template" est
-    // deja selectionne par defaut, ce clic est un no-op idempotent).
+    // Etape 2 : import des 2 modeles (l'UI ne melange pas modeles et saisie manuelle).
     await page.getByRole("button", { name: /depuis un mod[èe]le/i }).click();
-    expect(tpl1.id).toBeTruthy();
-    expect(tpl2.id).toBeTruthy();
-    // Le composant Checkbox custom rend un <button role="checkbox"> (plus de
-    // <input type=checkbox> natif) ; Playwright .check() supporte le role ARIA.
     await page.locator(`label:has-text("VIP")`).locator('[role="checkbox"]').check();
-    await page
-      .locator(`label:has-text("Standard")`)
-      .locator('[role="checkbox"]')
-      .check();
+    await page.locator(`label:has-text("Standard")`).locator('[role="checkbox"]').check();
     await page.getByRole("button", { name: /^continuer$/i }).click();
 
-    // Step 3 : recap + creation.
+    // Etape 3 : recap puis creation -> redirection vers les parametres de l'event.
     await expect(page.getByText(/r[ée]cap/i)).toBeVisible();
     await page.getByRole("button", { name: /cr[ée]er l'?[ée]v[ée]nement/i }).click();
+    await page.waitForURL(new RegExp(`/event/[^/]+/settings`), { timeout: 8000 });
 
-    // Redirection vers /settings de l'event cree.
-    await page.waitForURL(
-      new RegExp(`/event/[^/]+/settings`),
-      { timeout: 8000 },
-    );
-
-    // BDD : event cree avec 2 categories (les 2 templates importes), inscriptions fermees.
-    const db = getDb();
-    const event = await db.event.findFirst({
+    const event = await getDb().event.findFirst({
       where: { orgId, title: "E2E Event Wizard" },
       select: { id: true, registrationOpen: true, categories: true },
     });
-    expect(event).not.toBeNull();
     expect(event?.registrationOpen).toBe(false);
     expect(event?.categories.length).toBe(2);
 
@@ -95,150 +105,140 @@ test.describe("T15 Org events", () => {
     });
   });
 
-  test("OWNER archive event", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "events-archive" });
+  test("Le bouton 'Créer un événement' mene au wizard", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-link-new" });
     await loginAs(page, owner);
 
-    // Cree un event minimal via Prisma (les categories ne sont pas necessaires
-    // pour le test d'archivage).
-    const db = getDb();
-    const event = await db.event.create({
+    await page.goto(`/org/${orgId}/events`);
+    await page.getByRole("link", { name: /créer un événement/i }).click();
+    await page.waitForURL(`**/org/${orgId}/events/new`);
+  });
+
+  // --- Gardes & API -------------------------------------------------------
+
+  test("Limite d'evenements du plan atteinte -> 409 EVENT_LIMIT", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-limit", maxEvents: 1 });
+    await mkEvent(orgId, "Event unique");
+    await loginAs(page, owner);
+
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
       data: {
-        orgId,
-        title: "Event a archiver",
-        slug: `e2e-archive-${Date.now()}`,
+        title: "Event de trop",
+        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
         location: "Abidjan",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+        categories: [],
       },
     });
+    expect(res.status()).toBe(409);
+    expect((await res.json()).code).toBe("EVENT_LIMIT");
+  });
 
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${event.id}/archive`,
-    );
+  test("Abonnement inactif -> creation refusee", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({
+      scope: "ev-inactive",
+      activeSubscription: false,
+    });
+    await loginAs(page, owner);
+
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
+      data: {
+        title: "Event sans abonnement",
+        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+        location: "Abidjan",
+        categories: [],
+      },
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test("Slug deja pris -> 409 SLUG_TAKEN", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-slug" });
+    const existing = await mkEvent(orgId, "Event slug source");
+    await loginAs(page, owner);
+
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
+      data: {
+        title: "Autre event",
+        slug: existing.slug,
+        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+        location: "Abidjan",
+        categories: [],
+      },
+    });
+    expect(res.status()).toBe(409);
+    // Cette route renvoie le code dans `error` (et non `code`).
+    expect((await res.json()).error).toBe("SLUG_TAKEN");
+  });
+
+  test("Payload invalide -> 400", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-400" });
+    await loginAs(page, owner);
+
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
+      data: { title: "", location: "", categories: [] },
+    });
+    expect(res.status()).toBe(400);
+  });
+
+  test("AUDITOR POST /events -> 403 (le wizard reste atteignable)", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud" });
+    const auditor = await createTestOrgMember({ scope: "ev-aud-user", orgId, role: "AUDITOR" });
+    await loginAs(page, auditor);
+
+    // La page /events/new n'a pas de garde : elle s'affiche.
+    await page.goto(`/org/${orgId}/events/new`);
+    await expect(page.getByLabel("Titre")).toBeVisible();
+
+    // Mais la creation est refusee.
+    const res = await page.request.post(`/api/org/${orgId}/events`, {
+      data: {
+        title: "Tentative AUDITOR",
+        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+        location: "Abidjan",
+        categories: [],
+      },
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test("AUDITOR GET /api/org/[orgId]/events -> 200 (lecture autorisee)", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud-read" });
+    const auditor = await createTestOrgMember({
+      scope: "ev-aud-read-user",
+      orgId,
+      role: "AUDITOR",
+    });
+    await loginAs(page, auditor);
+
+    const res = await page.request.get(`/api/org/${orgId}/events`);
     expect(res.status()).toBe(200);
+  });
 
-    const after = await db.event.findUnique({
+  test("OWNER archive puis restaure un evenement", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-archive" });
+    const event = await mkEvent(orgId, "Event a archiver");
+    await loginAs(page, owner);
+
+    const archived = await page.request.post(`/api/org/${orgId}/events/${event.id}/archive`);
+    expect(archived.status()).toBe(200);
+
+    let after = await getDb().event.findUnique({
       where: { id: event.id },
       select: { archived: true, archivedAt: true, registrationOpen: true },
     });
     expect(after?.archived).toBe(true);
     expect(after?.archivedAt).not.toBeNull();
     expect(after?.registrationOpen).toBe(false);
+    await expectLastActivity({ type: "EVENT_ARCHIVED", orgId, eventId: event.id, userId: owner.id });
 
-    await expectLastActivity({
-      type: "EVENT_ARCHIVED",
-      orgId,
-      eventId: event.id,
-      userId: owner.id,
-    });
-  });
+    const restored = await page.request.post(`/api/org/${orgId}/events/${event.id}/restore`);
+    expect(restored.status()).toBe(200);
 
-  test("OWNER restaure event archive", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "events-restore" });
-    await loginAs(page, owner);
-
-    const db = getDb();
-    const event = await db.event.create({
-      data: {
-        orgId,
-        title: "Event a restaurer",
-        slug: `e2e-restore-${Date.now()}`,
-        location: "Abidjan",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-        archived: true,
-        archivedAt: new Date(),
-      },
-    });
-
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${event.id}/restore`,
-    );
-    expect(res.status()).toBe(200);
-
-    const after = await db.event.findUnique({
+    after = await getDb().event.findUnique({
       where: { id: event.id },
-      select: { archived: true, archivedAt: true },
+      select: { archived: true, archivedAt: true, registrationOpen: true },
     });
     expect(after?.archived).toBe(false);
-    expect(after?.archivedAt).toBeNull();
-
-    await expectLastActivity({
-      type: "EVENT_RESTORED",
-      orgId,
-      eventId: event.id,
-      userId: owner.id,
-    });
-  });
-
-  test("Limite events du plan atteinte -> 409 EVENT_LIMIT", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({
-      scope: "events-quota",
-      maxEvents: 2,
-    });
-    await loginAs(page, owner);
-
-    const db = getDb();
-    // Pre-cree 2 events non archives pour saturer le quota.
-    await db.event.create({
-      data: {
-        orgId,
-        title: "Quota 1",
-        slug: `e2e-quota-1-${Date.now()}`,
-        location: "Abidjan",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-      },
-    });
-    await db.event.create({
-      data: {
-        orgId,
-        title: "Quota 2",
-        slug: `e2e-quota-2-${Date.now()}`,
-        location: "Abidjan",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-      },
-    });
-
-    const res = await page.request.post(`/api/org/${orgId}/events`, {
-      data: {
-        title: "Quota 3",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        location: "Abidjan",
-      },
-    });
-    expect(res.status()).toBe(409);
-    const json = await res.json();
-    expect(json.code).toBe("EVENT_LIMIT");
-  });
-
-  test("Slug collision globale -> 409 SLUG_TAKEN", async ({ page }) => {
-    // Org A + event "shared-slug".
-    const a = await createTestOrgWithOwner({ scope: "slug-a" });
-    const sharedSlug = `e2e-shared-${Date.now()}`;
-    const db = getDb();
-    await db.event.create({
-      data: {
-        orgId: a.orgId,
-        title: "Slug A",
-        slug: sharedSlug,
-        location: "Abidjan",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-      },
-    });
-
-    // Org B tente de creer un event avec le meme slug.
-    const b = await createTestOrgWithOwner({ scope: "slug-b" });
-    await loginAs(page, b.owner);
-
-    const res = await page.request.post(`/api/org/${b.orgId}/events`, {
-      data: {
-        title: "Slug B",
-        date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-        location: "Abidjan",
-        slug: sharedSlug,
-      },
-    });
-    expect(res.status()).toBe(409);
-    const json = await res.json();
-    expect(json.error).toBe("SLUG_TAKEN");
+    await expectLastActivity({ type: "EVENT_RESTORED", orgId, eventId: event.id, userId: owner.id });
   });
 });
