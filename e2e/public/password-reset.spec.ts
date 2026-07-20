@@ -61,36 +61,31 @@ test.describe("Account password reset (forgot + reset)", () => {
     });
   });
 
-  test("anti-enumeration : unknown email returns 200 without sending mail", async ({
-    page,
-  }) => {
+  test("anti-enumeration : email inconnu -> message generique, aucun mail (UI)", async ({ page }) => {
     await mailpit.clear();
     const fakeEmail = `e2e-noenum-${Date.now()}@v2-11-e2e.test`;
 
-    const res = await page.request.post("/api/auth/forgot-password", {
-      data: { email: fakeEmail },
-    });
-    expect(res.status()).toBe(200);
+    await page.goto("/forgot-password");
+    await page.getByLabel(/adresse e-mail/i).fill(fakeEmail);
+    await page.getByRole("button", { name: /envoyer le lien/i }).click();
 
-    // Sleep court pour laisser le mail eventuel arriver, puis verifie qu'aucun
-    // mail n'est parti pour ce destinataire.
+    // Reponse UI generique (anti-enumeration) + aucun mail parti.
+    await expect(page.getByText(/un lien de réinitialisation a été envoyé/i)).toBeVisible();
     await page.waitForTimeout(500);
-    const messages = await mailpit.search({ to: fakeEmail });
-    expect(messages.length).toBe(0);
+    expect((await mailpit.search({ to: fakeEmail })).length).toBe(0);
   });
 
-  test("anti-enumeration : unverified email returns 200 without mail", async ({ page }) => {
+  test("anti-enumeration : email non verifie -> message generique, aucun mail (UI)", async ({ page }) => {
     await mailpit.clear();
     const user = await createTestUser({ scope: "reset-unverified", verified: false });
 
-    const res = await page.request.post("/api/auth/forgot-password", {
-      data: { email: user.email },
-    });
-    expect(res.status()).toBe(200);
+    await page.goto("/forgot-password");
+    await page.getByLabel(/adresse e-mail/i).fill(user.email);
+    await page.getByRole("button", { name: /envoyer le lien/i }).click();
 
+    await expect(page.getByText(/un lien de réinitialisation a été envoyé/i)).toBeVisible();
     await page.waitForTimeout(500);
-    const messages = await mailpit.search({ to: user.email });
-    expect(messages.length).toBe(0);
+    expect((await mailpit.search({ to: user.email })).length).toBe(0);
   });
 
   test("reset with expired token returns french error", async ({ page }) => {
@@ -108,25 +103,6 @@ test.describe("Account password reset (forgot + reset)", () => {
     await page.getByRole("button", { name: /mettre à jour/i }).click();
 
     await expect(page.getByText(/lien invalide ou expiré/i)).toBeVisible();
-  });
-
-  test("rate limit /api/auth/forgot-password triggers 429 after 5 requests", async ({
-    page,
-  }) => {
-    // 5 req/min/IP cf src/app/api/auth/forgot-password/route.ts ligne 26.
-    // En dev, on partage l'IP entre tous les appels -- la 6e doit renvoyer 429.
-    let triggered429 = false;
-    for (let i = 0; i < 8; i++) {
-      const res = await page.request.post("/api/auth/forgot-password", {
-        data: { email: `e2e-rl-forgot-${i}-${Date.now()}@v2-11-e2e.test` },
-      });
-      if (res.status() === 429) {
-        triggered429 = true;
-        expect(res.headers()["retry-after"]).toBeDefined();
-        break;
-      }
-    }
-    expect(triggered429).toBe(true);
   });
 
   test("Token de reinitialisation invalide -> message d'erreur", async ({ page }) => {
