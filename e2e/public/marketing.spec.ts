@@ -24,4 +24,28 @@ test.describe("Pages publiques marketing / legales (rendu)", () => {
       await expect(page.getByRole("link", { name: /se connecter/i }).first()).toBeVisible();
     });
   }
+
+  // --- Formulaire de contact ----------------------------------------------
+
+  test("Le formulaire de contact refuse une soumission sans consentement", async ({ page }) => {
+    await page.goto("/contact");
+    await page.getByPlaceholder("vous@organisation.fr").fill("contact-e2e@v2-11-e2e.test");
+
+    // Le bouton reste desactive tant que le consentement n'est pas coche.
+    await expect(page.getByRole("button", { name: /envoyer la demande/i })).toBeDisabled();
+  });
+
+  test("Le formulaire de contact envoie la demande", async ({ page }) => {
+    await page.goto("/contact");
+    await page.getByPlaceholder("Camille").fill("Camille");
+    await page.getByPlaceholder("Fabre").fill("Fabre");
+    await page.getByPlaceholder("vous@organisation.fr").fill("contact-e2e@v2-11-e2e.test");
+    await page.getByPlaceholder("Nom de votre organisation").fill("Org E2E");
+    await page.getByPlaceholder(/décrivez votre besoin/i).fill("Demande de test E2E.");
+    await page.getByRole("checkbox").check();
+
+    await page.getByRole("button", { name: /envoyer la demande/i }).click();
+
+    await expect(page.getByRole("heading", { name: /demande envoyée/i })).toBeVisible();
+  });
 });
