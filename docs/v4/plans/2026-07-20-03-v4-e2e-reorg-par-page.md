@@ -65,7 +65,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 2.5 | event/registrations-overview | [x] | 2026-07-20 | `e2e/event/registrations-overview.spec.ts` : acces VIEWER effectif, comptes agreges exacts (total = PENDING+APPROVED, rejets exclus), repartition par categorie, non-exposition PII, etat vide. Lacunes comblees. 6/6 verts. |
 | 2.6 | event/badges (+ detail + print) | [ ] | | |
 | 2.7 | event/categories | [ ] | | |
-| 2.8 | event/members | [ ] | | |
+| 2.8 | event/members | [x] | 2026-07-20 | `e2e/event/members.spec.ts` : invitation (nouveau + existant), retrait, table, + changement de role via select inline (lacune comblee) et garde OPERATOR 403. 6/6 verts. |
 | 2.9 | event/scan | [x] | 2026-07-20 | `scan-checkin.spec.ts` renomme `scan.spec.ts` : API verify/checkin + saisie manuelle UI (migree d'interactions) + gardes VIEWER/PRINTER 403 + acces ADMIN. Scan camera non automatisable (documente). 12/12 verts. |
 | 2.10 | event/settings (+ badge) | [ ] | | |
 | 2.11 | event/activity (+ detail) | [x] | 2026-07-20 | `e2e/event/activity.spec.ts` : feed ADMIN, filtre OPERATOR serveur, non-fuite PII, + rendus page/detail migres de pages-render et etat vide. 8/8 verts. |

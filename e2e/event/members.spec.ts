@@ -8,10 +8,14 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { createTestEventMember } from "../helpers/db";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity } from "../helpers/audit";
 
-test.describe("Event members", () => {
+// Page Membres — /event/[eventId]/members
+// Rôle : ADMIN. Actions : inviter (formulaire), changer le role (select inline),
+// retirer (bouton). Roles event : ADMIN / OPERATOR / PRINTER / VIEWER.
+test.describe("Event — Membres", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -160,5 +164,44 @@ test.describe("Event members", () => {
     await expect(page.getByRole("columnheader", { name: /rôle/i })).toBeVisible();
     // Ligne du membre seede visible.
     await expect(page.getByText(m1.email)).toBeVisible();
+  });
+
+  test("ADMIN change le role d'un membre via le select inline", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "mem-role" });
+    const admin = await makeEventAdminUser({ scope: "mem-role", eventId, orgId });
+    const member = await createTestEventMember({
+      scope: "mem-role-target",
+      orgId,
+      eventId,
+      role: "OPERATOR",
+    });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/members`);
+    const row = page.locator("tr", { hasText: member.email });
+    await row.locator("select").selectOption("PRINTER");
+
+    await expect(async () => {
+      const membership = await getDb().eventMembership.findFirst({
+        where: { eventId, userId: member.id },
+      });
+      expect(membership?.role).toBe("PRINTER");
+    }).toPass();
+  });
+
+  test("OPERATOR ne peut pas inviter -> 403", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "mem-operator" });
+    const operator = await createTestEventMember({
+      scope: "mem-operator-user",
+      orgId,
+      eventId,
+      role: "OPERATOR",
+    });
+    await loginAs(page, operator);
+
+    const res = await page.request.post(`/api/org/${orgId}/events/${eventId}/members`, {
+      data: { email: `nope-${Date.now()}@v2-11-e2e.test`, name: "x", role: "VIEWER" },
+    });
+    expect(res.status()).toBe(403);
   });
 });
