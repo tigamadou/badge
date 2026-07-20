@@ -105,7 +105,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 4.7 | account/dashboard | [x] | 2026-07-20 | `e2e/public/account.spec.ts` (lacune comblee) : liste des inscriptions, etat vide, redirection non connecte, statuts valide/rejete, navigation detail, XSS du nom echappe (migre de security). 7/7 verts. |
 | 4.8 | account/profile (+ complete) | [ ] | | |
 | 4.9 | account/registration-detail (resubmit) | [ ] | | |
-| 4.10 | public/event-register (+ success) | [ ] | | |
+| 4.10 | public/event-register (+ success) | [x] | 2026-07-20 | `e2e/public/event-register.spec.ts` : CTA, inscription, profil incomplet, deja inscrit, event archive, EMAIL_BLOCKED, PARTICIPANT_LIMIT, + page de SUCCES et DOCUMENT_BLOCKED (lacunes comblees). 9/9 verts. |
 | 4.11 | public/badge-verify (+ download fixme) | [ ] | | |
 | 4.12 | public/misc (styleguide) + security transverse | [ ] | | |
 | 5 | Nettoyage final, verification globale, doc | [ ] | | |

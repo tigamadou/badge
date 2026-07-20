@@ -5,6 +5,7 @@ import {
   createTestEvent,
   createTestRegistration,
   createTestBlockedEmail,
+  createTestBlockedDocument,
   getLatestRegistrationForUser,
   getDb,
   disconnectDb,
@@ -152,5 +153,54 @@ test.describe("Event registration flow", () => {
     expect(res.status()).toBe(429);
     const body = await res.json();
     expect(body.code).toBe("PARTICIPANT_LIMIT");
+  });
+
+  // --- Page de succes -----------------------------------------------------
+
+  test("La page de succes confirme l'inscription", async ({ page }) => {
+    const { eventSlug, eventId, categoryId } = await createTestEvent({ scope: "evreg-success" });
+    const user = await createTestUser({
+      scope: "evreg-success-u",
+      verified: true,
+      profile: true,
+    });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: user.id,
+      categoryId,
+      status: "PENDING",
+    });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/success?id=${reg.id}`);
+    await expect(page.getByRole("heading", { name: /inscription enregistrée/i })).toBeVisible();
+    await expect(page.getByText(/statut : en attente/i)).toBeVisible();
+  });
+
+  // --- Blocage par document -----------------------------------------------
+
+  test("Un document bloque empeche l'inscription", async ({ page }) => {
+    const { eventSlug, eventId, categoryId } = await createTestEvent({ scope: "evreg-docblock" });
+    const user = await createTestUser({
+      scope: "evreg-docblock-u",
+      verified: true,
+      profile: true,
+    });
+    const profil = await getDb().user.findUnique({
+      where: { id: user.id },
+      select: { idDocumentNumber: true },
+    });
+    await createTestBlockedDocument({
+      eventId,
+      documentNumber: profil!.idDocumentNumber!,
+      reason: "Document signale",
+    });
+    await loginAs(page, user);
+
+    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
+      data: { categoryId },
+    });
+    expect(res.status()).toBe(409);
+    expect((await res.json()).code).toBe("DOCUMENT_BLOCKED");
   });
 });
