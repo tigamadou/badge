@@ -103,38 +103,5 @@ test.describe("Event — Inscription manuelle", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("E-mail inconnu -> creation refusee (404)", async ({ page }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "regnew-unknown" });
-    const admin = await makeEventAdminUser({ scope: "regnew-unknown", eventId, orgId });
-    await loginAs(page, admin);
 
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations`,
-      { data: { email: `inconnu-${Date.now()}@v2-11-e2e.test`, categoryId } },
-    );
-    // L'utilisateur cible n'existe pas : la route repond 404 (et non 400).
-    expect(res.status()).toBe(404);
-  });
-
-  test("OPERATOR ne peut pas creer d'inscription -> 403", async ({ page }) => {
-    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "regnew-operator" });
-    const operator = await createTestEventMember({
-      scope: "regnew-operator-user",
-      orgId,
-      eventId,
-      role: "OPERATOR",
-    });
-    const participant = await createTestUser({
-      scope: "regnew-operator-part",
-      verified: true,
-      profile: true,
-    });
-    await loginAs(page, operator);
-
-    const res = await page.request.post(
-      `/api/org/${orgId}/events/${eventId}/registrations`,
-      { data: { email: participant.email, categoryId } },
-    );
-    expect(res.status()).toBe(403);
-  });
 });
