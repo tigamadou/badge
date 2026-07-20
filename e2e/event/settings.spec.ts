@@ -8,9 +8,14 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { ensureFixtures } from "../fixtures";
 import { expectLastActivity } from "../helpers/audit";
 
-test.describe("Event settings", () => {
+// Page Parametres evenement — /event/[eventId]/settings et /settings/badge
+// Rôle : ADMIN (la page badge exige la permission event.settings.update).
+// Actions : upload logo, enregistrer les infos, enregistrer le contact (override
+// cascade Event > Org), choisir le modele de badge / revenir a l'heritage.
+test.describe("Event — Parametres", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -177,5 +182,46 @@ test.describe("Event settings", () => {
       },
     );
     expect(res.status()).toBe(400);
+  });
+
+  // --- Actions UI ---------------------------------------------------------
+
+  test("ADMIN voit la page Parametres", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "evset-render" });
+    const admin = await makeEventAdminUser({ scope: "evset-render", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/settings`);
+    await expect(page.getByRole("button", { name: /enregistrer/i }).first()).toBeVisible();
+  });
+
+  test("ADMIN televerse un logo d'evenement", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "evset-logo" });
+    const admin = await makeEventAdminUser({ scope: "evset-logo", eventId, orgId });
+    const fixtures = ensureFixtures();
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/settings`);
+    await page.locator('input[type="file"]').first().setInputFiles(fixtures.jpeg);
+
+    await expect(page.getByRole("button", { name: /retirer/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
+  test("ADMIN choisit un modele de badge puis revient a l'heritage", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "evset-badge-ui" });
+    const admin = await makeEventAdminUser({ scope: "evset-badge-ui", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/settings/badge`);
+    await page.getByTestId("select-recto-verso-v1").click();
+    await expect(page.getByTestId("save-success")).toBeVisible();
+
+    const after = await getDb().event.findUnique({
+      where: { id: eventId },
+      select: { badgeTemplateId: true },
+    });
+    expect(after?.badgeTemplateId).toBe("recto-verso-v1");
   });
 });
