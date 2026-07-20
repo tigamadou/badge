@@ -3,16 +3,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
+import { computeSubscriptionDates } from "@/lib/subscription";
 
+// La periode pilote les dates : startDate = maintenant, endDate = +30j / +365j.
+// Le staff ne saisit donc plus startDate/endDate.
 const upsertSchema = z.object({
   planId: z.string().min(1),
   status: z.enum(["ACTIVE", "EXPIRED", "CANCELLED"]),
-  startDate: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: "Invalid date" }).optional(),
-  endDate: z
-    .string()
-    .refine((s) => !Number.isNaN(Date.parse(s)), { message: "Invalid date" })
-    .nullable()
-    .optional(),
+  period: z.enum(["MONTHLY", "ANNUAL"]),
   overrideMaxEvents: z.number().int().min(0).nullable().optional(),
   overrideMaxParticipantsPerEvent: z.number().int().min(0).nullable().optional(),
 });
@@ -40,18 +38,20 @@ export const PUT = withStaffAuth<{ orgId: string }>(
     }
 
     const existing = await prisma.subscription.findUnique({ where: { orgId } });
+    const { startDate, endDate } = computeSubscriptionDates(data.period);
     const values = {
       planId: data.planId,
       status: data.status,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : null,
+      period: data.period,
+      startDate,
+      endDate,
       overrideMaxEvents: data.overrideMaxEvents ?? null,
       overrideMaxParticipantsPerEvent: data.overrideMaxParticipantsPerEvent ?? null,
     };
 
     const subscription = await prisma.subscription.upsert({
       where: { orgId },
-      create: { orgId, ...values, startDate: values.startDate },
+      create: { orgId, ...values },
       update: values,
     });
 

@@ -85,7 +85,7 @@ docs/v4/README.md                                # statuts items 2/3
 | 1 | Periodicite : schema + helper de calcul des dates | [x] | 2026-07-20 | Enum `SubscriptionPeriod` + champ `period` nullable ; `PERIOD_DAYS` + `computeSubscriptionDates`. db-push OK (ajout non destructif). 4/4 vitest. |
 | 2 | Helper `slugify` isomorphe partage (DRY) | [x] | 2026-07-20 | `src/lib/slugify.ts` pur (importable client) ; `slugify-event` delegue ; `slugifyName` local retire de la route org. 14/14 slug + 24/24 organizations. |
 | 3 | Form creation org : slug readonly + preview live | [x] | 2026-07-20 | Champ slug derive de `slugify(name)`, `readOnly`. Verification par E2E `subscription-flow.spec.ts` (live + accents + readonly) plutot qu'a l'oeil. |
-| 4 | Attribution d'abonnement pilotee par la periode | [ ] | | |
+| 4 | Attribution d'abonnement pilotee par la periode | [x] | 2026-07-20 | PUT accepte `period` (startDate/endDate calcules serveur) ; SubscriptionForm remplace les 2 champs date par un select Periode ; periode affichee cote staff et org. 47/47 vitest, 3/3 e2e (+30j / +365j verifies en base). |
 | 5 | Blocage de l'espace org sans abonnement actif | [ ] | | |
 | 6 | Test E2E complet du parcours abonnement | [ ] | | |
 | 7 | Documentation v4 + verification finale | [ ] | | |
@@ -411,7 +411,7 @@ git commit -m "feat(v4): slug org en lecture seule genere en direct"
 - Consumes : `computeSubscriptionDates` + `SubscriptionPeriod` (Task 1).
 - Produces : le PUT accepte desormais `{ planId, status, period, overrideMaxEvents?, overrideMaxParticipantsPerEvent? }`. `startDate`/`endDate` ne sont **plus** acceptes en entree : ils sont calcules serveur (`computeSubscriptionDates(period)`). Le champ `period` est **requis**.
 
-- [ ] **Step 1 : Ecrire le test d'integration de la route (echoue)**
+- [x] **Step 1 : Ecrire le test d'integration de la route (echoue)**
 
 Creer/etendre `src/app/api/platform/organizations/[orgId]/__tests__/subscription.route.test.ts` (suivre le pattern d'integration existant : vraie MySQL de dev, seed via helpers). Test golden path :
 
@@ -453,14 +453,14 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
 
 > Adapter `seedOrg`/`seedPlan`/`callRoute`/`staffAdmin` aux utilitaires d'integration reels du repo (cf. un test `*.route.test.ts` voisin pour le harness exact). Ne pas mocker Prisma.
 
-- [ ] **Step 2 : Lancer, verifier l'echec**
+- [x] **Step 2 : Lancer, verifier l'echec**
 
 Run : `make test -- subscription.route.test.ts`
 Expected : FAIL — la route ne connait pas `period` (Zod le rejette ou l'ignore, endDate non calcule).
 
 > Note : `make test` utilise la MySQL de dev et **efface les donnees dev** ; re-seeder ensuite (`make db-seed`) si besoin de donnees manuelles.
 
-- [ ] **Step 3 : Mettre a jour la route PUT**
+- [x] **Step 3 : Mettre a jour la route PUT**
 
 Dans `src/app/api/platform/organizations/[orgId]/subscription/route.ts` :
 - Importer : `import { computeSubscriptionDates } from "@/lib/subscription";`
@@ -506,7 +506,7 @@ const sub = await prisma.subscription.upsert({
 
 - Conserver le `logActivity` `SUBSCRIPTION_CREATED`/`SUBSCRIPTION_UPDATED` (L58-65) et la garde `withStaffAuth({ minRole: "STAFF_ADMIN" })`.
 
-- [ ] **Step 4 : Mettre a jour `SubscriptionForm.tsx`**
+- [x] **Step 4 : Mettre a jour `SubscriptionForm.tsx`**
 
 Dans `src/components/staff/SubscriptionForm.tsx` (`"use client"`) :
 - Retirer les champs `startDate` et `endDate` de l'etat et du rendu.
@@ -528,7 +528,7 @@ Dans `src/components/staff/SubscriptionForm.tsx` (`"use client"`) :
 - Le corps de `PUT` envoie `{ planId, status, period, overrideMaxEvents, overrideMaxParticipantsPerEvent }` (plus de dates).
 - Conserver `router.refresh()` apres succes.
 
-- [ ] **Step 5 : Afficher la periode (staff + org read-only)**
+- [x] **Step 5 : Afficher la periode (staff + org read-only)**
 
 Dans `src/app/platform/organizations/[orgId]/subscription/page.tsx` et `src/app/org/[orgId]/subscription/page.tsx`, ajouter une ligne « Periode » a cote du statut/dates, avec un libelle FR :
 
@@ -539,21 +539,21 @@ const periodLabel = sub?.period === "ANNUAL" ? "Annuel" : sub?.period === "MONTH
 
 S'assurer que la requete Prisma de ces pages selectionne bien `period` (ajouter au `select` si un select explicite existe).
 
-- [ ] **Step 6 : Lancer le test d'integration**
+- [x] **Step 6 : Lancer le test d'integration**
 
 Run : `make test -- subscription.route.test.ts`
 Expected : PASS (golden path +30j, 400 si period manquante).
 
-- [ ] **Step 7 : Verification navigateur**
+- [x] **Step 7 : Verification navigateur**
 
 Ouvrir `https://badge.local/platform/organizations/<id>/subscription` : choisir « Annuel », enregistrer, verifier que la fiche org affiche un abonnement actif avec periode « Annuel » et une date de fin a ~1 an. Verifier cote org (`/org/<id>/subscription`) l'affichage read-only de la periode.
 
-- [ ] **Step 8 : Lint + typecheck**
+- [x] **Step 8 : Lint + typecheck**
 
 Run : `make lint && make typecheck`
 Expected : succes.
 
-- [ ] **Step 9 : Commit** (si demande)
+- [x] **Step 9 : Commit** (si demande)
 
 ```bash
 git add src/app/api/platform/organizations/\[orgId\]/subscription/route.ts src/components/staff/SubscriptionForm.tsx src/app/platform/organizations/\[orgId\]/subscription/page.tsx src/app/org/\[orgId\]/subscription/page.tsx

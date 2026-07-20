@@ -43,7 +43,9 @@ export default async function OrgDetailPage({
       archived: true,
       archivedAt: true,
       createdAt: true,
-      subscription: { select: { status: true, endDate: true, plan: { select: { name: true } } } },
+      subscription: {
+        select: { status: true, endDate: true, period: true, plan: { select: { name: true } } },
+      },
       memberships: {
         where: { role: "OWNER" },
         select: {
@@ -113,6 +115,15 @@ export default async function OrgDetailPage({
           <KeyValue
             items={[
               { label: "Statut", value: org.subscription?.status ?? "Aucun abonnement" },
+              {
+                label: "Période",
+                value:
+                  org.subscription?.period === "ANNUAL"
+                    ? "Annuel"
+                    : org.subscription?.period === "MONTHLY"
+                      ? "Mensuel"
+                      : "—",
+              },
               {
                 label: "Participants / event",
                 value: limits.maxParticipantsPerEvent?.toString() ?? "Illimité",

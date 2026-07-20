@@ -35,7 +35,13 @@ export default async function OrgSubscriptionPage({
     select: {
       id: true,
       subscription: {
-        select: { status: true, startDate: true, endDate: true, plan: { select: { name: true } } },
+        select: {
+          status: true,
+          startDate: true,
+          endDate: true,
+          period: true,
+          plan: { select: { name: true } },
+        },
       },
     },
   });
@@ -67,6 +73,15 @@ export default async function OrgSubscriptionPage({
             items={[
               { label: "Plan", value: sub?.plan.name ?? "Aucun abonnement" },
               { label: "Statut", value: sub?.status ?? "—" },
+              {
+                label: "Période",
+                value:
+                  sub?.period === "ANNUAL"
+                    ? "Annuel (365 jours)"
+                    : sub?.period === "MONTHLY"
+                      ? "Mensuel (30 jours)"
+                      : "—",
+              },
               { label: "Début", value: fmtDate(sub?.startDate ?? null) },
               { label: "Fin", value: sub?.endDate ? fmtDate(sub.endDate) : "Sans échéance" },
               { label: "Actif", value: limits.active ? "Oui" : "Non" },

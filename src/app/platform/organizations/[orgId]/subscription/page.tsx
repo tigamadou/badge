@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SubscriptionForm } from "@/components/staff/SubscriptionForm";
-import { isoDay } from "@/lib/format-date";
 import { Icon } from "@/components/ui/Icon";
 
 export default async function OrgSubscriptionPage({
@@ -28,8 +27,7 @@ export default async function OrgSubscriptionPage({
     ? {
         planId: sub.planId,
         status: sub.status,
-        startDate: isoDay(sub.startDate),
-        endDate: isoDay(sub.endDate),
+        period: sub.period,
         overrideMaxEvents: sub.overrideMaxEvents == null ? "" : String(sub.overrideMaxEvents),
         overrideMaxParticipantsPerEvent:
           sub.overrideMaxParticipantsPerEvent == null
