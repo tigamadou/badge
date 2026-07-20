@@ -71,7 +71,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 1.8 | org/access + suppression transverses org | [x] | 2026-07-20 | `e2e/org/access.spec.ts` (gates layout, staff->platform, nav par role). Tests hors-perimetre relogues : /select -> `e2e/public/select.spec.ts`, profile/complete -> `account-profile.spec.ts`. pages-render/rbac/interactions org SUPPRIMES (30 tests -> 71 repartis sur 8 pages). 81 passed / 0 echec. |
 | 2.1 | event/dashboard | [x] | 2026-07-20 | `e2e/event/dashboard.spec.ts` enrichi : 4 roles (shells distincts) + etat vide, banniere quota >80% vs sous seuil, lien Tout voir (lacunes comblees). 8/8 verts. |
 | 2.2 | event/registrations (liste) | [x] | 2026-07-20 | `e2e/event/registrations.spec.ts` : rendu, etat vide, filtre statut, RECHERCHE et PAGINATION (lacunes comblees), navigation detail/creation, export CSV. **1 test.fixme** : BUG APPLICATIF decouvert — l'API renvoie snapshot* mais RegistrationTable lit firstName/lastName/email -> colonnes Nom et E-mail VIDES. 8/8 verts + 1 fixme. |
-| 2.3 | event/registrations-new | [ ] | | |
+| 2.3 | event/registrations-new | [x] | 2026-07-20 | `e2e/event/registrations-new.spec.ts` : rendu, creation via formulaire, uploads photo et document UI (lacunes comblees), e-mail inconnu 404, OPERATOR 403. 6/6 verts. |
 | 2.4 | event/registration-detail | [ ] | | |
 | 2.5 | event/registrations-overview | [x] | 2026-07-20 | `e2e/event/registrations-overview.spec.ts` : acces VIEWER effectif, comptes agreges exacts (total = PENDING+APPROVED, rejets exclus), repartition par categorie, non-exposition PII, etat vide. Lacunes comblees. 6/6 verts. |
 | 2.6 | event/badges (+ detail + print) | [ ] | | |
