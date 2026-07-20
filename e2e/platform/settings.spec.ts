@@ -4,7 +4,11 @@ import { loginAsStaff } from "../helpers/auth";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity } from "../helpers/audit";
 
-test.describe("Staff > platform settings", () => {
+// Page Parametres plateforme — /platform/settings et /platform/settings/badge
+// Rôle : STAFF_ADMIN. Les SECRETS (smtpPassword, recaptchaSecretKey) sont
+// reserves au SUPER_ADMIN (403 FORBIDDEN_SECRET_CHANGE sinon) et ne sont JAMAIS
+// renvoyes par l'API. La page badge exige STAFF_ADMIN (redirection sinon).
+test.describe("Platform — Parametres", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -153,5 +157,70 @@ test.describe("Staff > platform settings", () => {
     expect(ko.status()).toBe(400);
     const koBody = await ko.json();
     expect(koBody.error).toBe("UNKNOWN_TEMPLATE");
+  });
+
+  // --- Actions UI ---------------------------------------------------------
+
+  test("STAFF_ADMIN modifie l'utilisateur SMTP via le formulaire", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-ui-smtp" });
+
+    await page.goto("/platform/settings");
+    const nouveau = `smtp-user-${Date.now()}`;
+    await page.getByLabel("Utilisateur SMTP").fill(nouveau);
+    await page.getByRole("button", { name: /enregistrer/i }).first().click();
+
+    await expect(async () => {
+      const settings = await getDb().platformSettings.findFirst();
+      expect(settings?.smtpUser).toBe(nouveau);
+    }).toPass();
+  });
+
+  test("STAFF_ADMIN bascule le TLS et l'affichage des secrets", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-ui-toggles" });
+
+    await page.goto("/platform/settings");
+    const before = (await getDb().platformSettings.findFirst())?.smtpSecure ?? false;
+
+    await page.getByRole("switch", { name: /TLS \(connexion sécurisée\)/i }).click();
+    // Le toggle d'affichage des secrets est purement local (aucune persistance).
+    await page.getByRole("switch", { name: /afficher les valeurs masquées/i }).click();
+    await page.getByRole("button", { name: /enregistrer/i }).first().click();
+
+    await expect(async () => {
+      const settings = await getDb().platformSettings.findFirst();
+      expect(settings?.smtpSecure).toBe(!before);
+    }).toPass();
+  });
+
+  test("STAFF_ADMIN configure le reCAPTCHA (activation + site key)", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-ui-recaptcha" });
+
+    await page.goto("/platform/settings");
+    const siteKey = `site-key-${Date.now()}`;
+    await page.getByLabel("Site key").fill(siteKey);
+    await page.getByRole("switch", { name: /activé par défaut/i }).click();
+    await page.getByRole("button", { name: /enregistrer/i }).first().click();
+
+    await expect(async () => {
+      const settings = await getDb().platformSettings.findFirst();
+      expect(settings?.recaptchaSiteKey).toBe(siteKey);
+    }).toPass();
+  });
+
+  test("STAFF_ADMIN -> 403 FORBIDDEN_SECRET_CHANGE sur un secret", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-secret-403" });
+
+    const res = await page.request.patch("/api/platform/settings", {
+      data: { smtpPassword: "tentative" },
+    });
+    expect(res.status()).toBe(403);
+    expect((await res.json()).error).toBe("FORBIDDEN_SECRET_CHANGE");
+  });
+
+  test("Moins que STAFF_ADMIN est redirige hors de /settings/badge", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pset-badge-obs" });
+
+    await page.goto("/platform/settings/badge");
+    await expect(page).not.toHaveURL(/\/platform\/settings\/badge$/);
   });
 });
