@@ -8,7 +8,7 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { mailpit } from "../helpers/mailpit";
 
@@ -46,9 +46,10 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN voit le detail d'une inscription", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-render");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await expect(page.getByText(/actions avancées/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /approuver/i })).toBeVisible();
   });
@@ -57,9 +58,10 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN approuve via le bouton", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-approve");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /approuver/i }).click();
 
     await expect(page.getByText(/^validé$/i)).toBeVisible();
@@ -77,9 +79,10 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN rejette via la modale (motif obligatoire)", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-reject");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /rejeter \/ bloquer/i }).click();
     await expect(page.getByRole("heading", { name: /rejeter cette inscription/i })).toBeVisible();
 
@@ -103,9 +106,10 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN active puis retire ALL ACCESS via le bouton", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-allaccess", "APPROVED");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /activer all access/i }).click();
 
     await expect(page.getByRole("button", { name: /retirer all access/i })).toBeVisible();
@@ -122,10 +126,11 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN bloque l'e-mail via le bouton", async ({ page }) => {
     const { eventId, reg, admin, participant } = await seedReg("det-block-email");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
     page.on("dialog", (d) => d.accept());
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /bloquer cet e-mail/i }).click();
 
     await expect(async () => {
@@ -138,10 +143,11 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN bloque le document via le bouton", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-block-doc");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
     page.on("dialog", (d) => d.accept());
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /bloquer ce document/i }).click();
 
     await expect(async () => {
@@ -152,10 +158,11 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("ADMIN supprime l'inscription via le bouton danger", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-delete");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
     page.on("dialog", (d) => d.accept());
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /^supprimer$/i }).click();
 
     // Retour a la liste, l'inscription a disparu.
@@ -165,9 +172,10 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("Le bouton 'Voir le badge' mene au detail du badge", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-badge", "APPROVED");
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /voir le badge/i }).click();
     await page.waitForURL(`**/event/${eventId}/badges/${reg.id}`);
   });
@@ -183,9 +191,10 @@ test.describe("Event — Detail d'inscription", () => {
   test("L'approbation envoie un mail au participant", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-mail-appr");
     await mailpit.clear();
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /approuver/i }).click();
     await expect(page.getByText(/^validé$/i)).toBeVisible();
 
@@ -199,9 +208,10 @@ test.describe("Event — Detail d'inscription", () => {
   test("Le rejet envoie un mail mentionnant le motif", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-mail-rej");
     await mailpit.clear();
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /rejeter \/ bloquer/i }).click();
     await page.getByPlaceholder(/motif \(obligatoire\)/i).fill("Piece illisible");
     await page.getByRole("button", { name: "Rejeter", exact: true }).click();
