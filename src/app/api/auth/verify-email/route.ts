@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { prisma } from "@/lib/prisma";
-import { logActivity } from "@/lib/activity-log";
-import { hashToken, isExpired } from "@/lib/auth-tokens";
+import { consumeEmailVerifyToken } from "@/lib/verify-email";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
@@ -35,46 +33,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const tokenHash = hashToken(parsed.data.token);
-  const user = await prisma.user.findUnique({
-    where: { emailVerifyToken: tokenHash },
-    select: {
-      id: true,
-      emailVerifiedAt: true,
-      emailVerifyTokenExpiry: true,
-      archived: true,
-      blocked: true,
-    },
-  });
+  // Logique partagee avec la page /verify-email/[token] (source unique).
+  const result = await consumeEmailVerifyToken(parsed.data.token, { req });
 
-  if (!user || user.archived || isExpired(user.emailVerifyTokenExpiry)) {
+  if (result.status === "invalid-or-expired") {
     return NextResponse.json(INVALID_OR_EXPIRED, { status: 400 });
   }
 
-  // Idempotent : si deja verifie on renvoie 200 sans relog.
-  if (user.emailVerifiedAt) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerifyToken: null, emailVerifyTokenExpiry: null },
-    });
-    return NextResponse.json({ ok: true, alreadyVerified: true });
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerifiedAt: new Date(),
-      emailVerifyToken: null,
-      emailVerifyTokenExpiry: null,
-    },
+  return NextResponse.json({
+    ok: true,
+    ...(result.status === "already-verified" ? { alreadyVerified: true } : {}),
   });
-
-  await logActivity({
-    type: "USER_EMAIL_VERIFIED",
-    userId: user.id,
-    targetId: user.id,
-    req,
-  });
-
-  return NextResponse.json({ ok: true });
 }

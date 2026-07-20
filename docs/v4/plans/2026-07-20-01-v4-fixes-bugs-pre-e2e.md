@@ -38,7 +38,7 @@
 
 | Task | Bug | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | verify-email : self-fetch SSR -> helper direct | [ ] | | |
+| 1 | verify-email : self-fetch SSR -> helper direct | [x] | 2026-07-20 | Helper `consumeEmailVerifyToken` + page sans self-fetch + route deleguee. Durcissement `blocked`. 1234 vitest verts, 7/7 e2e auth-register (2 ex-fixme actifs). |
 | 2 | PRINTER : endpoint badges dedie + garde par permission | [ ] | | |
 | 3 | /badge/[id] : suppression de la page orpheline | [ ] | | |
 | 4 | Verification finale + MAJ du plan E2E + doc | [ ] | | |
@@ -71,7 +71,7 @@ export async function consumeEmailVerifyToken(
 ```
 - Consumes : `hashToken`, `isExpired` (`src/lib/auth-tokens.ts`), `prisma`, `logActivity`.
 
-- [ ] **Step 1 : Ecrire le test unitaire du helper (echoue).** `src/lib/__tests__/verify-email.test.ts` :
+- [x] **Step 1 : Ecrire le test unitaire du helper (echoue).** `src/lib/__tests__/verify-email.test.ts` :
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -120,9 +120,9 @@ describe("consumeEmailVerifyToken", () => {
 });
 ```
 
-- [ ] **Step 2 : Lancer, verifier l'echec.** Run : `make test -- src/lib/__tests__/verify-email.test.ts` — Expected : FAIL (module absent).
+- [x] **Step 2 : Lancer, verifier l'echec.** Run : `make test -- src/lib/__tests__/verify-email.test.ts` — Expected : FAIL (module absent).
 
-- [ ] **Step 3 : Implementer `src/lib/verify-email.ts`** (deplacer le coeur metier de la route, L38-79) :
+- [x] **Step 3 : Implementer `src/lib/verify-email.ts`** (deplacer le coeur metier de la route, L38-79) :
 
 ```ts
 import type { NextRequest } from "next/server";
@@ -165,9 +165,9 @@ export async function consumeEmailVerifyToken(
 
 > Note : ajout du test `user.blocked` (aligne sur reset-password ; la route actuelle selectionne `blocked` sans le tester — c'est un durcissement coherent).
 
-- [ ] **Step 4 : Lancer le test, verifier le succes.** Run : `make test -- src/lib/__tests__/verify-email.test.ts` — Expected : PASS (4 tests).
+- [x] **Step 4 : Lancer le test, verifier le succes.** Run : `make test -- src/lib/__tests__/verify-email.test.ts` — Expected : PASS (4 tests).
 
-- [ ] **Step 5 : Reecrire la page en Server Component sans fetch.** `src/app/verify-email/[token]/page.tsx` : supprimer `verifyToken()` (L6-22) et `resolveBaseUrl()` (L24-30). Remplacer par :
+- [x] **Step 5 : Reecrire la page en Server Component sans fetch.** `src/app/verify-email/[token]/page.tsx` : supprimer `verifyToken()` (L6-22) et `resolveBaseUrl()` (L24-30). Remplacer par :
 
 ```ts
 import { consumeEmailVerifyToken } from "@/lib/verify-email";
@@ -183,7 +183,7 @@ export default async function VerifyEmailPage({ params }: { params: Promise<{ to
 
 Plus aucune dependance a `BASE_URL`/`NEXTAUTH_URL`.
 
-- [ ] **Step 6 : Deleguer la route API au helper (dedup).** `src/app/api/auth/verify-email/route.ts` : garder rate-limit (L20-27) + Zod (L29-36) ; remplacer L38-79 par :
+- [x] **Step 6 : Deleguer la route API au helper (dedup).** `src/app/api/auth/verify-email/route.ts` : garder rate-limit (L20-27) + Zod (L29-36) ; remplacer L38-79 par :
 
 ```ts
 const r = await consumeEmailVerifyToken(parsed.data.token, { req });
@@ -193,12 +193,12 @@ if (r.status === "invalid-or-expired") {
 return NextResponse.json({ ok: true, alreadyVerified: r.status === "already-verified" });
 ```
 
-- [ ] **Step 7 : De-fixmer les tests E2E.** `e2e/public/auth-register.spec.ts` : retirer `.fixme` L47 et L101, supprimer les commentaires de limitation (L42-46, L98-100).
+- [x] **Step 7 : De-fixmer les tests E2E.** `e2e/public/auth-register.spec.ts` : retirer `.fixme` L47 et L101, supprimer les commentaires de limitation (L42-46, L98-100).
 
-- [ ] **Step 8 : Verifier.** Run : `make lint && make typecheck && make test`. Puis E2E cible :
+- [x] **Step 8 : Verifier.** Run : `make lint && make typecheck && make test`. Puis E2E cible :
 `docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test e2e/public/auth-register.spec.ts` — Expected : les 2 tests ex-fixme passent (verify-email golden path + double consommation idempotente).
 
-- [ ] **Step 9 : Commit** (si demande) : `fix(v4): verify-email sans self-fetch SSR (helper direct)`.
+- [x] **Step 9 : Commit** (si demande) : `fix(v4): verify-email sans self-fetch SSR (helper direct)`.
 
 ---
 

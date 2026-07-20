@@ -2,32 +2,7 @@ import Link from "next/link";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Alert, SuccessRing } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
-
-async function verifyToken(token: string, baseUrl: string): Promise<{ ok: boolean; alreadyVerified?: boolean }> {
-  // Server-side fetch vers la route API pour valider le token. On utilise le
-  // baseUrl du runtime pour rester compatible Docker (l'app se voit elle-meme
-  // en http://localhost:3000 cote container).
-  try {
-    const res = await fetch(`${baseUrl}/api/auth/verify-email`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token }),
-      cache: "no-store",
-    });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, alreadyVerified: Boolean(data?.alreadyVerified) };
-  } catch {
-    return { ok: false };
-  }
-}
-
-function resolveBaseUrl(): string {
-  return (
-    process.env.BASE_URL ||
-    process.env.NEXTAUTH_URL ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
-}
+import { consumeEmailVerifyToken } from "@/lib/verify-email";
 
 export default async function VerifyEmailPage({
   params,
@@ -35,10 +10,14 @@ export default async function VerifyEmailPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const result = await verifyToken(token, resolveBaseUrl());
+  // Appel direct du helper (pas de self-fetch HTTP : NEXTAUTH_URL n'est pas
+  // joignable depuis le container, ce qui cassait la verification en dev/test).
+  const result = await consumeEmailVerifyToken(token);
+  const ok = result.status === "verified" || result.status === "already-verified";
+  const alreadyVerified = result.status === "already-verified";
 
-  return result.ok ? (
-    <AuthCard title={result.alreadyVerified ? "Email déjà confirmé" : "Adresse vérifiée"}>
+  return ok ? (
+    <AuthCard title={alreadyVerified ? "Email déjà confirmé" : "Adresse vérifiée"}>
       <div className="text-center">
         <SuccessRing>
           <Icon name="check" size={34} />
