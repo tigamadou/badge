@@ -42,7 +42,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 | 0.3 | Combler les gaps d'integration Vitest (avant retrait des gardes) | [x] | 2026-07-20 | Gaps reels combles : `PUT subscription` (STAFF_OBSERVER 403 + `PLAN_NOT_FOUND` 404), `scan/verify` (VIEWER 403, PRINTER 403), `registrations/export` (OPERATOR 403), `checkin` (VIEWER 403). Verification faite avant ecriture : `registrations/print` PENDING (deja couvert par `api-event-badges.test.ts` « ignores non-APPROVED silently ») et `duplicates` (deja couvert par `duplicates.test.ts` + `api-event-registrations`) n'etaient PAS des gaps. Verify : `make test` 1260 passed. |
 | 1 | org : convertir / retirer / URL (8 fichiers) | [x] | 2026-07-20 | 8 fichiers : **0 page.request**. Conversions : templates (MANAGER via modale + garde AUDITOR en nav absente), members (invitation masquee hors OWNER, change-role via select, echec dernier OWNER), settings (retour heritage via bouton, MANAGER badge via picker), events (echecs metier via wizard : EVENT_LIMIT message + abonnement inactif = espace bloque + AUDITOR creation echoue). Gardes API pures retirees (couvertes en integration). SLUG_TAKEN non provocable par l'UI (slug auto-suggere) -> reste en integration. Bug d'infra corrige : PlatformSettings.smtp corrompu par un run interrompu -> restaure (mailpit:1025). Verify : org complet 60 passed. |
 | 2 | event : convertir / retirer / URL (13 fichiers) | [x] | 2026-07-20 | 13 fichiers **0 page.request**. Conversions UI : badges (impression batch/individuelle), registration-detail (mails approve/reject via boutons), scan/categories deja doublons retires. Gardes API retirees (couvertes integration) ; cas « reapprouver une REJETEE » sans surface UI -> ajoute en integration (api-event-registrations). Parcours complet : `loginAndEnter` (/select si multi-espaces via makeEventAdminUser, redirect auto pour roles event-only) + `toHaveURL` a chaque etape. Seul `loginAs` restant = test « outsider sans espace » (aucun workspace, /select N/A). Verify par fichier (flakes de charge absorbes en run isole) : access/scan/categories/blocklist 16, reg-new/settings/members 13, badges/dashboard 13, registrations 8+1skip, registration-detail 10, activity 3, overview 6. |
-| 3 | platform : convertir / retirer / URL (15 fichiers) | [ ] | | |
+| 3 | platform : convertir / retirer / URL (15 fichiers) | [x] | 2026-07-20 | 15 fichiers **0 page.request**. Retire ~25 gardes 403/409/validation (couvertes integration + gaps combles Task 0.3) ; convertit NAME_TAKEN (plans) et Test SMTP (settings) en tests UI ; conserve les nombreux tests deja conformes (archive/restore/suppression via boutons, invitations, filtres via navigation). Verify par lot : activity 7, access/orgs 24, org-new/plans/user-new 7, settings 5. |
 | 4 | public / transverse : convertir / retirer / securite (12 fichiers) | [ ] | | |
 | 5 | Verification globale + doc | [ ] | | |
 
@@ -258,7 +258,7 @@ Pour chaque fichier, appliquer le catalogue (issu de l'audit). **Systemique a to
 
 `(*)` = apres gap Vitest (Task 0.3).
 
-- [ ] Task 3.x : traiter chaque fichier, run vert, commit si demande.
+- [x] Task 3.x : traiter chaque fichier, run vert, commit si demande. — Fait 2026-07-20 (15 fichiers, 0 page.request).
 
 ---
 
