@@ -54,7 +54,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 1.2 | org/events (liste + wizard) | [ ] | | |
 | 1.3 | org/members | [x] | 2026-07-20 | Fait avec la Task 0 (page de reference). Fusionne rendu + 3 actions UI + etat protege + 6 gardes API. |
 | 1.4 | org/templates | [ ] | | |
-| 1.5 | org/subscription | [ ] | | |
+| 1.5 | org/subscription | [x] | 2026-07-20 | `e2e/org/subscription.spec.ts` : rendu (plan/statut/periode/limites), MANAGER OK, AUDITOR redirige, illimite, sans abonnement, echu. 6/6 verts. |
 | 1.6 | org/settings (+ badge) | [ ] | | |
 | 1.7 | org/activity (+ detail) | [ ] | | |
 | 1.8 | org/access + suppression transverses org | [ ] | | |
