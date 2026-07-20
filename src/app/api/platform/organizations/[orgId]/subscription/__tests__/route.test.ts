@@ -11,7 +11,9 @@ function withStaffSession(user: { id: string; email: string; name: string }) {
   } as never);
 }
 
-async function seedStaff() {
+async function seedStaff(
+  staffRole: "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER" = "STAFF_ADMIN",
+) {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   return prisma.user.create({
     data: {
@@ -20,7 +22,7 @@ async function seedStaff() {
       name: "S",
       emailVerifiedAt: new Date(),
       isStaff: true,
-      staffRole: "STAFF_ADMIN",
+      staffRole,
     },
   });
 }
@@ -104,6 +106,30 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
     expect(sub?.planId).toBe(planAnnual.id);
     expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
+  });
+
+  it("STAFF_OBSERVER ne peut pas assigner un abonnement (403)", async () => {
+    const observer = await seedStaff("STAFF_OBSERVER");
+    const org = await seedOrg();
+    const plan = await seedPlan();
+    withStaffSession({ id: observer.id, email: observer.email, name: observer.name });
+
+    const res = await callPut(org.id, { planId: plan.id, status: "ACTIVE" });
+    expect(res.status).toBe(403);
+
+    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
+    expect(sub).toBeNull();
+  });
+
+  it("404 PLAN_NOT_FOUND si le plan n'existe pas", async () => {
+    const staff = await seedStaff();
+    const org = await seedOrg();
+    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
+
+    const res = await callPut(org.id, { planId: "plan-inexistant", status: "ACTIVE" });
+    expect(res.status).toBe(404);
+    const json = (await res.json()) as { error?: string };
+    expect(json.error).toBe("PLAN_NOT_FOUND");
   });
 
   it("404 si l'org n'existe pas", async () => {

@@ -35,6 +35,20 @@ async function seedOperator() {
   return { u, org, event, cat };
 }
 
+// Meme seed que seedOperator, avec un role event choisi (pour les gardes).
+async function seedMember(role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER") {
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const u = await prisma.user.create({
+    data: { email: `m-${stamp}@x.fr`, password: "x", name: "M", emailVerifiedAt: new Date() },
+  });
+  const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
+  const event = await prisma.event.create({
+    data: { orgId: org.id, title: "E", slug: `e-${stamp}`, location: "L", date: new Date() },
+  });
+  await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role } });
+  return { u, org, event };
+}
+
 async function mkParticipant(suffix: string) {
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${suffix}`;
   return prisma.user.create({
@@ -75,6 +89,38 @@ describe("POST /scan/verify", () => {
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.status).toBe(401);
+  });
+
+  it("VIEWER cannot scan (403)", async () => {
+    const { u, org, event } = await seedMember("VIEWER");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ payload: "REG-X" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("PRINTER cannot scan (403)", async () => {
+    const { u, org, event } = await seedMember("PRINTER");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/scan/verify/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ payload: "REG-X" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(403);
   });
 
   it("returns 400 VALIDATION on malformed JSON body", async () => {

@@ -39,7 +39,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 |---|---|---|---|---|
 | 0.1 | Contrat + helper `loginAndEnter` + page de reference | [x] | 2026-07-20 | `e2e/helpers/nav.ts` (`loginAndEnter` : `/select` si multi-espaces, clic de la carte, URL assertee) ; contrat strict dans `e2e/README.md` ; `badges.spec.ts` recode en reference (batch de 3 en parcours UI complet + reponse succes UI/DB/audit), doublon de marquage retire. Verify : 9 passed. NB : `next-env.d.ts` importe `.next/dev/types/routes.d.ts`, ce qui contourne l'`exclude` du tsconfig — si le dev server corrompt cet artefact, le supprimer avant `make typecheck`. |
 | 0.2 | Controles UI manquants (archive/restore event, role membre org) | [x] | 2026-07-20 | (A) `EventArchiveActions` : boutons Archiver/Restaurer par ligne sur `/org/[orgId]/events`, masques hors MANAGER+ (garde = etat UI). (B) selecteur de role inline dans `MembersClient`, rendu seulement pour un OWNER, erreur `LAST_OWNER` affichee. Tests UI ajoutes en remplacement des versions API : archive/restore via boutons, changement de role, et **echec** « dernier OWNER » (message + role inchange). Verify : 32 passed (org/members, org/events, event/badges). Helper `loginAndEnter` durci : la redirection auto mono-espace est detectee par timeout au lieu du heading. |
-| 0.3 | Combler les gaps d'integration Vitest (avant retrait des gardes) | [ ] | | |
+| 0.3 | Combler les gaps d'integration Vitest (avant retrait des gardes) | [x] | 2026-07-20 | Gaps reels combles : `PUT subscription` (STAFF_OBSERVER 403 + `PLAN_NOT_FOUND` 404), `scan/verify` (VIEWER 403, PRINTER 403), `registrations/export` (OPERATOR 403), `checkin` (VIEWER 403). Verification faite avant ecriture : `registrations/print` PENDING (deja couvert par `api-event-badges.test.ts` « ignores non-APPROVED silently ») et `duplicates` (deja couvert par `duplicates.test.ts` + `api-event-registrations`) n'etaient PAS des gaps. Verify : `make test` 1260 passed. |
 | 1 | org : convertir / retirer / URL (8 fichiers) | [ ] | | |
 | 2 | event : convertir / retirer / URL (13 fichiers) | [ ] | | |
 | 3 | platform : convertir / retirer / URL (15 fichiers) | [ ] | | |
@@ -179,13 +179,13 @@ Deux actions metier existent en API mais n'ont aucun controle UI ; on les ajoute
 
 Certaines gardes retirees de l'E2E ne sont PAS encore couvertes en integration. Les ecrire d'abord (sinon perte de couverture). Chaque test : golden path deja existant, on ajoute le cas manquant.
 
-- [ ] **platform** — `PUT /api/platform/organizations/[orgId]/subscription` : ajouter `STAFF_OBSERVER -> 403` et `planId inexistant -> 404 PLAN_NOT_FOUND` (fichier `.../subscription/__tests__/route.test.ts`).
-- [ ] **event** — `registrations/print` : `PENDING ignore silencieusement` (creer `__tests__/route.test.ts` si absent).
-- [ ] **event** — `registrations/[regId]/checkin` : golden + `403` par role (creer `__tests__`).
-- [ ] **event** — `registrations/[regId]/duplicates` : golden (expose les doublons) + `403` (creer `__tests__`).
-- [ ] **event** — `registrations/export` : `OPERATOR -> 403` (ajouter au `__tests__` existant qui ne teste que le happy path).
-- [ ] **event** — `scan/verify` : `VIEWER -> 403` et `PRINTER -> 403` explicites (ajouter a `api-event-scan.test.ts`).
-- [ ] **Verify** : `make test` vert ; ces cas passent. Commit (si demande) : `test(v4): integration gardes manquantes (subscription/print/checkin/duplicates/export/scan)`.
+- [x] **platform** — `PUT /api/platform/organizations/[orgId]/subscription` : ajouter `STAFF_OBSERVER -> 403` et `planId inexistant -> 404 PLAN_NOT_FOUND` (fichier `.../subscription/__tests__/route.test.ts`).
+- [x] **event** — `registrations/print` : `PENDING ignore silencieusement` (creer `__tests__/route.test.ts` si absent).
+- [x] **event** — `registrations/[regId]/checkin` : golden + `403` par role (creer `__tests__`).
+- [x] **event** — `registrations/[regId]/duplicates` : golden (expose les doublons) + `403` (creer `__tests__`).
+- [x] **event** — `registrations/export` : `OPERATOR -> 403` (ajouter au `__tests__` existant qui ne teste que le happy path).
+- [x] **event** — `scan/verify` : `VIEWER -> 403` et `PRINTER -> 403` explicites (ajouter a `api-event-scan.test.ts`).
+- [x] **Verify** : `make test` vert ; ces cas passent. Commit (si demande) : `test(v4): integration gardes manquantes (subscription/print/checkin/duplicates/export/scan)`.
 
 ---
 

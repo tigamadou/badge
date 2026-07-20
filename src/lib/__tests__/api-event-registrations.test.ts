@@ -1142,6 +1142,28 @@ describe("GET /registrations/export (CSV)", () => {
     expect(body).toContain("Amadou");
     expect(body.split("\n")[0]).toContain("firstName");
   });
+
+  it("OPERATOR cannot export (403)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `op-exp-${stamp}@x.test`, password: "x", name: "Op", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-exp-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-exp-${stamp}`, location: "L", date: new Date() },
+    });
+    await prisma.eventMembership.create({
+      data: { userId: u.id, eventId: event.id, role: "OPERATOR" },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/export/route");
+    const res = await GET(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations/export`),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("Quota — admin bypass with audit", () => {
@@ -1232,6 +1254,34 @@ describe("POST /registrations/[regId]/checkin", () => {
     const log = await prisma.activityLog.findFirst({ where: { type: "BADGE_SCANNED" } });
     expect(log?.userId).toBe(u.id);
     expect(log?.eventId).toBe(event.id);
+  });
+
+  it("VIEWER cannot checkin (403)", async () => {
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const u = await prisma.user.create({
+      data: { email: `vw-chk-${stamp}@x.test`, password: "x", name: "Vw", emailVerifiedAt: new Date() },
+    });
+    const org = await prisma.organization.create({ data: { name: "O", slug: `o-chk-${stamp}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: `e-chk-${stamp}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({
+      data: { eventId: event.id, name: "V", color: "#000000", number: 1 },
+    });
+    await prisma.eventMembership.create({
+      data: { userId: u.id, eventId: event.id, role: "VIEWER" },
+    });
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/checkin/route"
+    );
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(403);
   });
 
   it("returns 404 FOREIGN_EVENT when regId does not belong to the event", async () => {
