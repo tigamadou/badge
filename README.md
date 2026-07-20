@@ -134,6 +134,6 @@ votre version.
 
 **Version courante (v4, en construction)** :
 
-- [Plan de refonte globale v4](docs/v4/plans/2026-07-17-v4-refonte-globale.md)
+- [Plans v4](docs/v4/plans/) — les plans implementes sont retires (le code fait foi)
 - [Installation (dont HTTPS local)](docs/v4/installation.md)
-- [Spec stockage S3/MinIO](docs/v4/specs/2026-05-31-v4-stockage-s3-et-backups.md)
+- [Spec backups hebdomadaires](docs/v4/specs/2026-05-31-v4-stockage-s3-et-backups.md)

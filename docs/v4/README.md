@@ -14,12 +14,15 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 
 ## Documents
 
-- [Plan d'implementation unique](plans/2026-07-17-v4-refonte-globale.md) — tracker de progression en tete.
-- [Plan couverture de tests complete](plans/2026-07-18-v4-02-couverture-tests-complete.md) — unitaire 100% lib, integration 100% API, E2E 100% pages, cibles make, CI GitHub Actions.
+Trois plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la date) :
+
+- [01 — Corrections bugs pre-E2E](plans/2026-07-20-01-v4-fixes-bugs-pre-e2e.md) — **d'abord** : verify-email, acces PRINTER badges, suppression /badge/[id].
+- [02 — Abonnements (periodicite, slug auto, blocage org)](plans/2026-07-20-02-v4-abonnements-periodicite-slug-blocage.md) — tracker de progression en tete.
+- [03 — Reorganisation E2E par page](plans/2026-07-20-03-v4-e2e-reorg-par-page.md) — un fichier de specs par page, toutes les actions testees, tous les espaces (suppose 01 termine).
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
-- [Spec stockage S3/MinIO](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01).
+- [Spec backups hebdomadaires](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01) ; volet stockage S3/MinIO implemente et retire du document.
 
 ## Etat d'avancement
 

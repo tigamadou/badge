@@ -1,40 +1,34 @@
-# Spec v4 — Stockage S3 (MinIO) et backups hebdomadaires
+# Spec v4 — Backups hebdomadaires
 
-> **Statut** : conception validée — 2026-05-31 (migrée depuis l'ancienne spec v3-01 lors du nettoyage doc du 2026-07-17)
-> **Type** : nouvelle infrastructure (stockage + sauvegarde)
+> **Statut** : conception validée — 2026-05-31 (migrée depuis l'ancienne spec v3-01 lors du nettoyage doc du 2026-07-17) — **à implémenter**
+> **Type** : nouvelle infrastructure (sauvegarde)
 > **Périmètre** : v4
-> **Plan d'implémentation** : [`docs/v4/plans/2026-07-17-v4-refonte-globale.md`](../plans/2026-07-17-v4-refonte-globale.md) (Phase 5 — Stockage MinIO/S3)
 >
-> **Note de provenance** : ce document provient de l'ancienne spec `v3-01`. Les
-> versions v1/v2/v3 de la documentation ont été supprimées le 2026-07-17 ; les
-> chemins `docs/v2/...` et `docs/v3/...` cités plus bas sont **historiques** et ne
-> pointent plus vers des fichiers existants. Pour l'implémentation effective côté
-> code (driver `src/lib/storage.ts`, service MinIO Docker, sécurisation
-> `/api/files`), c'est le **plan v4 Phase 5** qui fait autorité. Le volet
-> backups/restore/age décrit ici reste une référence de conception à réactiver
-> le moment venu.
+> **Note de périmètre** : le volet **stockage S3 / MinIO** de cette spec est
+> **implémenté** (driver `src/lib/storage.ts`, service MinIO Docker, sécurisation
+> `/api/files`) — le code fait foi et sa description a été retirée de ce document.
+> Ne subsiste ici que le **pipeline de backups hebdomadaires** (BDD + bucket +
+> config, chiffrement `age`, rétention GFS, cron, restore), qui reste **à
+> implémenter**. Ce document provient de l'ancienne spec `v3-01` ; les chemins
+> `docs/v2/...` et `docs/v3/...` cités plus bas sont **historiques** et ne
+> pointent plus vers des fichiers existants.
 
 ## Contexte et objectifs
 
-La v1 stocke les fichiers utilisateurs (logos d'événement, photos de profil, justificatifs PDF, badges générés) en local sur le disque du conteneur, sous `uploads/`. Cette approche ne tient plus en v2 :
+Les fichiers utilisateurs (logos d'événement, photos de profil, justificatifs PDF, badges générés) sont désormais stockés dans un bucket S3-compatible (MinIO self-hosted, cf. `src/lib/storage.ts`), scopé par organisation et par événement. Reste à sécuriser la **sauvegarde** de cet ensemble :
 
-- **Multi-tenant** : les fichiers doivent être scopés par organisation et par événement, avec une structure de clés exploitable par le code et par les opérations d'archivage.
-- **Reproductibilité** : un volume Docker `uploads/` couplé au conteneur applicatif rend les sauvegardes fragiles et les restaurations incomplètes.
-- **Sécurité des sauvegardes** : la v1 a `make backup-prod` qui produit un `mysqldump` + un `uploads.tar.gz` non chiffrés, conservés sur le même serveur que la production. Une panne disque, un `rm -rf` malheureux ou une compromission du serveur entraîne la perte simultanée de la production **et** de ses backups.
+- **Sécurité des sauvegardes** : `make backup-prod` produit un `mysqldump` + une archive non chiffrés, conservés sur le même serveur que la production. Une panne disque, un `rm -rf` malheureux ou une compromission du serveur entraîne la perte simultanée de la production **et** de ses backups.
+- **Périmètre complet** : une sauvegarde fiable doit couvrir la BDD **et** le bucket MinIO **et** la configuration (`.env.production`, `Caddyfile`), pour reconstituer intégralement le service.
 
 Cette spec définit :
 
-1. Le passage d'un stockage local à un stockage S3-compatible (MinIO self-hosted dans Docker) avec une organisation de bucket multi-tenant.
-2. Un pipeline de sauvegarde hebdomadaire complet (BDD + bucket + config), chiffré bout-en-bout, poussé vers une cible distante hors-serveur (Hetzner Storage Box).
-3. Une procédure de restauration interactive avec garde-fous (confirmation, snapshot de précaution, audit).
+1. Un pipeline de sauvegarde hebdomadaire complet (BDD + bucket + config), chiffré bout-en-bout, poussé vers une cible distante hors-serveur (Hetzner Storage Box).
+2. Une procédure de restauration interactive avec garde-fous (confirmation, snapshot de précaution, audit).
 
 ## Décisions tranchées (synthèse ADR)
 
 | Sujet | Décision | Pourquoi |
 |---|---|---|
-| Provider stockage | MinIO self-hosted dans Docker | Pas de dépendance cloud externe, S3-compatible donc code agnostique, sur le même serveur que MySQL et l'app pour la simplicité opérationnelle. |
-| Organisation des objets | 1 bucket `badge-prod` avec préfixes `orgs/{orgId}/events/{eventId}/...` | Pattern S3 standard pour SaaS multi-tenant. Évite l'explosion du nombre de buckets (MinIO préfère des préfixes profonds). IAM scoping simple. Archivage d'org = `mc rm --recursive` sur un préfixe. |
-| SDK applicatif | `@aws-sdk/client-s3` v3 | SDK universel. Si on migre MinIO → AWS S3 / Scaleway / R2 plus tard, seul l'endpoint change. Tree-shakable. |
 | Outil de backup | Script shell maison (`mysqldump` + `mc` + `rclone` + `age`) | Cohérent avec le style du projet (Makefile + scripts). Pas de dépendance binaire exotique. Contrôle total sur le pipeline. La rétention/dedup sont assumés à la main. |
 | Cibles backup | Locale (hors dossier projet) **et** Hetzner Storage Box BX11 (SFTP via rclone) | Stratégie 3-2-1 simplifiée. Locale = restore rapide. Distante = disaster recovery. MinIO étant sur le même serveur que la BDD, ne PAS sortir les backups est inacceptable. |
 | Périmètre snapshot | BDD + bucket MinIO + `.env.production` + `Caddyfile` | Snapshot autoporteur : un seul fichier reconstitue intégralement le service. Les secrets sont protégés par le chiffrement `age`. |
@@ -44,115 +38,6 @@ Cette spec définit :
 | Monitoring | Email SMTP synchrone + log JSON local rotatif | Email systématique (succès comme échec) → l'absence d'email est elle-même une alerte. Log JSON = format directement consommable par v3-02 (Loki/Graylog) plus tard. |
 | Restore | `make restore-from-backup` interactif + doc `docs/v2/operations/restore.md` | Double confirmation, snapshot de précaution automatique avant écrasement, audit dans `ActivityLog`. |
 | Hors-scope | Logs centralisés (v3-02), queue jobs asynchrones (v3-03) | Décomposition explicite pour éviter une mega-spec. Chacun a ses propres arbitrages. |
-
-## Architecture de stockage
-
-### Service MinIO dans Docker
-
-Ajout d'un service `minio` dans `docker-compose.dev.yml` et `docker-compose.yml`, à côté de `app`, `mysql`, `mailpit` :
-
-```yaml
-minio:
-  image: minio/minio:latest
-  restart: unless-stopped
-  command: server /data --console-address ":9001"
-  environment:
-    MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-    MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-  volumes:
-    - minio-data:/data
-  networks:
-    - badge
-volumes:
-  minio-data:
-```
-
-- En **dev** : ports `9000` (data) et `9001` (console) exposés sur l'hôte pour introspection.
-- En **prod** : aucun port exposé sur Internet. MinIO est joignable uniquement via le réseau Docker interne (depuis `app`). La console (`9001`) est accessible via un tunnel SSH temporaire (`ssh -L 9001:minio:9001`) ou un futur sous-domaine Caddy IP-restreint (hors-scope).
-
-### Organisation des clés (multi-tenant)
-
-Un **seul bucket** : `badge-dev` en dev, `badge-prod` en prod. Structure des clés :
-
-```
-orgs/{orgId}/
-  logo.{ext}
-  events/{eventId}/
-    settings/
-      logo.{ext}
-      header.{ext}
-    registrations/{regId}/
-      passport.pdf
-      photo.{ext}
-    badges/
-      {regId}.pdf       (badges générés, cache)
-```
-
-**Conséquences pratiques :**
-
-- Toute lecture/écriture passe par un préfixe contenant `orgId` → défense en profondeur si `storage.ts` vérifie le préfixe avant l'opération.
-- Archivage d'une organisation = `DeleteObjects` paginé sur le préfixe `orgs/{orgId}/`.
-- Le miroir backup est trivial : `mc mirror minio-local/badge-prod /staging/minio/`.
-- Aucun migration depuis la v1 (la v2 part d'une base vide).
-
-### Adaptation de `src/lib/storage.ts`
-
-L'API publique passe de :
-
-```typescript
-uploadFile(key, body, contentType) → string
-getFile(key) → { body, contentType }
-```
-
-à :
-
-```typescript
-uploadFile(key, body, contentType) → string         // inchangé côté signature
-getFile(key) → { body, contentType }                 // inchangé côté signature
-deleteFile(key) → void                               // NOUVEAU
-deletePrefix(prefix) → number                        // NOUVEAU, retourne le nombre d'objets supprimés
-```
-
-L'implémentation bascule de `fs/promises` vers `@aws-sdk/client-s3` :
-
-```typescript
-import { S3Client, PutObjectCommand, GetObjectCommand,
-         DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
-
-const s3 = new S3Client({
-  endpoint: process.env.S3_ENDPOINT,             // http://minio:9000 en interne
-  region: process.env.S3_REGION ?? "us-east-1",  // MinIO ignore mais le SDK exige
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY!,
-    secretAccessKey: process.env.S3_SECRET_KEY!,
-  },
-  forcePathStyle: true,                           // requis pour MinIO
-});
-```
-
-### Variables d'environnement ajoutées
-
-```
-# MinIO
-S3_ENDPOINT=http://minio:9000
-S3_REGION=us-east-1
-S3_ACCESS_KEY=<clé applicative, distincte du root>
-S3_SECRET_KEY=<secret>
-S3_BUCKET=badge-prod
-MINIO_ROOT_USER=<admin>
-MINIO_ROOT_PASSWORD=<long random>
-```
-
-### Bootstrap du bucket
-
-Ajout d'une cible `make minio-init` (script `scripts/minio-init.sh`) qui :
-
-1. Attend que MinIO réponde.
-2. Crée le bucket s'il n'existe pas (`mc mb`).
-3. Crée une clé d'accès **applicative** (`S3_ACCESS_KEY` / `S3_SECRET_KEY`) si elle n'existe pas.
-4. Attache une policy scopée sur ce bucket uniquement (`s3:GetObject`, `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket`), sans droit de créer/supprimer le bucket lui-même ni d'accéder à d'autres buckets.
-
-Idempotent. Exécuté une fois au déploiement initial (à intégrer à la spec v2-07 `deploiement-initial.md`).
 
 ## Pipeline de backup
 

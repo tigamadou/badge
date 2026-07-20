@@ -1,6 +1,5 @@
 # Politique de tests - Badge v4
 
-> Reference : plan [`2026-07-18-v4-02-couverture-tests-complete.md`](../plans/2026-07-18-v4-02-couverture-tests-complete.md).
 > Commandes et CI : [`installation.md`](../installation.md).
 
 La couverture est organisee en **trois couches complementaires**, chacune avec un

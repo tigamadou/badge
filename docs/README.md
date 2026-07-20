@@ -60,9 +60,9 @@ Les details exacts par version sont indiques dans son propre `README.md`.
 - **Architecture** : [`v4/architecture.md`](v4/architecture.md) — espaces separes,
   RBAC, pouvoir staff explicite, stockage, garde-fous.
 - **Installation** : [`v4/installation.md`](v4/installation.md) — env, services, HTTPS local.
-- **Plans** : [`v4/plans/2026-07-17-v4-refonte-globale.md`](v4/plans/2026-07-17-v4-refonte-globale.md)
-  — plan unique couvrant les 7 chantiers v4 (HTTPS local, separation des
-  espaces, deconnexion, roles a la creation, stockage MinIO/S3, abonnements).
+- **Plans** : [`v4/plans/`](v4/plans/) — les plans deja implementes sont retires
+  (le code fait foi). Trois plans en cours, a executer dans l'ordre du suffixe
+  `-NN-` : `01` corrections de bugs pre-E2E, `02` abonnements, `03` reorganisation E2E.
 - **Features** : [`v4/features/`](v4/features/) — espaces-separes, stockage-s3, abonnements.
 - **Specs** : [`v4/specs/2026-05-31-v4-stockage-s3-et-backups.md`](v4/specs/2026-05-31-v4-stockage-s3-et-backups.md)
   — ADR stockage S3/MinIO + backups (migree depuis l'ancienne spec v3-01).
