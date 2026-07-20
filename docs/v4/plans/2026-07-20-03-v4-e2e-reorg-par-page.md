@@ -49,10 +49,10 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
-| 0 | Convention, helpers, `access.spec` gabarit + page de reference codee | [ ] | | |
+| 0 | Convention, helpers, `access.spec` gabarit + page de reference codee | [x] | 2026-07-20 | `e2e/README.md` (convention) ; 4 helpers de login confirmes ; `org/members.spec.ts` recode en gabarit (11/11 verts). |
 | 1.1 | org/dashboard | [ ] | | |
 | 1.2 | org/events (liste + wizard) | [ ] | | |
-| 1.3 | org/members | [ ] | | |
+| 1.3 | org/members | [x] | 2026-07-20 | Fait avec la Task 0 (page de reference). Fusionne rendu + 3 actions UI + etat protege + 6 gardes API. |
 | 1.4 | org/templates | [ ] | | |
 | 1.5 | org/subscription | [ ] | | |
 | 1.6 | org/settings (+ badge) | [ ] | | |
