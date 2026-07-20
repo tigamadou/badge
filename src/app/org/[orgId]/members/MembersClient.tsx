@@ -112,7 +112,8 @@ export function MembersClient({
       </div>
       {err && <Alert tone="err">{err}</Alert>}
 
-      <OrgMemberForm orgId={orgId} onAdded={refresh} />
+      {/* Inviter est OWNER-only : on masque le formulaire pour les autres roles. */}
+      {canManageRoles && <OrgMemberForm orgId={orgId} onAdded={refresh} />}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-sm">

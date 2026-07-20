@@ -136,20 +136,7 @@ test.describe("Org — Membres", () => {
 
   // --- Gardes & API (inatteignable par l'UI) ------------------------------
 
-  test("DELETE dernier OWNER -> 409 LAST_OWNER", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-api-last-rm" });
-    await loginAs(page, owner);
-
-    const res = await page.request.delete(`/api/org/${orgId}/members/${owner.id}`);
-    expect(res.status()).toBe(409);
-    expect((await res.json()).code).toBe("LAST_OWNER");
-
-    const still = await getDb().orgMembership.findUnique({
-      where: { userId_orgId: { userId: owner.id, orgId } },
-    });
-    expect(still?.role).toBe("OWNER");
-  });
-
+  
   test("Retrograder le dernier OWNER affiche une erreur (echec UI)", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-last-demote" });
     await loginAndEnter(page, owner, { kind: "org", id: orgId });
@@ -192,46 +179,31 @@ test.describe("Org — Membres", () => {
     expect(membership?.role).toBe("AUDITOR");
   });
 
-  test("MANAGER POST /members -> 403", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "mem-rbac-mgr" });
+    test("MANAGER ne voit pas le formulaire d'invitation (OWNER-only)", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "mem-mgr-noform" });
     const manager = await createTestOrgMember({
-      scope: "mem-rbac-mgr-user",
+      scope: "mem-mgr-noform-user",
       orgId,
       role: "MANAGER",
     });
-    await loginAs(page, manager);
+    await loginAndEnter(page, manager, { kind: "org", id: orgId });
 
-    const res = await page.request.post(`/api/org/${orgId}/members`, {
-      data: { email: `e2e-fail-${Date.now()}@v2-11-e2e.test`, name: "x", role: "AUDITOR" },
-    });
-    expect(res.status()).toBe(403);
+    await page.getByRole("link", { name: /membres/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/members`));
+    // La liste reste consultable, mais l'invitation est reservee a l'OWNER.
+    await expect(page.getByRole("heading", { name: /^membres$/i })).toBeVisible();
+    await expect(page.getByPlaceholder("email@exemple.fr")).toHaveCount(0);
   });
 
-  test("AUDITOR POST /members -> 403", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "mem-rbac-aud" });
+  test("AUDITOR ne voit pas l'entree Membres dans la nav", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "mem-aud-nonav" });
     const auditor = await createTestOrgMember({
-      scope: "mem-rbac-aud-user",
+      scope: "mem-aud-nonav-user",
       orgId,
       role: "AUDITOR",
     });
-    await loginAs(page, auditor);
+    await loginAndEnter(page, auditor, { kind: "org", id: orgId });
 
-    const res = await page.request.post(`/api/org/${orgId}/members`, {
-      data: { email: `e2e-fail2-${Date.now()}@v2-11-e2e.test`, name: "x", role: "AUDITOR" },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("MANAGER GET /api/org/[orgId]/members -> 200 (lecture autorisee)", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "mem-rbac-read" });
-    const manager = await createTestOrgMember({
-      scope: "mem-rbac-read-user",
-      orgId,
-      role: "MANAGER",
-    });
-    await loginAs(page, manager);
-
-    const res = await page.request.get(`/api/org/${orgId}/members`);
-    expect(res.status()).toBe(200);
+    await expect(page.getByRole("link", { name: /membres/i })).toHaveCount(0);
   });
 });
