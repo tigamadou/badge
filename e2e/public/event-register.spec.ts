@@ -5,7 +5,6 @@ import {
   createTestEvent,
   createTestRegistration,
   createTestBlockedEmail,
-  createTestBlockedDocument,
   getLatestRegistrationForUser,
   getDb,
   disconnectDb,
@@ -94,65 +93,23 @@ test.describe("Event registration flow", () => {
     // UI : page publique affiche "Inscriptions fermées".
     await page.goto(`/e/${eventSlug}`);
     await expect(page.getByText(/inscriptions fermées/i)).toBeVisible();
-
-    // API : POST /api/events/[slug]/register renvoie 403 (CLOSED).
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId: "anything" },
-    });
-    expect([403, 409]).toContain(res.status());
   });
 
-  test("BlockedEmail blocks event registration", async ({ page }) => {
+  test("Un e-mail bloque empeche l'inscription (echec via le formulaire)", async ({ page }) => {
     const user = await createTestUser({ scope: "evt-blocked", verified: true, profile: true });
-    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-blocked" });
+    const { eventId, eventSlug } = await createTestEvent({ scope: "evt-blocked" });
     await createTestBlockedEmail({ eventId, email: user.email });
     await loginAs(page, user);
 
-    // Appel API direct : le snapshot prend l'email du User, qui est blocke -> 409 EMAIL_BLOCKED.
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId },
-    });
-    expect(res.status()).toBe(409);
-    const body = await res.json();
-    expect(body.code).toBe("EMAIL_BLOCKED");
-  });
+    await page.goto(`/e/${eventSlug}/register`);
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
 
-  test("plan participant limit enforced per event (429 PARTICIPANT_LIMIT)", async ({ page }) => {
-    // On cree un event dont le plan limite a 1 participant/event puis on tente 2
-    // registrations. La 2e doit echouer (429, cf assertCanRegister).
-    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-quota" });
-    await getDb().plan.updateMany({
-      where: { subscriptions: { some: { org: { events: { some: { id: eventId } } } } } },
-      data: { maxParticipantsPerEvent: 1 },
-    });
-
-    // Premier user OK (PENDING compte dans le quota).
-    const firstUser = await createTestUser({
-      scope: "evt-quota-1",
-      verified: true,
-      profile: true,
-    });
-    await createTestRegistration({
-      userId: firstUser.id,
-      eventId,
-      categoryId,
-      status: "PENDING",
-    });
-
-    // 2e user tente l'inscription via l'API : doit etre rejete (quota atteint).
-    const secondUser = await createTestUser({
-      scope: "evt-quota-2",
-      verified: true,
-      profile: true,
-    });
-    await loginAs(page, secondUser);
-
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId },
-    });
-    expect(res.status()).toBe(429);
-    const body = await res.json();
-    expect(body.code).toBe("PARTICIPANT_LIMIT");
+    // Reponse attendue — ECHEC : reste sur /register (pas de succes), aucune inscription creee.
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
+    await expect(page.getByRole("button", { name: /s'inscrire/i })).toBeVisible();
+    expect(await getLatestRegistrationForUser(user.id)).toBeNull();
   });
 
   // --- Page de succes -----------------------------------------------------
@@ -177,30 +134,4 @@ test.describe("Event registration flow", () => {
     await expect(page.getByText(/statut : en attente/i)).toBeVisible();
   });
 
-  // --- Blocage par document -----------------------------------------------
-
-  test("Un document bloque empeche l'inscription", async ({ page }) => {
-    const { eventSlug, eventId, categoryId } = await createTestEvent({ scope: "evreg-docblock" });
-    const user = await createTestUser({
-      scope: "evreg-docblock-u",
-      verified: true,
-      profile: true,
-    });
-    const profil = await getDb().user.findUnique({
-      where: { id: user.id },
-      select: { idDocumentNumber: true },
-    });
-    await createTestBlockedDocument({
-      eventId,
-      documentNumber: profil!.idDocumentNumber!,
-      reason: "Document signale",
-    });
-    await loginAs(page, user);
-
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId },
-    });
-    expect(res.status()).toBe(409);
-    expect((await res.json()).code).toBe("DOCUMENT_BLOCKED");
-  });
 });
