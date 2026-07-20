@@ -40,7 +40,7 @@
 |---|---|---|---|---|
 | 1 | verify-email : self-fetch SSR -> helper direct | [x] | 2026-07-20 | Helper `consumeEmailVerifyToken` + page sans self-fetch + route deleguee. Durcissement `blocked`. 1234 vitest verts, 7/7 e2e auth-register (2 ex-fixme actifs). |
 | 2 | PRINTER : endpoint badges dedie + garde par permission | [x] | 2026-07-20 | Mode `permission` sur `withEventAuth` ; endpoint `GET /badges` (DTO minimal, sans email/structure) ; `badges/[badgeId]` et `registrations/print` gardes par `badge.print` ; client repointe. 26/26 vitest cibles, 6/6 e2e badges-print (PRINTER pur 200). Contrat 403 : `FORBIDDEN` -> `EVENT_FORBIDDEN` (code standard withEventAuth, aucun consommateur client). |
-| 3 | /badge/[id] : suppression de la page orpheline | [ ] | | |
+| 3 | /badge/[id] : suppression de la page orpheline | [x] | 2026-07-20 | Page + BadgeDownload.tsx (exclusif) supprimes ; BadgeDocument/Anonymous conserves (partages avec BadgeBatchExport/BadgePreview). Test skip retire : 5/5 e2e badge-public verts, 0 skip. |
 | 4 | Verification finale + MAJ du plan E2E + doc | [ ] | | |
 
 ---
@@ -329,20 +329,20 @@ export const GET = withEventAuth({ permission: "badge.print", allowArchived: tru
 - Delete: `src/components/badge/BadgeDownload.tsx` (composant **exclusif** a cette page)
 - Modify/Delete: le test de download dans `e2e/public/badge-public.spec.ts` (L120, `test.skip` du flux `/badge/[id]`)
 
-- [ ] **Step 1 : Confirmer l'exclusivite des fichiers a supprimer.**
+- [x] **Step 1 : Confirmer l'exclusivite des fichiers a supprimer.**
 Run : `grep -rn "components/badge/BadgeDownload\b\|from \"@/components/badge/BadgeDownload\"" src/` — Expected : references uniquement depuis `src/app/badge/[id]/page.tsx`.
 Run : `grep -rn "app/badge/\[id\]\|href=.*/badge/\|\"/badge/\|`/badge/" src/` — Expected : aucune reference entrante (hors la page elle-meme).
 > **Ne PAS supprimer** `src/components/badge/BadgeDownloadV2.tsx` (utilise par l'espace event) ni les sous-composants partages (`BadgeDocument`, `BadgeProps`…) que `BadgeDownload` importe s'ils servent aussi a `BadgeDownloadV2`. Verifier chaque import de `BadgeDownload.tsx` : ne supprimer que ce qui est **exclusif**.
 
-- [ ] **Step 2 : Supprimer la page et le composant.**
+- [x] **Step 2 : Supprimer la page et le composant.**
 Run : `git rm src/app/badge/[id]/page.tsx src/components/badge/BadgeDownload.tsx`
 (Si `src/app/badge/` devient vide, retirer aussi le dossier.)
 
-- [ ] **Step 3 : Retirer le test de download orphelin.** `e2e/public/badge-public.spec.ts` : supprimer le `test.skip` L120-138 (flux `/badge/[id] download`) et son commentaire de bug. Les tests de `/verify/[badgeId]` (verification publique) **restent** inchanges.
+- [x] **Step 3 : Retirer le test de download orphelin.** `e2e/public/badge-public.spec.ts` : supprimer le `test.skip` L120-138 (flux `/badge/[id] download`) et son commentaire de bug. Les tests de `/verify/[badgeId]` (verification publique) **restent** inchanges.
 
-- [ ] **Step 4 : Verifier l'absence de casse.** Run : `make lint && make typecheck` — Expected : succes (aucun import mort). Run : `make test` — Expected : vert.
+- [x] **Step 4 : Verifier l'absence de casse.** Run : `make lint && make typecheck` — Expected : succes (aucun import mort). Run : `make test` — Expected : vert.
 
-- [ ] **Step 5 : Verification navigateur.** `https://badge.local/badge/nimporte` renvoie desormais un **404** (route supprimee), comportement attendu.
+- [x] **Step 5 : Verification navigateur.** `https://badge.local/badge/nimporte` renvoie desormais un **404** (route supprimee), comportement attendu.
 
 - [ ] **Step 6 : Commit** (si demande) : `chore(v4): retire la page publique orpheline /badge/[id] (cassee depuis v2)`.
 

@@ -117,23 +117,9 @@ test.describe("Badge public verify + download", () => {
     });
   });
 
-  test("/badge/[id] download flow", async () => {
-    // La page /badge/[id] (src/app/badge/[id]/page.tsx) fait un fetch vers
-    // /api/verify/[id] qui N'EXISTE PAS dans le code v2 actuel (cf src/app/api/
-    // -- seule /api/public/verify/[badgeId] existe). La page est cassee et reste
-    // bloquee sur "Chargement..." en attendant la response 404.
-    //
-    // Le PDF du badge est genere cote admin via
-    // /api/org/[orgId]/events/[eventId]/badges/[id] et requiert une session
-    // EventMember PRINTER/ADMIN. Pour un participant, il n'existe pas de route
-    // publique de download de badge en v2 actuellement.
-    //
-    // Ce test est skippe en attendant : (a) une route /api/verify/[id] cote
-    // public OU (b) une route /api/account/registrations/[id]/badge cote
-    // participant.
-    test.skip(
-      true,
-      "/badge/[id] casse : appelle /api/verify/[id] qui n'existe pas (v2 bug). Voir specs section 5.",
-    );
-  });
+  // La page publique /badge/[id] a ete SUPPRIMEE (ilot v1 orphelin : sa route
+  // data /api/verify/[id] avait disparu au nettoyage v2 et aucun lien n'y menait ;
+  // le QR pointe vers /verify/[badgeId], couvert ci-dessus). Le PDF du badge est
+  // genere cote espace evenement (/api/org/.../badges/[badgeId], permission
+  // badge.print). Aucun flux public de telechargement n'existe donc plus.
 });
