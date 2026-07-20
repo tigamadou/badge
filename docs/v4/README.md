@@ -33,7 +33,7 @@ Trois plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apr
 | Deconnexion (item 4) | Livre |
 | Roles a la creation (item 5) | Livre |
 | Stockage MinIO/S3 (item 6) | Driver S3 livre ; securisation `/api/files` et champs upload en cours |
-| Abonnements (items 2+3) | A faire |
+| Abonnements (items 2+3) | Livre — catalogue `Plan` + `Subscription`, periodicite (30/365 j) pilotant les dates, slug org auto en lecture seule, blocage de l'espace org sans abonnement actif |
 | Couverture de tests (plan v4-02) | Unitaire lib + integration API a **100%** (gate vert) ; cibles make + CI livrees ; E2E (Phase 3) a faire |
 
 Voir la section `## Progression` du plan pour le detail task par task.

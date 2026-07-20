@@ -78,14 +78,23 @@ par prefixe. Service `minio` en dev (ports 9000/9001) et prod (reseau interne).
 Variables `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` /
 `S3_BUCKET`. Voir la [spec S3](specs/2026-05-31-v4-stockage-s3-et-backups.md).
 
-## Abonnements (a implementer)
+## Abonnements
 
 Remplacement des champs `quotaMaxEvents` / `quotaMaxRegistrations` /
 `quotaMaxStorageMB` de `Organization` par un catalogue `Plan` + une `Subscription`
 par org (statut + dates, sans montant, overrides par org). Limites appliquees :
 nombre d'evenements par org et nombre de participants **par evenement**.
 Enforcement : bloquer les creations au-dela de la limite ou si l'abonnement est
-echu ; existant consultable ; bypass staff audite. Voir le plan (Phase 6).
+echu ; existant consultable ; bypass staff audite.
+
+**Periodicite** : `period` (`MONTHLY` = 30 j, `ANNUAL` = 365 j) pilote le calcul
+de `startDate`/`endDate` a l'assignation (`computeSubscriptionDates`) ; le staff
+ne saisit plus de dates.
+
+**Blocage** : sans abonnement actif, le layout `org/[orgId]` remplace tout le
+contenu par un ecran bloquant, sauf l'onglet `/subscription` (lecture seule). Le
+pathname arrive via le header `x-pathname` pose par le middleware (Edge, sans
+acces Prisma). Voir [features/abonnements.md](features/abonnements.md).
 
 > Migration : le retrait des colonnes `quota*` est destructif. En dev via
 > `make db-push` ; une migration Prisma versionnee est requise avant tout

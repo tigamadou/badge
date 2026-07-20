@@ -88,7 +88,7 @@ docs/v4/README.md                                # statuts items 2/3
 | 4 | Attribution d'abonnement pilotee par la periode | [x] | 2026-07-20 | PUT accepte `period` (startDate/endDate calcules serveur) ; SubscriptionForm remplace les 2 champs date par un select Periode ; periode affichee cote staff et org. 47/47 vitest, 3/3 e2e (+30j / +365j verifies en base). |
 | 5 | Blocage de l'espace org sans abonnement actif | [x] | 2026-07-20 | Middleware propage `x-pathname` ; layout org rend `SubscriptionBlockedNotice` a la place des children si `!active`, sauf `/subscription`. 5/5 e2e subscription-flow + 50/50 e2e org (aucune regression). |
 | 6 | Test E2E complet du parcours abonnement | [x] | 2026-07-20 | `e2e/platform/subscription-flow.spec.ts` : 6 tests (slug live/readonly, parcours creation->fiche->attribution, +30j, +365j, blocage, non-regression actif). Piege corrige : /organizations/new matchait le motif de redirection. |
-| 7 | Documentation v4 + verification finale | [ ] | | |
+| 7 | Documentation v4 + verification finale | [x] | 2026-07-20 | abonnements.md (statut implemente, periodicite, blocage, UI slug), architecture.md, README v4 (chantier Livre). lint 0 erreur, typecheck OK, 38/38 vitest cibles, 6/6 e2e. |
 
 ---
 
@@ -816,33 +816,33 @@ git commit -m "test(v4): parcours e2e abonnement (creation, attribution, blocage
 - Modify: `docs/v4/README.md`
 - Modify: ce plan (section `## Progression`)
 
-- [ ] **Step 1 : Mettre a jour `docs/v4/features/abonnements.md`**
+- [x] **Step 1 : Mettre a jour `docs/v4/features/abonnements.md`**
 
 - Passer le statut de « a implementer » a « implemente » (le code fait foi).
 - Ajouter une sous-section « Periodicite » : `SubscriptionPeriod (MONTHLY=30j, ANNUAL=365j)`, dates calculees a l'assignation, `endDate` source de verite de `active`.
 - Ajouter une sous-section « Blocage org inactif » : le layout `org/[orgId]` rend une notice bloquante quand `!active`, sauf l'onglet `subscription`. Preciser le durcissement API mutation comme hors-scope (renvoyer au point Hors-scope de Task 5).
 - Mettre a jour la section « UI » (le form staff choisit une periode, plus de dates manuelles).
 
-- [ ] **Step 2 : Mettre a jour `docs/v4/architecture.md`**
+- [x] **Step 2 : Mettre a jour `docs/v4/architecture.md`**
 
 Section « Abonnements » (L81-92) : retirer « (a implementer) », ajouter la periodicite et le blocage layout, conserver la note migration Prisma prod (schema partage v1).
 
-- [ ] **Step 3 : Mettre a jour `docs/v4/README.md`**
+- [x] **Step 3 : Mettre a jour `docs/v4/README.md`**
 
 Passer les items 2 (retrait quotas) et 3 (abonnements) au statut adequat, referencer ce plan.
 
-- [ ] **Step 4 : Verification finale complete**
+- [x] **Step 4 : Verification finale complete**
 
 Run : `make lint && make typecheck && make test`
 Expected : lint sans warning, typecheck OK, suite Vitest verte (dont `slugify`, `subscription-period`, integration subscription route).
 Run (E2E) : `make test-e2e-ui` (ou CLI conteneur) sur `e2e/platform/subscription-flow.spec.ts`.
 Expected : 2 tests PASS. (Rappel memoire : la suite E2E globale a ~53 echecs pre-existants ; comparer a la baseline, ne pas se fier au compte brut.)
 
-- [ ] **Step 5 : Mettre a jour le tracker `## Progression`**
+- [x] **Step 5 : Mettre a jour le tracker `## Progression`**
 
 Passer chaque Task a `[x]` avec la date du jour et une note. **Ne pas supprimer** ce plan ni les autres plans v4 (decision : conservation ; le point « supprimer les plans » de `Todo.md` est volontairement non applique, conformement a la convention projet).
 
-- [ ] **Step 6 : Commit** (si demande)
+- [x] **Step 6 : Commit** (si demande)
 
 ```bash
 git add docs/v4/features/abonnements.md docs/v4/architecture.md docs/v4/README.md docs/v4/plans/2026-07-20-02-v4-abonnements-periodicite-slug-blocage.md
