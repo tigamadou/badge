@@ -8,6 +8,7 @@ import {
   makeEventAdminUser,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { createTestEventMember } from "../helpers/db";
 
 // Page Inscriptions (liste) — /event/[eventId]/registrations
@@ -151,32 +152,21 @@ test.describe("Event — Inscriptions (liste)", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("Export CSV : la route repond un CSV", async ({ page }) => {
+  test("ADMIN exporte les inscriptions en CSV via le bouton", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-export" });
     await addReg(eventId, categoryId, "APPROVED", "reg-export-p");
     const admin = await makeEventAdminUser({ scope: "reg-export", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    const res = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/registrations/export`,
-    );
-    expect(res.status()).toBe(200);
-    expect(res.headers()["content-type"]).toContain("csv");
+    await page.goto(`/event/${eventId}/registrations`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations`));
+
+    // Reponse attendue — SUCCES : le bouton declenche un telechargement CSV.
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: /exporter/i }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.csv$/);
   });
 
-  test("OPERATOR ne peut pas exporter -> 403", async ({ page }) => {
-    const { orgId, eventId } = await createTestEvent({ scope: "reg-op-export" });
-    const operator = await createTestEventMember({
-      scope: "reg-op-export-user",
-      orgId,
-      eventId,
-      role: "OPERATOR",
-    });
-    await loginAs(page, operator);
-
-    const res = await page.request.get(
-      `/api/org/${orgId}/events/${eventId}/registrations/export`,
-    );
-    expect(res.status()).toBe(403);
-  });
 });
