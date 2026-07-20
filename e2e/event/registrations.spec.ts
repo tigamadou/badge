@@ -7,7 +7,6 @@ import {
   disconnectDb,
   makeEventAdminUser,
 } from "../helpers/db";
-import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { createTestEventMember } from "../helpers/db";
 
@@ -43,7 +42,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-render" });
     await addReg(eventId, categoryId, "PENDING", "reg-render-p");
     const admin = await makeEventAdminUser({ scope: "reg-render", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     await expect(page.locator("tbody tr")).toHaveCount(1);
@@ -59,7 +58,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-names" });
     const { participant } = await addReg(eventId, categoryId, "PENDING", "reg-names-p");
     const admin = await makeEventAdminUser({ scope: "reg-names", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     await expect(page.getByText(participant.email)).toBeVisible();
@@ -68,7 +67,7 @@ test.describe("Event — Inscriptions (liste)", () => {
   test("Etat vide : aucune inscription", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "reg-empty" });
     const admin = await makeEventAdminUser({ scope: "reg-empty", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     await expect(page.getByText(/aucune inscription/i)).toBeVisible();
@@ -81,7 +80,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     await addReg(eventId, categoryId, "PENDING", "reg-filter-p");
     await addReg(eventId, categoryId, "APPROVED", "reg-filter-a");
     const admin = await makeEventAdminUser({ scope: "reg-filter", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     await expect(page.getByRole("cell", { name: /en attente/i })).toBeVisible();
@@ -97,7 +96,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     const { participant: cible } = await addReg(eventId, categoryId, "PENDING", "reg-search-hit");
     await addReg(eventId, categoryId, "PENDING", "reg-search-miss");
     const admin = await makeEventAdminUser({ scope: "reg-search", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     await expect(page.locator("tbody tr")).toHaveCount(2);
@@ -115,7 +114,7 @@ test.describe("Event — Inscriptions (liste)", () => {
       await addReg(eventId, categoryId, "PENDING", `reg-pagin-${i}`);
     }
     const admin = await makeEventAdminUser({ scope: "reg-pagin", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     // 25 lignes de donnees sur la premiere page.
@@ -132,7 +131,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-detail-nav" });
     const { reg } = await addReg(eventId, categoryId, "PENDING", "reg-detail-nav-p");
     const admin = await makeEventAdminUser({ scope: "reg-detail-nav", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     // Le lien du nom est vide (bug de mapping) : on passe par le lien "Détail".
@@ -143,7 +142,7 @@ test.describe("Event — Inscriptions (liste)", () => {
   test("Le bouton 'Nouvelle inscription' mene au formulaire", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "reg-new-nav" });
     const admin = await makeEventAdminUser({ scope: "reg-new-nav", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
     await page.getByRole("link", { name: /^inscription$/i }).click();
