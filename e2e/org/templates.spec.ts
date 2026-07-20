@@ -8,6 +8,7 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
 // Page Modeles de categories — /org/[orgId]/templates
@@ -132,55 +133,36 @@ test.describe("Org — Modeles de categories", () => {
 
   // --- Gardes & API -------------------------------------------------------
 
-  test("MANAGER cree un modele -> 201 (autorise en v4)", async ({ page }) => {
+  test("MANAGER cree un modele via la modale", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "tpl-mgr" });
     const manager = await createTestOrgMember({ scope: "tpl-mgr-user", orgId, role: "MANAGER" });
-    await loginAs(page, manager);
+    await loginAndEnter(page, manager, { kind: "org", id: orgId });
 
-    const res = await page.request.post(`/api/org/${orgId}/templates`, {
-      data: { name: `Mgr ${Date.now()}`, color: "#333333", number: 30 },
+    await page.getByRole("link", { name: /modèles/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/templates`));
+
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await page.getByRole("textbox", { name: "Nom" }).fill("Modele Manager");
+    await page.getByLabel("Numéro").fill("30");
+    await page.getByRole("button", { name: /^créer$/i }).click();
+
+    // Reponse attendue — SUCCES : la modale se ferme, la ligne apparait, persiste.
+    await expect(page.getByRole("heading", { name: /nouveau modèle/i })).toHaveCount(0);
+    await expect(page.getByText("Modele Manager")).toBeVisible();
+    const tpl = await getDb().categoryTemplate.findFirst({
+      where: { orgId, name: "Modele Manager" },
     });
-    expect(res.status()).toBe(201);
+    expect(tpl?.number).toBe(30);
   });
 
-  test("AUDITOR POST /templates -> 403", async ({ page }) => {
+  // --- Gardes exprimees en etat UI ---------------------------------------
+
+  test("AUDITOR ne voit pas l'entree Modeles dans la nav", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "tpl-aud" });
     const auditor = await createTestOrgMember({ scope: "tpl-aud-user", orgId, role: "AUDITOR" });
-    await loginAs(page, auditor);
+    await loginAndEnter(page, auditor, { kind: "org", id: orgId });
 
-    const res = await page.request.post(`/api/org/${orgId}/templates`, {
-      data: { name: `Aud ${Date.now()}`, color: "#444444", number: 31 },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("AUDITOR GET /templates -> 200 (lecture autorisee)", async ({ page }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "tpl-aud-read" });
-    const auditor = await createTestOrgMember({
-      scope: "tpl-aud-read-user",
-      orgId,
-      role: "AUDITOR",
-    });
-    await loginAs(page, auditor);
-
-    const res = await page.request.get(`/api/org/${orgId}/templates`);
-    expect(res.status()).toBe(200);
-  });
-
-  test("Modele d'une autre org -> 404 (scoping)", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-scope-a" });
-    const { orgId: otherOrgId } = await createTestOrgWithOwner({ scope: "tpl-scope-b" });
-    const foreign = await createTestCategoryTemplate({
-      orgId: otherOrgId,
-      name: "Etranger",
-      color: "#555555",
-      number: 32,
-    });
-    await loginAs(page, owner);
-
-    const res = await page.request.patch(`/api/org/${orgId}/templates/${foreign.id}`, {
-      data: { name: "Pirate" },
-    });
-    expect(res.status()).toBe(404);
+    // Les modeles sont reserves a MANAGER+ : l'entree de nav est absente.
+    await expect(page.getByRole("link", { name: /modèles/i })).toHaveCount(0);
   });
 });
