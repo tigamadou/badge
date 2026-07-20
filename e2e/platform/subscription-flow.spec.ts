@@ -58,6 +58,39 @@ test.describe("Parcours abonnement org", () => {
     }).toPass();
   });
 
+  test("org sans abonnement actif : espace bloque sauf l'onglet Abonnement", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({
+      scope: "sub-blocked",
+      activeSubscription: false,
+    });
+    await loginAs(page, owner);
+
+    // Dashboard bloque.
+    await page.goto(`/org/${orgId}`);
+    await expect(page.getByText("Abonnement inactif")).toBeVisible();
+    await expect(page.getByText(/Contactez le staff Badge/)).toBeVisible();
+
+    // Une autre sous-page l'est aussi.
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByText("Abonnement inactif")).toBeVisible();
+
+    // L'onglet Abonnement reste consultable.
+    await page.goto(`/org/${orgId}/subscription`);
+    await expect(page.getByText("Abonnement inactif")).toHaveCount(0);
+    await expect(page.getByText("Aucun abonnement")).toBeVisible();
+  });
+
+  test("org avec abonnement actif : espace accessible (non-regression)", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "sub-ok" });
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}`);
+    await expect(page.getByText("Abonnement inactif")).toHaveCount(0);
+
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByText("Abonnement inactif")).toHaveCount(0);
+  });
+
   test("attribution d'un plan annuel : endDate calculee a +365 jours", async ({ page }) => {
     const staff = await createTestStaff({ scope: "sub-annual", role: "STAFF_ADMIN" });
     const { orgId } = await createTestOrgWithOwner({ scope: "sub-annual" });

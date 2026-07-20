@@ -166,6 +166,8 @@ export async function createTestOrgWithOwner(opts: {
   // maxParticipantsPerEvent est une limite de participants PAR EVENT (abonnements v4).
   maxEvents?: number;
   maxParticipantsPerEvent?: number;
+  // false = aucun abonnement attache (org bloquee). Defaut true.
+  activeSubscription?: boolean;
 }): Promise<{ orgId: string; owner: TestUser }> {
   const prisma = db();
   const slugSuffix = `${opts.scope}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
@@ -175,16 +177,18 @@ export async function createTestOrgWithOwner(opts: {
       slug: `e2e-org-${slugSuffix}`,
     },
   });
-  const plan = await prisma.plan.create({
-    data: {
-      name: `e2e-plan-${slugSuffix}`,
-      maxEvents: opts.maxEvents ?? null,
-      maxParticipantsPerEvent: opts.maxParticipantsPerEvent ?? null,
-    },
-  });
-  await prisma.subscription.create({
-    data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
-  });
+  if (opts.activeSubscription ?? true) {
+    const plan = await prisma.plan.create({
+      data: {
+        name: `e2e-plan-${slugSuffix}`,
+        maxEvents: opts.maxEvents ?? null,
+        maxParticipantsPerEvent: opts.maxParticipantsPerEvent ?? null,
+      },
+    });
+    await prisma.subscription.create({
+      data: { orgId: org.id, planId: plan.id, status: "ACTIVE", period: "MONTHLY" },
+    });
+  }
   const owner = await createTestUser({ scope: `org-owner-${opts.scope}`, verified: true });
   await prisma.orgMembership.create({
     data: { userId: owner.id, orgId: org.id, role: "OWNER" },

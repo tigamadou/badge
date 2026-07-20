@@ -46,7 +46,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  return NextResponse.next();
+  // Propage le pathname en header de requete : les Server Components n'ont pas
+  // d'API native pour le lire, et le layout org en a besoin pour laisser passer
+  // l'onglet /subscription quand l'abonnement est inactif.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {

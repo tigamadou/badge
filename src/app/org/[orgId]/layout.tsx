@@ -1,10 +1,13 @@
 import { redirect, notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { hasOrgRole } from "@/lib/auth-helpers";
+import { resolveOrgLimits } from "@/lib/subscription";
 import { OrgShell } from "@/components/admin/OrgShell";
+import { SubscriptionBlockedNotice } from "@/components/admin/SubscriptionBlockedNotice";
 
 export default async function OrgLayout({
   params,
@@ -51,6 +54,15 @@ export default async function OrgLayout({
   // atteignent ce point (staff redirige plus haut), donc la membership existe.
   const orgRole = ctx.orgMemberships.find((m) => m.orgId === orgId)?.role ?? "AUDITOR";
 
+  // Sans abonnement actif, l'organisation ne peut rien faire : tout l'espace est
+  // remplace par un ecran bloquant, SAUF l'onglet Abonnement (lecture seule) pour
+  // que l'org puisse consulter son statut et ses dates.
+  const { active } = await resolveOrgLimits(orgId);
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const onSubscriptionTab = pathname.endsWith("/subscription");
+  const content =
+    active || onSubscriptionTab ? children : <SubscriptionBlockedNotice orgId={orgId} />;
+
   return (
     <OrgShell
       org={org}
@@ -58,7 +70,7 @@ export default async function OrgLayout({
       orgs={orgs}
       orgRole={orgRole}
     >
-      {children}
+      {content}
     </OrgShell>
   );
 }

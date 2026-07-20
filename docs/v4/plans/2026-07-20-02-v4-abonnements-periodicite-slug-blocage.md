@@ -86,7 +86,7 @@ docs/v4/README.md                                # statuts items 2/3
 | 2 | Helper `slugify` isomorphe partage (DRY) | [x] | 2026-07-20 | `src/lib/slugify.ts` pur (importable client) ; `slugify-event` delegue ; `slugifyName` local retire de la route org. 14/14 slug + 24/24 organizations. |
 | 3 | Form creation org : slug readonly + preview live | [x] | 2026-07-20 | Champ slug derive de `slugify(name)`, `readOnly`. Verification par E2E `subscription-flow.spec.ts` (live + accents + readonly) plutot qu'a l'oeil. |
 | 4 | Attribution d'abonnement pilotee par la periode | [x] | 2026-07-20 | PUT accepte `period` (startDate/endDate calcules serveur) ; SubscriptionForm remplace les 2 champs date par un select Periode ; periode affichee cote staff et org. 47/47 vitest, 3/3 e2e (+30j / +365j verifies en base). |
-| 5 | Blocage de l'espace org sans abonnement actif | [ ] | | |
+| 5 | Blocage de l'espace org sans abonnement actif | [x] | 2026-07-20 | Middleware propage `x-pathname` ; layout org rend `SubscriptionBlockedNotice` a la place des children si `!active`, sauf `/subscription`. 5/5 e2e subscription-flow + 50/50 e2e org (aucune regression). |
 | 6 | Test E2E complet du parcours abonnement | [ ] | | |
 | 7 | Documentation v4 + verification finale | [ ] | | |
 
@@ -573,7 +573,7 @@ git commit -m "feat(v4): abonnement pilote par la periode (dates calculees)"
 - Consumes : `resolveOrgLimits(orgId)` (existant, retourne `{ active }`). Le pathname courant via le header `x-pathname` pose par le middleware.
 - Produces : quand `active === false`, le layout rend `<SubscriptionBlockedNotice orgId={orgId} />` a la place de `{children}`, **sauf** si la route se termine par `/subscription` (onglet consultable). Le middleware garantit que `headers().get("x-pathname")` est disponible dans les Server Components sous `/org`.
 
-- [ ] **Step 1 : Propager le pathname dans le middleware**
+- [x] **Step 1 : Propager le pathname dans le middleware**
 
 Dans `src/middleware.ts`, dans le flux nominal (apres les redirections auth/staff, la ou l'acces est autorise), remplacer le `NextResponse.next()` par une variante qui ajoute le pathname en header de requete :
 
@@ -585,7 +585,7 @@ return NextResponse.next({ request: { headers: requestHeaders } });
 
 Ne pas modifier les branches de redirection existantes (`/login`, `/`, 401/403 API).
 
-- [ ] **Step 2 : Creer le composant de notice bloquante**
+- [x] **Step 2 : Creer le composant de notice bloquante**
 
 Creer `src/components/admin/SubscriptionBlockedNotice.tsx` (Server Component), reutilisant `EmptyState`/`Alert` de `src/components/ui/Feedback.tsx` et `Button`/`Link` :
 
@@ -615,7 +615,7 @@ export function SubscriptionBlockedNotice({ orgId }: { orgId: string }) {
 
 > Adapter les props exactes de `EmptyState` a sa signature reelle (`src/components/ui/Feedback.tsx:19`). Si `EmptyState` n'accepte pas `action`, envelopper l'`Alert tone="warn"` + le lien manuellement.
 
-- [ ] **Step 3 : Ajouter le gate dans le layout org**
+- [x] **Step 3 : Ajouter le gate dans le layout org**
 
 Dans `src/app/org/[orgId]/layout.tsx`, **apres** le gate de role existant (la ou l'acces org est confirme, ~L36-52) et avant de rendre `{children}` :
 
@@ -642,23 +642,23 @@ return (
 
 Garder `OrgShell` (header + nav) autour du contenu pour la coherence visuelle ; seul le corps (`children`) est remplace par la notice.
 
-- [ ] **Step 4 : Verification navigateur — cas bloque**
+- [x] **Step 4 : Verification navigateur — cas bloque**
 
 Preparer une org dont l'abonnement est `EXPIRED` (ou sans abonnement) via Prisma Studio (`make db-studio`) ou la fiche staff. Se connecter en OWNER de cette org :
 - `https://badge.local/org/<id>` -> affiche la notice « Abonnement inactif » (pas le dashboard).
 - `https://badge.local/org/<id>/events` -> affiche aussi la notice.
 - `https://badge.local/org/<id>/subscription` -> **accessible** (page read-only du statut).
 
-- [ ] **Step 5 : Verification navigateur — cas actif (non-regression)**
+- [x] **Step 5 : Verification navigateur — cas actif (non-regression)**
 
 Sur une org avec abonnement `ACTIVE` non echu : toutes les pages s'affichent normalement (dashboard, events, members...).
 
-- [ ] **Step 6 : Lint + typecheck**
+- [x] **Step 6 : Lint + typecheck**
 
 Run : `make lint && make typecheck`
 Expected : succes.
 
-- [ ] **Step 7 : Commit** (si demande)
+- [x] **Step 7 : Commit** (si demande)
 
 ```bash
 git add src/middleware.ts src/components/admin/SubscriptionBlockedNotice.tsx src/app/org/\[orgId\]/layout.tsx
