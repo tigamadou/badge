@@ -128,4 +128,13 @@ test.describe("Account password reset (forgot + reset)", () => {
     }
     expect(triggered429).toBe(true);
   });
+
+  test("Token de reinitialisation invalide -> message d'erreur", async ({ page }) => {
+    await page.goto("/reset-password/token-invalide-e2e");
+    await page.getByLabel("Nouveau mot de passe").fill("NouveauMdp123");
+    await page.getByLabel("Confirmer le mot de passe").fill("NouveauMdp123");
+    await page.getByRole("button", { name: /mettre à jour/i }).click();
+
+    await expect(page.getByText(/invalide|expir/i).first()).toBeVisible();
+  });
 });

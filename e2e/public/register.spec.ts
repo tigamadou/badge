@@ -140,4 +140,10 @@ test.describe("Account register & verify email", () => {
     expect(triggered429).toBe(true);
     expect(retryAfter).not.toBeNull();
   });
+
+  test("La page /register/success confirme l'envoi", async ({ page }) => {
+    const res = await page.goto("/register/success");
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.getByText(/inscription envoyée/i)).toBeVisible();
+  });
 });

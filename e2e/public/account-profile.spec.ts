@@ -141,17 +141,10 @@ test.describe("Account profile edit", () => {
     });
   });
 
-  test("BlockedDocument does NOT affect profile save (out of scope)", async () => {
-    // BlockedDocument est une regle metier *par event* (cf schema.prisma) ; le
-    // check est applique dans /api/events/[slug]/register, pas dans
-    // /api/account/profile (cf src/app/api/account/profile/route.ts qui n'a aucun
-    // check BlockedDocument). Le test du scenario "BlockedDocument empeche
-    // l'inscription" est donc deporte vers event-register.spec.ts (T06).
-    test.skip(
-      true,
-      "BlockedDocument n'est pas check dans /api/account/profile (seulement dans /api/events/[slug]/register). Voir T06.",
-    );
-  });
+  // NOTE : BlockedDocument est une regle metier PAR EVENT (schema.prisma) ; elle
+  // est appliquee dans /api/events/[slug]/register, pas dans /api/account/profile.
+  // Le scenario est couvert par e2e/public/event-register.spec.ts.
+
 
   test("participantProfileCompletedAt is set when all required fields are filled", async ({
     page,

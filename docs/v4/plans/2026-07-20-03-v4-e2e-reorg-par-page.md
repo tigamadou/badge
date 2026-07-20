@@ -98,16 +98,16 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 3.14 | platform/access + suppression transverses platform | [x] | 2026-07-20 | `e2e/platform/access.spec.ts` (gates layout, plancher OBSERVER, nav, shell supervision). Supprimes : rbac, pages-render, interactions, orgs, users — contenu redistribue. Isolation ajoutee : snapshot/restauration de PlatformSettings (etat global) ; users-list rendu deterministe via l'URL. 105 passed / 0 echec. |
 | 4.1 | public/marketing (+ contact) | [x] | 2026-07-20 | `e2e/public/marketing.spec.ts` : rendu parametre des 8 pages + SOUMISSION du ContactForm et refus sans consentement (lacune comblee). 10/10 verts. |
 | 4.2 | public/login | [x] | 2026-07-20 | `e2e/public/login.spec.ts` (lacune totale comblee) : rendu, identifiants valides -> espace, mauvais mot de passe, e-mail inconnu, compte non verifie, compte bloque, callbackUrl. 7/7 verts. |
-| 4.3 | public/register (+ success + verify-email) | [ ] | | |
-| 4.4 | public/forgot-password + reset-password | [ ] | | |
-| 4.5 | public/setup-password | [ ] | | |
-| 4.6 | public/select | [ ] | | |
+| 4.3 | public/register (+ success + verify-email) | [x] | 2026-07-20 | `auth-register.spec.ts` renomme `register.spec.ts` + rendu /register/success migre de misc. Les 2 ex-`fixme` verify-email sont ACTIFS (bug corrige par le plan 01). |
+| 4.4 | public/forgot-password + reset-password | [x] | 2026-07-20 | `auth-password-reset.spec.ts` renomme `password-reset.spec.ts` + token invalide (lacune comblee). 6/6 verts. |
+| 4.5 | public/setup-password | [x] | 2026-07-20 | `auth-setup-password.spec.ts` renomme `setup-password.spec.ts` : golden path, token invalide/expire, utilisateur archive. |
+| 4.6 | public/select | [x] | 2026-07-20 | `e2e/public/select.spec.ts` (lacune comblee, cree en Task 1.8) : multi-orgs, redirection auto, cible plateforme. |
 | 4.7 | account/dashboard | [x] | 2026-07-20 | `e2e/public/account.spec.ts` (lacune comblee) : liste des inscriptions, etat vide, redirection non connecte, statuts valide/rejete, navigation detail, XSS du nom echappe (migre de security). 7/7 verts. |
-| 4.8 | account/profile (+ complete) | [ ] | | |
-| 4.9 | account/registration-detail (resubmit) | [ ] | | |
+| 4.8 | account/profile (+ complete) | [x] | 2026-07-20 | `account-profile.spec.ts` : edition, uploads photo/document, refus >5 Mo et mauvais mime, completion, + /account/profile/complete relogue ici. Skip vide retire. |
+| 4.9 | account/registration-detail (resubmit) | [x] | 2026-07-20 | `registration-resubmit.spec.ts` renomme `account-registration.spec.ts` + gardes 403 (autre utilisateur) et 404 (lacunes comblees). |
 | 4.10 | public/event-register (+ success) | [x] | 2026-07-20 | `e2e/public/event-register.spec.ts` : CTA, inscription, profil incomplet, deja inscrit, event archive, EMAIL_BLOCKED, PARTICIPANT_LIMIT, + page de SUCCES et DOCUMENT_BLOCKED (lacunes comblees). 9/9 verts. |
-| 4.11 | public/badge-verify (+ download fixme) | [ ] | | |
-| 4.12 | public/misc (styleguide) + security transverse | [ ] | | |
+| 4.11 | public/badge-verify | [x] | 2026-07-20 | `badge-public.spec.ts` renomme `badge-verify.spec.ts` : /verify/[badgeId] uniquement (la page /badge/[id] a ete supprimee par le plan 01). Plus aucun skip. |
+| 4.12 | public/misc (styleguide) + security transverse | [x] | 2026-07-20 | `misc.spec.ts` reduit au styleguide ; `security.spec.ts` deplace en `e2e/transverse/` (cookies) apres migration du XSS vers account et du rate-limit vers register. Les 2 skips vides (limitations v2) remplaces par des notes. 78 passed / 0 skip. |
 | 5 | Nettoyage final, verification globale, doc | [ ] | | |
 
 ---

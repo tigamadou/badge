@@ -162,4 +162,34 @@ test.describe("Account resubmit after rejection", () => {
       targetId: regId,
     });
   });
+
+  // --- Gardes -------------------------------------------------------------
+
+  test("L'inscription d'un autre utilisateur -> 403", async ({ page }) => {
+    const { eventId, categoryId } = await createTestEvent({ scope: "areg-403" });
+    const proprietaire = await createTestUser({
+      scope: "areg-403-owner",
+      verified: true,
+      profile: true,
+    });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: proprietaire.id,
+      categoryId,
+      status: "PENDING",
+    });
+    const intrus = await createTestUser({ scope: "areg-403-intrus", verified: true, profile: true });
+    await loginAs(page, intrus);
+
+    const res = await page.request.get(`/api/account/registrations/${reg.id}`);
+    expect(res.status()).toBe(403);
+  });
+
+  test("Inscription introuvable -> 403 ou 404", async ({ page }) => {
+    const user = await createTestUser({ scope: "areg-404", verified: true, profile: true });
+    await loginAs(page, user);
+
+    const res = await page.request.get("/api/account/registrations/inexistante-e2e");
+    expect([403, 404]).toContain(res.status());
+  });
 });
