@@ -92,7 +92,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 3.8 | platform/plans | [x] | 2026-07-20 | `e2e/platform/plans.spec.ts` : rendu, creation + archive/restaure via l'UI, plan illimite, NAME_TAKEN 409 (lacune), OBSERVER 403. Etat vide non testable (catalogue global, documente). 5/5 verts. |
 | 3.9 | platform/users-list | [x] | 2026-07-20 | `e2e/platform/users-list.spec.ts` : rendu, recherche q, filtres type=staff et type=client, case Archives (lacunes comblees), table vide, navigation fiche. 7/7 verts. |
 | 3.10 | platform/user-new.spec.ts | [x] | 2026-07-20 | `e2e/platform/user-new.spec.ts` : creation client rattache a une org, creation staff (RadioCards + select), EMAIL_TAKEN 409, STAFF_ADMIN_REQUIRED et SUPER_ADMIN_REQUIRED 403. 6/6 verts. |
-| 3.11 | platform/user-detail | [ ] | | |
+| 3.11 | platform/user-detail | [x] | 2026-07-20 | `e2e/platform/user-detail.spec.ts` : rendu, 404, actions masquees sur sa propre fiche, reset mot de passe, CHANGEMENT DE ROLE VIA UI (lacune comblee), archivage UI, self-role 403, promotion SUPER_ADMIN 403, OBSERVER 403, LAST_SUPER_ADMIN 409 (migre). `users.spec.ts` dissous. 10/10 verts. |
 | 3.12 | platform/settings (+ badge) | [ ] | | |
 | 3.13 | platform/activity (+ detail) | [ ] | | |
 | 3.14 | platform/access + suppression transverses platform | [ ] | | |
