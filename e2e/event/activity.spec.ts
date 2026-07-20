@@ -6,7 +6,7 @@ import {
   disconnectDb,
   getDb,
 } from "../helpers/db";
-import { loginAs, loginAsEventMember } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 
 type ActivityLogResponseItem = {
   id: string;
@@ -38,9 +38,10 @@ test.describe("Event — Journal", () => {
   test("ADMIN voit la page Journal", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "act-page" });
     const admin = await makeEventAdminUser({ scope: "act-page", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/activity`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/activity$`));
     await expect(page.getByRole("heading", { name: /journal d'activité/i })).toBeVisible();
   });
 
@@ -50,9 +51,10 @@ test.describe("Event — Journal", () => {
     const log = await getDb().activityLog.create({
       data: { type: "REGISTRATION_CREATED", eventId, userId: admin.id },
     });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/activity/${log.id}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/activity/${log.id}`));
     // describeActivity("REGISTRATION_CREATED") => "Inscription créée" (h1).
     await expect(page.getByRole("heading", { name: /inscription créée/i })).toBeVisible();
   });
@@ -60,9 +62,10 @@ test.describe("Event — Journal", () => {
   test("Etat vide : aucune activite", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "act-empty" });
     const admin = await makeEventAdminUser({ scope: "act-empty", eventId, orgId });
-    await loginAs(page, admin);
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/activity`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/activity$`));
     await expect(page.getByText(/aucune activité/i)).toBeVisible();
   });
 });
