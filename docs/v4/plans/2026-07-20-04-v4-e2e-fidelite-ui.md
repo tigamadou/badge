@@ -40,7 +40,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 | 0.1 | Contrat + helper `loginAndEnter` + page de reference | [x] | 2026-07-20 | `e2e/helpers/nav.ts` (`loginAndEnter` : `/select` si multi-espaces, clic de la carte, URL assertee) ; contrat strict dans `e2e/README.md` ; `badges.spec.ts` recode en reference (batch de 3 en parcours UI complet + reponse succes UI/DB/audit), doublon de marquage retire. Verify : 9 passed. NB : `next-env.d.ts` importe `.next/dev/types/routes.d.ts`, ce qui contourne l'`exclude` du tsconfig — si le dev server corrompt cet artefact, le supprimer avant `make typecheck`. |
 | 0.2 | Controles UI manquants (archive/restore event, role membre org) | [x] | 2026-07-20 | (A) `EventArchiveActions` : boutons Archiver/Restaurer par ligne sur `/org/[orgId]/events`, masques hors MANAGER+ (garde = etat UI). (B) selecteur de role inline dans `MembersClient`, rendu seulement pour un OWNER, erreur `LAST_OWNER` affichee. Tests UI ajoutes en remplacement des versions API : archive/restore via boutons, changement de role, et **echec** « dernier OWNER » (message + role inchange). Verify : 32 passed (org/members, org/events, event/badges). Helper `loginAndEnter` durci : la redirection auto mono-espace est detectee par timeout au lieu du heading. |
 | 0.3 | Combler les gaps d'integration Vitest (avant retrait des gardes) | [x] | 2026-07-20 | Gaps reels combles : `PUT subscription` (STAFF_OBSERVER 403 + `PLAN_NOT_FOUND` 404), `scan/verify` (VIEWER 403, PRINTER 403), `registrations/export` (OPERATOR 403), `checkin` (VIEWER 403). Verification faite avant ecriture : `registrations/print` PENDING (deja couvert par `api-event-badges.test.ts` « ignores non-APPROVED silently ») et `duplicates` (deja couvert par `duplicates.test.ts` + `api-event-registrations`) n'etaient PAS des gaps. Verify : `make test` 1260 passed. |
-| 1 | org : convertir / retirer / URL (8 fichiers) | [ ] | | |
+| 1 | org : convertir / retirer / URL (8 fichiers) | [x] | 2026-07-20 | 8 fichiers : **0 page.request**. Conversions : templates (MANAGER via modale + garde AUDITOR en nav absente), members (invitation masquee hors OWNER, change-role via select, echec dernier OWNER), settings (retour heritage via bouton, MANAGER badge via picker), events (echecs metier via wizard : EVENT_LIMIT message + abonnement inactif = espace bloque + AUDITOR creation echoue). Gardes API pures retirees (couvertes en integration). SLUG_TAKEN non provocable par l'UI (slug auto-suggere) -> reste en integration. Bug d'infra corrige : PlatformSettings.smtp corrompu par un run interrompu -> restaure (mailpit:1025). Verify : org complet 60 passed. |
 | 2 | event : convertir / retirer / URL (13 fichiers) | [ ] | | |
 | 3 | platform : convertir / retirer / URL (15 fichiers) | [ ] | | |
 | 4 | public / transverse : convertir / retirer / securite (12 fichiers) | [ ] | | |
@@ -204,7 +204,7 @@ Pour chaque fichier, appliquer le catalogue (issu de l'audit). **Systemique a to
 | settings.spec.ts | L105 badge reset-null **via bouton « defaut herite »** ; L163 MANAGER badge **via UI** | L124, L134, L178 ; L145 -> garder partie UI (form visible MANAGER), retirer PATCH 403 |
 | templates.spec.ts | L135 MANAGER cree **via modale UI** | L146, L157, L170 |
 
-- [ ] Task 1.x : traiter chaque fichier (convertir, retirer, ajouter URL/parcours), run vert par fichier, commit si demande.
+- [x] Task 1.x : traiter chaque fichier (convertir, retirer, ajouter URL/parcours), run vert par fichier, commit si demande.
 
 ---
 
