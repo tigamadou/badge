@@ -9,8 +9,13 @@ import {
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
+import { makeEventAdminUser } from "../helpers/db";
 
-test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
+// Page Scanner — /event/[eventId]/scan
+// Rôles : OPERATOR + ADMIN (PRINTER/VIEWER refuses). Deux modes de saisie :
+// camera (Html5Qrcode, NON automatisable en E2E) et saisie manuelle (testee ici).
+// Le check-in direct par regId n'a pas de surface UI : teste en API.
+test.describe("Event — Scanner", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -257,5 +262,117 @@ test.describe("T25 Scan & check-in (verify + checkin per regId)", () => {
       { data: { payload: "" } },
     );
     expect(res.status()).toBe(400);
+  });
+
+  // --- Actions UI (saisie manuelle) ---------------------------------------
+
+  test("Saisie manuelle d'un code valide -> 'Accès autorisé'", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "scan-ui-ok" });
+    const operator = await createTestEventMember({
+      scope: "scan-ui-ok",
+      orgId,
+      eventId,
+      role: "OPERATOR",
+    });
+    const participant = await createTestUser({
+      scope: "scan-ui-ok-part",
+      verified: true,
+      profile: true,
+    });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: participant.id,
+      categoryId,
+      status: "APPROVED",
+    });
+    await loginAs(page, operator);
+
+    await page.goto(`/event/${eventId}/scan`);
+    await page.getByRole("button", { name: /saisie manuelle/i }).click();
+    await page.getByPlaceholder(/id de badge ou contenu qr/i).fill(reg.id);
+    await page.getByRole("button", { name: /^vérifier$/i }).click();
+
+    await expect(page.getByText(/accès autorisé/i)).toBeVisible();
+
+    await expectLastActivity({
+      type: "BADGE_SCANNED",
+      userId: operator.id,
+      eventId,
+      targetId: reg.id,
+    });
+  });
+
+  test("Saisie manuelle d'un code rejete -> 'Accès refusé'", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "scan-ui-rej" });
+    const operator = await createTestEventMember({
+      scope: "scan-ui-rej",
+      orgId,
+      eventId,
+      role: "OPERATOR",
+    });
+    const participant = await createTestUser({
+      scope: "scan-ui-rej-part",
+      verified: true,
+      profile: true,
+    });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: participant.id,
+      categoryId,
+      status: "REJECTED",
+    });
+    await loginAs(page, operator);
+
+    await page.goto(`/event/${eventId}/scan`);
+    await page.getByRole("button", { name: /saisie manuelle/i }).click();
+    await page.getByPlaceholder(/id de badge ou contenu qr/i).fill(reg.id);
+    await page.getByRole("button", { name: /^vérifier$/i }).click();
+
+    await expect(page.getByText(/accès refusé/i)).toBeVisible();
+  });
+
+  // --- Acces & gardes de role ---------------------------------------------
+
+  test("ADMIN accede aussi au scanner", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "scan-admin" });
+    const admin = await makeEventAdminUser({ scope: "scan-admin", eventId, orgId });
+    await loginAs(page, admin);
+
+    await page.goto(`/event/${eventId}/scan`);
+    await expect(page.getByRole("button", { name: /saisie manuelle/i })).toBeVisible();
+  });
+
+  test("VIEWER -> 403 sur scan/verify", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "scan-viewer" });
+    const viewer = await createTestEventMember({
+      scope: "scan-viewer-user",
+      orgId,
+      eventId,
+      role: "VIEWER",
+    });
+    await loginAs(page, viewer);
+
+    const res = await page.request.post(
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
+      { data: { code: "peu-importe" } },
+    );
+    expect(res.status()).toBe(403);
+  });
+
+  test("PRINTER -> 403 sur scan/verify", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "scan-printer" });
+    const printer = await createTestEventMember({
+      scope: "scan-printer-user",
+      orgId,
+      eventId,
+      role: "PRINTER",
+    });
+    await loginAs(page, printer);
+
+    const res = await page.request.post(
+      `/api/org/${orgId}/events/${eventId}/scan/verify`,
+      { data: { code: "peu-importe" } },
+    );
+    expect(res.status()).toBe(403);
   });
 });

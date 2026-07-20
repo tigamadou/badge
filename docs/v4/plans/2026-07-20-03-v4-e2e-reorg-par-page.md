@@ -66,7 +66,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 2.6 | event/badges (+ detail + print) | [ ] | | |
 | 2.7 | event/categories | [ ] | | |
 | 2.8 | event/members | [ ] | | |
-| 2.9 | event/scan | [ ] | | |
+| 2.9 | event/scan | [x] | 2026-07-20 | `scan-checkin.spec.ts` renomme `scan.spec.ts` : API verify/checkin + saisie manuelle UI (migree d'interactions) + gardes VIEWER/PRINTER 403 + acces ADMIN. Scan camera non automatisable (documente). 12/12 verts. |
 | 2.10 | event/settings (+ badge) | [ ] | | |
 | 2.11 | event/activity (+ detail) | [ ] | | |
 | 2.12 | event/blocklist | [ ] | | |
