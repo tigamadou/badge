@@ -81,7 +81,7 @@ Une page-spec est « complete » quand elle contient, pour sa page :
 | 2.10 | event/settings (+ badge) | [x] | 2026-07-20 | `e2e/event/settings.spec.ts` : infos, contact override, template + reset heritage, SMTP 400, + rendu, UPLOAD LOGO UI (lacune) et selection template UI. `badge-template-selection.spec.ts` fusionne et supprime. 8/8 verts. |
 | 2.11 | event/activity (+ detail) | [x] | 2026-07-20 | `e2e/event/activity.spec.ts` : feed ADMIN, filtre OPERATOR serveur, non-fuite PII, + rendus page/detail migres de pages-render et etat vide. 8/8 verts. |
 | 2.12 | event/blocklist | [x] | 2026-07-20 | `e2e/event/blocklist.spec.ts` : deux onglets, redirection /blocked-documents, ajout+retrait e-mail et document via UI avec audit, garde OPERATOR 403. 5/5 verts. |
-| 2.13 | event/access + suppression transverses event | [ ] | | |
+| 2.13 | event/access + suppression transverses event | [x] | 2026-07-20 | `e2e/event/access.spec.ts` (gates layout, heritage org->event, shells par role, event archive). Supprimes : rbac, pages-render, interactions, archive, registrations-admin, registrations-lifecycle — contenu redistribue (negatifs par page + mails/idempotence/reactivation/doublons migres dans registration-detail). 115 passed / 0 echec. |
 | 3.1 | platform/dashboard | [ ] | | |
 | 3.2 | platform/organizations-list | [ ] | | |
 | 3.3 | platform/organization-new | [ ] | | |

@@ -8,6 +8,7 @@ import {
   makeEventAdminUser,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { createTestEventMember } from "../helpers/db";
 
 // Page Inscriptions (liste) — /event/[eventId]/registrations
 // Rôle : ADMIN. Actions : recherche (nom/e-mail/document), filtre statut,
@@ -161,5 +162,21 @@ test.describe("Event — Inscriptions (liste)", () => {
     );
     expect(res.status()).toBe(200);
     expect(res.headers()["content-type"]).toContain("csv");
+  });
+
+  test("OPERATOR ne peut pas exporter -> 403", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "reg-op-export" });
+    const operator = await createTestEventMember({
+      scope: "reg-op-export-user",
+      orgId,
+      eventId,
+      role: "OPERATOR",
+    });
+    await loginAs(page, operator);
+
+    const res = await page.request.get(
+      `/api/org/${orgId}/events/${eventId}/registrations/export`,
+    );
+    expect(res.status()).toBe(403);
   });
 });
