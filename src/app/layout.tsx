@@ -14,12 +14,13 @@ const montserrat = Montserrat({
   weight: ["500", "600", "700", "800"],
 });
 
+// La favicon vient de la convention de fichier Next.js : src/app/icon.jpeg est
+// detecte automatiquement et la balise <link rel="icon"> est generee, avec une
+// URL versionnee par un hash. Ne pas la redeclarer dans `icons` : le chemin
+// "/icon.jpeg" designerait public/icon.jpeg, qui n'existe pas.
 export const metadata: Metadata = {
   title: "Badge Bénin",
   description: "Badge Bénin",
-  icons: {
-    icon: "/icon.jpeg",
-  },
 };
 
 export default function RootLayout({
