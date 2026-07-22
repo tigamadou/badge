@@ -1,7 +1,39 @@
+# Unique reverse proxy de l'hote (stack de production, ports 80/443).
+# Sert la production ET la preproduction, cette derniere etant jointe via le
+# reseau partage `badge_web` (cf. docker-compose.preprod.yml).
+#
+# Les upstreams utilisent les `container_name`, pas les noms de service : sur le
+# reseau partage, les deux stacks exposent toutes deux les alias `app`,
+# `phpmyadmin` et `minio`, ce qui rendrait la resolution DNS ambigue.
+
+# ============================================================
+#  Production
+# ============================================================
 badge.bj {
-	reverse_proxy app:3000
+	reverse_proxy badge-app:3000
 }
 
 pma.badge.bj {
-	reverse_proxy phpmyadmin:80
+	reverse_proxy badge-pma:80
+}
+
+# Console d'administration MinIO. Seule la console (9001) est exposee ;
+# l'API S3 (9000) reste interne au reseau Docker (accedee par `app`).
+s3.badge.bj {
+	reverse_proxy badge-minio:9001
+}
+
+# ============================================================
+#  Preproduction
+# ============================================================
+preprod.badge.bj {
+	reverse_proxy badge-app-preprod:3500
+}
+
+preprod.pma.badge.bj {
+	reverse_proxy badge-pma-preprod:80
+}
+
+preprod.s3.badge.bj {
+	reverse_proxy badge-minio-preprod:9001
 }
