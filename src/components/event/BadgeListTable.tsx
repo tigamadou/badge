@@ -26,17 +26,26 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
 
   async function load() {
     setBusy(true);
-    // Endpoint badges dedie : garde par la permission badge.print (accessible au
-    // PRINTER, contrairement a /registrations garde par minRole OPERATOR) et DTO
-    // minimal (pas d'email ni de structure).
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/badges`);
-    const json = await res.json();
-    let r: Row[] = json.registrations ?? [];
-    if (filter === "printed") r = r.filter((x) => x.badgePrinted);
-    else if (filter === "unprinted") r = r.filter((x) => !x.badgePrinted);
-    else if (filter === "allaccess") r = r.filter((x) => x.allAccessGranted);
-    setRows(r);
-    setBusy(false);
+    try {
+      // Endpoint badges dedie : garde par la permission badge.print (accessible au
+      // PRINTER, contrairement a /registrations garde par minRole OPERATOR) et DTO
+      // minimal (pas d'email ni de structure).
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/badges`);
+      if (!res.ok) {
+        setRows([]);
+        return;
+      }
+      const json = await res.json();
+      let r: Row[] = json.registrations ?? [];
+      if (filter === "printed") r = r.filter((x) => x.badgePrinted);
+      else if (filter === "unprinted") r = r.filter((x) => !x.badgePrinted);
+      else if (filter === "allaccess") r = r.filter((x) => x.allAccessGranted);
+      setRows(r);
+    } catch {
+      setRows([]);
+    } finally {
+      setBusy(false);
+    }
   }
 
   useEffect(() => {

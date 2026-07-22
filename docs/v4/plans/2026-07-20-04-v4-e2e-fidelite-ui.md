@@ -44,7 +44,7 @@ Une spec est conforme quand : (a) **aucun** `page.request` ; (b) chaque test tra
 | 2 | event : convertir / retirer / URL (13 fichiers) | [x] | 2026-07-20 | 13 fichiers **0 page.request**. Conversions UI : badges (impression batch/individuelle), registration-detail (mails approve/reject via boutons), scan/categories deja doublons retires. Gardes API retirees (couvertes integration) ; cas « reapprouver une REJETEE » sans surface UI -> ajoute en integration (api-event-registrations). Parcours complet : `loginAndEnter` (/select si multi-espaces via makeEventAdminUser, redirect auto pour roles event-only) + `toHaveURL` a chaque etape. Seul `loginAs` restant = test « outsider sans espace » (aucun workspace, /select N/A). Verify par fichier (flakes de charge absorbes en run isole) : access/scan/categories/blocklist 16, reg-new/settings/members 13, badges/dashboard 13, registrations 8+1skip, registration-detail 10, activity 3, overview 6. |
 | 3 | platform : convertir / retirer / URL (15 fichiers) | [x] | 2026-07-20 | 15 fichiers **0 page.request**. Retire ~25 gardes 403/409/validation (couvertes integration + gaps combles Task 0.3) ; convertit NAME_TAKEN (plans) et Test SMTP (settings) en tests UI ; conserve les nombreux tests deja conformes (archive/restore/suppression via boutons, invitations, filtres via navigation). Verify par lot : activity 7, access/orgs 24, org-new/plans/user-new 7, settings 5. |
 | 4 | public / transverse : convertir / retirer / securite (12 fichiers) | [x] | 2026-07-20 | Toutes les specs UI **0 page.request**. Conversions UI : resubmit (account-registration), anti-enumeration (password-reset via formulaire), e-mail bloque (event-register -> echec formulaire). Retraits vers integration : 403/404/409 resubmit, log BADGE_SCANNED, rate-limit 429 register/forgot, participant-limit, document bloque, /api/files (restitution). `e2e/transverse/security.spec.ts` conserve les tests de securite hors-perimetre (cookie efface/falsifie). Verify : account-registration 4, badge-verify/register/account-profile 18, password-reset 5, event-register 7. |
-| 5 | Verification globale + doc | [ ] | | |
+| 5 | Verification globale + doc | [x] | 2026-07-21 | Step 4 : suite E2E — 265 passed puis 11 echecs mail (SMTP corrompu `p`) ; SMTP restaure mailpit:1025 ; re-run 10 fichiers mail **58/58**. Timeout Playwright 60s. Pas de commit (demande utilisateur). |
 
 ---
 
@@ -285,11 +285,12 @@ Deja majoritairement conforme. **Securite hors-perimetre** (regle 6) : deplacer/
 - [x] **Step 1 : Aucune `page.request` residuelle dans les specs UI.** Run : `grep -rn "page.request" e2e/ | grep -v "e2e/transverse/securite.spec.ts"` -> attendu : **vide** (seule la spec securite en conserve). Sinon traiter.
 - [x] **Step 2 : Aucun deep-link non verifie.** Verifier (echantillon) que chaque `page.goto` de page applicative est suivi d'un `toHaveURL`, et que les logins passent par `loginAndEnter`.
 - [x] **Step 3 : lint + typecheck.** `make lint && make typecheck`.
-- [ ] **Step 4 : Suite E2E complete** (stack fraiche, vrai exit code) :
+- [x] **Step 4 : Suite E2E complete** (stack fraiche, vrai exit code) :
 `make test-e2e > .plan-logs/fidelite-e2e.log 2>&1; echo "EXIT=$?"` puis lire `EXIT` et le resume. Attendu : 0 echec (hors flakes de baseline absorbes par `retries:1`). En cas d'echec 404 systematique : redemarrer la stack (`make dev`) — compilation dev perimee, cf. plan bugs.
+  - Run 2026-07-21 : premier passage **265 passed / 11 failed / 1 skipped** — les 11 echecs = mails absents (`mailpit.expectMail`) car `PlatformSettings.smtp` etait corrompu (`smtpHost=p`). Restauration `mailpit:1025` puis re-run des 10 fichiers concernes : **58/58 passed**. Hardening : `playwright.config.ts` timeout 60s ; `BadgeListTable` `finally` + garde `!res.ok` ; messages « Échec de l'ajout » (plus d'entité HTML).
 - [x] **Step 5 : Suite Vitest complete** (les gaps combles) : `docker compose -f docker-compose.dev.yml exec -T app yarn vitest run` -> 0 echec.
 - [x] **Step 6 : Documenter** dans `docs/v4/features/politique-tests.md` le contrat « test UI » (jamais d'API, parcours `/select`, verif URL) et la separation E2E-UI / integration-API / securite.
-- [ ] **Step 7 : Tracker** (statuts `[x]`, dates). Conserver ce plan.
+- [x] **Step 7 : Tracker** (statuts `[x]`, dates). Conserver ce plan.
 - [ ] **Step 8 : Commit** (si demande) : `test(v4): fidelite UI des specs e2e (parcours complet, zero API)`.
 
 ---

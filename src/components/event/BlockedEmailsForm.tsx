@@ -50,7 +50,7 @@ export function BlockedEmailsForm({
     } else if (res.status === 409) {
       setError("Cet email est deja bloque.");
     } else {
-      setError("Echec de l&apos;ajout.");
+      setError("Échec de l'ajout.");
     }
   }
 

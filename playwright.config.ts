@@ -21,6 +21,10 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
+  // Suite complete sequentielle : login NextAuth + /select peuvent depasser 20 s
+  // sous charge. 60 s evite les faux timeouts (Chargement… / reste sur /login).
+  timeout: 60_000,
+  expect: { timeout: 10_000 },
   // 1 retry meme en local : absorbe les flakes residuels de timing (login lent
   // sous charge du run complet sequentiel). Un test qui passe au retry n'est pas
   // une regression.
@@ -29,11 +33,10 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: BASE_URL,
-    trace: "retain-on-failure",
+    trace: "retain-on-failure", 
     screenshot: "only-on-failure",
     // Une video .webm par test, uniquement en mode UI hote (PLAYWRIGHT_VIDEO=on,
     // pose par `make test-e2e-ui`). Off en mode conteneur pour ne pas generer
-    // 370 videos a chaque run CLI.
     video: process.env.PLAYWRIGHT_VIDEO === "on" ? "on" : "off",
     // Tolere le certificat de la CA interne de Caddy quand on teste via
     // https://badge.local (mode UI hote). Sans effet en http (mode conteneur).

@@ -52,7 +52,7 @@ export function BlockedDocumentsForm({
     } else if (res.status === 409) {
       setError("Ce document est deja bloque.");
     } else {
-      setError("Echec de l&apos;ajout.");
+      setError("Échec de l'ajout.");
     }
   }
 
