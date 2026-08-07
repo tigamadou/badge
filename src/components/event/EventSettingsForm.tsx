@@ -14,6 +14,8 @@ type Initial = {
     title: string;
     location: string;
     date: string;
+    endDate: string | null;
+    description: string | null;
     slug: string;
     logo: string | null;
     registrationOpen: boolean;
@@ -34,6 +36,8 @@ export function EventSettingsForm({
   const [title, setTitle] = useState(initial.event.title);
   const [location, setLocation] = useState(initial.event.location);
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
+  const [endDate, setEndDate] = useState(initial.event.endDate?.slice(0, 10) ?? "");
+  const [description, setDescription] = useState(initial.event.description ?? "");
   const [logo, setLogo] = useState<string | null>(initial.event.logo);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
@@ -64,9 +68,26 @@ export function EventSettingsForm({
     const res = await fetch(`/api/org/${orgId}/events/${eventId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title, location, date, logo, registrationOpen }),
+      body: JSON.stringify({
+        title,
+        location,
+        date,
+        endDate: endDate || null,
+        description: description || null,
+        logo,
+        registrationOpen,
+      }),
     });
-    setMsg(res.ok ? "Événement mis à jour." : "Échec de la mise à jour.");
+    if (res.ok) {
+      setMsg("Événement mis à jour.");
+    } else {
+      const data = await res.json().catch(() => null);
+      setMsg(
+        data?.issues?.[0]?.message === "endDate < date"
+          ? "La date de fin doit être postérieure ou égale à la date de l'événement."
+          : "Échec de la mise à jour.",
+      );
+    }
   }
 
   async function saveSettings(e: React.FormEvent) {
@@ -97,7 +118,24 @@ export function EventSettingsForm({
           <form onSubmit={saveEvent} className="space-y-4">
             <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} />
-            <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+              <Input
+                label="Date de fin (optionnelle)"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">Description (optionnelle)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
             <div className="space-y-2">
               <span className="block text-sm font-medium text-slate-700">Logo</span>
               {logo ? (

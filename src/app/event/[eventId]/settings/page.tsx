@@ -12,7 +12,17 @@ export default async function EventSettingsPage({
   const orgId = await getEventOrgId(eventId);
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, title: true, location: true, date: true, slug: true, logo: true, registrationOpen: true },
+    select: {
+      id: true,
+      title: true,
+      location: true,
+      date: true,
+      endDate: true,
+      description: true,
+      slug: true,
+      logo: true,
+      registrationOpen: true,
+    },
   });
   if (!event) throw new Error("Event not found");
   const settings = await prisma.eventSettings.findUnique({ where: { eventId } });
@@ -22,7 +32,11 @@ export default async function EventSettingsPage({
       orgId={orgId}
       eventId={eventId}
       initial={{
-        event: { ...event, date: event.date.toISOString() },
+        event: {
+          ...event,
+          date: event.date.toISOString(),
+          endDate: event.endDate ? event.endDate.toISOString() : null,
+        },
         settings: {
           contactEmail: settings?.contactEmail ?? null,
           contactPhone: settings?.contactPhone ?? null,

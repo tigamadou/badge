@@ -11,6 +11,9 @@ import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert, EmptyState } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { PublicLinkCard } from "@/components/event/PublicLinkCard";
+import { EventInfoCard } from "@/components/event/EventInfoCard";
+import { buildBaseUrl } from "@/lib/mail-helpers";
 import { getEventOrgId } from "@/lib/event-org";
 
 export default async function EventDashboardPage({
@@ -31,6 +34,12 @@ export default async function EventDashboardPage({
       id: true,
       orgId: true,
       title: true,
+      slug: true,
+      date: true,
+      endDate: true,
+      location: true,
+      description: true,
+      registrationOpen: true,
     },
   });
   if (!event || event.orgId !== orgId) redirect("/select");
@@ -87,6 +96,12 @@ export default async function EventDashboardPage({
       countCountableRegistrations(eventId),
     ]);
 
+  const categories = await prisma.category.findMany({
+    where: { eventId },
+    orderBy: { number: "asc" },
+    select: { id: true, name: true, color: true },
+  });
+
   const { maxParticipantsPerEvent: participantLimit } = await resolveOrgLimits(orgId);
   const quotaPct =
     participantLimit != null ? Math.round((quota30d / participantLimit) * 100) : null;
@@ -98,11 +113,33 @@ export default async function EventDashboardPage({
         <p className="mt-0.5 text-sm text-slate-400">Tableau de bord de l&apos;événement</p>
       </div>
 
+      <EventInfoCard
+        event={{
+          title: event.title,
+          date: event.date,
+          endDate: event.endDate,
+          location: event.location,
+          description: event.description,
+          registrationOpen: event.registrationOpen,
+        }}
+        categories={categories}
+        variant="staff"
+      />
+
       {quotaPct != null && quotaPct > 80 && (
         <Alert tone="warn">
           <Icon name="alert-triangle" size={16} /> Le quota d&apos;inscriptions dépasse 80 %.
         </Alert>
       )}
+
+      <PublicLinkCard
+        path={`/e/${event.slug}`}
+        fallbackBaseUrl={buildBaseUrl({
+          BASE_URL: process.env.BASE_URL,
+          NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+        })}
+        registrationOpen={event.registrationOpen}
+      />
 
       <StatGrid cols={4}>
         <StatCard label="En attente" value={pending} icon="clock" />

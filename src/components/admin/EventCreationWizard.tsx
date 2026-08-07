@@ -24,6 +24,8 @@ type ManualCategory = {
 type CreatePayload = {
   title: string;
   date: string;
+  endDate?: string | null;
+  description?: string | null;
   location: string;
   slug?: string;
   templateIds?: string[];
@@ -44,6 +46,8 @@ export function EventCreationWizard({
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
@@ -77,6 +81,8 @@ export function EventCreationWizard({
     setSubmitting(true);
     setErr(null);
     const body: CreatePayload = { title, date, location };
+    if (endDate) body.endDate = endDate;
+    if (description.trim()) body.description = description;
     if (slug && slugTouched) body.slug = slug;
     if (mode === "template") body.templateIds = selectedTemplates;
     if (mode === "manual") body.manualCategories = manualCats;
@@ -96,6 +102,8 @@ export function EventCreationWizard({
         setErr("Votre abonnement n'est pas actif. Contactez le support.");
       } else if (json.code === "SLUG_TAKEN") {
         setErr("Ce slug est déjà utilisé. Modifiez-le et réessayez.");
+      } else if ((json as { issues?: { message?: string }[] }).issues?.[0]?.message === "endDate < date") {
+        setErr("La date de fin doit être postérieure ou égale à la date de l'événement.");
       } else {
         setErr("Erreur lors de la création.");
       }
@@ -134,8 +142,25 @@ export function EventCreationWizard({
         <Card>
           <CardBody className="space-y-4">
             <Input label="Titre" value={title} onChange={(e) => onTitleChange(e.target.value)} required />
-            <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+              <Input
+                label="Date de fin (optionnelle)"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} required />
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-700">Description (optionnelle)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
             <div>
               <Input
                 label="Slug (URL publique)"

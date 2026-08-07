@@ -29,7 +29,7 @@
 |---|---|---|---|---|
 | 1 | Schema Prisma (`description`, `endDate`) + validation API + seed | [x] | 2026-08-07 | Validation endDate>=date create+patch, seed demo enrichi |
 | 2 | Helper `formatEventPeriod` + composant `EventInfoCard` | [x] | 2026-08-07 | |
-| 3 | Integration des trois vues + formulaires + emails | [ ] | | |
+| 3 | Integration des trois vues + formulaires + emails | [x] | 2026-08-07 | EventInfoCard sur page publique + dashboard, periode liste org, formulaires create/edit, email confirmation |
 | 4 | Couverture E2E + documentation | [ ] | | |
 
 ---
@@ -422,7 +422,7 @@ git commit -m "feat(v4): helper de periode et carte d'informations evenement"
 - Consomme : `formatEventPeriod`, `EventInfoCard` (Task 2), champs `description` / `endDate` (Task 1).
 - Produit : rien pour les tasks suivantes.
 
-- [ ] **Step 1 : Page publique**
+- [x] **Step 1 : Page publique**
 
 Dans `src/app/e/[slug]/page.tsx`, inserer avant la `Card` « Inscription en ligne » :
 
@@ -443,7 +443,7 @@ Dans `src/app/e/[slug]/page.tsx`, inserer avant la `Card` « Inscription en lign
 
 `loadPublicEventBySlug` renvoie l'entite `Event` complete : les nouveaux champs sont disponibles sans changer la requete.
 
-- [ ] **Step 2 : Banniere publique**
+- [x] **Step 2 : Banniere publique**
 
 Dans `src/components/public/PublicEventLayout.tsx`, ajouter `endDate?: Date | string | null` au type `event` du `Props` et remplacer l'affichage l.44 :
 
@@ -453,7 +453,7 @@ Dans `src/components/public/PublicEventLayout.tsx`, ajouter `endDate?: Date | st
 
 Remplacer l'import `formatEventDate` par `formatEventPeriod`. Verifier les autres appelants de `PublicEventLayout` (`grep -rn "PublicEventLayout" src/app`) : le champ etant optionnel, aucun n'a besoin d'etre modifie.
 
-- [ ] **Step 3 : Tableau de bord de l'espace evenement**
+- [x] **Step 3 : Tableau de bord de l'espace evenement**
 
 Dans `src/app/event/[eventId]/page.tsx`, etendre le `select` :
 
@@ -476,11 +476,11 @@ charger les categories de l'evenement :
 
 et inserer `<EventInfoCard event={event} categories={categories} variant="staff" />` juste apres le titre de page, avant l'alerte de quota. Le tableau de bord **operateur** (branche `role === "OPERATOR"`, l.44-62) reste inchange.
 
-- [ ] **Step 4 : Liste des evenements de l'organisation**
+- [x] **Step 4 : Liste des evenements de l'organisation**
 
 Dans `src/app/org/[orgId]/events/page.tsx` : ajouter `endDate: true` au `select`, remplacer l'affichage de la date par `formatEventPeriod(e.date, e.endDate)` dans la colonne correspondante, et ajouter une pastille d'ouverture des inscriptions (`Tag`) dans la colonne de statut existante.
 
-- [ ] **Step 5 : Formulaire d'edition**
+- [x] **Step 5 : Formulaire d'edition**
 
 Dans `src/components/event/EventSettingsForm.tsx` :
 - etendre le type `initial.event` avec `endDate: string | null` et `description: string | null` ;
@@ -491,11 +491,11 @@ Dans `src/components/event/EventSettingsForm.tsx` :
 
 Mettre a jour l'appelant (`src/app/event/[eventId]/settings/page.tsx`) pour transmettre les deux nouveaux champs.
 
-- [ ] **Step 6 : Formulaire de creation**
+- [x] **Step 6 : Formulaire de creation**
 
 Dans le formulaire de creation d'evenement (`src/app/org/[orgId]/events/new/`), ajouter les memes deux champs et les transmettre au `POST`.
 
-- [ ] **Step 7 : Emails**
+- [x] **Step 7 : Emails**
 
 Dans `src/lib/mail.ts`, remplacer l.285 :
 
@@ -505,17 +505,17 @@ Dans `src/lib/mail.ts`, remplacer l.285 :
 
 en important `formatEventPeriod` depuis `@/lib/format-date`. Verifier que la requete Prisma alimentant `reg` selectionne bien `endDate` (ajouter le champ au `select` de l'evenement si necessaire) et appliquer le meme traitement aux autres gabarits qui affichent la date de l'evenement — les reperer par `grep -n "event.date" src/lib/mail.ts`.
 
-- [ ] **Step 8 : Mettre a jour les tests de mail impactes**
+- [x] **Step 8 : Mettre a jour les tests de mail impactes**
 
 Run : `make test -- src/lib/__tests__/mail.test.ts`
 Attendu : les assertions portant sur la date de l'evenement passent toujours (evenements de test sans `endDate` : le libelle est inchange). Si une assertion echoue, c'est un changement de libelle non voulu — corriger le code.
 
-- [ ] **Step 9 : Verification complete**
+- [x] **Step 9 : Verification complete**
 
 Run : `make lint && make typecheck && make test`
 Attendu : tout vert.
 
-- [ ] **Step 10 : Verification navigateur**
+- [x] **Step 10 : Verification navigateur**
 
 `make db-seed`, puis :
 - `/e/<slug>` : banniere avec la periode, carte d'informations avec description et categories ;
@@ -523,7 +523,7 @@ Attendu : tout vert.
 - `/org/<id>/events` : periode et pastille d'ouverture ;
 - creation d'un evenement avec description et date de fin, puis edition ; verifier qu'une date de fin anterieure affiche un message d'erreur dans le formulaire.
 
-- [ ] **Step 11 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 11 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app src/components src/lib/mail.ts

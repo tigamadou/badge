@@ -5,6 +5,7 @@ import { loadUserContext } from "@/lib/user-context";
 import { hasOrgRole } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
+import { formatEventPeriod } from "@/lib/format-date";
 import { EventArchiveActions } from "./EventArchiveActions";
 
 export default async function EventsListPage({
@@ -25,6 +26,7 @@ export default async function EventsListPage({
       title: true,
       slug: true,
       date: true,
+      endDate: true,
       location: true,
       registrationOpen: true,
       archived: true,
@@ -52,7 +54,7 @@ export default async function EventsListPage({
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Titre</th>
-              <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3">Période</th>
               <th className="px-4 py-3">Lieu</th>
               <th className="px-4 py-3">Inscriptions</th>
               <th className="px-4 py-3">Statut</th>
@@ -82,7 +84,7 @@ export default async function EventsListPage({
                   <div className="font-mono text-xs text-slate-400">{e.slug}</div>
                 </td>
                 <td className="px-4 py-3 text-sm tabular-nums text-slate-600">
-                  {new Date(e.date).toLocaleDateString("fr-FR")}
+                  {formatEventPeriod(e.date, e.endDate)}
                 </td>
                 <td className="px-4 py-3 text-sm text-slate-600">{e.location}</td>
                 <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{e._count.registrations}</td>

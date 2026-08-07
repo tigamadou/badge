@@ -2,11 +2,8 @@ import { randomBytes } from "crypto";
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/prisma";
 import { resolveSettings, getPlatformSmtp, type ResolvedSettings } from "@/lib/settings";
-import {
-  buildBaseUrl,
-  formatFromAddress,
-  formatFrenchDate,
-} from "@/lib/mail-helpers";
+import { buildBaseUrl, formatFromAddress } from "@/lib/mail-helpers";
+import { formatEventPeriod } from "@/lib/format-date";
 
 export type TransportContext = {
   eventId?: string;
@@ -269,7 +266,7 @@ export async function sendRegistrationConfirmation(registrationId: string): Prom
       snapshotFirstName: true,
       snapshotLastName: true,
       eventId: true,
-      event: { select: { title: true, date: true, location: true } },
+      event: { select: { title: true, date: true, endDate: true, location: true } },
     },
   });
   if (!reg) {
@@ -282,7 +279,7 @@ export async function sendRegistrationConfirmation(registrationId: string): Prom
   const ctx = await resolveTransporter({ eventId: reg.eventId });
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
   const eventTitle = escapeText(reg.event.title);
-  const eventDate = formatFrenchDate(reg.event.date);
+  const eventDate = formatEventPeriod(reg.event.date, reg.event.endDate);
   const eventLocation = escapeText(reg.event.location);
 
   const body = `

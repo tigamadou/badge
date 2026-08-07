@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { loadPublicEventBySlug, PublicEventError, type PublicEventBundle } from "@/lib/public-event";
 import { PublicEventLayout } from "@/components/public/PublicEventLayout";
+import { EventInfoCard } from "@/components/event/EventInfoCard";
 import { Card, CardBody } from "@/components/ui/Card";
 import { CatPill } from "@/components/ui/Labels";
 import { ClosedView } from "./closed";
@@ -50,6 +51,21 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
       event={event}
       contact={{ email: settings.contactEmail, phone: settings.contactPhone }}
     >
+      <div className="mb-6">
+        <EventInfoCard
+          event={{
+            title: event.title,
+            date: event.date,
+            endDate: event.endDate,
+            location: event.location,
+            description: event.description,
+            registrationOpen: event.registrationOpen,
+          }}
+          categories={categories.map((c) => ({ id: c.id, name: c.name, color: c.color }))}
+          variant="public"
+        />
+      </div>
+
       <Card>
         <CardBody className="space-y-6">
           <div>

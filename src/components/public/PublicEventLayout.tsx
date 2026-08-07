@@ -1,10 +1,16 @@
 import Image from "next/image";
-import { formatEventDate } from "@/lib/format-date";
+import { formatEventPeriod } from "@/lib/format-date";
 
 type Props = {
   // ADR 2026-06-01 (v2-14 Task 12) : `organization` ajoute pour cascade logo
   // (Event.logo -> Org.logo) et lien website footer.
-  event: { title: string; date: Date | string; location: string; logo?: string | null };
+  event: {
+    title: string;
+    date: Date | string;
+    endDate?: Date | string | null;
+    location: string;
+    logo?: string | null;
+  };
   organization?: { logo?: string | null; website?: string | null };
   contact?: { email?: string; phone?: string };
   children: React.ReactNode;
@@ -41,7 +47,7 @@ export function PublicEventLayout({ event, organization, contact, children }: Pr
           <div>
             <h1 className="text-[22px] font-semibold">{event.title}</h1>
             <div className="mt-1 flex flex-wrap gap-4 text-sm text-white/75">
-              <span>{formatEventDate(event.date as Date)}</span>
+              <span>{formatEventPeriod(event.date as Date, event.endDate ?? null)}</span>
               {event.location && <span>{event.location}</span>}
             </div>
           </div>
