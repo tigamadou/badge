@@ -32,7 +32,7 @@
 |---|---|---|---|---|
 | 1 | Schema Prisma (`ProfileSubmission`, `RejectionReason`, `ProfileStatus`, `ActivityType`) + seed | [x] | 2026-08-07 | Catalogue de motifs + profils PENDING/REJECTED/APPROVED seedes |
 | 2 | `src/lib/profile-review.ts` — transitions et invariants | [x] | 2026-08-07 | 16 tests, couverture 100% |
-| 3 | API catalogue des motifs de rejet (plateforme) | [ ] | | |
+| 3 | API catalogue des motifs de rejet (plateforme) | [x] | 2026-08-07 | GET/POST/PATCH/DELETE (soft delete), portee, RBAC STAFF_ADMIN, couverture 100% |
 | 4 | Soumission cote participant (creation a chaque changement de piece) | [ ] | | |
 | 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [ ] | | |
 | 6 | Gate d'inscription + gel de l'approbation cote organisation | [ ] | | |
@@ -579,7 +579,7 @@ git commit -m "feat(v4): helper de validation des profils participants"
 - Consomme : `withStaffAuth` (`src/lib/with-staff-auth.ts`), `logActivity`, model `RejectionReason` (Task 1).
 - Produit : les endpoints consommes par les Tasks 5, 7 et 8. Reponse GET : `{ reasons: RejectionReason[] }`, filtrable par `?scope=PROFILE|REGISTRATION` (un motif `BOTH` remonte dans les deux filtres) et `?archived=true`.
 
-- [ ] **Step 1 : Ecrire les tests en echec**
+- [x] **Step 1 : Ecrire les tests en echec**
 
 Creer `src/lib/__tests__/api-platform-rejection-reasons.test.ts` en suivant la structure de `src/lib/__tests__/api-platform-plans.test.ts` (mock de `next-auth`, seed via Prisma). Couvrir :
 
@@ -600,12 +600,12 @@ Creer `src/lib/__tests__/api-platform-rejection-reasons.test.ts` en suivant la s
 
 Asserer explicitement, pour le soft delete, que la ligne **existe toujours** en base et qu'un `ProfileSubmission` qui la reference conserve son `rejectionReasonLabel`.
 
-- [ ] **Step 2 : Lancer les tests et verifier qu'ils echouent**
+- [x] **Step 2 : Lancer les tests et verifier qu'ils echouent**
 
 Run : `make test -- src/lib/__tests__/api-platform-rejection-reasons.test.ts`
 Attendu : FAIL — modules introuvables.
 
-- [ ] **Step 3 : Implementer la route de collection**
+- [x] **Step 3 : Implementer la route de collection**
 
 Creer `src/app/api/platform/rejection-reasons/route.ts` :
 
@@ -669,21 +669,21 @@ export const POST = withStaffAuth(
 
 Verifier la signature exacte de `logActivity` (`src/lib/activity-log.ts`) avant d'y passer `staffActor` ; si le champ n'est pas un parametre accepte, l'omettre.
 
-- [ ] **Step 4 : Implementer la route d'element**
+- [x] **Step 4 : Implementer la route d'element**
 
 Creer `src/app/api/platform/rejection-reasons/[id]/route.ts` avec `PATCH` (label, scope, sortOrder, tous optionnels ; 404 si inconnu ; `REJECTION_REASON_UPDATED`) et `DELETE` (soft delete `archived: true, archivedAt: new Date()` ; 404 si inconnu ; `REJECTION_REASON_ARCHIVED`), tous deux gardes par `{ minRole: "STAFF_ADMIN" }`.
 
-- [ ] **Step 5 : Lancer les tests et verifier qu'ils passent**
+- [x] **Step 5 : Lancer les tests et verifier qu'ils passent**
 
 Run : `make test -- src/lib/__tests__/api-platform-rejection-reasons.test.ts`
 Attendu : PASS.
 
-- [ ] **Step 6 : Verifier la couverture**
+- [x] **Step 6 : Verifier la couverture**
 
 Run : `make test-coverage`
 Attendu : les deux nouveaux fichiers de route a 100%.
 
-- [ ] **Step 7 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 7 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/api/platform/rejection-reasons src/lib/__tests__/api-platform-rejection-reasons.test.ts
