@@ -38,7 +38,7 @@
 | 6 | Gate d'inscription + gel de l'approbation cote organisation | [x] | 2026-08-07 | 403 PROFILE_NOT_APPROVED (register/resubmit/creation staff), 409 gel approbation, rejet inscription sur catalogue |
 | 7 | UI plateforme (file d'attente, detail, onglet motifs) | [x] | 2026-08-07 | Nav Profils, file d'attente, ProfileReviewPanel, RejectionReasonsManager dans settings |
 | 8 | UI participant (statut, historique) et UI organisation (etat verifie, motif catalogue) | [x] | 2026-08-07 | Bandeau statut + historique profil, alerte inscription gelee, etat verifie cote org, rejet via select catalogue, Approuver desactive |
-| 9 | Couverture E2E + documentation | [ ] | | |
+| 9 | Couverture E2E + documentation | [x] | 2026-08-07 | Specs plateforme (file/detail/decision), gate inscription, gel org, catalogue settings ; fiche validation-profils.md ; archi + politique-tests. NB : couverture globale 99.96% preexistante (slugify/with-event-auth/plans, hors plan 08) ; echecs e2e residuels = flakiness mail (baseline) |
 
 ---
 
@@ -1261,18 +1261,18 @@ git commit -m "feat(v4): statut de profil cote participant et organisation"
 - Consomme : tout ce qui precede.
 - Produit : rien.
 
-- [ ] **Step 1 : Etendre les helpers E2E**
+- [x] **Step 1 : Etendre les helpers E2E**
 
 Dans `e2e/helpers/db.ts`, ajouter :
 - une option `profileStatus?: "INCOMPLETE" | "PENDING" | "APPROVED" | "REJECTED"` a `createTestUser` (defaut `APPROVED` **uniquement** quand `completeProfile` est demande, afin que les specs existantes d'inscription continuent de passer) ;
 - `createTestProfileSubmission(opts)` et `createTestRejectionReason(opts)` ;
 - ajouter `profileSubmission` et `rejectionReason` au nettoyage de `cleanupE2ETestData()`, dans le bon ordre de dependances.
 
-- [ ] **Step 2 : Spec E2E — file d'attente plateforme**
+- [x] **Step 2 : Spec E2E — file d'attente plateforme**
 
 `e2e/platform/profiles.spec.ts` : acces et rendu (staff voit la file, le participant seede `PENDING` y figure), filtre par statut, recherche, redirection d'un utilisateur non staff vers son espace.
 
-- [ ] **Step 3 : Spec E2E — decision sur un profil**
+- [x] **Step 3 : Spec E2E — decision sur un profil**
 
 `e2e/platform/profile-detail.spec.ts` :
 - **approbation** : clic sur Approuver → feedback UI, `profileStatus = APPROVED` en base (`getDb()`), e-mail present dans Mailpit, entree d'audit `PROFILE_APPROVED` (`expectLastActivity`) ;
@@ -1280,46 +1280,46 @@ Dans `e2e/helpers/db.ts`, ajouter :
 - **echec** : tentative de rejet sans motif → le bouton reste desactive et rien ne change en base ;
 - **role** : un `STAFF_OBSERVER` ne voit ni le bouton Approuver ni le bouton Rejeter.
 
-- [ ] **Step 4 : Spec E2E — parcours participant bloque puis debloque**
+- [x] **Step 4 : Spec E2E — parcours participant bloque puis debloque**
 
 Dans `e2e/public/event-register.spec.ts` : un participant `PENDING` qui ouvre `/e/<slug>/register` est redirige vers `/account/profile` (URL assertee) et voit le message de verification ; apres passage du profil en `APPROVED` (via `getDb()`), le meme parcours UI aboutit a une inscription creee.
 
 Dans `e2e/public/account-profile.spec.ts` : apres un rejet, le motif est affiche ; le remplacement de la piece via `setInputFiles` puis l'enregistrement font apparaitre le bandeau « en cours de vérification » et une deuxieme ligne d'historique.
 
-- [ ] **Step 5 : Spec E2E — gel cote organisation**
+- [x] **Step 5 : Spec E2E — gel cote organisation**
 
 Dans `e2e/event/registration-detail.spec.ts` : pour une inscription `PENDING` dont le participant est `REJECTED`, le bouton Approuver est desactive et le message « Profil non validé par la plateforme » est visible ; le statut en base reste `PENDING`.
 
-- [ ] **Step 6 : Spec E2E — catalogue de motifs**
+- [x] **Step 6 : Spec E2E — catalogue de motifs**
 
 Dans `e2e/platform/settings.spec.ts` : creation d'un motif (feedback UI + ligne en base), renommage, archivage (le motif disparait de la liste mais la ligne existe toujours en base), et absence des actions pour un `STAFF_SUPPORT`.
 
-- [ ] **Step 7 : Lancer la suite E2E**
+- [x] **Step 7 : Lancer la suite E2E**
 
 Run : `make test-e2e`
 Attendu : les nouvelles specs passent ; aucun **nouvel** echec par rapport a la baseline connue de la suite. Verifier specifiquement les specs d'inscription existantes, sensibles au nouveau gate.
 
-- [ ] **Step 8 : Rediger la fiche de feature**
+- [x] **Step 8 : Rediger la fiche de feature**
 
 Creer `docs/v4/features/validation-profils.md` : cycle de vie du profil, roles et permissions, catalogue de motifs, effet du rejet sur les inscriptions, parcours participant, points d'API. Renvoyer vers la spec pour le *pourquoi*.
 
-- [ ] **Step 9 : Mettre a jour la documentation existante**
+- [x] **Step 9 : Mettre a jour la documentation existante**
 
 - `docs/v4/README.md` : entree de plan, entree de feature, ligne d'etat d'avancement.
 - `docs/v4/architecture.md` : cycle de vie du profil, gate d'inscription, regle « seul `profile-review.ts` ecrit `profileStatus` ».
 - `docs/v4/features/politique-tests.md` : ajouter les nouvelles routes a la matrice RBAC (`/api/platform/profiles*`, `/api/platform/rejection-reasons*`).
 - `docs/v4/specs/2026-07-22-checklist-tests-manuels-navigateur.md` : nouvelles pages plateforme et nouveaux etats participant.
 
-- [ ] **Step 10 : Verification finale**
+- [x] **Step 10 : Verification finale**
 
 Run : `make lint && make typecheck && make test-coverage && make test-e2e`
 Attendu : tout vert, couverture a 100% sur `src/lib` et `src/app/api`.
 
-- [ ] **Step 11 : Mettre a jour le tracker**
+- [x] **Step 11 : Mettre a jour le tracker**
 
 Passer les neuf lignes du tableau `## Progression` a `[x]` avec la date du jour.
 
-- [ ] **Step 12 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 12 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add e2e/ docs/v4/

@@ -103,4 +103,38 @@ test.describe("Platform — Parametres", () => {
     await page.goto("/platform/settings/badge");
     await expect(page).not.toHaveURL(/\/platform\/settings\/badge$/);
   });
+
+  test("STAFF_ADMIN ajoute puis archive un motif de rejet", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-reasons" });
+    const label = `E2E motif ${Date.now()}`;
+
+    await page.goto("/platform/settings");
+    await page.getByLabel("Libellé").fill(label);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+
+    await expect(page.getByRole("cell", { name: label })).toBeVisible();
+    await expect(async () => {
+      const stored = await getDb().rejectionReason.findFirst({ where: { label } });
+      expect(stored).not.toBeNull();
+    }).toPass();
+
+    // Archivage : la ligne disparait mais la ligne existe toujours en base.
+    page.once("dialog", (d) => d.accept());
+    await page
+      .getByRole("row", { name: new RegExp(label) })
+      .getByRole("button", { name: /archiver/i })
+      .click();
+    await expect(page.getByRole("cell", { name: label })).toHaveCount(0);
+    await expect(async () => {
+      const stored = await getDb().rejectionReason.findFirst({ where: { label } });
+      expect(stored?.archived).toBe(true);
+    }).toPass();
+  });
+
+  test("STAFF_SUPPORT ne voit pas le formulaire de motifs", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "pset-reasons-obs" });
+    await page.goto("/platform/settings");
+    await expect(page.getByText(/motifs de rejet/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^ajouter$/i })).toHaveCount(0);
+  });
 });

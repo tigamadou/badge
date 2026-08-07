@@ -22,7 +22,7 @@ Plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la 
 - [04 — Fidelite UI des tests E2E](plans/2026-07-20-04-v4-e2e-fidelite-ui.md) — parcours UI complet (jamais d'API, /select, verif URL, reponse succes/echec assertee). Suite du 03.
 - [06 — Correctifs profil participant & apercus](plans/2026-08-07-06-v4-correctifs-profil-participant-apercus.md) — **a implementer** : DTO des inscriptions (colonnes vides), composant `DocumentPreview`, apercus photo/piece. [Spec](specs/2026-08-07-06-v4-correctifs-profil-participant-apercus.md).
 - [07 — Affichage des details d'un evenement](plans/2026-08-07-07-v4-affichage-details-evenement.md) — **a implementer** : champs `description` / `endDate`, carte d'informations sur les 3 vues. [Spec](specs/2026-08-07-07-v4-affichage-details-evenement.md).
-- [08 — Validation des documents par le staff plateforme](plans/2026-08-07-08-v4-validation-documents-staff-plateforme.md) — **a implementer**, suppose le 06 termine : `ProfileSubmission`, catalogue de motifs, gate d'inscription. [Spec](specs/2026-08-07-08-v4-validation-documents-staff-plateforme.md).
+- [08 — Validation des documents par le staff plateforme](plans/2026-08-07-08-v4-validation-documents-staff-plateforme.md) — **livre** : `ProfileSubmission`, catalogue de motifs, gate d'inscription. [Spec](specs/2026-08-07-08-v4-validation-documents-staff-plateforme.md) · [Feature](features/validation-profils.md).
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
@@ -43,6 +43,7 @@ Plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la 
 | Reorganisation E2E par page | Livre — **un fichier par page** sur les 4 espaces (org 8, event 13, platform 15, public 12, transverse 2). Les fichiers transversaux `pages-render`/`rbac`/`interactions` sont dissous. Convention : [`e2e/README.md`](../../e2e/README.md) |
 | Fidelite UI des tests E2E | Livre — contrat « zero `page.request` », parcours `/select`, verif URL, reponses succes/echec assertées. Plan 04 Task 5 closee 2026-07-21 (SMTP plateforme a surveiller : les tests Vitest peuvent corrompre `PlatformSettings.smtp`) |
 | Correctifs profil participant & apercus (plan 06) | Livre — DTO des inscriptions aplati (colonnes Nom/E-mail corrigees), composant `DocumentPreview`, apercus photo/piece dans les espaces compte et evenement |
-| Affichage des details d'un evenement (plan 07) | En cours — champs `description` / `endDate`, helper `formatEventPeriod`, carte `EventInfoCard` sur page publique + dashboard, periode dans la liste org, emails |
+| Affichage des details d'un evenement (plan 07) | Livre — champs `description` / `endDate`, helper `formatEventPeriod`, carte `EventInfoCard` sur page publique + dashboard, periode dans la liste org, emails |
+| Validation des documents par le staff plateforme (plan 08) | Livre — `ProfileSubmission` + `profileStatus`, catalogue `RejectionReason`, gate d'inscription (403) + gel de l'approbation (409), ecrans plateforme/participant/org. Voir [feature](features/validation-profils.md) |
 
 Voir la section `## Progression` du plan pour le detail task par task.

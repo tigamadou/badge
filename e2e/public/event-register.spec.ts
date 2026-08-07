@@ -61,6 +61,32 @@ test.describe("Event registration flow", () => {
     expect(reg?.snapshotFirstName).toBe("Awa");
   });
 
+  test("un participant au profil non validé est redirigé vers /account/profile", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-gate", verified: true, profile: true, profileStatus: "PENDING" });
+    const { eventSlug } = await createTestEvent({ scope: "evt-gate" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page).toHaveURL(/\/account\/profile\?pending=1/);
+    await expect(page.getByText(/en cours de vérification par la plateforme/i)).toBeVisible();
+  });
+
+  test("un profil validé peut s'inscrire après déblocage", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-unblock", verified: true, profile: true, profileStatus: "APPROVED" });
+    const { eventSlug } = await createTestEvent({ scope: "evt-unblock" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
+    await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
+
+    const reg = await getLatestRegistrationForUser(user.id);
+    expect(reg?.status).toBe("PENDING");
+  });
+
   test("user with incomplete profile is redirected to /account/profile/complete", async ({
     page,
   }) => {

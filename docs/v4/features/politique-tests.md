@@ -100,7 +100,14 @@ Source d'autorite : `src/lib/auth.ts`, `src/lib/auth-helpers.ts`, `docs/v2/featu
 
 Garde-fous metier a asserter : dernier `OWNER`, dernier `SUPER_ADMIN`, `SLUG_TAKEN`,
 `NUMBER_TAKEN`, `CATEGORY_HAS_REGISTRATIONS`, limites d'abonnement
-(`EVENT_LIMIT` / `PARTICIPANT_LIMIT`), emails/documents bloques.
+(`EVENT_LIMIT` / `PARTICIPANT_LIMIT`), emails/documents bloques, gate profil
+(`PROFILE_NOT_APPROVED` a l'inscription 403 et a l'approbation 409).
+
+Validation des profils (plan 08) — frontieres staff a tester :
+`/api/platform/profiles*` (lecture `STAFF_OBSERVER`, decision `STAFF_SUPPORT+`) ;
+`/api/platform/rejection-reasons*` (lecture `STAFF_OBSERVER`, ecriture
+`STAFF_ADMIN+`). Rejet d'inscription sur motif catalogue : `REASON_WRONG_SCOPE`,
+`REASON_NOT_FOUND`.
 
 ## Commandes
 

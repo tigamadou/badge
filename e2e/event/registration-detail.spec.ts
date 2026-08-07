@@ -3,6 +3,7 @@ import {
   cleanupE2ETestData,
   createTestEvent,
   createTestRegistration,
+  createTestRejectionReason,
   createTestUser,
   disconnectDb,
   getDb,
@@ -77,8 +78,9 @@ test.describe("Event — Detail d'inscription", () => {
     });
   });
 
-  test("ADMIN rejette via la modale (motif obligatoire)", async ({ page }) => {
+  test("ADMIN rejette via la modale (motif du catalogue)", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-reject");
+    const reason = await createTestRejectionReason({ scope: "REGISTRATION", label: `E2E motif inscription ${Date.now()}` });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
@@ -86,15 +88,16 @@ test.describe("Event — Detail d'inscription", () => {
     await page.getByRole("button", { name: /rejeter \/ bloquer/i }).click();
     await expect(page.getByRole("heading", { name: /rejeter cette inscription/i })).toBeVisible();
 
-    await page.getByPlaceholder(/motif \(obligatoire\)/i).fill("Document illisible UI");
+    await page.locator("select").selectOption(reason.id);
     await page.getByRole("button", { name: "Rejeter", exact: true }).click();
 
     await expect(page.getByText(/^rejeté$/i)).toBeVisible();
-    await expect(page.getByText(/motif de rejet : document illisible ui/i)).toBeVisible();
 
-    const updated = await getDb().registration.findUnique({ where: { id: reg.id } });
-    expect(updated?.status).toBe("REJECTED");
-    expect(updated?.rejectionReason).toBe("Document illisible UI");
+    await expect(async () => {
+      const updated = await getDb().registration.findUnique({ where: { id: reg.id } });
+      expect(updated?.status).toBe("REJECTED");
+      expect(updated?.rejectionReason).toBe(reason.label);
+    }).toPass();
 
     await expectLastActivity({
       type: "REGISTRATION_REJECTED",
@@ -102,6 +105,24 @@ test.describe("Event — Detail d'inscription", () => {
       eventId,
       targetId: reg.id,
     });
+  });
+
+  test("Approuver est désactivé quand le profil du participant n'est pas validé", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "det-freeze" });
+    const participant = await createTestUser({
+      scope: "det-freeze-part",
+      verified: true,
+      profile: true,
+      profileStatus: "REJECTED",
+    });
+    const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "PENDING" });
+    const admin = await makeEventAdminUser({ scope: "det-freeze", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page.getByRole("button", { name: /^approuver$/i })).toBeDisabled();
+    await expect(page.getByText(/profil non validé par la plateforme/i)).toBeVisible();
+    expect((await getDb().registration.findUnique({ where: { id: reg.id } }))?.status).toBe("PENDING");
   });
 
   test("ADMIN active puis retire ALL ACCESS via le bouton", async ({ page }) => {
@@ -207,13 +228,14 @@ test.describe("Event — Detail d'inscription", () => {
 
   test("Le rejet envoie un mail mentionnant le motif", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-mail-rej");
+    const reason = await createTestRejectionReason({ scope: "REGISTRATION", label: `E2E motif mail ${Date.now()}` });
     await mailpit.clear();
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/${reg.id}`);
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations/${reg.id}`));
     await page.getByRole("button", { name: /rejeter \/ bloquer/i }).click();
-    await page.getByPlaceholder(/motif \(obligatoire\)/i).fill("Piece illisible");
+    await page.locator("select").selectOption(reason.id);
     await page.getByRole("button", { name: "Rejeter", exact: true }).click();
     await expect(page.getByText(/^rejeté$/i)).toBeVisible();
 

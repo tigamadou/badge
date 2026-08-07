@@ -67,8 +67,11 @@ export async function cleanupE2ETestData(): Promise<void> {
   //    Registration -> EventMembership/OrgMembership -> Category/Blocked* ->
   //    CategoryTemplate -> ActivityLog -> User -> Event -> Organization.
   if (userIds.length > 0) {
+    await prisma.profileSubmission.deleteMany({ where: { userId: { in: userIds } } });
     await prisma.registration.deleteMany({ where: { userId: { in: userIds } } });
   }
+  // v4 (plan 08) : motifs de rejet E2E (prefixe de libelle).
+  await prisma.rejectionReason.deleteMany({ where: { label: { startsWith: "E2E motif " } } });
   if (eventIds.length > 0) {
     await prisma.registration.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.eventMembership.deleteMany({ where: { eventId: { in: eventIds } } });
@@ -119,6 +122,9 @@ export async function createTestUser(opts: {
   verified?: boolean;
   profile?: boolean;
   password?: string;
+  // v4 (plan 08) : par defaut un profil complet est considere APPROVED (les specs
+  // d'inscription supposent un profil valide). Passer explicitement pour tester le gate.
+  profileStatus?: "INCOMPLETE" | "PENDING" | "APPROVED" | "REJECTED";
 }): Promise<TestUser> {
   const prisma = db();
   const email = `e2e-${opts.scope}-${Date.now()}-${Math.floor(Math.random() * 1e6)}${E2E_EMAIL_SUFFIX}`;
@@ -126,11 +132,14 @@ export async function createTestUser(opts: {
   const name = "E2E User";
   const now = new Date();
 
+  const profileStatus = opts.profileStatus ?? (opts.profile ? "APPROVED" : "INCOMPLETE");
+
   const u = await prisma.user.create({
     data: {
       email,
       password: hashSync(password, 12),
       name,
+      profileStatus,
       ...(opts.verified ? { emailVerifiedAt: now } : {}),
       ...(opts.profile
         ? {
@@ -142,6 +151,47 @@ export async function createTestUser(opts: {
     select: { id: true, email: true, name: true },
   });
   return { id: u.id, email: u.email, password, name: u.name };
+}
+
+// v4 (plan 08) : cree une soumission de profil E2E pour un user donne.
+export async function createTestProfileSubmission(opts: {
+  userId: string;
+  status?: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReasonLabel?: string;
+  rejectionDetails?: string;
+}): Promise<{ id: string }> {
+  const prisma = db();
+  const s = await prisma.profileSubmission.create({
+    data: {
+      userId: opts.userId,
+      photo: "profile/e2e/photos/p.png",
+      idDocumentType: "CNI",
+      idDocumentNumber: "E2E-DOC-1",
+      idDocument: "profile/e2e/documents/d.pdf",
+      status: opts.status ?? "PENDING",
+      rejectionReasonLabel: opts.rejectionReasonLabel ?? null,
+      rejectionDetails: opts.rejectionDetails ?? null,
+      reviewedAt: opts.status && opts.status !== "PENDING" ? new Date() : null,
+    },
+    select: { id: true },
+  });
+  return s;
+}
+
+// v4 (plan 08) : cree un motif de rejet E2E (nettoye par cleanupE2ETestData via le
+// prefixe de libelle).
+export async function createTestRejectionReason(opts: {
+  scope: "PROFILE" | "REGISTRATION" | "BOTH";
+  label?: string;
+  sortOrder?: number;
+}): Promise<{ id: string; label: string }> {
+  const prisma = db();
+  const label = opts.label ?? `E2E motif ${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const r = await prisma.rejectionReason.create({
+    data: { label, scope: opts.scope, sortOrder: opts.sortOrder ?? 0 },
+    select: { id: true, label: true },
+  });
+  return r;
 }
 
 // Cree un user staff verifie avec isStaff=true et staffRole pose.

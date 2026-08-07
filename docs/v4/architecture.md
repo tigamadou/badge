@@ -104,6 +104,17 @@ de periode (date seule, ou « Du … au … »), et le composant `EventInfoCard`
 (`src/components/event/`) presente le bloc d'informations en variantes `public`
 et `staff`.
 
+## Validation des profils (plan 08)
+
+L'identité d'un participant est validée par le **staff plateforme** avant toute
+inscription. `User.profileStatus` (`INCOMPLETE → PENDING → APPROVED | REJECTED`)
+est un miroir dénormalisé de la dernière `ProfileSubmission` (lignes immuables) ;
+**seul `src/lib/profile-review.ts` l'écrit**. Le gate d'inscription (403
+`PROFILE_NOT_APPROVED` sur register/resubmit/création staff) et le gel de
+l'approbation côté organisation (409) en découlent. Le rejet de profil et le rejet
+d'inscription puisent dans le catalogue `RejectionReason` (portée `PROFILE` /
+`REGISTRATION` / `BOTH`). Détail : [`features/validation-profils.md`](features/validation-profils.md).
+
 ## Abonnements
 
 Remplacement des champs `quotaMaxEvents` / `quotaMaxRegistrations` /
