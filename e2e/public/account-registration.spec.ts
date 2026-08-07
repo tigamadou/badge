@@ -49,6 +49,24 @@ test.describe("Account resubmit after rejection", () => {
     expect(updated?.rejectionReason).toBeNull();
   });
 
+  test("le detail affiche le bloc Pieces fournies avec les apercus", async ({ page }) => {
+    const user = await createTestUser({ scope: "reg-pieces", verified: true, profile: true });
+    const { eventId, categoryId } = await createTestEvent({ scope: "reg-pieces" });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+
+    await loginAs(page, user);
+    await page.goto(`/account/registrations/${regId}`);
+    await expect(page).toHaveURL(new RegExp(`/account/registrations/${regId}$`));
+    await expect(page.getByText(/pièces fournies/i)).toBeVisible();
+    // Chaque piece fournie est un apercu cliquable (DocumentPreview).
+    await expect(page.getByText(/cliquer pour agrandir/i)).toHaveCount(2);
+  });
+
   test("resubmit triggers email with subject 'Inscription resoumise'", async ({ page }) => {
     const user = await createTestUser({ scope: "resubmit-mail", verified: true, profile: true });
     const { eventId, categoryId } = await createTestEvent({ scope: "resubmit-mail" });

@@ -78,6 +78,20 @@ par prefixe. Service `minio` en dev (ports 9000/9001) et prod (reseau interne).
 Variables `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` /
 `S3_BUCKET`. Voir la [spec S3](specs/2026-05-31-v4-stockage-s3-et-backups.md).
 
+Les documents de profil (`profile/{userId}/documents/...`) sont **sensibles** :
+`/api/files` ne les sert qu'a leur proprietaire et au staff plateforme
+(`ctx.isStaff`). Les photos (`profile/{userId}/photos/...`) restent publiques
+(elles figurent sur les badges). Le composant `DocumentPreview`
+(`src/components/ui/`) rend un apercu cliquable et affiche un etat
+« non consultable ici » quand le visiteur n'a pas le droit de lire le fichier.
+
+## Contrat des listes d'inscriptions
+
+Les routes de liste d'inscriptions renvoient un **DTO aplati** via
+`toRegistrationListDTO` (`src/lib/registration-dto.ts`) : les champs metier
+(`firstName`, `email`, `structure`, ...) et jamais les cles `snapshot*`, qui sont
+un detail de persistance. Un test d'integration asservit ce contrat.
+
 ## Abonnements
 
 Remplacement des champs `quotaMaxEvents` / `quotaMaxRegistrations` /

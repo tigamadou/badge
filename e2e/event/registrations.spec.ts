@@ -50,11 +50,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     await expect(page.getByRole("link", { name: /^inscription$/i })).toBeVisible();
   });
 
-  // BUG APPLICATIF : la route GET /registrations renvoie snapshotFirstName /
-  // snapshotLastName / snapshotEmail, mais RegistrationTable lit r.firstName /
-  // r.lastName / r.email -> les colonnes Nom et E-mail sont VIDES dans l'UI.
-  // Test laisse en fixme tant que le mapping n'est pas corrige cote src/.
-  test.fixme("La liste affiche le nom et l'e-mail du participant", async ({ page }) => {
+  test("La liste affiche le nom et l'e-mail du participant", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-names" });
     const { participant } = await addReg(eventId, categoryId, "PENDING", "reg-names-p");
     const admin = await makeEventAdminUser({ scope: "reg-names", eventId, orgId });

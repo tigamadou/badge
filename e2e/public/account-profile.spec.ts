@@ -75,7 +75,7 @@ test.describe("Account profile edit", () => {
       'input[type="file"][accept*="application/pdf"]',
       fixtures.pdf,
     );
-    await expect(page.getByText(/document enregistré/i)).toBeVisible({
+    await expect(page.getByText(/pièce d'identité enregistrée/i)).toBeVisible({
       timeout: 10_000,
     });
 
@@ -87,6 +87,18 @@ test.describe("Account profile edit", () => {
       select: { idDocument: true },
     });
     expect(updated?.idDocument).toMatch(/^profile\/.+\/documents\/.+\.pdf$/);
+  });
+
+  test("le profil affiche les apercus et non les cles de stockage", async ({ page }) => {
+    const user = await createTestUser({ scope: "profile-preview", verified: true, profile: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    await expect(page).toHaveURL(/\/account\/profile$/);
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible();
+    await expect(page.getByText(/pièce d'identité enregistrée/i)).toBeVisible();
+    // La cle de stockage brute (profile/<id>/...) ne doit plus etre affichee.
+    await expect(page.getByText(/^profile\//)).toHaveCount(0);
   });
 
   test("upload over 5 Mo is refused with error", async ({ page }) => {
@@ -163,7 +175,7 @@ test.describe("Account profile edit", () => {
       'input[type="file"][accept*="application/pdf"]',
       fixtures.pdf,
     );
-    await expect(page.getByText(/document enregistré/i)).toBeVisible({
+    await expect(page.getByText(/pièce d'identité enregistrée/i)).toBeVisible({
       timeout: 10_000,
     });
 

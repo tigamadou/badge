@@ -31,7 +31,7 @@
 | 2 | Composant partage `DocumentPreview` | [x] | 2026-08-07 | Brique reutilisee par les plans 07 et 08 |
 | 3 | Apercus dans l'espace compte participant (profil + detail inscription) | [x] | 2026-08-07 | Items 2 et 4 |
 | 4 | Apercus et etat des pieces dans l'espace evenement | [x] | 2026-08-07 | Corrige la cause B de l'item 1 |
-| 5 | Couverture E2E + documentation | [ ] | | |
+| 5 | Couverture E2E + documentation | [x] | 2026-08-07 | Test liste reactive (ex-fixme), apercus compte, doc archi |
 
 ---
 
@@ -569,7 +569,7 @@ git commit -m "fix(v4): apercu photo et etat explicite de la piece cote evenemen
 - Consomme : helpers `e2e/helpers/nav.ts` (`loginAndEnter`), `e2e/helpers/db.ts` (`createTestRegistration`, `makeEventAdminUser`, `createTestUser`).
 - Produit : rien.
 
-- [ ] **Step 1 : Spec E2E — la liste des inscriptions affiche nom et e-mail**
+- [x] **Step 1 : Spec E2E — la liste des inscriptions affiche nom et e-mail**
 
 Ajouter dans `e2e/event/registrations.spec.ts`, section « Acces & rendu » :
 
@@ -596,12 +596,12 @@ test("la liste affiche le nom et l'e-mail du participant", async ({ page }) => {
 
 Adapter les noms d'arguments aux signatures reelles de `createTestRegistration` et `makeEventAdminUser` (`e2e/helpers/db.ts`) avant execution.
 
-- [ ] **Step 2 : Lancer la spec et verifier qu'elle passe**
+- [x] **Step 2 : Lancer la spec et verifier qu'elle passe**
 
 Run : `make test-e2e -- e2e/event/registrations.spec.ts`
 Attendu : PASS. Si elle echoue, c'est que la Task 1 est incomplete — corriger le code, jamais le test.
 
-- [ ] **Step 3 : Spec E2E — apercus dans l'espace compte**
+- [x] **Step 3 : Spec E2E — apercus dans l'espace compte**
 
 Dans `e2e/public/account-profile.spec.ts`, ajouter un test qui, apres connexion d'un participant au profil complet, verifie que la cle de stockage brute **n'est plus** affichee et que l'apercu l'est :
 
@@ -621,27 +621,27 @@ test("le profil affiche les apercus et non les cles de stockage", async ({ page 
 
 Dans `e2e/public/account-registration.spec.ts`, ajouter un test verifiant la presence du bloc « Pieces fournies » sur `/account/registrations/<id>`.
 
-- [ ] **Step 4 : Lancer les specs et verifier qu'elles passent**
+- [x] **Step 4 : Lancer les specs et verifier qu'elles passent**
 
 Run : `make test-e2e -- e2e/public/account-profile.spec.ts e2e/public/account-registration.spec.ts`
 Attendu : PASS.
 
-- [ ] **Step 5 : Mettre a jour la documentation**
+- [x] **Step 5 : Mettre a jour la documentation**
 
 Dans `docs/v4/README.md` : ajouter l'entree de plan dans la liste des documents et une ligne « Correctifs profil participant & apercus | Livre » dans le tableau d'etat d'avancement.
 
 Dans `docs/v4/architecture.md` : documenter le contrat de DTO des inscriptions (les routes de liste renvoient des champs metier aplatis, jamais de cle `snapshot*`) et rappeler que les documents de profil ne sont lisibles que par leur proprietaire et le staff plateforme.
 
-- [ ] **Step 6 : Verification finale**
+- [x] **Step 6 : Verification finale**
 
 Run : `make lint && make typecheck && make test && make test-e2e`
 Attendu : tout vert. Comparer le nombre d'echecs E2E a la baseline connue (la suite a des echecs pre-existants lies a l'environnement mail et aux courses sur la base partagee) : aucun **nouvel** echec ne doit apparaitre.
 
-- [ ] **Step 7 : Mettre a jour le tracker**
+- [x] **Step 7 : Mettre a jour le tracker**
 
 Passer les cinq lignes du tableau `## Progression` a `[x]` avec la date du jour.
 
-- [ ] **Step 8 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 8 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add e2e/ docs/v4/README.md docs/v4/architecture.md docs/v4/plans/2026-08-07-06-v4-correctifs-profil-participant-apercus.md

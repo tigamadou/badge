@@ -42,5 +42,6 @@ Plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la 
 | Couverture de tests | Unitaire lib + integration API a **100%** (gate vert) ; cibles make + CI livrees |
 | Reorganisation E2E par page | Livre — **un fichier par page** sur les 4 espaces (org 8, event 13, platform 15, public 12, transverse 2). Les fichiers transversaux `pages-render`/`rbac`/`interactions` sont dissous. Convention : [`e2e/README.md`](../../e2e/README.md) |
 | Fidelite UI des tests E2E | Livre — contrat « zero `page.request` », parcours `/select`, verif URL, reponses succes/echec assertées. Plan 04 Task 5 closee 2026-07-21 (SMTP plateforme a surveiller : les tests Vitest peuvent corrompre `PlatformSettings.smtp`) |
+| Correctifs profil participant & apercus (plan 06) | En cours — DTO des inscriptions aplati (colonnes Nom/E-mail corrigees), composant `DocumentPreview`, apercus photo/piece dans les espaces compte et evenement |
 
 Voir la section `## Progression` du plan pour le detail task par task.
