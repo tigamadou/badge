@@ -28,7 +28,7 @@
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Schema Prisma (`description`, `endDate`) + validation API + seed | [x] | 2026-08-07 | Validation endDate>=date create+patch, seed demo enrichi |
-| 2 | Helper `formatEventPeriod` + composant `EventInfoCard` | [ ] | | |
+| 2 | Helper `formatEventPeriod` + composant `EventInfoCard` | [x] | 2026-08-07 | |
 | 3 | Integration des trois vues + formulaires + emails | [ ] | | |
 | 4 | Couverture E2E + documentation | [ ] | | |
 
@@ -260,7 +260,7 @@ git commit -m "feat(v4): champs description et date de fin sur les evenements"
 - Consomme : `Event.date` / `Event.endDate` (Task 1), `Card` / `CardHead` / `CardBody` (`src/components/ui/Card`), `CatPill` (`src/components/ui/Labels`), `Icon`.
 - Produit : `formatEventPeriod(date, endDate)` et `<EventInfoCard event categories variant />`, consommes par la Task 3.
 
-- [ ] **Step 1 : Ecrire le test unitaire en echec**
+- [x] **Step 1 : Ecrire le test unitaire en echec**
 
 Ajouter dans `src/lib/__tests__/format-date.test.ts` :
 
@@ -284,12 +284,12 @@ describe("formatEventPeriod", () => {
 });
 ```
 
-- [ ] **Step 2 : Lancer le test et verifier qu'il echoue**
+- [x] **Step 2 : Lancer le test et verifier qu'il echoue**
 
 Run : `make test-unit -- src/lib/__tests__/format-date.test.ts`
 Attendu : FAIL — `formatEventPeriod` n'est pas exporte.
 
-- [ ] **Step 3 : Implementer le helper**
+- [x] **Step 3 : Implementer le helper**
 
 Ajouter dans `src/lib/format-date.ts` :
 
@@ -308,12 +308,12 @@ export function formatEventPeriod(
 }
 ```
 
-- [ ] **Step 4 : Lancer le test et verifier qu'il passe**
+- [x] **Step 4 : Lancer le test et verifier qu'il passe**
 
 Run : `make test-unit -- src/lib/__tests__/format-date.test.ts`
 Attendu : PASS (3 nouveaux tests), couverture du fichier a 100%.
 
-- [ ] **Step 5 : Creer le composant `EventInfoCard`**
+- [x] **Step 5 : Creer le composant `EventInfoCard`**
 
 Creer `src/components/event/EventInfoCard.tsx` :
 
@@ -388,17 +388,17 @@ export function EventInfoCard({
 
 `whitespace-pre-line` preserve les sauts de ligne de la description sans autoriser de HTML : la description est du texte brut, echappe par React.
 
-- [ ] **Step 6 : Verifier le nom des icones**
+- [x] **Step 6 : Verifier le nom des icones**
 
 Run : `grep -n "map-pin\|\"clock\"" src/components/ui/Icon.tsx`
 Attendu : les deux noms existent dans `IconName`. Si `map-pin` n'existe pas, utiliser une icone deja disponible plutot que d'en ajouter une (hors perimetre).
 
-- [ ] **Step 7 : Verifier lint et typage**
+- [x] **Step 7 : Verifier lint et typage**
 
 Run : `make lint && make typecheck`
 Attendu : aucun warning.
 
-- [ ] **Step 8 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 8 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/lib/format-date.ts src/lib/__tests__/format-date.test.ts src/components/event/EventInfoCard.tsx

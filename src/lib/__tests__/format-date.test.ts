@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatEventDate, isoDay } from "@/lib/format-date";
+import { formatEventDate, formatEventPeriod, isoDay } from "@/lib/format-date";
 
 describe("formatEventDate", () => {
   it("formats a Date object as `<day> <Month> . <year>`", () => {
@@ -23,6 +23,24 @@ describe("formatEventDate", () => {
     labels.forEach((label, month) => {
       expect(formatEventDate(new Date(2026, month, 1))).toBe(`1 ${label} . 2026`);
     });
+  });
+});
+
+describe("formatEventPeriod", () => {
+  it("renvoie la date seule quand il n'y a pas de date de fin", () => {
+    expect(formatEventPeriod(new Date(2026, 11, 15), null)).toBe("15 Décembre . 2026");
+  });
+
+  it("renvoie la date seule quand la date de fin est le meme jour", () => {
+    expect(formatEventPeriod(new Date(2026, 11, 15), new Date(2026, 11, 15))).toBe(
+      "15 Décembre . 2026",
+    );
+  });
+
+  it("renvoie une plage quand la date de fin est posterieure", () => {
+    expect(formatEventPeriod(new Date(2026, 11, 15), new Date(2026, 11, 17))).toBe(
+      "Du 15 Décembre . 2026 au 17 Décembre . 2026",
+    );
   });
 });
 
