@@ -16,6 +16,7 @@ import { CatPill, RoleBadge, Tag } from "@/components/ui/Labels";
 import { FormSection, Switch, Checkbox } from "@/components/ui/FormControls";
 import { RadioCards } from "@/components/ui/RadioCards";
 import { FileBox, Dropzone } from "@/components/ui/FileBox";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";
 import { Stepper } from "@/components/ui/Stepper";
 import { Tabs, Segmented } from "@/components/ui/Tabs";
@@ -165,6 +166,14 @@ export default function StyleguidePage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <Dropzone onFiles={() => {}} title="Deposez un fichier" subtitle="JPEG, PNG, PDF - max 5 Mo" />
                 <FileBox icon="file" title="carte-identite.pdf" subtitle="240 Ko" action={<Tag icon="trash-2">retirer</Tag>} />
+              </div>
+            </FormSection>
+            <FormSection title="Apercu de document (DocumentPreview)">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DocumentPreview storageKey="profile/demo/photos/demo.png" label="Photo (image)" />
+                <DocumentPreview storageKey="profile/demo/documents/demo.pdf" label="Piece (PDF)" />
+                <DocumentPreview storageKey={null} label="Document absent" />
+                <DocumentPreview storageKey="profile/demo/documents/demo.pdf" label="Non consultable" readable={false} />
               </div>
             </FormSection>
           </CardBody>

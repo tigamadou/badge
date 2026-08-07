@@ -28,7 +28,7 @@
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | DTO des inscriptions : helper `toRegistrationListDTO` + route liste + typage client | [x] | 2026-08-07 | Corrige la cause A de l'item 1 |
-| 2 | Composant partage `DocumentPreview` | [ ] | | Brique reutilisee par les plans 07 et 08 |
+| 2 | Composant partage `DocumentPreview` | [x] | 2026-08-07 | Brique reutilisee par les plans 07 et 08 |
 | 3 | Apercus dans l'espace compte participant (profil + detail inscription) | [ ] | | Items 2 et 4 |
 | 4 | Apercus et etat des pieces dans l'espace evenement | [ ] | | Corrige la cause B de l'item 1 |
 | 5 | Couverture E2E + documentation | [ ] | | |
@@ -278,7 +278,7 @@ git commit -m "fix(v4): aplatit le DTO des inscriptions et corrige la liste vide
 - Consomme : `FileBox` et `Icon` (`src/components/ui/`), la route `/api/files/<key>`.
 - Produit : `<DocumentPreview storageKey label readable? />`, consomme par les Tasks 3 et 4 de ce plan et par le plan 08.
 
-- [ ] **Step 1 : Creer le composant**
+- [x] **Step 1 : Creer le composant**
 
 Creer `src/components/ui/DocumentPreview.tsx` :
 
@@ -374,20 +374,20 @@ export function DocumentPreview({
 }
 ```
 
-- [ ] **Step 2 : Ajouter la demonstration au styleguide**
+- [x] **Step 2 : Ajouter la demonstration au styleguide**
 
 Dans `src/app/styleguide/page.tsx`, ajouter une section presentant les quatre etats (image, PDF, absent, non consultable) en suivant la structure des sections existantes du fichier. Utiliser des cles fictives (`"profile/demo/photos/demo.png"`, `"profile/demo/documents/demo.pdf"`, `null`).
 
-- [ ] **Step 3 : Verifier lint et typage**
+- [x] **Step 3 : Verifier lint et typage**
 
 Run : `make lint && make typecheck`
 Attendu : aucun warning. Le composant n'a pas de test unitaire (politique de tests : les composants React sont couverts par l'E2E, Task 5).
 
-- [ ] **Step 4 : Verification navigateur**
+- [x] **Step 4 : Verification navigateur**
 
 Ouvrir `/styleguide` : les quatre etats s'affichent, la vignette image ouvre la visionneuse, le PDF ouvre l'iframe, la fermeture fonctionne au clic sur le fond et sur la croix.
 
-- [ ] **Step 5 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 5 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/components/ui/DocumentPreview.tsx src/app/styleguide/page.tsx
