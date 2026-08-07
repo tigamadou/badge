@@ -1310,3 +1310,112 @@ describe("sendUserInvitation role labels", () => {
     consoleSpy.mockRestore();
   });
 });
+
+describe("sendProfileApproved / sendProfileRejected", () => {
+  beforeEach(async () => {
+    await prisma.profileSubmission.deleteMany();
+    await prisma.rejectionReason.deleteMany();
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  function platformTransport(sent: SentMail[]) {
+    const { transporter } = mockTransport(sent);
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: '"Badge" <noreply@badge.local>',
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: undefined,
+      orgName: undefined,
+      settings: {} as never,
+    });
+  }
+
+  it("sendProfileApproved envoie un message de validation au participant", async () => {
+    const user = await prisma.user.create({
+      data: { email: "approved@profmail.test", password: "x", name: "Awa Diallo", firstName: "Awa", lastName: "Diallo", profileStatus: "APPROVED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+
+    await mailModule.sendProfileApproved(user.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("approved@profmail.test");
+    expect(sent[0].subject).toContain("Profil validé");
+    expect(sent[0].html).toContain("Awa Diallo");
+  });
+
+  it("sendProfileRejected contient le motif et les details, sans cle de stockage", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rejected@profmail.test", password: "x", name: "Koffi Yao", firstName: "Koffi", lastName: "Yao", profileStatus: "REJECTED" },
+    });
+    await prisma.profileSubmission.create({
+      data: {
+        userId: user.id,
+        photo: "profile/secret/photos/p.png",
+        idDocumentType: "CNI",
+        idDocumentNumber: "N",
+        idDocument: "profile/secret/documents/d.pdf",
+        status: "REJECTED",
+        rejectionReasonLabel: "Piece illisible",
+        rejectionDetails: "Le numero est masque.",
+      },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+
+    await mailModule.sendProfileRejected(user.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).toContain("Piece illisible");
+    expect(sent[0].html).toContain("Le numero est masque.");
+    expect(sent[0].html).not.toContain("profile/secret");
+  });
+
+  it("sendProfileApproved retombe sur le nom du compte si firstName/lastName absents", async () => {
+    const user = await prisma.user.create({
+      data: { email: "noname-approved@profmail.test", password: "x", name: "Compte Sans Prenom", profileStatus: "APPROVED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileApproved(user.id);
+    expect(sent[0].html).toContain("Compte Sans Prenom");
+  });
+
+  it("sendProfileRejected retombe sur le nom du compte si firstName/lastName absents", async () => {
+    const user = await prisma.user.create({
+      data: { email: "noname-rejected@profmail.test", password: "x", name: "Compte Rejete", profileStatus: "REJECTED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileRejected(user.id);
+    expect(sent[0].html).toContain("Compte Rejete");
+  });
+
+  it("sendProfileApproved sort silencieusement si l'utilisateur est absent", async () => {
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileApproved("missing-user");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("sendProfileRejected sort silencieusement si l'utilisateur est absent", async () => {
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileRejected("missing-user");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("sendProfileRejected fonctionne sans soumission (motif/details omis)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rejected-nosub@profmail.test", password: "x", name: "Sans Sub", firstName: "Sans", lastName: "Sub", profileStatus: "REJECTED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileRejected(user.id);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("rejected-nosub@profmail.test");
+  });
+});

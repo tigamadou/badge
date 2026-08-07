@@ -34,7 +34,7 @@
 | 2 | `src/lib/profile-review.ts` — transitions et invariants | [x] | 2026-08-07 | 16 tests, couverture 100% |
 | 3 | API catalogue des motifs de rejet (plateforme) | [x] | 2026-08-07 | GET/POST/PATCH/DELETE (soft delete), portee, RBAC STAFF_ADMIN, couverture 100% |
 | 4 | Soumission cote participant (creation a chaque changement de piece) | [x] | 2026-08-07 | PUT cree une soumission au changement de piece, GET expose profileStatus + soumission courante |
-| 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [ ] | | |
+| 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [x] | 2026-08-07 | GET liste/detail, approve/reject (STAFF_SUPPORT), emails sendProfileApproved/Rejected, couverture 100% |
 | 6 | Gate d'inscription + gel de l'approbation cote organisation | [ ] | | |
 | 7 | UI plateforme (file d'attente, detail, onglet motifs) | [ ] | | |
 | 8 | UI participant (statut, historique) et UI organisation (etat verifie, motif catalogue) | [ ] | | |
@@ -823,7 +823,7 @@ git commit -m "feat(v4): soumission de profil a chaque changement de piece"
 - Consomme : `withStaffAuth`, `approveProfile` / `rejectProfile` / `getCurrentSubmission` / `ProfileReviewError` (Task 2), catalogue (Task 3).
 - Produit : `sendProfileApproved(userId: string): Promise<void>` et `sendProfileRejected(userId: string): Promise<void>` dans `src/lib/mail.ts` ; endpoints consommes par la Task 7.
 
-- [ ] **Step 1 : Ecrire les tests d'API en echec**
+- [x] **Step 1 : Ecrire les tests d'API en echec**
 
 Creer `src/lib/__tests__/api-platform-profiles.test.ts`. Couvrir :
 
@@ -844,12 +844,12 @@ Creer `src/lib/__tests__/api-platform-profiles.test.ts`. Couvrir :
 
 Mocker `@/lib/mail` comme le fait `src/app/api/account/__tests__/registrations.test.ts` et asserer les appels.
 
-- [ ] **Step 2 : Lancer les tests et verifier qu'ils echouent**
+- [x] **Step 2 : Lancer les tests et verifier qu'ils echouent**
 
 Run : `make test -- src/lib/__tests__/api-platform-profiles.test.ts`
 Attendu : FAIL — modules introuvables.
 
-- [ ] **Step 3 : Implementer la liste**
+- [x] **Step 3 : Implementer la liste**
 
 `src/app/api/platform/profiles/route.ts`, garde `withStaffAuth` par defaut (`STAFF_OBSERVER`) :
 
@@ -893,11 +893,11 @@ export const GET = withStaffAuth(async (req) => {
 
 Valider `status` contre l'enum et renvoyer 400 sur une valeur inconnue — ajouter le test correspondant.
 
-- [ ] **Step 4 : Implementer le detail**
+- [x] **Step 4 : Implementer le detail**
 
 `src/app/api/platform/profiles/[userId]/route.ts` : 404 si l'utilisateur n'existe pas ou est staff ; sinon profil complet (y compris `photo` et `idDocument`, lisibles par le staff) et `submissions` triees par `createdAt` decroissant.
 
-- [ ] **Step 5 : Implementer approbation et rejet**
+- [x] **Step 5 : Implementer approbation et rejet**
 
 Les deux routes sont gardees par `{ minRole: "STAFF_SUPPORT" }`, appellent le helper de la Task 2, traduisent `ProfileReviewError` en reponse HTTP via son `httpStatus` et son `code`, journalisent, puis declenchent l'e-mail sans bloquer la reponse :
 
@@ -940,25 +940,25 @@ export const POST = withStaffAuth(
 
 avec `const rejectSchema = z.object({ reasonId: z.string().min(1), details: z.string().max(2000).optional() });`.
 
-- [ ] **Step 6 : Ecrire les tests d'emails en echec**
+- [x] **Step 6 : Ecrire les tests d'emails en echec**
 
 Ajouter dans `src/lib/__tests__/mail.test.ts` deux tests calques sur ceux de `sendStatusNotification` : `sendProfileApproved` envoie a l'adresse du participant un message contenant le titre « Profil valide » ; `sendProfileRejected` contient le libelle du motif et les details, et ne contient **aucune** cle de stockage de document.
 
-- [ ] **Step 7 : Implementer les deux envois**
+- [x] **Step 7 : Implementer les deux envois**
 
 Dans `src/lib/mail.ts`, sur le modele de `sendStatusNotification` : lecture de l'utilisateur et de sa soumission courante, sortie silencieuse avec `console.error` si absent, construction du corps via `buildEmail`, envoi via `safeSend`. Le message de rejet renvoie vers `/account/profile`.
 
-- [ ] **Step 8 : Lancer les tests et verifier qu'ils passent**
+- [x] **Step 8 : Lancer les tests et verifier qu'ils passent**
 
 Run : `make test -- src/lib/__tests__/api-platform-profiles.test.ts src/lib/__tests__/mail.test.ts`
 Attendu : PASS.
 
-- [ ] **Step 9 : Verification complete**
+- [x] **Step 9 : Verification complete**
 
 Run : `make lint && make typecheck && make test-coverage`
 Attendu : tout vert, 100% sur les nouvelles routes et sur les nouveaux envois de `mail.ts`.
 
-- [ ] **Step 10 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 10 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/api/platform/profiles src/lib/mail.ts src/lib/__tests__/

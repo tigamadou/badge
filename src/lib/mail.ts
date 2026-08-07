@@ -705,3 +705,69 @@ export async function sendSmtpTest(args: {
     html: buildEmail({ title: "Test SMTP", body, ctx }),
   });
 }
+
+// v4 (plan 08) : notifications de decision sur le profil participant. Contexte
+// plateforme (pas d'eventId : la validation du profil n'est pas rattachee a un event).
+async function loadParticipantForProfileMail(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, firstName: true, lastName: true, name: true, profileStatus: true },
+  });
+}
+
+export async function sendProfileApproved(userId: string): Promise<void> {
+  const user = await loadParticipantForProfileMail(userId);
+  if (!user) {
+    console.error("[mail] sendProfileApproved: user not found", { userId });
+    return;
+  }
+  const ctx = await resolveTransporter({});
+  const fullName = escapeText(`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name);
+  const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
+  const body = `
+    <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
+    <p style="margin:0 0 16px;">Votre profil a été <span style="color:#059669;font-weight:600;">validé</span> par la plateforme. Vous pouvez désormais vous inscrire aux événements.</p>
+    <p style="margin:0;"><a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a></p>
+  `;
+  await safeSend({
+    to: user.email,
+    subject: "Profil validé — Badge",
+    html: buildEmail({ title: "Profil validé", body, ctx }),
+    ctx,
+  });
+}
+
+export async function sendProfileRejected(userId: string): Promise<void> {
+  const user = await loadParticipantForProfileMail(userId);
+  if (!user) {
+    console.error("[mail] sendProfileRejected: user not found", { userId });
+    return;
+  }
+  const submission = await prisma.profileSubmission.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { rejectionReasonLabel: true, rejectionDetails: true },
+  });
+  const ctx = await resolveTransporter({});
+  const fullName = escapeText(`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name);
+  const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
+  const reasonBlock = submission?.rejectionReasonLabel
+    ? `<p style="margin:0 0 8px;"><strong>Motif :</strong> ${escapeText(submission.rejectionReasonLabel)}</p>`
+    : "";
+  const detailsBlock = submission?.rejectionDetails
+    ? `<p style="margin:0 0 16px;color:#64748b;font-size:14px;">${escapeText(submission.rejectionDetails)}</p>`
+    : "";
+  const body = `
+    <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
+    <p style="margin:0 0 16px;">Vos documents ont été <span style="color:#e11d48;font-weight:600;">refusés</span> par la plateforme.</p>
+    ${reasonBlock}
+    ${detailsBlock}
+    <p style="margin:0;">Corrigez vos documents puis enregistrez à nouveau votre profil : <a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a>.</p>
+  `;
+  await safeSend({
+    to: user.email,
+    subject: "Documents refusés — Badge",
+    html: buildEmail({ title: "Documents refusés", body, ctx }),
+    ctx,
+  });
+}

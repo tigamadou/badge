@@ -5,7 +5,6 @@ import {
   approveProfile,
   rejectProfile,
   getCurrentSubmission,
-  ProfileReviewError,
 } from "@/lib/profile-review";
 
 const COMPLETE = {
