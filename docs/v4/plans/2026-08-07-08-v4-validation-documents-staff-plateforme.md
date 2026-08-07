@@ -31,7 +31,7 @@
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Schema Prisma (`ProfileSubmission`, `RejectionReason`, `ProfileStatus`, `ActivityType`) + seed | [x] | 2026-08-07 | Catalogue de motifs + profils PENDING/REJECTED/APPROVED seedes |
-| 2 | `src/lib/profile-review.ts` — transitions et invariants | [ ] | | |
+| 2 | `src/lib/profile-review.ts` — transitions et invariants | [x] | 2026-08-07 | 16 tests, couverture 100% |
 | 3 | API catalogue des motifs de rejet (plateforme) | [ ] | | |
 | 4 | Soumission cote participant (creation a chaque changement de piece) | [ ] | | |
 | 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [ ] | | |
@@ -234,7 +234,7 @@ git commit -m "feat(v4): schema de validation des profils participants"
 
   Consommes par les Tasks 4, 5 et 6.
 
-- [ ] **Step 1 : Ecrire les tests en echec**
+- [x] **Step 1 : Ecrire les tests en echec**
 
 Creer `src/lib/__tests__/profile-review.test.ts`. Couvrir, avec de vraies ecritures Prisma (pas de mock) :
 
@@ -425,12 +425,12 @@ describe("getCurrentSubmission", () => {
 });
 ```
 
-- [ ] **Step 2 : Lancer les tests et verifier qu'ils echouent**
+- [x] **Step 2 : Lancer les tests et verifier qu'ils echouent**
 
 Run : `make test -- src/lib/__tests__/profile-review.test.ts`
 Attendu : FAIL — `Cannot find module '@/lib/profile-review'`.
 
-- [ ] **Step 3 : Ecrire l'implementation**
+- [x] **Step 3 : Ecrire l'implementation**
 
 Creer `src/lib/profile-review.ts` :
 
@@ -549,17 +549,17 @@ export async function rejectProfile(args: {
 
 L'ordre des controles dans `rejectProfile` (motif d'abord, soumission ensuite) est impose par le test « refuse un motif inconnu » : il attend `REASON_NOT_FOUND` meme lorsqu'une soumission en attente existe.
 
-- [ ] **Step 4 : Lancer les tests et verifier qu'ils passent**
+- [x] **Step 4 : Lancer les tests et verifier qu'ils passent**
 
 Run : `make test -- src/lib/__tests__/profile-review.test.ts`
 Attendu : PASS, tous les tests du fichier verts.
 
-- [ ] **Step 5 : Verifier la couverture du module**
+- [x] **Step 5 : Verifier la couverture du module**
 
 Run : `make test-coverage`
 Attendu : `src/lib/profile-review.ts` a 100% sur les quatre metriques. Si une branche manque, ajouter le test correspondant — ne jamais ajouter d'exclusion.
 
-- [ ] **Step 6 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 6 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/lib/profile-review.ts src/lib/__tests__/profile-review.test.ts
