@@ -36,7 +36,7 @@
 | 4 | Soumission cote participant (creation a chaque changement de piece) | [x] | 2026-08-07 | PUT cree une soumission au changement de piece, GET expose profileStatus + soumission courante |
 | 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [x] | 2026-08-07 | GET liste/detail, approve/reject (STAFF_SUPPORT), emails sendProfileApproved/Rejected, couverture 100% |
 | 6 | Gate d'inscription + gel de l'approbation cote organisation | [x] | 2026-08-07 | 403 PROFILE_NOT_APPROVED (register/resubmit/creation staff), 409 gel approbation, rejet inscription sur catalogue |
-| 7 | UI plateforme (file d'attente, detail, onglet motifs) | [ ] | | |
+| 7 | UI plateforme (file d'attente, detail, onglet motifs) | [x] | 2026-08-07 | Nav Profils, file d'attente, ProfileReviewPanel, RejectionReasonsManager dans settings |
 | 8 | UI participant (statut, historique) et UI organisation (etat verifie, motif catalogue) | [ ] | | |
 | 9 | Couverture E2E + documentation | [ ] | | |
 
@@ -1117,7 +1117,7 @@ git commit -m "feat(v4): gate d'inscription sur profil approuve et gel de l'appr
 - Consomme : endpoints des Tasks 3 et 5, `DocumentPreview` (plan 06), `StatusBadge`, `Card`, `KeyValue`, `Button`.
 - Produit : rien pour les tasks suivantes.
 
-- [ ] **Step 1 : Ajouter l'entree de navigation**
+- [x] **Step 1 : Ajouter l'entree de navigation**
 
 Dans `src/components/staff/StaffShell.tsx`, inserer dans `NAV` apres « Organisations » :
 
@@ -1127,15 +1127,15 @@ Dans `src/components/staff/StaffShell.tsx`, inserer dans `NAV` apres « Organisa
 
 Verifier que `user-check` existe dans `IconName` (`grep -n "user-check" src/components/ui/Icon.tsx`).
 
-- [ ] **Step 2 : Creer la file d'attente**
+- [x] **Step 2 : Creer la file d'attente**
 
 `src/app/platform/profiles/page.tsx` — Server Component listant les profils via Prisma (meme filtre que l'API : `isStaff: false`, `profileStatus` selectionne par un filtre d'onglets `PENDING` / `REJECTED` / `APPROVED`), avec recherche et lien vers le detail. Suivre la structure de `src/app/platform/users/page.tsx` pour la mise en page et les composants.
 
-- [ ] **Step 3 : Creer l'ecran de detail**
+- [x] **Step 3 : Creer l'ecran de detail**
 
 `src/app/platform/profiles/[userId]/page.tsx` — charge le profil, la soumission courante et l'historique, puis rend `<ProfileReviewPanel />`. 404 (`notFound()`) si l'utilisateur n'existe pas ou est staff.
 
-- [ ] **Step 4 : Creer le panneau de decision**
+- [x] **Step 4 : Creer le panneau de decision**
 
 `src/components/staff/ProfileReviewPanel.tsx` (Client Component) :
 - en-tete : identite, e-mail, structure, `StatusBadge` du `profileStatus` ;
@@ -1144,20 +1144,20 @@ Verifier que `user-check` existe dans `IconName` (`grep -n "user-check" src/comp
 - bloc « Historique des soumissions » : une ligne par soumission (date, statut, motif fige, details, date de decision), de la plus recente a la plus ancienne ;
 - affichage du message d'erreur renvoye par l'API en cas d'echec (`NO_PENDING_SUBMISSION`, `REASON_WRONG_SCOPE`), et `router.refresh()` en cas de succes.
 
-- [ ] **Step 5 : Creer le gestionnaire de motifs**
+- [x] **Step 5 : Creer le gestionnaire de motifs**
 
 `src/components/staff/RejectionReasonsManager.tsx` (Client Component), calque sur `src/components/staff/PlanManager.tsx` : liste triee, creation (libelle, portee, ordre), edition en ligne, archivage avec confirmation. Les actions d'ecriture ne sont affichees que si l'utilisateur est `STAFF_ADMIN` ou `SUPER_ADMIN` — passer un booleen `canManage` depuis la page serveur, comme le fait deja `canEditSecrets` dans `src/app/platform/settings/page.tsx`.
 
-- [ ] **Step 6 : Integrer aux parametres plateforme**
+- [x] **Step 6 : Integrer aux parametres plateforme**
 
 Dans `src/app/platform/settings/page.tsx`, ajouter une section « Motifs de rejet » sous les formulaires existants, alimentee par `prisma.rejectionReason.findMany({ where: { archived: false }, orderBy: [{ sortOrder: "asc" }] })` et rendant `<RejectionReasonsManager initial={reasons} canManage={canManage} />`.
 
-- [ ] **Step 7 : Verification**
+- [x] **Step 7 : Verification**
 
 Run : `make lint && make typecheck && make test`
 Attendu : tout vert.
 
-- [ ] **Step 8 : Verification navigateur**
+- [x] **Step 8 : Verification navigateur**
 
 `make db-seed`, se connecter en `SUPER_ADMIN` :
 - `/platform/profiles` : la file d'attente affiche le participant `PENDING` seede ;
@@ -1166,7 +1166,7 @@ Attendu : tout vert.
 - `/platform/settings` : creer, renommer puis archiver un motif ;
 - se reconnecter en `STAFF_OBSERVER` : la file est consultable, les boutons Approuver / Rejeter et la gestion des motifs sont absents.
 
-- [ ] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/platform src/components/staff

@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PlatformSettingsForm } from "@/components/staff/PlatformSettingsForm";
 import { TestSmtpForm } from "@/components/staff/TestSmtpForm";
+import { RejectionReasonsManager } from "@/components/staff/RejectionReasonsManager";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Alert } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 
@@ -27,6 +29,22 @@ export default async function StaffSettingsPage() {
     });
     canEditSecrets = me?.staffRole === "SUPER_ADMIN";
   }
+
+  // v4 (plan 08) : la gestion du catalogue de motifs est reservee STAFF_ADMIN+.
+  let canManageReasons = false;
+  if (session?.user?.id) {
+    const me = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { staffRole: true },
+    });
+    canManageReasons = me?.staffRole === "SUPER_ADMIN" || me?.staffRole === "STAFF_ADMIN";
+  }
+
+  const rejectionReasons = await prisma.rejectionReason.findMany({
+    where: { archived: false },
+    orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+    select: { id: true, label: true, scope: true, sortOrder: true },
+  });
 
   // Construction de la vue publique : on ne passe JAMAIS les valeurs secretes au
   // composant client. Les booleans *Set indiquent simplement leur presence.
@@ -54,6 +72,16 @@ export default async function StaffSettingsPage() {
       </Alert>
       <PlatformSettingsForm initial={safe} canEditSecrets={canEditSecrets} />
       <TestSmtpForm defaultEmail={session?.user?.email ?? undefined} />
+
+      <Card>
+        <CardHead
+          title="Motifs de rejet"
+          subtitle="Catalogue partagé par la validation des profils et le rejet des inscriptions"
+        />
+        <CardBody>
+          <RejectionReasonsManager initial={rejectionReasons} canManage={canManageReasons} />
+        </CardBody>
+      </Card>
     </div>
   );
 }
