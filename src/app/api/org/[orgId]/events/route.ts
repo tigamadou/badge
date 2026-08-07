@@ -38,6 +38,12 @@ const createSchema = z.object({
   title: z.string().min(1).max(180),
   location: z.string().max(180).default(""),
   date: z.string().refine((s) => !Number.isNaN(Date.parse(s)), { message: "Invalid date" }),
+  endDate: z
+    .string()
+    .refine((s) => !Number.isNaN(Date.parse(s)), { message: "Invalid endDate" })
+    .nullable()
+    .optional(),
+  description: z.string().max(5000).nullable().optional(),
   logo: z.string().nullable().optional(),
   slug: z
     .string()
@@ -78,6 +84,13 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     );
   }
   const data = parsed.data;
+
+  if (data.endDate && new Date(data.endDate) < new Date(data.date)) {
+    return NextResponse.json(
+      { error: "VALIDATION", issues: [{ path: ["endDate"], message: "endDate < date" }] },
+      { status: 400 },
+    );
+  }
 
   try {
     await assertCanCreateEvent(orgId);
@@ -138,6 +151,8 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
         slug,
         location: data.location,
         date: new Date(data.date),
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        description: data.description ?? null,
         logo: data.logo ?? null,
         registrationOpen: false,
         categories: {

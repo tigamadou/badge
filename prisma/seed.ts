@@ -389,6 +389,10 @@ async function main() {
       const eventSlug = `demo-${orgDef.slug}-${ed.key}`;
       const eventDate = daysFromNow(state.daysOffset);
 
+      // v4 (plan 07) : le premier event de chaque org porte une description et une
+      // date de fin (J+2) ; les autres restent mono-journee sans description, pour
+      // exercer les deux rendus.
+      const withDetails = i === 0;
       const event = await prisma.event.create({
         data: {
           orgId: org.id,
@@ -396,6 +400,10 @@ async function main() {
           slug: eventSlug,
           location: ed.location,
           date: eventDate,
+          endDate: withDetails ? daysFromNow(state.daysOffset + 2) : null,
+          description: withDetails
+            ? `${ed.title} : trois jours de conferences, d'ateliers et de rencontres professionnelles.`
+            : null,
           registrationOpen: state.registrationOpen,
           archived: state.archived,
           archivedAt: state.archived ? new Date() : null,

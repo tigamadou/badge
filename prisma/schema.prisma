@@ -148,6 +148,10 @@ model Event {
   slug             String    @unique
   location         String
   date             DateTime
+  // v4 (plan 07) : informatif uniquement. `date` reste la date de reference pour
+  // l'ID metier, les badges et l'ouverture des inscriptions.
+  endDate          DateTime?
+  description      String?   @db.Text
   logo             String?
   registrationOpen Boolean   @default(false)
   // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).

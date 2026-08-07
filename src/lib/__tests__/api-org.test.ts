@@ -1061,6 +1061,55 @@ describe("POST /api/org/[orgId]/events", () => {
     expect(event?.registrationOpen).toBe(false);
   });
 
+  it("accepte une description et une date de fin", async () => {
+    const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "ev-desc" } });
+    await activatePlan(org.id);
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events`, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Salon 2026",
+        location: "Niamey",
+        date: "2026-12-15",
+        endDate: "2026-12-17",
+        description: "Trois jours de conferences.",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(201);
+    const event = await prisma.event.findFirst({ where: { orgId: org.id } });
+    expect(event?.description).toBe("Trois jours de conferences.");
+    expect(event?.endDate?.toISOString().slice(0, 10)).toBe("2026-12-17");
+  });
+
+  it("refuse une date de fin anterieure a la date de debut", async () => {
+    const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "ev-badend" } });
+    await activatePlan(org.id);
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events`, {
+      method: "POST",
+      body: JSON.stringify({
+        title: "Salon 2026",
+        location: "Niamey",
+        date: "2026-12-15",
+        endDate: "2026-12-14",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("VALIDATION");
+  });
+
   it("appends -2 if global slug collision", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const orgA = await prisma.organization.create({ data: { name: "A", slug: "a-o" } });

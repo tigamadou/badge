@@ -70,6 +70,54 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
     expect(updated?.date.toISOString().slice(0, 10)).toBe("2026-12-15");
   });
 
+  it("met a jour la description et la date de fin", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ date: "2026-12-16", description: "Nouvelle description.", endDate: "2026-12-18" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(200);
+    const updated = await prisma.event.findUnique({ where: { id: event.id } });
+    expect(updated?.description).toBe("Nouvelle description.");
+    expect(updated?.endDate?.toISOString().slice(0, 10)).toBe("2026-12-18");
+  });
+
+  it("efface la date de fin quand endDate vaut null", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.event.update({ where: { id: event.id }, data: { endDate: new Date("2026-12-05") } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ endDate: null }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(200);
+    const updated = await prisma.event.findUnique({ where: { id: event.id } });
+    expect(updated?.endDate).toBeNull();
+  });
+
+  it("refuse une date de fin anterieure a la date de l'evenement", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ endDate: "2020-01-01" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+  });
+
   it("slug is immutable for non-staff (ignored silently)", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
