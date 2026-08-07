@@ -33,7 +33,7 @@
 | 1 | Schema Prisma (`ProfileSubmission`, `RejectionReason`, `ProfileStatus`, `ActivityType`) + seed | [x] | 2026-08-07 | Catalogue de motifs + profils PENDING/REJECTED/APPROVED seedes |
 | 2 | `src/lib/profile-review.ts` — transitions et invariants | [x] | 2026-08-07 | 16 tests, couverture 100% |
 | 3 | API catalogue des motifs de rejet (plateforme) | [x] | 2026-08-07 | GET/POST/PATCH/DELETE (soft delete), portee, RBAC STAFF_ADMIN, couverture 100% |
-| 4 | Soumission cote participant (creation a chaque changement de piece) | [ ] | | |
+| 4 | Soumission cote participant (creation a chaque changement de piece) | [x] | 2026-08-07 | PUT cree une soumission au changement de piece, GET expose profileStatus + soumission courante |
 | 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [ ] | | |
 | 6 | Gate d'inscription + gel de l'approbation cote organisation | [ ] | | |
 | 7 | UI plateforme (file d'attente, detail, onglet motifs) | [ ] | | |
@@ -702,7 +702,7 @@ git commit -m "feat(v4): api du catalogue des motifs de rejet"
 - Consomme : `submitProfile`, `getCurrentSubmission` (Task 2).
 - Produit : la reponse `GET /api/account/profile` expose desormais `profileStatus` et la soumission courante ; consommee par la Task 8.
 
-- [ ] **Step 1 : Ecrire les tests en echec**
+- [x] **Step 1 : Ecrire les tests en echec**
 
 Ajouter au fichier de tests de la route :
 
@@ -748,12 +748,12 @@ it("expose le statut du profil et la soumission courante en GET", async () => {
 
 Ecrire les helpers `createUserWithoutPieces`, `createApprovedUser`, `putRequest`, `getRequest` dans le fichier, en suivant les conventions deja presentes.
 
-- [ ] **Step 2 : Lancer les tests et verifier qu'ils echouent**
+- [x] **Step 2 : Lancer les tests et verifier qu'ils echouent**
 
 Run : `make test -- <fichier de tests>`
 Attendu : FAIL.
 
-- [ ] **Step 3 : Brancher la soumission dans le PUT**
+- [x] **Step 3 : Brancher la soumission dans le PUT**
 
 Dans `src/app/api/account/profile/route.ts`, apres le `prisma.user.update` et avant le `logActivity` :
 
@@ -766,7 +766,7 @@ Dans `src/app/api/account/profile/route.ts`, apres le `prisma.user.update` et av
 
 Importer `submitProfile` depuis `@/lib/profile-review`.
 
-- [ ] **Step 4 : Exposer le statut dans le GET**
+- [x] **Step 4 : Exposer le statut dans le GET**
 
 Ajouter `profileStatus: true` a `SAFE_USER_SELECT` et enrichir la reponse du GET :
 
@@ -789,17 +789,17 @@ Ajouter `profileStatus: true` a `SAFE_USER_SELECT` et enrichir la reponse du GET
 
 Ne pas exposer `reviewedById` : l'identite du valideur ne regarde pas le participant.
 
-- [ ] **Step 5 : Lancer les tests et verifier qu'ils passent**
+- [x] **Step 5 : Lancer les tests et verifier qu'ils passent**
 
 Run : `make test -- <fichier de tests>`
 Attendu : PASS.
 
-- [ ] **Step 6 : Verification complete**
+- [x] **Step 6 : Verification complete**
 
 Run : `make lint && make typecheck && make test`
 Attendu : tout vert, couverture a 100%.
 
-- [ ] **Step 7 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 7 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/api/account/profile/route.ts src/lib/__tests__/

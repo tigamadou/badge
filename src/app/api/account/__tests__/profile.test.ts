@@ -247,6 +247,92 @@ describe("PUT /api/account/profile", () => {
     expect(json.code).toBe("NOT_FOUND");
   });
 
+  it("cree une soumission de profil quand les pieces deviennent completes", async () => {
+    const u = await prisma.user.create({
+      data: { email: "submit@profile08.test", password: "x", name: "U" },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq(COMPLETE_PROFILE, "PUT"));
+    expect(res.status).toBe(200);
+
+    const submissions = await prisma.profileSubmission.findMany({ where: { userId: u.id } });
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].status).toBe("PENDING");
+    expect((await prisma.user.findUnique({ where: { id: u.id } }))?.profileStatus).toBe("PENDING");
+  });
+
+  it("ne cree pas de soumission quand seuls des champs non lies a l'identite changent", async () => {
+    const u = await prisma.user.create({
+      data: { email: "stable@profile08.test", password: "x", name: "U", ...COMPLETE_PROFILE, profileStatus: "APPROVED" },
+    });
+    await prisma.profileSubmission.create({
+      data: {
+        userId: u.id,
+        photo: COMPLETE_PROFILE.photo,
+        idDocumentType: COMPLETE_PROFILE.idDocumentType,
+        idDocumentNumber: COMPLETE_PROFILE.idDocumentNumber,
+        idDocument: COMPLETE_PROFILE.idDocument,
+        status: "APPROVED",
+      },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq({ structure: "Nouvelle structure" }, "PUT"));
+    expect(res.status).toBe(200);
+    expect(await prisma.profileSubmission.count({ where: { userId: u.id } })).toBe(1);
+    expect((await prisma.user.findUnique({ where: { id: u.id } }))?.profileStatus).toBe("APPROVED");
+  });
+
+  it("repasse en PENDING quand la piece d'identite est remplacee", async () => {
+    const u = await prisma.user.create({
+      data: { email: "newdoc@profile08.test", password: "x", name: "U", ...COMPLETE_PROFILE, profileStatus: "APPROVED" },
+    });
+    await prisma.profileSubmission.create({
+      data: {
+        userId: u.id,
+        photo: COMPLETE_PROFILE.photo,
+        idDocumentType: COMPLETE_PROFILE.idDocumentType,
+        idDocumentNumber: COMPLETE_PROFILE.idDocumentNumber,
+        idDocument: COMPLETE_PROFILE.idDocument,
+        status: "APPROVED",
+      },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq({ idDocument: "/uploads/doc2.pdf" }, "PUT"));
+    expect(res.status).toBe(200);
+    expect(await prisma.profileSubmission.count({ where: { userId: u.id } })).toBe(2);
+    expect((await prisma.user.findUnique({ where: { id: u.id } }))?.profileStatus).toBe("PENDING");
+  });
+
+  it("expose le statut du profil et la soumission courante en GET", async () => {
+    const u = await prisma.user.create({
+      data: { email: "status@profile08.test", password: "x", name: "U", ...COMPLETE_PROFILE, profileStatus: "APPROVED" },
+    });
+    await prisma.profileSubmission.create({
+      data: {
+        userId: u.id,
+        photo: COMPLETE_PROFILE.photo,
+        idDocumentType: COMPLETE_PROFILE.idDocumentType,
+        idDocumentNumber: COMPLETE_PROFILE.idDocumentNumber,
+        idDocument: COMPLETE_PROFILE.idDocument,
+        status: "APPROVED",
+      },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/account/profile/route");
+    const res = await GET(makeReq());
+    const json = await res.json();
+    expect(json.user.profileStatus).toBe("APPROVED");
+    expect(json.currentSubmission.status).toBe("APPROVED");
+    expect(json.currentSubmission).not.toHaveProperty("reviewedById");
+  });
+
   describe("unexpected prisma failure", () => {
     afterEach(() => {
       vi.restoreAllMocks();

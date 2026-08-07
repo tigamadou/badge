@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { computeParticipantProfileCompletedAt } from "@/lib/participant-profile";
+import { submitProfile, getCurrentSubmission } from "@/lib/profile-review";
 
 const ID_DOC_TYPES = ["CNI", "Passeport", "Permis", "Autre"] as const;
 
@@ -33,6 +34,7 @@ type SanitizedUser = {
   idDocumentNumber: string | null;
   idDocument: string | null;
   participantProfileCompletedAt: Date | null;
+  profileStatus: string;
   isStaff: boolean;
 };
 
@@ -49,6 +51,7 @@ const SAFE_USER_SELECT = {
   idDocumentNumber: true,
   idDocument: true,
   participantProfileCompletedAt: true,
+  profileStatus: true,
   isStaff: true,
 } as const;
 
@@ -66,7 +69,20 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ code: "NOT_FOUND", error: "Utilisateur introuvable." }, { status: 404 });
     }
-    return NextResponse.json({ user });
+    const currentSubmission = await getCurrentSubmission(session.id);
+    return NextResponse.json({
+      user,
+      currentSubmission: currentSubmission
+        ? {
+            id: currentSubmission.id,
+            status: currentSubmission.status,
+            rejectionReasonLabel: currentSubmission.rejectionReasonLabel,
+            rejectionDetails: currentSubmission.rejectionDetails,
+            createdAt: currentSubmission.createdAt,
+            reviewedAt: currentSubmission.reviewedAt,
+          }
+        : null,
+    });
   } catch (err) {
     if (err instanceof AuthError) return authErrorResponse(err);
     throw err;
@@ -137,6 +153,11 @@ export async function PUT(req: NextRequest) {
       details: { fields: Object.keys(data) },
       req,
     });
+
+    // v4 (plan 08) : toute modification des pieces cree une nouvelle soumission et
+    // repasse le profil en attente de validation. Les champs non lies a l'identite
+    // (nom, prenom, structure) ne declenchent rien : submitProfile compare les pieces.
+    await submitProfile(session.id);
 
     return NextResponse.json({ user: updated });
   } catch (err) {
