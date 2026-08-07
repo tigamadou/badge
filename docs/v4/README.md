@@ -20,10 +20,14 @@ Plans en cours, numerotes selon leur ordre d'execution (suffixe `-NN-` apres la 
 - [02 — Abonnements (periodicite, slug auto, blocage org)](plans/2026-07-20-02-v4-abonnements-periodicite-slug-blocage.md) — tracker de progression en tete.
 - [03 — Reorganisation E2E par page](plans/2026-07-20-03-v4-e2e-reorg-par-page.md) — un fichier de specs par page, toutes les actions testees, tous les espaces (suppose 01 termine).
 - [04 — Fidelite UI des tests E2E](plans/2026-07-20-04-v4-e2e-fidelite-ui.md) — parcours UI complet (jamais d'API, /select, verif URL, reponse succes/echec assertee). Suite du 03.
+- [06 — Correctifs profil participant & apercus](plans/2026-08-07-06-v4-correctifs-profil-participant-apercus.md) — **a implementer** : DTO des inscriptions (colonnes vides), composant `DocumentPreview`, apercus photo/piece. [Spec](specs/2026-08-07-06-v4-correctifs-profil-participant-apercus.md).
+- [07 — Affichage des details d'un evenement](plans/2026-08-07-07-v4-affichage-details-evenement.md) — **a implementer** : champs `description` / `endDate`, carte d'informations sur les 3 vues. [Spec](specs/2026-08-07-07-v4-affichage-details-evenement.md).
+- [08 — Validation des documents par le staff plateforme](plans/2026-08-07-08-v4-validation-documents-staff-plateforme.md) — **a implementer**, suppose le 06 termine : `ProfileSubmission`, catalogue de motifs, gate d'inscription. [Spec](specs/2026-08-07-08-v4-validation-documents-staff-plateforme.md).
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
 - [Spec backups hebdomadaires](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01) ; volet stockage S3/MinIO implemente et retire du document.
+- [Checklist tests manuels navigateur](specs/2026-07-22-checklist-tests-manuels-navigateur.md) — recette manuelle complete page par page (68 pages, tous roles, transverse : emails, uploads, RBAC, responsive).
 
 ## Etat d'avancement
 

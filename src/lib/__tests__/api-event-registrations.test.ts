@@ -144,7 +144,23 @@ describe("GET /registrations", () => {
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     const json = await res.json();
     expect(json.registrations).toHaveLength(1);
-    expect(json.registrations[0].snapshotFirstName).toBe("Amadou");
+    expect(json.registrations[0].firstName).toBe("Amadou");
+  });
+
+  it("renvoie un DTO aplati, sans cle snapshot", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    await mkReg(event.id, cat.id, { email: "dto@x.test", firstName: "Alice", lastName: "Doe" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`);
+    const res = await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    const row = json.registrations[0];
+    expect(row.firstName).toBe("Alice");
+    expect(row.email).toBe("dto@x.test");
+    expect(Object.keys(row).some((k) => k.startsWith("snapshot"))).toBe(false);
   });
 
   it("filters by categoryId", async () => {

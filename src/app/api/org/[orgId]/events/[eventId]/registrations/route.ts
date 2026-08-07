@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { generateId } from "@/lib/generate-id";
 import { countCountableRegistrations, resolveOrgLimits } from "@/lib/subscription";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
+import { toRegistrationListDTO } from "@/lib/registration-dto";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (req, { eventId }) => {
   const url = new URL(req.url);
@@ -52,7 +53,12 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
     prisma.registration.count({ where }),
   ]);
 
-  return NextResponse.json({ registrations, total, page, limit });
+  return NextResponse.json({
+    registrations: registrations.map(toRegistrationListDTO),
+    total,
+    page,
+    limit,
+  });
 });
 
 // v2-11 : l'admin cree une registration pour un User existant (le User porte

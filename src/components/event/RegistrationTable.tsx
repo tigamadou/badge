@@ -6,19 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
+import type { RegistrationListDTO } from "@/lib/registration-dto";
 
-type Row = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  structure: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  badgePrinted: boolean;
-  allAccessGranted: boolean;
-  createdAt: string;
-  category: { id: string; name: string; color: string; number: number };
-};
+// createdAt est serialise en chaine par NextResponse.json : le Omit rend cette
+// difference explicite au lieu de la laisser implicite.
+type Row = Omit<RegistrationListDTO, "createdAt"> & { createdAt: string };
 
 export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: string }) {
   const [rows, setRows] = useState<Row[]>([]);
@@ -34,7 +26,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
     if (q) params.set("q", q);
     params.set("page", String(page));
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations?${params}`);
-    const json = await res.json();
+    const json = (await res.json()) as { registrations: Row[]; total: number };
     startTransition(() => {
       setRows(json.registrations);
       setTotal(json.total);
