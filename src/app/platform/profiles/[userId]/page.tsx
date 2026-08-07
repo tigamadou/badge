@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
 import { ProfileReviewPanel } from "@/components/staff/ProfileReviewPanel";
@@ -28,6 +30,14 @@ export default async function PlatformProfileDetailPage({
   });
   if (!user || user.isStaff) notFound();
 
+  // v4 (plan 08) : la decision est reservee STAFF_SUPPORT et au-dessus.
+  const session = await getServerSession(authOptions);
+  const me = session?.user?.id
+    ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { staffRole: true } })
+    : null;
+  const canDecide =
+    me?.staffRole === "SUPER_ADMIN" || me?.staffRole === "STAFF_ADMIN" || me?.staffRole === "STAFF_SUPPORT";
+
   const submissions = await prisma.profileSubmission.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -54,6 +64,7 @@ export default async function PlatformProfileDetailPage({
         <Icon name="arrow-left" size={13} /> Profils
       </Link>
       <ProfileReviewPanel
+        canDecide={canDecide}
         user={{
           id: user.id,
           email: user.email,

@@ -39,7 +39,15 @@ function fmt(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR");
 }
 
-export function ProfileReviewPanel({ user, submissions }: { user: User; submissions: Submission[] }) {
+export function ProfileReviewPanel({
+  user,
+  submissions,
+  canDecide,
+}: {
+  user: User;
+  submissions: Submission[];
+  canDecide: boolean;
+}) {
   const router = useRouter();
   const [reasons, setReasons] = useState<Reason[]>([]);
   const [rejecting, setRejecting] = useState(false);
@@ -48,7 +56,7 @@ export function ProfileReviewPanel({ user, submissions }: { user: User; submissi
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const currentPending = submissions[0]?.status === "PENDING";
+  const currentPending = canDecide && submissions[0]?.status === "PENDING";
 
   useEffect(() => {
     fetch("/api/platform/rejection-reasons?scope=PROFILE")
