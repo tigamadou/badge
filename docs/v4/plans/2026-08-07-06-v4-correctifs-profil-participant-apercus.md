@@ -30,7 +30,7 @@
 | 1 | DTO des inscriptions : helper `toRegistrationListDTO` + route liste + typage client | [x] | 2026-08-07 | Corrige la cause A de l'item 1 |
 | 2 | Composant partage `DocumentPreview` | [x] | 2026-08-07 | Brique reutilisee par les plans 07 et 08 |
 | 3 | Apercus dans l'espace compte participant (profil + detail inscription) | [x] | 2026-08-07 | Items 2 et 4 |
-| 4 | Apercus et etat des pieces dans l'espace evenement | [ ] | | Corrige la cause B de l'item 1 |
+| 4 | Apercus et etat des pieces dans l'espace evenement | [x] | 2026-08-07 | Corrige la cause B de l'item 1 |
 | 5 | Couverture E2E + documentation | [ ] | | |
 
 ---
@@ -492,7 +492,7 @@ git commit -m "feat(v4): apercus photo et piece d'identite dans l'espace compte"
 - Consomme : `DocumentPreview` (Task 2), `loadUserContext` (`src/lib/user-context.ts`).
 - Produit : rien pour les tasks suivantes. Le plan 08 remplacera l'etat « non consultable » par l'etat de verification plateforme.
 
-- [ ] **Step 1 : Calculer la lisibilite de la piece cote serveur**
+- [x] **Step 1 : Calculer la lisibilite de la piece cote serveur**
 
 Dans `src/app/event/[eventId]/registrations/[regId]/page.tsx`, determiner si le visiteur peut lire un document de profil — meme regle que `src/app/api/files/[...path]/route.ts` : seul le staff plateforme le peut.
 
@@ -515,7 +515,7 @@ Puis passer la valeur au panneau :
 
 dans l'objet `r`, et `idDocumentReadable: boolean;` dans le type `Reg` du panneau.
 
-- [ ] **Step 2 : Remplacer le bloc « Pieces fournies »**
+- [x] **Step 2 : Remplacer le bloc « Pieces fournies »**
 
 Dans `src/components/event/RegistrationDetailPanel.tsx`, remplacer les deux `<a>` + `FileBox` par :
 
@@ -534,20 +534,20 @@ Importer `DocumentPreview` ; retirer les imports `FileBox` et `Icon` s'ils ne se
 
 Les informations textuelles de la piece (type et numero) restent affichees dans le `KeyValue` existant : leur suppression n'est pas dans le perimetre.
 
-- [ ] **Step 3 : Verification complete**
+- [x] **Step 3 : Verification complete**
 
 Run : `make lint && make typecheck && make test`
 Attendu : tout vert.
 
-- [ ] **Step 4 : Verification navigateur — membre d'organisation**
+- [x] **Step 4 : Verification navigateur — membre d'organisation**
 
 `make db-seed`, se connecter en OWNER d'organisation, ouvrir le detail d'une inscription : la **photo** s'affiche en apercu, la **piece d'identite** affiche « Verifiee par la plateforme — non consultable ici » et n'est plus cliquable. Aucun 403 ne doit apparaitre dans l'onglet reseau.
 
-- [ ] **Step 5 : Verification navigateur — staff plateforme**
+- [x] **Step 5 : Verification navigateur — staff plateforme**
 
 Se connecter en `SUPER_ADMIN`, ouvrir la meme page : la piece d'identite est consultable et la visionneuse s'ouvre.
 
-- [ ] **Step 6 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 6 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add "src/app/event/[eventId]/registrations/[regId]/page.tsx" src/components/event/RegistrationDetailPanel.tsx

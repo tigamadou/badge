@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { loadUserContext } from "@/lib/user-context";
 import { RegistrationDetailPanel } from "@/components/event/RegistrationDetailPanel";
 import { Icon } from "@/components/ui/Icon";
 import { getEventOrgId } from "@/lib/event-org";
@@ -20,6 +23,12 @@ export default async function RegistrationDetailPage({
   });
   if (!registration || registration.eventId !== eventId) notFound();
 
+  // Meme regle que /api/files : un document de profil n'est lisible que par le staff
+  // plateforme. Un membre d'organisation voit un etat, pas le fichier.
+  const session = await getServerSession(authOptions);
+  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
+  const idDocumentReadable = Boolean(ctx?.isStaff);
+
   const r = {
     id: registration.id,
     firstName: registration.snapshotFirstName,
@@ -34,6 +43,7 @@ export default async function RegistrationDetailPage({
     rejectionDetails: registration.rejectionDetails,
     photo: registration.snapshotPhoto,
     idDocument: registration.snapshotIdDocument,
+    idDocumentReadable,
     idDocumentType: registration.snapshotIdDocumentType,
     idDocumentNumber: registration.snapshotIdDocumentNumber,
     createdAt: registration.createdAt.toISOString(),

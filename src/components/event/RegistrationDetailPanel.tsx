@@ -9,8 +9,7 @@ import { KeyValue } from "@/components/ui/JournalBlocks";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert } from "@/components/ui/Feedback";
-import { FileBox } from "@/components/ui/FileBox";
-import { Icon } from "@/components/ui/Icon";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { RegistrationActions } from "./RegistrationActions";
 
 type Reg = {
@@ -27,6 +26,7 @@ type Reg = {
   rejectionDetails: string | null;
   photo: string | null;
   idDocument: string | null;
+  idDocumentReadable: boolean;
   idDocumentType: string;
   idDocumentNumber: string;
   createdAt: string;
@@ -131,20 +131,12 @@ export function RegistrationDetailPanel({
         <CardHead title="Pièces fournies" />
         <CardBody>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {r.photo ? (
-              <a href={`/api/files/${r.photo}`} target="_blank" rel="noreferrer">
-                <FileBox icon="user" title="Photo" subtitle="Voir le fichier" action={<Icon name="external-link" size={16} />} />
-              </a>
-            ) : (
-              <FileBox icon="user" title="Photo" subtitle="Non fournie" />
-            )}
-            {r.idDocument ? (
-              <a href={`/api/files/${r.idDocument}`} target="_blank" rel="noreferrer">
-                <FileBox icon="file" title="Pièce d'identité" subtitle="Voir le fichier" action={<Icon name="external-link" size={16} />} />
-              </a>
-            ) : (
-              <FileBox icon="file" title="Pièce d'identité" subtitle="Non fournie" />
-            )}
+            <DocumentPreview storageKey={r.photo} label="Photo" />
+            <DocumentPreview
+              storageKey={r.idDocument}
+              label="Pièce d'identité"
+              readable={r.idDocumentReadable}
+            />
           </div>
         </CardBody>
       </Card>
