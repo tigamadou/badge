@@ -250,6 +250,30 @@ async function main() {
   });
   console.log("Plans par defaut (Gratuit, Standard) prets.");
 
+  // 1b. Catalogue de motifs de rejet (v4 plan 08). Idempotent via findFirst sur le libelle.
+  const rejectionReasonSeeds: Array<{
+    label: string;
+    scope: "PROFILE" | "REGISTRATION" | "BOTH";
+    sortOrder: number;
+  }> = [
+    { label: "Photo illisible ou de mauvaise qualite", scope: "PROFILE", sortOrder: 10 },
+    { label: "Photo non conforme (visage non visible)", scope: "PROFILE", sortOrder: 20 },
+    { label: "Piece d'identite illisible", scope: "PROFILE", sortOrder: 30 },
+    { label: "Piece d'identite expiree", scope: "PROFILE", sortOrder: 40 },
+    { label: "Informations incoherentes entre la piece et le profil", scope: "PROFILE", sortOrder: 50 },
+    { label: "Document suspecte de falsification", scope: "BOTH", sortOrder: 60 },
+    { label: "Categorie demandee non justifiee", scope: "REGISTRATION", sortOrder: 70 },
+    { label: "Quota de la categorie atteint", scope: "REGISTRATION", sortOrder: 80 },
+    { label: "Inscription en doublon", scope: "REGISTRATION", sortOrder: 90 },
+  ];
+  for (const r of rejectionReasonSeeds) {
+    const existing = await prisma.rejectionReason.findFirst({ where: { label: r.label } });
+    if (!existing) {
+      await prisma.rejectionReason.create({ data: r });
+    }
+  }
+  console.log(`Motifs de rejet seedes : ${rejectionReasonSeeds.length}`);
+
   // 2. Pre-hash unique du password demo (gain ~60s sur 240 hashes).
   const passwordHash = await hash(DEMO_PASSWORD, 12);
   console.log("Password hash pre-calcule.");
@@ -283,8 +307,8 @@ async function main() {
   }
   console.log(`Staff users seedes : ${staffSeeds.map((s) => s.email).join(", ")}`);
 
-  // 4. Participant historique avec profil complet.
-  await prisma.user.upsert({
+  // 4. Participant historique avec profil complet (profil APPROVED, v4 plan 08).
+  const historicalParticipant = await prisma.user.upsert({
     where: { email: "participant@badge.local" },
     create: {
       email: "participant@badge.local",
@@ -300,10 +324,84 @@ async function main() {
       idDocumentNumber: "CI-AWA-001",
       idDocument: "uploads/profile/seed/awa-cni.pdf",
       participantProfileCompletedAt: new Date(),
+      profileStatus: "APPROVED",
     },
-    update: { password: passwordHash, emailVerifiedAt: new Date() },
+    update: { password: passwordHash, emailVerifiedAt: new Date(), profileStatus: "APPROVED" },
   });
   console.log("Participant historique seede : participant@badge.local");
+
+  // 4b. Soumissions de profil dans les trois etats (v4 plan 08).
+  const superAdmin = await prisma.user.findUnique({ where: { email: "admin@badge.local" } });
+  if (
+    (await prisma.profileSubmission.count({ where: { userId: historicalParticipant.id } })) === 0
+  ) {
+    await prisma.profileSubmission.create({
+      data: {
+        userId: historicalParticipant.id,
+        photo: "uploads/profile/seed/awa-photo.jpg",
+        idDocumentType: "CNI",
+        idDocumentNumber: "CI-AWA-001",
+        idDocument: "uploads/profile/seed/awa-cni.pdf",
+        status: "APPROVED",
+        reviewedById: superAdmin?.id ?? null,
+        reviewedAt: new Date(),
+      },
+    });
+  }
+
+  const profileStateSeeds: Array<{
+    email: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    status: "PENDING" | "REJECTED";
+  }> = [
+    { email: "profil-attente@badge.local", name: "Koffi Yao", firstName: "Koffi", lastName: "Yao", status: "PENDING" },
+    { email: "profil-rejete@badge.local", name: "Mariam Bah", firstName: "Mariam", lastName: "Bah", status: "REJECTED" },
+  ];
+  const profileRejectReason = await prisma.rejectionReason.findFirst({
+    where: { label: "Piece d'identite illisible" },
+  });
+  for (const p of profileStateSeeds) {
+    const u = await prisma.user.upsert({
+      where: { email: p.email },
+      create: {
+        email: p.email,
+        password: passwordHash,
+        name: p.name,
+        isStaff: false,
+        emailVerifiedAt: new Date(),
+        firstName: p.firstName,
+        lastName: p.lastName,
+        structure: "Structure demo",
+        photo: `uploads/profile/seed/${p.firstName.toLowerCase()}-photo.jpg`,
+        idDocumentType: "CNI",
+        idDocumentNumber: `CI-${p.firstName.toUpperCase()}-001`,
+        idDocument: `uploads/profile/seed/${p.firstName.toLowerCase()}-cni.pdf`,
+        participantProfileCompletedAt: new Date(),
+        profileStatus: p.status,
+      },
+      update: { password: passwordHash, emailVerifiedAt: new Date(), profileStatus: p.status },
+    });
+    if ((await prisma.profileSubmission.count({ where: { userId: u.id } })) === 0) {
+      await prisma.profileSubmission.create({
+        data: {
+          userId: u.id,
+          photo: `uploads/profile/seed/${p.firstName.toLowerCase()}-photo.jpg`,
+          idDocumentType: "CNI",
+          idDocumentNumber: `CI-${p.firstName.toUpperCase()}-001`,
+          idDocument: `uploads/profile/seed/${p.firstName.toLowerCase()}-cni.pdf`,
+          status: p.status,
+          rejectionReasonId: p.status === "REJECTED" ? profileRejectReason?.id ?? null : null,
+          rejectionReasonLabel: p.status === "REJECTED" ? profileRejectReason?.label ?? null : null,
+          rejectionDetails: p.status === "REJECTED" ? "Le numero de piece est masque sur le scan." : null,
+          reviewedById: p.status === "REJECTED" ? superAdmin?.id ?? null : null,
+          reviewedAt: p.status === "REJECTED" ? new Date() : null,
+        },
+      });
+    }
+  }
+  console.log(`Profils demo (PENDING/REJECTED) seedes : ${profileStateSeeds.map((p) => p.email).join(", ")}`);
 
   // ADR 2026-06-01 (v2-14 Task 15) : branchement minimal vs demo.
   // Defaut (production-safe) -> s'arrete ici. Smoke test "0 org / 0 event" reste vert.

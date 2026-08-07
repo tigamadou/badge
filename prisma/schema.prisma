@@ -48,13 +48,18 @@ model User {
   blocked       Boolean @default(false)
   blockedReason String?
 
+  // v4 (plan 08) : miroir de la derniere ProfileSubmission. Ecrit UNIQUEMENT par
+  // src/lib/profile-review.ts.
+  profileStatus ProfileStatus @default(INCOMPLETE)
+
   // v2-14 Task 14 : derniere connexion reussie (mise a jour par NextAuth signIn callback).
   lastLoginAt DateTime?
 
-  orgMemberships   OrgMembership[]
-  eventMemberships EventMembership[]
-  activityLogs     ActivityLog[]
-  registrations    Registration[]
+  orgMemberships     OrgMembership[]
+  eventMemberships   EventMembership[]
+  activityLogs       ActivityLog[]
+  registrations      Registration[]
+  profileSubmissions ProfileSubmission[]
 }
 
 enum StaffRole {
@@ -257,6 +262,10 @@ model Registration {
   badgePrintedAt   DateTime?
   allAccessGranted Boolean            @default(false)
   rejectionReason  String?
+  // v4 (plan 08) : reference au catalogue ; `rejectionReason` conserve le libelle
+  // fige au moment de la decision.
+  rejectionReasonId  String?
+  rejectionReasonRef RejectionReason? @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
   rejectionDetails String?            @db.Text
 
   // v2-11 : snapshot inline du profil au moment de la soumission. Reecrit a
@@ -281,6 +290,70 @@ model Registration {
 }
 
 enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// v4 (plan 08) : chaque envoi de pieces cree une ligne IMMUABLE. La derniere ligne
+// fait foi ; `User.profileStatus` en est le miroir denormalise (cf. src/lib/profile-review.ts).
+model ProfileSubmission {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photo            String
+  idDocumentType   String
+  idDocumentNumber String
+  idDocument       String
+
+  status               ProfileSubmissionStatus @default(PENDING)
+  rejectionReasonId    String?
+  rejectionReason      RejectionReason?        @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
+  // Libelle fige a la decision : renommer ou archiver un motif ne doit pas
+  // reecrire l'historique.
+  rejectionReasonLabel String?
+  rejectionDetails     String?                 @db.Text
+
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+enum ProfileSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// v4 (plan 08) : catalogue administre dans les parametres plateforme. La portee
+// filtre les motifs proposes selon le contexte de rejet.
+model RejectionReason {
+  id         String         @id @default(cuid())
+  label      String
+  scope      RejectionScope
+  sortOrder  Int            @default(0)
+  archived   Boolean        @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  profileSubmissions ProfileSubmission[]
+  registrations      Registration[]
+
+  @@index([archived, scope])
+}
+
+enum RejectionScope {
+  PROFILE
+  REGISTRATION
+  BOTH
+}
+
+enum ProfileStatus {
+  INCOMPLETE
   PENDING
   APPROVED
   REJECTED
@@ -442,6 +515,14 @@ enum ActivityType {
   SUBSCRIPTION_CREATED
   SUBSCRIPTION_UPDATED
   QUOTA_BYPASS
+
+  // v4 (plan 08) : validation des profils par le staff plateforme
+  PROFILE_SUBMITTED
+  PROFILE_APPROVED
+  PROFILE_REJECTED
+  REJECTION_REASON_CREATED
+  REJECTION_REASON_UPDATED
+  REJECTION_REASON_ARCHIVED
 }
 
 // =====================================================
