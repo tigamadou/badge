@@ -469,6 +469,9 @@ export async function getUserById(userId: string) {
 // un parcours complet d'inscription.
 export async function createTestEvent(opts: {
   scope: string;
+  date?: Date;
+  endDate?: Date;
+  description?: string;
 }): Promise<{ orgId: string; eventId: string; eventSlug: string; categoryId: string }> {
   const prisma = db();
   const slug = `e2e-${opts.scope}-${Date.now()}`;
@@ -487,7 +490,9 @@ export async function createTestEvent(opts: {
       title: "Salon E2E",
       slug,
       location: "Abidjan",
-      date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      date: opts.date ?? new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      endDate: opts.endDate ?? null,
+      description: opts.description ?? null,
       registrationOpen: true,
     },
   });

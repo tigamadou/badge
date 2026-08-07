@@ -153,8 +153,11 @@ export function EventCreationWizard({
             </div>
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} required />
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">Description (optionnelle)</label>
+              <label htmlFor="new-event-description" className="block text-sm font-medium text-slate-700">
+                Description (optionnelle)
+              </label>
               <textarea
+                id="new-event-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}

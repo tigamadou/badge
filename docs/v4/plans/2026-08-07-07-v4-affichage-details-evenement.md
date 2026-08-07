@@ -30,7 +30,7 @@
 | 1 | Schema Prisma (`description`, `endDate`) + validation API + seed | [x] | 2026-08-07 | Validation endDate>=date create+patch, seed demo enrichi |
 | 2 | Helper `formatEventPeriod` + composant `EventInfoCard` | [x] | 2026-08-07 | |
 | 3 | Integration des trois vues + formulaires + emails | [x] | 2026-08-07 | EventInfoCard sur page publique + dashboard, periode liste org, formulaires create/edit, email confirmation |
-| 4 | Couverture E2E + documentation | [ ] | | |
+| 4 | Couverture E2E + documentation | [x] | 2026-08-07 | Specs page publique/dashboard/settings, doc archi + README |
 
 ---
 
@@ -546,11 +546,11 @@ git commit -m "feat(v4): affichage unifie des details d'un evenement"
 - Consomme : `createTestEvent`, `makeEventAdminUser`, `loginAndEnter`.
 - Produit : rien.
 
-- [ ] **Step 1 : Etendre le helper de seed E2E**
+- [x] **Step 1 : Etendre le helper de seed E2E**
 
 Dans `e2e/helpers/db.ts`, ajouter a `createTestEvent` deux options facultatives `endDate?: Date` et `description?: string`, transmises a `prisma.event.create`. Ne pas changer la signature existante autrement : tous les appelants actuels doivent continuer a fonctionner.
 
-- [ ] **Step 2 : Spec E2E — page publique**
+- [x] **Step 2 : Spec E2E — page publique**
 
 ```ts
 test("la page publique affiche la periode, le lieu et la description", async ({ page }) => {
@@ -571,35 +571,35 @@ test("la page publique affiche la periode, le lieu et la description", async ({ 
 
 Adapter les arguments a la signature reelle de `createTestEvent`.
 
-- [ ] **Step 3 : Spec E2E — tableau de bord**
+- [x] **Step 3 : Spec E2E — tableau de bord**
 
 Dans `e2e/event/dashboard.spec.ts`, ajouter un test verifiant qu'apres `loginAndEnter` en ADMIN d'evenement, la carte « Informations de l'evenement » affiche la periode, le lieu et la pastille d'ouverture des inscriptions.
 
-- [ ] **Step 4 : Spec E2E — formulaire d'edition**
+- [x] **Step 4 : Spec E2E — formulaire d'edition**
 
 Dans `e2e/event/settings.spec.ts`, ajouter deux tests : (a) saisir une description et une date de fin, enregistrer, verifier le feedback UI **et** la valeur en base via `getDb()` ; (b) saisir une date de fin anterieure a la date de debut, enregistrer, verifier le **message d'erreur affiche** et l'absence de modification en base.
 
-- [ ] **Step 5 : Lancer les specs**
+- [x] **Step 5 : Lancer les specs**
 
 Run : `make test-e2e -- e2e/public e2e/event/dashboard.spec.ts`
 Attendu : PASS pour les nouveaux tests ; aucun **nouvel** echec par rapport a la baseline connue de la suite.
 
-- [ ] **Step 6 : Mettre a jour la documentation**
+- [x] **Step 6 : Mettre a jour la documentation**
 
 - `docs/v4/README.md` : entree de plan + ligne d'etat d'avancement.
 - `docs/v4/architecture.md` : champs `description` et `endDate` du modele `Event`, avec la mention explicite que `endDate` est informative et qu'aucune logique metier ne s'y adosse.
 - `docs/v4/specs/2026-07-22-checklist-tests-manuels-navigateur.md` : ajouter les points de controle correspondants sur les trois pages.
 
-- [ ] **Step 7 : Verification finale**
+- [x] **Step 7 : Verification finale**
 
 Run : `make lint && make typecheck && make test && make test-e2e`
 Attendu : tout vert (hors baseline E2E connue).
 
-- [ ] **Step 8 : Mettre a jour le tracker**
+- [x] **Step 8 : Mettre a jour le tracker**
 
 Passer les quatre lignes du tableau `## Progression` a `[x]` avec la date du jour.
 
-- [ ] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add e2e/ docs/v4/

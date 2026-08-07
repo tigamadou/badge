@@ -44,6 +44,46 @@ test.describe("Event — Parametres", () => {
     await expectLastActivity({ type: "EVENT_UPDATED", userId: admin.id, eventId });
   });
 
+  test("ADMIN ajoute une description et une date de fin", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({
+      scope: "settings-details",
+      date: new Date("2026-12-15T00:00:00Z"),
+    });
+    const admin = await makeEventAdminUser({ scope: "settings-details", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}/settings`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/settings`));
+
+    await page.getByLabel(/date de fin/i).fill("2026-12-18");
+    await page.getByLabel(/description/i).fill("Programme complet sur trois jours.");
+    await page.getByRole("button", { name: /^enregistrer$/i }).first().click();
+
+    await expect(async () => {
+      const fresh = await getDb().event.findUnique({ where: { id: eventId } });
+      expect(fresh?.description).toBe("Programme complet sur trois jours.");
+      expect(fresh?.endDate?.toISOString().slice(0, 10)).toBe("2026-12-18");
+    }).toPass();
+  });
+
+  test("ADMIN voit une erreur si la date de fin precede la date de debut", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({
+      scope: "settings-badend",
+      date: new Date("2026-12-15T00:00:00Z"),
+    });
+    const admin = await makeEventAdminUser({ scope: "settings-badend", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}/settings`);
+    await page.getByLabel(/date de fin/i).fill("2026-12-10");
+    await page.getByRole("button", { name: /^enregistrer$/i }).first().click();
+
+    // Reponse attendue — ECHEC : message d'erreur UI + aucune date de fin en base.
+    await expect(page.getByText(/la date de fin doit être postérieure/i)).toBeVisible();
+    const fresh = await getDb().event.findUnique({ where: { id: eventId } });
+    expect(fresh?.endDate).toBeNull();
+  });
+
   test("ADMIN definit les coordonnees de contact via le formulaire", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "settings-contact" });
     const admin = await makeEventAdminUser({ scope: "settings-contact", eventId, orgId });

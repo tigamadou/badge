@@ -92,6 +92,18 @@ Les routes de liste d'inscriptions renvoient un **DTO aplati** via
 (`firstName`, `email`, `structure`, ...) et jamais les cles `snapshot*`, qui sont
 un detail de persistance. Un test d'integration asservit ce contrat.
 
+## Details d'un evenement
+
+Le modele `Event` porte, en plus de `date`, deux champs optionnels **purement
+informatifs** : `endDate` (date de fin, `>= date`) et `description` (texte brut,
+rendu avec preservation des sauts de ligne). `date` reste la seule date de
+reference metier : ID de badge (`generate-id.ts`), ouverture/cloture des
+inscriptions et archivage ne s'appuient jamais sur `endDate`. Le helper
+`formatEventPeriod(date, endDate)` (`src/lib/format-date.ts`) produit le libelle
+de periode (date seule, ou « Du … au … »), et le composant `EventInfoCard`
+(`src/components/event/`) presente le bloc d'informations en variantes `public`
+et `staff`.
+
 ## Abonnements
 
 Remplacement des champs `quotaMaxEvents` / `quotaMaxRegistrations` /

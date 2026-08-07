@@ -35,6 +35,23 @@ test.describe("Event — Tableau de bord", () => {
     await expect(page.getByText(/badges imprimés/i).first()).toBeVisible();
   });
 
+  test("ADMIN voit la carte d'informations de l'evenement", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({
+      scope: "dash-info",
+      date: new Date("2026-12-15T00:00:00Z"),
+      endDate: new Date("2026-12-17T00:00:00Z"),
+    });
+    const admin = await makeEventAdminUser({ scope: "dash-info", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}`);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}$`));
+    await expect(page.getByText(/informations de l'événement/i)).toBeVisible();
+    await expect(page.getByText(/Du 15 Décembre . 2026 au 17 Décembre . 2026/)).toBeVisible();
+    await expect(page.getByText("Abidjan")).toBeVisible();
+    await expect(page.getByText(/inscriptions ouvertes/i).first()).toBeVisible();
+  });
+
   test("OPERATOR voit Mes scans et lien scanner", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "dash-operator" });
     const operator = await createTestEventMember({
@@ -95,6 +112,56 @@ test.describe("Event — Tableau de bord", () => {
     // v4 Bloc D : le membre VIEWER (event-only) atteint son evenement et obtient le
     // shell dedie VIEWER, reconnaissable a l'en-tete "Lecture — <titre>".
     await expect(page.getByText(/lecture —/i)).toBeVisible();
+  });
+
+  // --- Lien d'inscription public -------------------------------------------
+
+  test("ADMIN voit le lien d'inscription public et peut le copier", async ({ page, context }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "dash-publink" });
+    const slug = (await getDb().event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { slug: true },
+    })).slug;
+    const admin = await makeEventAdminUser({ scope: "dash-publink", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto(`/event/${eventId}`);
+
+    const field = page.getByLabel(/lien d'inscription public/i);
+    await expect(field).toHaveValue(new RegExp(`/e/${slug}$`));
+
+    await page.getByRole("button", { name: /copier/i }).click();
+    await expect(page.getByRole("button", { name: /copié/i })).toBeVisible();
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboard).toContain(`/e/${slug}`);
+  });
+
+  test("Le lien 'Ouvrir' mene a la page publique de l'evenement", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "dash-publink-open" });
+    const slug = (await getDb().event.findUniqueOrThrow({
+      where: { id: eventId },
+      select: { slug: true },
+    })).slug;
+    const admin = await makeEventAdminUser({ scope: "dash-publink-open", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}`);
+    const [publicPage] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: /ouvrir/i }).click(),
+    ]);
+    await expect(publicPage).toHaveURL(new RegExp(`/e/${slug}$`));
+  });
+
+  test("Inscriptions fermees : la carte du lien public le signale", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "dash-publink-closed" });
+    await getDb().event.update({ where: { id: eventId }, data: { registrationOpen: false } });
+    const admin = await makeEventAdminUser({ scope: "dash-publink-closed", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}`);
+    await expect(page.getByText(/inscriptions fermées/i)).toBeVisible();
   });
 
   // --- Etats --------------------------------------------------------------

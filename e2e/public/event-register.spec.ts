@@ -25,6 +25,20 @@ test.describe("Event registration flow", () => {
     await expect(page.getByText(/créer un compte/i)).toBeVisible();
   });
 
+  test("la page publique affiche la periode, le lieu et la description", async ({ page }) => {
+    const { eventSlug } = await createTestEvent({
+      scope: "event-details",
+      date: new Date("2026-12-15T00:00:00Z"),
+      endDate: new Date("2026-12-17T00:00:00Z"),
+      description: "Trois jours de conferences.",
+    });
+
+    await page.goto(`/e/${eventSlug}`);
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}$`));
+    await expect(page.getByText(/Du 15 Décembre . 2026 au 17 Décembre . 2026/).first()).toBeVisible();
+    await expect(page.getByText("Trois jours de conferences.")).toBeVisible();
+  });
+
   test("logged-in user with complete profile can register to an event", async ({ page }) => {
     const user = await createTestUser({ scope: "evt-flow", verified: true, profile: true });
     const { eventSlug } = await createTestEvent({ scope: "evt-flow" });
