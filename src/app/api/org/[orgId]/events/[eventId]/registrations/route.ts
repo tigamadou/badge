@@ -100,6 +100,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
           idDocumentType: true,
           idDocumentNumber: true,
           idDocument: true,
+          profileStatus: true,
         },
       })
     : await prisma.user.findUnique({
@@ -114,6 +115,7 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
           idDocumentType: true,
           idDocumentNumber: true,
           idDocument: true,
+          profileStatus: true,
         },
       });
 
@@ -126,6 +128,11 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     snapshot = buildRegistrationSnapshot(user);
   } catch {
     return NextResponse.json({ error: "PROFILE_INCOMPLETE" }, { status: 400 });
+  }
+
+  // v4 (plan 08) : le profil du participant cible doit etre valide par la plateforme.
+  if (user.profileStatus !== "APPROVED") {
+    return NextResponse.json({ error: "PROFILE_NOT_APPROVED" }, { status: 403 });
   }
 
   const existingReg = await prisma.registration.findUnique({

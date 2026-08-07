@@ -7,8 +7,10 @@ import { sendStatusNotification } from "@/lib/mail";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
+// v4 (plan 08) : le motif provient du catalogue (RejectionReason). Le libelle est
+// fige sur la registration ; la cle etrangere est conservee pour les statistiques.
 const schema = z.object({
-  reason: z.string().min(1).max(200),
+  reasonId: z.string().min(1),
   details: z.string().max(2000).optional(),
 });
 
@@ -26,13 +28,24 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
 
+  const reason = await prisma.rejectionReason.findFirst({
+    where: { id: parsed.data.reasonId, archived: false },
+  });
+  if (!reason) {
+    return NextResponse.json({ error: "REASON_NOT_FOUND" }, { status: 400 });
+  }
+  if (reason.scope === "PROFILE") {
+    return NextResponse.json({ error: "REASON_WRONG_SCOPE" }, { status: 400 });
+  }
+
   // v2-11 : plus de editToken. La resoumission passe par le compte du participant
   // (/account/registrations/[id]/resubmit). Le mail de rejet pointe vers cette page.
   await prisma.registration.update({
     where: { id: regId },
     data: {
       status: "REJECTED",
-      rejectionReason: parsed.data.reason,
+      rejectionReasonId: reason.id,
+      rejectionReason: reason.label,
       rejectionDetails: parsed.data.details ?? null,
     },
   });
@@ -43,7 +56,7 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     orgId,
     eventId,
     targetId: regId,
-    details: { reason: parsed.data.reason, hasDetails: !!parsed.data.details },
+    details: { reason: reason.label, hasDetails: !!parsed.data.details },
     req,
   });
 

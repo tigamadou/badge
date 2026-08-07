@@ -83,6 +83,7 @@ describe("ADMIN journey (smoke)", () => {
         idDocumentNumber: "CNI-JOURNEY-1",
         idDocument: "uploads/test/doc.pdf",
         participantProfileCompletedAt: new Date(),
+        profileStatus: "APPROVED",
       },
     });
     const { POST: createReg } = await import(

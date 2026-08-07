@@ -18,6 +18,16 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     return NextResponse.json({ ok: true, alreadyApproved: true });
   }
 
+  // v4 (plan 08) : gel. L'organisation ne peut approuver une inscription que si le
+  // profil du participant est valide par la plateforme.
+  const participant = await prisma.user.findUnique({
+    where: { id: existing.userId },
+    select: { profileStatus: true },
+  });
+  if (participant?.profileStatus !== "APPROVED") {
+    return NextResponse.json({ error: "PROFILE_NOT_APPROVED" }, { status: 409 });
+  }
+
   await prisma.registration.update({
     where: { id: regId },
     data: {

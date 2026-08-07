@@ -69,6 +69,8 @@ async function createCompleteUser(email: string) {
       emailVerifiedAt: new Date(),
       ...COMPLETE_PROFILE,
       participantProfileCompletedAt: new Date(),
+      // v4 (plan 08) : la resoumission exige aussi un profil approuve.
+      profileStatus: "APPROVED",
     },
   });
 }
@@ -451,6 +453,30 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
       { params: Promise.resolve({ id: reg.id }) },
     );
     expect(res.status).toBe(403);
+  });
+
+  it("refuse la resoumission si le profil n'est pas approuve (403)", async () => {
+    const me = await createCompleteUser("me@v2-11-acctreg-resub-gate.test");
+    await prisma.user.update({ where: { id: me.id }, data: { profileStatus: "PENDING" } });
+    const { event, category } = await seedEventBundle("acctreg-resub-gate");
+    const reg = await createRegistration({
+      id: "REG-GATE",
+      userId: me.id,
+      eventId: event.id,
+      categoryId: category.id,
+      status: "REJECTED",
+      email: me.email,
+    });
+    await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/account/registrations/[id]/resubmit/route");
+    const res = await POST(
+      new NextRequest(`http://localhost/api/account/registrations/${reg.id}/resubmit`, { method: "POST" }),
+      { params: Promise.resolve({ id: reg.id }) },
+    );
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("PROFILE_NOT_APPROVED");
+    expect((await prisma.registration.findUnique({ where: { id: reg.id } }))?.status).toBe("REJECTED");
   });
 
   it("success: updates snapshot from user profile, sets PENDING, sends mail, logs", async () => {

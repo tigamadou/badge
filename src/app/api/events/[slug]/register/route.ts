@@ -65,6 +65,7 @@ export async function POST(
         idDocumentType: true,
         idDocumentNumber: true,
         idDocument: true,
+        profileStatus: true,
       },
     });
     if (!user) {
@@ -78,6 +79,19 @@ export async function POST(
       return NextResponse.json(
         { code: "PROFILE_INCOMPLETE", error: "Profil incomplet : complétez votre profil avant de vous inscrire." },
         { status: 400 },
+      );
+    }
+
+    // v4 (plan 08) : l'identite est validee par le staff plateforme, en amont de
+    // toute inscription. Le check de completude passe d'abord (profil complet mais
+    // non encore valide).
+    if (user.profileStatus !== "APPROVED") {
+      return NextResponse.json(
+        {
+          code: "PROFILE_NOT_APPROVED",
+          error: "Votre profil doit être validé par la plateforme avant de vous inscrire.",
+        },
+        { status: 403 },
       );
     }
 

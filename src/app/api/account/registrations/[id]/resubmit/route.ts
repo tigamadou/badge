@@ -42,6 +42,7 @@ export async function POST(
         idDocumentType: true,
         idDocumentNumber: true,
         idDocument: true,
+        profileStatus: true,
       },
     });
     if (!user) {
@@ -55,6 +56,14 @@ export async function POST(
       return NextResponse.json(
         { code: "PROFILE_INCOMPLETE", error: "Votre profil est incomplet : complétez-le avant de resoumettre." },
         { status: 400 },
+      );
+    }
+
+    // v4 (plan 08) : la resoumission suppose un profil valide par la plateforme.
+    if (user.profileStatus !== "APPROVED") {
+      return NextResponse.json(
+        { code: "PROFILE_NOT_APPROVED", error: "Votre profil doit être validé par la plateforme avant de resoumettre." },
+        { status: 403 },
       );
     }
 

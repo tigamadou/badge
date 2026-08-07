@@ -70,6 +70,8 @@ async function createCompleteUser(email: string) {
       emailVerifiedAt: new Date(),
       ...COMPLETE_PROFILE,
       participantProfileCompletedAt: new Date(),
+      // v4 (plan 08) : l'inscription exige un profil valide par la plateforme.
+      profileStatus: "APPROVED",
     },
   });
 }
@@ -146,6 +148,21 @@ describe("POST /api/events/[slug]/register", () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.code).toBe("PROFILE_INCOMPLETE");
+  });
+
+  it("refuse l'inscription si le profil n'est pas approuve (403 PROFILE_NOT_APPROVED)", async () => {
+    const u = await createCompleteUser("gate-pending@v2-11-evtreg.test");
+    await prisma.user.update({ where: { id: u.id }, data: { profileStatus: "PENDING" } });
+    const { event, category } = await seedEvent("re-gate");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/events/[slug]/register/route");
+    const res = await POST(makeReq(event.slug, { categoryId: category.id }), {
+      params: Promise.resolve({ slug: event.slug }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json()).code).toBe("PROFILE_NOT_APPROVED");
+    expect(await prisma.registration.count({ where: { userId: u.id } })).toBe(0);
   });
 
   it("creates a registration with snapshot reflecting the user profile at time t (201)", async () => {

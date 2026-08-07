@@ -52,11 +52,17 @@ export default async function EventRegisterPage({
       idDocumentType: true,
       idDocumentNumber: true,
       idDocument: true,
+      profileStatus: true,
     },
   });
 
   if (!user || !isParticipantProfileComplete(user)) {
     redirect(`/account/profile/complete?next=/e/${slug}/register`);
+  }
+
+  // v4 (plan 08) : profil complet mais non encore valide par la plateforme.
+  if (user.profileStatus !== "APPROVED") {
+    redirect(`/account/profile?pending=1&next=/e/${slug}/register`);
   }
 
   const existing = await prisma.registration.findUnique({

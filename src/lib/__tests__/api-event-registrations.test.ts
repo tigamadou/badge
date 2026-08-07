@@ -66,6 +66,8 @@ async function mkParticipantUser(suffix = "") {
       idDocumentNumber: `D-${stamp}`,
       idDocument: "uploads/test/doc.pdf",
       participantProfileCompletedAt: new Date(),
+      // v4 (plan 08) : profil valide par defaut pour les tests d'inscription/approbation.
+      profileStatus: "APPROVED",
     },
   });
 }
@@ -228,6 +230,24 @@ describe("POST /registrations (manual creation)", () => {
 
     const log = await prisma.activityLog.findFirst({ where: { type: "REGISTRATION_CREATED" } });
     expect(log?.eventId).toBe(event.id);
+  });
+
+  it("refuse la creation si le profil du participant cible n'est pas approuve (403)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const participant = await mkParticipantUser("manual-gate");
+    await prisma.user.update({ where: { id: participant.id }, data: { profileStatus: "PENDING" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: cat.id, email: participant.email }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("PROFILE_NOT_APPROVED");
+    expect(await prisma.registration.count({ where: { eventId: event.id } })).toBe(0);
   });
 
   it("OPERATOR cannot create (403)", async () => {
@@ -421,6 +441,22 @@ describe("POST /registrations/[regId]/approve", () => {
     expect(after?.rejectionReason).toBeNull();
   });
 
+  it("gele l'approbation quand le profil du participant n'est pas approuve (409)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await prisma.user.update({ where: { id: r.userId }, data: { profileStatus: "REJECTED" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/approve/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", { method: "POST" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("PROFILE_NOT_APPROVED");
+    expect((await prisma.registration.findUnique({ where: { id: r.id } }))?.status).toBe("PENDING");
+  });
+
   // ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur registration.approve.
   // Test inverse de l'ancien "OPERATOR cannot approve (403)" supprime.
   it("OPERATOR can approve (200)", async () => {
@@ -538,17 +574,23 @@ describe("POST /registrations/[regId]/approve", () => {
 describe("POST /registrations/[regId]/reject", () => {
   beforeEach(cleanup);
 
-  // v2-11 : plus de editToken. Le test verifie status + raison + envoi mail.
-  it("rejects with reason, sets rejectionReason, sends email", async () => {
+  async function seedRegReason(scope: "REGISTRATION" | "BOTH" | "PROFILE", label = "Inscription en doublon") {
+    return prisma.rejectionReason.create({ data: { label, scope } });
+  }
+
+  // v4 (plan 08) : le motif provient du catalogue (reasonId). Le libelle est fige
+  // sur la registration et la cle etrangere est enregistree.
+  it("rejects with a catalog reason, sets rejectionReason label + id, sends email", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    const reason = await seedRegReason("REGISTRATION", "Inscription en doublon");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
-        body: JSON.stringify({ reason: "Photo illisible", details: "Veuillez fournir une photo nette" }),
+        body: JSON.stringify({ reasonId: reason.id, details: "Deja inscrit sous un autre email" }),
         headers: { "content-type": "application/json" },
       }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
@@ -557,11 +599,68 @@ describe("POST /registrations/[regId]/reject", () => {
 
     const after = await prisma.registration.findUnique({ where: { id: r.id } });
     expect(after?.status).toBe("REJECTED");
-    expect(after?.rejectionReason).toBe("Photo illisible");
+    expect(after?.rejectionReason).toBe("Inscription en doublon");
+    expect(after?.rejectionReasonId).toBe(reason.id);
     expect(vi.mocked(sendStatusNotification)).toHaveBeenCalledWith(r.id);
   });
 
-  it("requires a reason", async () => {
+  it("accepte un motif de portee BOTH", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    const reason = await seedRegReason("BOTH", "Document suspecte");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reasonId: reason.id }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    expect((await prisma.registration.findUnique({ where: { id: r.id } }))?.rejectionReason).toBe("Document suspecte");
+  });
+
+  it("refuse un motif de portee PROFILE (400 REASON_WRONG_SCOPE)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    const reason = await seedRegReason("PROFILE", "Piece illisible");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reasonId: reason.id }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("REASON_WRONG_SCOPE");
+  });
+
+  it("refuse un motif inconnu (400 REASON_NOT_FOUND)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reasonId: "missing" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("REASON_NOT_FOUND");
+  });
+
+  it("requires a reasonId", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
@@ -597,13 +696,14 @@ describe("POST /registrations/[regId]/reject", () => {
 
   it("returns 404 when regId does not exist", async () => {
     const { u, org, event } = await seedAdmin();
+    const reason = await seedRegReason("REGISTRATION");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
-        body: JSON.stringify({ reason: "x" }),
+        body: JSON.stringify({ reasonId: reason.id }),
         headers: { "content-type": "application/json" },
       }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: "does-not-exist" } as never) },
@@ -614,6 +714,7 @@ describe("POST /registrations/[regId]/reject", () => {
   it("swallows a sendStatusNotification failure and still returns 200", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });
+    const reason = await seedRegReason("REGISTRATION");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
     vi.mocked(sendStatusNotification).mockRejectedValueOnce(new Error("smtp down"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -622,7 +723,7 @@ describe("POST /registrations/[regId]/reject", () => {
     const res = await POST(
       new NextRequest("http://localhost/x", {
         method: "POST",
-        body: JSON.stringify({ reason: "x" }),
+        body: JSON.stringify({ reasonId: reason.id }),
         headers: { "content-type": "application/json" },
       }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },

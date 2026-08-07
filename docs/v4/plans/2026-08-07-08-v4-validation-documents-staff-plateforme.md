@@ -35,7 +35,7 @@
 | 3 | API catalogue des motifs de rejet (plateforme) | [x] | 2026-08-07 | GET/POST/PATCH/DELETE (soft delete), portee, RBAC STAFF_ADMIN, couverture 100% |
 | 4 | Soumission cote participant (creation a chaque changement de piece) | [x] | 2026-08-07 | PUT cree une soumission au changement de piece, GET expose profileStatus + soumission courante |
 | 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [x] | 2026-08-07 | GET liste/detail, approve/reject (STAFF_SUPPORT), emails sendProfileApproved/Rejected, couverture 100% |
-| 6 | Gate d'inscription + gel de l'approbation cote organisation | [ ] | | |
+| 6 | Gate d'inscription + gel de l'approbation cote organisation | [x] | 2026-08-07 | 403 PROFILE_NOT_APPROVED (register/resubmit/creation staff), 409 gel approbation, rejet inscription sur catalogue |
 | 7 | UI plateforme (file d'attente, detail, onglet motifs) | [ ] | | |
 | 8 | UI participant (statut, historique) et UI organisation (etat verifie, motif catalogue) | [ ] | | |
 | 9 | Couverture E2E + documentation | [ ] | | |
@@ -982,7 +982,7 @@ git commit -m "feat(v4): api de moderation des profils et notifications"
 - Consomme : `User.profileStatus` (Task 1), catalogue (Task 3).
 - Produit : le code d'erreur `PROFILE_NOT_APPROVED` (403 a l'inscription, 409 a l'approbation), consomme par les Tasks 8 et 9.
 
-- [ ] **Step 1 : Ecrire les tests de gate en echec**
+- [x] **Step 1 : Ecrire les tests de gate en echec**
 
 Dans `src/app/api/events/__tests__/register-event.test.ts` :
 
@@ -1020,12 +1020,12 @@ it("gele l'approbation quand le profil du participant n'est plus approuve", asyn
 });
 ```
 
-- [ ] **Step 2 : Lancer les tests et verifier qu'ils echouent**
+- [x] **Step 2 : Lancer les tests et verifier qu'ils echouent**
 
 Run : `make test -- src/app/api/events/__tests__/register-event.test.ts`
 Attendu : FAIL — les inscriptions passent encore sans controle.
 
-- [ ] **Step 3 : Implementer le gate d'inscription**
+- [x] **Step 3 : Implementer le gate d'inscription**
 
 Dans `src/app/api/events/[slug]/register/route.ts`, ajouter `profileStatus: true` au `select` de l'utilisateur, puis juste apres le controle de profil complet :
 
@@ -1045,7 +1045,7 @@ Dans `src/app/api/events/[slug]/register/route.ts`, ajouter `profileStatus: true
 
 Appliquer le meme controle dans `resubmit/route.ts` et dans le `POST` de creation par le staff d'organisation (sur l'utilisateur cible ; message : « Le profil de ce participant n'est pas validé. »).
 
-- [ ] **Step 4 : Implementer le gel de l'approbation**
+- [x] **Step 4 : Implementer le gel de l'approbation**
 
 Dans `approve/route.ts`, avant la mise a jour du statut :
 
@@ -1061,7 +1061,7 @@ Dans `approve/route.ts`, avant la mise a jour du statut :
 
 `existing` est la registration deja chargee par la route ; si elle ne selectionne pas `userId`, l'ajouter.
 
-- [ ] **Step 5 : Rediriger cote page d'inscription**
+- [x] **Step 5 : Rediriger cote page d'inscription**
 
 Dans `src/app/e/[slug]/register/page.tsx`, ajouter `profileStatus: true` au `select` et, apres le controle de completude :
 
@@ -1071,7 +1071,7 @@ Dans `src/app/e/[slug]/register/page.tsx`, ajouter `profileStatus: true` au `sel
   }
 ```
 
-- [ ] **Step 6 : Basculer le rejet d'inscription sur le catalogue**
+- [x] **Step 6 : Basculer le rejet d'inscription sur le catalogue**
 
 Dans `reject/route.ts`, remplacer le schema de saisie libre par :
 
@@ -1084,17 +1084,17 @@ const schema = z.object({
 
 puis charger le motif (`archived: false`, portee `REGISTRATION` ou `BOTH` — sinon 400 `REASON_WRONG_SCOPE`, 400 `REASON_NOT_FOUND` si inconnu) et ecrire `rejectionReasonId: reason.id` **et** `rejectionReason: reason.label` sur la registration. Ajouter les tests correspondants dans `src/lib/__tests__/api-event-registrations.test.ts` et mettre a jour les tests existants qui envoyaient `{ reason: "..." }`.
 
-- [ ] **Step 7 : Lancer les tests et verifier qu'ils passent**
+- [x] **Step 7 : Lancer les tests et verifier qu'ils passent**
 
 Run : `make test`
 Attendu : PASS. Plusieurs tests existants d'inscription vont echouer tant qu'ils ne mettent pas leur utilisateur en `profileStatus: "APPROVED"` : les mettre a jour — c'est un changement de pre-condition metier, pas un contournement.
 
-- [ ] **Step 8 : Verification complete**
+- [x] **Step 8 : Verification complete**
 
 Run : `make lint && make typecheck && make test-coverage`
 Attendu : tout vert, 100%.
 
-- [ ] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/api src/app/e src/lib/__tests__/
