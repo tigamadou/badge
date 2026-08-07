@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CatPill } from "@/components/ui/Labels";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import ResubmitButton from "./ResubmitButton";
 
 function formatDate(d: Date): string {
@@ -44,6 +45,8 @@ export default async function RegistrationDetailPage({
       snapshotLastName: true,
       snapshotEmail: true,
       snapshotStructure: true,
+      snapshotPhoto: true,
+      snapshotIdDocument: true,
       snapshotIdDocumentType: true,
       snapshotIdDocumentNumber: true,
       event: { select: { title: true, date: true, location: true } },
@@ -124,6 +127,16 @@ export default async function RegistrationDetailPage({
               { label: "Inscrit le", value: formatDate(registration.createdAt) },
             ]}
           />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title="Pièces fournies" />
+        <CardBody>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DocumentPreview storageKey={registration.snapshotPhoto} label="Photo" />
+            <DocumentPreview storageKey={registration.snapshotIdDocument} label="Pièce d'identité" />
+          </div>
         </CardBody>
       </Card>
     </div>

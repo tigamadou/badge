@@ -29,7 +29,7 @@
 |---|---|---|---|---|
 | 1 | DTO des inscriptions : helper `toRegistrationListDTO` + route liste + typage client | [x] | 2026-08-07 | Corrige la cause A de l'item 1 |
 | 2 | Composant partage `DocumentPreview` | [x] | 2026-08-07 | Brique reutilisee par les plans 07 et 08 |
-| 3 | Apercus dans l'espace compte participant (profil + detail inscription) | [ ] | | Items 2 et 4 |
+| 3 | Apercus dans l'espace compte participant (profil + detail inscription) | [x] | 2026-08-07 | Items 2 et 4 |
 | 4 | Apercus et etat des pieces dans l'espace evenement | [ ] | | Corrige la cause B de l'item 1 |
 | 5 | Couverture E2E + documentation | [ ] | | |
 
@@ -406,7 +406,7 @@ git commit -m "feat(v4): composant DocumentPreview partage"
 - Consomme : `DocumentPreview` (Task 2).
 - Produit : rien pour les tasks suivantes.
 
-- [ ] **Step 1 : Remplacer la cle brute par l'apercu dans le formulaire de profil**
+- [x] **Step 1 : Remplacer la cle brute par l'apercu dans le formulaire de profil**
 
 Dans `src/app/account/profile/ProfileForm.tsx`, importer `DocumentPreview` et remplacer le bloc `FileBox` de la photo (celui dont le sous-titre est `subtitle={photo}`) par :
 
@@ -432,12 +432,12 @@ Et le bloc `FileBox` du document (`subtitle={idDocument}`) par :
 
 Les imports `FileBox` et `Tag` deviennent inutilisables s'ils ne servent plus ailleurs dans le fichier : les retirer pour ne pas laisser de warning lint.
 
-- [ ] **Step 2 : Verifier lint et typage**
+- [x] **Step 2 : Verifier lint et typage**
 
 Run : `make lint && make typecheck`
 Attendu : aucun warning, notamment aucun import inutilise.
 
-- [ ] **Step 3 : Etendre le `select` du detail d'inscription**
+- [x] **Step 3 : Etendre le `select` du detail d'inscription**
 
 Dans `src/app/account/registrations/[id]/page.tsx`, ajouter au `select` de `prisma.registration.findUnique` :
 
@@ -446,7 +446,7 @@ Dans `src/app/account/registrations/[id]/page.tsx`, ajouter au `select` de `pris
       snapshotIdDocument: true,
 ```
 
-- [ ] **Step 4 : Ajouter le bloc « Pieces fournies »**
+- [x] **Step 4 : Ajouter le bloc « Pieces fournies »**
 
 Toujours dans le meme fichier, apres la `Card` « Informations enregistrees pour cette inscription », ajouter :
 
@@ -464,16 +464,16 @@ Toujours dans le meme fichier, apres la `Card` « Informations enregistrees pour
 
 Importer `DocumentPreview` en tete de fichier. La page est un Server Component ; `DocumentPreview` est un Client Component (`"use client"`), l'import direct est donc valide.
 
-- [ ] **Step 5 : Verification complete**
+- [x] **Step 5 : Verification complete**
 
 Run : `make lint && make typecheck && make test`
 Attendu : tout vert.
 
-- [ ] **Step 6 : Verification navigateur**
+- [x] **Step 6 : Verification navigateur**
 
 `make db-seed`, se connecter en participant, ouvrir `/account/profile` (les deux apercus s'affichent, la visionneuse s'ouvre) puis `/account/registrations/<id>` (bloc « Pieces fournies » avec la photo visible). Le participant est proprietaire de ses fichiers : `/api/files/profile/<sonId>/documents/...` doit renvoyer 200.
 
-- [ ] **Step 7 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 7 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/account/profile/ProfileForm.tsx "src/app/account/registrations/[id]/page.tsx"

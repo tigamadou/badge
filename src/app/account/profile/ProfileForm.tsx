@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FormSection } from "@/components/ui/FormControls";
-import { FileBox } from "@/components/ui/FileBox";
-import { Tag } from "@/components/ui/Labels";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 
@@ -133,21 +132,9 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
 
       <FormSection title="Photo" description="JPEG, PNG ou WebP — 5 Mo maximum.">
         {photo ? (
-          <div className="mb-3">
-            <FileBox
-              icon="user"
-              title="Photo enregistrée"
-              subtitle={photo}
-              action={
-                uploadingPhoto ? (
-                  <Spinner size={16} />
-                ) : (
-                  <Tag>
-                    <Icon name="check" size={12} /> OK
-                  </Tag>
-                )
-              }
-            />
+          <div className="mb-3 space-y-1">
+            <DocumentPreview storageKey={photo} label="Photo enregistrée" />
+            {uploadingPhoto && <p className="text-xs text-slate-500">Envoi en cours…</p>}
           </div>
         ) : null}
         <input
@@ -186,21 +173,9 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
           />
         </div>
         {idDocument ? (
-          <div className="mb-3">
-            <FileBox
-              icon="file"
-              title="Document enregistré"
-              subtitle={idDocument}
-              action={
-                uploadingDoc ? (
-                  <Spinner size={16} />
-                ) : (
-                  <Tag>
-                    <Icon name="check" size={12} /> OK
-                  </Tag>
-                )
-              }
-            />
+          <div className="mb-3 space-y-1">
+            <DocumentPreview storageKey={idDocument} label="Pièce d'identité enregistrée" />
+            {uploadingDoc && <p className="text-xs text-slate-500">Envoi en cours…</p>}
           </div>
         ) : null}
         <input
