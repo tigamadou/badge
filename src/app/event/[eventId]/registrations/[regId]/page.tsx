@@ -19,6 +19,7 @@ export default async function RegistrationDetailPage({
     where: { id: regId },
     include: {
       category: true,
+      user: { select: { profileStatus: true } },
     },
   });
   if (!registration || registration.eventId !== eventId) notFound();
@@ -28,6 +29,22 @@ export default async function RegistrationDetailPage({
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
   const idDocumentReadable = Boolean(ctx?.isStaff);
+
+  // v4 (plan 08) : date de validation plateforme (derniere soumission approuvee).
+  const approvedSubmission = await prisma.profileSubmission.findFirst({
+    where: { userId: registration.userId, status: "APPROVED" },
+    orderBy: { reviewedAt: "desc" },
+    select: { reviewedAt: true },
+  });
+
+  // v4 (plan 08) : le rejet d'inscription puise dans le catalogue plateforme (portee
+  // REGISTRATION ou BOTH). L'endpoint /api/platform/rejection-reasons etant reserve
+  // au staff, on descend la liste depuis ce Server Component.
+  const rejectionReasons = await prisma.rejectionReason.findMany({
+    where: { archived: false, scope: { in: ["REGISTRATION", "BOTH"] } },
+    orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+    select: { id: true, label: true },
+  });
 
   const r = {
     id: registration.id,
@@ -44,6 +61,8 @@ export default async function RegistrationDetailPage({
     photo: registration.snapshotPhoto,
     idDocument: registration.snapshotIdDocument,
     idDocumentReadable,
+    profileStatus: registration.user.profileStatus,
+    profileReviewedAt: approvedSubmission?.reviewedAt?.toISOString() ?? null,
     idDocumentType: registration.snapshotIdDocumentType,
     idDocumentNumber: registration.snapshotIdDocumentNumber,
     createdAt: registration.createdAt.toISOString(),
@@ -58,7 +77,12 @@ export default async function RegistrationDetailPage({
       >
         <Icon name="arrow-left" size={13} /> Inscriptions
       </Link>
-      <RegistrationDetailPanel orgId={orgId} eventId={eventId} registration={r} />
+      <RegistrationDetailPanel
+        orgId={orgId}
+        eventId={eventId}
+        registration={r}
+        rejectionReasons={rejectionReasons}
+      />
     </div>
   );
 }

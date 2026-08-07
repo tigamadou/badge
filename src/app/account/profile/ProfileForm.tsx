@@ -147,6 +147,10 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
         {uploadingPhoto && <p className="mt-1 text-xs text-slate-500">Envoi en cours…</p>}
       </FormSection>
 
+      <div className="pt-4 text-xs text-slate-500">
+        Toute modification de la photo ou de la pièce d&apos;identité relance la vérification par la plateforme.
+      </div>
+
       <FormSection title="Pièce d'identité" description="Type, numéro et justificatif.">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>

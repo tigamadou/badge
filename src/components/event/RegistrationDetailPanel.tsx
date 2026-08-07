@@ -10,6 +10,7 @@ import { CatPill, Tag } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert } from "@/components/ui/Feedback";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
+import { FileBox } from "@/components/ui/FileBox";
 import { RegistrationActions } from "./RegistrationActions";
 
 type Reg = {
@@ -27,6 +28,8 @@ type Reg = {
   photo: string | null;
   idDocument: string | null;
   idDocumentReadable: boolean;
+  profileStatus: "INCOMPLETE" | "PENDING" | "APPROVED" | "REJECTED";
+  profileReviewedAt: string | null;
   idDocumentType: string;
   idDocumentNumber: string;
   createdAt: string;
@@ -37,10 +40,12 @@ export function RegistrationDetailPanel({
   orgId,
   eventId,
   registration,
+  rejectionReasons,
 }: {
   orgId: string;
   eventId: string;
   registration: Reg;
+  rejectionReasons: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -122,6 +127,8 @@ export function RegistrationDetailPanel({
             eventId={eventId}
             registrationId={r.id}
             status={r.status}
+            profileApproved={r.profileStatus === "APPROVED"}
+            reasons={rejectionReasons}
             onChanged={() => router.refresh()}
           />
         </CardBody>
@@ -132,11 +139,23 @@ export function RegistrationDetailPanel({
         <CardBody>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <DocumentPreview storageKey={r.photo} label="Photo" />
-            <DocumentPreview
-              storageKey={r.idDocument}
-              label="Pièce d'identité"
-              readable={r.idDocumentReadable}
-            />
+            {r.idDocumentReadable ? (
+              <DocumentPreview storageKey={r.idDocument} label="Pièce d'identité" readable />
+            ) : (
+              <FileBox
+                icon="shield"
+                title="Pièce d'identité"
+                subtitle={
+                  r.profileStatus === "APPROVED"
+                    ? r.profileReviewedAt
+                      ? `Vérifiée par la plateforme le ${new Date(r.profileReviewedAt).toLocaleDateString("fr-FR")}`
+                      : "Vérifiée par la plateforme"
+                    : r.profileStatus === "REJECTED"
+                      ? "Refusée par la plateforme"
+                      : "En attente de vérification par la plateforme"
+                }
+              />
+            )}
           </div>
         </CardBody>
       </Card>

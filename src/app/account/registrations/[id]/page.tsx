@@ -34,6 +34,7 @@ export default async function RegistrationDetailPage({
     select: {
       id: true,
       userId: true,
+      user: { select: { profileStatus: true } },
       status: true,
       badgePrinted: true,
       badgePrintedAt: true,
@@ -73,6 +74,21 @@ export default async function RegistrationDetailPage({
           {formatDate(registration.event.date)} · {registration.event.location}
         </p>
       </div>
+
+      {registration.status === "PENDING" && registration.user.profileStatus !== "APPROVED" && (
+        <Alert tone="warn">
+          <div>
+            <p className="font-semibold">Inscription en attente de validation du profil</p>
+            <p className="mt-1 text-[13px]">
+              Votre inscription ne peut pas être traitée tant que votre profil n&apos;est pas validé par la
+              plateforme.{" "}
+              <Link href="/account/profile" className="text-green-700 underline">
+                Voir mon profil
+              </Link>
+            </p>
+          </div>
+        </Alert>
+      )}
 
       {registration.status === "APPROVED" && registration.badgePrinted && (
         <Alert tone="success">

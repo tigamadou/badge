@@ -37,7 +37,7 @@
 | 5 | API de moderation plateforme (liste, approbation, rejet) + emails | [x] | 2026-08-07 | GET liste/detail, approve/reject (STAFF_SUPPORT), emails sendProfileApproved/Rejected, couverture 100% |
 | 6 | Gate d'inscription + gel de l'approbation cote organisation | [x] | 2026-08-07 | 403 PROFILE_NOT_APPROVED (register/resubmit/creation staff), 409 gel approbation, rejet inscription sur catalogue |
 | 7 | UI plateforme (file d'attente, detail, onglet motifs) | [x] | 2026-08-07 | Nav Profils, file d'attente, ProfileReviewPanel, RejectionReasonsManager dans settings |
-| 8 | UI participant (statut, historique) et UI organisation (etat verifie, motif catalogue) | [ ] | | |
+| 8 | UI participant (statut, historique) et UI organisation (etat verifie, motif catalogue) | [x] | 2026-08-07 | Bandeau statut + historique profil, alerte inscription gelee, etat verifie cote org, rejet via select catalogue, Approuver desactive |
 | 9 | Couverture E2E + documentation | [ ] | | |
 
 ---
@@ -1189,7 +1189,7 @@ git commit -m "feat(v4): ecrans plateforme de validation des profils"
 - Consomme : `profileStatus` et soumission courante (Task 4), catalogue (Task 3), codes d'erreur de la Task 6.
 - Produit : rien.
 
-- [ ] **Step 1 : Afficher le statut du profil au participant**
+- [x] **Step 1 : Afficher le statut du profil au participant**
 
 Dans `src/app/account/profile/page.tsx`, ajouter `profileStatus: true` au `select`, charger la soumission courante et l'historique via `getCurrentSubmission` / `prisma.profileSubmission.findMany`, puis remplacer le bloc « Profil complet ✓ / Profil incomplet » par un bandeau a quatre etats :
 
@@ -1202,41 +1202,41 @@ Dans `src/app/account/profile/page.tsx`, ajouter `profileStatus: true` au `selec
 
 Ajouter sous le formulaire un bloc « Historique de mes soumissions » (date, statut, motif, details).
 
-- [ ] **Step 2 : Signaler la resoumission dans le formulaire**
+- [x] **Step 2 : Signaler la resoumission dans le formulaire**
 
 Dans `ProfileForm.tsx`, afficher sous les champs de pieces une note : « Toute modification de la photo ou de la pièce d'identité relance la vérification par la plateforme. »
 
-- [ ] **Step 3 : Expliquer le blocage sur le detail d'inscription**
+- [x] **Step 3 : Expliquer le blocage sur le detail d'inscription**
 
 Dans `src/app/account/registrations/[id]/page.tsx`, si le profil du participant n'est pas `APPROVED` et que l'inscription est `PENDING`, afficher une alerte : « Votre inscription ne peut pas être traitée tant que votre profil n'est pas validé par la plateforme. » avec un lien vers `/account/profile`.
 
-- [ ] **Step 4 : Remplacer l'etat de la piece cote organisation**
+- [x] **Step 4 : Remplacer l'etat de la piece cote organisation**
 
 Dans `src/app/event/[eventId]/registrations/[regId]/page.tsx`, charger le `profileStatus` et la date de validation du participant (`reviewedAt` de la derniere soumission approuvee) et les transmettre au panneau. Dans `RegistrationDetailPanel.tsx`, remplacer le `DocumentPreview` de la piece par un `FileBox` d'etat : « Pièce d'identité — vérifiée par la plateforme le JJ/MM/AAAA », ou « en attente de vérification » / « refusée par la plateforme » selon le statut. La photo reste en apercu.
 
-- [ ] **Step 5 : Geler visuellement l'approbation**
+- [x] **Step 5 : Geler visuellement l'approbation**
 
 Dans `RegistrationActions.tsx`, desactiver le bouton **Approuver** quand le profil du participant n'est pas `APPROVED`, avec un libelle explicite a cote : « Profil non validé par la plateforme ». Le controle serveur de la Task 6 reste la source de verite : cette desactivation est une commodite d'interface, pas une garde.
 
-- [ ] **Step 6 : Brancher le catalogue sur le rejet d'inscription**
+- [x] **Step 6 : Brancher le catalogue sur le rejet d'inscription**
 
 Toujours dans `RegistrationActions.tsx`, remplacer le champ libre de motif par un `<select>` alimente par `GET /api/platform/rejection-reasons?scope=REGISTRATION`, plus un `<textarea>` de details. Afficher le message d'erreur renvoye par l'API en cas d'echec.
 
 > Note : cet endpoint est garde par `withStaffAuth` et n'est donc pas accessible a un membre d'organisation. Exposer le catalogue filtre aux roles evenement autorises a rejeter, soit en le passant depuis le Server Component parent (recommande : aucune route supplementaire), soit via une route dediee gardee par `withEventAuth`. **Choisir le passage par le Server Component** et faire descendre `reasons` en props jusqu'a `RegistrationActions`.
 
-- [ ] **Step 7 : Verification**
+- [x] **Step 7 : Verification**
 
 Run : `make lint && make typecheck && make test`
 Attendu : tout vert.
 
-- [ ] **Step 8 : Verification navigateur**
+- [x] **Step 8 : Verification navigateur**
 
 `make db-seed`, puis :
 - en participant `PENDING` : bandeau de verification, tentative d'inscription a un evenement → redirection vers le profil avec message ;
 - en participant `REJECTED` : motif affiche, remplacement de la piece, retour en `PENDING`, historique a deux lignes ;
 - en membre d'organisation : bouton Approuver desactive avec l'explication, rejet via le menu deroulant de motifs.
 
-- [ ] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
+- [x] **Step 9 : Commit (uniquement si l'utilisateur le demande)**
 
 ```bash
 git add src/app/account src/app/event src/components/event
