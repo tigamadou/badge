@@ -5,16 +5,30 @@
 
 ## État actuel
 
-Deux mécanismes coexistent :
+**Un template de badge est une donnée, jamais du code.** Il n'existe plus qu'un seul
+mécanisme : la table `InstalledBadgeTemplate`, alimentée par téléversement d'une archive
+depuis `/platform/badge-templates`, sans déploiement.
 
-| Origine | Où | Comment on en ajoute un |
-|---|---|---|
-| **Registre compilé** | `src/lib/badge-templates/index.ts` — `default-v1`, `recto-verso-v1` | Écrire un composant React, l'inscrire au registre, redéployer |
-| **Catalogue installé** | Table `InstalledBadgeTemplate` | Téléverser une archive depuis `/platform/badge-templates` — **sans déploiement** |
+Les deux modèles livrés avec l'application — `default` et `recto-verso` — n'ont aucun
+statut particulier : leurs manifestes sont versionnés sous
+`prisma/badge-templates/<famille>/manifest.json` et **installés par le seed**, en
+empruntant exactement le même chemin de code qu'un paquet téléversé (validation, rendu
+d'épreuve, génération d'aperçu).
 
-Les deux sont servis par une porte d'entrée unique, `src/lib/badge-templates/resolve.ts`,
-si bien qu'aucun écran ni aucune route ne sait de quelle origine vient un template. Le
-retrait du registre compilé fait l'objet de la spec 12.
+`src/lib/badge-templates/resolve.ts` est la porte d'entrée unique :
+
+| Fonction | Rôle |
+|---|---|
+| `resolveTemplate(id)` | Rend le template, **quel que soit son état d'archivage**. Repli sur la famille `default` si l'identifiant ne désigne rien, avec journalisation. |
+| `templateExists(id)` | Valide une saisie **sans repli** — `resolveTemplate` retombant toujours sur le défaut, il ne peut pas servir à ça. |
+| `listAvailableTemplates()` | Ce qui est proposable : la version la plus récente de chaque famille non archivée. |
+
+**La garantie qu'un template par défaut existe est portée par le seed**, plus par le
+schéma. `PlatformSettings.badgeTemplateId` vaut `""` par défaut — « aucune racine
+définie » — et `resolveTemplate` retombe alors sur la famille `default`. Si celle-ci est
+absente, la résolution **échoue bruyamment** en nommant `make db-seed` : une base sans
+template est une anomalie d'exploitation, qu'il vaut mieux voir échouer qu'imprimer un
+badge vide.
 
 ## Installation
 
@@ -219,17 +233,28 @@ déclarant le même alias s'écraseraient sans ce préfixe.
 Le validateur est une fonction **pure** : aucun accès réseau ni base. Il est donc
 réutilisable côté client par un futur éditeur visuel.
 
-## Fidélité aux templates compilés
+## Historique de la bascule
 
-`src/lib/badge-templates/declarative/__tests__/fidelity.test.tsx` compare, pour sept
-contextes (nominal, anonyme, neutre, sans photo, texte long, avec et sans logo), l'arbre
-de rendu produit par chaque template compilé et celui produit par son manifeste
-équivalent (`__fixtures__/default.json`, `__fixtures__/recto-verso.json`).
+Jusqu'au plan 12, `default-v1` et `recto-verso-v1` étaient des composants React inscrits
+dans un registre compilé (`src/lib/badge-templates/index.ts`). Leur conversion en
+manifestes a été validée par un test de fidélité comparant, sur sept contextes (nominal,
+anonyme, neutre, sans photo, texte long, avec et sans logo), l'arbre de rendu du composant
+historique et celui du manifeste équivalent.
 
-**Ce que la comparaison couvre** : le contenu textuel, les images, les couleurs de fond,
-les tailles de police, les traits typographiques (casse, graisse, interlettrage,
-interligne) et le nombre de pages.
+Ce test a été **supprimé avec le registre** : il comparait le moteur à des composants qui
+n'existent plus. Sa valeur a été consommée — c'est lui qui a autorisé la suppression.
 
-**Ce qu'elle ne couvre pas** : le placement. Un layout flexbox et un layout absolu
-atteignent le même résultat visuel par des moyens différents — comparer leurs
-coordonnées n'aurait aucun sens. Le placement se vérifie à l'œil, sur un badge imprimé.
+Ce que la comparaison couvrait : contenu textuel, images, couleurs de fond, tailles de
+police, traits typographiques et nombre de pages. Ce qu'elle ne couvrait **pas** : le
+placement. Un layout flexbox et un layout absolu atteignent le même résultat par des
+moyens différents ; le placement se vérifie à l'œil, sur un badge imprimé.
+
+## Migration d'une base antérieure
+
+`make migrate-badge-template-refs` convertit les anciennes références texte
+(`"default-v1"`, `"recto-verso-v1"`) vers les cuid des templates installés, dans les trois
+colonnes de la cascade. Idempotent, et il signale toute valeur qui ne désigne aucun
+template plutôt que de deviner. Une base neuve n'en a pas besoin : `make db-seed` suffit.
+
+`make validate-badge-templates` vérifie qu'aucune référence n'est orpheline et que la
+famille `default` existe bien.

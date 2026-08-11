@@ -3,13 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
 import { SAMPLE_CONTEXT } from "../declarative/sample-context";
 import { renderToJson } from "../declarative/__tests__/helpers/render-to-json";
-import {
-  resolveTemplate,
-  listAvailableTemplates,
-  templateExists,
-  collidesWithRegistry,
-} from "../resolve";
-import { DEFAULT_TEMPLATE_ID } from "../index";
+import { resolveTemplate, listAvailableTemplates, templateExists, previewUrl } from "../resolve";
+import { ensureReferenceTemplates, defaultTemplateId } from "../install";
 
 const LAYOUT = {
   formatVersion: 1,
@@ -46,9 +41,12 @@ describe("resolveTemplate", () => {
     await prisma.installedBadgeTemplate.deleteMany({});
   });
 
-  it("resout un identifiant du registre compile", async () => {
-    const t = await resolveTemplate(DEFAULT_TEMPLATE_ID);
-    expect(t.meta.id).toBe(DEFAULT_TEMPLATE_ID);
+  it("resout un template livre, installe par le seed", async () => {
+    await ensureReferenceTemplates("seed");
+    const id = (await defaultTemplateId())!;
+    const t = await resolveTemplate(id);
+    expect(t.meta.id).toBe(id);
+    expect(t.meta.label).toBe("Badge standard");
   });
 
   it("resout un template installe actif", async () => {
@@ -116,11 +114,19 @@ describe("resolveTemplate", () => {
     expect(rendu.images.some((src) => src.startsWith("data:image/png;base64,"))).toBe(true);
   });
 
-  it("retombe sur le defaut pour un identifiant inconnu, en le signalant", async () => {
+  it("retombe sur la famille default pour un identifiant inconnu, en le signalant", async () => {
+    await ensureReferenceTemplates("seed");
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const t = await resolveTemplate("inconnu-xyz");
-    expect(t.meta.id).toBe(DEFAULT_TEMPLATE_ID);
+    expect(t.meta.id).toBe(await defaultTemplateId());
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("inconnu-xyz"));
+    warn.mockRestore();
+  });
+
+  it("leve explicitement si aucune famille default n'existe", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // Base sans seed : mieux vaut echouer bruyamment qu'imprimer un badge vide.
+    await expect(resolveTemplate("inconnu-xyz")).rejects.toThrow(/make db-seed/);
     warn.mockRestore();
   });
 });
@@ -130,8 +136,9 @@ describe("templateExists", () => {
     await prisma.installedBadgeTemplate.deleteMany({});
   });
 
-  it("reconnait un identifiant du registre", async () => {
-    expect(await templateExists(DEFAULT_TEMPLATE_ID)).toBe(true);
+  it("reconnait un template livre installe par le seed", async () => {
+    await ensureReferenceTemplates("seed");
+    expect(await templateExists((await defaultTemplateId())!)).toBe(true);
   });
 
   it("reconnait un template installe, meme archive", async () => {
@@ -149,9 +156,10 @@ describe("listAvailableTemplates", () => {
     await prisma.installedBadgeTemplate.deleteMany({});
   });
 
-  it("inclut les templates du registre", async () => {
+  it("inclut les templates livres une fois le seed passe", async () => {
+    await ensureReferenceTemplates("seed");
     const list = await listAvailableTemplates();
-    expect(list.some((t) => t.id === DEFAULT_TEMPLATE_ID)).toBe(true);
+    expect(list.map((t) => t.label)).toContain("Badge standard");
   });
 
   it("exclut les templates archives", async () => {
@@ -182,12 +190,14 @@ describe("listAvailableTemplates", () => {
   });
 });
 
-describe("collidesWithRegistry", () => {
-  it("detecte une famille qui masquerait un template compile", () => {
-    expect(collidesWithRegistry(DEFAULT_TEMPLATE_ID)).toBe(true);
+describe("previewUrl", () => {
+  it("prefixe un chemin de stockage par la route de service", () => {
+    expect(previewUrl("badge-templates/x/preview.pdf")).toBe(
+      "/api/files/badge-templates/x/preview.pdf",
+    );
   });
 
-  it("laisse passer une famille libre", () => {
-    expect(collidesWithRegistry("salon-2027")).toBe(false);
+  it("rend une chaine vide quand aucun apercu n'existe", () => {
+    expect(previewUrl(null)).toBe("");
   });
 });

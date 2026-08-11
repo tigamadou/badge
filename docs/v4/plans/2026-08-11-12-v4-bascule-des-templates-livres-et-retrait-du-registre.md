@@ -43,12 +43,34 @@
 
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Paquets de reference dans le depot | [ ] | | Promus depuis les fixtures du plan 10 |
-| 2 | Seed idempotent | [ ] | | Deplace la garantie du defaut de colonne vers le seed |
-| 3 | Script de migration des references | [ ] | | |
-| 4 | Retrait du registre code | [ ] | | Le point de non-retour |
-| 5 | Nettoyage des outils du registre | [ ] | | `copy-badge-previews`, `prebuild`, script de validation |
-| 6 | Documentation | [ ] | | |
+| 1 | Paquets de reference dans le depot | [x] | 2026-08-11 | Condition d'entree verifiee au prealable : 16 tests de fidelite verts |
+| 2 | Seed idempotent | [x] | 2026-08-11 | `installTemplate` extrait de la route (aucun changement de comportement : 26 tests inchanges) |
+| 3 | Script de migration des references | [x] | 2026-08-11 | 5 tests. Execute sur la base de dev : 0 reference orpheline |
+| 4 | Retrait du registre code | [x] | 2026-08-11 | Le point de non-retour |
+| 5 | Nettoyage des outils du registre | [x] | 2026-08-11 | `copy-badge-previews` et son hook `prebuild` supprimes, script de validation reoriente vers la base |
+| 6 | Documentation | [x] | 2026-08-11 | Fiche feature, architecture, installation |
+
+### Ecarts constates a l'execution (2026-08-11)
+
+**Le `@default` de colonne a du etre remplace, pas supprime.** Le plan prevoyait de
+retirer `@default("default-v1")` de `PlatformSettings.badgeTemplateId`. Sans defaut, le
+champ devient obligatoire a la creation et **26 appelants cassent** (tests et routes qui
+creent un PlatformSettings sans ce champ). Le defaut est donc devenu `""`, qui signifie
+« aucune racine definie » : `resolveTemplate` le traite comme un identifiant inconnu et
+retombe sur la famille `default`. La garantie a bien migre du schema vers le seed, comme
+prevu ; seule la forme change.
+
+**`collidesWithRegistry` a disparu.** Sans registre, aucune collision de famille n'est
+possible. Reinstaller `default` cree simplement une version 2 -- ce qui est le
+comportement voulu. Le test correspondant a ete reecrit dans ce sens.
+
+**Dix tests reposaient sur les identifiants litteraux** `default-v1` / `recto-verso-v1`
+(rendu de badge, trois routes de reglage). Ils installent desormais les templates de
+reference et utilisent les cuid obtenus. `familyTemplateId(family)` a ete ajoute a
+`install.ts` pour eviter de dupliquer la requete dans chaque test.
+
+**`public/badge-previews/` et sa ligne de `.gitignore` ont ete retires** : le dossier
+n'etait alimente que par `copy-badge-previews`, et plus rien ne le lit.
 
 ---
 

@@ -43,7 +43,7 @@ export default async function OrgBadgeSettingsPage({
   const effectiveId = resolveBadgeTemplateId(
     null,
     { badgeTemplateId: organization.badgeTemplateId },
-    platform ?? { badgeTemplateId: "default-v1" },
+    platform ?? { badgeTemplateId: "" },
   );
   const effectiveLevel: EffectiveLevel = organization.badgeTemplateId
     ? "org"

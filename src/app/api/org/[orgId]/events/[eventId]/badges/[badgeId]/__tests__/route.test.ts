@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@/lib/badge-templates/install";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -34,9 +35,13 @@ async function setupFixtures(
   // role event PUR (ex. VIEWER rejete faute de badge.print), passer { orgOwner: false }
   // afin que le role effectif ne soit pas remonte au niveau ADMIN par l'appartenance org.
   const { orgOwner = true } = opts;
+  // v4 (plan 12) : les templates livres sont installes en base, plus compiles.
+  await ensureReferenceTemplates("seed-test");
+  const defaultId = (await defaultTemplateId())!;
+  const rectoVersoId = (await familyTemplateId("recto-verso"))!;
   await prisma.platformSettings.upsert({
     where: { id: "singleton" },
-    update: { badgeTemplateId: "default-v1" },
+    update: { badgeTemplateId: defaultId },
     create: {
       id: "singleton",
       smtpHost: "mailpit",
@@ -48,7 +53,7 @@ async function setupFixtures(
       recaptchaEnabled: false,
       recaptchaSiteKey: "",
       recaptchaSecretKey: "",
-      badgeTemplateId: "default-v1",
+      badgeTemplateId: defaultId,
     },
   });
 
@@ -106,7 +111,7 @@ async function setupFixtures(
     user: { id: admin.id, email: admin.email, name: admin.name, isStaff: false },
   } as never);
 
-  return { admin, org, event, reg };
+  return { admin, org, event, reg, defaultId, rectoVersoId };
 }
 
 describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
@@ -127,8 +132,8 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(buf.toString("latin1", 0, 5)).toBe("%PDF-");
   }, 30_000);
 
-  it("rend 1 page quand template effectif = default-v1", async () => {
-    const { org, event, reg } = await setupFixtures();
+  it("rend 1 page quand le template effectif est la famille default", async () => {
+    const { org, event, reg, defaultId } = await setupFixtures();
     const { GET } = await import("../route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`);
     const res = await GET(req, {
@@ -136,14 +141,14 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     });
     const buf = await bodyToBuffer(res);
     expect(countPdfPages(buf)).toBe(1);
-    expect(res.headers.get("x-template-id")).toBe("default-v1");
+    expect(res.headers.get("x-template-id")).toBe(defaultId);
   }, 30_000);
 
-  it("rend 2 pages quand Event.badgeTemplateId = recto-verso-v1", async () => {
-    const { org, event, reg } = await setupFixtures();
+  it("rend 2 pages quand l'evenement pointe sur la famille recto-verso", async () => {
+    const { org, event, reg, rectoVersoId } = await setupFixtures();
     await prisma.event.update({
       where: { id: event.id },
-      data: { badgeTemplateId: "recto-verso-v1" },
+      data: { badgeTemplateId: rectoVersoId },
     });
     const { GET } = await import("../route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`);
@@ -152,11 +157,11 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     });
     const buf = await bodyToBuffer(res);
     expect(countPdfPages(buf)).toBe(2);
-    expect(res.headers.get("x-template-id")).toBe("recto-verso-v1");
+    expect(res.headers.get("x-template-id")).toBe(rectoVersoId);
   }, 30_000);
 
-  it("fallback default-v1 quand badgeTemplateId orphelin", async () => {
-    const { org, event, reg } = await setupFixtures();
+  it("repli sur la famille default quand badgeTemplateId est orphelin", async () => {
+    const { org, event, reg, defaultId } = await setupFixtures();
     await prisma.event.update({
       where: { id: event.id },
       data: { badgeTemplateId: "id-inexistant-xyz" },
@@ -166,7 +171,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     const res = await GET(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
     });
-    expect(res.headers.get("x-template-id")).toBe("default-v1");
+    expect(res.headers.get("x-template-id")).toBe(defaultId);
   }, 30_000);
 
   it("retourne 403 EVENT_FORBIDDEN pour un VIEWER (pas de permission badge.print)", async () => {
@@ -196,8 +201,8 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(json.error).toBe("NOT_FOUND");
   });
 
-  it("fallback DEFAULT_TEMPLATE_ID quand PlatformSettings (singleton) est absent", async () => {
-    const { org, event, reg } = await setupFixtures();
+  it("repli sur la famille default quand PlatformSettings (singleton) est absent", async () => {
+    const { org, event, reg, defaultId } = await setupFixtures();
     await prisma.platformSettings.delete({ where: { id: "singleton" } });
     const { GET } = await import("../route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`);
@@ -205,7 +210,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
     });
     expect(res.status).toBe(200);
-    expect(res.headers.get("x-template-id")).toBe("default-v1");
+    expect(res.headers.get("x-template-id")).toBe(defaultId);
   }, 30_000);
 
   it("propage une erreur de stream au reader de la reponse (controller.error)", async () => {

@@ -51,7 +51,7 @@ export default async function EventBadgeSettingsPage({
   const effectiveId = resolveBadgeTemplateId(
     { badgeTemplateId: event.badgeTemplateId },
     organization,
-    platform ?? { badgeTemplateId: "default-v1" },
+    platform ?? { badgeTemplateId: "" },
   );
   const effectiveLevel: EffectiveLevel = event.badgeTemplateId
     ? "event"

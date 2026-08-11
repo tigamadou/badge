@@ -139,6 +139,32 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).fills).not.toContain("#e2e8f0");
   });
 
+  it("applique un arrondi et une bordure a un aplat", () => {
+    const t = build(
+      manifest([
+        {
+          type: "rect", page: 1, x: 0, y: 46, w: 85.6, h: 8,
+          fill: "#ffffff", radiusMm: 1, borderTopPt: 1, borderColor: "category.color",
+        },
+      ]),
+    );
+    // La bordure prend sa couleur d'une source, comme la bande de categorie en mode
+    // neutre : c'est ce que faisait le template historique.
+    expect(renderToJson(t.Component, CTX).fills).toContain("#ffffff");
+  });
+
+  it("applique un arrondi a une image", () => {
+    const t = build(
+      manifest([
+        {
+          type: "image", page: 1, x: 4, y: 6, w: 28, h: 34,
+          source: "participant.photoDataUrl", radiusMm: 1,
+        },
+      ]),
+    );
+    expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,AAA");
+  });
+
   it("resout une couleur de remplissage depuis une source", () => {
     const t = build(
       manifest([{ type: "rect", page: 1, x: 0, y: 46, w: 85.6, h: 8, fill: "category.color" }]),

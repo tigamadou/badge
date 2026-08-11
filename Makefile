@@ -7,6 +7,7 @@
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
         test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
+        validate-badge-templates migrate-badge-template-refs \
         upload deploy upload-prod deploy-prod upload-preprod deploy-preprod \
         upload-prod-dry upload-preprod-dry net-create \
         download-uploads download-db
@@ -333,6 +334,12 @@ test-e2e-ui:
 
 validate-badge-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
+
+# v4 (plan 12) : convertit les anciennes references texte ("default-v1") vers les cuid
+# des templates installes. Idempotent. Utile sur une base de dev anterieure au plan 12 ;
+# une base neuve est deja correcte apres `make db-seed`.
+migrate-badge-template-refs:
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-badge-template-refs.ts
 
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint

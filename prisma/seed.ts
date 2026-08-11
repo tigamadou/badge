@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { generateId } from "../src/lib/generate-id";
+import { ensureReferenceTemplates, defaultTemplateId } from "../src/lib/badge-templates/install";
 
 const prisma = new PrismaClient();
 
@@ -337,6 +338,28 @@ async function main() {
 
   // 4b. Soumissions de profil dans les trois etats (v4 plan 08).
   const superAdmin = await prisma.user.findUnique({ where: { email: "admin@badge.local" } });
+
+  // 4c. Templates de badge livres avec l'application (v4 plan 12). Ils ne sont plus
+  // compiles : le seed les installe comme n'importe quel paquet, et porte desormais la
+  // garantie qu'un template par defaut existe -- garantie qui vivait dans le
+  // @default("default-v1") de PlatformSettings.badgeTemplateId.
+  await ensureReferenceTemplates(superAdmin!.id);
+  const currentSettings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+  const pointsToExisting =
+    currentSettings !== null &&
+    (await prisma.installedBadgeTemplate.count({
+      where: { id: currentSettings.badgeTemplateId },
+    })) > 0;
+  if (!pointsToExisting) {
+    const fallback = await defaultTemplateId();
+    if (fallback) {
+      await prisma.platformSettings.update({
+        where: { id: "singleton" },
+        data: { badgeTemplateId: fallback },
+      });
+    }
+  }
+  console.log("Templates de badge de reference installes.");
   if (
     (await prisma.profileSubmission.count({ where: { userId: historicalParticipant.id } })) === 0
   ) {

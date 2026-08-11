@@ -4,10 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { deletePrefix, uploadFile } from "@/lib/storage";
 import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@/lib/badge-templates/package-reader";
-import { renderProof } from "@/lib/badge-templates/render-proof";
-import { collidesWithRegistry } from "@/lib/badge-templates/resolve";
+import { installTemplate } from "@/lib/badge-templates/install";
 
 export const runtime = "nodejs";
 
@@ -43,62 +41,24 @@ export async function POST(req: NextRequest) {
   if (!read.ok) return badRequest(read.errors);
 
   const { manifest, assets } = read;
-  if (collidesWithRegistry(manifest.family)) {
-    return badRequest([
-      `famille "${manifest.family}" : identifiant reserve par un template livre avec l'application.`,
-    ]);
-  }
 
-  const previous = await prisma.installedBadgeTemplate.findFirst({
-    where: { family: manifest.family },
-    orderBy: { version: "desc" },
-    select: { version: true },
-  });
-  const version = (previous?.version ?? 0) + 1;
-
-  // L'identifiant est genere en amont : il compose le prefixe de stockage, ce qui
-  // permet de nettoyer les ressources si le rendu d'epreuve echoue.
-  const id = crypto.randomUUID();
-  const assetPrefix = `badge-templates/${id}/`;
-
-  let preview: Buffer;
+  // v4 (plan 12) : plus de registre compile, donc plus de collision possible.
+  // Reinstaller une famille livree (`default`) en cree simplement une nouvelle
+  // version, ce qui est le comportement voulu.
+  let created;
   try {
-    preview = await renderProof(manifest, assets, id);
+    created = await installTemplate({
+      manifest,
+      assets,
+      installedById: session.user.id as string,
+    });
   } catch (err) {
-    // Un paquet qui ne s'imprime pas n'entre pas au catalogue, et ne laisse rien
-    // derriere lui. Nettoyage best-effort : son echec ne doit pas masquer l'erreur
-    // de rendu, qui est ce que l'installateur doit lire.
-    /* v8 ignore next -- rien n'a encore ete ecrit sous ce prefixe a ce stade */
-    await deletePrefix(assetPrefix).catch(() => undefined);
+    // Un paquet qui ne s'imprime pas n'entre pas au catalogue. installTemplate a
+    // deja nettoye les ressources ; il reste a traduire l'echec pour l'installateur.
     return badRequest([
       `rendu d'epreuve : le paquet n'a pas pu etre imprime (${(err as Error).message}).`,
     ]);
   }
-
-  for (const asset of assets) {
-    await uploadFile(`${assetPrefix}${asset.path}`, asset.body, asset.contentType);
-  }
-  const previewPath = `${assetPrefix}preview.pdf`;
-  await uploadFile(previewPath, preview, "application/pdf");
-
-  const created = await prisma.installedBadgeTemplate.create({
-    data: {
-      id,
-      family: manifest.family,
-      version,
-      label: manifest.label,
-      description: manifest.description,
-      pages: manifest.page.count,
-      pageWidthMm: manifest.page.widthMm,
-      pageHeightMm: manifest.page.heightMm,
-      layout: manifest as unknown as object,
-      assetPrefix,
-      previewPath,
-      formatVersion: manifest.formatVersion,
-      installedById: session.user.id as string,
-    },
-    select: { id: true, family: true, version: true },
-  });
 
   await logActivity({
     type: "BADGE_TEMPLATE_INSTALLED",

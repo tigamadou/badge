@@ -26,7 +26,7 @@ export default async function StaffBadgeSettingsPage() {
     select: { badgeTemplateId: true },
   });
 
-  const currentValue = platform?.badgeTemplateId ?? "default-v1";
+  const currentValue = platform?.badgeTemplateId ?? "";
 
   const templates: TemplateSummary[] = await listAvailableTemplates();
 

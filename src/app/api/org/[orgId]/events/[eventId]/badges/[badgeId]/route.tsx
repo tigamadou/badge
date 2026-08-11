@@ -4,7 +4,6 @@ import React from "react";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { prisma } from "@/lib/prisma";
 import { resolveBadgeTemplateId } from "@/lib/settings";
-import { DEFAULT_TEMPLATE_ID } from "@/lib/badge-templates";
 import { resolveTemplate } from "@/lib/badge-templates/resolve";
 import { buildTemplateContext } from "@/lib/badge-templates/build-context";
 
@@ -12,16 +11,16 @@ export const runtime = "nodejs";
 
 type Params = { orgId: string; eventId: string; badgeId: string };
 
-// Lit le badgeTemplateId de PlatformSettings (singleton).
+// Lit le badgeTemplateId de PlatformSettings (singleton). En son absence, on rend une
+// chaine vide : resolveTemplate la traitera comme un identifiant inconnu et retombera
+// sur la famille `default` en le signalant. Il n'existe plus de constante de repli
+// depuis le retrait du registre compile (plan 12).
 async function getPlatformBadgeTemplateId(): Promise<{ badgeTemplateId: string }> {
   const platform = await prisma.platformSettings.findUnique({
     where: { id: "singleton" },
     select: { badgeTemplateId: true },
   });
-  if (!platform) {
-    return { badgeTemplateId: DEFAULT_TEMPLATE_ID };
-  }
-  return platform;
+  return platform ?? { badgeTemplateId: "" };
 }
 
 // Garde par la permission atomique `badge.print` (cf. matrice multi-tenancy-rbac.md).

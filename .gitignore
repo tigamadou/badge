@@ -55,9 +55,6 @@ next-env.d.ts
 /playwright-report/
 /playwright/.cache/
 
-# v2-12 : preview PNG copies au build (sources versionnees, copies non)
-/public/badge-previews/
-
 .plan-logs
 .superpowers
 

@@ -111,6 +111,13 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 > `make db-seed` ensuite pour retrouver les comptes de dev. Les tests e2e seedent
 > leurs propres fixtures (`e2e/helpers/`) et ne dependent pas du seed global.
 
+> **Templates de badge** (v4, plan 12) : `make db-seed` installe aussi les modeles de
+> badge livres avec l'application, depuis `prisma/badge-templates/`. Sans lui, aucun
+> badge n'est imprimable et `resolveTemplate` echoue explicitement. Deux cibles
+> associees : `make validate-badge-templates` verifie qu'aucune reference n'est
+> orpheline, et `make migrate-badge-template-refs` convertit les anciennes references
+> texte d'une base anterieure au plan 12 (inutile sur une base neuve).
+
 **Pre-requis Playwright / MinIO** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
 (MinIO) doit tourner (`make dev` le demarre) pour les tests d'upload.

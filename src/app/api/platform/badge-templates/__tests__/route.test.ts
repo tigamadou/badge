@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import JSZip from "jszip";
 import { prisma } from "@/lib/prisma";
+import { ensureReferenceTemplates } from "@/lib/badge-templates/install";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -137,16 +138,18 @@ describe("POST /api/platform/badge-templates", () => {
     expect(res.status).toBe(400);
   });
 
-  it("refuse une famille qui collisionne avec le registre compile (400)", async () => {
+  it("reinstaller une famille livree en cree une nouvelle version", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
 
+    // v4 (plan 12) : plus de registre compile, donc plus de famille reservee.
+    // `default` est un template installe comme un autre : le reinstaller le versionne.
+    await ensureReferenceTemplates(staff.id);
     const res = await post(
-      await archiveOf({ "manifest.json": JSON.stringify(manifestOf({ family: "default-v1" })) }),
+      await archiveOf({ "manifest.json": JSON.stringify(manifestOf({ family: "default" })) }),
     );
-    expect(res.status).toBe(400);
-    expect((await res.json()).errors.join()).toMatch(/reserve/i);
-    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
+    expect(res.status).toBe(201);
+    expect((await res.json()).version).toBe(2);
   });
 
   it("incremente la version a la reinstallation d'une meme famille", async () => {

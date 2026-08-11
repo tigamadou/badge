@@ -1,7 +1,6 @@
 import type { InstalledBadgeTemplate } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFile } from "@/lib/storage";
-import { BADGE_TEMPLATES, DEFAULT_TEMPLATE_ID, getTemplate, listTemplates } from "./index";
 import type { BadgeTemplate } from "./types";
 import { buildDeclarativeTemplate, type AssetResolver } from "./declarative";
 import type { Block, TemplateManifest } from "./declarative/manifest-types";
@@ -14,6 +13,10 @@ export type TemplateSummary = {
   pageSize: { width: string; height: string };
   previewSrc: string;
 };
+
+// Famille livree avec l'application, installee par le seed. Elle sert de repli quand
+// un identifiant ne designe plus rien.
+export const DEFAULT_FAMILY = "default";
 
 // L'apercu d'un template installe est un PDF stocke. Il est servi par
 // /api/files/[...path], qui traite les cles `badge-templates/` comme non sensibles.
@@ -62,30 +65,41 @@ async function buildFromRow(row: InstalledBadgeTemplate): Promise<BadgeTemplate>
   };
 }
 
-// Resout un identifiant, quelle que soit son origine. Un template ARCHIVE reste
-// resolvable : c'est ce qui fige les badges des evenements deja configures. Le filtre
-// sur `archived` n'a lieu que dans listAvailableTemplates.
-export async function resolveTemplate(id: string): Promise<BadgeTemplate> {
-  const fromRegistry = getTemplate(id);
-  if (fromRegistry) return fromRegistry;
+// Le repli ne peut plus viser une constante de code : il vise la famille `default`,
+// dont le seed garantit l'existence. Une base sans template est une anomalie
+// d'exploitation qu'il vaut mieux voir echouer bruyamment qu'imprimer un badge vide.
+async function fallbackTemplate(): Promise<BadgeTemplate> {
+  const row = await prisma.installedBadgeTemplate.findFirst({
+    where: { family: DEFAULT_FAMILY },
+    orderBy: { version: "desc" },
+  });
+  if (!row) {
+    throw new Error(
+      `resolveTemplate : aucune famille "${DEFAULT_FAMILY}" en base. Le seed n'a pas ete execute (make db-seed).`,
+    );
+  }
+  return buildFromRow(row);
+}
 
+// Un template ARCHIVE reste resolvable : c'est ce qui fige les badges des evenements
+// deja configures. Le filtre sur `archived` n'a lieu que dans listAvailableTemplates.
+export async function resolveTemplate(id: string): Promise<BadgeTemplate> {
   const row = await prisma.installedBadgeTemplate.findUnique({ where: { id } });
   if (row) return buildFromRow(row);
 
-  console.warn(`[badge-templates] templateId "${id}" introuvable -- repli sur "${DEFAULT_TEMPLATE_ID}"`);
-  return getTemplate(DEFAULT_TEMPLATE_ID)!;
+  console.warn(
+    `[badge-templates] templateId "${id}" introuvable -- repli sur la famille "${DEFAULT_FAMILY}"`,
+  );
+  return fallbackTemplate();
 }
 
 // Distincte de resolveTemplate, qui retombe toujours sur le defaut : ici on veut
 // savoir si l'identifiant designe reellement un template, pour valider une saisie.
 export async function templateExists(id: string): Promise<boolean> {
-  if (getTemplate(id)) return true;
-  const count = await prisma.installedBadgeTemplate.count({ where: { id } });
-  return count > 0;
+  return (await prisma.installedBadgeTemplate.count({ where: { id } })) > 0;
 }
 
-// Ce qui est PROPOSABLE : le registre, plus la version la plus recente de chaque
-// famille non archivee.
+// Ce qui est PROPOSABLE : la version la plus recente de chaque famille non archivee.
 export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
   const rows = await prisma.installedBadgeTemplate.findMany({
     where: { archived: false },
@@ -97,16 +111,7 @@ export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
     if (!latestByFamily.has(row.family)) latestByFamily.set(row.family, row);
   }
 
-  const fromRegistry: TemplateSummary[] = listTemplates().map((t) => ({
-    id: t.meta.id,
-    label: t.meta.label,
-    description: t.meta.description,
-    pages: t.meta.pages,
-    pageSize: t.meta.pageSize,
-    previewSrc: t.meta.previewSrc,
-  }));
-
-  const fromDatabase: TemplateSummary[] = [...latestByFamily.values()].map((row) => ({
+  return [...latestByFamily.values()].map((row) => ({
     id: row.id,
     label: row.label,
     description: row.description,
@@ -114,11 +119,4 @@ export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
     pageSize: { width: `${row.pageWidthMm}mm`, height: `${row.pageHeightMm}mm` },
     previewSrc: previewUrl(row.previewPath),
   }));
-
-  return [...fromRegistry, ...fromDatabase];
-}
-
-// Un `family` installe ne doit jamais masquer un identifiant du registre compile.
-export function collidesWithRegistry(family: string): boolean {
-  return Object.keys(BADGE_TEMPLATES).includes(family);
 }

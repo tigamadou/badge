@@ -104,16 +104,20 @@ de periode (date seule, ou « Du … au … »), et le composant `EventInfoCard`
 (`src/components/event/`) presente le bloc d'informations en variantes `public`
 et `staff`.
 
-## Templates de badge (plans 10 et 11)
+## Templates de badge (plans 10 à 12)
 
-Un template de badge a deux origines possibles : le **registre compilé**
-(`src/lib/badge-templates/index.ts`, composants React livrés avec l'application) et le
-**catalogue installé** (table `InstalledBadgeTemplate`, manifestes JSON téléversés par le
-staff plateforme sans déploiement). `src/lib/badge-templates/resolve.ts` est la porte
-d'entrée unique : `resolveTemplate(id)` interroge le registre puis la base et retombe sur
-le défaut en journalisant, `templateExists(id)` valide une saisie sans repli, et
-`listAvailableTemplates()` rend ce qui est proposable. Aucun écran ni aucune route ne sait
-de quelle origine vient un template.
+Un template de badge est une **donnée**, jamais du code : la table
+`InstalledBadgeTemplate` porte des manifestes JSON téléversés par le staff plateforme sans
+déploiement. Les deux modèles livrés (`default`, `recto-verso`) n'ont aucun statut
+particulier — leurs manifestes vivent sous `prisma/badge-templates/` et sont installés par
+le seed, par le même chemin de code qu'un paquet téléversé.
+
+`src/lib/badge-templates/resolve.ts` est la porte d'entrée unique : `resolveTemplate(id)`
+rend le template et retombe sur la famille `default` en journalisant,
+`templateExists(id)` valide une saisie sans repli, et `listAvailableTemplates()` rend ce
+qui est proposable. La garantie qu'un template par défaut existe est portée par le **seed**
+et non par le schéma ; si la famille `default` manque, la résolution échoue bruyamment en
+nommant `make db-seed`.
 
 Chaque installation crée une **version figée** : réinstaller ajoute une ligne, ne met
 jamais à jour. L'identifiant stocké par la cascade `Event → Org → Platform` est le `cuid`

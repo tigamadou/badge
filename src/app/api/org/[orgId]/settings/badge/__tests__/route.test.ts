@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@/lib/badge-templates/install";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -22,7 +23,7 @@ function withSession(user: {
 async function setupPlatform() {
   await prisma.platformSettings.upsert({
     where: { id: "singleton" },
-    update: { badgeTemplateId: "default-v1" },
+    update: { badgeTemplateId: await installedDefaultId() },
     create: {
       id: "singleton",
       smtpHost: "mailpit",
@@ -34,7 +35,7 @@ async function setupPlatform() {
       recaptchaEnabled: false,
       recaptchaSiteKey: "",
       recaptchaSecretKey: "",
-      badgeTemplateId: "default-v1",
+      badgeTemplateId: await installedDefaultId(),
     },
   });
 }
@@ -68,6 +69,18 @@ function makeReq(orgId: string, body: unknown): NextRequest {
   });
 }
 
+// v4 (plan 12) : les templates livres sont installes en base. Un identifiant valide
+// est donc un cuid, plus une chaine litterale.
+async function installedDefaultId(): Promise<string> {
+  await ensureReferenceTemplates("seed-test");
+  return (await defaultTemplateId())!;
+}
+
+async function installedRectoVersoId(): Promise<string> {
+  await ensureReferenceTemplates("seed-test");
+  return (await familyTemplateId("recto-verso"))!;
+}
+
 describe("PATCH /api/org/[orgId]/settings/badge", () => {
   beforeEach(async () => {
     vi.mocked(getServerSession).mockReset();
@@ -80,7 +93,7 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
       data: { name: "Org401", slug: `org-401-${Date.now()}` },
     });
     const { PATCH } = await import("../route");
-    const req = makeReq(org.id, { badgeTemplateId: "default-v1" });
+    const req = makeReq(org.id, { badgeTemplateId: await installedDefaultId() });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(401);
   });
@@ -88,7 +101,7 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
   it("returns 403 for AUDITOR (below MANAGER)", async () => {
     const { org } = await makeOrgWithMember("AUDITOR");
     const { PATCH } = await import("../route");
-    const req = makeReq(org.id, { badgeTemplateId: "default-v1" });
+    const req = makeReq(org.id, { badgeTemplateId: await installedDefaultId() });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
   });
@@ -96,15 +109,15 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
   it("MANAGER updates with valid templateId -> persist on Organization + log ORG_UPDATED", async () => {
     const { user, org } = await makeOrgWithMember("MANAGER");
     const { PATCH } = await import("../route");
-    const req = makeReq(org.id, { badgeTemplateId: "recto-verso-v1" });
+    const req = makeReq(org.id, { badgeTemplateId: await installedRectoVersoId() });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
-    expect(json.badgeTemplateId).toBe("recto-verso-v1");
+    expect(json.badgeTemplateId).toBe(await installedRectoVersoId());
 
     const reloaded = await prisma.organization.findUnique({ where: { id: org.id } });
-    expect(reloaded?.badgeTemplateId).toBe("recto-verso-v1");
+    expect(reloaded?.badgeTemplateId).toBe(await installedRectoVersoId());
 
     const log = await prisma.activityLog.findFirst({
       where: { type: "ORG_UPDATED", userId: user.id, orgId: org.id },
@@ -112,14 +125,14 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
     expect(log).not.toBeNull();
     const details = log?.details as { field: string; value: string | null };
     expect(details.field).toBe("badgeTemplateId");
-    expect(details.value).toBe("recto-verso-v1");
+    expect(details.value).toBe(await installedRectoVersoId());
   });
 
   it("OWNER updates with null -> persist null (heritage platform)", async () => {
     const { user, org } = await makeOrgWithMember("OWNER");
     await prisma.organization.update({
       where: { id: org.id },
-      data: { badgeTemplateId: "recto-verso-v1" },
+      data: { badgeTemplateId: await installedRectoVersoId() },
     });
 
     const { PATCH } = await import("../route");
@@ -172,7 +185,7 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
     const spy = vi.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("db boom"));
 
     const { PATCH } = await import("../route");
-    const req = makeReq(org.id, { badgeTemplateId: "default-v1" });
+    const req = makeReq(org.id, { badgeTemplateId: await installedDefaultId() });
     await expect(PATCH(req, { params: Promise.resolve({ orgId: org.id }) })).rejects.toThrow("db boom");
     spy.mockRestore();
   });

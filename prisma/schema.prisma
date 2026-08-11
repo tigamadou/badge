@@ -433,9 +433,11 @@ model PlatformSettings {
   recaptchaSiteKey   String  @default("")
   recaptchaSecretKey String  @default("")
   // v2-12 : template de badge par defaut de la plateforme (racine de la cascade).
-  // NOT NULL avec default -- garantit que resolveBadgeTemplateId renvoie toujours
-  // une valeur.
-  badgeTemplateId    String  @default("default-v1")
+  // v4 (plan 12) : le defaut n'est plus un identifiant litteral -- il designe desormais
+  // une ligne InstalledBadgeTemplate, dont le cuid n'est pas connu a l'avance. La chaine
+  // vide signifie « aucune racine definie » : resolveTemplate retombe alors sur la
+  // famille `default`, dont le seed garantit l'existence.
+  badgeTemplateId    String  @default("")
 }
 
 // Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs
