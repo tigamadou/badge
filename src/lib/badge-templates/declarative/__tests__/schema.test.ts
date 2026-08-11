@@ -265,6 +265,21 @@ describe("parseManifest", () => {
     expect(res.ok === false && res.errors.length).toBeGreaterThan(1);
   });
 
+  it("accepte un apercu declare et present dans le paquet", () => {
+    const res = parse({ preview: "assets/apercu.png" }, ["assets/apercu.png"]);
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
+  it("accepte un manifeste sans apercu", () => {
+    expect(parse().ok).toBe(true);
+  });
+
+  it("refuse un apercu absent du paquet", () => {
+    const res = parse({ preview: "assets/absent.png" }, []);
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/apercu/i);
+  });
+
   it("refuse une famille qui n'est pas un slug kebab-case", () => {
     expect(parse({ family: "Salon 2027" }).ok).toBe(false);
   });

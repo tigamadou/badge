@@ -68,6 +68,9 @@ export type TemplateManifest = {
   family: string;
   label: string;
   description: string;
+  // Image d'apercu du badge, fournie par l'auteur du paquet et affichee au catalogue.
+  // Optionnelle : sans elle, l'interface montre un placeholder.
+  preview?: string;
   page: { widthMm: number; heightMm: number; count: number };
   fonts?: FontDeclaration[];
   blocks: Block[];

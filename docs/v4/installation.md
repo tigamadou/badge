@@ -118,6 +118,13 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 > orpheline, et `make migrate-badge-template-refs` convertit les anciennes references
 > texte d'une base anterieure au plan 12 (inutile sur une base neuve).
 
+| Commande | Description |
+|----------|-------------|
+| `make new-badge-template NAME=<slug>` | Cree un squelette de template dans `badge-templates/<slug>/` (atelier gitignore) |
+| `make pack-badge-template NAME=<slug>` | Empaquette ce dossier en archive installable, apres validation du manifeste |
+
+Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
+
 **Pre-requis Playwright / MinIO** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
 (MinIO) doit tourner (`make dev` le demarre) pour les tests d'upload.

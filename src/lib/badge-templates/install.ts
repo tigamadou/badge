@@ -45,8 +45,11 @@ export async function installTemplate(args: {
   for (const asset of assets) {
     await uploadFile(`${assetPrefix}${asset.path}`, asset.body, asset.contentType);
   }
-  const previewPath = `${assetPrefix}preview.pdf`;
-  await uploadFile(previewPath, preview, "application/pdf");
+  const proofPath = `${assetPrefix}proof.pdf`;
+  await uploadFile(proofPath, preview, "application/pdf");
+  // L'apercu affiche est l'image fournie par le paquet ; le PDF ne sert plus que de
+  // preuve d'impression, telechargeable depuis la page de detail.
+  const previewPath = manifest.preview ? `${assetPrefix}${manifest.preview}` : null;
 
   const created = await prisma.installedBadgeTemplate.create({
     data: {
@@ -61,6 +64,7 @@ export async function installTemplate(args: {
       layout: manifest as unknown as object,
       assetPrefix,
       previewPath,
+      proofPath,
       formatVersion: manifest.formatVersion,
       installedById,
     },

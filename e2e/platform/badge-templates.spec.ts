@@ -79,7 +79,10 @@ test.describe("Platform — Templates de badge", () => {
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
     expect(installed).not.toBeNull();
     expect(installed?.version).toBe(1);
-    expect(installed?.previewPath).toBeTruthy();
+    // Ce paquet ne declare pas d'image : le catalogue montrera le placeholder. Le PDF
+    // d'epreuve, lui, est toujours produit — c'est la preuve que le paquet s'imprime.
+    expect(installed?.previewPath).toBeNull();
+    expect(installed?.proofPath).toBeTruthy();
 
     // Un membre d'organisation peut le selectionner pour son evenement.
     const { orgId, eventId } = await createTestEvent({ scope: "bt-use" });
@@ -162,6 +165,35 @@ test.describe("Platform — Templates de badge", () => {
     await page.goto(`/platform/badge-templates/${installed!.id}`);
     await expect(page).toHaveURL(new RegExp(`/platform/badge-templates/${installed!.id}`));
     await expect(page.getByText(evenement!.title)).toBeVisible();
+  });
+
+  test("un template qui fournit une image l'affiche au lieu du placeholder", async ({ page }) => {
+    const family = `e2e-image-${Date.now()}`;
+    const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const manifest = JSON.parse(manifestOf(family));
+    manifest.preview = "assets/apercu.png";
+
+    const archive = await writeArchive(`${family}.zip`, {
+      "manifest.json": JSON.stringify(manifest),
+      "assets/apercu.png": PNG,
+    });
+
+    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-image" });
+    await loginAs(page, staff);
+
+    await page.goto("/platform/badge-templates");
+    await page.setInputFiles('input[type="file"]', archive);
+    await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
+
+    const prisma = getDb();
+    const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
+    // L'image devient l'apercu ; le PDF reste produit comme preuve d'impression.
+    expect(installed?.previewPath).toBe(`badge-templates/${installed!.id}/assets/apercu.png`);
+    expect(installed?.proofPath).toBe(`badge-templates/${installed!.id}/proof.pdf`);
+
+    await page.goto(`/platform/badge-templates/${installed!.id}`);
+    await expect(page).toHaveURL(new RegExp(`/platform/badge-templates/${installed!.id}`));
+    await expect(page.getByRole("link", { name: /pdf d'épreuve/i })).toBeVisible();
   });
 
   test("une archive invalide est refusee avec ses erreurs", async ({ page }) => {

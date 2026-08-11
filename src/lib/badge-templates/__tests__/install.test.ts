@@ -14,11 +14,14 @@ describe("ensureReferenceTemplates", () => {
     expect(families.map((f) => f.family).sort()).toEqual(["default", "recto-verso"]);
   });
 
-  it("genere un apercu pour chaque famille installee", async () => {
+  it("produit un PDF d'epreuve pour chaque famille installee", async () => {
     await ensureReferenceTemplates("seed");
     const rows = await prisma.installedBadgeTemplate.findMany();
     for (const row of rows) {
-      expect(row.previewPath).toBe(`badge-templates/${row.id}/preview.pdf`);
+      expect(row.proofPath).toBe(`badge-templates/${row.id}/proof.pdf`);
+      // Les paquets livres ne fournissent pas d'image : le catalogue montre le
+      // placeholder tant qu'aucune n'est deposee.
+      expect(row.previewPath).toBeNull();
     }
   });
 
@@ -62,6 +65,47 @@ describe("installTemplate", () => {
     expect(created.version).toBe(1);
     const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: created.id } });
     expect(row?.assetPrefix).toBe(`badge-templates/${created.id}/`);
+  });
+
+  it("stocke l'image d'apercu declaree et le PDF d'epreuve separement", async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const manifest: TemplateManifest = {
+      formatVersion: 1,
+      family: "avec-apercu",
+      label: "Avec apercu",
+      description: "",
+      preview: "assets/apercu.png",
+      page: { widthMm: 85.6, heightMm: 54, count: 1 },
+      blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
+    };
+
+    const created = await installTemplate({
+      manifest,
+      assets: [{ path: "assets/apercu.png", body: png, contentType: "image/png" }],
+      installedById: "u1",
+    });
+
+    const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: created.id } });
+    expect(row?.previewPath).toBe(`badge-templates/${created.id}/assets/apercu.png`);
+    expect(row?.proofPath).toBe(`badge-templates/${created.id}/proof.pdf`);
+  });
+
+  it("laisse previewPath nul quand le paquet ne declare pas d'apercu", async () => {
+    const manifest: TemplateManifest = {
+      formatVersion: 1,
+      family: "sans-apercu",
+      label: "Sans apercu",
+      description: "",
+      page: { widthMm: 85.6, heightMm: 54, count: 1 },
+      blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
+    };
+
+    const created = await installTemplate({ manifest, assets: [], installedById: "u1" });
+
+    const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: created.id } });
+    expect(row?.previewPath).toBeNull();
+    // Le PDF est produit meme sans apercu : c'est la preuve que le paquet s'imprime.
+    expect(row?.proofPath).toBe(`badge-templates/${created.id}/proof.pdf`);
   });
 
   it("propage l'echec d'un rendu impossible", async () => {

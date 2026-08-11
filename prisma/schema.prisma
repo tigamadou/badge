@@ -362,7 +362,11 @@ model InstalledBadgeTemplate {
   pageHeightMm  Float
   layout        Json
   assetPrefix   String
+  // v4 (spec 14) : previewPath designe l'IMAGE d'apercu declaree par le manifeste
+  // (null si le paquet n'en fournit pas) ; proofPath le PDF produit a l'installation,
+  // conserve pour verifier le rendu aux dimensions reelles.
   previewPath   String?
+  proofPath     String?
   formatVersion Int
   installedById String
   archived      Boolean   @default(false)

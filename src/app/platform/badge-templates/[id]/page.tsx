@@ -49,9 +49,9 @@ export default async function BadgeTemplateDetailPage({
   const apercu = previewUrl(template.previewPath);
   const manifeste = JSON.stringify(template.layout, null, 2);
   const totalUsages = events.length + orgs.length + platformCount;
-  // L'apercu vit sous le meme prefixe que les ressources : ce n'est pas une ressource
-  // du paquet, on ne le compte pas comme telle.
-  const ressources = objets.filter((o) => !o.key.endsWith("/preview.pdf"));
+  // proof.pdf est produit a l'installation, pas fourni par le paquet : il n'a pas sa
+  // place dans la liste des ressources embarquees. L'image d'apercu, elle, en est une.
+  const ressources = objets.filter((o) => !o.key.endsWith("/proof.pdf"));
 
   return (
     <div className="space-y-6">
@@ -206,10 +206,22 @@ export default async function BadgeTemplateDetailPage({
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold text-slate-900">Manifeste</h2>
-          <ManifestDownloadButton
-            json={manifeste}
-            filename={`${template.family}-v${template.version}.json`}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {template.proofPath && (
+              <a
+                href={previewUrl(template.proofPath)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+              >
+                <Icon name="download" size={15} /> PDF d&apos;épreuve
+              </a>
+            )}
+            <ManifestDownloadButton
+              json={manifeste}
+              filename={`${template.family}-v${template.version}.json`}
+            />
+          </div>
         </div>
         <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-slate-50 p-3 text-[12px] leading-relaxed text-slate-700">
           {manifeste}

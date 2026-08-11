@@ -63,6 +63,7 @@ const manifestSchema = z.object({
   family: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/),
   label: z.string().min(1).max(120),
   description: z.string().max(1000),
+  preview: z.string().min(1).optional(),
   page: z.object({
     widthMm: z.number().positive().max(1000),
     heightMm: z.number().positive().max(1000),
@@ -201,6 +202,9 @@ export function parseManifest(input: unknown, entries: string[]): ParseResult {
     if (!entries.includes(font.file)) {
       errors.push(`police "${font.alias}" : fichier "${font.file}" absent du paquet.`);
     }
+  }
+  if (parsed.data.preview && !entries.includes(parsed.data.preview)) {
+    errors.push(`apercu : fichier "${parsed.data.preview}" absent du paquet.`);
   }
   parsed.data.blocks.forEach((block, i) =>
     checkBlock(block as Block, i, parsed.data, entries, errors),

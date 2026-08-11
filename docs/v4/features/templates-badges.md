@@ -64,15 +64,46 @@ Archiver retire le template du sélecteur **sans supprimer ni la ligne ni ses re
 `resolveTemplate` continue de le résoudre : les événements qui le référencent impriment
 exactement le même badge qu'avant. Seules `listAvailableTemplates` filtre sur `archived`.
 
-### Aperçu
+### Aperçu et PDF d'épreuve
 
-L'aperçu est le PDF produit par le rendu d'épreuve, servi par `/api/files/[...path]` —
-les clés `badge-templates/` y sont non sensibles. Il est **généré**, jamais fourni par
-l'installateur : un aperçu déposé pourrait mentir sur le rendu réel.
+Deux fichiers distincts, deux rôles :
 
-Le composant partagé `src/components/ui/TemplatePreview.tsx` l'affiche partout où c'est
-nécessaire, en aiguillant selon la source : image, `<object>` PDF, ou vignette neutre en
-l'absence d'aperçu.
+| Fichier | Origine | Rôle |
+|---|---|---|
+| **Image d'aperçu** (`previewPath`) | Fournie par le paquet, déclarée par le champ `preview` du manifeste | Ce qu'on voit au catalogue et sur la page de détail |
+| **PDF d'épreuve** (`proofPath`) | Produit à l'installation | Prouve que le paquet s'imprime ; téléchargeable pour vérifier le rendu aux dimensions réelles |
+
+Le PDF servait d'aperçu jusqu'à la spec 14. Le problème : affiché dans un `<object>`, il
+passe par le lecteur PDF du navigateur, qui superpose sa barre d'outils à la vignette. Une
+image ordinaire n'a pas ce défaut.
+
+**Le champ `preview` est optionnel.** Sans lui, l'interface affiche un placeholder — c'est
+le cas des deux modèles livrés, qui ne fournissent pas d'image. Le rendu d'épreuve, lui,
+reste systématique : c'est la garantie qu'un template accepté au catalogue s'imprime.
+
+Les deux fichiers sont servis par `/api/files/[...path]`, où les clés `badge-templates/`
+sont non sensibles. Le composant partagé `src/components/ui/TemplatePreview.tsx` aiguille
+selon la source : image, `<object>` PDF (pour les templates installés avant la spec 14),
+ou placeholder.
+
+## Créer un template
+
+```bash
+make new-badge-template NAME=salon-2027   # cree le squelette
+# deposer l'image dans badge-templates/salon-2027/assets/apercu.png
+# modifier badge-templates/salon-2027/manifest.json
+make pack-badge-template NAME=salon-2027  # produit l'archive
+```
+
+Le squelette naît dans `badge-templates/<nom>/`, à la racine du dépôt — un dossier
+**gitignoré**, atelier de travail à ne pas confondre avec `prisma/badge-templates/`, qui
+contient les paquets de référence installés par le seed. Il contient un `manifest.json`
+minimal mais fonctionnel, un `README.md` documentant le format, et un dossier `assets/`.
+
+`pack-badge-template` **valide le manifeste avant d'écrire l'archive** et refuse d'en
+produire une invalide : mieux vaut échouer à l'empaquetage, où le message est immédiat,
+qu'au téléversement. En particulier, un `preview` déclaré sans image déposée fait échouer
+l'empaquetage — c'est le rappel le plus utile possible.
 
 ### Où consulter un template
 

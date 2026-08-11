@@ -91,7 +91,9 @@ describe("POST /api/platform/badge-templates", () => {
     expect(body).toMatchObject({ family: "salon-2027", version: 1 });
 
     const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: body.id } });
-    expect(row?.previewPath).toBe(`badge-templates/${body.id}/preview.pdf`);
+    // Ce paquet ne declare pas d'image : pas d'apercu, mais un PDF d'epreuve.
+    expect(row?.previewPath).toBeNull();
+    expect(row?.proofPath).toBe(`badge-templates/${body.id}/proof.pdf`);
     expect(row?.installedById).toBe(staff.id);
 
     const log = await prisma.activityLog.findFirst({ where: { type: "BADGE_TEMPLATE_INSTALLED" } });
