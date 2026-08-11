@@ -193,7 +193,9 @@ test.describe("Platform — Templates de badge", () => {
 
     await page.goto(`/platform/badge-templates/${installed!.id}`);
     await expect(page).toHaveURL(new RegExp(`/platform/badge-templates/${installed!.id}`));
-    await expect(page.getByRole("link", { name: /pdf d'épreuve/i })).toBeVisible();
+    // Sur le detail, l'apercu est le PDF d'epreuve : le rendu reel, affiche
+    // directement. L'image fournie sert de vignette au catalogue.
+    await expect(page.locator(`object[data="/api/files/${installed!.proofPath}"]`)).toHaveCount(1);
   });
 
   test("une archive invalide est refusee avec ses erreurs", async ({ page }) => {

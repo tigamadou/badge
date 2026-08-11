@@ -367,8 +367,14 @@ logs:
 # ============================================================
 #  Base de donnees (dev)
 # ============================================================
+# Le client Prisma est genere DEUX fois : dans le conteneur (execution) et sur l'hote
+# (types lus par l'editeur). Sans la seconde, l'IDE ignore tout modele ajoute et signale
+# « Property 'x' does not exist on type 'PrismaClient' » alors que `make typecheck` passe.
+# La generation hote est silencieuse et non bloquante : elle echoue sans casser la cible
+# si les node_modules de l'hote sont absents (installation 100% conteneur).
 db-push:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db push
+	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
 
 db-seed:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
@@ -384,6 +390,7 @@ db-studio:
 
 db-generate:
 	docker compose -f docker-compose.dev.yml exec app npx prisma generate
+	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
 
 db-reset:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db push --force-reset

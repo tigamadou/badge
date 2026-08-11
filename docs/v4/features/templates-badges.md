@@ -68,14 +68,18 @@ exactement le même badge qu'avant. Seules `listAvailableTemplates` filtre sur `
 
 Deux fichiers distincts, deux rôles :
 
-| Fichier | Origine | Rôle |
+| Fichier | Origine | Où il s'affiche |
 |---|---|---|
-| **Image d'aperçu** (`previewPath`) | Fournie par le paquet, déclarée par le champ `preview` du manifeste | Ce qu'on voit au catalogue et sur la page de détail |
-| **PDF d'épreuve** (`proofPath`) | Produit à l'installation | Prouve que le paquet s'imprime ; téléchargeable pour vérifier le rendu aux dimensions réelles |
+| **Image d'aperçu** (`previewPath`) | Fournie par le paquet, déclarée par le champ `preview` du manifeste | La **vignette du catalogue** et le sélecteur de badge |
+| **PDF d'épreuve** (`proofPath`) | Produit à l'installation | L'**aperçu de la page de détail**, affiché directement |
 
-Le PDF servait d'aperçu jusqu'à la spec 14. Le problème : affiché dans un `<object>`, il
-passe par le lecteur PDF du navigateur, qui superpose sa barre d'outils à la vignette. Une
-image ordinaire n'a pas ce défaut.
+La répartition suit l'usage de chaque écran. Le catalogue liste des dizaines de modèles :
+il lui faut des vignettes légères, et une image ordinaire s'affiche sans lecteur
+intercalé. La page de détail sert au contraire à examiner **un** modèle : on y veut le
+rendu réel aux dimensions exactes, donc le PDF, visible sans avoir à cliquer.
+
+Jusqu'à la spec 14, le PDF servait aux deux, y compris comme vignette — où le lecteur du
+navigateur superposait sa barre d'outils, illisible en petit.
 
 **Le champ `preview` est optionnel.** Sans lui, l'interface affiche un placeholder — c'est
 le cas des deux modèles livrés, qui ne fournissent pas d'image. Le rendu d'épreuve, lui,
@@ -115,7 +119,8 @@ l'empaquetage — c'est le rappel le plus utile possible.
 
 La **page de détail** est en lecture seule, accessible à tout staff, et rassemble :
 
-- l'aperçu en grand, avec un lien pour l'ouvrir en plein écran ;
+- l'aperçu en grand — le **PDF d'épreuve**, donc le rendu réel — avec un lien pour
+  l'ouvrir en plein écran ;
 - **qui utilise cette version** — événements, organisations, défaut de la plateforme.
   Zéro utilisation est affiché explicitement : c'est l'information qui permet d'archiver
   sans risque ;
