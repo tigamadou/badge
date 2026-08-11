@@ -5,6 +5,7 @@ import {
   approveProfile,
   rejectProfile,
   getCurrentSubmission,
+  canRegisterToEvent,
 } from "@/lib/profile-review";
 
 const COMPLETE = {
@@ -179,5 +180,23 @@ describe("getCurrentSubmission", () => {
     const reloaded = await prisma.profileSubmission.findUnique({ where: { id: first!.id } });
     expect(reloaded?.photo).toBe("profile/u1/photos/p.png");
     expect(reloaded?.status).toBe("REJECTED");
+  });
+});
+
+describe("canRegisterToEvent", () => {
+  it("autorise un profil en attente d'examen", () => {
+    expect(canRegisterToEvent("PENDING")).toBe(true);
+  });
+
+  it("autorise un profil approuve", () => {
+    expect(canRegisterToEvent("APPROVED")).toBe(true);
+  });
+
+  it("refuse un profil incomplet", () => {
+    expect(canRegisterToEvent("INCOMPLETE")).toBe(false);
+  });
+
+  it("refuse un profil rejete tant que les pieces ne sont pas resoumises", () => {
+    expect(canRegisterToEvent("REJECTED")).toBe(false);
   });
 });

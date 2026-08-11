@@ -1,17 +1,29 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { safeInternalPath } from "@/lib/safe-path";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  // v4 (plan 09) : `callbackUrl` etait emis par plusieurs pages mais jamais lu ici,
+  // ce qui renvoyait tout le monde sur /select et cassait le fil de l'inscription.
+  const callbackUrl = safeInternalPath(useSearchParams().get("callbackUrl"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,7 +44,7 @@ export default function LoginPage() {
       setError("Email ou mot de passe incorrect");
       setLoading(false);
     } else {
-      router.push("/select");
+      router.push(callbackUrl ?? "/select");
     }
   }
 

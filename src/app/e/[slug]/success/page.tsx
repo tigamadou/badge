@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicSettings } from "@/lib/settings";
 import { PublicEventLayout } from "@/components/public/PublicEventLayout";
@@ -23,6 +25,19 @@ export default async function SuccessPage({
   const event = await prisma.event.findUnique({ where: { slug } });
   if (!event) notFound();
   const settings = await resolvePublicSettings(event.id);
+
+  // v4 (plan 09) : l'inscription est desormais possible avant validation des pieces.
+  // On le rappelle ici, sinon le participant croit n'avoir plus rien a attendre.
+  const session = await getServerSession(authOptions);
+  const profileStatus = session?.user?.id
+    ? (
+        await prisma.user.findUnique({
+          where: { id: session.user.id as string },
+          select: { profileStatus: true },
+        })
+      )?.profileStatus
+    : undefined;
+
   return (
     <PublicEventLayout event={event} contact={{ email: settings.contactEmail, phone: settings.contactPhone }}>
       <Card>
@@ -35,6 +50,12 @@ export default async function SuccessPage({
             Votre inscription a bien été reçue et est en cours de vérification. Un e-mail de confirmation vient de vous
             être envoyé.
           </p>
+          {profileStatus === "PENDING" && (
+            <p className="mx-auto mt-3 max-w-[440px] text-sm text-sky-700">
+              Vos pièces d&apos;identité sont en cours de vérification par la plateforme. Votre inscription
+              sera examinée par l&apos;organisateur une fois cette vérification terminée.
+            </p>
+          )}
           <div className="my-6 border-t border-slate-100" />
           <div className="flex flex-wrap justify-center gap-4 text-left">
             <FileBox icon="clock" title="Statut : en attente" subtitle="Vous serez notifié dès traitement" />

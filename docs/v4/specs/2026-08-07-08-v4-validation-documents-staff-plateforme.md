@@ -34,6 +34,15 @@ Cette spec introduit une validation du **profil** par le staff plateforme, en am
 | Alternative écartée : validation du profil ET de l'inscription par le staff | Non retenue | Retirerait à l'organisation la maîtrise de son propre événement (catégories, quotas) sans bénéfice de sécurité. |
 | Alternative écartée : historique via `ActivityLog` | Non retenue | Les `details` JSON ne garantissent pas la conservation des fichiers ni un requêtage sérieux de la file d'attente. |
 
+> **Révision 2026-08-11** — Les lignes « Gate d'inscription » et « Objet validé »
+> de ce tableau sont révisées par
+> [`2026-08-11-09-v4-parcours-court-inscription.md`](2026-08-11-09-v4-parcours-court-inscription.md) :
+> le gate passe de l'entrée (interdire l'inscription tant que le profil n'est pas
+> `APPROVED`) à la sortie (interdire l'approbation de l'inscription). Un profil
+> `PENDING` peut désormais s'inscrire. Le reste de cette spec — historique
+> immuable, catalogue de motifs, gel côté organisation, documents invisibles à
+> l'organisation — reste en vigueur.
+
 ## Architecture cible
 
 ### Modèle de données

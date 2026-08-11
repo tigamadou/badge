@@ -1,4 +1,4 @@
-import type { ProfileSubmission } from "@prisma/client";
+import type { ProfileStatus, ProfileSubmission } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isParticipantProfileComplete } from "@/lib/participant-profile";
 
@@ -107,4 +107,13 @@ export async function rejectProfile(args: {
   });
   await prisma.user.update({ where: { id: args.userId }, data: { profileStatus: "REJECTED" } });
   return decided;
+}
+
+// v4 (plan 09) : le gate d'inscription passe de l'entree a la sortie. Deposer ses
+// pieces suffit pour s'inscrire ; c'est l'approbation de l'inscription par
+// l'organisation qui reste conditionnee a un profil APPROVED (cf. approve/route.ts).
+// REJECTED reste bloque : le participant resoumet ses pieces, ce qui le repasse
+// PENDING via submitProfile() et le debloque aussitot.
+export function canRegisterToEvent(status: ProfileStatus): boolean {
+  return status === "PENDING" || status === "APPROVED";
 }

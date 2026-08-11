@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { safeInternalPath } from "@/lib/safe-path";
 import ProfileForm from "../ProfileForm";
 
 export default async function ProfileCompletePage({
@@ -27,8 +28,7 @@ export default async function ProfileCompletePage({
 
   if (!user) return null;
 
-  // Redirection apres save uniquement vers une URL interne (next commencant par "/").
-  const safeNext = next && next.startsWith("/") ? next : "/account";
+  const safeNext = safeInternalPath(next) ?? "/account";
 
   return (
     <div className="space-y-6">

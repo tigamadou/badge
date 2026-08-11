@@ -1,12 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { safeInternalPath } from "@/lib/safe-path";
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
+  // v4 (plan 09) : la page publique d'un evenement passe `next`. On le porte jusqu'a
+  // l'API, qui l'inscrit dans le lien de verification.
+  const next = safeInternalPath(useSearchParams().get("next"));
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +44,7 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, next }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -53,11 +66,15 @@ export default function RegisterPage() {
           <p className="text-green-700 font-medium">Compte créé.</p>
           <p className="text-sm text-slate-700">
             Nous vous avons envoyé un email à <strong>{email}</strong> pour confirmer votre adresse.
-            Cliquez sur le lien reçu pour activer votre compte.
+            {next
+              ? " Cliquez sur le lien reçu pour activer votre compte et reprendre votre inscription."
+              : " Cliquez sur le lien reçu pour activer votre compte."}
           </p>
-          <p className="text-sm">
-            <Link href="/login" className="text-green-600 hover:underline">Retour à la connexion</Link>
-          </p>
+          {!next && (
+            <p className="text-sm">
+              <Link href="/login" className="text-green-600 hover:underline">Retour à la connexion</Link>
+            </p>
+          )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -98,7 +98,8 @@ test.describe("Public — Connexion", () => {
     await page.getByLabel("Mot de passe").fill(owner.password);
     await page.getByRole("button", { name: /se connecter/i }).click();
 
-    // Le formulaire pousse vers /select, qui dispatche vers l'unique espace.
-    await page.waitForURL(`**/org/${orgId}`);
+    // v4 (plan 09) : le formulaire honore desormais callbackUrl et ramene sur la
+    // page exacte qui avait ete demandee, au lieu de passer par /select.
+    await page.waitForURL(`**/org/${orgId}/members`);
   });
 });

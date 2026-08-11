@@ -7,17 +7,25 @@
 ## Principe
 
 L'identité d'un participant (photo + pièce d'identité) est validée **une fois**
-par le **staff plateforme**, en amont de toute inscription. L'organisation
-conserve son approbation métier par événement (catégorie, quota, pertinence),
-sans juger les documents.
+par le **staff plateforme**. L'organisation conserve son approbation métier par
+événement (catégorie, quota, pertinence), sans juger les documents.
+
+Depuis le plan 09, **déposer ses pièces suffit pour s'inscrire** : le participant
+n'attend pas la décision plateforme pour être enregistré. C'est l'**approbation
+de l'inscription** par l'organisation qui reste conditionnée à un profil
+`APPROVED`. La barrière n'a pas disparu, elle s'est déplacée de l'entrée vers la
+sortie — aucun badge n'est émis sans identité vérifiée.
 
 ## Cycle de vie du profil
 
 `User.profileStatus` : `INCOMPLETE → PENDING → APPROVED | REJECTED`.
 
 - **INCOMPLETE** : profil incomplet, aucune inscription possible.
-- **PENDING** : documents soumis, en attente de décision plateforme.
-- **APPROVED** : le participant peut s'inscrire aux événements.
+- **PENDING** : documents soumis, en attente de décision plateforme. Le
+  participant **peut s'inscrire** ; son inscription restera non approuvable
+  jusqu'à la décision.
+- **APPROVED** : le participant peut s'inscrire, et son inscription peut être
+  approuvée par l'organisation.
 - **REJECTED** : documents refusés ; toute modification de pièce recrée une
   soumission et repasse en `PENDING`.
 
@@ -38,8 +46,12 @@ l'historique.
 ## Gate d'inscription et gel
 
 - `POST /api/events/[slug]/register`, la resoumission et la création par le staff
-  d'org renvoient **403 `PROFILE_NOT_APPROVED`** si le profil cible n'est pas
-  `APPROVED`. La page `/e/[slug]/register` redirige vers `/account/profile`.
+  d'org renvoient **403 `PROFILE_NOT_SUBMITTED`** si le profil cible est
+  `INCOMPLETE` ou `REJECTED`. Les statuts `PENDING` et `APPROVED` passent
+  (`canRegisterToEvent`, `src/lib/profile-review.ts`). La page
+  `/e/[slug]/register` redirige vers `/account/profile` dans les mêmes cas.
+  Un profil `REJECTED` se débloque en resoumettant ses pièces, ce qui le repasse
+  `PENDING`.
 - `POST …/registrations/[regId]/approve` renvoie **409 `PROFILE_NOT_APPROVED`**
   tant que le profil n'est pas `APPROVED` (gel des inscriptions `PENDING`). Les
   inscriptions déjà `APPROVED` et les badges imprimés ne bougent pas.

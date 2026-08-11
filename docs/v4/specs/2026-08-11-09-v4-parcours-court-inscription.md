@@ -92,7 +92,15 @@ La destination voyage dans l'URL, de bout en bout :
                            └─ ProfileForm redirectTo → /e/<slug>/register
 ```
 
-Les deux dernières flèches fonctionnent déjà. Les trois premières sont à câbler.
+Les deux dernières flèches fonctionnent déjà. Les autres sont à câbler.
+
+**Découvert à l'implémentation (2026-08-11)** : `src/app/login/page.tsx` faisait
+`router.push("/select")` en dur et **ignorait `callbackUrl`**. Le défaut
+préexistait à cette spec — le lien « Se connecter pour s'inscrire » de
+`/e/[slug]/page.tsx:101` et la redirection du gate `/e/[slug]/register/page.tsx:23`
+émettaient déjà un `callbackUrl` que personne ne lisait, renvoyant tout le monde
+sur `/select`. Sans ce correctif la chaîne casse à l'étape 4 ; il fait donc partie
+du périmètre.
 
 Toute lecture de `next` passe par un helper partagé `safeInternalPath(value): string | null`,
 qui n'accepte qu'un chemin commençant par `/` et refuse les URL absolues et les

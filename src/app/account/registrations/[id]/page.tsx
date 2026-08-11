@@ -80,8 +80,8 @@ export default async function RegistrationDetailPage({
           <div>
             <p className="font-semibold">Inscription en attente de validation du profil</p>
             <p className="mt-1 text-[13px]">
-              Votre inscription ne peut pas être traitée tant que votre profil n&apos;est pas validé par la
-              plateforme.{" "}
+              Vos pièces sont en cours de vérification par la plateforme. Votre inscription sera examinée
+              par l&apos;organisateur une fois cette vérification terminée.{" "}
               <Link href="/account/profile" className="text-green-700 underline">
                 Voir mon profil
               </Link>

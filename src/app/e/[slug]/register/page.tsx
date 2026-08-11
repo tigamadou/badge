@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { loadPublicEventBySlug, PublicEventError } from "@/lib/public-event";
 import { PublicEventLayout } from "@/components/public/PublicEventLayout";
 import { isParticipantProfileComplete } from "@/lib/participant-profile";
+import { canRegisterToEvent } from "@/lib/profile-review";
 import { ClosedView } from "../closed";
 import RegisterEventForm from "./RegisterEventForm";
 
@@ -60,8 +61,8 @@ export default async function EventRegisterPage({
     redirect(`/account/profile/complete?next=/e/${slug}/register`);
   }
 
-  // v4 (plan 08) : profil complet mais non encore valide par la plateforme.
-  if (user.profileStatus !== "APPROVED") {
+  // v4 (plan 09) : profil complet mais pieces jamais deposees, ou rejetees.
+  if (!canRegisterToEvent(user.profileStatus)) {
     redirect(`/account/profile?pending=1&next=/e/${slug}/register`);
   }
 

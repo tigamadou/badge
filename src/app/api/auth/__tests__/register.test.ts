@@ -221,4 +221,63 @@ describe("POST /api/auth/register", () => {
     expect(json.code).toBe("RATE_LIMITED");
     expect(last!.headers.get("Retry-After")).toBeTruthy();
   });
+
+  it("propage un next interne jusqu'au lien de verification", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(
+      makeReq({
+        email: "next-ok@v2-11-register.test",
+        password: "password123",
+        name: "Awa",
+        next: "/e/salon-2026/register",
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(sendAccountVerifyEmail).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      "/e/salon-2026/register",
+    );
+  });
+
+  it("ignore un next externe sans faire echouer l'inscription", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(
+      makeReq({
+        email: "next-evil@v2-11-register.test",
+        password: "password123",
+        name: "Awa",
+        next: "https://evil.example/phish",
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(sendAccountVerifyEmail).toHaveBeenCalledWith(expect.any(String), expect.any(String), null);
+  });
+
+  it("accepte next: null, envoye par le formulaire quand il n'y a pas de destination", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(
+      makeReq({
+        email: "next-null@v2-11-register.test",
+        password: "password123",
+        name: "Awa",
+        next: null,
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(sendAccountVerifyEmail).toHaveBeenCalledWith(expect.any(String), expect.any(String), null);
+  });
+
+  it("envoie sans destination quand next est absent", async () => {
+    const { POST } = await import("@/app/api/auth/register/route");
+    const res = await POST(
+      makeReq({
+        email: "next-absent@v2-11-register.test",
+        password: "password123",
+        name: "Awa",
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(sendAccountVerifyEmail).toHaveBeenCalledWith(expect.any(String), expect.any(String), null);
+  });
 });

@@ -31,12 +31,12 @@
 
 | Task | Perimetre | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Helper `safeInternalPath` + adoption dans `profile/complete` | [ ] | | Brique consommee par les tasks 3 et 4 |
-| 2 | Helper `canRegisterToEvent` + les 4 points de gate + renommage du code d'erreur | [ ] | | Coeur fonctionnel |
-| 3 | Propagation du `next` : `/register` → API → lien e-mail | [ ] | | |
-| 4 | Page `/verify-email/[token]` : reprise du `next` | [ ] | | Ferme la chaine |
-| 5 | Messages d'attente (succes + detail d'inscription) | [ ] | | UI seule, validee en E2E |
-| 6 | E2E parcours nouvel arrivant + documentation | [ ] | | Comble le trou de couverture identifie le 2026-08-11 |
+| 1 | Helper `safeInternalPath` + adoption dans `profile/complete` | [x] | 2026-08-11 | 8 tests ; refuse aussi `//host` et `/\`, que l'ancien `startsWith("/")` laissait passer |
+| 2 | Helper `canRegisterToEvent` + les 4 points de gate + renommage du code d'erreur | [x] | 2026-08-11 | 4 tests unitaires + 105 tests d'integration verts ; le 409 d'`approve` non touche (verifie) |
+| 3 | Propagation du `next` : `/register` → API → lien e-mail | [x] | 2026-08-11 | **Hors plan initial** : `/login` ignorait `callbackUrl` (`router.push("/select")` en dur), la chaine cassait sans ce correctif |
+| 4 | Page `/verify-email/[token]` : reprise du `next` | [x] | 2026-08-11 | |
+| 5 | Messages d'attente (succes + detail d'inscription) | [x] | 2026-08-11 | Le detail d'inscription portait deja l'encart : seul le libelle a change |
+| 6 | E2E parcours nouvel arrivant + documentation | [x] | 2026-08-11 | 2 tests verts. Deux corrections de test (pas de code) : bouton Approuver **desactive** et non refuse a l'API ; deconnexion via `clearCookies` (l'espace evenement n'a pas le bouton de StaffShell) |
 
 ---
 

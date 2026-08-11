@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { assertCanRegister, SubscriptionError } from "@/lib/subscription";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
+import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationConfirmation } from "@/lib/mail";
 import { generateId } from "@/lib/generate-id";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
@@ -82,14 +83,13 @@ export async function POST(
       );
     }
 
-    // v4 (plan 08) : l'identite est validee par le staff plateforme, en amont de
-    // toute inscription. Le check de completude passe d'abord (profil complet mais
-    // non encore valide).
-    if (user.profileStatus !== "APPROVED") {
+    // v4 (plan 09) : deposer ses pieces suffit pour s'inscrire. L'inscription
+    // restera non approuvable tant que le profil n'est pas valide (cf. approve).
+    if (!canRegisterToEvent(user.profileStatus)) {
       return NextResponse.json(
         {
-          code: "PROFILE_NOT_APPROVED",
-          error: "Votre profil doit être validé par la plateforme avant de vous inscrire.",
+          code: "PROFILE_NOT_SUBMITTED",
+          error: "Complétez votre profil et déposez vos pièces avant de vous inscrire.",
         },
         { status: 403 },
       );

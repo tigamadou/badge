@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { generateId } from "@/lib/generate-id";
 import { countCountableRegistrations, resolveOrgLimits } from "@/lib/subscription";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
+import { canRegisterToEvent } from "@/lib/profile-review";
 import { toRegistrationListDTO } from "@/lib/registration-dto";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (req, { eventId }) => {
@@ -130,9 +131,9 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
     return NextResponse.json({ error: "PROFILE_INCOMPLETE" }, { status: 400 });
   }
 
-  // v4 (plan 08) : le profil du participant cible doit etre valide par la plateforme.
-  if (user.profileStatus !== "APPROVED") {
-    return NextResponse.json({ error: "PROFILE_NOT_APPROVED" }, { status: 403 });
+  // v4 (plan 09) : le participant cible doit avoir depose ses pieces.
+  if (!canRegisterToEvent(user.profileStatus)) {
+    return NextResponse.json({ error: "PROFILE_NOT_SUBMITTED" }, { status: 403 });
   }
 
   const existingReg = await prisma.registration.findUnique({

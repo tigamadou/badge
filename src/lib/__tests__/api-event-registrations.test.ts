@@ -232,10 +232,10 @@ describe("POST /registrations (manual creation)", () => {
     expect(log?.eventId).toBe(event.id);
   });
 
-  it("refuse la creation si le profil du participant cible n'est pas approuve (403)", async () => {
+  it("refuse la creation si le participant cible n'a pas depose ses pieces (403)", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const participant = await mkParticipantUser("manual-gate");
-    await prisma.user.update({ where: { id: participant.id }, data: { profileStatus: "PENDING" } });
+    await prisma.user.update({ where: { id: participant.id }, data: { profileStatus: "REJECTED" } });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
@@ -246,8 +246,25 @@ describe("POST /registrations (manual creation)", () => {
     });
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe("PROFILE_NOT_APPROVED");
+    expect((await res.json()).error).toBe("PROFILE_NOT_SUBMITTED");
     expect(await prisma.registration.count({ where: { eventId: event.id } })).toBe(0);
+  });
+
+  it("autorise la creation staff pour un participant PENDING (gate deplace en sortie)", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const participant = await mkParticipantUser("manual-pending");
+    await prisma.user.update({ where: { id: participant.id }, data: { profileStatus: "PENDING" } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations`, {
+      method: "POST",
+      body: JSON.stringify({ categoryId: cat.id, email: participant.email }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(201);
+    expect(await prisma.registration.count({ where: { eventId: event.id } })).toBe(1);
   });
 
   it("OPERATOR cannot create (403)", async () => {

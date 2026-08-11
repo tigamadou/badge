@@ -13,6 +13,7 @@ import {
   EMAIL_VERIFY_TTL_MS,
 } from "@/lib/auth-tokens";
 import { sendAccountVerifyEmail } from "@/lib/mail";
+import { safeInternalPath } from "@/lib/safe-path";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
@@ -20,6 +21,11 @@ const bodySchema = z.object({
   password: z.string().min(6).max(200),
   name: z.string().trim().min(1).max(120),
   recaptchaToken: z.string().optional(),
+  // v4 (plan 09) : destination a reprendre apres verification de l'email. Validee
+  // par safeInternalPath ; une valeur externe est ignoree silencieusement.
+  // `nullish` et non `optional` : le formulaire poste explicitement `next: null`
+  // quand la page n'a pas de destination.
+  next: z.string().max(512).nullish(),
 });
 
 export async function POST(req: NextRequest) {
@@ -94,7 +100,7 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   });
 
-  await sendAccountVerifyEmail(user.id, plainToken);
+  await sendAccountVerifyEmail(user.id, plainToken, safeInternalPath(parsed.data.next));
 
   await logActivity({
     type: "USER_REGISTERED",

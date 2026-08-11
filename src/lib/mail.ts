@@ -435,7 +435,11 @@ export async function sendBadgePrintedNotification(registrationId: string): Prom
 
 // v2-11 : nouveau template -- envoye apres /api/auth/register pour confirmer l'email.
 // Le `plainToken` est genere par l'appelant (la route) qui en a deja stocke le hash en BDD.
-export async function sendAccountVerifyEmail(userId: string, plainToken: string): Promise<void> {
+export async function sendAccountVerifyEmail(
+  userId: string,
+  plainToken: string,
+  next?: string | null,
+): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true, name: true },
@@ -452,11 +456,18 @@ export async function sendAccountVerifyEmail(userId: string, plainToken: string)
   });
   const safeName = escapeText(user.name);
 
+  // v4 (plan 09) : la destination voyage dans l'URL. Le lien peut etre ouvert sur un
+  // autre appareil que celui de la creation du compte : ni cookie ni session ne survit.
+  const verifyUrl = next
+    ? `${baseUrl}/verify-email/${plainToken}?next=${encodeURIComponent(next)}`
+    : `${baseUrl}/verify-email/${plainToken}`;
+  const ctaLabel = next ? "Confirmer mon email et continuer" : "Confirmer mon email";
+
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${safeName}</strong>,</p>
     <p style="margin:0 0 16px;">Bienvenue sur Badge. Pour activer votre compte, veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous :</p>
     <p style="margin:0 0 24px;text-align:center;">
-      <a href="${baseUrl}/verify-email/${plainToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Confirmer mon email</a>
+      <a href="${verifyUrl}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">${ctaLabel}</a>
     </p>
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message.</p>
   `;

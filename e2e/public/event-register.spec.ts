@@ -61,14 +61,32 @@ test.describe("Event registration flow", () => {
     expect(reg?.snapshotFirstName).toBe("Awa");
   });
 
-  test("un participant au profil non validé est redirigé vers /account/profile", async ({ page }) => {
-    const user = await createTestUser({ scope: "evt-gate", verified: true, profile: true, profileStatus: "PENDING" });
+  // v4 (plan 09) : le gate est passe de l'entree a la sortie. Un profil PENDING
+  // s'inscrit ; seul un profil REJECTED (ou incomplet) est renvoye vers son profil.
+  test("un participant aux pieces rejetées est redirigé vers /account/profile", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-gate", verified: true, profile: true, profileStatus: "REJECTED" });
     const { eventSlug } = await createTestEvent({ scope: "evt-gate" });
     await loginAs(page, user);
 
     await page.goto(`/e/${eventSlug}/register`);
     await expect(page).toHaveURL(/\/account\/profile\?pending=1/);
-    await expect(page.getByText(/en cours de vérification par la plateforme/i)).toBeVisible();
+    await expect(page.getByText(/documents refusés/i)).toBeVisible();
+  });
+
+  test("un participant au profil PENDING peut s'inscrire sans attendre la validation", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-pending", verified: true, profile: true, profileStatus: "PENDING" });
+    const { eventSlug } = await createTestEvent({ scope: "evt-pending" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
+    await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
+
+    const reg = await getLatestRegistrationForUser(user.id);
+    expect(reg?.status).toBe("PENDING");
   });
 
   test("un profil validé peut s'inscrire après déblocage", async ({ page }) => {
