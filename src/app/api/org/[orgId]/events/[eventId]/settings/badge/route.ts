@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { prisma } from "@/lib/prisma";
-import { getTemplate } from "@/lib/badge-templates";
+import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
 
 // v2-12 : PATCH event.badgeTemplateId. requireEventPermission event.settings.update
@@ -30,7 +30,7 @@ export const PATCH = withEventAuth(
     }
     const { badgeTemplateId } = parsed.data;
 
-    if (badgeTemplateId !== null && !getTemplate(badgeTemplateId)) {
+    if (badgeTemplateId !== null && !(await templateExists(badgeTemplateId))) {
       return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
     }
 

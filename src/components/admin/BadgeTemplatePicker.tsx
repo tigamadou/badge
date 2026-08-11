@@ -34,6 +34,34 @@ type Props = {
   canClearToInherit: boolean;
 };
 
+// Trois origines d'apercu : une image livree avec l'application (templates compiles),
+// un PDF d'epreuve servi depuis le stockage (templates installes), ou rien du tout.
+// Un PDF ne passe pas par next/image, d'ou l'aiguillage.
+function TemplatePreview({ src, label }: { src: string; label: string }) {
+  if (!src) {
+    return (
+      <span className="flex flex-col items-center gap-1 text-slate-400">
+        <Icon name="id-card" size={28} />
+        <span className="text-xs">Aperçu indisponible</span>
+      </span>
+    );
+  }
+
+  if (src.endsWith(".pdf")) {
+    return (
+      <object data={src} type="application/pdf" className="h-full w-full" aria-label={`Aperçu ${label}`}>
+        <a href={src} className="text-xs text-green-700 underline">
+          Ouvrir l&apos;aperçu PDF
+        </a>
+      </object>
+    );
+  }
+
+  return (
+    <Image src={src} alt={`Aperçu ${label}`} width={400} height={300} className="object-contain" />
+  );
+}
+
 export default function BadgeTemplatePicker({
   templates,
   currentValue,
@@ -103,13 +131,7 @@ export default function BadgeTemplatePicker({
               }`}
             >
               <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
-                <Image
-                  src={tpl.previewSrc}
-                  alt={`Aperçu ${tpl.label}`}
-                  width={400}
-                  height={300}
-                  className="object-contain"
-                />
+                <TemplatePreview src={tpl.previewSrc} label={tpl.label} />
               </div>
               <div>
                 <div className="flex items-center gap-2">

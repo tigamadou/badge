@@ -1118,6 +1118,31 @@ describe("sendAccountVerifyEmail", () => {
     expect(sent[0].html).toContain("/verify-email/plain-token-abc");
     expect(sent[0].html).toContain("Verify User");
     expect(sent[0].html).toContain("24 heures");
+    // Sans destination : lien nu et libelle standard.
+    expect(sent[0].html).not.toContain("?next=");
+    expect(sent[0].html).toContain("Confirmer mon email<");
+  });
+
+  it("porte la destination dans le lien quand next est fourni (v4 plan 09)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "verify-next@x.com", password: "x", name: "Verify Next" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendAccountVerifyEmail(user.id, "tok-next", "/e/salon-2027/register");
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).toContain(
+      "/verify-email/tok-next?next=%2Fe%2Fsalon-2027%2Fregister",
+    );
+    expect(sent[0].html).toContain("Confirmer mon email et continuer");
   });
 
   it("escapes the user name (anti-XSS)", async () => {

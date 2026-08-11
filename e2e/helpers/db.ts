@@ -72,6 +72,8 @@ export async function cleanupE2ETestData(): Promise<void> {
   }
   // v4 (plan 08) : motifs de rejet E2E (prefixe de libelle).
   await prisma.rejectionReason.deleteMany({ where: { label: { startsWith: "E2E motif " } } });
+  // v4 (plan 11) : templates installes par les tests (prefixe de famille).
+  await prisma.installedBadgeTemplate.deleteMany({ where: { family: { startsWith: "e2e-" } } });
   if (eventIds.length > 0) {
     await prisma.registration.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.eventMembership.deleteMany({ where: { eventId: { in: eventIds } } });

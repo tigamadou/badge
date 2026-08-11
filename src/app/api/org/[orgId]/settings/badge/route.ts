@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireOrgRole, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
-import { getTemplate } from "@/lib/badge-templates";
+import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
 
 // v2-12 : PATCH organization.badgeTemplateId.
@@ -40,7 +40,7 @@ export async function PATCH(
   }
   const { badgeTemplateId } = parsed.data;
 
-  if (badgeTemplateId !== null && !getTemplate(badgeTemplateId)) {
+  if (badgeTemplateId !== null && !(await templateExists(badgeTemplateId))) {
     return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
   }
 

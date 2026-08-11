@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasEventPermission } from "@/lib/auth-helpers";
 import { loadUserContext } from "@/lib/user-context";
-import { listTemplates } from "@/lib/badge-templates";
+import { listAvailableTemplates } from "@/lib/badge-templates/resolve";
 import { resolveBadgeTemplateId } from "@/lib/settings";
 import BadgeTemplatePicker, {
   type EffectiveLevel,
@@ -59,14 +59,7 @@ export default async function EventBadgeSettingsPage({
       ? "org"
       : "platform";
 
-  const templates: TemplateSummary[] = listTemplates().map((t) => ({
-    id: t.meta.id,
-    label: t.meta.label,
-    description: t.meta.description,
-    pages: t.meta.pages,
-    pageSize: t.meta.pageSize,
-    previewSrc: t.meta.previewSrc,
-  }));
+  const templates: TemplateSummary[] = await listAvailableTemplates();
 
   return (
     <div className="space-y-6">

@@ -104,6 +104,27 @@ de periode (date seule, ou « Du … au … »), et le composant `EventInfoCard`
 (`src/components/event/`) presente le bloc d'informations en variantes `public`
 et `staff`.
 
+## Templates de badge (plans 10 et 11)
+
+Un template de badge a deux origines possibles : le **registre compilé**
+(`src/lib/badge-templates/index.ts`, composants React livrés avec l'application) et le
+**catalogue installé** (table `InstalledBadgeTemplate`, manifestes JSON téléversés par le
+staff plateforme sans déploiement). `src/lib/badge-templates/resolve.ts` est la porte
+d'entrée unique : `resolveTemplate(id)` interroge le registre puis la base et retombe sur
+le défaut en journalisant, `templateExists(id)` valide une saisie sans repli, et
+`listAvailableTemplates()` rend ce qui est proposable. Aucun écran ni aucune route ne sait
+de quelle origine vient un template.
+
+Chaque installation crée une **version figée** : réinstaller ajoute une ligne, ne met
+jamais à jour. L'identifiant stocké par la cascade `Event → Org → Platform` est le `cuid`
+de la ligne, si bien qu'un événement ne peut pas voir son badge changer. Un template
+archivé reste **résolvable** — il disparaît du sélecteur, pas des badges existants.
+
+Le moteur déclaratif (`declarative/`) est pur : ni Prisma, ni stockage, ni réseau. Il
+reçoit un manifeste et un résolveur de ressources. L'ouverture d'archive est confinée à
+`package-reader.ts`, qui applique toutes les bornes de sécurité avant extraction. Détail :
+[`features/templates-badges.md`](features/templates-badges.md).
+
 ## Validation des profils (plans 08 et 09)
 
 L'identité d'un participant est validée par le **staff plateforme**.

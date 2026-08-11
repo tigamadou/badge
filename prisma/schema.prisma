@@ -346,6 +346,33 @@ model RejectionReason {
   @@index([archived, scope])
 }
 
+// v4 (plan 11) : une ligne = une VERSION FIGEE d'un template installe.
+// Reinstaller cree une nouvelle ligne : `layout` et `assetPrefix` ne sont JAMAIS
+// mis a jour. C'est ce qui garantit qu'un evenement ne voit pas son badge changer.
+// `installedById` est un identifiant nu, sans relation, comme
+// ProfileSubmission.reviewedById : c'est une donnee d'audit.
+model InstalledBadgeTemplate {
+  id            String    @id @default(cuid())
+  family        String
+  version       Int
+  label         String
+  description   String    @db.Text
+  pages         Int
+  pageWidthMm   Float
+  pageHeightMm  Float
+  layout        Json
+  assetPrefix   String
+  previewPath   String?
+  formatVersion Int
+  installedById String
+  archived      Boolean   @default(false)
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([family, version])
+  @@index([archived])
+}
+
 enum RejectionScope {
   PROFILE
   REGISTRATION
@@ -523,6 +550,10 @@ enum ActivityType {
   REJECTION_REASON_CREATED
   REJECTION_REASON_UPDATED
   REJECTION_REASON_ARCHIVED
+
+  // v4 (plan 11) : catalogue des templates de badge installes
+  BADGE_TEMPLATE_INSTALLED
+  BADGE_TEMPLATE_ARCHIVED
 }
 
 // =====================================================

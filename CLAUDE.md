@@ -102,7 +102,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 - **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
 - **Soft delete partout** (`archived: bool` + `archivedAt: DateTime?`). Hard delete = action staff explicite.
 - **RBAC — séparation des rôles (v1 uniquement)** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **En v2**, cette restriction n'existe plus : `SUPER_ADMIN` est au sommet de `StaffRole` (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`) avec tous les droits sans restriction, y compris les actions métier (avec audit `staffActor=true`). Voir `docs/v2/features/multi-tenancy-rbac.md`.
-- **Rendu PDF des badges** : utilise Montserrat via Google Fonts (`https://fonts.googleapis.com/`) — préserver l'accès sortant à ce domaine.
+- **Rendu PDF des badges** : Montserrat via Google Fonts (`https://fonts.googleapis.com/`) est la police **par défaut** — préserver l'accès sortant à ce domaine. Un paquet de template peut embarquer ses propres polices (TTF/OTF), enregistrées sous une famille préfixée par template. Les images d'un paquet sont limitées à **JPEG et PNG** : `@react-pdf` ne lit pas le WebP, pourtant accepté ailleurs pour les uploads. Voir `docs/v4/features/templates-badges.md`.
 
 ---
 

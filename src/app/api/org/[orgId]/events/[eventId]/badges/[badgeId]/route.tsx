@@ -4,7 +4,8 @@ import React from "react";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { prisma } from "@/lib/prisma";
 import { resolveBadgeTemplateId } from "@/lib/settings";
-import { getTemplate, DEFAULT_TEMPLATE_ID } from "@/lib/badge-templates";
+import { DEFAULT_TEMPLATE_ID } from "@/lib/badge-templates";
+import { resolveTemplate } from "@/lib/badge-templates/resolve";
 import { buildTemplateContext } from "@/lib/badge-templates/build-context";
 
 export const runtime = "nodejs";
@@ -58,14 +59,9 @@ export const GET = withEventAuth(
       organization,
       platform,
     );
-    const primary = getTemplate(resolvedId);
-    if (!primary) {
-      console.warn(
-        `[badges] templateId "${resolvedId}" orphelin du registry -- fallback "${DEFAULT_TEMPLATE_ID}"`,
-      );
-    }
-    // default-v1 est toujours present dans le registry (invariant garanti).
-    const template = primary ?? getTemplate(DEFAULT_TEMPLATE_ID)!;
+    // resolveTemplate porte deja le repli sur le template par defaut et sa
+    // journalisation, pour le registre compile comme pour le catalogue installe.
+    const template = await resolveTemplate(resolvedId);
 
     const templateCtx = await buildTemplateContext({
       id: registration.id,

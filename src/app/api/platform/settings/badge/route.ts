@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
-import { getTemplate } from "@/lib/badge-templates";
+import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
 
 // v2-12 : PATCH platformSettings.badgeTemplateId.
@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest) {
   }
   const { badgeTemplateId } = parsed.data;
 
-  if (!getTemplate(badgeTemplateId)) {
+  if (!(await templateExists(badgeTemplateId))) {
     return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
   }
 

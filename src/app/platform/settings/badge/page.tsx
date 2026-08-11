@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { loadUserContext } from "@/lib/user-context";
-import { listTemplates } from "@/lib/badge-templates";
+import { listAvailableTemplates } from "@/lib/badge-templates/resolve";
 import BadgeTemplatePicker, {
   type TemplateSummary,
 } from "@/components/admin/BadgeTemplatePicker";
@@ -28,14 +28,7 @@ export default async function StaffBadgeSettingsPage() {
 
   const currentValue = platform?.badgeTemplateId ?? "default-v1";
 
-  const templates: TemplateSummary[] = listTemplates().map((t) => ({
-    id: t.meta.id,
-    label: t.meta.label,
-    description: t.meta.description,
-    pages: t.meta.pages,
-    pageSize: t.meta.pageSize,
-    previewSrc: t.meta.previewSrc,
-  }));
+  const templates: TemplateSummary[] = await listAvailableTemplates();
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">

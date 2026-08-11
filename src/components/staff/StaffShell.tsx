@@ -8,6 +8,7 @@ const NAV: NavEntry[] = [
   { href: "/platform/profiles", label: "Profils", icon: "user-check" },
   { href: "/platform/plans", label: "Plans", icon: "credit-card" },
   { href: "/platform/users", label: "Utilisateurs", icon: "users" },
+  { href: "/platform/badge-templates", label: "Templates de badge", icon: "id-card" },
   { href: "/platform/settings", label: "Paramètres", icon: "settings" },
   { href: "/platform/activity", label: "Journal", icon: "scroll-text" },
 ];
