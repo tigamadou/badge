@@ -109,6 +109,61 @@ test.describe("Platform — Templates de badge", () => {
       .toBe(installed!.id);
   });
 
+  test("le detail d'un template montre son apercu, ses versions et son manifeste", async ({
+    page,
+  }) => {
+    const family = `e2e-detail-${Date.now()}`;
+    const archive = await writeArchive(`${family}.zip`, { "manifest.json": manifestOf(family) });
+
+    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-detail" });
+    await loginAs(page, staff);
+
+    await page.goto("/platform/badge-templates");
+    await page.setInputFiles('input[type="file"]', archive);
+    await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
+
+    const prisma = getDb();
+    const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
+
+    await page.goto(`/platform/badge-templates/${installed!.id}`);
+    await expect(page).toHaveURL(new RegExp(`/platform/badge-templates/${installed!.id}`));
+    await expect(page.getByRole("heading", { name: /badge e2e/i })).toBeVisible();
+
+    // Aucun evenement ne l'utilise encore : l'information doit etre affichee, pas masquee.
+    await expect(page.getByText(/aucun évènement ni organisation/i)).toBeVisible();
+
+    // La famille n'a qu'une version, et le manifeste est telechargeable.
+    await expect(page.getByText(/versions de la famille/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /télécharger le manifeste/i })).toBeVisible();
+  });
+
+  test("le detail liste les evenements qui utilisent le template", async ({ page }) => {
+    const family = `e2e-usage-${Date.now()}`;
+    const archive = await writeArchive(`${family}.zip`, { "manifest.json": manifestOf(family) });
+
+    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-usage" });
+    await loginAs(page, staff);
+
+    await page.goto("/platform/badge-templates");
+    await page.setInputFiles('input[type="file"]', archive);
+    await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
+
+    const prisma = getDb();
+    const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
+
+    // Un evenement adopte ce template : le detail doit le nommer.
+    const { eventId } = await createTestEvent({ scope: "bt-usage" });
+    await prisma.event.update({
+      where: { id: eventId },
+      data: { badgeTemplateId: installed!.id },
+    });
+    const evenement = await prisma.event.findUnique({ where: { id: eventId } });
+
+    await page.goto(`/platform/badge-templates/${installed!.id}`);
+    await expect(page).toHaveURL(new RegExp(`/platform/badge-templates/${installed!.id}`));
+    await expect(page.getByText(evenement!.title)).toBeVisible();
+  });
+
   test("une archive invalide est refusee avec ses erreurs", async ({ page }) => {
     const archive = await writeArchive(`e2e-invalide-${Date.now()}.zip`, {
       "assets/fond.png": Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),

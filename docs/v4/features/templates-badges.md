@@ -67,10 +67,36 @@ exactement le même badge qu'avant. Seules `listAvailableTemplates` filtre sur `
 ### Aperçu
 
 L'aperçu est le PDF produit par le rendu d'épreuve, servi par `/api/files/[...path]` —
-les clés `badge-templates/` y sont non sensibles. Le sélecteur aiguille selon la source :
-image pour un template compilé, `<object>` PDF pour un template installé, vignette neutre
-si aucun aperçu n'existe. Il est **généré**, jamais fourni par l'installateur : un aperçu
-déposé pourrait mentir sur le rendu réel.
+les clés `badge-templates/` y sont non sensibles. Il est **généré**, jamais fourni par
+l'installateur : un aperçu déposé pourrait mentir sur le rendu réel.
+
+Le composant partagé `src/components/ui/TemplatePreview.tsx` l'affiche partout où c'est
+nécessaire, en aiguillant selon la source : image, `<object>` PDF, ou vignette neutre en
+l'absence d'aperçu.
+
+### Où consulter un template
+
+| Écran | Ce qu'on y voit |
+|---|---|
+| `/platform/badge-templates` | Le catalogue : vignette, libellé, famille, version, état, action d'archivage |
+| `/platform/badge-templates/<id>` | Le détail (voir ci-dessous) |
+| Les trois écrans de réglage de badge | Le sélecteur, qui rend l'aperçu de chaque modèle proposable |
+
+La **page de détail** est en lecture seule, accessible à tout staff, et rassemble :
+
+- l'aperçu en grand, avec un lien pour l'ouvrir en plein écran ;
+- **qui utilise cette version** — événements, organisations, défaut de la plateforme.
+  Zéro utilisation est affiché explicitement : c'est l'information qui permet d'archiver
+  sans risque ;
+- les **versions de la famille**, avec un lien vers chacune, ce qui rend le versionnement
+  figé tangible ;
+- les **ressources embarquées** et leur poids, lues depuis le stockage — donc ce qui est
+  réellement présent, pas seulement ce que le manifeste déclare. Section masquée si le
+  paquet n'en a aucune ;
+- le **manifeste**, affiché et téléchargeable. C'est le chemin pour dériver un modèle :
+  télécharger, modifier, réinstaller en nouvelle version.
+
+L'archivage reste sur le catalogue : la page de détail n'expose aucune action mutante.
 
 ## Structure d'un paquet
 

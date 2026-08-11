@@ -138,3 +138,23 @@ export async function deletePrefix(prefix: string): Promise<number> {
   } while (token);
   return deleted;
 }
+
+// Liste les objets sous un prefixe, avec leur poids. Meme motif de pagination que
+// deletePrefix, dont la branche IsTruncated est egalement inatteignable en unitaire.
+export async function listPrefix(prefix: string): Promise<Array<{ key: string; size: number }>> {
+  await ensureBucket();
+  const out: Array<{ key: string; size: number }> = [];
+  let token: string | undefined;
+  do {
+    const list = await s3.send(
+      new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }),
+    );
+    for (const o of list.Contents ?? []) {
+      /* v8 ignore next -- MinIO renvoie toujours une taille ; fallback defensif */
+      out.push({ key: o.Key!, size: o.Size ?? 0 });
+    }
+    /* v8 ignore next -- branche IsTruncated=true : exige >1000 objets sous un prefixe (impraticable en unitaire) */
+    token = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}

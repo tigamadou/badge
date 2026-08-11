@@ -9,6 +9,7 @@ import {
   getFile,
   deleteFile,
   deletePrefix,
+  listPrefix,
   ALLOWED_IMAGE_MIME,
   ALLOWED_DOCUMENT_MIME,
   MAX_UPLOAD_BYTES,
@@ -160,5 +161,27 @@ describe("storage S3 client configuration branches", () => {
     const mod = await import("@/lib/storage");
     expect(typeof mod.getFile).toBe("function");
     expect(typeof mod.deletePrefix).toBe("function");
+  });
+});
+
+describe("listPrefix", () => {
+  it("rend une liste vide pour un prefixe inconnu", async () => {
+    expect(await listPrefix(`badge-templates/vide-${Date.now()}/`)).toEqual([]);
+  });
+
+  it("liste les objets d'un prefixe avec leur poids", async () => {
+    const prefix = `badge-templates/list-${Date.now()}/`;
+    await uploadFile(`${prefix}assets/a.png`, Buffer.alloc(10, 1), "image/png");
+    await uploadFile(`${prefix}assets/b.png`, Buffer.alloc(20, 2), "image/png");
+
+    const objets = await listPrefix(prefix);
+    expect(objets).toHaveLength(2);
+    expect(objets.map((o) => o.key).sort()).toEqual([
+      `${prefix}assets/a.png`,
+      `${prefix}assets/b.png`,
+    ]);
+    expect(objets.find((o) => o.key.endsWith("a.png"))?.size).toBe(10);
+
+    await deletePrefix(prefix);
   });
 });

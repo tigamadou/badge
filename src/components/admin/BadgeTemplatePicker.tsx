@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Feedback";
 import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
+import { TemplatePreview } from "@/components/ui/TemplatePreview";
 
 export type TemplateSummary = {
   id: string;
@@ -33,34 +33,6 @@ type Props = {
   patchUrl: string;
   canClearToInherit: boolean;
 };
-
-// Trois origines d'apercu : une image livree avec l'application (templates compiles),
-// un PDF d'epreuve servi depuis le stockage (templates installes), ou rien du tout.
-// Un PDF ne passe pas par next/image, d'ou l'aiguillage.
-function TemplatePreview({ src, label }: { src: string; label: string }) {
-  if (!src) {
-    return (
-      <span className="flex flex-col items-center gap-1 text-slate-400">
-        <Icon name="id-card" size={28} />
-        <span className="text-xs">Aperçu indisponible</span>
-      </span>
-    );
-  }
-
-  if (src.endsWith(".pdf")) {
-    return (
-      <object data={src} type="application/pdf" className="h-full w-full" aria-label={`Aperçu ${label}`}>
-        <a href={src} className="text-xs text-green-700 underline">
-          Ouvrir l&apos;aperçu PDF
-        </a>
-      </object>
-    );
-  }
-
-  return (
-    <Image src={src} alt={`Aperçu ${label}`} width={400} height={300} className="object-contain" />
-  );
-}
 
 export default function BadgeTemplatePicker({
   templates,
