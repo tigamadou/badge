@@ -219,22 +219,27 @@ async function main() {
   await cleanup();
 
   // 1. PlatformSettings
+  // Le SMTP est reecrit a chaque seed : les tests e2e et les essais manuels
+  // dans l'UI plateforme peuvent l'avoir pointe ailleurs que sur mailpit.
+  const platformSmtp = {
+    smtpHost: process.env.PLATFORM_SMTP_HOST || "mailpit",
+    smtpPort: parseInt(process.env.PLATFORM_SMTP_PORT || "1025", 10),
+    smtpFrom: process.env.PLATFORM_SMTP_FROM || "noreply@badge.local",
+    smtpUser: process.env.PLATFORM_SMTP_USER || "",
+    smtpPassword: process.env.PLATFORM_SMTP_PASSWORD || "",
+    smtpSecure: process.env.PLATFORM_SMTP_SECURE === "true",
+  };
   await prisma.platformSettings.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
-      smtpHost: process.env.PLATFORM_SMTP_HOST || "mailpit",
-      smtpPort: parseInt(process.env.PLATFORM_SMTP_PORT || "1025", 10),
-      smtpFrom: process.env.PLATFORM_SMTP_FROM || "noreply@badge.local",
-      smtpUser: process.env.PLATFORM_SMTP_USER || "",
-      smtpPassword: process.env.PLATFORM_SMTP_PASSWORD || "",
-      smtpSecure: process.env.PLATFORM_SMTP_SECURE === "true",
+      ...platformSmtp,
       recaptchaEnabled: false,
       recaptchaSiteKey: "",
       recaptchaSecretKey: "",
       badgeTemplateId: "default-v1",
     },
-    update: {},
+    update: platformSmtp,
   });
 
   // 1b. Plans d'abonnement par defaut (v4). Upsert par nom (unique).
