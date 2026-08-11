@@ -126,15 +126,16 @@ make dev    # démarre les conteneurs (à faire une fois)
 
 Services disponibles :
 
-| Service | Port direct | URL via Caddy (HTTP) | Description |
-|---------|-------------|----------------------|-------------|
-| `app` | 3785 | `http://badge.local` | Next.js avec hot reload |
+| Service | Port direct | URL via Caddy (HTTPS) | Description |
+|---------|-------------|-----------------------|-------------|
+| `app` | 3785 | `https://badge.local` | Next.js avec hot reload |
 | `mysql` | 33060 | — | Base de données |
-| `phpmyadmin` | 8080 | `http://pma.badge.local` | Interface admin BDD |
-| `mailpit` | 8025 | `http://mail.badge.local` | Capture d'emails |
-| `caddy` | 80 | — | Reverse proxy dev (sous-domaines `*.badge.local`) |
+| `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
+| `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
+| `minio` | 9001 | `https://s3.badge.local` | Console MinIO |
+| `caddy` | 80 / 443 | — | Reverse proxy dev (sous-domaines `*.badge.local`, `tls internal`) |
 
-> **Pré-requis pour les URL `*.badge.local`** : ajouter au `/etc/hosts` de la machine hôte la ligne `127.0.0.1 badge.local pma.badge.local mail.badge.local`. Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
+> **Pré-requis pour les URL `*.badge.local`** : lancer `make dev-https` une fois (renseigne `/etc/hosts` et approuve la CA locale de Caddy — voir `docs/v4/installation.md`). Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
 
 Commandes principales :
 
@@ -142,6 +143,7 @@ Commandes principales :
 |----------|-------------|
 | `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
 | `make dev` / `make dev-down` / `make logs` | Cycle dev local |
+| `make dev-https` / `make dev-https-check` | HTTPS local : `/etc/hosts` + confiance CA Caddy (idempotent) |
 | `make db-push` / `make db-seed` / `make db-studio` | Schéma Prisma + seed + Prisma Studio |
 | `make db-reset` | **Reset BDD dev (destructif — demander avant)** |
 

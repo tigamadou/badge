@@ -1,4 +1,5 @@
 .PHONY: dev dev-down dev-build dev-restart \
+        dev-https dev-https-hosts dev-https-trust dev-https-check dev-https-untrust \
         prod prod-down prod-build prod-logs \
         prod-db-reset  prod-db-push \
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
@@ -139,6 +140,111 @@ caddy-check:
 # Erreurs et problemes de certificat uniquement.
 caddy-logs:
 	docker logs --tail 200 badge-caddy 2>&1 | grep -iE "error|warn|certificate|acme" || echo "Aucune erreur recente."
+
+# ============================================================
+#  HTTPS local (dev)
+# ============================================================
+# Caddy dev signe les certificats *.badge.local avec sa propre CA (`tls internal`,
+# cf. Caddyfile.dev). Rien a generer donc : il suffit de resoudre les domaines
+# vers 127.0.0.1 et de faire confiance a la racine de cette CA.
+#
+# Les domaines sont lus dans Caddyfile.dev plutot qu'ecrits en dur : ajouter un
+# site au proxy suffit a le prendre en compte ici.
+DEV_DOMAINS=$(shell grep -oE '^[A-Za-z0-9.-]+\.local' Caddyfile.dev | sort -u)
+CADDY_ROOT_CRT=.caddy-root.crt
+
+dev-https: dev-https-hosts dev-https-trust
+	@echo ""
+	@echo "HTTPS local pret. Verifier avec : make dev-https-check"
+	@echo "Firefox utilise son propre magasin de certificats : importer la racine"
+	@echo "via Parametres > Vie privee et securite > Certificats si besoin."
+	@if [ -f .env ] && grep -q '^NEXTAUTH_URL=' .env && ! grep -q '^NEXTAUTH_URL=https://badge.local' .env; then \
+	  echo ""; \
+	  echo "ATTENTION : le .env racine surcharge docker/compose.dev.env et ne pointe pas"; \
+	  echo "vers https://badge.local. Les liens d'email et les callbacks NextAuth seront"; \
+	  echo "incoherents tant que la valeur n'est pas alignee."; \
+	fi
+
+# Ajoute a /etc/hosts les seuls domaines manquants (idempotent, sudo requis).
+dev-https-hosts:
+	@missing=""; \
+	for d in $(DEV_DOMAINS); do \
+	  grep -qE "^[^#]*[[:space:]]$$d([[:space:]]|\$$)" /etc/hosts || missing="$$missing $$d"; \
+	done; \
+	if [ -z "$$missing" ]; then \
+	  echo "/etc/hosts : deja a jour ($(DEV_DOMAINS))."; \
+	else \
+	  echo "Ajout a /etc/hosts (mot de passe admin requis) :$$missing"; \
+	  echo "127.0.0.1$$missing" | sudo tee -a /etc/hosts >/dev/null; \
+	fi
+
+# Extrait la racine de la CA Caddy et l'installe dans le magasin systeme.
+dev-https-trust:
+	@rm -f $(CADDY_ROOT_CRT)
+	@i=0; \
+	until docker compose -f docker-compose.dev.yml cp \
+	    caddy:/data/caddy/pki/authorities/local/root.crt $(CADDY_ROOT_CRT) >/dev/null 2>&1; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 10 ]; then \
+	    echo "Erreur : racine CA introuvable dans le conteneur caddy."; \
+	    echo "Verifier que la stack dev tourne ('make dev') puis relancer."; \
+	    exit 1; \
+	  fi; \
+	  sleep 1; \
+	done
+	@fp=$$(openssl x509 -in $(CADDY_ROOT_CRT) -noout -fingerprint -sha1 | cut -d= -f2 | tr -d ':' | tr 'a-z' 'A-Z'); \
+	case "$$(uname -s)" in \
+	  Darwin) \
+	    if security find-certificate -a -Z /Library/Keychains/System.keychain 2>/dev/null | grep -q "$$fp"; then \
+	      echo "CA Caddy deja approuvee dans le trousseau Systeme ($$fp)."; \
+	    else \
+	      echo "Ajout de la CA Caddy au trousseau Systeme (mot de passe admin requis)..."; \
+	      sudo security add-trusted-cert -d -r trustRoot \
+	        -k /Library/Keychains/System.keychain $(CADDY_ROOT_CRT); \
+	    fi ;; \
+	  Linux) \
+	    echo "Installation de la CA Caddy dans /usr/local/share/ca-certificates (sudo requis)..."; \
+	    sudo cp $(CADDY_ROOT_CRT) /usr/local/share/ca-certificates/caddy-badge-local.crt; \
+	    sudo update-ca-certificates ;; \
+	  *) \
+	    echo "OS non gere ($$(uname -s)) : approuver manuellement $(CADDY_ROOT_CRT)."; \
+	    exit 1 ;; \
+	esac; \
+	rm -f $(CADDY_ROOT_CRT)
+
+# Verifie la redirection HTTP -> HTTPS et la validite de la chaine SANS -k :
+# un echec ici signifie que la CA n'est pas (ou plus) approuvee.
+dev-https-check:
+	@for d in $(DEV_DOMAINS); do \
+	  http=$$(curl -sS -o /dev/null -w "%{http_code}" "http://$$d/" 2>/dev/null || true); \
+	  https=$$(curl -sS -o /dev/null -w "%{http_code}" "https://$$d/" 2>/dev/null || true); \
+	  if [ "$$https" = "000" ]; then \
+	    echo "KO   $$d (http=$$http) : certificat refuse ou domaine non resolu"; \
+	  else \
+	    echo "OK   $$d (http=$$http -> https=$$https)"; \
+	  fi; \
+	done
+
+# Retire la CA du magasin systeme (utile apres un `down -v` qui regenere la CA :
+# l'ancienne racine devient obsolete et encombre le trousseau).
+dev-https-untrust:
+	@case "$$(uname -s)" in \
+	  Darwin) \
+	    hashes=$$(security find-certificate -a -Z /Library/Keychains/System.keychain 2>/dev/null \
+	      | awk '/^SHA-1 hash: /{h=$$3} /"labl"<blob>=".*Caddy Local Authority/{print h}'); \
+	    if [ -z "$$hashes" ]; then \
+	      echo "Aucune CA Caddy dans le trousseau Systeme."; \
+	    else \
+	      for h in $$hashes; do \
+	        echo "Suppression de la CA Caddy $$h (mot de passe admin requis)..."; \
+	        sudo security delete-certificate -Z "$$h" -t /Library/Keychains/System.keychain; \
+	      done; \
+	    fi ;; \
+	  Linux) \
+	    sudo rm -f /usr/local/share/ca-certificates/caddy-badge-local.crt; \
+	    sudo update-ca-certificates --fresh ;; \
+	  *) echo "OS non gere ($$(uname -s))." ;; \
+	esac
 
 # ============================================================
 #  Reset & deploiement v2 (procedure dediee)

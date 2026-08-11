@@ -60,3 +60,6 @@ next-env.d.ts
 
 .plan-logs
 .superpowers
+
+# racine CA Caddy extraite temporairement par `make dev-https`
+.caddy-root.crt

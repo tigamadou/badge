@@ -15,6 +15,7 @@ sa CA interne (`tls internal`). Le HTTP est redirige vers HTTPS.
 | `mysql` | 33060 | -- | Base de donnees MySQL |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
+| `minio` | 9001 | `https://s3.badge.local` | Console MinIO (stockage S3) |
 | `caddy` | 80 / 443 | -- | Reverse proxy dev HTTPS |
 
 Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`)
@@ -22,34 +23,47 @@ restent exposes en parallele.
 
 ## HTTPS local
 
-### 1. Renseigner `/etc/hosts`
+Il n'y a **aucun certificat a generer** : Caddy signe lui-meme les certificats
+`*.badge.local` avec une autorite locale (`Caddy Local Authority`) creee au
+premier demarrage et persistee dans le volume `caddy_data_dev`. Le travail
+consiste seulement a resoudre les domaines vers `127.0.0.1` et a faire confiance
+a cette racine.
 
-Une seule ligne sur la machine hote (une seule fois) :
+### 1. Tout configurer en une commande
 
 ```bash
-echo "127.0.0.1 badge.local pma.badge.local mail.badge.local" | sudo tee -a /etc/hosts
+make dev            # la stack doit tourner (la CA est generee par le conteneur)
+make dev-https      # /etc/hosts + approbation de la CA (mot de passe admin demande)
+make dev-https-check
 ```
 
-### 2. Faire confiance a la CA interne de Caddy
+`make dev-https` est **idempotent** : il n'ajoute a `/etc/hosts` que les domaines
+manquants et ne reinstalle pas une CA deja approuvee. Les domaines traites sont
+lus dans `Caddyfile.dev`, donc ajouter un site au proxy suffit a le couvrir.
 
-Caddy genere une autorite de certification locale (`Caddy Local Authority`) au
-premier demarrage et l'utilise pour signer les certificats `*.badge.local`.
-Pour supprimer l'avertissement du navigateur, importer et approuver la racine :
+| Commande | Role |
+|----------|------|
+| `make dev-https` | Enchaine `dev-https-hosts` + `dev-https-trust`. |
+| `make dev-https-hosts` | Ajoute les domaines manquants a `/etc/hosts`. |
+| `make dev-https-trust` | Extrait la racine CA du conteneur et l'installe dans le magasin systeme (macOS : trousseau Systeme ; Linux : `/usr/local/share/ca-certificates`). |
+| `make dev-https-check` | Verifie sans `-k` que la chaine est valide sur chaque domaine. |
+| `make dev-https-untrust` | Retire les CA Caddy du magasin systeme. |
+
+> **Apres un `docker compose -f docker-compose.dev.yml down -v`** : le volume
+> `caddy_data_dev` disparait, Caddy regenere une CA differente et l'ancienne
+> racine approuvee ne vaut plus rien. Lancer `make dev-https-untrust` puis
+> `make dev-https` pour repartir propre (sinon les vieilles racines s'accumulent
+> dans le trousseau).
+
+**Firefox** utilise son propre magasin de certificats et n'est pas couvert par
+ces cibles : importer la racine via *Parametres > Vie privee et securite >
+Certificats*. Pour l'obtenir :
 
 ```bash
-# Extraire la racine CA du conteneur caddy
 docker compose -f docker-compose.dev.yml cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
-
-# macOS : ajouter au trousseau Systeme et marquer "Toujours approuver"
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ./caddy-root.crt
-rm caddy-root.crt
 ```
 
-Sur Linux : copier `caddy-root.crt` dans `/usr/local/share/ca-certificates/` puis
-`sudo update-ca-certificates`. Firefox utilise son propre magasin de certificats :
-importer la racine via `Parametres > Vie privee et securite > Certificats`.
-
-### 3. Aligner l'URL de base de l'app
+### 2. Aligner l'URL de base de l'app
 
 L'app doit se savoir servie en `https://badge.local` pour que les liens des
 emails et les callbacks NextAuth soient coherents. La valeur committable vit
@@ -69,9 +83,11 @@ NEXTAUTH_URL=https://badge.local
 ### Verification
 
 ```bash
-curl -sS -o /dev/null -w "%{http_code} %{redirect_url}\n" http://badge.local/   # attendu : 308 https://badge.local/
-curl -k -sS -o /dev/null -w "%{http_code}\n" https://badge.local/                # attendu : 200
+make dev-https-check   # attendu : une ligne "OK <domaine> (http=308 -> https=200)" par site
 ```
+
+Une ligne `KO` signifie soit que le domaine n'est pas dans `/etc/hosts`, soit que
+la CA approuvee ne correspond plus a celle du conteneur (cas du `down -v`).
 
 Dans le navigateur (apres confiance CA) : `https://badge.local` affiche le
 cadenas sans avertissement. Les liens captures dans Mailpit

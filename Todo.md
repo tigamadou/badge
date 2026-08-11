@@ -1,0 +1,5 @@
+- Les informations du participants ne sont pas bien transféré lors de son inscription à un évènement
+- Afficher aussi, la photo du participant sur la page de détails de son inscription
+- Aperçu photo et pièce d'identité; La photo et la pièce d'identité envoyé par un participants passent par une validation... Lors que rejeté, l'utilisateur doit soumettre les documents à nouveau. garder une historique de toutes les soumissions. Ajouter des aperçues des pièces partout où nécessaire. Aussi, on doit aussi pouvoir définir les motifs de rejets d'une inscription. Les définir dans les paramètres de la plateforme.  Aussi, les inscriptions doivent être validées par le staff de la plateforme. Et non les membres de l'organisation d'un évènement. Ainsi, une utilisateur dont le profil n'est pas encore approuvé, ne peut pas s'inscrire à un évènement.
+- Dans le compte participants: afficher les aperçus de la pièce d'identité et de la photo.
+- Revoir l'affichage des détails d'un évènement
