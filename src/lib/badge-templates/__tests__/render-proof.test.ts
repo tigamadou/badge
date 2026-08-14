@@ -61,8 +61,15 @@ describe("renderProof", () => {
       ],
     };
     const pdf = await renderProof(overflowing, [], "t-overflow");
-    const pages = pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? [];
+    const raw = pdf.toString("latin1");
+    const pages = raw.match(/\/Type\s*\/Page[^s]/g) ?? [];
     expect(pages.length).toBe(1);
+    // La page doit garder son format declare : 1011x638 px -> 758,25x478,5 pt.
+    // (wrap={false} pose sur la Page ferait retomber la hauteur a 0.)
+    const box = raw.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/);
+    expect(box).not.toBeNull();
+    expect(Number(box![1])).toBeCloseTo(758.25, 1);
+    expect(Number(box![2])).toBeCloseTo(478.5, 1);
   });
 
   it("rend autant de pages PDF que le manifeste en declare", async () => {

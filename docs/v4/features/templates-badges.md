@@ -208,7 +208,9 @@ maquette Figma, positionnées en absolu depuis le coin supérieur gauche de la p
 Un bloc peut déborder de la page sans que la validation s'y oppose — le fond perdu
 est un cas print légitime, et le dépassement se juge à l'œil dans l'aperçu du studio.
 Le trop-plein est simplement coupé : une page déclarée = une page rendue, le rendu ne
-crée jamais de page supplémentaire (`wrap={false}` sur la `Page` `@react-pdf`).
+crée jamais de page supplémentaire (les blocs vivent dans une `View` insécable qui
+couvre exactement la page — `wrap={false}` posé sur la `Page` elle-même lui ferait
+adopter la hauteur du flux, c'est-à-dire zéro).
 
 Piège connu : `@react-pdf` n'affiche pas un texte dont le cadre est plus bas que sa
 ligne — il le supprime sans erreur ni rognage. Donner à chaque bloc `text` une

@@ -146,15 +146,20 @@ export function DeclarativeDocument({
           key={`page-${pageNumber}`}
           size={{ width: px(manifest.page.widthPx), height: px(manifest.page.heightPx) }}
           style={{ backgroundColor: "#ffffff", fontFamily: DEFAULT_FONT_FAMILY }}
-          // Sans wrap={false}, @react-pdf paginerait sur des pages supplementaires tout
-          // contenu debordant de la page — or le fond perdu est permis : une page
-          // declaree = une page rendue, le trop-plein est simplement coupe.
-          wrap={false}
         >
-          {manifest.blocks
-            .map((block, index) => ({ block, index }))
-            .filter(({ block }) => block.page === pageNumber && isBlockVisible(ctx, block.visibleIf))
-            .map(({ block, index }) => renderBlock(block, ctx, assets, fontMap, `b-${index}`))}
+          {/* Les blocs vivent dans une View insecable couvrant exactement la page :
+              sans elle, @react-pdf paginerait sur des pages supplementaires tout
+              contenu debordant (fond perdu permis). wrap={false} directement sur la
+              Page ne convient pas : la page adopterait la hauteur du flux, soit 0. */}
+          <View
+            wrap={false}
+            style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%" }}
+          >
+            {manifest.blocks
+              .map((block, index) => ({ block, index }))
+              .filter(({ block }) => block.page === pageNumber && isBlockVisible(ctx, block.visibleIf))
+              .map(({ block, index }) => renderBlock(block, ctx, assets, fontMap, `b-${index}`))}
+          </View>
         </Page>
       ))}
     </Document>
