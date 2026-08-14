@@ -32,7 +32,7 @@
 | 2 | Variantes de contexte — `contexts.ts` | [x] | 2026-08-14 | 6 tests ; ecart : le nom de la variante textes-longs du plan (26 car.) ne passait pas son propre seuil de 30, allonge |
 | 3 | Validation et rendu — `render.tsx` | [x] | 2026-08-14 | 5 tests ; rendu PDF reel via buildDeclarativeTemplate |
 | 4 | Serveur HTTP — `server.ts` | [x] | 2026-08-14 | 9 tests par appels HTTP reels sur port ephemere |
-| 5 | Infrastructure — docker-compose, Caddy, Makefile | [ ] | | |
+| 5 | Infrastructure — docker-compose, Caddy, Makefile | [x] | 2026-08-14 | service demarre, /api/templates repond. **`make dev-https-hosts` a lancer manuellement** (sudo) pour https://studio.badge.local ; localhost:3786 fonctionne sans |
 | 6 | Interface — page, édition, aperçu | [ ] | | |
 | 7 | Documentation | [ ] | | |
 
@@ -1019,7 +1019,7 @@ make lint && make typecheck
 - Consomme : `studio/server.ts` (Task 4).
 - Produit : la commande `make studio` et les accès `http://localhost:3786` / `https://studio.badge.local`.
 
-- [ ] **Étape 1 : Déclarer le service**
+- [x] **Étape 1 : Déclarer le service**
 
 Dans `docker-compose.dev.yml`, après le service `app` :
 
@@ -1045,7 +1045,7 @@ Dans `docker-compose.dev.yml`, après le service `app` :
 
 Aucune dépendance à `mysql` ou `minio` : le studio ne touche ni la base ni le stockage.
 
-- [ ] **Étape 2 : Publier via Caddy**
+- [x] **Étape 2 : Publier via Caddy**
 
 Ajouter à la fin de `Caddyfile.dev` :
 
@@ -1056,7 +1056,7 @@ studio.badge.local {
 }
 ```
 
-- [ ] **Étape 3 : Ajouter la cible make**
+- [x] **Étape 3 : Ajouter la cible make**
 
 Dans `Makefile`, ajouter `studio` à la liste `.PHONY` (ligne 11, à côté de `new-badge-template pack-badge-template`), puis la cible près des cibles de développement :
 
@@ -1068,7 +1068,7 @@ studio:
 	@echo "Studio : http://localhost:3786 (ou https://studio.badge.local apres make dev-https)"
 ```
 
-- [ ] **Étape 4 : Enregistrer le domaine local — À LA CHARGE DE L'UTILISATEUR**
+- [x] **Étape 4 : Enregistrer le domaine local — À LA CHARGE DE L'UTILISATEUR**
 
 > **Ne pas exécuter cette commande en session automatisée.** `make dev-https-hosts` écrit dans `/etc/hosts` via `sudo` : sans terminal interactif, elle attend un mot de passe et bloque la boucle. Cocher cette étape en consignant dans la table `## Progression` : « `make dev-https-hosts` à lancer manuellement ». Rien n'est bloqué pour la suite : le studio reste joignable sur `http://localhost:3786`, seul l'accès `https://studio.badge.local` attend cette commande.
 
@@ -1080,7 +1080,7 @@ make dev-https-hosts
 
 Attendu, quand l'utilisateur la lance : la commande signale l'ajout de `studio.badge.local` (mot de passe administrateur demandé), ou indique que le fichier est déjà à jour.
 
-- [ ] **Étape 5 : Démarrer et vérifier**
+- [x] **Étape 5 : Démarrer et vérifier**
 
 ```bash
 make studio
@@ -1090,7 +1090,7 @@ curl -s http://localhost:3786/api/templates
 
 Attendu : le journal affiche « Studio de templates : http://localhost:3900 (atelier /app/badge-templates) », et l'appel renvoie `{"templates":[...]}` — liste vide si l'atelier n'existe pas encore.
 
-- [ ] **Étape 6 : Créer un template d'essai**
+- [x] **Étape 6 : Créer un template d'essai**
 
 ```bash
 make new-badge-template NAME=essai-studio

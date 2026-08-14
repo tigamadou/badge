@@ -8,7 +8,7 @@
         test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs \
-        new-badge-template pack-badge-template \
+        new-badge-template pack-badge-template studio \
         upload deploy upload-prod deploy-prod upload-preprod deploy-preprod \
         upload-prod-dry upload-preprod-dry net-create \
         download-uploads download-db
@@ -344,6 +344,12 @@ migrate-badge-template-refs:
 
 # v4 (spec 14) : cree un squelette de template dans badge-templates/<NAME>/ (atelier
 # gitignore, distinct de prisma/badge-templates/ qui contient les paquets de reference).
+# v4 (spec 16) : studio de construction de templates (outil de dev, non deploye).
+# Edite badge-templates/<NAME>/manifest.json avec apercu instantane.
+studio:
+	docker compose -f docker-compose.dev.yml up -d studio
+	@echo "Studio : http://localhost:3786 (ou https://studio.badge.local apres make dev-https)"
+
 new-badge-template:
 	docker compose -f docker-compose.dev.yml exec -e NAME=$(NAME) app yarn tsx scripts/new-badge-template.ts
 

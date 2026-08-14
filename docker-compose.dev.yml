@@ -19,6 +19,24 @@ services:
       minio:
         condition: service_started
 
+  # v4 (spec 16) : studio de construction de templates. Outil de developpement
+  # uniquement, jamais deploye. Meme image que `app`, meme depot monte.
+  studio:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    command: yarn tsx studio/server.ts
+    ports:
+      - "3786:3900"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - docker/compose.dev.env
+      - path: .env
+        required: false
+
   mysql:
     image: mysql:8
     ports:
