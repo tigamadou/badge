@@ -31,7 +31,7 @@
 | 1 | Accès à l'atelier — `workshop.ts` | [x] | 2026-08-14 | 9 tests ; `sniff` promu en export (153 tests badge-templates verts) |
 | 2 | Variantes de contexte — `contexts.ts` | [x] | 2026-08-14 | 6 tests ; ecart : le nom de la variante textes-longs du plan (26 car.) ne passait pas son propre seuil de 30, allonge |
 | 3 | Validation et rendu — `render.tsx` | [x] | 2026-08-14 | 5 tests ; rendu PDF reel via buildDeclarativeTemplate |
-| 4 | Serveur HTTP — `server.ts` | [ ] | | |
+| 4 | Serveur HTTP — `server.ts` | [x] | 2026-08-14 | 9 tests par appels HTTP reels sur port ephemere |
 | 5 | Infrastructure — docker-compose, Caddy, Makefile | [ ] | | |
 | 6 | Interface — page, édition, aperçu | [ ] | | |
 | 7 | Documentation | [ ] | | |
@@ -696,7 +696,7 @@ Routes, telles que fixées par la spec :
 | `PUT` | `/api/templates/:name` | `{ ok: true }` ou `404` |
 | `POST` | `/api/render` | PDF, ou `422` `{ errors }` |
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Créer `studio/__tests__/server.test.ts` :
 
@@ -838,7 +838,7 @@ describe("POST /api/render", () => {
 });
 ```
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/server.test.ts
@@ -846,7 +846,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : ÉCHEC à la résolution — `Cannot find module '../server'`.
 
-- [ ] **Étape 3 : Écrire `server.ts`**
+- [x] **Étape 3 : Écrire `server.ts`**
 
 Créer `studio/server.ts` :
 
@@ -992,7 +992,7 @@ if (process.env.VITEST === undefined) {
 
 La garde `process.env.VITEST` évite qu'importer le module dans un test ouvre un port : Vitest positionne cette variable.
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/server.test.ts
@@ -1000,7 +1000,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : SUCCÈS sur les neuf tests. Ce fichier n'exerce que les routes d'API ; les fichiers statiques n'existent qu'à partir de la Task 6 et ne sont pas testés ici.
 
-- [ ] **Étape 5 : Vérifier lint et types**
+- [x] **Étape 5 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck
