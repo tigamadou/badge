@@ -47,6 +47,38 @@ describe("renderProof", () => {
     expect(pdf.subarray(0, 4).toString("latin1")).toBe("%PDF");
   });
 
+  it("ne cree pas de page supplementaire quand un bloc deborde de la page", async () => {
+    // Le fond perdu etant permis, un bloc peut sortir de la page ; @react-pdf ne doit
+    // pas paginer le trop-plein sur une deuxieme page.
+    const overflowing: TemplateManifest = {
+      ...OK,
+      blocks: [
+        {
+          type: "text", page: 1, x: 4, y: 600, w: 400, h: 200,
+          text: "{participant.firstName}",
+          style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
+        },
+      ],
+    };
+    const pdf = await renderProof(overflowing, [], "t-overflow");
+    const pages = pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? [];
+    expect(pages.length).toBe(1);
+  });
+
+  it("rend autant de pages PDF que le manifeste en declare", async () => {
+    const twoPages: TemplateManifest = {
+      ...OK,
+      page: { ...OK.page, count: 2 },
+      blocks: [
+        { ...OK.blocks[0] },
+        { ...OK.blocks[0], page: 2 },
+      ],
+    };
+    const pdf = await renderProof(twoPages, [], "t-two-pages");
+    const pages = pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? [];
+    expect(pages.length).toBe(2);
+  });
+
   it("echoue quand une ressource declaree n'est pas fournie", async () => {
     // Cas de defense en profondeur : le lecteur d'archive refuse deja un asset absent
     // avant d'arriver ici. Le message exact vient de @react-pdf, qui encapsule l'erreur

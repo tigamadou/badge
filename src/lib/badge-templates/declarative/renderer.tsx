@@ -146,6 +146,10 @@ export function DeclarativeDocument({
           key={`page-${pageNumber}`}
           size={{ width: px(manifest.page.widthPx), height: px(manifest.page.heightPx) }}
           style={{ backgroundColor: "#ffffff", fontFamily: DEFAULT_FONT_FAMILY }}
+          // Sans wrap={false}, @react-pdf paginerait sur des pages supplementaires tout
+          // contenu debordant de la page — or le fond perdu est permis : une page
+          // declaree = une page rendue, le trop-plein est simplement coupe.
+          wrap={false}
         >
           {manifest.blocks
             .map((block, index) => ({ block, index }))

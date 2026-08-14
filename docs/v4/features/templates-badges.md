@@ -207,6 +207,8 @@ converti en points PDF au rendu : 1 px = 0,75 pt). Une carte CR80 paysage fait
 maquette Figma, positionnées en absolu depuis le coin supérieur gauche de la page.
 Un bloc peut déborder de la page sans que la validation s'y oppose — le fond perdu
 est un cas print légitime, et le dépassement se juge à l'œil dans l'aperçu du studio.
+Le trop-plein est simplement coupé : une page déclarée = une page rendue, le rendu ne
+crée jamais de page supplémentaire (`wrap={false}` sur la `Page` `@react-pdf`).
 
 Piège connu : `@react-pdf` n'affiche pas un texte dont le cadre est plus bas que sa
 ligne — il le supprime sans erreur ni rognage. Donner à chaque bloc `text` une
