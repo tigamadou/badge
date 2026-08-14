@@ -176,6 +176,35 @@ describe("parseManifest", () => {
     expect(res.ok).toBe(true);
   });
 
+  it("accepte la typo etendue", () => {
+    const res = parse({
+      blocks: [
+        {
+          ...VALID.blocks[0],
+          style: {
+            sizePx: 50, color: "#0f172a", overflow: "clip", fontStyle: "italic",
+            decoration: "underline", align: "justify", maxLines: 2,
+            backgroundColor: "category.color", paddingPx: 8,
+          },
+        },
+      ],
+    });
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
+  it("refuse un maxLines non entier ou nul", () => {
+    expect(
+      parse({ blocks: [{ ...VALID.blocks[0], style: { ...VALID.blocks[0].style, maxLines: 0 } }] }).ok,
+    ).toBe(false);
+  });
+
+  it("refuse un backgroundColor invalide", () => {
+    const res = parse({
+      blocks: [{ ...VALID.blocks[0], style: { ...VALID.blocks[0].style, backgroundColor: "bleu" } }],
+    });
+    expect(res.ok).toBe(false);
+  });
+
   it("refuse une source de type incompatible avec le bloc", () => {
     const res = parse({
       blocks: [

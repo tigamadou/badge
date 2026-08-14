@@ -20,7 +20,9 @@ export function registerTemplateFonts(
     const family = `tpl-${templateId}-${font.alias}`;
     Font.register({
       family,
-      fonts: [{ src: assets(font.file), fontWeight: font.weight ?? 400 }],
+      fonts: [
+        { src: assets(font.file), fontWeight: font.weight ?? 400, fontStyle: font.style ?? "normal" },
+      ],
     });
     map[font.alias] = family;
   }

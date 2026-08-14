@@ -38,7 +38,7 @@ describe("registerTemplateFonts", () => {
     registerTemplateFonts("t1", [{ alias: "titre", file: "fonts/A.ttf", weight: 700 }], assets);
     expect(register).toHaveBeenCalledWith({
       family: "tpl-t1-titre",
-      fonts: [{ src: "data:font/ttf;base64,fonts/A.ttf", fontWeight: 700 }],
+      fonts: [{ src: "data:font/ttf;base64,fonts/A.ttf", fontWeight: 700, fontStyle: "normal" }],
     });
   });
 
@@ -46,8 +46,21 @@ describe("registerTemplateFonts", () => {
     registerTemplateFonts("t1", [{ alias: "corps", file: "fonts/B.ttf" }], assets);
     expect(register).toHaveBeenCalledWith({
       family: "tpl-t1-corps",
-      fonts: [{ src: "data:font/ttf;base64,fonts/B.ttf", fontWeight: 400 }],
+      fonts: [{ src: "data:font/ttf;base64,fonts/B.ttf", fontWeight: 400, fontStyle: "normal" }],
     });
+  });
+
+  it("enregistre une police avec son style italique", () => {
+    registerTemplateFonts(
+      "tid",
+      [{ alias: "titre", file: "fonts/A.ttf", weight: 700, style: "italic" }],
+      assets,
+    );
+    expect(register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fonts: [expect.objectContaining({ fontStyle: "italic", fontWeight: 700 })],
+      }),
+    );
   });
 
   it("expose Montserrat comme police par defaut", () => {

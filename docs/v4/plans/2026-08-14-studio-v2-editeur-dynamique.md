@@ -17,7 +17,7 @@
 | 1. opacity + rotate sur tous les blocs | [x] | 2026-08-14 | |
 | 2. Bordures par côté (remplace borderTopPx) | [x] | 2026-08-14 | |
 | 3. Coins arrondis par coin (+ QR) | [x] | 2026-08-14 | |
-| 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [ ] | | |
+| 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [x] | 2026-08-14 | |
 | 5. objectFit des images | [ ] | | |
 | 6. Doc feature : format enrichi | [ ] | | |
 | 7. Contexte dynamique serveur (context.ts, render, presets) | [ ] | | |
@@ -249,7 +249,7 @@ appliqué à tous les types (spread avec `frame`/`borderStyles`) ; retirer les a
 **Interfaces:**
 - Produces — sur `TextStyle` : `fontStyle?: "italic"`, `decoration?: "underline" | "line-through"`, `align` accepte `"justify"`, `maxLines?: number` (entier ≥ 1, ellipsis native), `backgroundColor?: string` (hexa ou source), `paddingPx?: number` (les 4 côtés). Sur `FontDeclaration` : `style?: "normal" | "italic"`. `shrink`/`truncate` calculent sur `w - 2*paddingPx`.
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // schema.test.ts
@@ -308,16 +308,16 @@ it("enregistre une police avec son style italique", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec** (vitest declarative).
-- [ ] **Step 3 : Implémentation** —
+- [x] **Step 2 : Vérifier l'échec** (vitest declarative).
+- [x] **Step 3 : Implémentation** —
   - Types : champs ci-dessus sur `TextStyle` ; `FontDeclaration.style?: "normal" | "italic"`.
   - Schéma : `fontStyle: z.enum(["italic"]).optional(), decoration: z.enum(["underline", "line-through"]).optional(), align: z.enum(["left", "center", "right", "justify"]).optional(), maxLines: z.number().int().min(1).optional(), backgroundColor: z.string().min(1).optional(), paddingPx: z.number().min(0).optional()` ; déclaration `fonts` : `style: z.enum(["normal", "italic"]).optional()` ; dans `checkTextBlock`, valider `style.backgroundColor` via `checkColor` quand présent.
   - `declarative/fonts.ts` : `fonts: [{ src: assets(font.file), fontWeight: font.weight ?? 400, fontStyle: font.style ?? "normal" }]`.
   - `src/lib/badge-templates/fonts.ts` : ajouter les entrées italiques 400 et 700 de Montserrat. Récupérer les URL exactes au moment de l'implémentation :
     `curl -s 'https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@1,400;1,700' -A 'Mozilla/5.0 (X11; Linux x86_64)' | grep -o 'https://[^)]*\.ttf'` (l'UA force le format TTF) ; ajouter `{ src: <url400>, fontWeight: 400, fontStyle: "italic" }` et `{ src: <url700>, fontWeight: 700, fontStyle: "italic" }`.
   - Renderer (`renderText`) : le `<View>` reçoit `backgroundColor: colorOf(style.backgroundColor, ctx)` (si présent) et `padding: px(style.paddingPx)` (si présent) ; le `<Text>` reçoit `fontStyle`, `textDecoration: style.decoration`, `maxLines: style.maxLines` (prop du composant, pas du style) et `textOverflow: style.maxLines ? "ellipsis" : undefined` ; `shrinkToFit`/`truncateToFit` reçoivent `widthPx = block.w - 2 * (style.paddingPx ?? 0)`.
-- [ ] **Step 4 : Vérifier le vert** — vitest declarative, puis contrôle visuel rapide : lancer le studio (`make studio` déjà up → `docker compose -f docker-compose.dev.yml restart studio`), rendre un manifeste avec un bloc italique souligné et vérifier le PDF à l'œil.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): typo etendue du manifeste (italique, decoration, justify, maxLines, fond, padding)`
+- [x] **Step 4 : Vérifier le vert** — vitest declarative, puis contrôle visuel rapide : lancer le studio (`make studio` déjà up → `docker compose -f docker-compose.dev.yml restart studio`), rendre un manifeste avec un bloc italique souligné et vérifier le PDF à l'œil.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): typo etendue du manifeste (italique, decoration, justify, maxLines, fond, padding)`
 
 ### Task 5 : `objectFit` des images
 

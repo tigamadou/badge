@@ -12,13 +12,18 @@ const styleSchema = z.object({
   font: z.string().min(1).optional(),
   sizePx: z.number().positive().max(270),
   weight: weightSchema.optional(),
-  align: z.enum(["left", "center", "right"]).optional(),
+  align: z.enum(["left", "center", "right", "justify"]).optional(),
   color: z.string().min(1),
   overflow: z.enum(["shrink", "truncate", "clip"]),
   minSizePx: z.number().positive().max(270).optional(),
   transform: z.enum(["uppercase", "lowercase", "none"]).optional(),
   letterSpacing: z.number().optional(),
   lineHeight: z.number().positive().optional(),
+  fontStyle: z.literal("italic").optional(),
+  decoration: z.enum(["underline", "line-through"]).optional(),
+  maxLines: z.number().int().min(1).optional(),
+  backgroundColor: z.string().min(1).optional(),
+  paddingPx: z.number().min(0).optional(),
 });
 
 const conditionSchema = z.union([
@@ -87,7 +92,14 @@ const manifestSchema = z.object({
     count: z.number().int().positive().max(4),
   }),
   fonts: z
-    .array(z.object({ alias: z.string().min(1), file: z.string().min(1), weight: weightSchema.optional() }))
+    .array(
+      z.object({
+        alias: z.string().min(1),
+        file: z.string().min(1),
+        weight: weightSchema.optional(),
+        style: z.enum(["normal", "italic"]).optional(),
+      }),
+    )
     .optional(),
   blocks: z.array(blockSchema).min(1).max(MAX_BLOCKS),
 });
@@ -135,6 +147,9 @@ function checkTextBlock(
   }
   for (const path of paths) checkSource(path, "text", label, errors);
   checkColor(block.style.color, `${label} (couleur)`, errors);
+  if (block.style.backgroundColor !== undefined) {
+    checkColor(block.style.backgroundColor, `${label} (fond du texte)`, errors);
+  }
   if (block.style.overflow === "shrink" && block.style.minSizePx === undefined) {
     errors.push(`${label} : overflow "shrink" exige un minSizePx.`);
   }

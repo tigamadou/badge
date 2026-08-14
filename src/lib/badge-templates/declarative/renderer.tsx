@@ -88,13 +88,29 @@ function renderText(
   key: string,
 ) {
   const raw = renderTextTemplate(block.text, ctx);
-  const content = block.style.overflow === "truncate" ? truncateToFit(raw, block.style, block.w) : raw;
+  // La marge interne retranche de la largeur utile : sans cela un texte cadre au
+  // pixel deborderait de son fond.
+  const innerWidth = block.w - 2 * (block.style.paddingPx ?? 0);
+  const content =
+    block.style.overflow === "truncate" ? truncateToFit(raw, block.style, innerWidth) : raw;
   const sizePx =
-    block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, block.w) : block.style.sizePx;
+    block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, innerWidth) : block.style.sizePx;
 
   return (
-    <View key={key} style={{ ...frame(block), ...borderStyles(block, ctx), ...radiusStyles(block) }}>
+    <View
+      key={key}
+      style={{
+        ...frame(block),
+        ...borderStyles(block, ctx),
+        ...radiusStyles(block),
+        backgroundColor: block.style.backgroundColor
+          ? colorOf(block.style.backgroundColor, ctx)
+          : undefined,
+        padding: block.style.paddingPx !== undefined ? px(block.style.paddingPx) : undefined,
+      }}
+    >
       <Text
+        maxLines={block.style.maxLines}
         style={{
           fontFamily: block.style.font ? fontMap[block.style.font] : DEFAULT_FONT_FAMILY,
           fontSize: px(sizePx),
@@ -107,6 +123,9 @@ function renderText(
           letterSpacing:
             block.style.letterSpacing !== undefined ? px(block.style.letterSpacing) : undefined,
           lineHeight: block.style.lineHeight,
+          fontStyle: block.style.fontStyle,
+          textDecoration: block.style.decoration,
+          textOverflow: block.style.maxLines !== undefined ? "ellipsis" : undefined,
         }}
       >
         {content}

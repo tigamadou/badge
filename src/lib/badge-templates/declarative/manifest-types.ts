@@ -9,13 +9,21 @@ export type TextStyle = {
   font?: string;
   sizePx: number;
   weight?: FontWeight;
-  align?: "left" | "center" | "right";
+  align?: "left" | "center" | "right" | "justify";
   color: string;
   overflow: Overflow;
   minSizePx?: number;
   transform?: "uppercase" | "lowercase" | "none";
   letterSpacing?: number;
   lineHeight?: number;
+  fontStyle?: "italic";
+  decoration?: "underline" | "line-through";
+  // Nombre maximal de lignes rendues, ellipsis au-dela (complete shrink/truncate
+  // pour le multiligne).
+  maxLines?: number;
+  // Fond et marge interne du CADRE du texte : de quoi composer une etiquette.
+  backgroundColor?: string;
+  paddingPx?: number;
 };
 
 // Deux formes de condition :
@@ -87,7 +95,12 @@ export type RectBlock = BlockBase & {
 
 export type Block = TextBlock | ImageBlock | QrBlock | RectBlock;
 
-export type FontDeclaration = { alias: string; file: string; weight?: FontWeight };
+export type FontDeclaration = {
+  alias: string;
+  file: string;
+  weight?: FontWeight;
+  style?: "normal" | "italic";
+};
 
 export type TemplateManifest = {
   formatVersion: 1;

@@ -279,6 +279,28 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).transforms).toEqual([]);
   });
 
+  it("rend italique, decoration, justify, maxLines, fond et padding", () => {
+    const t = build(
+      manifest([
+        {
+          type: "text", page: 1, x: 0, y: 0, w: 472, h: 94, text: "{event.title}",
+          style: {
+            sizePx: 38, color: "#000000", overflow: "clip", fontStyle: "italic",
+            decoration: "line-through", align: "justify", maxLines: 2,
+            backgroundColor: "#eeeeee", paddingPx: 8,
+          },
+        },
+      ]),
+    );
+    const out = renderToJson(t.Component, CTX);
+    expect(out.textStyles[0]).toMatchObject({
+      fontStyle: "italic",
+      textDecoration: "line-through",
+    });
+    expect(out.viewPaddings).toContain(px(8));
+    expect(out.fills).toContain("#eeeeee");
+  });
+
   it("utilise la police declaree par le manifeste", () => {
     const withFont: TemplateManifest = {
       ...manifest([
