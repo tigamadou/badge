@@ -35,6 +35,13 @@ const borderSideSchema = z.object({
   style: z.enum(["solid", "dashed", "dotted"]).optional(),
 });
 
+const cornerRadiiSchema = z.object({
+  topLeft: z.number().min(0).optional(),
+  topRight: z.number().min(0).optional(),
+  bottomRight: z.number().min(0).optional(),
+  bottomLeft: z.number().min(0).optional(),
+});
+
 const baseShape = {
   page: z.number().int().positive(),
   x: z.number().min(0),
@@ -43,6 +50,7 @@ const baseShape = {
   h: z.number().positive(),
   rotate: z.number().min(-360).max(360).optional(),
   opacity: z.number().min(0).max(1).optional(),
+  radiusPx: z.union([z.number().min(0), cornerRadiiSchema]).optional(),
   border: borderSideSchema.optional(),
   borderTop: borderSideSchema.optional(),
   borderRight: borderSideSchema.optional(),
@@ -57,14 +65,12 @@ const blockSchema = z.discriminatedUnion("type", [
     type: z.literal("image"),
     source: z.string().optional(),
     asset: z.string().optional(),
-    radiusPx: z.number().min(0).optional(),
     ...baseShape,
   }),
   z.object({ type: z.literal("qr"), ...baseShape }),
   z.object({
     type: z.literal("rect"),
     fill: z.string(),
-    radiusPx: z.number().min(0).optional(),
     ...baseShape,
   }),
 ]);

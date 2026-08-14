@@ -16,7 +16,7 @@
 |---|---|---|---|
 | 1. opacity + rotate sur tous les blocs | [x] | 2026-08-14 | |
 | 2. Bordures par côté (remplace borderTopPx) | [x] | 2026-08-14 | |
-| 3. Coins arrondis par coin (+ QR) | [ ] | | |
+| 3. Coins arrondis par coin (+ QR) | [x] | 2026-08-14 | |
 | 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [ ] | | |
 | 5. objectFit des images | [ ] | | |
 | 6. Doc feature : format enrichi | [ ] | | |
@@ -187,7 +187,7 @@ export type CornerRadii = { topLeft?: number; topRight?: number; bottomRight?: n
 // BlockBase.radiusPx?: number | CornerRadii   (remplace radiusPx de ImageBlock/RectBlock, s'etend a qr et text)
 ```
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // schema.test.ts
@@ -218,8 +218,8 @@ it("applique un arrondi par coin", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec** (vitest declarative).
-- [ ] **Step 3 : Implémentation** — types (`CornerRadii`, `radiusPx` sur `BlockBase`, retiré des blocs image/rect) ; schéma : `radiusPx: z.union([z.number().min(0), z.object({ topLeft: z.number().min(0).optional(), topRight: ..., bottomRight: ..., bottomLeft: ... })]).optional()` dans `baseShape` ; renderer :
+- [x] **Step 2 : Vérifier l'échec** (vitest declarative).
+- [x] **Step 3 : Implémentation** — types (`CornerRadii`, `radiusPx` sur `BlockBase`, retiré des blocs image/rect) ; schéma : `radiusPx: z.union([z.number().min(0), z.object({ topLeft: z.number().min(0).optional(), topRight: ..., bottomRight: ..., bottomLeft: ... })]).optional()` dans `baseShape` ; renderer :
 
 ```tsx
 function radiusStyles(block: Block) {
@@ -236,8 +236,8 @@ function radiusStyles(block: Block) {
 ```
 
 appliqué à tous les types (spread avec `frame`/`borderStyles`) ; retirer les anciens `borderRadius: block.radiusPx ? px(...)` spécifiques.
-- [ ] **Step 4 : Vérifier le vert** ; grep `radiusPx` dans les manifestes du dépôt : la forme nombre reste valide, aucune migration attendue.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): coins arrondis par coin et sur les blocs qr`
+- [x] **Step 4 : Vérifier le vert** ; grep `radiusPx` dans les manifestes du dépôt : la forme nombre reste valide, aucune migration attendue.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): coins arrondis par coin et sur les blocs qr`
 
 ### Task 4 : Typo étendue — italique, décoration, justify, maxLines, fond et padding
 

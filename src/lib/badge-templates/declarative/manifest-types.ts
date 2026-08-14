@@ -33,6 +33,15 @@ export type VisibleIf = Condition | Condition[];
 
 export type BorderStyle = "solid" | "dashed" | "dotted";
 
+// Rayons d'arrondi par coin. `radiusPx` accepte aussi un nombre unique, applique
+// aux quatre coins.
+export type CornerRadii = {
+  topLeft?: number;
+  topRight?: number;
+  bottomRight?: number;
+  bottomLeft?: number;
+};
+
 // Une bordure : largeur en px, couleur (hexadecimale ou source de couleur), style.
 export type BorderSide = { widthPx: number; color: string; style?: BorderStyle };
 
@@ -49,6 +58,7 @@ type BlockBase = {
   h: number;
   rotate?: number;
   opacity?: number;
+  radiusPx?: number | CornerRadii;
   border?: BorderSide;
   borderTop?: BorderSide;
   borderRight?: BorderSide;
@@ -66,7 +76,6 @@ export type ImageBlock = BlockBase & {
   type: "image";
   source?: string;
   asset?: string;
-  radiusPx?: number;
 };
 
 export type QrBlock = BlockBase & { type: "qr" };
@@ -74,7 +83,6 @@ export type QrBlock = BlockBase & { type: "qr" };
 export type RectBlock = BlockBase & {
   type: "rect";
   fill: string;
-  radiusPx?: number;
 };
 
 export type Block = TextBlock | ImageBlock | QrBlock | RectBlock;

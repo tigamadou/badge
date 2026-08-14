@@ -50,6 +50,19 @@ function frame(block: Block) {
   };
 }
 
+// `radiusPx` accepte un nombre (les quatre coins) ou un objet par coin.
+function radiusStyles(block: Block) {
+  const radius = block.radiusPx;
+  if (radius === undefined) return {};
+  if (typeof radius === "number") return { borderRadius: px(radius) };
+  const out: Record<string, number> = {};
+  if (radius.topLeft !== undefined) out.borderTopLeftRadius = px(radius.topLeft);
+  if (radius.topRight !== undefined) out.borderTopRightRadius = px(radius.topRight);
+  if (radius.bottomRight !== undefined) out.borderBottomRightRadius = px(radius.bottomRight);
+  if (radius.bottomLeft !== undefined) out.borderBottomLeftRadius = px(radius.bottomLeft);
+  return out;
+}
+
 // `border` couvre les quatre cotes ; une declaration par cote prime sur lui.
 function borderStyles(block: Block, ctx: TemplateContext) {
   const sides = {
@@ -80,7 +93,7 @@ function renderText(
     block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, block.w) : block.style.sizePx;
 
   return (
-    <View key={key} style={{ ...frame(block), ...borderStyles(block, ctx) }}>
+    <View key={key} style={{ ...frame(block), ...borderStyles(block, ctx), ...radiusStyles(block) }}>
       <Text
         style={{
           fontFamily: block.style.font ? fontMap[block.style.font] : DEFAULT_FONT_FAMILY,
@@ -118,8 +131,8 @@ function renderBlock(
         style={{
           ...frame(block),
           ...borderStyles(block, ctx),
+          ...radiusStyles(block),
           backgroundColor: colorOf(block.fill, ctx),
-          borderRadius: block.radiusPx ? px(block.radiusPx) : undefined,
         }}
       />
     );
@@ -140,8 +153,8 @@ function renderBlock(
       style={{
         ...frame(block),
         ...borderStyles(block, ctx),
+        ...radiusStyles(block),
         objectFit: "cover",
-        borderRadius: block.type === "image" && block.radiusPx ? px(block.radiusPx) : undefined,
       }}
     />
   );

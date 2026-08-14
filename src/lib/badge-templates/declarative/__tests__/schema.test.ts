@@ -109,6 +109,21 @@ describe("parseManifest", () => {
     expect(res.ok, errorsOf(res)).toBe(true);
   });
 
+  it("accepte un radius global ou par coin, y compris sur un qr", () => {
+    expect(
+      parse({ blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 118, h: 118, radiusPx: 8 }] }).ok,
+    ).toBe(true);
+    const res = parse({
+      blocks: [
+        {
+          type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "#ffffff",
+          radiusPx: { topLeft: 8, bottomRight: 16 },
+        },
+      ],
+    });
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
   it("refuse une couleur de bordure invalide", () => {
     const res = parse({
       blocks: [

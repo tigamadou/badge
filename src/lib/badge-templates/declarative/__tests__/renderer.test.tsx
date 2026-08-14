@@ -157,6 +157,18 @@ describe("buildDeclarativeTemplate", () => {
     expect(out.borderWidths).toContain(px(4));
   });
 
+  it("applique un arrondi par coin", () => {
+    const t = build(
+      manifest([
+        {
+          type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "#ffffff",
+          radiusPx: { topLeft: 8 },
+        },
+      ]),
+    );
+    expect(renderToJson(t.Component, CTX).radii[0].borderTopLeftRadius).toBe(px(8));
+  });
+
   it("applique un arrondi a une image", () => {
     const t = build(
       manifest([

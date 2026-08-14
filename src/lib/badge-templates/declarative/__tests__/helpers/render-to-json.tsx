@@ -21,6 +21,8 @@ export type Collected = {
   opacities: number[];
   // Largeurs de bordure (tous cotes confondus) rencontrees sur n'importe quel noeud.
   borderWidths: number[];
+  // Rayons d'arrondi par noeud : cles borderRadius / borderTopLeftRadius / ...
+  radii: Array<Record<string, number>>;
   pageCount: number;
 };
 
@@ -85,6 +87,14 @@ function walk(node: ReactNode, out: Collected): void {
     if (typeof width === "number") out.borderWidths.push(width);
   }
 
+  const radii: Record<string, number> = {};
+  for (const [key, value] of Object.entries(style)) {
+    if (key.startsWith("border") && key.endsWith("Radius") && typeof value === "number") {
+      radii[key] = value;
+    }
+  }
+  if (Object.keys(radii).length > 0) out.radii.push(radii);
+
   walk(props.children ?? null, out);
 }
 
@@ -101,6 +111,7 @@ export function renderToJson(
     transforms: [],
     opacities: [],
     borderWidths: [],
+    radii: [],
     pageCount: 0,
   };
   walk(createElement(Component, { ctx }), out);
