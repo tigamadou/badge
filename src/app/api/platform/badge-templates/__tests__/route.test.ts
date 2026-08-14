@@ -180,7 +180,7 @@ describe("POST /api/platform/badge-templates", () => {
 
     const manifest = manifestOf({
       blocks: [
-        { type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" },
+        { type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/fond.png" } },
       ],
     });
     const res = await post(

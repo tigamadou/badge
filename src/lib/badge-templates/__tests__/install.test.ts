@@ -53,7 +53,7 @@ describe("installTemplate", () => {
       label: "Avec fond",
       description: "",
       page: { widthPx: 1011, heightPx: 638, count: 1 },
-      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/fond.png" } }],
     };
 
     const created = await installTemplate({
@@ -115,7 +115,7 @@ describe("installTemplate", () => {
       label: "Sans ressource",
       description: "",
       page: { widthPx: 1011, heightPx: 638, count: 1 },
-      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 10, h: 10, asset: "assets/absent.png" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, image: { asset: "assets/absent.png" } }],
     };
 
     await expect(

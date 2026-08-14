@@ -89,11 +89,19 @@ describe("buildDeclarativeTemplate", () => {
     expect(out.textStyles[0]).toMatchObject({ textTransform: "uppercase" });
   });
 
-  it("rend une image issue d'une ressource du paquet", () => {
+  it("rend le fond image d'une forme, rogne par elle", () => {
     const t = build(
-      manifest([{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" }]),
+      manifest([
+        {
+          type: "circle", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "#e2e8f0",
+          image: { asset: "assets/fond.png", fit: "contain" },
+        },
+      ]),
     );
-    expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,assets/fond.png");
+    const out = renderToJson(t.Component, CTX);
+    expect(out.images).toContain("data:image/png;base64,assets/fond.png");
+    expect(out.objectFits).toContain("contain");
+    expect(out.fills).toContain("#e2e8f0");
   });
 
   it("rend un carre comme un aplat et un cercle a rayon implicite", () => {
@@ -109,25 +117,16 @@ describe("buildDeclarativeTemplate", () => {
     expect(out.radii.some((r) => r.borderRadius === px(30))).toBe(true); // min(80,60)/2
   });
 
-  it("rend une image issue du contexte", () => {
-    const t = build(
-      manifest([
-        { type: "image", page: 1, x: 0, y: 0, w: 331, h: 402, source: "participant.photoDataUrl" },
-      ]),
-    );
-    expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,AAA");
-  });
-
-  it("applique objectFit contain a une image", () => {
+  it("rend le fond image issu du contexte", () => {
     const t = build(
       manifest([
         {
-          type: "image", page: 1, x: 0, y: 0, w: 331, h: 402,
-          source: "participant.photoDataUrl", objectFit: "contain",
+          type: "rect", page: 1, x: 0, y: 0, w: 331, h: 402,
+          image: { source: "participant.photoDataUrl" },
         },
       ]),
     );
-    expect(renderToJson(t.Component, CTX).objectFits).toContain("contain");
+    expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,AAA");
   });
 
   it("rend le QR code sans source explicite", () => {
@@ -194,12 +193,12 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).radii[0].borderTopLeftRadius).toBe(px(8));
   });
 
-  it("applique un arrondi a une image", () => {
+  it("applique un arrondi a une forme a fond image", () => {
     const t = build(
       manifest([
         {
-          type: "image", page: 1, x: 47, y: 71, w: 331, h: 402,
-          source: "participant.photoDataUrl", radiusPx: 12,
+          type: "rect", page: 1, x: 47, y: 71, w: 331, h: 402,
+          image: { source: "participant.photoDataUrl" }, radiusPx: 12,
         },
       ]),
     );

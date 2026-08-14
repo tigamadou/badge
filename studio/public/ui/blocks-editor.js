@@ -14,17 +14,25 @@ export const BLOCK_DEFAULTS = {
     text: "Texte",
     style: { sizePx: 16, color: "#0f172a", overflow: "clip" },
   },
-  image: { type: "image", page: 1, x: 20, y: 20, w: 100, h: 100, source: "participant.photoDataUrl" },
   qr: { type: "qr", page: 1, x: 20, y: 20, w: 60, h: 60 },
   rect: { type: "rect", page: 1, x: 20, y: 20, w: 100, h: 40, fill: "#e2e8f0" },
+  square: { type: "square", page: 1, x: 20, y: 20, w: 80, h: 80, fill: "#e2e8f0" },
+  circle: { type: "circle", page: 1, x: 20, y: 20, w: 80, h: 80, fill: "#e2e8f0" },
 };
 
-const TYPE_LABELS = { text: "Texte", image: "Image", qr: "QR", rect: "Aplat" };
+const TYPE_LABELS = {
+  text: "Texte",
+  qr: "QR",
+  rect: "Rectangle",
+  square: "Carré",
+  circle: "Cercle",
+};
 
 function summarize(block) {
   if (block.type === "text") return block.text?.slice(0, 40) ?? "";
-  if (block.type === "image") return block.source ?? block.asset ?? "";
-  if (block.type === "rect") return block.fill ?? "";
+  if (block.type === "rect" || block.type === "square" || block.type === "circle") {
+    return block.image?.source ?? block.image?.asset ?? block.fill ?? "";
+  }
   return "";
 }
 

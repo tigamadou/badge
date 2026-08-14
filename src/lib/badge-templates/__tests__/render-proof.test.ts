@@ -33,7 +33,7 @@ describe("renderProof", () => {
   it("rend un paquet utilisant une ressource embarquee", async () => {
     const withAsset: TemplateManifest = {
       ...OK,
-      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/f.png" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/f.png" } }],
     };
     const png = Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
@@ -92,7 +92,7 @@ describe("renderProof", () => {
     // levee par le resolveur : seul compte le fait que le rendu n'aboutisse pas.
     const missing: TemplateManifest = {
       ...OK,
-      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 10, h: 10, asset: "assets/absent.png" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, image: { asset: "assets/absent.png" } }],
     };
     await expect(renderProof(missing, [], "t3")).rejects.toBeDefined();
   });

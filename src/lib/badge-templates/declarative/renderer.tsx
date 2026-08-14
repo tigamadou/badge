@@ -150,6 +150,13 @@ function renderBlock(
       block.type === "circle"
         ? { borderRadius: px(Math.min(block.w, block.h) / 2) }
         : radiusStyles(block);
+    // Le schema garantit qu'un fond image porte exactement un `source` ou un `asset`.
+    const backgroundSrc = block.image
+      ? block.image.asset !== undefined
+        ? assets(block.image.asset)
+        : String(resolveSource(ctx, block.image.source!))
+      : null;
+
     return (
       <View
         key={key}
@@ -157,29 +164,31 @@ function renderBlock(
           ...frame(block),
           ...borderStyles(block, ctx),
           ...radius,
-          backgroundColor: colorOf(block.fill, ctx),
+          backgroundColor: block.fill ? colorOf(block.fill, ctx) : undefined,
+          // Le fond image est rogne par la forme : coins arrondis et cercles
+          // decoupent l'image sans que celle-ci ait a les connaitre.
+          overflow: "hidden",
         }}
-      />
+      >
+        {backgroundSrc ? (
+          <Image
+            src={backgroundSrc}
+            style={{ width: "100%", height: "100%", objectFit: block.image!.fit ?? "cover" }}
+          />
+        ) : null}
+      </View>
     );
   }
-
-  // Le schema garantit qu'un bloc image porte exactement un `source` ou un `asset`.
-  const src =
-    block.type === "qr"
-      ? String(resolveSource(ctx, "badge.qrCodeDataUrl"))
-      : block.asset !== undefined
-        ? assets(block.asset)
-        : String(resolveSource(ctx, block.source!));
 
   return (
     <Image
       key={key}
-      src={src}
+      src={String(resolveSource(ctx, "badge.qrCodeDataUrl"))}
       style={{
         ...frame(block),
         ...borderStyles(block, ctx),
         ...radiusStyles(block),
-        objectFit: block.type === "image" ? (block.objectFit ?? "cover") : "cover",
+        objectFit: "cover",
       }}
     />
   );

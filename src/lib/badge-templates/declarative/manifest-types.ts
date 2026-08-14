@@ -82,36 +82,31 @@ type BlockBase = {
 // ou « #{badge.id} » sans multiplier les blocs.
 export type TextBlock = BlockBase & { type: "text"; text: string; style: TextStyle };
 
-export type ImageBlock = BlockBase & {
-  type: "image";
+// Fond image d'une forme : une source du contexte OU une ressource du paquet,
+// jamais les deux. `fit` cadre l'image dans la forme : `cover` remplit quitte a
+// rogner (defaut), `contain` inscrit l'image entiere, `fill` etire.
+export type ShapeImage = {
   source?: string;
   asset?: string;
-  // Cadrage de l'image dans son bloc : `cover` remplit quitte a rogner (defaut),
-  // `contain` inscrit l'image entiere, `fill` etire. Un logo se declare `contain`.
-  objectFit?: "cover" | "contain" | "fill";
+  fit?: "cover" | "contain" | "fill";
 };
 
 export type QrBlock = BlockBase & { type: "qr" };
 
-export type RectBlock = BlockBase & {
-  type: "rect";
-  fill: string;
-};
+// Une forme porte un fond : une couleur, une image, ou les deux (la couleur se voit
+// alors sous une image `contain` ou transparente). L'image est rognee par la forme.
+type ShapeBase = { fill?: string; image?: ShapeImage };
+
+export type RectBlock = BlockBase & ShapeBase & { type: "rect" };
 
 // Un carre exige w = h ; le radiusPx reste permis (carre arrondi).
-export type SquareBlock = BlockBase & { type: "square"; fill: string };
+export type SquareBlock = BlockBase & ShapeBase & { type: "square" };
 
 // Un cercle a un rayon implicite (min(w,h)/2) : radiusPx n'y est pas admis, et une
 // largeur differente de la hauteur donne une ellipse.
-export type CircleBlock = BlockBase & { type: "circle"; fill: string };
+export type CircleBlock = BlockBase & ShapeBase & { type: "circle" };
 
-export type Block =
-  | TextBlock
-  | ImageBlock
-  | QrBlock
-  | RectBlock
-  | SquareBlock
-  | CircleBlock;
+export type Block = TextBlock | QrBlock | RectBlock | SquareBlock | CircleBlock;
 
 export type FontDeclaration = {
   alias: string;

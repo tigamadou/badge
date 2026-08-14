@@ -243,68 +243,106 @@ describe("parseManifest", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("refuse une source de type incompatible avec le bloc", () => {
-    const res = parse({
-      blocks: [
-        { type: "image", page: 1, x: 0, y: 0, w: 118, h: 118, source: "participant.firstName" },
-      ],
-    });
-    expect(res.ok).toBe(false);
-    expect(errorsOf(res)).toMatch(/incompatible/i);
+  it("accepte une forme a fond image, couleur, ou les deux", () => {
+    expect(
+      parse({
+        blocks: [
+          {
+            type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80,
+            image: { source: "participant.photoDataUrl" },
+          },
+        ],
+      }).ok,
+    ).toBe(true);
+    expect(
+      parse({
+        blocks: [
+          {
+            type: "circle", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "#e2e8f0",
+            image: { source: "event.logoDataUrl", fit: "contain" },
+          },
+        ],
+      }).ok,
+    ).toBe(true);
   });
 
-  it("accepte objectFit sur un bloc image", () => {
-    const res = parse({
+  it("refuse une forme sans fond", () => {
+    const res = parse({ blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80 }] });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/fond/i);
+  });
+
+  it("refuse un fond image sans source ni asset, ou avec les deux", () => {
+    expect(
+      parse({ blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80, image: {} }] }).ok,
+    ).toBe(false);
+    expect(
+      parse(
+        {
+          blocks: [
+            {
+              type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80,
+              image: { source: "participant.photoDataUrl", asset: "assets/f.png" },
+            },
+          ],
+        },
+        ["assets/f.png"],
+      ).ok,
+    ).toBe(false);
+  });
+
+  it("valide la source et l'asset d'un fond image", () => {
+    const incompatible = parse({
       blocks: [
         {
-          type: "image", page: 1, x: 0, y: 0, w: 118, h: 118,
-          source: "event.logoDataUrl", objectFit: "contain",
+          type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80,
+          image: { source: "participant.firstName" },
         },
       ],
     });
-    expect(res.ok, errorsOf(res)).toBe(true);
+    expect(incompatible.ok).toBe(false);
+    expect(errorsOf(incompatible)).toMatch(/incompatible/i);
+    const absent = parse(
+      {
+        blocks: [
+          {
+            type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80,
+            image: { asset: "assets/absent.png" },
+          },
+        ],
+      },
+      [],
+    );
+    expect(absent.ok).toBe(false);
+    expect(errorsOf(absent)).toMatch(/absente du paquet/i);
   });
 
-  it("refuse un bloc image portant a la fois source et asset", () => {
+  it("accepte un fond image dont la ressource est presente dans le paquet", () => {
     const res = parse(
       {
         blocks: [
           {
-            type: "image",
-            page: 1,
-            x: 0,
-            y: 0,
-            w: 118,
-            h: 118,
-            source: "participant.photoDataUrl",
-            asset: "assets/f.png",
+            type: "rect", page: 1, x: 0, y: 0, w: 80, h: 80,
+            image: { asset: "assets/fond.png" },
           },
         ],
       },
-      ["assets/f.png"],
-    );
-    expect(res.ok).toBe(false);
-  });
-
-  it("refuse un bloc image sans source ni asset", () => {
-    expect(parse({ blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 118, h: 118 }] }).ok).toBe(false);
-  });
-
-  it("refuse un asset absent du paquet", () => {
-    const res = parse(
-      { blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 118, h: 118, asset: "assets/absent.png" }] },
-      [],
-    );
-    expect(res.ok).toBe(false);
-    expect(errorsOf(res)).toMatch(/absente du paquet/i);
-  });
-
-  it("accepte un asset present dans le paquet", () => {
-    const res = parse(
-      { blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 118, h: 118, asset: "assets/fond.png" }] },
       ["assets/fond.png"],
     );
-    expect(res.ok).toBe(true);
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
+  it("refuse le type image, disparu du format", () => {
+    expect(
+      parse({
+        blocks: [
+          {
+            type: "image", page: 1, x: 0, y: 0, w: 80, h: 80,
+            source: "participant.photoDataUrl",
+          },
+        ],
+      }).ok,
+    ).toBe(false);
   });
 
   it("refuse une couleur ni hexadecimale ni source de couleur", () => {

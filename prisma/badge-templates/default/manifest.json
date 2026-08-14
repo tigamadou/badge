@@ -10,13 +10,12 @@
   },
   "blocks": [
     {
-      "type": "image",
+      "type": "rect",
       "page": 1,
       "x": 8,
       "y": 38,
       "w": 106,
       "h": 129,
-      "source": "participant.photoDataUrl",
       "radiusPx": 3.8,
       "visibleIf": [
         {
@@ -27,7 +26,10 @@
           "path": "participant.photoDataUrl",
           "isEmpty": false
         }
-      ]
+      ],
+      "image": {
+        "source": "participant.photoDataUrl"
+      }
     },
     {
       "type": "rect",

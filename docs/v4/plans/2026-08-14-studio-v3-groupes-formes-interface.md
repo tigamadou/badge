@@ -16,7 +16,7 @@
 |---|---|---|---|
 | 1. `name` sur tout bloc | [x] | 2026-08-14 | |
 | 2. Types `square` et `circle` | [x] | 2026-08-14 | |
-| 3. Fond des formes (couleur/image) et retrait du type `image` | [ ] | | |
+| 3. Fond des formes (couleur/image) et retrait du type `image` | [x] | 2026-08-14 | Manifestes du depot migres ; BDD non touchee (re-seed manuel a faire) |
 | 4. Type `group` (conteneur récursif) | [ ] | | |
 | 5. Doc du format (feature + scaffold) | [ ] | | |
 | 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [ ] | | |
@@ -175,7 +175,7 @@ export type CircleBlock = BlockBase & { type: "circle"; fill?: string; image?: S
 
 Validation : une forme exige **au moins un** de `fill`/`image` ; un `image` porte **exactement un** de `source` (source de type image) / `asset` (présent dans le paquet) ; `fit` optionnel (`cover` par défaut au rendu). Rendu : `View` (fond couleur, bordures, coins, `overflow: "hidden"`) contenant l'`Image` 100 % × 100 % avec son `objectFit` — le rognage (coins, cercle) est porté par la `View`.
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // schema.test.ts — remplacer les tests des blocs image par ceux du fond de forme.
@@ -225,8 +225,8 @@ it("rend le fond image d'une forme, rogne par elle", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec** (vitest declarative).
-- [ ] **Step 3 : Implémentation moteur** — types ci-dessus (`fill` devient optionnel, `ImageBlock` supprimé de l'union) ; schéma : `fill: z.string().min(1).optional(), image: z.object({ source: z.string().optional(), asset: z.string().optional(), fit: z.enum(["cover", "contain", "fill"]).optional() }).optional()` sur les trois formes, membre `image` retiré de l'union ; dans `checkBlock`, pour les trois formes :
+- [x] **Step 2 : Vérifier l'échec** (vitest declarative).
+- [x] **Step 3 : Implémentation moteur** — types ci-dessus (`fill` devient optionnel, `ImageBlock` supprimé de l'union) ; schéma : `fill: z.string().min(1).optional(), image: z.object({ source: z.string().optional(), asset: z.string().optional(), fit: z.enum(["cover", "contain", "fill"]).optional() }).optional()` sur les trois formes, membre `image` retiré de l'union ; dans `checkBlock`, pour les trois formes :
 
 ```ts
 if (block.fill === undefined && block.image === undefined) {
@@ -270,9 +270,9 @@ if (block.type === "rect" || block.type === "square" || block.type === "circle")
 ```
 
   Le cas `image` du renderer disparaît ; le QR garde son rendu `Image` direct.
-- [ ] **Step 4 : Migration des manifestes** — script jetable (scratchpad) transformant chaque bloc `{ type: "image", source?, asset?, objectFit?, ...reste }` en `{ type: "rect", image: { source?, asset?, fit: objectFit }, ...reste }` (omettre `fit` si `objectFit` absent) sur les seeds et les ateliers ; adapter les tests annexes listés (grep `type: "image"` et `type: \"image\"`), y compris les manifestes en dur des tests serveur/studio.
-- [ ] **Step 5 : Vérifier le vert** — `yarn vitest run src/lib/badge-templates studio scripts src/app/api/platform/badge-templates`. **Ne pas toucher à la base de données** (pas de purge ni de re-seed : opération manuelle de l'utilisateur, hors plan).
-- [ ] **Step 6 : Point de commit** — `feat(v4): fond couleur ou image sur les formes, retrait du type image`
+- [x] **Step 4 : Migration des manifestes** — script jetable (scratchpad) transformant chaque bloc `{ type: "image", source?, asset?, objectFit?, ...reste }` en `{ type: "rect", image: { source?, asset?, fit: objectFit }, ...reste }` (omettre `fit` si `objectFit` absent) sur les seeds et les ateliers ; adapter les tests annexes listés (grep `type: "image"` et `type: \"image\"`), y compris les manifestes en dur des tests serveur/studio.
+- [x] **Step 5 : Vérifier le vert** — `yarn vitest run src/lib/badge-templates studio scripts src/app/api/platform/badge-templates`. **Ne pas toucher à la base de données** (pas de purge ni de re-seed : opération manuelle de l'utilisateur, hors plan).
+- [x] **Step 6 : Point de commit** — `feat(v4): fond couleur ou image sur les formes, retrait du type image`
 
 ### Task 4 : Type `group` — conteneur récursif
 

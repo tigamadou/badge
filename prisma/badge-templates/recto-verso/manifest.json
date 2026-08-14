@@ -26,13 +26,12 @@
       }
     },
     {
-      "type": "image",
+      "type": "rect",
       "page": 1,
       "x": 45,
       "y": 76,
       "w": 189,
       "h": 227,
-      "source": "participant.photoDataUrl",
       "radiusPx": 7.6,
       "visibleIf": [
         {
@@ -43,7 +42,10 @@
           "path": "participant.photoDataUrl",
           "isEmpty": false
         }
-      ]
+      ],
+      "image": {
+        "source": "participant.photoDataUrl"
+      }
     },
     {
       "type": "rect",
@@ -170,19 +172,21 @@
       }
     },
     {
-      "type": "image",
+      "type": "rect",
       "page": 2,
       "x": 106,
       "y": 38,
       "w": 68,
       "h": 68,
-      "source": "event.logoDataUrl",
       "visibleIf": [
         {
           "path": "event.logoDataUrl",
           "isEmpty": false
         }
-      ]
+      ],
+      "image": {
+        "source": "event.logoDataUrl"
+      }
     },
     {
       "type": "text",

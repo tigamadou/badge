@@ -65,31 +65,24 @@ const baseShape = {
   visibleIf: visibleIfSchema.optional(),
 };
 
+// Fond d'une forme : couleur et/ou image (au moins l'un des deux, verifie plus bas).
+const shapeShape = {
+  fill: z.string().min(1).optional(),
+  image: z
+    .object({
+      source: z.string().optional(),
+      asset: z.string().optional(),
+      fit: z.enum(["cover", "contain", "fill"]).optional(),
+    })
+    .optional(),
+};
+
 const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string().min(1), style: styleSchema, ...baseShape }),
-  z.object({
-    type: z.literal("image"),
-    source: z.string().optional(),
-    asset: z.string().optional(),
-    objectFit: z.enum(["cover", "contain", "fill"]).optional(),
-    ...baseShape,
-  }),
   z.object({ type: z.literal("qr"), ...baseShape }),
-  z.object({
-    type: z.literal("rect"),
-    fill: z.string(),
-    ...baseShape,
-  }),
-  z.object({
-    type: z.literal("square"),
-    fill: z.string(),
-    ...baseShape,
-  }),
-  z.object({
-    type: z.literal("circle"),
-    fill: z.string(),
-    ...baseShape,
-  }),
+  z.object({ type: z.literal("rect"), ...shapeShape, ...baseShape }),
+  z.object({ type: z.literal("square"), ...shapeShape, ...baseShape }),
+  z.object({ type: z.literal("circle"), ...shapeShape, ...baseShape }),
 ]);
 
 const manifestSchema = z.object({
@@ -173,21 +166,27 @@ function checkTextBlock(
   }
 }
 
-function checkImageBlock(
-  block: Extract<Block, { type: "image" }>,
+function checkShapeBlock(
+  block: Extract<Block, { type: "rect" | "square" | "circle" }>,
   label: string,
   entries: string[],
   errors: string[],
 ): void {
-  const hasSource = block.source !== undefined;
-  const hasAsset = block.asset !== undefined;
+  if (block.fill === undefined && block.image === undefined) {
+    errors.push(`${label} : une forme exige un fond (fill et/ou image).`);
+  }
+  if (block.fill !== undefined) checkColor(block.fill, `${label} (remplissage)`, errors);
+  if (!block.image) return;
+
+  const hasSource = block.image.source !== undefined;
+  const hasAsset = block.image.asset !== undefined;
   if (hasSource === hasAsset) {
-    errors.push(`${label} : un bloc image porte soit source, soit asset, jamais les deux ni aucun.`);
+    errors.push(`${label} : un fond image porte soit source, soit asset, jamais les deux ni aucun.`);
     return;
   }
-  if (hasSource) checkSource(block.source!, "image", label, errors);
-  if (hasAsset && !entries.includes(block.asset!)) {
-    errors.push(`${label} : ressource "${block.asset}" absente du paquet.`);
+  if (hasSource) checkSource(block.image.source!, "image", label, errors);
+  if (hasAsset && !entries.includes(block.image.asset!)) {
+    errors.push(`${label} : ressource "${block.image.asset}" absente du paquet.`);
   }
 }
 
@@ -235,9 +234,8 @@ function checkBlock(
   }
 
   if (block.type === "text") checkTextBlock(block, label, manifest, errors);
-  if (block.type === "image") checkImageBlock(block, label, entries, errors);
   if (block.type === "rect" || block.type === "square" || block.type === "circle") {
-    checkColor(block.fill, `${label} (remplissage)`, errors);
+    checkShapeBlock(block, label, entries, errors);
   }
 }
 

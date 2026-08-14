@@ -25,12 +25,15 @@ export function previewUrl(previewPath: string | null): string {
   return previewPath ? `/api/files/${previewPath}` : "";
 }
 
-// Noms de ressources referencees par un layout : assets des blocs image et fichiers
+// Noms de ressources referencees par un layout : fonds image des formes et fichiers
 // de police. Sert a precharger avant construction, `AssetResolver` etant synchrone.
 function referencedAssets(manifest: TemplateManifest): string[] {
   const fromBlocks = manifest.blocks
-    .filter((b: Block): b is Extract<Block, { type: "image" }> => b.type === "image")
-    .map((b) => b.asset)
+    .filter(
+      (b: Block): b is Extract<Block, { type: "rect" | "square" | "circle" }> =>
+        b.type === "rect" || b.type === "square" || b.type === "circle",
+    )
+    .map((b) => b.image?.asset)
     .filter((a): a is string => typeof a === "string");
   const fromFonts = (manifest.fonts ?? []).map((f) => f.file);
   return [...new Set([...fromBlocks, ...fromFonts])];

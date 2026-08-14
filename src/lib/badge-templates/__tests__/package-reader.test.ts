@@ -16,7 +16,7 @@ const MANIFEST = {
   label: "Badge Salon",
   description: "",
   page: { widthPx: 1011, heightPx: 638, count: 1 },
-  blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" }],
+  blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/fond.png" } }],
 };
 
 async function zipOf(files: Record<string, Buffer | string>): Promise<Buffer> {
@@ -165,7 +165,10 @@ describe("readTemplatePackage", () => {
   });
 
   it("accepte une image JPEG", async () => {
-    const manifest = { ...MANIFEST, blocks: [{ ...MANIFEST.blocks[0], asset: "assets/fond.jpg" }] };
+    const manifest = {
+      ...MANIFEST,
+      blocks: [{ ...MANIFEST.blocks[0], image: { asset: "assets/fond.jpg" } }],
+    };
     const res = await readTemplatePackage(
       await zipOf({ "manifest.json": JSON.stringify(manifest), "assets/fond.jpg": JPEG }),
     );

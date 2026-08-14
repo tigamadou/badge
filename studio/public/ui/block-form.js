@@ -245,6 +245,8 @@ export function BlockForm({ block, schemaInfo, pageCount, assets, fonts, onChang
   const colorSources = Object.keys(sources).filter((p) => sources[p] === "color");
   const imageSources = Object.keys(sources).filter((p) => sources[p] === "image");
 
+  const isShape = block.type === "rect" || block.type === "square" || block.type === "circle";
+
   const ratio = schemaInfo?.minTextHeightRatio ?? 1.45;
   const tooShort =
     block.type === "text" && block.style?.sizePx && block.h < block.style.sizePx * ratio;
@@ -285,41 +287,42 @@ export function BlockForm({ block, schemaInfo, pageCount, assets, fonts, onChang
           `
         : null}
 
-      ${block.type === "image"
-        ? html`
-            <${Select}
-              label="Source"
-              value=${block.source}
-              options=${imageSources}
-              onValue=${(v) => patch({ source: v, asset: v ? undefined : block.asset })}
-            />
-            <${Select}
-              label="Ressource"
-              value=${block.asset}
-              options=${assets}
-              onValue=${(v) => patch({ asset: v, source: v ? undefined : block.source })}
-            />
-            <${Select}
-              label="Cadrage"
-              value=${block.objectFit}
-              options=${["cover", "contain", "fill"]}
-              onValue=${(v) => patch({ objectFit: v })}
-            />
-          `
-        : null}
-
-      ${block.type === "rect"
+      ${isShape
         ? html`
             <${ColorInput}
-              label="Remplissage"
+              label="Fond couleur"
               value=${block.fill}
               colorSources=${colorSources}
-              onValue=${(v) => patch({ fill: v ?? "#e2e8f0" })}
+              onValue=${(v) => patch({ fill: v })}
             />
+            <${Select}
+              label="Fond image (source)"
+              value=${block.image?.source}
+              options=${imageSources}
+              onValue=${(v) => patch({ image: v ? { ...block.image, source: v, asset: undefined } : undefined })}
+            />
+            <${Select}
+              label="Fond image (ressource)"
+              value=${block.image?.asset}
+              options=${assets}
+              onValue=${(v) => patch({ image: v ? { ...block.image, asset: v, source: undefined } : undefined })}
+            />
+            ${block.image
+              ? html`
+                  <${Select}
+                    label="Cadrage"
+                    value=${block.image.fit}
+                    options=${["cover", "contain", "fill"]}
+                    onValue=${(v) => patch({ image: { ...block.image, fit: v } })}
+                  />
+                `
+              : null}
           `
         : null}
 
-      <${RadiusEditor} value=${block.radiusPx} onValue=${(v) => patch({ radiusPx: v })} />
+      ${block.type === "circle"
+        ? null
+        : html`<${RadiusEditor} value=${block.radiusPx} onValue=${(v) => patch({ radiusPx: v })} />`}
       <${BorderEditor}
         label="Bordure (4 côtés)"
         value=${block.border}
