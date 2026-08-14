@@ -11,6 +11,7 @@ const ALL_ACTIVITY_TYPES = [
   "REGISTRATION_UPDATED",
   "REGISTRATION_DELETED",
   "REGISTRATION_RESUBMITTED",
+  "REGISTRATION_SNAPSHOT_REFRESHED",
   "BADGE_PRINTED",
   "BADGE_BATCH_PRINTED",
   "BADGE_ALL_ACCESS_TOGGLED",
@@ -117,6 +118,18 @@ describe("logKind", () => {
     expect(logKind(as("REGISTRATION_RESUBMITTED"))).toBe("systeme");
     expect(logKind(as("QUOTA_BYPASS"))).toBe("systeme");
     expect(logKind(as("USER_EMAIL_VERIFIED"))).toBe("systeme");
+  });
+});
+
+describe("REGISTRATION_SNAPSHOT_REFRESHED", () => {
+  it("est classe comme une modification", () => {
+    expect(logKind(as("REGISTRATION_SNAPSHOT_REFRESHED"))).toBe("modification");
+  });
+
+  it("a un libelle humain", () => {
+    expect(describeActivity(as("REGISTRATION_SNAPSHOT_REFRESHED"))).toBe(
+      "Inscription mise a jour depuis le profil",
+    );
   });
 });
 

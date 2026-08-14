@@ -19,6 +19,7 @@ export function logKind(t: ActivityType): LogKind {
   if (s === "BADGE_SCANNED" || s.endsWith("_PRINTED") || s.endsWith("_EXPORTED")) return "acces";
   if (
     s.endsWith("_UPDATED") ||
+    s === "REGISTRATION_SNAPSHOT_REFRESHED" ||
     s === "MEMBERSHIP_ROLE_CHANGED" ||
     s.endsWith("SETTINGS_UPDATED") ||
     s === "USER_PASSWORD_SET"
@@ -33,6 +34,7 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   REGISTRATION_REJECTED: "Inscription rejetée",
   REGISTRATION_UPDATED: "Inscription modifiée",
   REGISTRATION_DELETED: "Inscription supprimée",
+  REGISTRATION_SNAPSHOT_REFRESHED: "Inscription mise a jour depuis le profil",
   BADGE_PRINTED: "Badge imprimé",
   BADGE_BATCH_PRINTED: "Impression de badges par lot",
   BADGE_EXPORTED: "Badge exporté",

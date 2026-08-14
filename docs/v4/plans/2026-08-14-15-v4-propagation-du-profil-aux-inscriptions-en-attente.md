@@ -28,7 +28,7 @@
 
 | Task | Description | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Type d'action `REGISTRATION_SNAPSHOT_REFRESHED` | [ ] | | |
+| 1 | Type d'action `REGISTRATION_SNAPSHOT_REFRESHED` | [x] | 2026-08-14 | 2 tests ; enum propage par `make db-push` |
 | 2 | Module de synchronisation — sélection et réécriture | [ ] | | |
 | 3 | Module de synchronisation — règle de blocage document | [ ] | | |
 | 4 | Branchement dans `PUT /api/account/profile` + audit | [ ] | | |
@@ -52,7 +52,7 @@ Statuts : `[ ]` pending · `[~]` in_progress · `[x]` completed · `[-]` abandon
 
 Le point de vigilance : `logKind()` classe par suffixe. `REGISTRATION_SNAPSHOT_REFRESHED` se termine par `_REFRESHED`, qui n'est reconnu nulle part — sans ajout explicite il tomberait dans le fallback `"systeme"` alors qu'il s'agit d'une modification de dossier.
 
-- [ ] **Étape 1 : Ajouter la valeur à l'enum Prisma**
+- [x] **Étape 1 : Ajouter la valeur à l'enum Prisma**
 
 Dans `prisma/schema.prisma`, enum `ActivityType`, à la suite de `REGISTRATION_RESUBMITTED` :
 
@@ -62,7 +62,7 @@ Dans `prisma/schema.prisma`, enum `ActivityType`, à la suite de `REGISTRATION_R
   REGISTRATION_SNAPSHOT_REFRESHED
 ```
 
-- [ ] **Étape 2 : Propager le schéma et régénérer le client**
+- [x] **Étape 2 : Propager le schéma et régénérer le client**
 
 ```bash
 make db-push
@@ -70,7 +70,7 @@ make db-push
 
 Attendu : la commande se termine sans erreur et régénère le client Prisma. `REGISTRATION_SNAPSHOT_REFRESHED` devient disponible dans le type `ActivityType`.
 
-- [ ] **Étape 3 : Écrire les tests qui échouent**
+- [x] **Étape 3 : Écrire les tests qui échouent**
 
 Dans `src/lib/__tests__/activity-labels.test.ts`, ajouter `"REGISTRATION_SNAPSHOT_REFRESHED"` à la liste `ALL_ACTIVITY_TYPES` (elle sert à couvrir `describeActivity` pour toutes les valeurs de l'enum), puis ajouter ce bloc :
 
@@ -88,7 +88,7 @@ describe("REGISTRATION_SNAPSHOT_REFRESHED", () => {
 });
 ```
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/activity-labels.test.ts
@@ -96,7 +96,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Attendu : ÉCHEC — `logKind` renvoie `"systeme"` au lieu de `"modification"`, et `describeActivity` renvoie le type brut.
 
-- [ ] **Étape 5 : Implémenter**
+- [x] **Étape 5 : Implémenter**
 
 Dans `src/lib/activity-labels.ts`, étendre la branche « modification » de `logKind` :
 
@@ -119,7 +119,7 @@ et ajouter le libellé dans `DESCRIPTIONS`, à la suite de `REGISTRATION_DELETED
 
 Le libellé est affiché tel quel dans le journal : il suit le style des libellés voisins.
 
-- [ ] **Étape 6 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 6 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/activity-labels.test.ts
@@ -127,7 +127,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Attendu : SUCCÈS.
 
-- [ ] **Étape 7 : Vérifier lint et types**
+- [x] **Étape 7 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck
