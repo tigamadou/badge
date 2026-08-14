@@ -26,7 +26,7 @@
 | 10. Scaffold + pack depuis le studio | [x] | 2026-08-14 | Lot B termine, lint/typecheck/test verts |
 | 11. UI : socle Preact (parité JSON + aperçu) | [x] | 2026-08-14 | Verif navigateur a refaire manuellement : MCP Chrome indisponible en session headless |
 | 12. UI : onglet Contexte | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
-| 13. UI : onglet Blocs | [ ] | | |
+| 13. UI : onglet Blocs | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
 | 14. UI : métadonnées, polices, ressources, nouveau template | [ ] | | |
 | 15. UI : génération du paquet + parcours complet + doc | [ ] | | |
 
@@ -720,8 +720,8 @@ export const BLOCK_DEFAULTS = {
 };
 ```
 
-- [ ] **Step 1 : `blocks-editor.js`** — liste repliable : chaque entrée affiche `n° · type · résumé` (texte : gabarit tronqué ; image : source/asset ; rect : fill) + `x,y w×h` ; boutons ↑ ↓ ⧉ ✕ ; barre « Ajouter : Texte Image QR Aplat » (`onChange({...manifest, blocks: [...blocks, BLOCK_DEFAULTS[type]]})`).
-- [ ] **Step 2 : `block-form.js`** — formulaire du bloc déplié :
+- [x] **Step 1 : `blocks-editor.js`** — liste repliable : chaque entrée affiche `n° · type · résumé` (texte : gabarit tronqué ; image : source/asset ; rect : fill) + `x,y w×h` ; boutons ↑ ↓ ⧉ ✕ ; barre « Ajouter : Texte Image QR Aplat » (`onChange({...manifest, blocks: [...blocks, BLOCK_DEFAULTS[type]]})`).
+- [x] **Step 2 : `block-form.js`** — formulaire du bloc déplié :
   - communs : page (select 1..pageCount), x/y/w/h (`<input type="number">`), rotate, opacity, radiusPx (nombre OU quatre champs par coin via une case « par coin »), bordures (case « bordure » → widthPx/couleur/style, + par côté en mode avancé) ;
   - texte : gabarit (`textarea` monoligne), et le style complet : sizePx, minSizePx, weight (select 400/500/600/700), fontStyle italic (case), align (select avec justify), color, overflow (select), maxLines, letterSpacing, lineHeight, transform, decoration, backgroundColor, paddingPx, font (select des alias déclarés dans `manifest.fonts`) ;
   - image : source (select des sources `image` de `schemaInfo.sources`) OU asset (select des fichiers `assets/` du template — fournis par `getTemplate`), objectFit, radius ;
@@ -729,9 +729,9 @@ export const BLOCK_DEFAULTS = {
   - `visibleIf` : liste de conditions — chaque ligne : select du chemin (`schemaInfo.conditionPaths` pour equals, toutes les sources pour isEmpty), select `equals vrai / equals faux / est vide / n'est pas vide`, bouton ✕, bouton « + condition » ;
   - **avertissement hauteur** : si `type === "text"` et `h < style.sizePx * schemaInfo.minTextHeightRatio`, afficher « ⚠ Cadre trop bas : le texte ne s'affichera pas (h ≥ 1,45 × police). ».
   - Couleurs : composant partagé `ColorInput` (champ texte hexa + pastille `<input type="color">` synchronisée + select optionnel de sources couleur).
-- [ ] **Step 3 : Synchronisation** — dans `app.js` : l'onglet Blocs ne s'affiche que si `manifestText` parse (sinon message « Corrigez le JSON pour éditer les blocs ») ; toute édition de bloc resérialise `manifestText` ; l'onglet JSON reflète immédiatement ; les erreurs 422 du rendu s'affichent sous l'aperçu et, quand le message commence par `bloc N`, aussi en rouge sur l'entrée N de la liste.
-- [ ] **Step 4 : Vérification navigateur** — ajouter un bloc de chaque type, le déplacer/dupliquer/supprimer ; éditer x/y et voir l'aperçu bouger ; créer un visibleIf anonyme et le vérifier via l'onglet Contexte ; provoquer l'avertissement de hauteur ; vérifier l'aller-retour Blocs ↔ JSON dans les deux sens.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): editeur de blocs dynamique du studio`
+- [x] **Step 3 : Synchronisation** — dans `app.js` : l'onglet Blocs ne s'affiche que si `manifestText` parse (sinon message « Corrigez le JSON pour éditer les blocs ») ; toute édition de bloc resérialise `manifestText` ; l'onglet JSON reflète immédiatement ; les erreurs 422 du rendu s'affichent sous l'aperçu et, quand le message commence par `bloc N`, aussi en rouge sur l'entrée N de la liste.
+- [x] **Step 4 : Vérification navigateur** — ajouter un bloc de chaque type, le déplacer/dupliquer/supprimer ; éditer x/y et voir l'aperçu bouger ; créer un visibleIf anonyme et le vérifier via l'onglet Contexte ; provoquer l'avertissement de hauteur ; vérifier l'aller-retour Blocs ↔ JSON dans les deux sens.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): editeur de blocs dynamique du studio`
 
 ### Task 14 : Métadonnées, polices, ressources, nouveau template
 

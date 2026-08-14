@@ -1,7 +1,8 @@
-import { html, render, useCallback, useEffect, useState } from "/vendor/preact-htm.mjs";
+import { html, render, useCallback, useEffect, useMemo, useState } from "/vendor/preact-htm.mjs";
 import * as api from "/ui/api.js";
 import { Preview } from "/ui/preview.js";
 import { ContextForm } from "/ui/context-form.js";
+import { BlocksEditor } from "/ui/blocks-editor.js";
 
 const TABS = [
   ["context", "Contexte"],
@@ -9,22 +10,48 @@ const TABS = [
   ["json", "JSON"],
 ];
 
+// Les erreurs de validation nomment leur bloc (« bloc 3 : ... ») : on les range
+// par index pour les afficher sur l'entree fautive de la liste.
+function groupErrorsByBlock(errors) {
+  const grouped = {};
+  for (const error of errors) {
+    const match = /^bloc (\d+)/.exec(error);
+    if (!match) continue;
+    const index = Number(match[1]) - 1;
+    (grouped[index] ??= []).push(error);
+  }
+  return grouped;
+}
+
 function App() {
   const [templates, setTemplates] = useState([]);
   const [current, setCurrent] = useState("");
+  const [assets, setAssets] = useState([]);
   const [manifestText, setManifestText] = useState("");
-  // `null` = contexte par defaut du serveur ; l'onglet Contexte le remplacera.
+  // `null` = contexte par defaut du serveur ; l'onglet Contexte le remplace.
   const [context, setContext] = useState(null);
-  const [tab, setTab] = useState("json");
+  const [tab, setTab] = useState("blocks");
   const [errors, setErrors] = useState([]);
   const [status, setStatus] = useState("");
   const [schemaInfo, setSchemaInfo] = useState(null);
+
+  // Le manifeste parse est DERIVE du texte : une seule source de verite, et un
+  // JSON invalide n'ecrase jamais l'etat (il rend juste l'onglet Blocs indisponible).
+  const manifest = useMemo(() => {
+    try {
+      const parsed = JSON.parse(manifestText);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [manifestText]);
 
   const selectTemplate = useCallback(async (name) => {
     if (!name) return;
     const read = await api.getTemplate(name);
     setCurrent(name);
     setManifestText(read.manifest);
+    setAssets(read.assets ?? []);
     setErrors([]);
   }, []);
 
@@ -41,6 +68,13 @@ function App() {
     setStatus(ok ? "Enregistré" : "Échec de l'enregistrement");
     setTimeout(() => setStatus(""), 2000);
   }, [current, manifestText]);
+
+  const updateManifest = useCallback(
+    (next) => setManifestText(`${JSON.stringify(next, null, 2)}\n`),
+    [],
+  );
+
+  const blockErrors = useMemo(() => groupErrorsByBlock(errors), [errors]);
 
   return html`
     <header>
@@ -70,6 +104,7 @@ function App() {
             `,
           )}
         </nav>
+
         ${tab === "json"
           ? html`<textarea
               spellcheck="false"
@@ -83,9 +118,16 @@ function App() {
                 schemaInfo=${schemaInfo}
                 onChange=${setContext}
               />`
-            : html`<p class="placeholder">
-                Onglet « ${TABS.find(([id]) => id === tab)[1]} » à venir.
-              </p>`}
+            : manifest
+              ? html`<${BlocksEditor}
+                  manifest=${manifest}
+                  schemaInfo=${schemaInfo}
+                  assets=${assets}
+                  blockErrors=${blockErrors}
+                  onChange=${updateManifest}
+                />`
+              : html`<p class="placeholder">Corrigez le JSON pour éditer les blocs.</p>`}
+
         <ul class="errors" hidden=${errors.length === 0}>
           ${errors.map((e) => html`<li>${e}</li>`)}
         </ul>
