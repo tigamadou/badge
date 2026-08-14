@@ -110,7 +110,6 @@ function renderText(
       }}
     >
       <Text
-        maxLines={block.style.maxLines}
         style={{
           fontFamily: block.style.font ? fontMap[block.style.font] : DEFAULT_FONT_FAMILY,
           fontSize: px(sizePx),
@@ -125,6 +124,8 @@ function renderText(
           lineHeight: block.style.lineHeight,
           fontStyle: block.style.fontStyle,
           textDecoration: block.style.decoration,
+          // maxLines/textOverflow sont lus par @react-pdf dans le STYLE, pas en prop.
+          maxLines: block.style.maxLines,
           textOverflow: block.style.maxLines !== undefined ? "ellipsis" : undefined,
         }}
       >

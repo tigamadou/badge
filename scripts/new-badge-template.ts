@@ -79,9 +79,30 @@ moins **1,45 x la taille de police** (par ligne de texte).
 | Type | Role | Champs propres |
 |---|---|---|
 | \`text\` | Un texte | \`text\` (gabarit), \`style\` |
-| \`image\` | Une image | \`source\` **ou** \`asset\`, jamais les deux ; \`radiusPx\` |
+| \`image\` | Une image | \`source\` **ou** \`asset\`, jamais les deux ; \`objectFit\` |
 | \`qr\` | Le QR code du badge | aucun |
-| \`rect\` | Un aplat | \`fill\`, \`radiusPx\` |
+| \`rect\` | Un aplat | \`fill\` |
+
+### Champs communs a tous les blocs
+
+Outre \`page\`, \`x\`, \`y\`, \`w\`, \`h\` et \`visibleIf\` :
+
+| Champ | Effet |
+|---|---|
+| \`rotate\` | Rotation en degres (sens horaire, +/-360) autour du centre du cadre |
+| \`opacity\` | Opacite du bloc entier, de 0 a 1 |
+| \`radiusPx\` | Coins arrondis : un nombre, ou \`{ topLeft, topRight, bottomRight, bottomLeft }\` |
+| \`border\` | Bordure des quatre cotes : \`{ widthPx, color, style }\` (\`solid\`, \`dashed\`, \`dotted\`) |
+| \`borderTop\` / \`borderRight\` / \`borderBottom\` / \`borderLeft\` | Meme forme, prime sur \`border\` |
+
+Les ombres portees et les degrades ne sont PAS supportes par le moteur PDF.
+
+### Style du texte
+
+\`sizePx\`, \`minSizePx\`, \`font\`, \`weight\`, \`fontStyle\` (\`italic\`), \`color\`,
+\`align\` (\`left\`, \`center\`, \`right\`, \`justify\`), \`transform\`, \`decoration\`
+(\`underline\`, \`line-through\`), \`letterSpacing\`, \`lineHeight\`, \`maxLines\`,
+\`backgroundColor\` et \`paddingPx\` (fond et marge interne du cadre).
 
 ### Gabarits de texte
 

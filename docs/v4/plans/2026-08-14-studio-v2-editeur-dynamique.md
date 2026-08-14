@@ -19,7 +19,7 @@
 | 3. Coins arrondis par coin (+ QR) | [x] | 2026-08-14 | |
 | 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [x] | 2026-08-14 | |
 | 5. objectFit des images | [x] | 2026-08-14 | |
-| 6. Doc feature : format enrichi | [ ] | | |
+| 6. Doc feature : format enrichi | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
 | 7. Contexte dynamique serveur (context.ts, render, presets) | [ ] | | |
 | 8. Routes render/schema-info + statiques vendor-ui | [ ] | | |
 | 9. Upload de ressources vers l'atelier | [ ] | | |
@@ -362,11 +362,11 @@ it("applique objectFit contain a une image", () => {
 - Modify: `scripts/new-badge-template.ts` (README généré : tableau des champs)
 - Modify: `badge-templates/*/README.md` s'ils existent (mêmes remplacements que le scaffold)
 
-- [ ] **Step 1 :** Mettre à jour le tableau « Types de blocs » de la doc feature : champs communs (`opacity`, `rotate`, `border`/`borderTop|Right|Bottom|Left` `{widthPx, color, style}`, `radiusPx` nombre ou par coin) ; texte (`fontStyle`, `decoration`, `align` avec justify, `maxLines`, `backgroundColor`, `paddingPx`, `rotate` retiré de la ligne texte car devenu commun) ; image (`objectFit`) ; retirer toute mention de `borderTopPx`/`borderColor`. Ajouter une phrase : « Les ombres portées et les dégradés ne sont pas supportés (limite `@react-pdf`, décision spec 18). »
-- [ ] **Step 2 :** Reporter les mêmes changements dans le README généré par `scripts/new-badge-template.ts` et les README d'atelier existants.
-- [ ] **Step 3 :** Vérifier `grep -rn "borderTopPx" src scripts docs badge-templates prisma` → plus aucune occurrence hors specs historiques.
-- [ ] **Step 4 :** Fin de lot : `make lint && make typecheck && make test` → tout vert.
-- [ ] **Step 5 : Point de commit (proposer)** — `docs(v4): documente le format declaratif enrichi`
+- [x] **Step 1 :** Mettre à jour le tableau « Types de blocs » de la doc feature : champs communs (`opacity`, `rotate`, `border`/`borderTop|Right|Bottom|Left` `{widthPx, color, style}`, `radiusPx` nombre ou par coin) ; texte (`fontStyle`, `decoration`, `align` avec justify, `maxLines`, `backgroundColor`, `paddingPx`, `rotate` retiré de la ligne texte car devenu commun) ; image (`objectFit`) ; retirer toute mention de `borderTopPx`/`borderColor`. Ajouter une phrase : « Les ombres portées et les dégradés ne sont pas supportés (limite `@react-pdf`, décision spec 18). »
+- [x] **Step 2 :** Reporter les mêmes changements dans le README généré par `scripts/new-badge-template.ts` et les README d'atelier existants.
+- [x] **Step 3 :** Vérifier `grep -rn "borderTopPx" src scripts docs badge-templates prisma` → plus aucune occurrence hors specs historiques.
+- [x] **Step 4 :** Fin de lot : `make lint && make typecheck && make test` → tout vert.
+- [x] **Step 5 : Point de commit (proposer)** — `docs(v4): documente le format declaratif enrichi`
 
 ---
 

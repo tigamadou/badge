@@ -220,10 +220,28 @@ hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
 
 | Type | Rôle | Champs propres |
 |---|---|---|
-| `text` | Un texte | `text` (gabarit), `style`, `rotate` (degrés, sens horaire, ±360 ; pivote autour du centre du cadre — déclarer le cadre non pivoté, comme dans Figma) |
-| `image` | Une image | `source` **ou** `asset`, jamais les deux ; `radiusPx` |
+| `text` | Un texte | `text` (gabarit), `style` |
+| `image` | Une image | `source` **ou** `asset`, jamais les deux ; `objectFit` (`cover` par défaut, `contain`, `fill`) |
 | `qr` | Le QR code du badge | — |
-| `rect` | Un aplat | `fill`, `radiusPx`, `borderTopPx`, `borderColor` |
+| `rect` | Un aplat | `fill` |
+
+#### Champs communs à tous les blocs
+
+Outre `page`, `x`, `y`, `w`, `h` et `visibleIf` :
+
+| Champ | Effet |
+|---|---|
+| `rotate` | Rotation en degrés (sens horaire, ±360) autour du centre du cadre. Déclarer le cadre **non pivoté**, comme dans Figma |
+| `opacity` | Opacité du bloc entier, de 0 à 1 |
+| `radiusPx` | Coins arrondis : un nombre (les quatre coins) ou un objet `{ topLeft, topRight, bottomRight, bottomLeft }` |
+| `border` | Bordure des quatre côtés : `{ widthPx, color, style }` où `style` vaut `solid` (défaut), `dashed` ou `dotted` |
+| `borderTop`, `borderRight`, `borderBottom`, `borderLeft` | Même forme que `border`, et **prime** sur lui pour le côté concerné |
+
+Les couleurs de bordure acceptent, comme `fill`, une valeur hexadécimale ou un chemin
+de source de type couleur.
+
+Les **ombres portées et les dégradés ne sont pas supportés** : `@react-pdf` n'a ni
+ombre ni flou (limite du moteur, décision de la spec 18).
 
 ### Gabarits de texte
 
@@ -288,11 +306,31 @@ bloc `text` déclare ce qu'il faut faire.
 | `truncate` | Coupe et ajoute une ellipse |
 | `clip` | Laisse déborder — comportement brut de `@react-pdf` |
 
+`maxLines` complète ces modes pour le multiligne : au-delà du nombre de lignes
+déclaré, `@react-pdf` coupe avec une ellipse.
+
+### Style du texte
+
+| Champ | Effet |
+|---|---|
+| `sizePx`, `minSizePx` | Taille de police, et plancher du mode `shrink` |
+| `font`, `weight` | Alias d'une police déclarée dans `fonts` ; graisse 400 / 500 / 600 / 700 |
+| `fontStyle` | `italic` (Montserrat italique est enregistrée par défaut) |
+| `color` | Hexadécimale ou source de type couleur |
+| `align` | `left`, `center`, `right`, `justify` |
+| `transform` | `uppercase`, `lowercase`, `none` |
+| `decoration` | `underline`, `line-through` |
+| `letterSpacing`, `lineHeight` | Interlettrage en px ; interligne en multiplicateur (sans unité) |
+| `maxLines` | Nombre maximal de lignes, ellipse au-delà |
+| `backgroundColor`, `paddingPx` | Fond et marge interne du **cadre** du texte (étiquettes, pastilles). La marge est retranchée de la largeur utile pour `shrink` / `truncate` |
+
 ### Polices
 
-Montserrat est la police **par défaut**. Un paquet peut embarquer les siennes en les
-déclarant dans `fonts`, chaque entrée portant un `alias` réutilisé par
-`style.font`.
+Montserrat est la police **par défaut** (romaine et italique, graisses 400 à 700).
+Un paquet peut embarquer les siennes en les déclarant dans `fonts`, chaque entrée
+portant un `alias` réutilisé par `style.font`, une `weight` et un `style`
+(`normal` par défaut, ou `italic`). Une famille complète se déclare en plusieurs
+entrées partageant le même alias.
 
 Les polices sont enregistrées sous une famille préfixée `tpl-<templateId>-<alias>` :
 `Font.register` étant global au process et indexé par nom de famille, deux paquets
@@ -310,7 +348,8 @@ déclarant le même alias s'écraseraient sans ce préfixe.
 - une ressource ou une police déclarée mais absente du paquet ;
 - un `style.font` sans `alias` correspondant ;
 - `overflow: "shrink"` sans `minSizePx`, ou un `minSizePx` supérieur au `sizePx` ;
-- une couleur ni hexadécimale ni source de couleur ;
+- une couleur ni hexadécimale ni source de couleur (remplissage, texte, fond du
+  texte, bordures) ;
 - un `visibleIf` de forme `equals` sur un chemin non booléen.
 
 Le validateur est une fonction **pure** : aucun accès réseau ni base. Il est donc
