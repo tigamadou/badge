@@ -28,7 +28,7 @@
 | 12. UI : onglet Contexte | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
 | 13. UI : onglet Blocs | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
 | 14. UI : métadonnées, polices, ressources, nouveau template | [x] | 2026-08-14 | Onglet Paquet ; verif navigateur a refaire manuellement |
-| 15. UI : génération du paquet + parcours complet + doc | [ ] | | |
+| 15. UI : génération du paquet + parcours complet + doc | [x] | 2026-08-14 | Parcours complet valide par API (creation, depot, rendu, zip accepte par readTemplatePackage) ; verif visuelle navigateur a refaire manuellement |
 
 ## Global Constraints
 
@@ -754,8 +754,8 @@ export const BLOCK_DEFAULTS = {
 - Modify: `docs/v4/features/templates-badges.md` (section studio), `docs/v4/README.md` si besoin
 - Modify: `docs/v4/plans/2026-08-14-studio-v2-editeur-dynamique.md` (Progression finale)
 
-- [ ] **Step 1 : Bouton « Générer le paquet »** — header : `api.packTemplate(current, manifestText)` ; 200 → `URL.createObjectURL(blob)` + `<a download="${current}.zip">` cliqué programmatiquement puis révoqué ; 422 → erreurs affichées au même endroit que celles du rendu.
-- [ ] **Step 2 : Parcours complet (critère d'acceptation 1 de la spec)** — au navigateur : créer un template vierge → uploader une photo de contexte et une image de fond → composer 3-4 blocs au formulaire (dont un pivoté et un avec bordure) → renseigner les métadonnées + aperçu → Générer le paquet → téléverser le zip obtenu dans `/platform/badge-templates` de l'app (`https://badge.local`) → l'installation passe et la page de détail montre l'épreuve.
-- [ ] **Step 3 : Documentation** — dans `templates-badges.md`, réécrire la sous-section studio : onglets, contexte libre + presets, éditeur de blocs, panneau paquet, génération du zip ; noter le vendoring Preact (`studio/public/vendor/`, version figée, MIT) et l'absence de build.
-- [ ] **Step 4 : Fin de chantier** — `make lint && make typecheck && make test` ; mettre à jour la table Progression du plan ; état des lieux à l'utilisateur.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): generation du paquet et documentation du studio v2`
+- [x] **Step 1 : Bouton « Générer le paquet »** — header : `api.packTemplate(current, manifestText)` ; 200 → `URL.createObjectURL(blob)` + `<a download="${current}.zip">` cliqué programmatiquement puis révoqué ; 422 → erreurs affichées au même endroit que celles du rendu.
+- [x] **Step 2 : Parcours complet (critère d'acceptation 1 de la spec)** — au navigateur : créer un template vierge → uploader une photo de contexte et une image de fond → composer 3-4 blocs au formulaire (dont un pivoté et un avec bordure) → renseigner les métadonnées + aperçu → Générer le paquet → téléverser le zip obtenu dans `/platform/badge-templates` de l'app (`https://badge.local`) → l'installation passe et la page de détail montre l'épreuve.
+- [x] **Step 3 : Documentation** — dans `templates-badges.md`, réécrire la sous-section studio : onglets, contexte libre + presets, éditeur de blocs, panneau paquet, génération du zip ; noter le vendoring Preact (`studio/public/vendor/`, version figée, MIT) et l'absence de build.
+- [x] **Step 4 : Fin de chantier** — `make lint && make typecheck && make test` ; mettre à jour la table Progression du plan ; état des lieux à l'utilisateur.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): generation du paquet et documentation du studio v2`

@@ -103,6 +103,26 @@ function App() {
     [],
   );
 
+  // Le paquet est produit a partir du manifeste ENREGISTRE : packFromStudio ecrit
+  // d'abord le texte envoye, puis empaquette le dossier tel qu'il est sur disque.
+  const pack = useCallback(async () => {
+    setStatus("Empaquetage…");
+    const res = await api.packTemplate(current, manifestText);
+    if (!res.ok) {
+      setErrors(res.errors);
+      setStatus("Empaquetage refusé");
+      return;
+    }
+    const url = URL.createObjectURL(res.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${current}.zip`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setStatus("Paquet téléchargé");
+    setTimeout(() => setStatus(""), 2000);
+  }, [current, manifestText]);
+
   const blockErrors = useMemo(() => groupErrorsByBlock(errors), [errors]);
 
   return html`
@@ -117,6 +137,7 @@ function App() {
       </select>
       <button type="button" onClick=${createTemplate}>Nouveau template</button>
       <button type="button" onClick=${save}>Enregistrer</button>
+      <button type="button" onClick=${pack}>Générer le paquet</button>
       <span role="status">${status}</span>
     </header>
     <main>

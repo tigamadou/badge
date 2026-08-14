@@ -93,19 +93,40 @@ ou placeholder.
 ## Créer un template
 
 ```bash
+make studio   # ouvre le studio sur http://localhost:3786
+# tout se fait ensuite dans le studio : creer le template, deposer les images
+# et les polices, composer les blocs, generer le paquet.
+```
+
+Le studio suffit de bout en bout ; les commandes restent disponibles pour un usage
+hors interface :
+
+```bash
 make new-badge-template NAME=salon-2027   # cree le squelette
-make studio                               # ouvre le studio sur http://localhost:3786
-# editer le manifeste dans le studio, l'apercu se rafraichit a mesure
-# deposer les images dans badge-templates/salon-2027/assets/
 make pack-badge-template NAME=salon-2027  # produit l'archive
 ```
 
-Le **studio** (`make studio`) est un outil de développement local : il liste les templates
-de l'atelier, édite leur manifeste et rend le badge à chaque modification, sans empaqueter
-ni installer. Le rendu porte sur le texte de l'éditeur, donc avant enregistrement, et un
-sélecteur permet de commuter entre cinq jeux de données — participant complet, sans photo,
-catégorie anonyme, badge neutre, textes très longs — pour éprouver les `visibleIf` et les
-modes de débordement. Il n'est jamais déployé et ne connaît ni la base, ni le stockage.
+Le **studio** (`make studio`) est un outil de développement local, jamais déployé, qui
+ne connaît ni la base ni le stockage. Il se compose de quatre onglets à gauche et d'un
+**aperçu PDF permanent** à droite, rafraîchi à chaque modification. Le rendu porte sur le
+texte de l'éditeur, donc avant enregistrement ; un manifeste invalide affiche ses erreurs
+sans effacer l'aperçu précédent.
+
+| Onglet | Rôle |
+|---|---|
+| **Contexte** | Le jeu de données du rendu, entièrement libre : identité et structure du participant, **photo** et **logo** déposés depuis le navigateur, catégorie (libellé, couleur, bascules *anonyme* et *neutre*), titre / lieu / date de l'événement, identifiant et URL de vérification (le QR est produit pour de vrai). Cinq **préréglages** — participant complet, sans photo, catégorie anonyme, badge neutre, textes très longs — préremplissent le formulaire pour éprouver les `visibleIf` et les modes de débordement. |
+| **Blocs** | L'éditeur dynamique : ajouter un bloc par type, le dupliquer, le déplacer, le supprimer ; chaque bloc déplié offre ses champs typés (position, rotation, opacité, coins, bordures, style de texte complet, cadrage d'image, conditions d'affichage). Les sources et chemins autorisés sont proposés en listes déroulantes, et un avertissement signale un cadre texte trop bas pour sa police. |
+| **Paquet** | Famille, libellé, description, dimensions de page, image d'aperçu, polices déclarées (alias, fichier, graisse, italique) et **dépôt de ressources** dans `assets/` / `fonts/` — avec les mêmes contrôles qu'à l'installation (type déduit des octets, 5 Mo pour une image, 2 Mo pour une police). |
+| **JSON** | Le manifeste brut, synchronisé dans les deux sens avec les onglets Blocs et Paquet : le formulaire pour le confort, le JSON pour les cas fins et le copier-coller. |
+
+Deux boutons complètent la barre supérieure : **Nouveau template** (même squelette que
+`make new-badge-template`) et **Générer le paquet**, qui enregistre le manifeste puis
+télécharge le zip prêt à téléverser dans `/platform/badge-templates` — l'empaquetage
+passe par le même code que `make pack-badge-template`, donc aucun écart possible.
+
+L'interface est écrite en **Preact + htm sans étape de build** : la bibliothèque est
+vendorisée dans `studio/public/vendor/` (version figée, licence MIT), les composants
+vivent dans `studio/public/ui/`.
 
 Le squelette naît dans `badge-templates/<nom>/`, à la racine du dépôt — un dossier
 **gitignoré**, atelier de travail à ne pas confondre avec `prisma/badge-templates/`, qui
