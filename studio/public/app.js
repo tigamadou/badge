@@ -202,6 +202,7 @@ function App() {
                   pageCount=${manifest.page?.count ?? 1}
                   assets=${assets}
                   fonts=${manifest.fonts ?? []}
+                  isRoot=${selection.length === 1}
                   onChange=${(next) =>
                     updateManifest({
                       ...manifest,

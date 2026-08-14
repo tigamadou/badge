@@ -22,7 +22,7 @@
 | 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [x] | 2026-08-14 | |
 | 7. Layout 3 colonnes + thème sombre + bascule JSON | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
 | 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
-| 9. Inspecteur : contrôles par nature + Paquet par défaut | [ ] | | |
+| 9. Inspecteur : contrôles par nature + Paquet par défaut | [x] | 2026-08-14 | Sections fonctionnelles ; verif visuelle a faire a la main |
 | 10. Contexte en bas à gauche + erreurs canvas + doc + vérif finale | [ ] | | |
 
 ## Global Constraints
@@ -647,12 +647,12 @@ export function Dropzone({ label, accept, preview, onFile })        // zone de d
 
   Un groupe n'affiche que Identité, Disposition, Apparence (opacité seule) et Conditions. L'avertissement de hauteur de texte existant est conservé (affiché en tête de Typographie).
 
-- [ ] **Step 1 : `controls.js`** — implémenter les sept contrôles (composition des primitives existantes : `Slider` = `<input type="range">` + `<span>` valeur ; `Segmented` = rangée de boutons `.seg` avec `.active` ; `Dropzone` = `<label>` stylée contenant l'`<input type="file">` masqué et la vignette `<img>` quand `preview` est fourni).
-- [ ] **Step 2 : `BlockInspector`** — réécrire `block-form.js` en l'organisant par sections `.panel-title`, en remplaçant chaque champ par le contrôle adapté (mapping ci-dessus). L'opacité s'affiche 0–100 % mais reste stockée 0–1 (`onValue: (v) => patch({ opacity: v === 100 ? undefined : v / 100 })`). La rotation à 0 s'enregistre `undefined` (pas de bruit dans le manifeste).
-- [ ] **Step 3 : `app.js`** — brancher `BlockInspector` sur `selection` (bloc résolu par `getAt`) ; `MetaPanel` s'affiche sans sélection ; passer `page` seulement pour un bloc racine (chemin de longueur 1).
-- [ ] **Step 4 : `meta-panel.js`** — habiller aux classes du thème (sections, `Dropzone` pour les uploads avec vignette du fichier fraîchement déposé).
-- [ ] **Step 5 : Vérification** — curl + noter la passe visuelle ; `yarn vitest run studio`.
-- [ ] **Step 6 : Point de commit** — `feat(v4): inspecteur du studio avec controles par nature`
+- [x] **Step 1 : `controls.js`** — implémenter les sept contrôles (composition des primitives existantes : `Slider` = `<input type="range">` + `<span>` valeur ; `Segmented` = rangée de boutons `.seg` avec `.active` ; `Dropzone` = `<label>` stylée contenant l'`<input type="file">` masqué et la vignette `<img>` quand `preview` est fourni).
+- [x] **Step 2 : `BlockInspector`** — réécrire `block-form.js` en l'organisant par sections `.panel-title`, en remplaçant chaque champ par le contrôle adapté (mapping ci-dessus). L'opacité s'affiche 0–100 % mais reste stockée 0–1 (`onValue: (v) => patch({ opacity: v === 100 ? undefined : v / 100 })`). La rotation à 0 s'enregistre `undefined` (pas de bruit dans le manifeste).
+- [x] **Step 3 : `app.js`** — brancher `BlockInspector` sur `selection` (bloc résolu par `getAt`) ; `MetaPanel` s'affiche sans sélection ; passer `page` seulement pour un bloc racine (chemin de longueur 1).
+- [x] **Step 4 : `meta-panel.js`** — habiller aux classes du thème (sections, `Dropzone` pour les uploads avec vignette du fichier fraîchement déposé).
+- [x] **Step 5 : Vérification** — curl + noter la passe visuelle ; `yarn vitest run studio`.
+- [x] **Step 6 : Point de commit** — `feat(v4): inspecteur du studio avec controles par nature`
 
 ### Task 10 : Contexte en bas à gauche, erreurs canvas, doc, vérification finale
 

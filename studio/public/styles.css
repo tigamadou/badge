@@ -392,3 +392,98 @@ textarea.json {
   font-size: 11px;
   color: var(--text-dim);
 }
+
+/* --------------------------------------------- controles de l'inspecteur */
+
+.xywh {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  margin-bottom: 0.15rem;
+}
+
+.xywh-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.xywh-cell > span {
+  color: var(--text-dim);
+  width: 0.9rem;
+  font-size: 11px;
+}
+
+.xywh-cell input {
+  width: 100%;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.slider input[type="range"] {
+  flex: 1;
+  padding: 0;
+  border: none;
+  background: none;
+  accent-color: var(--accent);
+}
+
+.slider .dim {
+  min-width: 2.6rem;
+  text-align: right;
+}
+
+.seg {
+  display: flex;
+  gap: 1px;
+}
+
+.seg button {
+  flex: 1;
+  padding: 0.2rem 0.3rem;
+  border-radius: 0;
+  font-size: 11px;
+}
+
+.seg button:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.seg button:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+.dropzone {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  border-color: var(--accent);
+}
+
+.dropzone img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.dropzone input[type="file"] {
+  display: none;
+}
+
+.block-form .field {
+  grid-template-columns: 6.5rem 1fr;
+}
