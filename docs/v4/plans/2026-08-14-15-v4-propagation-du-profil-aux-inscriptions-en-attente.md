@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | 1 | Type d'action `REGISTRATION_SNAPSHOT_REFRESHED` | [x] | 2026-08-14 | 2 tests ; enum propage par `make db-push` |
 | 2 | Module de synchronisation — sélection et réécriture | [x] | 2026-08-14 | 6 tests verts |
-| 3 | Module de synchronisation — règle de blocage document | [ ] | | |
+| 3 | Module de synchronisation — règle de blocage document | [x] | 2026-08-14 | 9 tests ; couverture module 100% (make test-coverage global tombe en OOM, couverture ciblee utilisee) |
 | 4 | Branchement dans `PUT /api/account/profile` + audit | [ ] | | |
 | 5 | Détail d'inscription côté organisation — retrait de l'encart | [ ] | | |
 | 6 | Documentation | [ ] | | |
@@ -491,7 +491,7 @@ Attendu : aucun warning, aucune erreur de type.
 
 Rappel du risque, qui justifie cette tâche : à la création d'une inscription, un `BlockedDocument` correspondant au numéro de pièce — au niveau plateforme (`eventId: null`) ou de l'événement — interdit l'inscription (`src/app/api/events/[slug]/register/route.ts:128-136`). Propager un nouveau numéro sans rejouer ce contrôle ferait entrer après coup un document que l'événement a explicitement bloqué.
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Ajouter à `src/lib/__tests__/registration-snapshot-sync.test.ts`, dans le même `describe` :
 
@@ -587,7 +587,7 @@ Ajouter à `src/lib/__tests__/registration-snapshot-sync.test.ts`, dans le même
 
 Le troisième test verrouille une décision de la spec : le contrôle ne se déclenche que si `snapshotIdDocumentNumber` change. Un blocage posé sur le numéro déjà présent dans l'inscription ne doit pas geler la propagation des autres champs — ce blocage-là relève de l'organisation, qui rejettera le dossier.
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/registration-snapshot-sync.test.ts
@@ -595,7 +595,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Attendu : ÉCHEC sur les deux premiers nouveaux tests — la fonction renvoie `refreshed` là où on attend `skipped_document_blocked`. Le troisième passe déjà.
 
-- [ ] **Étape 3 : Implémenter la règle**
+- [x] **Étape 3 : Implémenter la règle**
 
 Dans `src/lib/registration-snapshot-sync.ts`, remplacer le corps de la boucle par :
 
@@ -637,7 +637,7 @@ Dans `src/lib/registration-snapshot-sync.ts`, remplacer le corps de la boucle pa
 
 Le `OR` reprend la forme utilisée à l'inscription : le typage Prisma n'accepte pas `null` dans un `in` sur un champ nullable.
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/registration-snapshot-sync.test.ts
@@ -645,7 +645,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Attendu : SUCCÈS sur les neuf tests.
 
-- [ ] **Étape 5 : Vérifier la couverture du module**
+- [x] **Étape 5 : Vérifier la couverture du module**
 
 ```bash
 make test-coverage

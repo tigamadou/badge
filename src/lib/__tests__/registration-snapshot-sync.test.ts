@@ -176,4 +176,92 @@ describe("refreshPendingRegistrationSnapshots", () => {
   it("retourne un tableau vide pour un utilisateur inconnu", async () => {
     expect(await refreshPendingRegistrationSnapshots("inconnu")).toEqual([]);
   });
+
+  it("saute l'inscription dont l'evenement bloque le nouveau numero, et met a jour les autres", async () => {
+    const user = await makeParticipant("f");
+    const bloquant = await makeEvent("f-bloquant");
+    const libre = await makeEvent("f-libre");
+    const regBloquee = await makeRegistration({
+      userId: user.id,
+      eventId: bloquant.eventId,
+      categoryId: bloquant.categoryId,
+    });
+    const regLibre = await makeRegistration({
+      userId: user.id,
+      eventId: libre.eventId,
+      categoryId: libre.categoryId,
+    });
+    await prisma.blockedDocument.create({
+      data: { eventId: bloquant.eventId, documentNumber: "NEW-1", reason: "Fraude" },
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { idDocumentNumber: "NEW-1", photo: "profile/u/photos/new.jpg" },
+    });
+
+    const outcomes = await refreshPendingRegistrationSnapshots(user.id);
+
+    expect(outcomes).toContainEqual({
+      registrationId: regBloquee.id,
+      eventId: bloquant.eventId,
+      orgId: bloquant.orgId,
+      outcome: "skipped_document_blocked",
+    });
+    expect(outcomes).toContainEqual(
+      expect.objectContaining({ registrationId: regLibre.id, outcome: "refreshed" }),
+    );
+
+    const bloquee = await prisma.registration.findUniqueOrThrow({ where: { id: regBloquee.id } });
+    const passee = await prisma.registration.findUniqueOrThrow({ where: { id: regLibre.id } });
+    expect(bloquee.snapshotIdDocumentNumber).toBe("OLD-1");
+    expect(bloquee.snapshotPhoto).toBe("uploads/legacy/old.jpg");
+    expect(passee.snapshotIdDocumentNumber).toBe("NEW-1");
+  });
+
+  it("saute l'inscription quand le blocage est au niveau plateforme", async () => {
+    const user = await makeParticipant("g");
+    const { orgId, eventId, categoryId } = await makeEvent("g");
+    const reg = await makeRegistration({ userId: user.id, eventId, categoryId });
+    await prisma.blockedDocument.create({
+      data: { eventId: null, documentNumber: "NEW-2", reason: "Blocage plateforme" },
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { idDocumentNumber: "NEW-2" },
+    });
+
+    const outcomes = await refreshPendingRegistrationSnapshots(user.id);
+
+    expect(outcomes).toEqual([
+      { registrationId: reg.id, eventId, orgId, outcome: "skipped_document_blocked" },
+    ]);
+    const after = await prisma.registration.findUniqueOrThrow({ where: { id: reg.id } });
+    expect(after.snapshotIdDocumentNumber).toBe("OLD-1");
+  });
+
+  it("ne consulte pas les blocages quand le numero de piece n'a pas change", async () => {
+    const user = await makeParticipant("h");
+    const { eventId, categoryId } = await makeEvent("h");
+    const reg = await makeRegistration({ userId: user.id, eventId, categoryId });
+    // Un blocage existe sur le numero courant : il ne doit pas s'appliquer,
+    // puisque la propagation ne change pas ce champ.
+    await prisma.blockedDocument.create({
+      data: { eventId, documentNumber: "OLD-1", reason: "Blocage historique" },
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { photo: "profile/u/photos/new.jpg" },
+    });
+
+    const outcomes = await refreshPendingRegistrationSnapshots(user.id);
+
+    expect(outcomes).toEqual([
+      expect.objectContaining({ registrationId: reg.id, outcome: "refreshed" }),
+    ]);
+    const after = await prisma.registration.findUniqueOrThrow({ where: { id: reg.id } });
+    expect(after.snapshotPhoto).toBe("profile/u/photos/new.jpg");
+  });
 });

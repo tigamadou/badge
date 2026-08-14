@@ -85,6 +85,26 @@ export async function refreshPendingRegistrationSnapshots(
     const fields = changedFields(registration, target);
     if (fields.length === 0) continue;
 
+    // Le controle de blocage n'est rejoue que si le numero change : un blocage
+    // pose sur le numero deja present releve de la decision de l'organisation.
+    if (fields.includes("snapshotIdDocumentNumber")) {
+      const blocked = await prisma.blockedDocument.findFirst({
+        where: {
+          documentNumber: target.snapshotIdDocumentNumber,
+          OR: [{ eventId: null }, { eventId: registration.eventId }],
+        },
+      });
+      if (blocked) {
+        outcomes.push({
+          registrationId: registration.id,
+          eventId: registration.eventId,
+          orgId: registration.event.orgId,
+          outcome: "skipped_document_blocked",
+        });
+        continue;
+      }
+    }
+
     await prisma.registration.update({ where: { id: registration.id }, data: target });
     outcomes.push({
       registrationId: registration.id,
