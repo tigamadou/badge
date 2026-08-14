@@ -1,12 +1,17 @@
-import { readdir, readFile, writeFile, stat } from "node:fs/promises";
+import { readdir, readFile, writeFile, stat, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { sniff, type PackageAsset } from "../src/lib/badge-templates/package-reader";
+import { checkAsset, sniff, type PackageAsset } from "../src/lib/badge-templates/package-reader";
 
 // Meme motif que scripts/new-badge-template.ts : un nom valide ne peut contenir
 // ni separateur, ni point, ce qui exclut par construction toute remontee de chemin.
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 const ASSET_DIRS = ["assets", "fonts"] as const;
+
+export type AssetDir = (typeof ASSET_DIRS)[number];
+
+// Un nom de fichier de ressource : ni separateur, ni remontee de chemin.
+const FILENAME = /^[a-z0-9][a-z0-9._-]{0,63}$/i;
 
 export function isValidTemplateName(name: string): boolean {
   return SLUG.test(name);
@@ -96,4 +101,34 @@ export async function writeManifest(
   if (!(await isDirectory(dir))) return false;
   await writeFile(join(dir, "manifest.json"), manifest, "utf8");
   return true;
+}
+
+export type SaveAssetResult = { ok: true; path: string } | { ok: false; error: string };
+
+// Depose une ressource dans l'atelier. Les controles sont ceux de l'installation
+// (checkAsset : format sniffe sur les octets, taille bornee), pour qu'un paquet
+// compose dans le studio ne puisse pas etre refuse plus tard au televersement.
+export async function saveAsset(
+  root: string,
+  name: string,
+  dir: AssetDir,
+  filename: string,
+  body: Buffer,
+): Promise<SaveAssetResult> {
+  if (!isValidTemplateName(name)) return { ok: false, error: "Nom de template invalide." };
+  if (!FILENAME.test(filename) || filename.includes("..")) {
+    return { ok: false, error: `Nom de fichier invalide : "${filename}".` };
+  }
+  const templateDir = join(root, name);
+  if (!(await isDirectory(templateDir))) {
+    return { ok: false, error: `Template introuvable : "${name}".` };
+  }
+
+  const path = `${dir}/${filename}`;
+  const checked = checkAsset(path, body);
+  if ("error" in checked) return { ok: false, error: checked.error };
+
+  await mkdir(join(templateDir, dir), { recursive: true });
+  await writeFile(join(templateDir, dir, filename), body);
+  return { ok: true, path };
 }

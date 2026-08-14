@@ -113,6 +113,47 @@ describe("statiques", () => {
   });
 });
 
+describe("POST /api/templates/:name/assets", () => {
+  const PNG_BASE64 = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d,
+  ]).toString("base64");
+
+  const upload = (name: string, body: unknown) =>
+    fetch(`${base}/api/templates/${name}/assets`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  it("ecrit la ressource dans l'atelier", async () => {
+    const res = await upload("salon", { dir: "assets", filename: "fond.png", dataBase64: PNG_BASE64 });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, path: "assets/fond.png" });
+
+    const read = await fetch(`${base}/api/templates/salon`).then((r) => r.json());
+    expect(read.assets).toContain("assets/fond.png");
+  });
+
+  it("repond 422 pour un contenu refuse", async () => {
+    const res = await upload("salon", {
+      dir: "assets",
+      filename: "note.png",
+      dataBase64: Buffer.from("bonjour").toString("base64"),
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it("repond 400 pour un corps malforme", async () => {
+    expect((await upload("salon", { dir: "images", filename: "a.png", dataBase64: PNG_BASE64 })).status).toBe(400);
+    expect((await upload("salon", { dir: "assets", dataBase64: PNG_BASE64 })).status).toBe(400);
+  });
+
+  it("repond 422 pour un template inconnu", async () => {
+    const res = await upload("inconnu", { dir: "assets", filename: "fond.png", dataBase64: PNG_BASE64 });
+    expect(res.status).toBe(422);
+  });
+});
+
 describe("POST /api/render", () => {
   it("rend avec un contexte partiel fourni", async () => {
     const res = await fetch(`${base}/api/render`, {

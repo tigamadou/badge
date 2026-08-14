@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { listTemplates, readTemplate, writeManifest } from "./workshop";
+import { listTemplates, readTemplate, saveAsset, writeManifest, type AssetDir } from "./workshop";
 import { buildContext, PRESETS, type ContextInput } from "./context";
 import { CONDITION_PATHS, SOURCES } from "../src/lib/badge-templates/declarative/sources";
 import { renderManifest } from "./render";
@@ -89,6 +89,31 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
       sendJson(res, written ? 200 : 404, written ? { ok: true } : { error: "TEMPLATE_NOT_FOUND" });
       return;
     }
+  }
+
+  const assetsMatch = /^\/api\/templates\/([^/]+)\/assets$/.exec(path);
+  if (req.method === "POST" && assetsMatch) {
+    const name = decodeURIComponent(assetsMatch[1]);
+    const body = (await readBody(req)) as
+      | { dir?: unknown; filename?: unknown; dataBase64?: unknown }
+      | null;
+    if (
+      (body?.dir !== "assets" && body?.dir !== "fonts") ||
+      typeof body.filename !== "string" ||
+      typeof body.dataBase64 !== "string"
+    ) {
+      sendJson(res, 400, { error: "INVALID_BODY" });
+      return;
+    }
+    const saved = await saveAsset(
+      root,
+      name,
+      body.dir as AssetDir,
+      body.filename,
+      Buffer.from(body.dataBase64, "base64"),
+    );
+    sendJson(res, saved.ok ? 200 : 422, saved.ok ? saved : { error: saved.error });
+    return;
   }
 
   if (req.method === "POST" && path === "/api/render") {

@@ -22,7 +22,7 @@
 | 6. Doc feature : format enrichi | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
 | 7. Contexte dynamique serveur (context.ts, render, presets) | [x] | 2026-08-14 | |
 | 8. Routes render/schema-info + statiques vendor-ui | [x] | 2026-08-14 | |
-| 9. Upload de ressources vers l'atelier | [ ] | | |
+| 9. Upload de ressources vers l'atelier | [x] | 2026-08-14 | |
 | 10. Scaffold + pack depuis le studio | [ ] | | |
 | 11. UI : socle Preact (parité JSON + aperçu) | [ ] | | |
 | 12. UI : onglet Contexte | [ ] | | |
@@ -521,7 +521,7 @@ it("sert les modules statiques vendor et ui", async () => {
   - `workshop.ts` : `export async function saveAsset(root: string, name: string, dir: "assets" | "fonts", filename: string, body: Buffer): Promise<{ ok: true; path: string } | { ok: false; error: string }>` — valide le nom de fichier (`/^[a-z0-9][a-z0-9._-]{0,63}$/i`, refus de `..`), applique `checkAsset`, crée le sous-dossier au besoin (`mkdir recursive`), écrit.
   - Serveur : `POST /api/templates/:name/assets` body `{ dir: "assets"|"fonts", filename: string, dataBase64: string }` → 200 `{ ok: true, path }` | 422 `{ error }` | 400/404.
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // workshop.test.ts (atelier temporaire mkdtemp, motif des tests studio existants)
@@ -555,10 +555,10 @@ it("refuse une police dans assets/ et inversement", async () => {
 ```
 
 Côté serveur : un test 200 (upload PNG base64 → fichier présent puis visible dans `GET /api/templates/t1`), un test 422 (contenu refusé), un 404 (template inconnu).
-- [ ] **Step 2 : Vérifier l'échec.**
-- [ ] **Step 3 : Implémentation** — exporter `checkAsset` ; `saveAsset` dans workshop (`checkAsset(\`${dir}/${filename}\`, body)` applique déjà les bons formats/tailles selon le dossier) ; route serveur : décoder `Buffer.from(dataBase64, "base64")`, refuser body malformé par 400.
-- [ ] **Step 4 : Vérifier le vert** — `yarn vitest run studio src/lib/badge-templates/__tests__/package-reader.test.ts`.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): upload de ressources vers l'atelier depuis le studio`
+- [x] **Step 2 : Vérifier l'échec.**
+- [x] **Step 3 : Implémentation** — exporter `checkAsset` ; `saveAsset` dans workshop (`checkAsset(\`${dir}/${filename}\`, body)` applique déjà les bons formats/tailles selon le dossier) ; route serveur : décoder `Buffer.from(dataBase64, "base64")`, refuser body malformé par 400.
+- [x] **Step 4 : Vérifier le vert** — `yarn vitest run studio src/lib/badge-templates/__tests__/package-reader.test.ts`.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): upload de ressources vers l'atelier depuis le studio`
 
 ### Task 10 : Nouveau template + génération du paquet
 

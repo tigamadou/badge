@@ -49,7 +49,9 @@ function pathIssue(path: string): string | null {
   return null;
 }
 
-function checkAsset(path: string, body: Buffer): { error: string } | { contentType: string } {
+// Exporte pour le studio : un fichier depose dans l'atelier subit exactement les
+// memes controles de format et de taille qu'a l'ouverture d'une archive.
+export function checkAsset(path: string, body: Buffer): { error: string } | { contentType: string } {
   const kind = sniff(body);
   const isFont = path.startsWith("fonts/");
 
