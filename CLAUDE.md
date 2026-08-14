@@ -131,6 +131,7 @@ Services disponibles :
 | `app` | 3785 | `https://badge.local` | Next.js avec hot reload |
 | `mysql` | 33060 | — | Base de données |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
+| `studio` | 3786 | `https://studio.badge.local` | Studio de construction de templates (dev) |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
 | `minio` | 9001 | `https://s3.badge.local` | Console MinIO |
 | `caddy` | 80 / 443 | — | Reverse proxy dev (sous-domaines `*.badge.local`, `tls internal`) |
@@ -144,6 +145,7 @@ Commandes principales :
 | `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
 | `make dev` / `make dev-down` / `make logs` | Cycle dev local |
 | `make dev-https` / `make dev-https-check` | HTTPS local : `/etc/hosts` + confiance CA Caddy (idempotent) |
+| `make studio` | Studio de templates (édition du manifeste + aperçu instantané) |
 | `make db-push` / `make db-seed` / `make db-studio` | Schéma Prisma + seed + Prisma Studio |
 | `make db-reset` | **Reset BDD dev (destructif — demander avant)** |
 

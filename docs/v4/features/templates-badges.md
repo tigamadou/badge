@@ -94,10 +94,18 @@ ou placeholder.
 
 ```bash
 make new-badge-template NAME=salon-2027   # cree le squelette
-# deposer l'image dans badge-templates/salon-2027/assets/apercu.png
-# modifier badge-templates/salon-2027/manifest.json
+make studio                               # ouvre le studio sur http://localhost:3786
+# editer le manifeste dans le studio, l'apercu se rafraichit a mesure
+# deposer les images dans badge-templates/salon-2027/assets/
 make pack-badge-template NAME=salon-2027  # produit l'archive
 ```
+
+Le **studio** (`make studio`) est un outil de développement local : il liste les templates
+de l'atelier, édite leur manifeste et rend le badge à chaque modification, sans empaqueter
+ni installer. Le rendu porte sur le texte de l'éditeur, donc avant enregistrement, et un
+sélecteur permet de commuter entre cinq jeux de données — participant complet, sans photo,
+catégorie anonyme, badge neutre, textes très longs — pour éprouver les `visibleIf` et les
+modes de débordement. Il n'est jamais déployé et ne connaît ni la base, ni le stockage.
 
 Le squelette naît dans `badge-templates/<nom>/`, à la racine du dépôt — un dossier
 **gitignoré**, atelier de travail à ne pas confondre avec `prisma/badge-templates/`, qui

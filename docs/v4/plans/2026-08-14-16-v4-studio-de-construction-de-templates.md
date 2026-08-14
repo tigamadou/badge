@@ -34,7 +34,7 @@
 | 4 | Serveur HTTP — `server.ts` | [x] | 2026-08-14 | 9 tests par appels HTTP reels sur port ephemere |
 | 5 | Infrastructure — docker-compose, Caddy, Makefile | [x] | 2026-08-14 | service demarre, /api/templates repond. **`make dev-https-hosts` a lancer manuellement** (sudo) pour https://studio.badge.local ; localhost:3786 fonctionne sans |
 | 6 | Interface — page, édition, aperçu | [x] | 2026-08-14 | page et ressources en 200, rendu PDF reel verifie (20 Ko, variantes distinctes). **Recette visuelle (6 points) a faire par l'utilisateur** |
-| 7 | Documentation | [ ] | | |
+| 7 | Documentation | [x] | 2026-08-14 | templates-badges.md + installation.md + CLAUDE.md ; suite complete verte (1578 tests) |
 
 Statuts : `[ ]` pending · `[~]` in_progress · `[x]` completed · `[-]` abandoned.
 
@@ -1390,7 +1390,7 @@ Attendu : tout au vert. `app.js` n'est pas typé ; s'il est repris par ESLint, v
 - Consomme : le comportement livré par les Tasks 1 à 6.
 - Produit : rien.
 
-- [ ] **Étape 1 : Décrire la nouvelle boucle de construction**
+- [x] **Étape 1 : Décrire la nouvelle boucle de construction**
 
 Dans `docs/v4/features/templates-badges.md`, remplacer le bloc de commandes de la section « Créer un template » par :
 
@@ -1413,15 +1413,15 @@ catégorie anonyme, badge neutre, textes très longs — pour éprouver les `vis
 modes de débordement. Il n'est jamais déployé et ne connaît ni la base, ni le stockage.
 ```
 
-- [ ] **Étape 2 : Ajouter le service à la doc d'installation**
+- [x] **Étape 2 : Ajouter le service à la doc d'installation**
 
 Dans `docs/v4/installation.md`, ajouter une ligne au tableau des services, en suivant la forme des lignes existantes : service `studio`, port direct `3786`, URL `https://studio.badge.local`, description « Studio de construction de templates (dev) ».
 
-- [ ] **Étape 3 : Mettre à jour `CLAUDE.md`**
+- [x] **Étape 3 : Mettre à jour `CLAUDE.md`**
 
 Deux tableaux : celui des services (même ligne que ci-dessus) et celui des commandes, où `make studio` rejoint les commandes de développement avec la description « Studio de templates (édition + aperçu) ».
 
-- [ ] **Étape 4 : Vérification finale**
+- [x] **Étape 4 : Vérification finale**
 
 ```bash
 make lint && make typecheck && make test
