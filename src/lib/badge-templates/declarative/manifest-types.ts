@@ -98,7 +98,20 @@ export type RectBlock = BlockBase & {
   fill: string;
 };
 
-export type Block = TextBlock | ImageBlock | QrBlock | RectBlock;
+// Un carre exige w = h ; le radiusPx reste permis (carre arrondi).
+export type SquareBlock = BlockBase & { type: "square"; fill: string };
+
+// Un cercle a un rayon implicite (min(w,h)/2) : radiusPx n'y est pas admis, et une
+// largeur differente de la hauteur donne une ellipse.
+export type CircleBlock = BlockBase & { type: "circle"; fill: string };
+
+export type Block =
+  | TextBlock
+  | ImageBlock
+  | QrBlock
+  | RectBlock
+  | SquareBlock
+  | CircleBlock;
 
 export type FontDeclaration = {
   alias: string;

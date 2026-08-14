@@ -40,6 +40,38 @@ describe("parseManifest", () => {
     expect(parse({ blocks: [{ ...VALID.blocks[0], name: "x".repeat(61) }] }).ok).toBe(false);
   });
 
+  it("accepte un carre et refuse un carre non carre", () => {
+    expect(
+      parse({ blocks: [{ type: "square", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "#112233" }] }).ok,
+    ).toBe(true);
+    const res = parse({
+      blocks: [{ type: "square", page: 1, x: 0, y: 0, w: 80, h: 60, fill: "#112233" }],
+    });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/carre/i);
+  });
+
+  it("accepte un cercle et refuse son radiusPx", () => {
+    expect(
+      parse({
+        blocks: [{ type: "circle", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "category.color" }],
+      }).ok,
+    ).toBe(true);
+    const res = parse({
+      blocks: [
+        { type: "circle", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "#112233", radiusPx: 4 },
+      ],
+    });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/rayon implicite/i);
+  });
+
+  it("valide la couleur de remplissage des formes", () => {
+    expect(
+      parse({ blocks: [{ type: "circle", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "rouge" }] }).ok,
+    ).toBe(false);
+  });
+
   it("refuse un formatVersion inconnu", () => {
     expect(parse({ formatVersion: 2 }).ok).toBe(false);
   });

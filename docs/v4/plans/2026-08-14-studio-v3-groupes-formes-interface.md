@@ -15,7 +15,7 @@
 | Task | Statut | Date | Notes |
 |---|---|---|---|
 | 1. `name` sur tout bloc | [x] | 2026-08-14 | |
-| 2. Types `square` et `circle` | [ ] | | |
+| 2. Types `square` et `circle` | [x] | 2026-08-14 | |
 | 3. Fond des formes (couleur/image) et retrait du type `image` | [ ] | | |
 | 4. Type `group` (conteneur récursif) | [ ] | | |
 | 5. Doc du format (feature + scaffold) | [ ] | | |
@@ -81,7 +81,7 @@ export type Block = TextBlock | ImageBlock | QrBlock | RectBlock | SquareBlock |
 
 Rendu : `square` = comme `rect` ; `circle` = comme `rect` avec `borderRadius = px(min(w, h) / 2)` (ellipse si w ≠ h), `radiusStyles` ignoré.
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // schema.test.ts
@@ -120,8 +120,8 @@ it("rend un carre comme un aplat et un cercle a rayon implicite", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec** (vitest declarative).
-- [ ] **Step 3 : Implémentation** —
+- [x] **Step 2 : Vérifier l'échec** (vitest declarative).
+- [x] **Step 3 : Implémentation** —
   - Types : les deux nouveaux types + union `Block` étendue.
   - Schéma : deux membres d'union `z.object({ type: z.literal("square"), fill: z.string(), ...baseShape })` (idem `circle`) ; dans `checkBlock` :
 
@@ -152,8 +152,8 @@ if (block.type === "rect" || block.type === "square" || block.type === "circle")
 }
 ```
 
-- [ ] **Step 4 : Vérifier le vert.**
-- [ ] **Step 5 : Point de commit** — `feat(v4): types square et circle dans le manifeste`
+- [x] **Step 4 : Vérifier le vert.**
+- [x] **Step 5 : Point de commit** — `feat(v4): types square et circle dans le manifeste`
 
 ### Task 3 : Fond des formes (couleur/image) et retrait du type `image`
 

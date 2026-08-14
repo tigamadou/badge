@@ -96,6 +96,19 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,assets/fond.png");
   });
 
+  it("rend un carre comme un aplat et un cercle a rayon implicite", () => {
+    const t = build(
+      manifest([
+        { type: "square", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "#112233" },
+        { type: "circle", page: 1, x: 100, y: 0, w: 80, h: 60, fill: "#445566" },
+      ]),
+    );
+    const out = renderToJson(t.Component, CTX);
+    expect(out.fills).toContain("#112233");
+    expect(out.fills).toContain("#445566");
+    expect(out.radii.some((r) => r.borderRadius === px(30))).toBe(true); // min(80,60)/2
+  });
+
   it("rend une image issue du contexte", () => {
     const t = build(
       manifest([

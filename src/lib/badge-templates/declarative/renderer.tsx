@@ -144,14 +144,19 @@ function renderBlock(
 ) {
   if (block.type === "text") return renderText(block, ctx, fontMap, key);
 
-  if (block.type === "rect") {
+  if (block.type === "rect" || block.type === "square" || block.type === "circle") {
+    // Le cercle porte un rayon implicite : la moitie de son plus petit cote.
+    const radius =
+      block.type === "circle"
+        ? { borderRadius: px(Math.min(block.w, block.h) / 2) }
+        : radiusStyles(block);
     return (
       <View
         key={key}
         style={{
           ...frame(block),
           ...borderStyles(block, ctx),
-          ...radiusStyles(block),
+          ...radius,
           backgroundColor: colorOf(block.fill, ctx),
         }}
       />

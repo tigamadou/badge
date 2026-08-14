@@ -80,6 +80,16 @@ const blockSchema = z.discriminatedUnion("type", [
     fill: z.string(),
     ...baseShape,
   }),
+  z.object({
+    type: z.literal("square"),
+    fill: z.string(),
+    ...baseShape,
+  }),
+  z.object({
+    type: z.literal("circle"),
+    fill: z.string(),
+    ...baseShape,
+  }),
 ]);
 
 const manifestSchema = z.object({
@@ -217,9 +227,18 @@ function checkBlock(
     }
   }
 
+  if (block.type === "square" && block.w !== block.h) {
+    errors.push(`${label} : un carre exige w = h (${block.w}×${block.h} recus).`);
+  }
+  if (block.type === "circle" && block.radiusPx !== undefined) {
+    errors.push(`${label} : un cercle a un rayon implicite, radiusPx n'y est pas admis.`);
+  }
+
   if (block.type === "text") checkTextBlock(block, label, manifest, errors);
   if (block.type === "image") checkImageBlock(block, label, entries, errors);
-  if (block.type === "rect") checkColor(block.fill, `${label} (remplissage)`, errors);
+  if (block.type === "rect" || block.type === "square" || block.type === "circle") {
+    checkColor(block.fill, `${label} (remplissage)`, errors);
+  }
 }
 
 // `entries` est la liste des chemins presents dans le paquet. Elle permet de verifier
