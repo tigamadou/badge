@@ -21,7 +21,7 @@
 | 5. Doc du format (feature + scaffold) | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
 | 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [x] | 2026-08-14 | |
 | 7. Layout 3 colonnes + thème sombre + bascule JSON | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
-| 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [ ] | | |
+| 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
 | 9. Inspecteur : contrôles par nature + Paquet par défaut | [ ] | | |
 | 10. Contexte en bas à gauche + erreurs canvas + doc + vérif finale | [ ] | | |
 
@@ -609,12 +609,12 @@ ${rightView === "json"
   - `BLOCK_DEFAULTS` : retirer `image`, ajouter `square: { type: "square", page: 1, x: 20, y: 20, w: 80, h: 80, fill: "#e2e8f0" }` et `circle: { type: "circle", page: 1, x: 20, y: 20, w: 80, h: 80, fill: "#e2e8f0" }` ;
   - toutes les mutations passent par `blocks-tree.js` (`setAt`, `removeAt`, `insertAfter`, `moveWithin`, `groupSiblings`, `ungroupAt`).
 
-- [ ] **Step 1 : Arbre** — composant récursif : une entrée par bloc, indentée par profondeur (`padding-left: depth * 14px`), **sans numéro** : case à cocher (sélection multiple), glyphe du type, libellé = `block.name ?? TYPE_LABELS[block.type]`, coordonnées en `dim` ; un groupe a un chevron plier/déplier (état local Set de chemins repliés) ; clic sur l'entrée → `onSelect(path)` (surbrillance `.selected`) ; actions au survol (`.row-actions`, visibles par `:hover`) : ↑ ↓ (via `moveWithin`), ⧉ (via `insertAfter` d'un `structuredClone`), ✕ (via `removeAt`, désélectionne).
-- [ ] **Step 2 : Renommage** — bouton ✎ dans les actions → l'entrée passe en `<input>` inline (état local `renaming: path`) ; Entrée/blur valide (`setAt(path, { ...block, name: value || undefined })`), Échap annule ; champ vide = retour au libellé de type.
-- [ ] **Step 3 : Grouper / dégrouper** — barre du panneau : bouton **Grouper** actif quand ≥ 2 cases cochées **de même parent** (comparer les chemins moins le dernier segment) → `groupSiblings(blocks, parentPath, indices)` ; en cas de `ok: false`, la `reason` s'affiche dans le bandeau d'erreurs ; **Dégrouper** actif quand la sélection est un groupe → `ungroupAt` (même gestion de `reason`). Après groupement, sélectionner le groupe créé et vider `checked`.
-- [ ] **Step 4 : Ajout** — rangée de boutons `+ T  + ▭  + ◻  + ◯  + ▩` (title = libellé) ; si la sélection est un groupe, l'ajout se fait DANS le groupe (enfant sans `page`), sinon à la racine.
-- [ ] **Step 5 : Vérification** — parcours curl du HTML + noter la passe visuelle ; `yarn vitest run studio` (les tests d'arbre couvrent la logique).
-- [ ] **Step 6 : Point de commit** — `feat(v4): panneau de calques du studio (arbre, renommage, groupes)`
+- [x] **Step 1 : Arbre** — composant récursif : une entrée par bloc, indentée par profondeur (`padding-left: depth * 14px`), **sans numéro** : case à cocher (sélection multiple), glyphe du type, libellé = `block.name ?? TYPE_LABELS[block.type]`, coordonnées en `dim` ; un groupe a un chevron plier/déplier (état local Set de chemins repliés) ; clic sur l'entrée → `onSelect(path)` (surbrillance `.selected`) ; actions au survol (`.row-actions`, visibles par `:hover`) : ↑ ↓ (via `moveWithin`), ⧉ (via `insertAfter` d'un `structuredClone`), ✕ (via `removeAt`, désélectionne).
+- [x] **Step 2 : Renommage** — bouton ✎ dans les actions → l'entrée passe en `<input>` inline (état local `renaming: path`) ; Entrée/blur valide (`setAt(path, { ...block, name: value || undefined })`), Échap annule ; champ vide = retour au libellé de type.
+- [x] **Step 3 : Grouper / dégrouper** — barre du panneau : bouton **Grouper** actif quand ≥ 2 cases cochées **de même parent** (comparer les chemins moins le dernier segment) → `groupSiblings(blocks, parentPath, indices)` ; en cas de `ok: false`, la `reason` s'affiche dans le bandeau d'erreurs ; **Dégrouper** actif quand la sélection est un groupe → `ungroupAt` (même gestion de `reason`). Après groupement, sélectionner le groupe créé et vider `checked`.
+- [x] **Step 4 : Ajout** — rangée de boutons `+ T  + ▭  + ◻  + ◯  + ▩` (title = libellé) ; si la sélection est un groupe, l'ajout se fait DANS le groupe (enfant sans `page`), sinon à la racine.
+- [x] **Step 5 : Vérification** — parcours curl du HTML + noter la passe visuelle ; `yarn vitest run studio` (les tests d'arbre couvrent la logique).
+- [x] **Step 6 : Point de commit** — `feat(v4): panneau de calques du studio (arbre, renommage, groupes)`
 
 ### Task 9 : Inspecteur — contrôles par nature, sections fonctionnelles, Paquet par défaut
 

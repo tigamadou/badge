@@ -3,19 +3,24 @@ import * as api from "/ui/api.js";
 import { Preview } from "/ui/preview.js";
 import { ContextForm } from "/ui/context-form.js";
 import { BlocksEditor } from "/ui/blocks-editor.js";
+import { BlockForm } from "/ui/block-form.js";
+import * as tree from "/ui/blocks-tree.js";
 import { MetaPanel } from "/ui/meta-panel.js";
 
 const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-// Les erreurs de validation nomment leur bloc (« bloc 3 : ... ») : on les range
-// par index pour les afficher sur l'entree fautive de la liste.
+// Les erreurs de validation nomment leur bloc (« bloc 3 › 2 : ... ») : on les range
+// par CHEMIN serialise, pour les poser sur l'entree fautive de l'arbre.
 function groupErrorsByBlock(errors) {
   const grouped = {};
   for (const error of errors) {
-    const match = /^bloc (\d+)/.exec(error);
+    const match = /^bloc ([\d\s›]+)/.exec(error);
     if (!match) continue;
-    const index = Number(match[1]) - 1;
-    (grouped[index] ??= []).push(error);
+    const path = match[1]
+      .split("›")
+      .map((part) => Number(part.trim()) - 1)
+      .filter((index) => Number.isInteger(index));
+    (grouped[JSON.stringify(path)] ??= []).push(error);
   }
   return grouped;
 }
@@ -150,10 +155,11 @@ function App() {
         ${manifest
           ? html`<${BlocksEditor}
               manifest=${manifest}
-              schemaInfo=${schemaInfo}
-              assets=${assets}
+              selection=${selection}
               blockErrors=${blockErrors}
+              onSelect=${setSelection}
               onChange=${updateManifest}
+              onError=${setErrors}
             />`
           : html`<p class="placeholder">Corrigez le JSON pour éditer les blocs.</p>`}
 
@@ -187,6 +193,22 @@ function App() {
               value=${manifestText}
               onInput=${(e) => setManifestText(e.target.value)}
             ></textarea>`
+          : selection && manifest && tree.getAt(manifest.blocks ?? [], selection)
+            ? html`
+                <h2 class="panel-title">Bloc</h2>
+                <${BlockForm}
+                  block=${tree.getAt(manifest.blocks ?? [], selection)}
+                  schemaInfo=${schemaInfo}
+                  pageCount=${manifest.page?.count ?? 1}
+                  assets=${assets}
+                  fonts=${manifest.fonts ?? []}
+                  onChange=${(next) =>
+                    updateManifest({
+                      ...manifest,
+                      blocks: tree.setAt(manifest.blocks ?? [], selection, next),
+                    })}
+                />
+              `
           : manifest
             ? html`
                 <h2 class="panel-title">Paquet</h2>
