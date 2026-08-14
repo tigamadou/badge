@@ -48,6 +48,7 @@ const cornerRadiiSchema = z.object({
 });
 
 const baseShape = {
+  name: z.string().min(1).max(60).optional(),
   page: z.number().int().positive(),
   x: z.number().min(0),
   y: z.number().min(0),

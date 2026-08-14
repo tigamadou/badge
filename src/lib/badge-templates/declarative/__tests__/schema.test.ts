@@ -34,6 +34,12 @@ describe("parseManifest", () => {
     expect(parse().ok).toBe(true);
   });
 
+  it("accepte un nom de bloc et refuse un nom hors bornes", () => {
+    expect(parse({ blocks: [{ ...VALID.blocks[0], name: "Titre principal" }] }).ok).toBe(true);
+    expect(parse({ blocks: [{ ...VALID.blocks[0], name: "" }] }).ok).toBe(false);
+    expect(parse({ blocks: [{ ...VALID.blocks[0], name: "x".repeat(61) }] }).ok).toBe(false);
+  });
+
   it("refuse un formatVersion inconnu", () => {
     expect(parse({ formatVersion: 2 }).ok).toBe(false);
   });

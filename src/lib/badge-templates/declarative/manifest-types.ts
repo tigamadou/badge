@@ -59,6 +59,8 @@ export type BorderSide = { widthPx: number; color: string; style?: BorderStyle }
 // `border` couvre les quatre cotes ; un `borderTop`/`Right`/`Bottom`/`Left` prime
 // sur lui pour le cote concerne.
 type BlockBase = {
+  // Nom d'affichage dans le studio ; aucun effet sur le rendu.
+  name?: string;
   page: number;
   x: number;
   y: number;

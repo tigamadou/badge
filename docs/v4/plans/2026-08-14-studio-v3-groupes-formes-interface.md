@@ -14,7 +14,7 @@
 
 | Task | Statut | Date | Notes |
 |---|---|---|---|
-| 1. `name` sur tout bloc | [ ] | | |
+| 1. `name` sur tout bloc | [x] | 2026-08-14 | |
 | 2. Types `square` et `circle` | [ ] | | |
 | 3. Fond des formes (couleur/image) et retrait du type `image` | [ ] | | |
 | 4. Type `group` (conteneur récursif) | [ ] | | |
@@ -49,7 +49,7 @@
 **Interfaces:**
 - Produces : `BlockBase.name?: string` (1–60 caractères). Purement descriptif : ni le renderer ni la validation sémantique n'y touchent.
 
-- [ ] **Step 1 : Test qui échoue** — dans `schema.test.ts` :
+- [x] **Step 1 : Test qui échoue** — dans `schema.test.ts` :
 
 ```ts
 it("accepte un nom de bloc et refuse un nom hors bornes", () => {
@@ -59,10 +59,10 @@ it("accepte un nom de bloc et refuse un nom hors bornes", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec** — `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/declarative` : le cas `name: ""` passe à tort (Zod strippe la clé inconnue), donc le test échoue.
-- [ ] **Step 3 : Implémentation** — `manifest-types.ts` : `name?: string;` dans `BlockBase` (commentaire : « Nom d'affichage dans le studio ; aucun effet sur le rendu. ») ; `schema.ts` : `name: z.string().min(1).max(60).optional(),` dans `baseShape`.
-- [ ] **Step 4 : Vérifier le vert** — même commande.
-- [ ] **Step 5 : Point de commit** — `feat(v4): nom d'affichage optionnel sur les blocs du manifeste`
+- [x] **Step 2 : Vérifier l'échec** — `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/declarative` : le cas `name: ""` passe à tort (Zod strippe la clé inconnue), donc le test échoue.
+- [x] **Step 3 : Implémentation** — `manifest-types.ts` : `name?: string;` dans `BlockBase` (commentaire : « Nom d'affichage dans le studio ; aucun effet sur le rendu. ») ; `schema.ts` : `name: z.string().min(1).max(60).optional(),` dans `baseShape`.
+- [x] **Step 4 : Vérifier le vert** — même commande.
+- [x] **Step 5 : Point de commit** — `feat(v4): nom d'affichage optionnel sur les blocs du manifeste`
 
 ### Task 2 : Types `square` et `circle`
 
