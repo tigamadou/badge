@@ -10,7 +10,6 @@ import { CatPill, Tag } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert } from "@/components/ui/Feedback";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
-import { FileBox } from "@/components/ui/FileBox";
 import { RegistrationActions } from "./RegistrationActions";
 
 type Reg = {
@@ -116,6 +115,17 @@ export function RegistrationDetailPanel({
                 value: <CatPill color={r.category.color} label={`${r.category.name} (#${r.category.number})`} />,
               },
               { label: "Pièce", value: `${r.idDocumentType} ${r.idDocumentNumber}` },
+              {
+                label: "Identité",
+                value:
+                  r.profileStatus === "APPROVED"
+                    ? r.profileReviewedAt
+                      ? `Vérifiée par la plateforme le ${new Date(r.profileReviewedAt).toLocaleDateString("fr-FR")}`
+                      : "Vérifiée par la plateforme"
+                    : r.profileStatus === "REJECTED"
+                      ? "Refusée par la plateforme"
+                      : "En attente de vérification par la plateforme",
+              },
               { label: "Inscrit le", value: new Date(r.createdAt).toLocaleString("fr-FR") },
               ...(r.badgePrinted && r.badgePrintedAt
                 ? [{ label: "Badge imprimé le", value: new Date(r.badgePrintedAt).toLocaleString("fr-FR") }]
@@ -135,26 +145,15 @@ export function RegistrationDetailPanel({
       </Card>
 
       <Card>
-        <CardHead title="Pièces fournies" />
+        <CardHead title={r.idDocumentReadable ? "Pièces fournies" : "Photo"} />
         <CardBody>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <DocumentPreview storageKey={r.photo} label="Photo" />
-            {r.idDocumentReadable ? (
+            {/* La piece d'identite n'est servie qu'au staff plateforme (cf. canRead()
+                dans /api/files) : pour l'organisation, ne rien afficher plutot qu'un
+                encart qui se lit comme un fichier consultable. */}
+            {r.idDocumentReadable && (
               <DocumentPreview storageKey={r.idDocument} label="Pièce d'identité" readable />
-            ) : (
-              <FileBox
-                icon="shield"
-                title="Pièce d'identité"
-                subtitle={
-                  r.profileStatus === "APPROVED"
-                    ? r.profileReviewedAt
-                      ? `Vérifiée par la plateforme le ${new Date(r.profileReviewedAt).toLocaleDateString("fr-FR")}`
-                      : "Vérifiée par la plateforme"
-                    : r.profileStatus === "REJECTED"
-                      ? "Refusée par la plateforme"
-                      : "En attente de vérification par la plateforme"
-                }
-              />
             )}
           </div>
         </CardBody>

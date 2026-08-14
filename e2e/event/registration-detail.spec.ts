@@ -248,4 +248,20 @@ test.describe("Event — Detail d'inscription", () => {
   // (le bouton Approuver ne s'affiche que pour un statut PENDING) -> couvert en
   // integration : api-event-registrations.test.ts « reactivates a REJECTED... ».
 
+
+  test("un membre d'organisation ne voit pas d'encart de piece d'identite", async ({ page }) => {
+    const { eventId, reg, admin } = await seedReg("det-piece-masquee");
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+
+    await expect(page.getByText("Pièce d'identité")).toHaveCount(0);
+    await expect(page.getByText("Pièces fournies")).toHaveCount(0);
+    // Titre de carte cible par son role : "Photo" apparait aussi comme label
+    // de l'apercu, ce qui rendrait getByText ambigu.
+    await expect(page.getByRole("heading", { name: "Photo" })).toBeVisible();
+    await expect(
+      page.getByText(/vérifiée par la plateforme|en attente de vérification|refusée par la plateforme/i),
+    ).toBeVisible();
+  });
 });

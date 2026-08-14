@@ -32,7 +32,7 @@
 | 2 | Module de synchronisation — sélection et réécriture | [x] | 2026-08-14 | 6 tests verts |
 | 3 | Module de synchronisation — règle de blocage document | [x] | 2026-08-14 | 9 tests ; couverture module 100% (make test-coverage global tombe en OOM, couverture ciblee utilisee) |
 | 4 | Branchement dans `PUT /api/account/profile` + audit | [x] | 2026-08-14 | 3 tests API + 1 E2E ; suite complete verte (1549 tests) |
-| 5 | Détail d'inscription côté organisation — retrait de l'encart | [ ] | | |
+| 5 | Détail d'inscription côté organisation — retrait de l'encart | [x] | 2026-08-14 | 12 tests e2e verts. **Recette visuelle a faire par l'utilisateur.** Ecart : l'assertion `getByText("Photo")` du plan etait ambigue (titre de carte + label d'apercu), remplacee par `getByRole("heading")` |
 | 6 | Documentation | [ ] | | |
 
 Statuts : `[ ]` pending · `[~]` in_progress · `[x]` completed · `[-]` abandoned.
@@ -899,7 +899,7 @@ Attendu : tout au vert. Cette étape vérifie qu'aucun test existant ne supposai
 
 Le staff plateforme conserve l'aperçu réel de la pièce ; pour tout autre utilisateur, l'encart disparaît et le statut de vérification devient une ligne d'information.
 
-- [ ] **Étape 1 : Écrire le test E2E qui échoue**
+- [x] **Étape 1 : Écrire le test E2E qui échoue**
 
 Ajouter dans `e2e/event/registration-detail.spec.ts`, à l'intérieur du `test.describe` existant, en réutilisant son helper `seedReg` et `loginAndEnter` :
 
@@ -921,7 +921,7 @@ Ajouter dans `e2e/event/registration-detail.spec.ts`, à l'intérieur du `test.d
 
 `seedReg(scope)` retourne `{ orgId, eventId, categoryId, participant, reg, admin }` et crée un `admin` OWNER de l'organisation — donc non-staff : c'est exactement le cas à couvrir. La signature de `loginAndEnter` avec `{ kind: "event", id: eventId }` reprend celle des autres tests du fichier.
 
-- [ ] **Étape 2 : Lancer le test et vérifier qu'il échoue**
+- [x] **Étape 2 : Lancer le test et vérifier qu'il échoue**
 
 ```bash
 make test-e2e
@@ -929,7 +929,7 @@ make test-e2e
 
 Attendu : ÉCHEC — « Pièce d'identité » et « Pièces fournies » sont présents.
 
-- [ ] **Étape 3 : Implémenter**
+- [x] **Étape 3 : Implémenter**
 
 Dans `src/components/event/RegistrationDetailPanel.tsx`, ajouter la ligne d'identité au `KeyValue` existant, après l'entrée « Pièce » :
 
@@ -973,7 +973,7 @@ Retirer l'import devenu inutile de `FileBox` (`RegistrationDetailPanel.tsx:13`) 
 grep -n "FileBox" src/components/event/RegistrationDetailPanel.tsx
 ```
 
-- [ ] **Étape 4 : Lancer le test E2E et vérifier qu'il passe**
+- [x] **Étape 4 : Lancer le test E2E et vérifier qu'il passe**
 
 ```bash
 make test-e2e
@@ -981,13 +981,13 @@ make test-e2e
 
 Attendu : SUCCÈS, y compris les tests existants du même fichier.
 
-- [ ] **Étape 5 : Vérifier visuellement dans le navigateur — À LA CHARGE DE L'UTILISATEUR**
+- [x] **Étape 5 : Vérifier visuellement dans le navigateur — À LA CHARGE DE L'UTILISATEUR**
 
 > **En session automatisée, ne pas cocher cette étape comme vérifiée.** Un agent headless ne peut pas juger un rendu ; le test E2E de l'étape 2 couvre l'essentiel. Cocher en consignant dans la table `## Progression` : « recette visuelle du détail d'inscription à faire par l'utilisateur ».
 
 Sur `https://badge.local`, ouvrir le détail d'une inscription en tant que membre d'organisation : la carte ne montre que la photo, la ligne « Identité » porte le statut de vérification, aucun encart de pièce n'apparaît. Se reconnecter en staff plateforme et rouvrir la même page : l'aperçu de la pièce est bien là.
 
-- [ ] **Étape 6 : Vérifier lint et types**
+- [x] **Étape 6 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck
