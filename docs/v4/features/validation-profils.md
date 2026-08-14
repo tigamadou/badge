@@ -29,6 +29,10 @@ sortie — aucun badge n'est émis sans identité vérifiée.
 - **REJECTED** : documents refusés ; toute modification de pièce recrée une
   soumission et repasse en `PENDING`.
 
+Toute modification du profil réaligne les inscriptions **en attente** du participant sur
+les nouvelles valeurs ; les inscriptions déjà approuvées restent figées. C'est ce qui
+permet à un participant de corriger une photo ou une pièce sans attendre un rejet.
+
 Le champ est un **miroir dénormalisé** de la dernière `ProfileSubmission`. Seul
 `src/lib/profile-review.ts` l'écrit (`submitProfile`, `approveProfile`,
 `rejectProfile`). Chaque envoi de pièces crée une ligne **immuable** ;
@@ -84,5 +88,6 @@ Toutes les décisions sont journalisées (`PROFILE_APPROVED`, `PROFILE_REJECTED`
   (décision + historique), onglet « Motifs de rejet » dans `/platform/settings`.
 - **Participant** : `/account/profile` (bandeau de statut, historique),
   détail d'inscription (alerte de gel).
-- **Organisation** : détail d'inscription (état « vérifiée par la plateforme »,
-  bouton Approuver désactivé si profil non validé, rejet via le catalogue).
+- **Organisation** : détail d'inscription (photo, ligne « Identité » portant l'état de
+  vérification plateforme, bouton Approuver désactivé si profil non validé, rejet via le
+  catalogue). La pièce d'identité elle-même n'est jamais affichée à l'organisation.

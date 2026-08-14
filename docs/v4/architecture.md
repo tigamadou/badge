@@ -92,6 +92,15 @@ Les routes de liste d'inscriptions renvoient un **DTO aplati** via
 (`firstName`, `email`, `structure`, ...) et jamais les cles `snapshot*`, qui sont
 un detail de persistance. Un test d'integration asservit ce contrat.
 
+Les colonnes `snapshot*` d'une `Registration` sont **figees a l'approbation**, pas a la
+creation : tant qu'une inscription est en attente, une modification du profil participant
+la realigne (`src/lib/registration-snapshot-sync.ts`, appele par
+`PUT /api/account/profile`). Une inscription `APPROVED` ne change plus -- le badge emis et
+la verification publique doivent refleter l'identite au moment de la decision. Une
+inscription `REJECTED` passe par la resoumission, qui reecrit deja le snapshot. Une
+inscription dont l'evenement bloque le nouveau numero de piece est laissee intacte, et
+chaque inscription touchee produit un `REGISTRATION_SNAPSHOT_REFRESHED` au journal.
+
 ## Details d'un evenement
 
 Le modele `Event` porte, en plus de `date`, deux champs optionnels **purement

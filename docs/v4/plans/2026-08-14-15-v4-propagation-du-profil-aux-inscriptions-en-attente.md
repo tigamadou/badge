@@ -33,7 +33,7 @@
 | 3 | Module de synchronisation — règle de blocage document | [x] | 2026-08-14 | 9 tests ; couverture module 100% (make test-coverage global tombe en OOM, couverture ciblee utilisee) |
 | 4 | Branchement dans `PUT /api/account/profile` + audit | [x] | 2026-08-14 | 3 tests API + 1 E2E ; suite complete verte (1549 tests) |
 | 5 | Détail d'inscription côté organisation — retrait de l'encart | [x] | 2026-08-14 | 12 tests e2e verts. **Recette visuelle a faire par l'utilisateur.** Ecart : l'assertion `getByText("Photo")` du plan etait ambigue (titre de carte + label d'apercu), remplacee par `getByRole("heading")` |
-| 6 | Documentation | [ ] | | |
+| 6 | Documentation | [x] | 2026-08-14 | architecture.md + validation-profils.md ; suite complete verte (1549 tests) |
 
 Statuts : `[ ]` pending · `[~]` in_progress · `[x]` completed · `[-]` abandoned.
 
@@ -1007,7 +1007,7 @@ Attendu : aucun warning (notamment aucun import inutilisé), aucune erreur de ty
 - Consomme : le comportement livré par les Tasks 1 à 5.
 - Produit : rien.
 
-- [ ] **Étape 1 : Documenter la règle dans l'architecture**
+- [x] **Étape 1 : Documenter la règle dans l'architecture**
 
 Ajouter dans `docs/v4/architecture.md`, à la suite du paragraphe sur le DTO d'inscription :
 
@@ -1022,7 +1022,7 @@ inscription dont l'événement bloque le nouveau numéro de pièce est laissée 
 chaque inscription touchée produit un `REGISTRATION_SNAPSHOT_REFRESHED` au journal.
 ```
 
-- [ ] **Étape 2 : Documenter le cycle de vie et l'écran**
+- [x] **Étape 2 : Documenter le cycle de vie et l'écran**
 
 Dans `docs/v4/features/validation-profils.md`, ajouter à la fin de la section « Cycle de vie du profil » :
 
@@ -1040,7 +1040,7 @@ et compléter la ligne « Organisation » de la section « Écrans » :
   catalogue). La pièce d'identité elle-même n'est jamais affichée à l'organisation.
 ```
 
-- [ ] **Étape 3 : Relire l'ensemble**
+- [x] **Étape 3 : Relire l'ensemble**
 
 Vérifier qu'aucune autre page de `docs/v4/` n'affirme que les snapshots sont figés dès la création :
 
@@ -1050,7 +1050,7 @@ grep -rn "snapshot" docs/v4/ | grep -iv "specs/\|plans/"
 
 Corriger toute formulation devenue fausse.
 
-- [ ] **Étape 4 : Vérification finale**
+- [x] **Étape 4 : Vérification finale**
 
 ```bash
 make lint && make typecheck && make test
