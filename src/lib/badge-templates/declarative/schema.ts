@@ -49,7 +49,7 @@ const cornerRadiiSchema = z.object({
 
 const baseShape = {
   name: z.string().min(1).max(60).optional(),
-  page: z.number().int().positive(),
+  page: z.number().int().positive().optional(),
   x: z.number().min(0),
   y: z.number().min(0),
   w: z.number().positive(),
@@ -77,13 +77,17 @@ const shapeShape = {
     .optional(),
 };
 
-const blockSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("text"), text: z.string().min(1), style: styleSchema, ...baseShape }),
-  z.object({ type: z.literal("qr"), ...baseShape }),
-  z.object({ type: z.literal("rect"), ...shapeShape, ...baseShape }),
-  z.object({ type: z.literal("square"), ...shapeShape, ...baseShape }),
-  z.object({ type: z.literal("circle"), ...shapeShape, ...baseShape }),
-]);
+// `z.lazy` porte la recursion : un groupe contient des blocs, dont des groupes.
+const blockSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.discriminatedUnion("type", [
+    z.object({ type: z.literal("text"), text: z.string().min(1), style: styleSchema, ...baseShape }),
+    z.object({ type: z.literal("qr"), ...baseShape }),
+    z.object({ type: z.literal("rect"), ...shapeShape, ...baseShape }),
+    z.object({ type: z.literal("square"), ...shapeShape, ...baseShape }),
+    z.object({ type: z.literal("circle"), ...shapeShape, ...baseShape }),
+    z.object({ type: z.literal("group"), blocks: z.array(blockSchema).min(1), ...baseShape }),
+  ]),
+);
 
 const manifestSchema = z.object({
   formatVersion: z.literal(1),
@@ -106,7 +110,7 @@ const manifestSchema = z.object({
       }),
     )
     .optional(),
-  blocks: z.array(blockSchema).min(1).max(MAX_BLOCKS),
+  blocks: z.array(blockSchema).min(1),
 });
 
 export type ParseResult =
@@ -192,17 +196,16 @@ function checkShapeBlock(
 
 function checkBlock(
   block: Block,
-  index: number,
+  label: string,
   manifest: ParsedManifest,
   entries: string[],
   errors: string[],
 ): void {
-  const label = `bloc ${index + 1}`;
   const { page } = manifest;
 
   // Un bloc qui depasse la page n'est PAS une erreur : le fond perdu est un cas
   // print legitime, et le depassement se juge a l'oeil dans l'apercu du studio.
-  if (block.page > page.count) {
+  if (block.page !== undefined && block.page > page.count) {
     errors.push(`${label} : page ${block.page} alors que le manifeste en declare ${page.count}.`);
   }
   for (const side of ["border", "borderTop", "borderRight", "borderBottom", "borderLeft"] as const) {
@@ -239,6 +242,38 @@ function checkBlock(
   }
 }
 
+function countBlocks(blocks: Block[]): number {
+  return blocks.reduce(
+    (total, block) => total + 1 + (block.type === "group" ? countBlocks(block.blocks) : 0),
+    0,
+  );
+}
+
+// Descente recursive : chaque bloc porte un label localise (« bloc 3 › 2 ») pour
+// qu'une erreur enfouie dans un groupe reste reperable.
+function walkBlocks(
+  blocks: Block[],
+  parentLabel: string | null,
+  isRoot: boolean,
+  manifest: ParsedManifest,
+  entries: string[],
+  errors: string[],
+): void {
+  blocks.forEach((block, index) => {
+    const label = parentLabel ? `${parentLabel} › ${index + 1}` : `bloc ${index + 1}`;
+    if (isRoot && block.page === undefined) {
+      errors.push(`${label} : page manquante a la racine.`);
+    }
+    if (!isRoot && block.page !== undefined) {
+      errors.push(`${label} : page interdite dans un groupe.`);
+    }
+    checkBlock(block, label, manifest, entries, errors);
+    if (block.type === "group") {
+      walkBlocks(block.blocks, label, false, manifest, entries, errors);
+    }
+  });
+}
+
 // `entries` est la liste des chemins presents dans le paquet. Elle permet de verifier
 // qu'un asset ou une police reference existe reellement. Le lecteur d'archive la
 // fournit ; les tests la passent en dur.
@@ -260,9 +295,11 @@ export function parseManifest(input: unknown, entries: string[]): ParseResult {
   if (parsed.data.preview && !entries.includes(parsed.data.preview)) {
     errors.push(`apercu : fichier "${parsed.data.preview}" absent du paquet.`);
   }
-  parsed.data.blocks.forEach((block, i) =>
-    checkBlock(block as Block, i, parsed.data, entries, errors),
-  );
+  const rootBlocks = parsed.data.blocks as Block[];
+  if (countBlocks(rootBlocks) > MAX_BLOCKS) {
+    errors.push(`manifeste : plus de ${MAX_BLOCKS} blocs (groupes et enfants compris).`);
+  }
+  walkBlocks(rootBlocks, null, true, parsed.data, entries, errors);
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, manifest: parsed.data as TemplateManifest };

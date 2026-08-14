@@ -61,7 +61,9 @@ export type BorderSide = { widthPx: number; color: string; style?: BorderStyle }
 type BlockBase = {
   // Nom d'affichage dans le studio ; aucun effet sur le rendu.
   name?: string;
-  page: number;
+  // Exigee a la racine, interdite sur un enfant de groupe : la page du groupe
+  // racine s'applique a tout son arbre.
+  page?: number;
   x: number;
   y: number;
   w: number;
@@ -106,7 +108,18 @@ export type SquareBlock = BlockBase & ShapeBase & { type: "square" };
 // largeur differente de la hauteur donne une ellipse.
 export type CircleBlock = BlockBase & ShapeBase & { type: "circle" };
 
-export type Block = TextBlock | QrBlock | RectBlock | SquareBlock | CircleBlock;
+// Conteneur : les coordonnees de ses enfants sont RELATIVES a lui. Deplacer,
+// pivoter, attenuer ou masquer le groupe agit sur tout son contenu ; l'imbrication
+// est libre.
+export type GroupBlock = BlockBase & { type: "group"; blocks: Block[] };
+
+export type Block =
+  | TextBlock
+  | QrBlock
+  | RectBlock
+  | SquareBlock
+  | CircleBlock
+  | GroupBlock;
 
 export type FontDeclaration = {
   alias: string;

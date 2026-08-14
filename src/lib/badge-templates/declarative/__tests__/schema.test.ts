@@ -21,6 +21,17 @@ const VALID = {
   ],
 };
 
+// Enfant de groupe : sans `page`, ses coordonnees sont relatives au conteneur.
+const CHILD = {
+  type: "text",
+  x: 4,
+  y: 4,
+  w: 200,
+  h: 40,
+  text: "{participant.firstName}",
+  style: { sizePx: 16, color: "#0f172a", overflow: "clip" },
+};
+
 function parse(overrides: Record<string, unknown> = {}, entries: string[] = []) {
   return parseManifest({ ...VALID, ...overrides }, entries);
 }
@@ -70,6 +81,55 @@ describe("parseManifest", () => {
     expect(
       parse({ blocks: [{ type: "circle", page: 1, x: 0, y: 0, w: 80, h: 80, fill: "rouge" }] }).ok,
     ).toBe(false);
+  });
+
+  it("accepte un groupe imbrique sur deux niveaux", () => {
+    const res = parse({
+      blocks: [
+        {
+          type: "group", page: 1, x: 10, y: 10, w: 300, h: 100,
+          blocks: [CHILD, { type: "group", x: 0, y: 50, w: 200, h: 50, blocks: [CHILD] }],
+        },
+      ],
+    });
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
+  it("refuse une page sur un enfant de groupe, avec un chemin localise", () => {
+    const res = parse({
+      blocks: [
+        { type: "group", page: 1, x: 0, y: 0, w: 300, h: 100, blocks: [{ ...CHILD, page: 1 }] },
+      ],
+    });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/bloc 1 › 1 : page interdite/i);
+  });
+
+  it("refuse un bloc racine sans page", () => {
+    const res = parse({ blocks: [{ ...CHILD }] });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/page manquante/i);
+  });
+
+  it("valide recursivement le contenu des groupes", () => {
+    const res = parse({
+      blocks: [
+        {
+          type: "group", page: 1, x: 0, y: 0, w: 300, h: 100,
+          blocks: [{ ...CHILD, text: "{participant.secretField}" }],
+        },
+      ],
+    });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/bloc 1 › 1 : source inconnue/i);
+  });
+
+  it("plafonne les blocs sur l'arbre aplati", () => {
+    const children = Array.from({ length: 60 }, () => ({ ...CHILD }));
+    const res = parse({
+      blocks: [{ type: "group", page: 1, x: 0, y: 0, w: 300, h: 100, blocks: children }],
+    });
+    expect(res.ok).toBe(false); // 1 groupe + 60 enfants = 61
   });
 
   it("refuse un formatVersion inconnu", () => {

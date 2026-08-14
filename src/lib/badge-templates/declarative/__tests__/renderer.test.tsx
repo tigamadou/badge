@@ -129,6 +129,48 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,AAA");
   });
 
+  it("rend recursivement les enfants d'un groupe", () => {
+    const t = build(
+      manifest([
+        {
+          type: "group", page: 1, x: 10, y: 10, w: 300, h: 100, opacity: 0.5,
+          blocks: [
+            {
+              type: "text", x: 0, y: 0, w: 200, h: 40, text: "{participant.firstName}",
+              style: { sizePx: 16, color: "#0f172a", overflow: "clip" },
+            },
+            {
+              type: "group", x: 0, y: 50, w: 100, h: 50,
+              blocks: [{ type: "qr", x: 0, y: 0, w: 40, h: 40 }],
+            },
+          ],
+        },
+      ]),
+    );
+    const out = renderToJson(t.Component, CTX);
+    expect(out.texts).toEqual(["Awa"]);
+    expect(out.images).toContain("data:image/png;base64,BBB"); // le QR imbrique
+    expect(out.opacities).toContain(0.5);
+  });
+
+  it("masque tout un groupe via sa condition", () => {
+    const t = build(
+      manifest([
+        {
+          type: "group", page: 1, x: 0, y: 0, w: 100, h: 50,
+          visibleIf: { path: "category.anonymous", equals: true },
+          blocks: [
+            {
+              type: "text", x: 0, y: 0, w: 80, h: 30, text: "{participant.firstName}",
+              style: { sizePx: 16, color: "#0f172a", overflow: "clip" },
+            },
+          ],
+        },
+      ]),
+    );
+    expect(renderToJson(t.Component, CTX).texts).toEqual([]); // CTX n'est pas anonyme
+  });
+
   it("rend le QR code sans source explicite", () => {
     const t = build(manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 189, h: 189 }]));
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,BBB");

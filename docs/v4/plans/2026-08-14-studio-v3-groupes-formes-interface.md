@@ -17,7 +17,7 @@
 | 1. `name` sur tout bloc | [x] | 2026-08-14 | |
 | 2. Types `square` et `circle` | [x] | 2026-08-14 | |
 | 3. Fond des formes (couleur/image) et retrait du type `image` | [x] | 2026-08-14 | Manifestes du depot migres ; BDD non touchee (re-seed manuel a faire) |
-| 4. Type `group` (conteneur récursif) | [ ] | | |
+| 4. Type `group` (conteneur récursif) | [x] | 2026-08-14 | |
 | 5. Doc du format (feature + scaffold) | [ ] | | |
 | 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [ ] | | |
 | 7. Layout 3 colonnes + thème sombre + bascule JSON | [ ] | | |
@@ -292,7 +292,7 @@ export type Block = ... | GroupBlock;
 
 Validation : `MAX_BLOCKS` (60) compte l'arbre aplati ; toutes les vérifications descendent récursivement, messages « bloc 3 › 2 : … ». Rendu : `View` conteneur (frame = position/taille/opacité/rotation), enfants filtrés par `visibleIf` et rendus récursivement ; le filtre de page ne s'applique qu'à la racine.
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // schema.test.ts
@@ -378,8 +378,8 @@ it("masque tout un groupe via sa condition", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec.**
-- [ ] **Step 3 : Implémentation** —
+- [x] **Step 2 : Vérifier l'échec.**
+- [x] **Step 3 : Implémentation** —
   - Types : `page?: number` dans `BlockBase` ; `GroupBlock` + union.
   - Schéma : `page` optionnelle dans `baseShape` (`z.number().int().positive().optional()`) ; membre d'union récursif :
 
@@ -431,8 +431,8 @@ if (block.type === "group") {
 ```
 
   Le filtre racine de `DeclarativeDocument` (`block.page === pageNumber`) reste inchangé — les enfants n'ont pas de page.
-- [ ] **Step 4 : Vérifier le vert** — vitest declarative, puis `yarn vitest run src/lib/badge-templates studio scripts` (les manifestes migrés en Task 3 restent valides).
-- [ ] **Step 5 : Point de commit** — `feat(v4): groupes de blocs imbriquables dans le manifeste`
+- [x] **Step 4 : Vérifier le vert** — vitest declarative, puis `yarn vitest run src/lib/badge-templates studio scripts` (les manifestes migrés en Task 3 restent valides).
+- [x] **Step 5 : Point de commit** — `feat(v4): groupes de blocs imbriquables dans le manifeste`
 
 ### Task 5 : Documentation du format
 

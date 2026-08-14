@@ -144,6 +144,18 @@ function renderBlock(
 ) {
   if (block.type === "text") return renderText(block, ctx, fontMap, key);
 
+  if (block.type === "group") {
+    // Les enfants se positionnent dans le repere du conteneur : @react-pdf place
+    // l'absolu relativement au parent, donc rien a recalculer ici.
+    return (
+      <View key={key} style={{ ...frame(block) }}>
+        {block.blocks
+          .filter((child) => isBlockVisible(ctx, child.visibleIf))
+          .map((child, index) => renderBlock(child, ctx, assets, fontMap, `${key}-${index}`))}
+      </View>
+    );
+  }
+
   if (block.type === "rect" || block.type === "square" || block.type === "circle") {
     // Le cercle porte un rayon implicite : la moitie de son plus petit cote.
     const radius =
