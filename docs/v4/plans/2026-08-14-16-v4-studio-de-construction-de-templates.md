@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | 1 | Accès à l'atelier — `workshop.ts` | [x] | 2026-08-14 | 9 tests ; `sniff` promu en export (153 tests badge-templates verts) |
 | 2 | Variantes de contexte — `contexts.ts` | [x] | 2026-08-14 | 6 tests ; ecart : le nom de la variante textes-longs du plan (26 car.) ne passait pas son propre seuil de 30, allonge |
-| 3 | Validation et rendu — `render.ts` | [ ] | | |
+| 3 | Validation et rendu — `render.tsx` | [x] | 2026-08-14 | 5 tests ; rendu PDF reel via buildDeclarativeTemplate |
 | 4 | Serveur HTTP — `server.ts` | [ ] | | |
 | 5 | Infrastructure — docker-compose, Caddy, Makefile | [ ] | | |
 | 6 | Interface — page, édition, aperçu | [ ] | | |
@@ -522,7 +522,7 @@ export function renderManifest(args: {
 
 `renderProof()` rend avec `SAMPLE_CONTEXT` ; le studio a besoin d'un contexte choisi. La fonction reconstruit donc le même enchaînement — `buildDeclarativeTemplate()` puis `renderToBuffer()` — avec le contexte de la variante, en réutilisant `assetsToResolver()` exporté par `render-proof.tsx`.
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Créer `studio/__tests__/render.test.ts` :
 
@@ -595,7 +595,7 @@ describe("renderManifest", () => {
 });
 ```
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/render.test.ts
@@ -603,7 +603,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : ÉCHEC à la résolution — `Cannot find module '../render'`.
 
-- [ ] **Étape 3 : Écrire `render.tsx`**
+- [x] **Étape 3 : Écrire `render.tsx`**
 
 Créer `studio/render.tsx` :
 
@@ -653,7 +653,7 @@ export async function renderManifest(args: {
 
 Le fichier porte l'extension `.tsx` parce qu'il contient du JSX ; l'import reste `./render`.
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/render.test.ts
@@ -661,7 +661,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : SUCCÈS sur les cinq tests. Le premier rendu prend quelques secondes — `@react-pdf` charge Montserrat depuis Google Fonts au premier appel.
 
-- [ ] **Étape 5 : Vérifier lint et types**
+- [x] **Étape 5 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck
