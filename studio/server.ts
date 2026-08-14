@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { listTemplates, readTemplate, writeManifest } from "./workshop";
 import { buildContext, PRESETS, type ContextInput } from "./context";
+import { CONDITION_PATHS, SOURCES } from "../src/lib/badge-templates/declarative/sources";
 import { renderManifest } from "./render";
 
 // Resolu depuis la racine du depot plutot que depuis le fichier : `package.json` ne
@@ -10,6 +11,10 @@ import { renderManifest } from "./render";
 // tsx, et `__dirname` n'existe pas quand Vitest charge le module en ESM. Le studio est
 // toujours lance depuis la racine, par `make studio` comme par les tests.
 const PUBLIC_DIR = resolve(process.cwd(), "studio", "public");
+
+// Hauteur minimale d'un cadre texte, en multiples de la taille de police :
+// @react-pdf supprime silencieusement un texte plus haut que son cadre.
+const MIN_TEXT_HEIGHT_RATIO = 1.45;
 
 const STATIC_FILES: Record<string, { file: string; type: string }> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
@@ -45,8 +50,15 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
     return;
   }
 
-  if (req.method === "GET" && path === "/api/variants") {
-    sendJson(res, 200, { variants: PRESETS.map(({ id, label }) => ({ id, label })) });
+  // Tout ce dont l'editeur a besoin pour proposer des listes deroulantes plutot
+  // que des champs libres : sources, chemins de condition, presets, garde-fous.
+  if (req.method === "GET" && path === "/api/schema-info") {
+    sendJson(res, 200, {
+      sources: SOURCES,
+      conditionPaths: [...CONDITION_PATHS],
+      presets: PRESETS,
+      minTextHeightRatio: MIN_TEXT_HEIGHT_RATIO,
+    });
     return;
   }
 
@@ -81,16 +93,17 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
 
   if (req.method === "POST" && path === "/api/render") {
     const body = (await readBody(req)) as
-      | { name?: unknown; manifest?: unknown; variant?: unknown; context?: unknown }
+      | { name?: unknown; manifest?: unknown; context?: unknown }
       | null;
     if (typeof body?.name !== "string" || typeof body.manifest !== "string") {
       sendJson(res, 400, { error: "INVALID_BODY" });
       return;
     }
-    // Un `variant` nomme reste accepte le temps que l'interface bascule sur le
-    // formulaire de contexte : il designe simplement le preset de depart.
-    const preset = PRESETS.find((p) => p.id === body.variant);
-    const contextInput = (body.context ?? preset?.input) as ContextInput | undefined;
+    if (body.context !== undefined && (typeof body.context !== "object" || body.context === null)) {
+      sendJson(res, 400, { error: "INVALID_BODY" });
+      return;
+    }
+    const contextInput = body.context as ContextInput | undefined;
     const read = await readTemplate(root, body.name);
     if (!read) {
       sendJson(res, 404, { error: "TEMPLATE_NOT_FOUND" });
@@ -110,6 +123,23 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
     res.writeHead(200, { "content-type": "application/pdf", "cache-control": "no-store" });
     res.end(result.pdf);
     return;
+  }
+
+  // Modules ES du client (bibliotheque vendorisee et composants) : servis a plat,
+  // sans remontee de chemin possible.
+  const moduleMatch = req.method === "GET" && /^\/(vendor|ui)\/[a-z0-9.-]+\.(mjs|js)$/.exec(path);
+  if (moduleMatch) {
+    const file = resolve(PUBLIC_DIR, `.${path}`);
+    if (file.startsWith(PUBLIC_DIR)) {
+      try {
+        const body = await readFile(file);
+        res.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
+        res.end(body);
+        return;
+      } catch {
+        // Fichier absent : on retombe sur le 404 commun.
+      }
+    }
   }
 
   sendJson(res, 404, { error: "NOT_FOUND" });

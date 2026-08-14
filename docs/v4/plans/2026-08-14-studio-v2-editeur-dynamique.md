@@ -21,7 +21,7 @@
 | 5. objectFit des images | [x] | 2026-08-14 | |
 | 6. Doc feature : format enrichi | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
 | 7. Contexte dynamique serveur (context.ts, render, presets) | [x] | 2026-08-14 | |
-| 8. Routes render/schema-info + statiques vendor-ui | [ ] | | |
+| 8. Routes render/schema-info + statiques vendor-ui | [x] | 2026-08-14 | |
 | 9. Upload de ressources vers l'atelier | [ ] | | |
 | 10. Scaffold + pack depuis le studio | [ ] | | |
 | 11. UI : socle Preact (parité JSON + aperçu) | [ ] | | |
@@ -469,7 +469,7 @@ export async function buildContext(input: ContextInput = DEFAULT_CONTEXT_INPUT):
   - `GET /api/variants` supprimée (404).
   - `GET /vendor/<fichier>.mjs` et `GET /ui/<fichier>.js` servis depuis `studio/public/` (regex `/^\/(vendor|ui)\/[a-z0-9.-]+\.(mjs|js)$/`, type `text/javascript`).
 
-- [ ] **Step 1 : Tests qui échouent** — dans `server.test.ts` (qui utilise déjà un serveur monté sur un atelier temporaire) :
+- [x] **Step 1 : Tests qui échouent** — dans `server.test.ts` (qui utilise déjà un serveur monté sur un atelier temporaire) :
 
 ```ts
 it("rend avec un contexte partiel fourni", async () => {
@@ -503,10 +503,10 @@ it("sert les modules statiques vendor et ui", async () => {
 ```
 
 (Adapter `request()` du fichier existant : il accepte déjà method/path/body JSON.) Mettre à jour les tests render existants du serveur pour le nouveau body (`context` au lieu de `variant`).
-- [ ] **Step 2 : Vérifier l'échec.**
-- [ ] **Step 3 : Implémentation** — dans `handle()` : route render lit `{name, manifest, context}` (context optionnel, objet → `buildContext(context)` ; refuser un `context` non-objet par 400) ; ajouter `/api/schema-info` (imports `SOURCES`, `CONDITION_PATHS` de `src/lib/badge-templates/declarative/sources`, `PRESETS` de `./context`) ; supprimer la route variants ; ajouter le service statique regex AVANT le 404 final (résoudre `join(PUBLIC_DIR, path)` puis vérifier `resolve(...)` commence par `PUBLIC_DIR` — défense chemin traversant, un échec de lecture → 404).
-- [ ] **Step 4 : Vérifier le vert** — `yarn vitest run studio`.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): routes contexte, schema-info et statiques du studio`
+- [x] **Step 2 : Vérifier l'échec.**
+- [x] **Step 3 : Implémentation** — dans `handle()` : route render lit `{name, manifest, context}` (context optionnel, objet → `buildContext(context)` ; refuser un `context` non-objet par 400) ; ajouter `/api/schema-info` (imports `SOURCES`, `CONDITION_PATHS` de `src/lib/badge-templates/declarative/sources`, `PRESETS` de `./context`) ; supprimer la route variants ; ajouter le service statique regex AVANT le 404 final (résoudre `join(PUBLIC_DIR, path)` puis vérifier `resolve(...)` commence par `PUBLIC_DIR` — défense chemin traversant, un échec de lecture → 404).
+- [x] **Step 4 : Vérifier le vert** — `yarn vitest run studio`.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): routes contexte, schema-info et statiques du studio`
 
 ### Task 9 : Upload de ressources vers l'atelier
 

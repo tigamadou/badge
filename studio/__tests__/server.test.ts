@@ -52,11 +52,19 @@ describe("GET /api/templates", () => {
   });
 });
 
-describe("GET /api/variants", () => {
-  it("expose les variantes", async () => {
-    const res = await fetch(`${base}/api/variants`);
+describe("GET /api/schema-info", () => {
+  it("expose les informations de schema", async () => {
+    const res = await fetch(`${base}/api/schema-info`);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.variants[0]).toEqual({ id: "complet", label: "Participant complet" });
+    expect(body.sources["participant.firstName"]).toBe("text");
+    expect(body.conditionPaths).toContain("category.anonymous");
+    expect(body.presets.map((p: { id: string }) => p.id)).toContain("anonyme");
+    expect(body.minTextHeightRatio).toBe(1.45);
+  });
+
+  it("ne sert plus /api/variants", async () => {
+    expect((await fetch(`${base}/api/variants`)).status).toBe(404);
   });
 });
 
@@ -95,14 +103,47 @@ describe("PUT /api/templates/:name", () => {
   });
 });
 
+describe("statiques", () => {
+  it("refuse un chemin traversant sous /vendor", async () => {
+    expect((await fetch(`${base}/vendor/../server.ts`)).status).toBe(404);
+  });
+
+  it("repond 404 pour un module vendor absent", async () => {
+    expect((await fetch(`${base}/vendor/absent.mjs`)).status).toBe(404);
+  });
+});
+
 describe("POST /api/render", () => {
+  it("rend avec un contexte partiel fourni", async () => {
+    const res = await fetch(`${base}/api/render`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "salon",
+        manifest: MINIMAL,
+        context: { participant: { firstName: "Zoé" } },
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/pdf");
+  });
+
+  it("repond 400 pour un contexte qui n'est pas un objet", async () => {
+    const res = await fetch(`${base}/api/render`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "salon", manifest: MINIMAL, context: "complet" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   it("rend le texte recu, pas le fichier", async () => {
     const modifie = JSON.parse(MINIMAL);
     modifie.label = "Jamais enregistre";
     const res = await fetch(`${base}/api/render`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "salon", manifest: JSON.stringify(modifie), variant: "complet" }),
+      body: JSON.stringify({ name: "salon", manifest: JSON.stringify(modifie) }),
     });
 
     expect(res.status).toBe(200);
@@ -117,7 +158,7 @@ describe("POST /api/render", () => {
     const res = await fetch(`${base}/api/render`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "salon", manifest: "{ pas du json", variant: "complet" }),
+      body: JSON.stringify({ name: "salon", manifest: "{ pas du json" }),
     });
 
     expect(res.status).toBe(422);
@@ -128,7 +169,7 @@ describe("POST /api/render", () => {
     const res = await fetch(`${base}/api/render`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "inconnu", manifest: MINIMAL, variant: "complet" }),
+      body: JSON.stringify({ name: "inconnu", manifest: MINIMAL }),
     });
     expect(res.status).toBe(404);
   });

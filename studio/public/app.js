@@ -35,7 +35,7 @@ async function render() {
   const res = await fetch("/api/render", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, manifest: els.manifest.value, variant: els.variant.value }),
+    body: JSON.stringify({ name, manifest: els.manifest.value, context: presets[els.variant.value] }),
   });
   if (res.status === 422) {
     showErrors((await res.json()).errors);
@@ -80,14 +80,19 @@ async function save() {
   setStatus(res.ok ? "Enregistré" : `Échec de l'enregistrement (${res.status})`);
 }
 
+// Contextes des presets, indexes par identifiant : l'ancien selecteur de variante
+// envoie desormais un contexte complet, comme le fera le formulaire de la spec 18.
+const presets = {};
+
 async function boot() {
-  const [templates, variants] = await Promise.all([
+  const [templates, schema] = await Promise.all([
     fetch("/api/templates").then((r) => r.json()),
-    fetch("/api/variants").then((r) => r.json()),
+    fetch("/api/schema-info").then((r) => r.json()),
   ]);
 
-  for (const variant of variants.variants) {
-    els.variant.append(new Option(variant.label, variant.id));
+  for (const preset of schema.presets) {
+    presets[preset.id] = preset.input;
+    els.variant.append(new Option(preset.label, preset.id));
   }
   for (const template of templates.templates) {
     els.template.append(new Option(template.name, template.name));
