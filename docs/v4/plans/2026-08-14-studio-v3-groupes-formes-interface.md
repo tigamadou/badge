@@ -19,7 +19,7 @@
 | 3. Fond des formes (couleur/image) et retrait du type `image` | [x] | 2026-08-14 | Manifestes du depot migres ; BDD non touchee (re-seed manuel a faire) |
 | 4. Type `group` (conteneur récursif) | [x] | 2026-08-14 | |
 | 5. Doc du format (feature + scaffold) | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
-| 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [ ] | | |
+| 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [x] | 2026-08-14 | |
 | 7. Layout 3 colonnes + thème sombre + bascule JSON | [ ] | | |
 | 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [ ] | | |
 | 9. Inspecteur : contrôles par nature + Paquet par défaut | [ ] | | |
@@ -474,7 +474,7 @@ export function ungroupAt(blocks, path)
 //      quand le parent est la racine)
 ```
 
-- [ ] **Step 1 : Tests qui échouent** — `studio/__tests__/blocks-tree.test.ts` :
+- [x] **Step 1 : Tests qui échouent** — `studio/__tests__/blocks-tree.test.ts` :
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -530,10 +530,10 @@ describe("blocks-tree", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec** — `yarn vitest run studio/__tests__/blocks-tree.test.ts` (module absent).
-- [ ] **Step 3 : Implémentation** — récursion immuable simple (`structuredClone` interdit sur les branches non touchées : reconstruire uniquement le chemin) ; `groupSiblings` : cadre = `minX/minY` et `max(x + w)/max(y + h)` des blocs choisis ; enfants : `{ ...bloc, x: bloc.x - minX, y: bloc.y - minY }` avec `page` retirée (`delete`) ; le groupe hérite de `page` du premier bloc quand `parentPath` est vide. `ungroupAt` : rejette (`reason` en français) si `rotate`/`opacity`/`visibleIf` présents ; sinon `{ ...enfant, x: +group.x, y: +group.y, page: group.page }` (page seulement si le parent est la racine) ; réinsère les enfants à l'indice du groupe.
-- [ ] **Step 4 : Vérifier le vert.**
-- [ ] **Step 5 : Point de commit** — `feat(v4): operations d'arbre des blocs du studio (grouper, degrouper, chemins)`
+- [x] **Step 2 : Vérifier l'échec** — `yarn vitest run studio/__tests__/blocks-tree.test.ts` (module absent).
+- [x] **Step 3 : Implémentation** — récursion immuable simple (`structuredClone` interdit sur les branches non touchées : reconstruire uniquement le chemin) ; `groupSiblings` : cadre = `minX/minY` et `max(x + w)/max(y + h)` des blocs choisis ; enfants : `{ ...bloc, x: bloc.x - minX, y: bloc.y - minY }` avec `page` retirée (`delete`) ; le groupe hérite de `page` du premier bloc quand `parentPath` est vide. `ungroupAt` : rejette (`reason` en français) si `rotate`/`opacity`/`visibleIf` présents ; sinon `{ ...enfant, x: +group.x, y: +group.y, page: group.page }` (page seulement si le parent est la racine) ; réinsère les enfants à l'indice du groupe.
+- [x] **Step 4 : Vérifier le vert.**
+- [x] **Step 5 : Point de commit** — `feat(v4): operations d'arbre des blocs du studio (grouper, degrouper, chemins)`
 
 ### Task 7 : Layout trois colonnes, thème sombre, bascule JSON
 
