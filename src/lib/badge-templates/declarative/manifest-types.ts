@@ -31,26 +31,24 @@ export type Condition =
 // conjonction, ce cas ne serait pas exprimable.
 export type VisibleIf = Condition | Condition[];
 
+// `rotate` (degres, sens horaire) pivote le bloc autour de son centre : declarer le
+// cadre NON pivote (comme dans Figma avant rotation), la rotation s'applique ensuite.
+// `opacity` (0 a 1) s'applique au bloc entier.
 type BlockBase = {
   page: number;
   x: number;
   y: number;
   w: number;
   h: number;
+  rotate?: number;
+  opacity?: number;
   visibleIf?: VisibleIf;
 };
 
 // `text` est un gabarit : les segments `{chemin}` sont remplaces par la valeur du
 // contexte, le reste est litteral. Permet « {participant.firstName} {participant.lastName} »
 // ou « #{badge.id} » sans multiplier les blocs.
-// `rotate` (degres, sens horaire) pivote le bloc autour de son centre : declarer le
-// cadre NON pivote (comme dans Figma avant rotation), la rotation s'applique ensuite.
-export type TextBlock = BlockBase & {
-  type: "text";
-  text: string;
-  style: TextStyle;
-  rotate?: number;
-};
+export type TextBlock = BlockBase & { type: "text"; text: string; style: TextStyle };
 
 export type ImageBlock = BlockBase & {
   type: "image";

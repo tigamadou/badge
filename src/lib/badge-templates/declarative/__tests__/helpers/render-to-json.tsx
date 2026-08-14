@@ -17,6 +17,8 @@ export type Collected = {
   textStyles: Array<Record<string, unknown>>;
   // Chaines de transformation CSS rencontrees sur n'importe quel noeud (rotation).
   transforms: string[];
+  // Opacites rencontrees sur n'importe quel noeud.
+  opacities: number[];
   pageCount: number;
 };
 
@@ -75,6 +77,7 @@ function walk(node: ReactNode, out: Collected): void {
 
   if (typeof style.backgroundColor === "string") out.fills.push(style.backgroundColor);
   if (typeof style.transform === "string") out.transforms.push(style.transform);
+  if (typeof style.opacity === "number") out.opacities.push(style.opacity);
 
   walk(props.children ?? null, out);
 }
@@ -90,6 +93,7 @@ export function renderToJson(
     fontSizes: [],
     textStyles: [],
     transforms: [],
+    opacities: [],
     pageCount: 0,
   };
   walk(createElement(Component, { ctx }), out);

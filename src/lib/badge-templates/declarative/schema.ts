@@ -35,17 +35,13 @@ const baseShape = {
   y: z.number().min(0),
   w: z.number().positive(),
   h: z.number().positive(),
+  rotate: z.number().min(-360).max(360).optional(),
+  opacity: z.number().min(0).max(1).optional(),
   visibleIf: visibleIfSchema.optional(),
 };
 
 const blockSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("text"),
-    text: z.string().min(1),
-    style: styleSchema,
-    rotate: z.number().min(-360).max(360).optional(),
-    ...baseShape,
-  }),
+  z.object({ type: z.literal("text"), text: z.string().min(1), style: styleSchema, ...baseShape }),
   z.object({
     type: z.literal("image"),
     source: z.string().optional(),

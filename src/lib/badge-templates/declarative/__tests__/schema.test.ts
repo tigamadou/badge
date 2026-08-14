@@ -108,13 +108,28 @@ describe("parseManifest", () => {
     expect(res.ok).toBe(true);
   });
 
-  it("accepte un bloc texte pivote", () => {
-    expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: 90 }] }).ok).toBe(true);
-    expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: -90 }] }).ok).toBe(true);
+  it("accepte rotate et opacity sur tout type de bloc", () => {
+    expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: 90, opacity: 0.5 }] }).ok).toBe(true);
+    expect(
+      parse({
+        blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 118, h: 118, rotate: -45, opacity: 1 }],
+      }).ok,
+    ).toBe(true);
+    expect(
+      parse({
+        blocks: [
+          { type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "#112233", opacity: 0.2 },
+        ],
+      }).ok,
+    ).toBe(true);
   });
 
   it("refuse une rotation hors bornes", () => {
     expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: 400 }] }).ok).toBe(false);
+  });
+
+  it("refuse une opacite hors bornes", () => {
+    expect(parse({ blocks: [{ ...VALID.blocks[0], opacity: 1.5 }] }).ok).toBe(false);
   });
 
   it("accepte les styles de texte etendus", () => {

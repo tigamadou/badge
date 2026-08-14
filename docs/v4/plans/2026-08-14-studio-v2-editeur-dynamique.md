@@ -14,7 +14,7 @@
 
 | Task | Statut | Date | Notes |
 |---|---|---|---|
-| 1. opacity + rotate sur tous les blocs | [ ] | | |
+| 1. opacity + rotate sur tous les blocs | [x] | 2026-08-14 | |
 | 2. Bordures par côté (remplace borderTopPx) | [ ] | | |
 | 3. Coins arrondis par coin (+ QR) | [ ] | | |
 | 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [ ] | | |
@@ -57,7 +57,7 @@
 **Interfaces:**
 - Produces: `BlockBase` porte désormais `opacity?: number` (0–1) et `rotate?: number` (±360, degrés sens horaire, pivot au centre du cadre non pivoté). `TextBlock` ne déclare plus `rotate` en propre. Le renderer émet `opacity` et `transform: rotate(...)` dans `frame(block)` pour tous les types.
 
-- [ ] **Step 1 : Tests qui échouent** — dans `schema.test.ts`, remplacer le test « accepte un bloc texte pivote » par la version tous-types, et ajouter l'opacité :
+- [x] **Step 1 : Tests qui échouent** — dans `schema.test.ts`, remplacer le test « accepte un bloc texte pivote » par la version tous-types, et ajouter l'opacité :
 
 ```ts
 it("accepte rotate et opacity sur tout type de bloc", () => {
@@ -90,13 +90,13 @@ it("pivote et attenue un bloc de tout type", () => {
 
 Dans `helpers/render-to-json.tsx` : ajouter `opacities: number[]` au type `Collected`, l'initialiser dans `renderToJson`, et dans `walk()` : `if (typeof style.opacity === "number") out.opacities.push(style.opacity);`.
 
-- [ ] **Step 2 : Vérifier l'échec** — `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/declarative` → les nouveaux tests échouent (clé `opacity` inconnue refusée par… rien : Zod strippe les clés inconnues, donc c'est le renderer qui échoue sur `opacities` vide et le schéma sur `rotate` posé sur un bloc qr).
-- [ ] **Step 3 : Implémentation** —
+- [x] **Step 2 : Vérifier l'échec** — `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/declarative` → les nouveaux tests échouent (clé `opacity` inconnue refusée par… rien : Zod strippe les clés inconnues, donc c'est le renderer qui échoue sur `opacities` vide et le schéma sur `rotate` posé sur un bloc qr).
+- [x] **Step 3 : Implémentation** —
   - `manifest-types.ts` : déplacer `rotate?: number` de `TextBlock` vers `BlockBase`, ajouter `opacity?: number` à `BlockBase` (commentaire : rotation sens horaire autour du centre du cadre non pivoté, opacité 0–1 appliquée au bloc entier).
   - `schema.ts` : dans `baseShape`, ajouter `rotate: z.number().min(-360).max(360).optional(), opacity: z.number().min(0).max(1).optional()` ; retirer la ligne `rotate` du bloc texte.
   - `renderer.tsx` : `frame(block)` retourne aussi `opacity: block.opacity` et `transform: block.rotate !== undefined ? \`rotate(${block.rotate}deg)\` : undefined` ; retirer le transform spécifique du `<View>` de `renderText` (le frame le porte pour tous).
-- [ ] **Step 4 : Vérifier le vert** — même commande, tout passe.
-- [ ] **Step 5 : Point de commit (proposer, ne pas exécuter)** — `feat(v4): generalise rotation et opacite a tous les blocs du manifeste`
+- [x] **Step 4 : Vérifier le vert** — même commande, tout passe.
+- [x] **Step 5 : Point de commit (proposer, ne pas exécuter)** — `feat(v4): generalise rotation et opacite a tous les blocs du manifeste`
 
 ### Task 2 : Bordures complètes par côté (remplace `borderTopPx`)
 

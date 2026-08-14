@@ -243,6 +243,15 @@ describe("buildDeclarativeTemplate", () => {
     expect(out.transforms).toContain("rotate(90deg)");
   });
 
+  it("pivote et attenue un bloc de tout type", () => {
+    const t = build(
+      manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 118, h: 118, rotate: 45, opacity: 0.5 }]),
+    );
+    const out = renderToJson(t.Component, CTX);
+    expect(out.transforms).toContain("rotate(45deg)");
+    expect(out.opacities).toContain(0.5);
+  });
+
   it("n'emet aucune transformation sans rotate", () => {
     const t = build(
       manifest([
