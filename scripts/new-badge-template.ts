@@ -79,9 +79,18 @@ moins **1,45 x la taille de police** (par ligne de texte).
 | Type | Role | Champs propres |
 |---|---|---|
 | \`text\` | Un texte | \`text\` (gabarit), \`style\` |
-| \`image\` | Une image | \`source\` **ou** \`asset\`, jamais les deux ; \`objectFit\` |
 | \`qr\` | Le QR code du badge | aucun |
-| \`rect\` | Un aplat | \`fill\` |
+| \`rect\` | Un rectangle | fond : \`fill\` et/ou \`image\` |
+| \`square\` | Un carre (w = h exige) | fond : \`fill\` et/ou \`image\` |
+| \`circle\` | Un cercle (rayon implicite, \`radiusPx\` interdit) | fond : \`fill\` et/ou \`image\` |
+| \`group\` | Un conteneur : enfants en coordonnees RELATIVES, sans \`page\` ; opacite, rotation et \`visibleIf\` s'appliquent a tout le contenu | \`blocks\` |
+
+Une forme porte au moins un fond : \`fill\` (couleur ou source de couleur) et/ou
+\`image\` (\`{ source | asset, fit }\`, \`fit\` valant \`cover\` par defaut). L'image est
+rognee par la forme : un cercle suffit a poser une photo ronde.
+
+Tout bloc accepte un \`name\` (1-60 caracteres) : c'est son libelle dans le studio,
+sans effet sur le rendu.
 
 ### Champs communs a tous les blocs
 

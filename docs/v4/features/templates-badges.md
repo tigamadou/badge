@@ -209,14 +209,19 @@ renommée en `.png` est refusée.
   "page": { "widthPx": 323.53, "heightPx": 204.09, "count": 1 },
   "fonts": [{ "alias": "titre", "file": "fonts/Inter-Bold.ttf", "weight": 700 }],
   "blocks": [
-    { "type": "image", "page": 1, "x": 0, "y": 0, "w": 323.53, "h": 204.09,
-      "asset": "assets/fond.png" },
+    { "type": "rect", "page": 1, "x": 0, "y": 0, "w": 323.53, "h": 204.09,
+      "image": { "asset": "assets/fond.png" } },
     { "type": "text", "page": 1, "x": 136, "y": 30, "w": 174, "h": 27,
       "text": "{participant.firstName} {participant.lastName}",
       "style": { "font": "titre", "sizePx": 16, "color": "#0f172a",
                  "overflow": "shrink", "minSizePx": 11 },
       "visibleIf": { "path": "category.anonymous", "equals": false } },
-    { "type": "qr", "page": 1, "x": 234, "y": 113, "w": 68, "h": 68 }
+    { "type": "qr", "page": 1, "x": 234, "y": 113, "w": 68, "h": 68 },
+    { "type": "group", "page": 1, "x": 12, "y": 12, "w": 100, "h": 120, "name": "Photo",
+      "blocks": [
+        { "type": "circle", "x": 0, "y": 0, "w": 100, "h": 100,
+          "image": { "source": "participant.photoDataUrl", "fit": "cover" } }
+      ] }
   ]
 }
 ```
@@ -242,9 +247,24 @@ hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
 | Type | Rôle | Champs propres |
 |---|---|---|
 | `text` | Un texte | `text` (gabarit), `style` |
-| `image` | Une image | `source` **ou** `asset`, jamais les deux ; `objectFit` (`cover` par défaut, `contain`, `fill`) |
 | `qr` | Le QR code du badge | — |
-| `rect` | Un aplat | `fill` |
+| `rect` | Un rectangle | fond : `fill` et/ou `image` |
+| `square` | Un carré — la validation exige `w = h` | fond : `fill` et/ou `image` |
+| `circle` | Un cercle — rayon implicite `min(w,h)/2`, une ellipse si `w ≠ h` ; `radiusPx` interdit | fond : `fill` et/ou `image` |
+| `group` | Un conteneur : les coordonnées de ses enfants sont **relatives** à lui, et ils n'ont pas de `page`. Déplacer, pivoter, atténuer (`opacity`) ou masquer (`visibleIf`) le groupe agit sur tout son contenu ; l'imbrication est libre. | `blocks` |
+
+#### Fond des formes
+
+Une forme (`rect`, `square`, `circle`) porte **au moins un** fond :
+
+- `fill` — une couleur hexadécimale ou une source de type couleur ;
+- `image` — `{ source | asset, fit }` : une source image du contexte **ou** une
+  ressource du paquet (jamais les deux), cadrée par `fit` (`cover` par défaut,
+  `contain`, `fill`).
+
+Déclarer les deux laisse la couleur visible sous une image `contain` ou transparente.
+**L'image est rognée par la forme** : coins arrondis et cercles la découpent, ce qui
+suffit à poser une photo ronde en un seul bloc.
 
 #### Champs communs à tous les blocs
 
@@ -290,8 +310,8 @@ par la valeur, le reste est écrit tel quel.
 | `badge.id`, `badge.verifyUrl` | texte |
 | `badge.qrCodeDataUrl` | image |
 
-Un bloc consommant une source d'un type incompatible est refusé à la validation : un
-bloc `image` ne peut pas pointer sur `participant.firstName`.
+Un bloc consommant une source d'un type incompatible est refusé à la validation : le
+fond image d'une forme ne peut pas pointer sur `participant.firstName`.
 
 Les champs `fill` et `color` acceptent soit une couleur hexadécimale (`#4f46e5`), soit
 un chemin de source de type couleur (`category.color`).
@@ -359,13 +379,18 @@ déclarant le même alias s'écraseraient sans ce préfixe.
 
 ## Validation
 
-`parseManifest` refuse, en une passe et avec un message par erreur :
+`parseManifest` refuse, en une passe et avec un message par erreur. Les vérifications
+descendent récursivement dans les groupes, et les messages nomment le chemin du bloc
+fautif (« bloc 3 › 2 : … ») :
 
 - un `formatVersion` inconnu, une `family` qui n'est pas un slug kebab-case ;
-- un bloc dont la page dépasse `page.count` ;
-- plus de 60 blocs ;
+- un bloc dont la page dépasse `page.count` ; une `page` manquante à la racine ou
+  déclarée sur un enfant de groupe ;
+- plus de 60 blocs, **groupes et enfants compris** (l'arbre est compté à plat) ;
 - une source inconnue ou de type incompatible ;
-- un bloc `image` portant à la fois `source` et `asset`, ou aucun des deux ;
+- une forme sans fond, ou dont le fond `image` porte à la fois `source` et `asset`,
+  ou aucun des deux ;
+- un `square` dont `w ≠ h`, un `circle` portant un `radiusPx` ;
 - une ressource ou une police déclarée mais absente du paquet ;
 - un `style.font` sans `alias` correspondant ;
 - `overflow: "shrink"` sans `minSizePx`, ou un `minSizePx` supérieur au `sizePx` ;

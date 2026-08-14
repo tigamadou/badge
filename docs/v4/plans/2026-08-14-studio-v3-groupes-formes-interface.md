@@ -18,7 +18,7 @@
 | 2. Types `square` et `circle` | [x] | 2026-08-14 | |
 | 3. Fond des formes (couleur/image) et retrait du type `image` | [x] | 2026-08-14 | Manifestes du depot migres ; BDD non touchee (re-seed manuel a faire) |
 | 4. Type `group` (conteneur récursif) | [x] | 2026-08-14 | |
-| 5. Doc du format (feature + scaffold) | [ ] | | |
+| 5. Doc du format (feature + scaffold) | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
 | 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [ ] | | |
 | 7. Layout 3 colonnes + thème sombre + bascule JSON | [ ] | | |
 | 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [ ] | | |
@@ -439,10 +439,10 @@ if (block.type === "group") {
 **Files:**
 - Modify: `docs/v4/features/templates-badges.md`, `scripts/new-badge-template.ts` (README généré), `badge-templates/*/README.md` (mêmes remplacements s'ils existent)
 
-- [ ] **Step 1 :** Doc feature — tableau des types : **retirer la ligne `image`** ; ajouter `square` (« un carré, w = h »), `circle` (« un cercle — rayon implicite min(w,h)/2, ellipse si w ≠ h »), `group` (« conteneur : enfants en coordonnées relatives, sans `page` ; `opacity`/`rotate`/`visibleIf` s'appliquent à l'ensemble ; imbrication libre ») ; documenter le **fond des formes** (`fill` couleur et/ou `image: { source | asset, fit }`, rognage par la forme) ; mentionner `name` (champ commun, affichage studio uniquement) et le plafond de 60 blocs compté à plat. Adapter l'exemple de manifeste (le bloc image d'exemple devient un `rect` à fond image).
-- [ ] **Step 2 :** Reporter dans le README du scaffold et les README d'atelier.
-- [ ] **Step 3 :** `make lint && make typecheck && make test` verts (fin de lot A).
-- [ ] **Step 4 : Point de commit** — `docs(v4): documente groupes, formes a fond et noms de blocs`
+- [x] **Step 1 :** Doc feature — tableau des types : **retirer la ligne `image`** ; ajouter `square` (« un carré, w = h »), `circle` (« un cercle — rayon implicite min(w,h)/2, ellipse si w ≠ h »), `group` (« conteneur : enfants en coordonnées relatives, sans `page` ; `opacity`/`rotate`/`visibleIf` s'appliquent à l'ensemble ; imbrication libre ») ; documenter le **fond des formes** (`fill` couleur et/ou `image: { source | asset, fit }`, rognage par la forme) ; mentionner `name` (champ commun, affichage studio uniquement) et le plafond de 60 blocs compté à plat. Adapter l'exemple de manifeste (le bloc image d'exemple devient un `rect` à fond image).
+- [x] **Step 2 :** Reporter dans le README du scaffold et les README d'atelier.
+- [x] **Step 3 :** `make lint && make typecheck && make test` verts (fin de lot A).
+- [x] **Step 4 : Point de commit** — `docs(v4): documente groupes, formes a fond et noms de blocs`
 
 ---
 
