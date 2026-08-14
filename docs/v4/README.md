@@ -38,6 +38,7 @@ conservees : elles portent le *pourquoi* des decisions.
 - [Spec 16 — Studio de construction de templates](specs/2026-08-14-16-v4-studio-de-construction-de-templates.md) · [Feature](features/templates-badges.md)
 - [Spec 17 — Manifeste en pixels](specs/2026-08-14-17-v4-manifeste-en-pixels.md) · [Feature](features/templates-badges.md)
 - [Spec 18 — Studio v2 : éditeur dynamique de badges](specs/2026-08-14-18-v4-studio-v2-editeur-dynamique.md) · [Feature](features/templates-badges.md)
+- [Spec 19 — Studio v3 : groupes, formes et interface en trois colonnes](specs/2026-08-14-19-v4-studio-v3-groupes-formes-interface.md) · [Feature](features/templates-badges.md)
 
 Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterieures
 (commits `a8ef855` et `b4af4c6`) et n'ont pas de spec associee.
