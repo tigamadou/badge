@@ -71,7 +71,44 @@ object {
   border-radius: 4px;
 }
 
-#status {
+[role="status"] {
   font-size: 13px;
   opacity: 0.75;
+}
+
+#app {
+  display: contents;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tabs button {
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tabs button.active {
+  background: rgba(48, 213, 155, 0.18);
+  border-color: rgba(48, 213, 155, 0.6);
+  font-weight: 600;
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 1px dashed rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  font-size: 13px;
+  opacity: 0.7;
 }

@@ -24,7 +24,7 @@
 | 8. Routes render/schema-info + statiques vendor-ui | [x] | 2026-08-14 | |
 | 9. Upload de ressources vers l'atelier | [x] | 2026-08-14 | |
 | 10. Scaffold + pack depuis le studio | [x] | 2026-08-14 | Lot B termine, lint/typecheck/test verts |
-| 11. UI : socle Preact (parité JSON + aperçu) | [ ] | | |
+| 11. UI : socle Preact (parité JSON + aperçu) | [x] | 2026-08-14 | Verif navigateur a refaire manuellement : MCP Chrome indisponible en session headless |
 | 12. UI : onglet Contexte | [ ] | | |
 | 13. UI : onglet Blocs | [ ] | | |
 | 14. UI : métadonnées, polices, ressources, nouveau template | [ ] | | |
@@ -597,10 +597,10 @@ Côté serveur : un test 200 (upload PNG base64 → fichier présent puis visibl
   - `ui/api.js` : `listTemplates()`, `getTemplate(name)`, `putManifest(name, manifest)`, `renderPdf(name, manifest, context) → Blob|{errors}`, `getSchemaInfo()`, `createTemplate(name)`, `uploadAsset(name, dir, filename, file)`, `packTemplate(name, manifest) → Blob|{errors}` — toutes en `fetch` JSON (fichiers encodés base64 via `FileReader`).
   - État racine dans `app.js` : `{ templates, current, manifestText, context, tab: "context"|"blocks"|"json", errors, status, schemaInfo }`. L'objet manifeste parsé est dérivé de `manifestText` quand il est valide (source de vérité unique, cf. spec).
 
-- [ ] **Step 1 : Vendoriser** — télécharger la version figée du standalone :
+- [x] **Step 1 : Vendoriser** — télécharger la version figée du standalone :
   `curl -sL https://unpkg.com/htm@3.1.1/preact/standalone.module.js -o studio/public/vendor/preact-htm.mjs` ; créer `vendor/README.md` (« htm 3.1.1 + preact bundlés, MIT, https://github.com/developit/htm — fichier vendorisé pour un studio sans build ni CDN »). Vérifier que le fichier exporte bien `html`, `render` et les hooks (`grep -o "export{[^}]*}" studio/public/vendor/preact-htm.mjs`).
-- [ ] **Step 2 : Recrire `index.html`** — `<div id="app"></div>` + `<script type="module" src="/app.js">` seulement (le shell est rendu par Preact).
-- [ ] **Step 3 : `app.js`** — reproduire la parité fonctionnelle actuelle en Preact :
+- [x] **Step 2 : Recrire `index.html`** — `<div id="app"></div>` + `<script type="module" src="/app.js">` seulement (le shell est rendu par Preact).
+- [x] **Step 3 : `app.js`** — reproduire la parité fonctionnelle actuelle en Preact :
 
 ```js
 import { html, render, useState, useEffect, useCallback, useRef } from "/vendor/preact-htm.mjs";
@@ -670,8 +670,8 @@ render(html`<${App} />`, document.getElementById("app"));
 ```
 
 `ui/preview.js` : composant qui débounce (400 ms, `useRef` pour le timer), appelle `api.renderPdf`, gère l'URL d'objet (`URL.createObjectURL` + `revokeObjectURL` de la précédente), affiche `<object type="application/pdf">` ; en cas de 422, remonte `onErrors(errors)` **sans** écraser le PDF affiché (règle spec 16 conservée). `ui/api.js` : wrappers `fetch` fins, `renderPdf` retourne `{ ok: true, blob }` ou `{ ok: false, errors }`.
-- [ ] **Step 4 : Vérification navigateur** — `docker compose -f docker-compose.dev.yml restart studio` puis sur `http://localhost:3786` : la liste des templates charge, l'onglet JSON édite, l'aperçu se met à jour en tapant, un JSON invalide affiche l'erreur sans perdre l'aperçu, Enregistrer écrit sur disque (vérifier le fichier). Tester aussi `https://studio.badge.local`.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): socle Preact du studio (parite JSON et apercu)`
+- [x] **Step 4 : Vérification navigateur** — `docker compose -f docker-compose.dev.yml restart studio` puis sur `http://localhost:3786` : la liste des templates charge, l'onglet JSON édite, l'aperçu se met à jour en tapant, un JSON invalide affiche l'erreur sans perdre l'aperçu, Enregistrer écrit sur disque (vérifier le fichier). Tester aussi `https://studio.badge.local`.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): socle Preact du studio (parite JSON et apercu)`
 
 ### Task 12 : Onglet Contexte
 
