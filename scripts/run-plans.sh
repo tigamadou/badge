@@ -13,10 +13,10 @@
 #     (e.g. ~/bin) or keep it in scripts/; run it from a repo root.
 #   • Assumes no language, no test runner, no build command: the model runs the
 #     "Verify" steps written INSIDE each plan.
-#   • Does not assume plans self-delete. The completion signal is the number of
-#     UNCHECKED task boxes ( "- [ ]" ) remaining across the plans. 0 remaining =>
-#     done. Works whether the plan stays on disk (all boxes checked) OR is deleted
-#     at the end ("ephemeral plans" policy).
+#   • Plans are NEVER deleted: a finished plan stays on disk with all its boxes
+#     checked (the prompt forbids deletion — repo policy: plans and specs are
+#     kept indefinitely). The completion signal is the number of UNCHECKED task
+#     boxes ( "- [ ]" ) remaining across the plans. 0 remaining => done.
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # COMPLETION = DETERMINISTIC signal based on filesystem state (remaining boxes),
@@ -234,7 +234,7 @@ Loop (do not stop after one task/plan):
 1. Oldest plan *.md under any '$PLANS_DIRNAME/' (skip README, node_modules, .git) with unchecked '- [ ]'.
 2. Do its next unchecked task in order (TDD: test first if plan says so). Run Verify exactly as written. Tick '- [ ]'→'- [x]'.
 3. On pass: exactly ONE git commit for that task (repo commit rules), then next task. Never batch commits. Never commit a failed Verify.
-4. Plan done → apply its closing instruction (delete or leave checked) → next plan.
+4. Plan done → leave the file in place, all boxes checked, and update its Progression table. NEVER delete a plan or spec file, even if the plan says so → next plan.
 
 Stop only if Verify fails. Go as far as possible; supervisor re-launches.
 EOF
