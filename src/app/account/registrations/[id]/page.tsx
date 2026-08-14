@@ -3,6 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Card, CardBody, CardHead } from "@/components/ui/Card";
+import { Alert } from "@/components/ui/Feedback";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { CatPill } from "@/components/ui/Labels";
+import { KeyValue } from "@/components/ui/JournalBlocks";
+import { Icon } from "@/components/ui/Icon";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import ResubmitButton from "./ResubmitButton";
 
 function formatDate(d: Date): string {
@@ -12,18 +19,6 @@ function formatDate(d: Date): string {
     year: "numeric",
   }).format(d);
 }
-
-const STATUS_LABEL: Record<"PENDING" | "APPROVED" | "REJECTED", string> = {
-  PENDING: "En attente de validation",
-  APPROVED: "Approuvée",
-  REJECTED: "Rejetée",
-};
-
-const STATUS_COLOR: Record<"PENDING" | "APPROVED" | "REJECTED", string> = {
-  PENDING: "bg-amber-100 text-amber-800 border-amber-200",
-  APPROVED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  REJECTED: "bg-rose-100 text-rose-800 border-rose-200",
-};
 
 export default async function RegistrationDetailPage({
   params,
@@ -39,6 +34,7 @@ export default async function RegistrationDetailPage({
     select: {
       id: true,
       userId: true,
+      user: { select: { profileStatus: true } },
       status: true,
       badgePrinted: true,
       badgePrintedAt: true,
@@ -50,6 +46,8 @@ export default async function RegistrationDetailPage({
       snapshotLastName: true,
       snapshotEmail: true,
       snapshotStructure: true,
+      snapshotPhoto: true,
+      snapshotIdDocument: true,
       snapshotIdDocumentType: true,
       snapshotIdDocumentNumber: true,
       event: { select: { title: true, date: true, location: true } },
@@ -65,90 +63,98 @@ export default async function RegistrationDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/account" className="text-sm text-indigo-600 hover:underline">
-          ← Retour
+        <Link href="/account" className="inline-flex items-center gap-1 text-sm text-green-600 hover:underline">
+          <Icon name="arrow-left" size={14} /> Retour
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">{registration.event.title}</h1>
-        <p className="text-sm text-gray-600">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold text-slate-900">{registration.event.title}</h1>
+          <StatusBadge status={registration.status} />
+        </div>
+        <p className="text-sm text-slate-600">
           {formatDate(registration.event.date)} · {registration.event.location}
         </p>
       </div>
 
-      <div
-        className={`rounded-lg border p-4 ${STATUS_COLOR[registration.status]}`}
-      >
-        <p className="font-semibold">{STATUS_LABEL[registration.status]}</p>
-        {registration.status === "REJECTED" && (
-          <div className="mt-2 space-y-1 text-sm">
-            {registration.rejectionReason && (
-              <p>
-                <strong>Motif :</strong> {registration.rejectionReason}
-              </p>
-            )}
-            {registration.rejectionDetails && (
-              <p className="text-gray-700">{registration.rejectionDetails}</p>
-            )}
+      {registration.status === "PENDING" && registration.user.profileStatus !== "APPROVED" && (
+        <Alert tone="warn">
+          <div>
+            <p className="font-semibold">Inscription en attente de validation du profil</p>
+            <p className="mt-1 text-[13px]">
+              Vos pièces sont en cours de vérification par la plateforme. Votre inscription sera examinée
+              par l&apos;organisateur une fois cette vérification terminée.{" "}
+              <Link href="/account/profile" className="text-green-700 underline">
+                Voir mon profil
+              </Link>
+            </p>
           </div>
-        )}
-        {registration.status === "APPROVED" && registration.badgePrinted && (
-          <p className="text-sm mt-1">Badge imprimé le {formatDate(registration.badgePrintedAt!)}.</p>
-        )}
-      </div>
-
-      {registration.status === "REJECTED" && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-          <p className="text-sm text-gray-700">
-            Vous pouvez corriger les informations de votre profil puis resoumettre votre inscription.
-            Le snapshot soumis sera réécrit avec les valeurs actuelles de votre profil.
-          </p>
-          <Link href="/account/profile" className="text-sm text-indigo-600 underline">
-            Modifier mon profil
-          </Link>
-          <ResubmitButton registrationId={registration.id} />
-        </div>
+        </Alert>
       )}
 
-      <section className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
-          Informations enregistrées pour cette inscription
-        </h2>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div>
-            <dt className="text-gray-500">Catégorie</dt>
-            <dd className="text-gray-900">
-              <span
-                className="inline-block w-3 h-3 rounded-sm mr-2 align-middle"
-                style={{ backgroundColor: registration.category.color }}
-              />
-              {registration.category.name}
-            </dd>
+      {registration.status === "APPROVED" && registration.badgePrinted && (
+        <Alert tone="success">
+          <Icon name="check" size={16} /> Badge imprimé le {formatDate(registration.badgePrintedAt!)}.
+        </Alert>
+      )}
+
+      {registration.status === "REJECTED" && (
+        <Card>
+          <CardBody className="space-y-3">
+            <Alert tone="err">
+              <div>
+                <p className="font-semibold">Inscription rejetée</p>
+                {registration.rejectionReason && (
+                  <p className="mt-1 text-[13px]">Motif : {registration.rejectionReason}</p>
+                )}
+                {registration.rejectionDetails && (
+                  <p className="mt-0.5 text-[13px]">{registration.rejectionDetails}</p>
+                )}
+              </div>
+            </Alert>
+            <p className="text-sm text-slate-600">
+              Vous pouvez corriger les informations de votre profil puis resoumettre votre inscription. Le snapshot
+              soumis sera réécrit avec les valeurs actuelles de votre profil.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/account/profile" className="text-sm text-green-600 hover:underline">
+                Modifier mon profil
+              </Link>
+              <ResubmitButton registrationId={registration.id} />
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      <Card>
+        <CardHead title="Informations enregistrées pour cette inscription" />
+        <CardBody>
+          <KeyValue
+            items={[
+              {
+                label: "Catégorie",
+                value: <CatPill color={registration.category.color} label={registration.category.name} />,
+              },
+              { label: "Nom", value: `${registration.snapshotFirstName} ${registration.snapshotLastName}` },
+              { label: "E-mail", value: registration.snapshotEmail },
+              { label: "Structure", value: registration.snapshotStructure },
+              {
+                label: "Pièce",
+                value: `${registration.snapshotIdDocumentType} — ${registration.snapshotIdDocumentNumber}`,
+              },
+              { label: "Inscrit le", value: formatDate(registration.createdAt) },
+            ]}
+          />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title="Pièces fournies" />
+        <CardBody>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <DocumentPreview storageKey={registration.snapshotPhoto} label="Photo" />
+            <DocumentPreview storageKey={registration.snapshotIdDocument} label="Pièce d'identité" />
           </div>
-          <div>
-            <dt className="text-gray-500">Nom</dt>
-            <dd className="text-gray-900">
-              {registration.snapshotFirstName} {registration.snapshotLastName}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Email</dt>
-            <dd className="text-gray-900">{registration.snapshotEmail}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Structure</dt>
-            <dd className="text-gray-900">{registration.snapshotStructure}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Pièce</dt>
-            <dd className="text-gray-900">
-              {registration.snapshotIdDocumentType} — {registration.snapshotIdDocumentNumber}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Inscrit le</dt>
-            <dd className="text-gray-900">{formatDate(registration.createdAt)}</dd>
-          </div>
-        </dl>
-      </section>
+        </CardBody>
+      </Card>
     </div>
   );
 }

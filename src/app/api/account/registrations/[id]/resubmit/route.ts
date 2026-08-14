@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
+import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationResubmitted } from "@/lib/mail";
 
 export async function POST(
@@ -42,6 +43,7 @@ export async function POST(
         idDocumentType: true,
         idDocumentNumber: true,
         idDocument: true,
+        profileStatus: true,
       },
     });
     if (!user) {
@@ -55,6 +57,14 @@ export async function POST(
       return NextResponse.json(
         { code: "PROFILE_INCOMPLETE", error: "Votre profil est incomplet : complétez-le avant de resoumettre." },
         { status: 400 },
+      );
+    }
+
+    // v4 (plan 09) : idem inscription -- les pieces deposees suffisent.
+    if (!canRegisterToEvent(user.profileStatus)) {
+      return NextResponse.json(
+        { code: "PROFILE_NOT_SUBMITTED", error: "Complétez votre profil et déposez vos pièces avant de resoumettre." },
+        { status: 403 },
       );
     }
 

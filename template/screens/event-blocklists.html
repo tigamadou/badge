@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Listes de blocage</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "settings", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" }, crumbs: ["Salon Tech", "Salon Tech 2026", "Paramètres", "Listes de blocage"] };</script>
+<div id="page" data-screen-label="43 Event listes de blocage">
+
+  <div class="page-head"><div><h1>Listes de blocage</h1><p class="sub">Empêche certaines inscriptions</p></div><button class="btn btn-primary" onclick="document.getElementById('m').hidden=false"><span data-ico="plus" data-size="16"></span> Ajouter</button></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="emails">E-mails bloqués <span class="tag" style="margin-left:4px;">12</span></button>
+    <button class="tab" data-tab="docs">Documents bloqués <span class="tag" style="margin-left:4px;">5</span></button>
+  </div>
+
+  <div data-panel="emails">
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Valeur</th><th>Raison</th><th>Ajouté le</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="cell-name mono">spam@exemple.fr</td><td>Inscriptions frauduleuses répétées</td><td class="cell-meta">04/06/2026</td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+          <tr><td class="cell-name mono">test@test.com</td><td>Adresse jetable</td><td class="cell-meta">02/06/2026</td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+          <tr><td class="cell-name mono">bloque@exemple.fr</td><td>Demande de l'organisateur</td><td class="cell-meta">28/05/2026</td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div data-panel="docs" hidden>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>N° de document</th><th>Raison</th><th>Ajouté le</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="cell-name mono">CNI 1234 5678</td><td>Document falsifié</td><td class="cell-meta">03/06/2026</td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+          <tr><td class="cell-name mono">PASS 99AA00</td><td>Usurpation signalée</td><td class="cell-meta">30/05/2026</td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="m">
+  <div class="modal">
+    <div class="mh"><h3>Ajouter à la liste de blocage</h3></div>
+    <div class="mb">
+      <div class="field"><label>Type</label><div class="select-wrap"><select class="input"><option>E-mail</option><option>Document</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div></div>
+      <div class="field"><label>Valeur</label><input class="input" placeholder="e-mail ou n° de document" /></div>
+      <div class="field" style="margin-bottom:0;"><label>Raison</label><textarea class="input" rows="2" placeholder="Motif du blocage…"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-secondary" onclick="document.getElementById('m').hidden=true">Annuler</button><button class="btn btn-danger" onclick="document.getElementById('m').hidden=true"><span data-ico="ban" data-size="16"></span> Bloquer</button></div>
+  </div>
+</div>
+
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  document.querySelectorAll('.tab').forEach(function (t) { t.addEventListener('click', function () { document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('active'); }); t.classList.add('active'); var n = t.getAttribute('data-tab'); document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== n; }); }); });
+</script>
+</body>
+</html>

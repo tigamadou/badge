@@ -204,6 +204,16 @@ describe("requireEventRole", () => {
     });
     expect(await getEffectiveEventRole(s.id, event.id)).toBe("STAFF");
   });
+
+  it("getEffectiveEventRole returns null when the user does not exist", async () => {
+    const { event } = await setupOrgEvent();
+    expect(await getEffectiveEventRole("missing-user", event.id)).toBeNull();
+  });
+
+  it("getEffectiveEventRole returns null when the event does not exist", async () => {
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    expect(await getEffectiveEventRole(u.id, "missing-event")).toBeNull();
+  });
 });
 
 describe("requireEventPermission", () => {
@@ -257,6 +267,20 @@ describe("requireEventPermission", () => {
       data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_OBSERVER" },
     });
     await expect(requireEventPermission(s.id, event.id, "registration.delete")).resolves.toBeUndefined();
+  });
+
+  it("throws NOT_AUTHENTICATED when the user does not exist", async () => {
+    const { event } = await setupOrgEvent();
+    await expect(
+      requireEventPermission("missing-user", event.id, "badge.print"),
+    ).rejects.toMatchObject({ code: "NOT_AUTHENTICATED", httpStatus: 401 });
+  });
+
+  it("throws EVENT_NOT_FOUND when the event does not exist", async () => {
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    await expect(
+      requireEventPermission(u.id, "missing-event", "badge.print"),
+    ).rejects.toMatchObject({ code: "EVENT_NOT_FOUND", httpStatus: 404 });
   });
 });
 
@@ -319,5 +343,33 @@ describe("assertNotLastSuperAdmin", () => {
       data: { email: "sa2@x", password: "x", name: "SA2", isStaff: true, staffRole: "SUPER_ADMIN" },
     });
     await expect(assertNotLastSuperAdmin(u1.id)).resolves.toBeUndefined();
+  });
+});
+
+describe("guards - branches d'entree (contexte / event manquants)", () => {
+  beforeEach(resetAll);
+
+  it("requireOrgRole rejette NOT_AUTHENTICATED si le user n'existe pas", async () => {
+    await expect(requireOrgRole("ghost-user", "any-org", "AUDITOR")).rejects.toMatchObject({
+      code: "NOT_AUTHENTICATED",
+      httpStatus: 401,
+    });
+  });
+
+  it("requireEventRole rejette NOT_AUTHENTICATED si le user n'existe pas", async () => {
+    await expect(requireEventRole("ghost-user", "any-event", "VIEWER")).rejects.toMatchObject({
+      code: "NOT_AUTHENTICATED",
+      httpStatus: 401,
+    });
+  });
+
+  it("requireEventRole rejette EVENT_NOT_FOUND si l'event n'existe pas", async () => {
+    const user = await prisma.user.create({
+      data: { email: `ev-nf-${Date.now()}@x.fr`, password: "x", name: "U" },
+    });
+    await expect(requireEventRole(user.id, "no-such-event", "VIEWER")).rejects.toMatchObject({
+      code: "EVENT_NOT_FOUND",
+      httpStatus: 404,
+    });
   });
 });

@@ -19,33 +19,62 @@ export default async function ProfilePage() {
       idDocumentNumber: true,
       idDocument: true,
       participantProfileCompletedAt: true,
+      profileStatus: true,
     },
   });
 
   if (!user) return null;
 
+  const submissions = await prisma.profileSubmission.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      status: true,
+      rejectionReasonLabel: true,
+      rejectionDetails: true,
+      reviewedAt: true,
+      createdAt: true,
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Mon profil</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Mon profil</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Ces informations sont enregistrées sur votre compte et utilisées pour vos inscriptions.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4 text-sm text-gray-700">
+      <div className="bg-white rounded-lg border border-slate-200 p-4 text-sm text-slate-700">
         <p>
           <strong>Email :</strong> {user.email}{" "}
-          <span className="text-xs text-gray-500">(non modifiable)</span>
+          <span className="text-xs text-slate-500">(non modifiable)</span>
         </p>
         <p className="mt-1">
           <strong>Nom du compte :</strong> {user.name}
         </p>
-        {user.participantProfileCompletedAt ? (
-          <p className="text-emerald-700 mt-1">Profil complet ✓</p>
-        ) : (
+        {user.profileStatus === "INCOMPLETE" && (
           <p className="text-amber-700 mt-1">
             Profil incomplet : complétez tous les champs ci-dessous pour pouvoir vous inscrire.
+          </p>
+        )}
+        {user.profileStatus === "PENDING" && (
+          <p className="text-sky-700 mt-1">
+            Vos documents sont en cours de vérification par la plateforme. Vous pourrez vous inscrire à un
+            événement une fois votre profil validé.
+          </p>
+        )}
+        {user.profileStatus === "APPROVED" && (
+          <p className="text-emerald-700 mt-1">Profil validé — vous pouvez vous inscrire aux événements.</p>
+        )}
+        {user.profileStatus === "REJECTED" && (
+          <p className="text-rose-700 mt-1">
+            Documents refusés
+            {submissions[0]?.rejectionReasonLabel ? ` : ${submissions[0].rejectionReasonLabel}` : ""}
+            {submissions[0]?.rejectionDetails ? ` — ${submissions[0].rejectionDetails}` : ""}. Corrigez-les puis
+            enregistrez pour soumettre à nouveau.
           </p>
         )}
       </div>
@@ -61,6 +90,26 @@ export default async function ProfilePage() {
           idDocument: user.idDocument,
         }}
       />
+
+      {submissions.length > 0 && (
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Historique de mes soumissions</h2>
+          <ul className="mt-3 divide-y divide-slate-100 text-sm">
+            {submissions.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="text-slate-700">
+                  {s.status === "APPROVED" ? "Validé" : s.status === "REJECTED" ? "Rejeté" : "En attente"}
+                  {s.rejectionReasonLabel ? ` — ${s.rejectionReasonLabel}` : ""}
+                  {s.rejectionDetails ? ` (${s.rejectionDetails})` : ""}
+                </span>
+                <span className="text-xs tabular-nums text-slate-400">
+                  Soumis le {new Date(s.createdAt).toLocaleDateString("fr-FR")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

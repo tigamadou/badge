@@ -2,23 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { FormSection } from "@/components/ui/FormControls";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
+import { slugify } from "@/lib/slugify";
 
 type FormState = {
   name: string;
-  slug: string;
-  quotaMaxEvents: string;
-  quotaMaxRegistrations: string;
-  quotaMaxStorageMB: string;
   ownerEmail: string;
   ownerName: string;
 };
 
 const INITIAL_FORM: FormState = {
   name: "",
-  slug: "",
-  quotaMaxEvents: "",
-  quotaMaxRegistrations: "",
-  quotaMaxStorageMB: "",
   ownerEmail: "",
   ownerName: "",
 };
@@ -33,6 +32,11 @@ export function OrgCreationForm() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  // Slug derive en direct du nom, en lecture seule. Le serveur reste seul juge
+  // de l'unicite : en cas de collision il suffixe (-2, -3...). C'est donc une
+  // preview du slug de base, pas une garantie.
+  const derivedSlug = slugify(form.name.trim());
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -43,14 +47,9 @@ export function OrgCreationForm() {
       ownerEmail: form.ownerEmail.trim(),
     };
     if (form.ownerName.trim()) payload.ownerName = form.ownerName.trim();
-    if (form.slug.trim()) payload.slug = form.slug.trim();
-    if (form.quotaMaxEvents) payload.quotaMaxEvents = Number(form.quotaMaxEvents);
-    if (form.quotaMaxRegistrations)
-      payload.quotaMaxRegistrations = Number(form.quotaMaxRegistrations);
-    if (form.quotaMaxStorageMB)
-      payload.quotaMaxStorageMB = Number(form.quotaMaxStorageMB);
+    if (derivedSlug) payload.slug = derivedSlug;
 
-    const res = await fetch("/api/staff/organizations", {
+    const res = await fetch("/api/platform/organizations", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
@@ -58,117 +57,78 @@ export function OrgCreationForm() {
     setSubmitting(false);
     if (res.ok) {
       const json = await res.json();
-      router.push(`/staff/organizations/${json.org.id}`);
+      router.push(`/platform/organizations/${json.org.id}`);
     } else {
       const json = await res.json().catch(() => ({}));
-      setError(json.error ?? "Erreur a la creation.");
+      setError(json.error ?? "Erreur à la création.");
     }
   }
 
-  const canSubmit =
-    form.name.trim() && form.ownerEmail.trim() && !submitting;
+  const canSubmit = form.name.trim() && form.ownerEmail.trim() && !submitting;
 
   return (
-    <form onSubmit={submit} className="max-w-xl space-y-4">
+    <form onSubmit={submit} className="max-w-2xl space-y-4">
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800">
-          {error}
-        </div>
+        <Alert tone="err">
+          <Icon name="alert-triangle" size={16} /> {error}
+        </Alert>
       )}
 
-      <div className="bg-white border rounded p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-700">Organisation</h2>
-        <Field
-          label="Nom de l'organisation"
-          value={form.name}
-          onChange={(v) => set("name", v)}
-          required
-        />
-        <Field
-          label="Slug (optionnel — genere depuis le nom si vide)"
-          value={form.slug}
-          onChange={(v) => set("slug", v)}
-          placeholder="acme-corp"
-        />
-        <Field
-          label="Quota max events (optionnel)"
-          type="number"
-          value={form.quotaMaxEvents}
-          onChange={(v) => set("quotaMaxEvents", v)}
-        />
-        <Field
-          label="Quota max inscriptions (optionnel)"
-          type="number"
-          value={form.quotaMaxRegistrations}
-          onChange={(v) => set("quotaMaxRegistrations", v)}
-        />
-        <Field
-          label="Quota max stockage Mo (optionnel)"
-          type="number"
-          value={form.quotaMaxStorageMB}
-          onChange={(v) => set("quotaMaxStorageMB", v)}
-        />
-      </div>
+      <Card>
+        <div className="px-6">
+          <FormSection
+            title="Organisation"
+            description="Identité de l'organisation. L'abonnement (plan + limites) se gère après création depuis la fiche de l'organisation."
+          >
+            <div className="space-y-4">
+              <Input label="Nom de l'organisation" value={form.name} onChange={(e) => set("name", e.target.value)} required />
+              <Input
+                label="Slug (généré automatiquement)"
+                name="slug"
+                value={derivedSlug}
+                readOnly
+                aria-readonly="true"
+                placeholder="acme-corp"
+              />
+            </div>
+          </FormSection>
 
-      <div className="bg-white border rounded p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-slate-700">OWNER initial</h2>
-        <p className="text-sm text-slate-600">
-          Un utilisateur sera cree (s&apos;il n&apos;existe pas) et un email
-          d&apos;invitation lui sera envoye pour definir son mot de passe.
-        </p>
-        <Field
-          label="Email du OWNER"
-          type="email"
-          value={form.ownerEmail}
-          onChange={(v) => set("ownerEmail", v)}
-          required
-        />
-        <Field
-          label="Nom complet du OWNER (optionnel)"
-          value={form.ownerName}
-          onChange={(v) => set("ownerName", v)}
-        />
-      </div>
+          <FormSection
+            title="OWNER initial"
+            description="Un utilisateur sera créé (s'il n'existe pas) et recevra un e-mail d'invitation pour définir son mot de passe."
+          >
+            <div className="space-y-4">
+              <Input
+                label="E-mail du OWNER"
+                type="email"
+                value={form.ownerEmail}
+                onChange={(e) => set("ownerEmail", e.target.value)}
+                required
+              />
+              <Input
+                label="Nom complet du OWNER (optionnel)"
+                value={form.ownerName}
+                onChange={(e) => set("ownerName", e.target.value)}
+              />
+            </div>
+          </FormSection>
+        </div>
+      </Card>
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
-        >
-          {submitting ? "Creation..." : "Creer l'organisation"}
-        </button>
+      <div className="flex justify-end gap-3">
+        <Button type="button" variant="secondary" onClick={() => router.push("/platform/organizations")}>
+          Annuler
+        </Button>
+        <Button type="submit" className="flex items-center justify-center gap-2" disabled={!canSubmit}>
+          {submitting ? (
+            <>
+              <Spinner size={16} /> Création…
+            </>
+          ) : (
+            "Créer l'organisation"
+          )}
+        </Button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  placeholder?: string;
-  required?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm text-slate-600">{label}</span>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        required={required}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded border px-3 py-1.5 text-sm"
-      />
-    </label>
   );
 }

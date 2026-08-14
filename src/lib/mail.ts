@@ -2,11 +2,8 @@ import { randomBytes } from "crypto";
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/prisma";
 import { resolveSettings, getPlatformSmtp, type ResolvedSettings } from "@/lib/settings";
-import {
-  buildBaseUrl,
-  formatFromAddress,
-  formatFrenchDate,
-} from "@/lib/mail-helpers";
+import { buildBaseUrl, formatFromAddress } from "@/lib/mail-helpers";
+import { formatEventPeriod } from "@/lib/format-date";
 
 export type TransportContext = {
   eventId?: string;
@@ -230,7 +227,8 @@ function escapeText(s: string): string {
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;",
-      })[ch] ?? ch,
+        // La regex ne matche que ces 5 cles : l'acces est toujours defini.
+      })[ch]!,
   );
 }
 
@@ -268,7 +266,7 @@ export async function sendRegistrationConfirmation(registrationId: string): Prom
       snapshotFirstName: true,
       snapshotLastName: true,
       eventId: true,
-      event: { select: { title: true, date: true, location: true } },
+      event: { select: { title: true, date: true, endDate: true, location: true } },
     },
   });
   if (!reg) {
@@ -281,7 +279,7 @@ export async function sendRegistrationConfirmation(registrationId: string): Prom
   const ctx = await resolveTransporter({ eventId: reg.eventId });
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
   const eventTitle = escapeText(reg.event.title);
-  const eventDate = formatFrenchDate(reg.event.date);
+  const eventDate = formatEventPeriod(reg.event.date, reg.event.endDate);
   const eventLocation = escapeText(reg.event.location);
 
   const body = `
@@ -437,7 +435,11 @@ export async function sendBadgePrintedNotification(registrationId: string): Prom
 
 // v2-11 : nouveau template -- envoye apres /api/auth/register pour confirmer l'email.
 // Le `plainToken` est genere par l'appelant (la route) qui en a deja stocke le hash en BDD.
-export async function sendAccountVerifyEmail(userId: string, plainToken: string): Promise<void> {
+export async function sendAccountVerifyEmail(
+  userId: string,
+  plainToken: string,
+  next?: string | null,
+): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true, name: true },
@@ -454,11 +456,18 @@ export async function sendAccountVerifyEmail(userId: string, plainToken: string)
   });
   const safeName = escapeText(user.name);
 
+  // v4 (plan 09) : la destination voyage dans l'URL. Le lien peut etre ouvert sur un
+  // autre appareil que celui de la creation du compte : ni cookie ni session ne survit.
+  const verifyUrl = next
+    ? `${baseUrl}/verify-email/${plainToken}?next=${encodeURIComponent(next)}`
+    : `${baseUrl}/verify-email/${plainToken}`;
+  const ctaLabel = next ? "Confirmer mon email et continuer" : "Confirmer mon email";
+
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${safeName}</strong>,</p>
     <p style="margin:0 0 16px;">Bienvenue sur Badge. Pour activer votre compte, veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous :</p>
     <p style="margin:0 0 24px;text-align:center;">
-      <a href="${baseUrl}/verify-email/${plainToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Confirmer mon email</a>
+      <a href="${verifyUrl}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">${ctaLabel}</a>
     </p>
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message.</p>
   `;
@@ -705,5 +714,71 @@ export async function sendSmtpTest(args: {
     to: args.to,
     subject: "Test SMTP — Badge",
     html: buildEmail({ title: "Test SMTP", body, ctx }),
+  });
+}
+
+// v4 (plan 08) : notifications de decision sur le profil participant. Contexte
+// plateforme (pas d'eventId : la validation du profil n'est pas rattachee a un event).
+async function loadParticipantForProfileMail(userId: string) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, firstName: true, lastName: true, name: true, profileStatus: true },
+  });
+}
+
+export async function sendProfileApproved(userId: string): Promise<void> {
+  const user = await loadParticipantForProfileMail(userId);
+  if (!user) {
+    console.error("[mail] sendProfileApproved: user not found", { userId });
+    return;
+  }
+  const ctx = await resolveTransporter({});
+  const fullName = escapeText(`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name);
+  const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
+  const body = `
+    <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
+    <p style="margin:0 0 16px;">Votre profil a été <span style="color:#059669;font-weight:600;">validé</span> par la plateforme. Vous pouvez désormais vous inscrire aux événements.</p>
+    <p style="margin:0;"><a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a></p>
+  `;
+  await safeSend({
+    to: user.email,
+    subject: "Profil validé — Badge",
+    html: buildEmail({ title: "Profil validé", body, ctx }),
+    ctx,
+  });
+}
+
+export async function sendProfileRejected(userId: string): Promise<void> {
+  const user = await loadParticipantForProfileMail(userId);
+  if (!user) {
+    console.error("[mail] sendProfileRejected: user not found", { userId });
+    return;
+  }
+  const submission = await prisma.profileSubmission.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { rejectionReasonLabel: true, rejectionDetails: true },
+  });
+  const ctx = await resolveTransporter({});
+  const fullName = escapeText(`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name);
+  const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
+  const reasonBlock = submission?.rejectionReasonLabel
+    ? `<p style="margin:0 0 8px;"><strong>Motif :</strong> ${escapeText(submission.rejectionReasonLabel)}</p>`
+    : "";
+  const detailsBlock = submission?.rejectionDetails
+    ? `<p style="margin:0 0 16px;color:#64748b;font-size:14px;">${escapeText(submission.rejectionDetails)}</p>`
+    : "";
+  const body = `
+    <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
+    <p style="margin:0 0 16px;">Vos documents ont été <span style="color:#e11d48;font-weight:600;">refusés</span> par la plateforme.</p>
+    ${reasonBlock}
+    ${detailsBlock}
+    <p style="margin:0;">Corrigez vos documents puis enregistrez à nouveau votre profil : <a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a>.</p>
+  `;
+  await safeSend({
+    to: user.email,
+    subject: "Documents refusés — Badge",
+    html: buildEmail({ title: "Documents refusés", body, ctx }),
+    ctx,
   });
 }

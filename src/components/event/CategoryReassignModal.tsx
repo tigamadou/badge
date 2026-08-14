@@ -27,7 +27,7 @@ export function CategoryReassignModal({
   async function submit() {
     setBusy(true);
     setErr(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ reassignToCategoryId: target }),
@@ -37,7 +37,7 @@ export function CategoryReassignModal({
       setBusy(false);
       return;
     }
-    const del = await fetch(`/api/admin/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
+    const del = await fetch(`/api/org/${orgId}/events/${eventId}/categories/${fromCategory.id}`, {
       method: "DELETE",
     });
     if (!del.ok) {
@@ -54,7 +54,7 @@ export function CategoryReassignModal({
         <h3 className="font-semibold">Réaffecter les inscriptions de « {fromCategory.name} »</h3>
         {err && <div className="text-sm text-red-600">{err}</div>}
         {candidates.length === 0 ? (
-          <p className="text-sm text-gray-500">Aucune autre catégorie disponible. Créez-en une d&apos;abord.</p>
+          <p className="text-sm text-slate-500">Aucune autre catégorie disponible. Créez-en une d&apos;abord.</p>
         ) : (
           <>
             <label className="text-sm block">Vers :</label>

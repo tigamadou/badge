@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ScanResult as ScanResultPanel } from "./ScannerFrame";
+import { CatPill } from "@/components/ui/Labels";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Icon } from "@/components/ui/Icon";
 
 type ScanResult = {
   authorized: boolean;
@@ -31,7 +35,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
 
   async function verifyPayload(payload: string) {
     setBusy(true);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/scan/verify`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/scan/verify`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ payload }),
@@ -88,78 +92,93 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
     setManualPayload("");
   }
 
-  const resultClass = last
-    ? last.authorized
-      ? "border-green-400 bg-green-50"
-      : "border-red-400 bg-red-50"
-    : "border-gray-200 bg-white";
-
   return (
-    <div className="space-y-4 max-w-2xl">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Scanner</h2>
-        <Button variant="secondary" onClick={() => setManualMode((m) => !m)}>
-          {manualMode ? "Activer la caméra" : "Saisie manuelle"}
-        </Button>
-      </div>
-
-      {manualMode ? (
-        <form onSubmit={submitManual} className="bg-white border rounded p-3 flex gap-2">
-          <Input
-            value={manualPayload}
-            onChange={(e) => setManualPayload(e.target.value)}
-            placeholder="ID de badge ou contenu QR"
-          />
-          <Button type="submit" disabled={busy || !manualPayload}>
-            Vérifier
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center gap-2 text-sm font-medium text-slate-600">
+            <Icon name="scan-line" size={16} /> {manualMode ? "Saisie manuelle" : "Caméra active"}
+          </span>
+          <Button variant="secondary" onClick={() => setManualMode((m) => !m)}>
+            {manualMode ? "Activer la caméra" : "Saisie manuelle"}
           </Button>
-        </form>
-      ) : (
-        <div id="qr-scanner-container" ref={containerRef} className="bg-white border rounded p-2" />
-      )}
+        </div>
 
-      <div className={`rounded border p-4 ${resultClass}`}>
-        {last ? (
-          <>
-            <div className="text-lg font-bold">
-              {last.authorized
-                ? "Entrée autorisée"
-                : last.error === "FOREIGN_EVENT"
-                ? "Badge d'un autre événement"
-                : "Refusé"}
+        {manualMode ? (
+          <form onSubmit={submitManual} className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                value={manualPayload}
+                onChange={(e) => setManualPayload(e.target.value)}
+                placeholder="ID de badge ou contenu QR"
+              />
             </div>
-            {last.message && <div className="text-sm">{last.message}</div>}
-            {last.registration && (
-              <div className="mt-2">
-                <div className="font-semibold">
-                  {last.registration.firstName} {last.registration.lastName}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Catégorie : #{last.registration.category.number} {last.registration.category.name}
-                </div>
-                <div className="text-sm">Statut : {last.registration.status}</div>
-              </div>
-            )}
-          </>
+            <Button type="submit" disabled={busy || !manualPayload}>
+              Vérifier
+            </Button>
+          </form>
         ) : (
-          <div className="text-sm text-gray-500">Aucun scan pour le moment.</div>
+          <div
+            id="qr-scanner-container"
+            ref={containerRef}
+            className="mx-auto max-w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 p-2"
+          />
         )}
       </div>
 
-      <section>
-        <h3 className="font-semibold mb-2">Historique session</h3>
-        <ul className="bg-white border rounded divide-y text-sm">
-          {history.length === 0 && <li className="px-3 py-2 text-gray-500">—</li>}
-          {history.map((h, i) => (
-            <li key={i} className="px-3 py-2 flex justify-between">
-              <span>{h.registration ? `${h.registration.firstName} ${h.registration.lastName}` : h.error ?? "?"}</span>
-              <span className={h.authorized ? "text-green-700" : "text-red-700"}>
-                {h.authorized ? "OK" : "Refusé"} — {h.scannedAt.toLocaleTimeString("fr-FR")}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="space-y-6">
+        {last ? (
+          <ScanResultPanel
+            valid={last.authorized}
+            title={
+              last.authorized
+                ? "Accès autorisé"
+                : last.error === "FOREIGN_EVENT"
+                  ? "Badge d'un autre événement"
+                  : "Accès refusé"
+            }
+          >
+            {last.message && <p className="mt-1 text-sm text-slate-600">{last.message}</p>}
+            {last.registration && (
+              <div className="mt-3 space-y-2">
+                <div className="text-base font-semibold text-slate-900">
+                  {last.registration.firstName} {last.registration.lastName}
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <CatPill
+                    color={last.registration.category.color}
+                    label={`#${last.registration.category.number} ${last.registration.category.name}`}
+                  />
+                  <StatusBadge status={last.registration.status as "PENDING" | "APPROVED" | "REJECTED"} />
+                </div>
+              </div>
+            )}
+          </ScanResultPanel>
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+            Aucun scan pour le moment.
+          </div>
+        )}
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-900">Historique de session</h3>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            {history.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-slate-400">Aucun scan.</p>
+            ) : (
+              history.map((h, i) => (
+                <div key={i} className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 text-sm last:border-b-0">
+                  <span className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${h.authorized ? "bg-green-500" : "bg-rose-500"}`} />
+                    {h.registration ? `${h.registration.firstName} ${h.registration.lastName}` : h.error ?? "?"}
+                  </span>
+                  <span className="text-xs tabular-nums text-slate-400">{h.scannedAt.toLocaleTimeString("fr-FR")}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

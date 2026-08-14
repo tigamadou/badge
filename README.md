@@ -45,13 +45,13 @@ make dev
 
 Services disponibles :
 
-| Service | Port direct | URL via Caddy (HTTP) | Description |
-|---------|-------------|----------------------|-------------|
-| app | 3000 | http://badge.local | Next.js (hot reload) |
-| mysql | 3306 | -- | Base de donnees MySQL |
-| phpmyadmin | 8080 | http://pma.badge.local | Interface admin BDD |
-| mailpit | 8025 | http://mail.badge.local | Capture d'emails |
-| caddy | 80 | -- | Reverse proxy dev (routes les sous-domaines `*.badge.local`) |
+| Service | Port direct | URL via Caddy (HTTPS) | Description |
+|---------|-------------|-----------------------|-------------|
+| app | 3785 | https://badge.local | Next.js (hot reload) |
+| mysql | 33060 | -- | Base de donnees MySQL |
+| phpmyadmin | 8080 | https://pma.badge.local | Interface admin BDD |
+| mailpit | 8025 | https://mail.badge.local | Capture d'emails |
+| caddy | 80 / 443 | -- | Reverse proxy dev HTTPS (routes les sous-domaines `*.badge.local`, redirige http vers https) |
 
 **Activer les URLs `*.badge.local`** : ajouter une seule ligne au `/etc/hosts` de la machine hote (sudo requis, a faire une seule fois) :
 
@@ -59,7 +59,20 @@ Services disponibles :
 echo "127.0.0.1 badge.local pma.badge.local mail.badge.local" | sudo tee -a /etc/hosts
 ```
 
-Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent exposes en parallele : aucun outil pointant vers `localhost` n'est casse.
+**Faire confiance a la CA locale de Caddy (HTTPS en dev)** : Caddy sert les
+sous-domaines `*.badge.local` en HTTPS via sa CA interne (`tls internal`). Pour
+eviter l'avertissement du navigateur, importer et approuver la racine une seule
+fois sur la machine hote :
+
+```bash
+# Extraire la racine CA du conteneur caddy
+docker compose -f docker-compose.dev.yml cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
+# macOS : ajouter au trousseau Systeme et marquer "Toujours approuver"
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ./caddy-root.crt
+rm caddy-root.crt
+```
+
+Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent exposes en parallele : aucun outil pointant vers `localhost` n'est casse.
 
 ### Lancer en production
 
@@ -119,13 +132,8 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 La documentation est versionnee. Voir l'[index](docs/README.md) pour choisir
 votre version.
 
-**Version courante (v1)** :
+**Version courante (v4, en construction)** :
 
-- [Architecture technique](docs/v1/architecture.md)
-- [Installation et deploiement](docs/v1/installation.md)
-- [Base de donnees](docs/v1/base-de-donnees.md)
-- [Reference API](docs/v1/api/README.md)
-- [Specifications par feature](docs/v1/features/)
-- [Guide utilisateur](docs/v1/guide-utilisateur/README.md)
-
-**Prochaine version (v2)** : [en construction](docs/v2/README.md).
+- [Plans v4](docs/v4/plans/) — les plans implementes sont retires (le code fait foi)
+- [Installation (dont HTTPS local)](docs/v4/installation.md)
+- [Spec backups hebdomadaires](docs/v4/specs/2026-05-31-v4-stockage-s3-et-backups.md)

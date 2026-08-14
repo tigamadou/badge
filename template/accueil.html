@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Accueil</title>
+<link rel="stylesheet" href="assets/badge.css" />
+<style>
+  .home { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-app); }
+  .home-nav { display: flex; align-items: center; padding: 20px 32px; }
+  .home-nav img { height: 30px; }
+  .home-nav .sp { flex: 1; }
+  .home-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 24px 80px; }
+  .home-main .shield { width: 72px; height: 72px; margin-bottom: 28px; }
+  .home-main h1 { font-size: 40px; font-weight: 600; color: var(--fg1); margin: 0 0 14px; letter-spacing: -0.02em; max-width: 660px; line-height: 1.12; }
+  .home-main p { font-size: 17px; color: var(--fg2); margin: 0 0 32px; max-width: 520px; line-height: 1.55; }
+  .home-main .cta { display: flex; gap: 12px; }
+  .home-feats { display: flex; gap: 40px; margin-top: 64px; flex-wrap: wrap; justify-content: center; }
+  .home-feats .f { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 180px; }
+  .home-feats .f .fi { width: 40px; height: 40px; border-radius: 11px; background: #fff; border: 1px solid var(--border-card); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+  .home-feats .f .ft { font-size: 14px; font-weight: 600; color: var(--fg1); }
+  .home-feats .f .fd { font-size: 13px; color: var(--fg3); line-height: 1.45; }
+  .home-foot { text-align: center; padding: 24px; font-size: 13px; color: var(--fg3); border-top: 1px solid var(--border-card); }
+</style>
+</head>
+<body>
+  <div class="home" data-screen-label="01 Accueil">
+    <div class="home-nav">
+      <img src="assets/logo.svg" alt="Badge" />
+      <span class="sp"></span>
+      <a class="btn btn-secondary btn-sm" href="connexion.html">Se connecter</a>
+    </div>
+    <div class="home-main">
+      <svg class="shield" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M20 2.5 L34 7.2 V19 C34 28.4 27.9 34.6 20 37.5 C12.1 34.6 6 28.4 6 19 V7.2 Z" fill="#36ab58"></path>
+        <text x="20" y="27" font-family="Montserrat, sans-serif" font-size="20" font-weight="700" fill="#fff" text-anchor="middle">B</text>
+      </svg>
+      <h1>La gestion de badges, simple et maîtrisée.</h1>
+      <p>Inscriptions en ligne, modération, génération de badges PDF avec QR code et contrôle d'accès par scan — pour vos événements professionnels et institutionnels.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="connexion.html">Se connecter <span data-ico="arrow-right" data-size="16"></span></a>
+      </div>
+      <div class="home-feats">
+        <div class="f"><span class="fi" data-ico="user-check" data-size="20"></span><span class="ft">Inscription &amp; modération</span><span class="fd">Collectez et approuvez les inscriptions en ligne.</span></div>
+        <div class="f"><span class="fi" data-ico="id-card" data-size="20"></span><span class="ft">Badges PDF + QR</span><span class="fd">Générez des badges prêts à imprimer.</span></div>
+        <div class="f"><span class="fi" data-ico="scan-line" data-size="20"></span><span class="ft">Contrôle d'accès</span><span class="fd">Vérifiez chaque entrée par scan.</span></div>
+      </div>
+    </div>
+    <div class="home-foot">© 2026 Badge · Plateforme multi-organisation et multi-rôles · <a class="link" href="#">Mentions légales</a></div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

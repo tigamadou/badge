@@ -4,7 +4,13 @@ import type { Session } from "next-auth";
 import type { EventRole } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { AuthError, requireEventRole, getEffectiveEventRole } from "@/lib/auth-guards";
+import {
+  AuthError,
+  requireEventRole,
+  requireEventPermission,
+  getEffectiveEventRole,
+} from "@/lib/auth-guards";
+import type { EventPermission } from "@/lib/auth-helpers";
 import type { EffectiveEventRole } from "@/types/auth";
 
 export type EventAuthCtx = {
@@ -16,8 +22,14 @@ export type EventAuthCtx = {
 
 type RouteParams = { params: Promise<{ orgId: string; eventId: string }> };
 
+// Deux modes d'autorisation, exclusifs :
+//  - minRole    : hierarchie de roles (ADMIN > OPERATOR > PRINTER/VIEWER).
+//  - permission : permission atomique (EVENT_PERMISSION_ROLES). A privilegier
+//    quand un role "lateral" doit passer (ex. PRINTER sur badge.print, que la
+//    hierarchie minRole ne satisfait jamais).
 export type WithEventAuthOptions = {
-  minRole: EventRole;
+  minRole?: EventRole;
+  permission?: EventPermission;
   allowArchived?: boolean;
   requireRegistrationOpen?: boolean;
 };
@@ -62,7 +74,13 @@ export function withEventAuth(
     }
 
     try {
-      await requireEventRole(session.user.id, eventId, options.minRole);
+      if (options.permission) {
+        await requireEventPermission(session.user.id, eventId, options.permission);
+      } else if (options.minRole) {
+        await requireEventRole(session.user.id, eventId, options.minRole);
+      } else {
+        throw new Error("withEventAuth: minRole ou permission requis");
+      }
     } catch (err) {
       if (err instanceof AuthError) {
         return NextResponse.json({ error: err.code }, { status: err.httpStatus });

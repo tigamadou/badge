@@ -67,8 +67,13 @@ export async function cleanupE2ETestData(): Promise<void> {
   //    Registration -> EventMembership/OrgMembership -> Category/Blocked* ->
   //    CategoryTemplate -> ActivityLog -> User -> Event -> Organization.
   if (userIds.length > 0) {
+    await prisma.profileSubmission.deleteMany({ where: { userId: { in: userIds } } });
     await prisma.registration.deleteMany({ where: { userId: { in: userIds } } });
   }
+  // v4 (plan 08) : motifs de rejet E2E (prefixe de libelle).
+  await prisma.rejectionReason.deleteMany({ where: { label: { startsWith: "E2E motif " } } });
+  // v4 (plan 11) : templates installes par les tests (prefixe de famille).
+  await prisma.installedBadgeTemplate.deleteMany({ where: { family: { startsWith: "e2e-" } } });
   if (eventIds.length > 0) {
     await prisma.registration.deleteMany({ where: { eventId: { in: eventIds } } });
     await prisma.eventMembership.deleteMany({ where: { eventId: { in: eventIds } } });
@@ -119,6 +124,9 @@ export async function createTestUser(opts: {
   verified?: boolean;
   profile?: boolean;
   password?: string;
+  // v4 (plan 08) : par defaut un profil complet est considere APPROVED (les specs
+  // d'inscription supposent un profil valide). Passer explicitement pour tester le gate.
+  profileStatus?: "INCOMPLETE" | "PENDING" | "APPROVED" | "REJECTED";
 }): Promise<TestUser> {
   const prisma = db();
   const email = `e2e-${opts.scope}-${Date.now()}-${Math.floor(Math.random() * 1e6)}${E2E_EMAIL_SUFFIX}`;
@@ -126,11 +134,14 @@ export async function createTestUser(opts: {
   const name = "E2E User";
   const now = new Date();
 
+  const profileStatus = opts.profileStatus ?? (opts.profile ? "APPROVED" : "INCOMPLETE");
+
   const u = await prisma.user.create({
     data: {
       email,
       password: hashSync(password, 12),
       name,
+      profileStatus,
       ...(opts.verified ? { emailVerifiedAt: now } : {}),
       ...(opts.profile
         ? {
@@ -142,6 +153,47 @@ export async function createTestUser(opts: {
     select: { id: true, email: true, name: true },
   });
   return { id: u.id, email: u.email, password, name: u.name };
+}
+
+// v4 (plan 08) : cree une soumission de profil E2E pour un user donne.
+export async function createTestProfileSubmission(opts: {
+  userId: string;
+  status?: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReasonLabel?: string;
+  rejectionDetails?: string;
+}): Promise<{ id: string }> {
+  const prisma = db();
+  const s = await prisma.profileSubmission.create({
+    data: {
+      userId: opts.userId,
+      photo: "profile/e2e/photos/p.png",
+      idDocumentType: "CNI",
+      idDocumentNumber: "E2E-DOC-1",
+      idDocument: "profile/e2e/documents/d.pdf",
+      status: opts.status ?? "PENDING",
+      rejectionReasonLabel: opts.rejectionReasonLabel ?? null,
+      rejectionDetails: opts.rejectionDetails ?? null,
+      reviewedAt: opts.status && opts.status !== "PENDING" ? new Date() : null,
+    },
+    select: { id: true },
+  });
+  return s;
+}
+
+// v4 (plan 08) : cree un motif de rejet E2E (nettoye par cleanupE2ETestData via le
+// prefixe de libelle).
+export async function createTestRejectionReason(opts: {
+  scope: "PROFILE" | "REGISTRATION" | "BOTH";
+  label?: string;
+  sortOrder?: number;
+}): Promise<{ id: string; label: string }> {
+  const prisma = db();
+  const label = opts.label ?? `E2E motif ${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const r = await prisma.rejectionReason.create({
+    data: { label, scope: opts.scope, sortOrder: opts.sortOrder ?? 0 },
+    select: { id: true, label: true },
+  });
+  return r;
 }
 
 // Cree un user staff verifie avec isStaff=true et staffRole pose.
@@ -162,8 +214,14 @@ export async function createTestStaff(opts: {
 // Ne cree aucun event ; c'est le minimum pour tester les flows org-only.
 export async function createTestOrgWithOwner(opts: {
   scope: string;
-  quotaMaxEvents?: number;
-  quotaMaxRegistrations?: number;
+  // Limites du plan attache a l'org (null/omis = illimite).
+  // maxParticipantsPerEvent est une limite de participants PAR EVENT (abonnements v4).
+  maxEvents?: number;
+  maxParticipantsPerEvent?: number;
+  // Periodicite portee par le plan (defaut MONTHLY).
+  planPeriod?: "MONTHLY" | "ANNUAL";
+  // false = aucun abonnement attache (org bloquee). Defaut true.
+  activeSubscription?: boolean;
 }): Promise<{ orgId: string; owner: TestUser }> {
   const prisma = db();
   const slugSuffix = `${opts.scope}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
@@ -171,10 +229,21 @@ export async function createTestOrgWithOwner(opts: {
     data: {
       name: `E2E Org ${opts.scope}`,
       slug: `e2e-org-${slugSuffix}`,
-      quotaMaxEvents: opts.quotaMaxEvents ?? null,
-      quotaMaxRegistrations: opts.quotaMaxRegistrations ?? null,
     },
   });
+  if (opts.activeSubscription ?? true) {
+    const plan = await prisma.plan.create({
+      data: {
+        name: `e2e-plan-${slugSuffix}`,
+        period: opts.planPeriod ?? "MONTHLY",
+        maxEvents: opts.maxEvents ?? null,
+        maxParticipantsPerEvent: opts.maxParticipantsPerEvent ?? null,
+      },
+    });
+    await prisma.subscription.create({
+      data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
+    });
+  }
   const owner = await createTestUser({ scope: `org-owner-${opts.scope}`, verified: true });
   await prisma.orgMembership.create({
     data: { userId: owner.id, orgId: org.id, role: "OWNER" },
@@ -452,11 +521,20 @@ export async function getUserById(userId: string) {
 // un parcours complet d'inscription.
 export async function createTestEvent(opts: {
   scope: string;
+  date?: Date;
+  endDate?: Date;
+  description?: string;
 }): Promise<{ orgId: string; eventId: string; eventSlug: string; categoryId: string }> {
   const prisma = db();
   const slug = `e2e-${opts.scope}-${Date.now()}`;
   const org = await prisma.organization.create({
     data: { name: "E2E Org", slug: `e2e-org-${opts.scope}-${Date.now()}` },
+  });
+  const plan = await prisma.plan.create({
+    data: { name: `e2e-plan-${opts.scope}-${Date.now()}`, maxEvents: null, maxParticipantsPerEvent: null },
+  });
+  await prisma.subscription.create({
+    data: { orgId: org.id, planId: plan.id, status: "ACTIVE" },
   });
   const event = await prisma.event.create({
     data: {
@@ -464,7 +542,9 @@ export async function createTestEvent(opts: {
       title: "Salon E2E",
       slug,
       location: "Abidjan",
-      date: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      date: opts.date ?? new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      endDate: opts.endDate ?? null,
+      description: opts.description ?? null,
       registrationOpen: true,
     },
   });
@@ -480,7 +560,7 @@ export async function createTestEvent(opts: {
 }
 
 // v2-12 : cree un user staff avec EventMembership ADMIN sur un event donne.
-// Utile pour les E2E qui accedent aux pages /admin/[orgId]/events/[eventId]/*.
+// Utile pour les E2E qui accedent aux pages /org/[orgId]/event/[eventId]/*.
 export async function makeEventAdminUser(opts: {
   scope: string;
   eventId: string;

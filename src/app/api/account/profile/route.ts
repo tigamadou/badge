@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { computeParticipantProfileCompletedAt } from "@/lib/participant-profile";
+import { submitProfile, getCurrentSubmission } from "@/lib/profile-review";
+import { refreshPendingRegistrationSnapshots } from "@/lib/registration-snapshot-sync";
 
 const ID_DOC_TYPES = ["CNI", "Passeport", "Permis", "Autre"] as const;
 
@@ -33,6 +35,7 @@ type SanitizedUser = {
   idDocumentNumber: string | null;
   idDocument: string | null;
   participantProfileCompletedAt: Date | null;
+  profileStatus: string;
   isStaff: boolean;
 };
 
@@ -49,6 +52,7 @@ const SAFE_USER_SELECT = {
   idDocumentNumber: true,
   idDocument: true,
   participantProfileCompletedAt: true,
+  profileStatus: true,
   isStaff: true,
 } as const;
 
@@ -66,7 +70,20 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ code: "NOT_FOUND", error: "Utilisateur introuvable." }, { status: 404 });
     }
-    return NextResponse.json({ user });
+    const currentSubmission = await getCurrentSubmission(session.id);
+    return NextResponse.json({
+      user,
+      currentSubmission: currentSubmission
+        ? {
+            id: currentSubmission.id,
+            status: currentSubmission.status,
+            rejectionReasonLabel: currentSubmission.rejectionReasonLabel,
+            rejectionDetails: currentSubmission.rejectionDetails,
+            createdAt: currentSubmission.createdAt,
+            reviewedAt: currentSubmission.reviewedAt,
+          }
+        : null,
+    });
   } catch (err) {
     if (err instanceof AuthError) return authErrorResponse(err);
     throw err;
@@ -86,11 +103,9 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Construit l'objet de mise a jour en ne touchant que les champs explicitement passes.
-    const data: Record<string, string> = {};
-    for (const [k, v] of Object.entries(parsed.data)) {
-      if (typeof v === "string") data[k] = v;
-    }
+    // Zod omet les champs optionnels absents : parsed.data ne contient que les
+    // champs explicitement passes, tous de type string. On l'utilise directement.
+    const data = parsed.data;
 
     // ADR 2026-06-01 (v2-14 Task 7) : check blocage document plateforme si
     // idDocumentNumber est modifie. eventId=NULL = blocage global.
@@ -139,6 +154,30 @@ export async function PUT(req: NextRequest) {
       details: { fields: Object.keys(data) },
       req,
     });
+
+    // v4 (plan 08) : toute modification des pieces cree une nouvelle soumission et
+    // repasse le profil en attente de validation. Les champs non lies a l'identite
+    // (nom, prenom, structure) ne declenchent rien : submitProfile compare les pieces.
+    await submitProfile(session.id);
+
+    // v4 (plan 15) : les inscriptions encore en attente suivent le profil. Une
+    // inscription validee reste figee. Pas de catch : masquer un echec ici ne se
+    // verrait qu'a l'impression du badge, et l'operation est idempotente.
+    const refreshed = await refreshPendingRegistrationSnapshots(session.id);
+    for (const outcome of refreshed) {
+      await logActivity({
+        type: "REGISTRATION_SNAPSHOT_REFRESHED",
+        userId: session.id,
+        targetId: outcome.registrationId,
+        eventId: outcome.eventId,
+        orgId: outcome.orgId,
+        details:
+          outcome.outcome === "refreshed"
+            ? { outcome: outcome.outcome, fields: outcome.fields }
+            : { outcome: outcome.outcome },
+        req,
+      });
+    }
 
     return NextResponse.json({ user: updated });
   } catch (err) {

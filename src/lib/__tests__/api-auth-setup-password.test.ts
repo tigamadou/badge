@@ -21,6 +21,14 @@ function makeReq(body: unknown) {
   });
 }
 
+function makeRawReq(rawBody: string) {
+  return new NextRequest("http://localhost/api/auth/setup-password", {
+    method: "POST",
+    body: rawBody,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 describe("POST /api/auth/setup-password", () => {
   beforeEach(async () => {
     await cleanDb();
@@ -30,6 +38,14 @@ describe("POST /api/auth/setup-password", () => {
     const { POST } = await import("@/app/api/auth/setup-password/route");
     const res = await POST(makeReq({ password: "secret123" }));
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 INVALID_BODY when the JSON body is malformed (req.json() rejects)", async () => {
+    const { POST } = await import("@/app/api/auth/setup-password/route");
+    const res = await POST(makeRawReq("{not-json"));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe("INVALID_BODY");
   });
 
   it("returns 400 when password is too short", async () => {

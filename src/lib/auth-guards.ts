@@ -46,7 +46,10 @@ export async function requireOrgRole(
 ): Promise<void> {
   const ctx = await loadUserContext(userId);
   if (!ctx) throw new AuthError("NOT_AUTHENTICATED", 401);
-  if (!hasOrgRole(ctx, orgId, role)) throw new AuthError("ORG_FORBIDDEN", 403);
+  // Les routes API conservent le pouvoir d'action staff (audit staffActor cote metier).
+  if (!hasOrgRole(ctx, orgId, role, { allowStaff: true })) {
+    throw new AuthError("ORG_FORBIDDEN", 403);
+  }
 }
 
 // Variante "role minimum" sur event, conservee pour les contextes UI/sidebar.

@@ -1,3 +1,5 @@
+import { Timeline, TimelineItem } from "@/components/ui/Timeline";
+
 type Snapshot = {
   id: string;
   firstName: string;
@@ -10,23 +12,17 @@ type Snapshot = {
 
 export function RegistrationHistory({ snapshots }: { snapshots: Snapshot[] }) {
   if (snapshots.length === 0) {
-    return <p className="text-sm text-gray-500">Aucune modification antérieure.</p>;
+    return <p className="text-sm text-slate-400">Aucune modification antérieure.</p>;
   }
   return (
-    <ul className="bg-white border rounded divide-y text-sm">
+    <Timeline>
       {snapshots.map((s) => (
-        <li key={s.id} className="px-4 py-3">
-          <div className="flex justify-between">
-            <span className="font-medium">
-              {s.firstName} {s.lastName}
-            </span>
-            <span className="text-xs text-gray-500">{new Date(s.createdAt).toLocaleString("fr-FR")}</span>
-          </div>
-          <div className="text-xs text-gray-600">
-            {s.email} — {s.structure} — Doc {s.idDocumentNumber}
-          </div>
-        </li>
+        <TimelineItem
+          key={s.id}
+          title={`${s.firstName} ${s.lastName}`}
+          meta={`${new Date(s.createdAt).toLocaleString("fr-FR")} · ${s.email} — ${s.structure} — Doc ${s.idDocumentNumber}`}
+        />
       ))}
-    </ul>
+    </Timeline>
   );
 }

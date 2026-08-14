@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Inscriptions</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "inscriptions", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" } };</script>
+<div id="page" data-screen-label="31 Event inscriptions">
+
+  <div class="page-head"><div><h1>Inscriptions</h1><p class="sub">1 248 inscriptions</p></div><a class="btn btn-primary" href="event-inscription-create.html"><span data-ico="plus" data-size="16"></span> Inscription manuelle</a></div>
+
+  <div class="toolbar wrap">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Nom, e-mail…" /></div>
+    <button class="chip-filter"><span data-ico="filter" data-size="14"></span> Statut <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="tag" data-size="14"></span> Catégorie <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="chevrons-up-down" data-size="14"></span> Trier : date <span data-ico="chevron-down" data-size="14"></span></button>
+    <span class="spacer"></span>
+    <button class="btn-ghost-sm"><span data-ico="download" data-size="14"></span> Exporter</button>
+  </div>
+
+  <div class="batch-bar">
+    <span class="cnt">3 sélectionnées</span>
+    <span class="spacer"></span>
+    <button class="bb-btn"><span data-ico="check" data-size="15"></span> Approuver</button>
+    <button class="bb-btn"><span data-ico="printer" data-size="15"></span> Imprimer</button>
+    <button class="bb-btn"><span data-ico="download" data-size="15"></span> Exporter</button>
+    <button class="bb-btn"><span data-ico="x" data-size="15"></span></button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th class="ck"><span class="box on"><span data-ico="check" data-size="12"></span></span></th><th>Nom</th><th>E-mail</th><th>Doc</th><th>Catégorie</th><th>Statut</th><th>Soumise</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="ck"><span class="box on"><span data-ico="check" data-size="12"></span></span></td><td class="cell-name">Camille Laurent</td><td class="cell-meta">camille.laurent@exemple.fr</td><td><span data-ico="file-text" data-size="16" style="color:var(--green-600);"></span></td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td class="cell-meta">07/06</td><td><div class="row-actions"><a class="btn-icon" href="event-inscription-detail.html"><span data-ico="chevron-right" data-size="16"></span></a></div></td></tr>
+        <tr><td class="ck"><span class="box on"><span data-ico="check" data-size="12"></span></span></td><td class="cell-name">Yanis Bernard</td><td class="cell-meta">yanis.bernard@exemple.fr</td><td><span data-ico="file-text" data-size="16" style="color:var(--green-600);"></span></td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><span class="status status-pending"><span data-ico="clock" data-size="12"></span> En attente</span></td><td class="cell-meta">07/06</td><td><div class="row-actions"><a class="btn-icon" href="event-inscription-detail.html"><span data-ico="chevron-right" data-size="16"></span></a></div></td></tr>
+        <tr><td class="ck"><span class="box on"><span data-ico="check" data-size="12"></span></span></td><td class="cell-name">Hugo Faure</td><td class="cell-meta">hugo.faure@exemple.fr</td><td><span data-ico="file" data-size="16" style="color:var(--slate-300);"></span></td><td><span class="cat-pill"><span class="cat-dot" style="background:#f59e0b;"></span> Visiteur</span></td><td><span class="status status-pending"><span data-ico="clock" data-size="12"></span> En attente</span></td><td class="cell-meta">06/06</td><td><div class="row-actions"><a class="btn-icon" href="event-inscription-detail.html"><span data-ico="chevron-right" data-size="16"></span></a></div></td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td class="cell-name">Inès Moreau</td><td class="cell-meta">ines.moreau@exemple.fr</td><td><span data-ico="file-text" data-size="16" style="color:var(--green-600);"></span></td><td><span class="cat-pill"><span class="cat-dot" style="background:#f43f5e;"></span> Presse</span></td><td><span class="status status-rejected"><span data-ico="x" data-size="12"></span> Rejetée</span></td><td class="cell-meta">06/06</td><td><div class="row-actions"><a class="btn-icon" href="event-inscription-detail.html"><span data-ico="chevron-right" data-size="16"></span></a></div></td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td class="cell-name">Léa Girard</td><td class="cell-meta">lea.girard@exemple.fr</td><td><span data-ico="file-text" data-size="16" style="color:var(--green-600);"></span></td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td class="cell-meta">05/06</td><td><div class="row-actions"><a class="btn-icon" href="event-inscription-detail.html"><span data-ico="chevron-right" data-size="16"></span></a></div></td></tr>
+        <tr><td class="ck"><span class="box"></span></td><td class="cell-name">Thomas Rey</td><td class="cell-meta">thomas.rey@exemple.fr</td><td><span data-ico="file-text" data-size="16" style="color:var(--green-600);"></span></td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td class="cell-meta">05/06</td><td><div class="row-actions"><a class="btn-icon" href="event-inscription-detail.html"><span data-ico="chevron-right" data-size="16"></span></a></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager"><span class="info">1–6 sur 1 248</span><div class="ctrls"><button class="btn-ghost-sm" disabled style="opacity:.5;"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

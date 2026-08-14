@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Dashboard</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "dashboard", user: { name: "Marie Dubois", role: "SUPER_ADMIN" } };</script>
+<div id="page" data-screen-label="12 Staff dashboard">
+
+  <div class="page-head">
+    <div><h1>Tableau de bord</h1><p class="sub">Vue d'ensemble de la plateforme</p></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="statcard"><div class="top"><p class="lbl">Organisations</p><span class="ic"><span data-ico="building-2" data-size="18"></span></span></div><p class="val">24</p><p class="sub"><span class="delta up"><span data-ico="trending-up" data-size="12"></span> +2</span> ce mois</p></div>
+    <div class="statcard"><div class="top"><p class="lbl">Événements</p><span class="ic"><span data-ico="calendar" data-size="18"></span></span></div><p class="val">38</p><p class="sub">11 actifs</p></div>
+    <div class="statcard"><div class="top"><p class="lbl">Inscriptions</p><span class="ic"><span data-ico="user-check" data-size="18"></span></span></div><p class="val">12 480</p><p class="sub"><span class="delta up"><span data-ico="trending-up" data-size="12"></span> +840</span> 30 j</p></div>
+    <div class="statcard"><div class="top"><p class="lbl">Stockage</p><span class="ic"><span data-ico="hard-drive" data-size="18"></span></span></div><p class="val">18,4 Go</p><p class="sub">sur 200 Go</p></div>
+  </div>
+
+  <div class="panel-grid">
+    <div class="card">
+      <div class="card-head"><h3>Top 5 organisations</h3><p>Par nombre d'inscriptions</p></div>
+      <div class="card-pad" style="padding-top:8px;">
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:13px;">UF</span><div style="flex:1;"><div class="cell-name">Université Forum</div><div class="ds-meta">5 événements</div></div><div style="width:120px;"><div class="qbar"><div class="qfill" style="width:100%;"></div></div></div><span class="ds-value" style="width:56px;text-align:right;">2 105</span></div>
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:13px;">ST</span><div style="flex:1;"><div class="cell-name">Salon Tech</div><div class="ds-meta">3 événements</div></div><div style="width:120px;"><div class="qbar"><div class="qfill" style="width:59%;"></div></div></div><span class="ds-value" style="width:56px;text-align:right;">1 248</span></div>
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:13px;">EX</span><div style="flex:1;"><div class="cell-name">ExpoPro Lyon</div><div class="ds-meta">2 événements</div></div><div style="width:120px;"><div class="qbar"><div class="qfill" style="width:42%;"></div></div></div><span class="ds-value" style="width:56px;text-align:right;">880</span></div>
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:13px;">CM</span><div style="flex:1;"><div class="cell-name">Congrès Médical</div><div class="ds-meta">1 événement</div></div><div style="width:120px;"><div class="qbar"><div class="qfill" style="width:26%;"></div></div></div><span class="ds-value" style="width:56px;text-align:right;">540</span></div>
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:13px;">AF</span><div style="flex:1;"><div class="cell-name">Assises Formation</div><div class="ds-meta">1 événement</div></div><div style="width:120px;"><div class="qbar"><div class="qfill" style="width:14%;"></div></div></div><span class="ds-value" style="width:56px;text-align:right;">295</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Activité récente</h3></div>
+      <div class="card-pad" style="padding-top:18px;">
+        <div class="tl">
+          <div class="tl-item"><span class="tl-dot ok"></span><div class="tl-t">Nouvelle organisation créée — <b>Assises Formation</b></div><div class="tl-s">Marie Dubois · il y a 2 h</div></div>
+          <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">Quota stockage relevé pour <b>Université Forum</b></div><div class="tl-s">Système · il y a 5 h</div></div>
+          <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">Utilisateur staff ajouté — <b>P. Garnier</b></div><div class="tl-s">Marie Dubois · hier</div></div>
+          <div class="tl-item"><span class="tl-dot warn"></span><div class="tl-t">Test SMTP échoué puis rétabli</div><div class="tl-s">Système · hier</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -2,9 +2,22 @@
 
 import { useState, use } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
+import { PasswordMeter } from "@/components/ui/PasswordMeter";
+import { Icon } from "@/components/ui/Icon";
+
+function pwScore(v: string): 0 | 1 | 2 | 3 | 4 {
+  let s = 0;
+  if (v.length >= 6) s++;
+  if (v.length >= 10) s++;
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) s++;
+  if (/\d/.test(v) || /[^A-Za-z0-9]/.test(v)) s++;
+  return Math.min(4, s) as 0 | 1 | 2 | 3 | 4;
+}
+const PW_LABEL = ["très faible", "faible", "moyenne", "correcte", "forte"];
 
 export default function ResetPasswordPage({
   params,
@@ -50,28 +63,33 @@ export default function ResetPasswordPage({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white rounded-lg shadow p-8">
-        <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="Logo" width={120} height={120} className="h-20 w-auto object-contain" />
+    <AuthCard
+      title={done ? "Mot de passe mis à jour" : "Nouveau mot de passe"}
+      subtitle={done ? undefined : "Choisissez un mot de passe pour votre compte."}
+    >
+      {done ? (
+        <div className="text-center">
+          <SuccessRing>
+            <Icon name="check" size={34} />
+          </SuccessRing>
+          <p className="text-sm text-slate-600">
+            Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
+          </p>
+          <Link
+            href="/login"
+            className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700"
+          >
+            Se connecter
+          </Link>
         </div>
-        <h1 className="text-xl font-bold text-center mb-6">Nouveau mot de passe</h1>
-
-        {done ? (
-          <div className="space-y-4 text-center">
-            <p className="text-green-700 font-medium">Mot de passe mis à jour.</p>
-            <p className="text-sm text-gray-700">
-              Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.
-            </p>
-            <Link
-              href="/login"
-              className="inline-block mt-2 bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-semibold"
-            >
-              Se connecter
-            </Link>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert tone="err">
+              <Icon name="alert-triangle" size={16} /> {error}
+            </Alert>
+          )}
+          <div>
             <Input
               label="Nouveau mot de passe"
               type="password"
@@ -79,22 +97,36 @@ export default function ResetPasswordPage({
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="new-password"
+              disabled={loading}
             />
-            <Input
-              label="Confirmer le mot de passe"
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-              autoComplete="new-password"
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Mise à jour..." : "Mettre à jour"}
-            </Button>
-          </form>
-        )}
-      </div>
-    </div>
+            <PasswordMeter score={pwScore(password)} />
+            {password && (
+              <p className="-mt-1 text-[13px] text-slate-500">
+                Robustesse :{" "}
+                <b className={pwScore(password) >= 3 ? "text-green-700" : "text-rose-700"}>{PW_LABEL[pwScore(password)]}</b>
+              </p>
+            )}
+          </div>
+          <Input
+            label="Confirmer le mot de passe"
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            autoComplete="new-password"
+            disabled={loading}
+          />
+          <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
+            {loading ? (
+              <>
+                <Spinner size={16} /> Mise à jour…
+              </>
+            ) : (
+              "Mettre à jour"
+            )}
+          </Button>
+        </form>
+      )}
+    </AuthCard>
   );
 }

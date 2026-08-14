@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Créer un utilisateur</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "users", user: { name: "Marie Dubois", role: "SUPER_ADMIN" }, crumbs: ["Staff", "Utilisateurs", "Créer"] };</script>
+<div id="page" data-screen-label="17 Staff création utilisateur">
+
+  <a class="link" href="staff-users.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Utilisateurs</a>
+  <div class="page-head" style="margin-top:12px;"><div><h1>Créer un utilisateur</h1><p class="sub">Un e-mail d'invitation sera envoyé pour définir le mot de passe</p></div></div>
+
+  <div class="card card-pad" style="max-width:640px;">
+    <div class="form-section">
+      <h3>Compte</h3>
+      <div class="field"><label>Adresse e-mail <span class="req">*</span></label><input class="input" type="email" placeholder="prenom.nom@exemple.fr" /></div>
+      <div class="field" style="margin-bottom:0;"><label>Nom complet <span class="req">*</span></label><input class="input" placeholder="Prénom Nom" /></div>
+    </div>
+
+    <div class="form-section">
+      <h3>Type de compte</h3>
+      <div class="radio-cards" style="grid-template-columns:1fr 1fr;">
+        <div class="radio-card sel" tabindex="0"><span class="swatch" style="background:var(--brand-navy);"></span><div><div class="rc-t">Staff</div><div class="rc-d">Administration de la plateforme.</div></div><span class="rc-check" data-ico="check-circle" data-size="18"></span></div>
+        <div class="radio-card" tabindex="0"><span class="swatch" style="background:var(--green-600);"></span><div><div class="rc-t">Client</div><div class="rc-d">Rattaché à une organisation.</div></div><span class="rc-check" data-ico="check-circle" data-size="18"></span></div>
+      </div>
+    </div>
+
+    <div class="form-section" id="staff-role">
+      <h3>Rôle staff</h3>
+      <div class="field" style="margin-bottom:0;"><div class="select-wrap"><select class="input"><option>STAFF</option><option>SUPER_ADMIN</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div><p class="help">SUPER_ADMIN peut modifier les paramètres sensibles de la plateforme.</p></div>
+    </div>
+
+    <div class="form-section" style="border-bottom:0;">
+      <h3>Lier à une organisation <span class="ds-meta" style="font-weight:400;text-transform:none;letter-spacing:0;">(optionnel)</span></h3>
+      <div class="row-2">
+        <div class="field" style="margin-bottom:0;"><label>Organisation</label><div class="select-wrap"><select class="input"><option>Aucune</option><option>Salon Tech</option><option>Université Forum</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div></div>
+        <div class="field" style="margin-bottom:0;"><label>Rôle dans l'org</label><div class="select-wrap"><select class="input"><option>OWNER</option><option>MANAGER</option><option>AUDITOR</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="between" style="max-width:640px;margin-top:20px;">
+    <button class="btn btn-secondary">Annuler</button>
+    <button class="btn btn-primary"><span data-ico="send" data-size="16"></span> Créer et inviter</button>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  document.querySelectorAll('#page .radio-card').forEach(function (c) {
+    c.addEventListener('click', function () {
+      document.querySelectorAll('#page .radio-card').forEach(function (x) { x.classList.remove('sel'); });
+      c.classList.add('sel');
+    });
+  });
+</script>
+</body>
+</html>

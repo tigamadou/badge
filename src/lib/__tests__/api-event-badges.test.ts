@@ -89,9 +89,9 @@ describe("Badges API — GET /registrations contract used by /badges page", () =
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { GET } = await import("@/app/api/admin/[orgId]/events/[eventId]/registrations/route");
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
     const res = await GET(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/registrations?status=APPROVED&limit=100`),
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations?status=APPROVED&limit=100`),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
     );
     expect(res.status).toBe(200);
@@ -149,7 +149,7 @@ describe("Badges API — POST /registrations/print", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
     );
     const res = await POST(
       new NextRequest(`http://localhost/x`, {
@@ -196,7 +196,7 @@ describe("Badges API — POST /registrations/print", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
     );
     const res = await POST(
       new NextRequest(`http://localhost/x`, {
@@ -213,7 +213,7 @@ describe("Badges API — POST /registrations/print", () => {
     expect(reload?.badgePrinted).toBe(false);
   });
 
-  it("OPERATOR cannot batch print (403)", async () => {
+  it("OPERATOR peut batch print (200, permission badge.print)", async () => {
     const { u, org, event, cat } = await seed("OPERATOR");
     const p = await mkParticipant("op");
     const r = await prisma.registration.create({
@@ -236,7 +236,43 @@ describe("Badges API — POST /registrations/print", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/registrations/print/route"
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
+    );
+    const res = await POST(
+      new NextRequest(`http://localhost/x`, {
+        method: "POST",
+        body: JSON.stringify({ ids: [r.id] }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("VIEWER cannot batch print (403, hors badge.print)", async () => {
+    const { u, org, event, cat } = await seed("VIEWER");
+    const p = await mkParticipant("vw");
+    const r = await prisma.registration.create({
+      data: {
+        id: "REG-VW",
+        eventId: event.id,
+        categoryId: cat.id,
+        userId: p.id,
+        snapshotEmail: "v@x.fr",
+        snapshotFirstName: "V",
+        snapshotLastName: "L",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "V",
+        snapshotIdDocument: "uploads/test/doc.pdf",
+        status: "APPROVED",
+      },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/registrations/print/route"
     );
     const res = await POST(
       new NextRequest(`http://localhost/x`, {

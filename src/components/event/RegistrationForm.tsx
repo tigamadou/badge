@@ -4,8 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Dropzone, FileBox } from "@/components/ui/FileBox";
+import { Card } from "@/components/ui/Card";
+import { FormSection } from "@/components/ui/FormControls";
+import { RadioCards } from "@/components/ui/RadioCards";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 type Category = { id: string; name: string; number: number };
+
+const SELECT_CLASS =
+  "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500";
 
 export function RegistrationForm({
   orgId,
@@ -41,14 +50,39 @@ export function RegistrationForm({
   const [idDocument, setIdDocument] = useState<string | null>(initial?.idDocument ?? null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<"photo" | "document" | null>(null);
+
+  async function uploadReg(
+    kind: "photo" | "document",
+    files: FileList,
+    setter: (key: string) => void,
+  ) {
+    const file = files[0];
+    if (!file) return;
+    setUploading(kind);
+    setErr(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/upload?kind=${kind}`, {
+      method: "POST",
+      body: fd,
+    });
+    setUploading(null);
+    if (!res.ok) {
+      setErr("Échec de l'envoi du fichier.");
+      return;
+    }
+    const { storageKey } = await res.json();
+    setter(storageKey);
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr(null);
     const url = initial
-      ? `/api/admin/${orgId}/events/${eventId}/registrations/${initial.id}`
-      : `/api/admin/${orgId}/events/${eventId}/registrations`;
+      ? `/api/org/${orgId}/events/${eventId}/registrations/${initial.id}`
+      : `/api/org/${orgId}/events/${eventId}/registrations`;
     const res = await fetch(url, {
       method: initial ? "PATCH" : "POST",
       headers: { "content-type": "application/json" },
@@ -71,40 +105,139 @@ export function RegistrationForm({
       return;
     }
     const json = await res.json();
-    router.push(`/admin/${orgId}/events/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
+    router.push(`/event/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
   }
 
   return (
-    <form onSubmit={submit} className="bg-white border rounded p-4 space-y-3 max-w-xl">
-      <h2 className="text-xl font-semibold">{initial ? "Modifier l'inscription" : "Nouvelle inscription"}</h2>
-      {err && <div className="text-sm text-red-600">{err}</div>}
-      <div className="grid grid-cols-2 gap-3">
-        <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" required />
-        <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" required />
+    <form onSubmit={submit} className="max-w-2xl space-y-4">
+      {err && (
+        <Alert tone="err">
+          <Icon name="alert-triangle" size={16} /> {err}
+        </Alert>
+      )}
+      <Card>
+        <div className="px-6">
+          <FormSection title="Identité">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input label="Prénom" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                <Input label="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+              </div>
+              <Input label="Adresse e-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                label="Structure / organisation"
+                value={structure}
+                onChange={(e) => setStructure(e.target.value)}
+                required
+              />
+            </div>
+          </FormSection>
+
+          <FormSection title="Catégorie">
+            <RadioCards
+              name="Catégorie"
+              value={categoryId || null}
+              onChange={setCategoryId}
+              options={categories.map((c) => ({ value: c.id, title: `#${c.number} — ${c.name}` }))}
+            />
+          </FormSection>
+
+          <FormSection title="Pièce d'identité">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-slate-700">Type</span>
+                  <select value={idDocumentType} onChange={(e) => setIdDocumentType(e.target.value)} className={SELECT_CLASS}>
+                    <option value="CNI">CNI</option>
+                    <option value="PASSPORT">Passeport</option>
+                    <option value="DRIVER_LICENSE">Permis de conduire</option>
+                    <option value="OTHER">Autre</option>
+                  </select>
+                </label>
+                <Input
+                  label="Numéro de pièce"
+                  value={idDocumentNumber}
+                  onChange={(e) => setIdDocumentNumber(e.target.value)}
+                  required
+                />
+              </div>
+              <RegFileField
+                label="Photo"
+                storageKey={photo}
+                accept="image/jpeg,image/png,image/webp"
+                uploading={uploading === "photo"}
+                onUpload={(files) => uploadReg("photo", files, setPhoto)}
+                onClear={() => setPhoto(null)}
+              />
+              <RegFileField
+                label="Pièce d'identité"
+                storageKey={idDocument}
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                uploading={uploading === "document"}
+                onUpload={(files) => uploadReg("document", files, setIdDocument)}
+                onClear={() => setIdDocument(null)}
+              />
+            </div>
+          </FormSection>
+        </div>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button type="submit" className="flex items-center justify-center gap-2" disabled={busy}>
+          {busy ? (
+            <>
+              <Spinner size={16} /> Enregistrement…
+            </>
+          ) : initial ? (
+            "Mettre à jour"
+          ) : (
+            "Créer l'inscription"
+          )}
+        </Button>
       </div>
-      <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
-      <Input value={structure} onChange={(e) => setStructure(e.target.value)} placeholder="Structure / organisation" required />
-      <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full border rounded px-2 py-1 text-sm">
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            #{c.number} — {c.name}
-          </option>
-        ))}
-      </select>
-      <div className="grid grid-cols-2 gap-3">
-        <select value={idDocumentType} onChange={(e) => setIdDocumentType(e.target.value)} className="border rounded px-2 py-1 text-sm">
-          <option value="CNI">CNI</option>
-          <option value="PASSPORT">Passeport</option>
-          <option value="DRIVER_LICENSE">Permis de conduire</option>
-          <option value="OTHER">Autre</option>
-        </select>
-        <Input value={idDocumentNumber} onChange={(e) => setIdDocumentNumber(e.target.value)} placeholder="N° de pièce" required />
-      </div>
-      <Input value={photo ?? ""} onChange={(e) => setPhoto(e.target.value || null)} placeholder="Chemin photo (uploads/...)" />
-      <Input value={idDocument ?? ""} onChange={(e) => setIdDocument(e.target.value || null)} placeholder="Chemin pièce d'identité" />
-      <Button type="submit" disabled={busy}>
-        {busy ? "..." : initial ? "Mettre à jour" : "Créer"}
-      </Button>
     </form>
+  );
+}
+
+function RegFileField({
+  label,
+  storageKey,
+  accept,
+  uploading,
+  onUpload,
+  onClear,
+}: {
+  label: string;
+  storageKey: string | null;
+  accept: string;
+  uploading: boolean;
+  onUpload: (files: FileList) => void;
+  onClear: () => void;
+}) {
+  const isPdf = accept.includes("pdf");
+  return (
+    <div className="space-y-2">
+      <span className="block text-sm font-medium text-slate-700">{label}</span>
+      {storageKey ? (
+        <FileBox
+          icon="file"
+          thumbUrl={isPdf ? undefined : `/api/files/${storageKey}`}
+          title={label}
+          subtitle={storageKey}
+          action={
+            <Button type="button" variant="secondary" onClick={onClear}>
+              Retirer
+            </Button>
+          }
+        />
+      ) : (
+        <Dropzone
+          onFiles={onUpload}
+          accept={accept}
+          title={uploading ? "Envoi…" : "Déposer un fichier ou cliquer"}
+          subtitle="5 Mo max"
+        />
+      )}
+    </div>
   );
 }

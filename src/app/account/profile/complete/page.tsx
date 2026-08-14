@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { safeInternalPath } from "@/lib/safe-path";
 import ProfileForm from "../ProfileForm";
 
 export default async function ProfileCompletePage({
@@ -27,14 +28,13 @@ export default async function ProfileCompletePage({
 
   if (!user) return null;
 
-  // Redirection apres save uniquement vers une URL interne (next commencant par "/").
-  const safeNext = next && next.startsWith("/") ? next : "/account";
+  const safeNext = safeInternalPath(next) ?? "/account";
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Compléter votre profil</h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold text-slate-900">Compléter votre profil</h1>
+        <p className="text-sm text-slate-600 mt-1">
           Avant de pouvoir vous inscrire à un événement, nous avons besoin de quelques informations
           obligatoires (identité, structure, photo, pièce d&apos;identité). Ces données seront utilisées
           uniquement pour vos badges.

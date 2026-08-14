@@ -10,7 +10,6 @@ import {
   MAX_UPLOAD_BYTES,
   type UploadKind,
 } from "@/lib/storage";
-import { signUploadToken } from "@/lib/upload-token";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
 
   const form = await req.formData();
   const file = form.get("file");
-  if (!(file instanceof Blob)) {
+  if (!(file instanceof File)) {
     return NextResponse.json({ error: "Fichier manquant", code: "NO_FILE" }, { status: 400 });
   }
   const mime = file.type || "application/octet-stream";
@@ -68,7 +67,7 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   assertWithinSizeLimit(buffer.length);
 
-  const origName = file instanceof File ? file.name : "upload";
+  const origName = file.name;
   const ext = extOf(origName, mime === "application/pdf" ? ".pdf" : ".bin");
   const filename = `${randomUUID()}${ext}`;
   const storageKey = kind === "photo"
@@ -77,6 +76,7 @@ export async function POST(req: Request) {
 
   await uploadFile(storageKey, buffer, mime);
 
-  const token = signUploadToken({ eventId: event.id, kind, storageKey });
-  return NextResponse.json({ token, originalName: origName, kind, size: buffer.length });
+  // v4 Task 5.3 : contrat unifie avec /api/account/upload -> { storageKey }.
+  // L'ancien flux de token HMAC signe (verifyUploadToken) etait mort (jamais consomme).
+  return NextResponse.json({ storageKey, originalName: origName, kind, size: buffer.length });
 }

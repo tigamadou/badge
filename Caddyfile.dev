@@ -1,11 +1,24 @@
-http://badge.local {
+badge.local {
+	tls internal
 	reverse_proxy app:3000
 }
 
-http://pma.badge.local {
+pma.badge.local {
+	tls internal
 	reverse_proxy phpmyadmin:80
 }
 
-http://mail.badge.local {
+mail.badge.local {
+	tls internal
 	reverse_proxy mailpit:8025
+}
+
+s3.badge.local {
+	tls internal
+	reverse_proxy minio:9001
+}
+
+studio.badge.local {
+	tls internal
+	reverse_proxy studio:3900
 }

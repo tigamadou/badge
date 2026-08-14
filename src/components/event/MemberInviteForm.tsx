@@ -25,7 +25,7 @@ export function MemberInviteForm({
     e.preventDefault();
     setBusy(true);
     setErr(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/members`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/members`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email, name: name || undefined, role }),

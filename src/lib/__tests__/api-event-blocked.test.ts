@@ -53,13 +53,82 @@ async function cleanup() {
 describe("/blocked-emails", () => {
   beforeEach(cleanup);
 
+  it("GET lists blocked emails for the event", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.blockedEmail.create({ data: { eventId: event.id, email: "listed@x.test", reason: null } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
+    const res = await GET(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, { method: "GET" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.blocked).toHaveLength(1);
+    expect(json.blocked[0].email).toBe("listed@x.test");
+  });
+
+  it("POST returns 400 VALIDATION on malformed JSON body", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
+        method: "POST",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("VALIDATION");
+  });
+
+  it("POST rethrows non-P2002 errors from blockedEmail creation", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const spy = vi
+      .spyOn(prisma.blockedEmail, "create")
+      .mockRejectedValueOnce(Object.assign(new Error("db-boom"), { code: "P2003" }));
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
+      method: "POST",
+      body: JSON.stringify({ email: "rethrow@x.test" }),
+      headers: { "content-type": "application/json" },
+    });
+    await expect(POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) })).rejects.toThrow(
+      "db-boom",
+    );
+    spy.mockRestore();
+  });
+
+  it("POST returns 400 on invalid email", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
+        method: "POST",
+        body: JSON.stringify({ email: "not-an-email" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("POST adds an entry; DELETE removes it", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
         method: "POST",
         body: JSON.stringify({ email: "spam@x.test", reason: "spam" }),
         headers: { "content-type": "application/json" },
@@ -77,10 +146,10 @@ describe("/blocked-emails", () => {
     expect((log?.details as { action?: string } | null)?.action).toBe("blocked-email-added");
 
     const { DELETE } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-emails/[id]/route"
     );
     const r2 = await DELETE(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails/${json.blocked.id}`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails/${json.blocked.id}`, {
         method: "DELETE",
       }),
       {
@@ -98,9 +167,9 @@ describe("/blocked-emails", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
         method: "POST",
         body: JSON.stringify({ email: "dup@x.test" }),
         headers: { "content-type": "application/json" },
@@ -132,9 +201,9 @@ describe("/blocked-emails", () => {
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-    const { POST } = await import("@/app/api/admin/[orgId]/events/[eventId]/blocked-emails/route");
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-emails/route");
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-emails`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails`, {
         method: "POST",
         body: JSON.stringify({ email: "x@x.test" }),
         headers: { "content-type": "application/json" },
@@ -143,20 +212,151 @@ describe("/blocked-emails", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it("DELETE returns 404 when the blocked email does not exist in this event", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { DELETE } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-emails/[id]/route"
+    );
+    const res = await DELETE(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-emails/does-not-exist`, {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, id: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("/blocked-documents", () => {
   beforeEach(cleanup);
+
+  it("GET lists blocked documents for the event", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.blockedDocument.create({ data: { eventId: event.id, documentNumber: "LISTED", reason: null } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route");
+    const res = await GET(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, { method: "GET" }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.blocked).toHaveLength(1);
+    expect(json.blocked[0].documentNumber).toBe("LISTED");
+  });
+
+  it("POST returns 400 VALIDATION on malformed JSON body", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
+    );
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, {
+        method: "POST",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("VALIDATION");
+  });
+
+  it("POST rethrows non-P2002 errors from blockedDocument creation", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const spy = vi
+      .spyOn(prisma.blockedDocument, "create")
+      .mockRejectedValueOnce(Object.assign(new Error("db-boom"), { code: "P2003" }));
+
+    const { POST } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
+    );
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, {
+      method: "POST",
+      body: JSON.stringify({ documentNumber: "RETHROW-DOC" }),
+      headers: { "content-type": "application/json" },
+    });
+    await expect(POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) })).rejects.toThrow(
+      "db-boom",
+    );
+    spy.mockRestore();
+  });
+
+  it("POST returns 400 on invalid documentNumber", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
+    );
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, {
+        method: "POST",
+        body: JSON.stringify({ documentNumber: "" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("POST returns 409 on duplicate document number within event", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.blockedDocument.create({
+      data: { eventId: event.id, documentNumber: "DUP-DOC", reason: null },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
+    );
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, {
+        method: "POST",
+        body: JSON.stringify({ documentNumber: "DUP-DOC" }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(409);
+    const json = (await res.json()) as { code?: string };
+    expect(json.code).toBe("ALREADY_BLOCKED");
+  });
+
+  it("DELETE returns 404 when the blocked document does not exist in this event", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { DELETE } = await import(
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/[id]/route"
+    );
+    const res = await DELETE(
+      new NextRequest(
+        `http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents/does-not-exist`,
+        { method: "DELETE" },
+      ),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, id: "does-not-exist" } as never) },
+    );
+    expect(res.status).toBe(404);
+  });
 
   it("POST adds and audit logged; DELETE removes", async () => {
     const { u, org, event } = await seedAdmin();
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-documents/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
     );
     const res = await POST(
-      new NextRequest(`http://localhost/api/admin/${org.id}/events/${event.id}/blocked-documents`, {
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`, {
         method: "POST",
         body: JSON.stringify({ documentNumber: "DOC-XX", reason: "faux" }),
         headers: { "content-type": "application/json" },
@@ -173,11 +373,11 @@ describe("/blocked-documents", () => {
 
     const created = await prisma.blockedDocument.findFirst({ where: { eventId: event.id } });
     const { DELETE } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-documents/[id]/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/[id]/route"
     );
     const r2 = await DELETE(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/blocked-documents/${created!.id}`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents/${created!.id}`,
         { method: "DELETE" },
       ),
       {
@@ -215,11 +415,11 @@ describe("/blocked-documents", () => {
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { POST } = await import(
-      "@/app/api/admin/[orgId]/events/[eventId]/blocked-documents/route"
+      "@/app/api/org/[orgId]/events/[eventId]/blocked-documents/route"
     );
     const res = await POST(
       new NextRequest(
-        `http://localhost/api/admin/${org.id}/events/${event.id}/blocked-documents`,
+        `http://localhost/api/org/${org.id}/events/${event.id}/blocked-documents`,
         {
           method: "POST",
           body: JSON.stringify({ documentNumber: "D1" }),

@@ -1,7 +1,14 @@
-import fs from "fs/promises";
 import path from "path";
-
-const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
+} from "@aws-sdk/client-s3";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
@@ -55,48 +62,99 @@ export function accountProfileKey(userId: string, kind: UploadKind, filename: st
   return `profile/${userId}/${kind === "photo" ? "photos" : "documents"}/${safeFilename(filename)}`;
 }
 
-async function ensureDir(dir: string) {
-  await fs.mkdir(dir, { recursive: true });
+// v4 : stockage objet S3-compatible (MinIO en dev). L'API publique (uploadFile/getFile/
+// deleteFile) est inchangee ; deletePrefix est ajoute pour l'archivage par prefixe.
+const BUCKET = process.env.S3_BUCKET ?? "badge-dev";
+
+const s3 = new S3Client({
+  endpoint: process.env.S3_ENDPOINT,
+  region: process.env.S3_REGION ?? "us-east-1",
+  forcePathStyle: true, // requis pour MinIO
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY ?? "minioadmin",
+    secretAccessKey: process.env.S3_SECRET_KEY ?? "minioadmin",
+  },
+});
+
+let bucketReady: Promise<void> | null = null;
+async function ensureBucket(): Promise<void> {
+  if (!bucketReady) {
+    bucketReady = (async () => {
+      try {
+        await s3.send(new HeadBucketCommand({ Bucket: BUCKET }));
+      } catch {
+        /* v8 ignore next -- creation de bucket : exercee seulement sur un bucket absent (CI MinIO vierge) */
+        await s3.send(new CreateBucketCommand({ Bucket: BUCKET }));
+      }
+    })();
+  }
+  return bucketReady;
 }
 
 export async function uploadFile(
   key: string,
   body: Buffer,
-  _contentType: string,
+  contentType: string,
 ): Promise<string> {
-  const filePath = path.join(UPLOADS_DIR, key);
-  await ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, body);
+  await ensureBucket();
+  await s3.send(
+    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }),
+  );
   return key;
 }
 
 export async function getFile(
   key: string,
 ): Promise<{ body: Buffer; contentType: string }> {
-  const filePath = path.join(UPLOADS_DIR, key);
-  const body = await fs.readFile(filePath);
-
-  const ext = path.extname(key).toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".webp": "image/webp",
-    ".pdf": "application/pdf",
-  };
-
+  const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  const bytes = await res.Body!.transformToByteArray();
   return {
-    body,
-    contentType: mimeTypes[ext] || "application/octet-stream",
+    body: Buffer.from(bytes),
+    /* v8 ignore next -- MinIO renvoie toujours un ContentType ; fallback defensif */
+    contentType: res.ContentType ?? "application/octet-stream",
   };
 }
 
 export async function deleteFile(key: string): Promise<void> {
-  const filePath = path.join(UPLOADS_DIR, key);
-  try {
-    await fs.unlink(filePath);
-  } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
-    throw err;
-  }
+  await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+}
+
+// Archivage par prefixe (ex. orgs/{orgId}/). Retourne le nombre d'objets supprimes.
+export async function deletePrefix(prefix: string): Promise<number> {
+  await ensureBucket();
+  let deleted = 0;
+  let token: string | undefined;
+  do {
+    const list = await s3.send(
+      new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }),
+    );
+    const objects = (list.Contents ?? []).map((o) => ({ Key: o.Key! }));
+    if (objects.length > 0) {
+      await s3.send(new DeleteObjectsCommand({ Bucket: BUCKET, Delete: { Objects: objects } }));
+      deleted += objects.length;
+    }
+    /* v8 ignore next -- branche IsTruncated=true : exige >1000 objets sous un prefixe (impraticable en unitaire) */
+    token = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (token);
+  return deleted;
+}
+
+// Liste les objets sous un prefixe, avec leur poids. Meme motif de pagination que
+// deletePrefix, dont la branche IsTruncated est egalement inatteignable en unitaire.
+export async function listPrefix(prefix: string): Promise<Array<{ key: string; size: number }>> {
+  await ensureBucket();
+  const out: Array<{ key: string; size: number }> = [];
+  let token: string | undefined;
+  do {
+    const list = await s3.send(
+      new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }),
+    );
+    for (const o of list.Contents ?? []) {
+      /* v8 ignore next -- MinIO renvoie toujours une taille ; fallback defensif */
+      out.push({ key: o.Key!, size: o.Size ?? 0 });
+    }
+    /* v8 ignore next -- branche IsTruncated=true : exige >1000 objets sous un prefixe (impraticable en unitaire) */
+    token = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (token);
+  return out;
 }

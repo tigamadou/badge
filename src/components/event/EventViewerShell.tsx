@@ -16,33 +16,33 @@ export function EventViewerShell({
   user: { name: string; email: string };
   children: React.ReactNode;
 }) {
-  const base = `/admin/${org.id}/events/${event.id}`;
+  const base = `/event/${event.id}`;
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-60 bg-gray-900 text-white p-4 flex flex-col">
-        <div className="text-xs text-gray-400">{org.name}</div>
-        <div className="text-lg font-bold mb-6 mt-2">{event.title}</div>
-        <nav className="flex-1 space-y-1">
+    <div className="flex h-screen overflow-hidden">
+      <aside className="flex w-56 flex-none flex-col gap-1 bg-brand-navy px-3 py-4">
+        <div className="px-2 text-xs text-slate-400">{org.name}</div>
+        <div className="mb-3 px-2 text-sm font-semibold text-white">{event.title}</div>
+        <nav className="flex flex-1 flex-col gap-1">
           <Link
             href={`${base}/registrations/overview`}
-            className="block rounded px-3 py-2 text-sm hover:bg-gray-800"
+            className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
           >
             Vue d&apos;ensemble
           </Link>
-          <Link href="/profile" className="block rounded px-3 py-2 text-sm hover:bg-gray-800">
+          <Link href="/profile" className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
             Profil
           </Link>
         </nav>
-        <div className="text-xs text-gray-400 mt-auto pt-4 border-t border-gray-800">{user.name}</div>
+        <div className="mt-auto truncate px-2 pt-2 text-xs text-slate-400">{user.name}</div>
       </aside>
-      <div className="flex-1 flex flex-col">
-        <header className="border-b bg-white px-6 py-3 flex items-center justify-between">
-          <div className="text-sm text-gray-500">Lecture — {event.title}</div>
-          <Link href="/profile" className="text-sm text-gray-700 hover:underline">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 flex-none items-center justify-between border-b border-slate-200 bg-white px-5">
+          <div className="text-sm text-slate-500">Lecture — {event.title}</div>
+          <Link href="/profile" className="text-sm text-slate-700 hover:underline">
             {user.email}
           </Link>
         </header>
-        <main className="flex-1 p-6 bg-gray-50">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">{children}</main>
       </div>
     </div>
   );

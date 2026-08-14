@@ -9,7 +9,11 @@ import { prisma } from "@/lib/prisma";
 // rester en place pour delete des entites supplementaires ou reset des mocks).
 beforeEach(async () => {
   await prisma.activityLog.deleteMany();
+  await prisma.subscription.deleteMany();
+  await prisma.plan.deleteMany();
+  await prisma.profileSubmission.deleteMany();
   await prisma.registration.deleteMany();
+  await prisma.rejectionReason.deleteMany();
   await prisma.blockedEmail.deleteMany();
   await prisma.blockedDocument.deleteMany();
   await prisma.category.deleteMany();

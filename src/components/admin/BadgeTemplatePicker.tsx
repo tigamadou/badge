@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Feedback";
+import { Tag } from "@/components/ui/Labels";
+import { Icon } from "@/components/ui/Icon";
+import { TemplatePreview } from "@/components/ui/TemplatePreview";
 
 export type TemplateSummary = {
   id: string;
@@ -69,23 +73,23 @@ export default function BadgeTemplatePicker({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-md border border-gray-200 bg-white p-3 text-sm">
-        <p>
-          <strong>Template effectif :</strong> {effectiveId}{" "}
-          <span className="text-gray-500">(niveau {LEVEL_LABEL[effectiveLevel]})</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+        <p className="text-slate-600">
+          Template effectif : <span className="font-mono text-slate-900">{effectiveId}</span>{" "}
+          <span className="text-slate-400">(niveau {LEVEL_LABEL[effectiveLevel]})</span>
         </p>
         {canClearToInherit && currentValue !== null && (
           <button
             onClick={() => patch(null)}
             disabled={pending}
-            className="mt-2 text-sm text-indigo-700 underline disabled:opacity-50"
+            className="text-sm font-medium text-green-600 hover:underline disabled:opacity-50"
           >
-            Utiliser le defaut herite
+            Utiliser le défaut hérité
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {templates.map((tpl) => {
           const isCurrent = currentValue === tpl.id;
           const isEffective = effectiveId === tpl.id;
@@ -94,55 +98,50 @@ export default function BadgeTemplatePicker({
               key={tpl.id}
               data-testid={`template-card-${tpl.id}`}
               data-selected={isCurrent ? "true" : "false"}
-              className={`rounded-lg border p-4 bg-white space-y-3 ${
-                isCurrent ? "border-indigo-500 ring-2 ring-indigo-200" : "border-gray-200"
+              className={`space-y-3 rounded-xl border bg-white p-4 ${
+                isCurrent ? "border-green-600 ring-1 ring-green-600" : "border-slate-200"
               }`}
             >
-              <div className="aspect-[4/3] bg-gray-50 rounded overflow-hidden flex items-center justify-center">
-                <Image
-                  src={tpl.previewSrc}
-                  alt={`Apercu ${tpl.label}`}
-                  width={400}
-                  height={300}
-                  className="object-contain"
-                />
+              <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+                <TemplatePreview src={tpl.previewSrc} label={tpl.label} />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">{tpl.label}</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Format {tpl.pageSize.width} x {tpl.pageSize.height} -- {tpl.pages}{" "}
-                  page{tpl.pages > 1 ? "s" : ""}
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">{tpl.label}</h3>
+                  {isCurrent && <Tag icon="check">Sélectionné</Tag>}
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Format {tpl.pageSize.width} × {tpl.pageSize.height} · {tpl.pages} page{tpl.pages > 1 ? "s" : ""}
                 </p>
-                <p className="text-sm text-gray-700 mt-2">{tpl.description}</p>
+                <p className="mt-2 text-[13px] text-slate-600">{tpl.description}</p>
               </div>
               <div className="flex items-center gap-3">
-                <button
+                <Button
                   onClick={() => patch(tpl.id)}
                   disabled={pending || isCurrent}
                   data-testid={`select-${tpl.id}`}
-                  className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm font-semibold disabled:opacity-50"
                 >
-                  {isCurrent ? "Selectionne" : "Selectionner"}
-                </button>
-                {isEffective && !isCurrent && (
-                  <span className="text-xs text-emerald-700">Herite a ce niveau</span>
-                )}
+                  {isCurrent ? "Sélectionné" : "Sélectionner"}
+                </Button>
+                {isEffective && !isCurrent && <span className="text-xs text-emerald-700">Hérité à ce niveau</span>}
               </div>
             </div>
           );
         })}
       </div>
 
-      {message && (
-        <p
-          className={`text-sm ${
-            message.type === "success" ? "text-emerald-700" : "text-rose-600"
-          }`}
-          data-testid={message.type === "success" ? "save-success" : "save-error"}
-        >
-          {message.text}
-        </p>
-      )}
+      {message &&
+        (message.type === "success" ? (
+          <div data-testid="save-success">
+            <Alert tone="success">
+              <Icon name="check" size={16} /> {message.text}
+            </Alert>
+          </div>
+        ) : (
+          <div data-testid="save-error">
+            <Alert tone="err">{message.text}</Alert>
+          </div>
+        ))}
     </div>
   );
 }

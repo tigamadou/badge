@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Membres</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "members", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" } };</script>
+<div id="page" data-screen-label="39 Event membres">
+
+  <div class="page-head"><div><h1>Membres de l'événement</h1><p class="sub">5 membres</p></div></div>
+
+  <div class="card card-pad" style="margin-bottom:16px;">
+    <label class="ds-label" style="display:block;margin-bottom:6px;">Inviter un membre</label>
+    <div class="flex gap12 wrap" style="align-items:flex-start;">
+      <div style="flex:1;min-width:240px;position:relative;">
+        <input class="input" value="aline" placeholder="Rechercher un membre de l'organisation…" />
+        <div class="card" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;box-shadow:var(--shadow-modal);overflow:hidden;">
+          <div class="list-row" style="padding:10px 12px;margin:0;cursor:pointer;"><span class="avatar sm">AP</span><div style="flex:1;"><div class="cell-name">Aline Petit</div><div class="ds-meta">aline.petit@salontech.fr</div></div></div>
+          <div class="list-row" style="padding:10px 12px;margin:0;cursor:pointer;border-bottom:0;"><span class="avatar sm">AL</span><div style="flex:1;"><div class="cell-name">Alice Lemaire</div><div class="ds-meta">alice.lemaire@salontech.fr</div></div></div>
+        </div>
+      </div>
+      <div class="select-wrap" style="width:170px;"><select class="input"><option>OPERATOR</option><option>ADMIN</option><option>PRINTER</option><option>VIEWER</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div>
+      <button class="btn btn-primary"><span data-ico="user-plus" data-size="16"></span> Inviter</button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Membre</th><th>E-mail</th><th>Rôle</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">SB</span><span class="cell-name">Sophie Bernard</span></div></td><td class="cell-meta">sophie.bernard@salontech.fr</td><td><span class="role-badge">ADMIN</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="sliders" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">JR</span><span class="cell-name">Julien Roy</span></div></td><td class="cell-meta">julien.roy@salontech.fr</td><td><span class="role-badge slate">OPERATOR</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="sliders" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">PL</span><span class="cell-name">Paul Lefèvre</span></div></td><td class="cell-meta">paul.lefevre@salontech.fr</td><td><span class="role-badge slate">PRINTER</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="sliders" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">MP</span><span class="cell-name">Marc Petit</span></div></td><td class="cell-meta">marc.petit@salontech.fr</td><td><span class="role-badge amber">VIEWER</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="sliders" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

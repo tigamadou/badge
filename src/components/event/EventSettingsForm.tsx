@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Switch } from "@/components/ui/FormControls";
+import { Alert } from "@/components/ui/Feedback";
+import { Dropzone, FileBox } from "@/components/ui/FileBox";
 
 type Initial = {
   event: {
@@ -10,6 +14,8 @@ type Initial = {
     title: string;
     location: string;
     date: string;
+    endDate: string | null;
+    description: string | null;
     slug: string;
     logo: string | null;
     registrationOpen: boolean;
@@ -30,27 +36,64 @@ export function EventSettingsForm({
   const [title, setTitle] = useState(initial.event.title);
   const [location, setLocation] = useState(initial.event.location);
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
+  const [endDate, setEndDate] = useState(initial.event.endDate?.slice(0, 10) ?? "");
+  const [description, setDescription] = useState(initial.event.description ?? "");
   const [logo, setLogo] = useState<string | null>(initial.event.logo);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
   const [contactEmail, setContactEmail] = useState(initial.settings.contactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(initial.settings.contactPhone ?? "");
   const [msg, setMsg] = useState<string | null>(null);
 
+  async function uploadLogo(files: FileList) {
+    const file = files[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+    setUploadingLogo(false);
+    if (!res.ok) {
+      setMsg("Échec de l'envoi du logo.");
+      return;
+    }
+    const { storageKey } = await res.json();
+    setLogo(storageKey);
+  }
+
   async function saveEvent(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title, location, date, logo, registrationOpen }),
+      body: JSON.stringify({
+        title,
+        location,
+        date,
+        endDate: endDate || null,
+        description: description || null,
+        logo,
+        registrationOpen,
+      }),
     });
-    setMsg(res.ok ? "Événement mis à jour." : "Échec de la mise à jour.");
+    if (res.ok) {
+      setMsg("Événement mis à jour.");
+    } else {
+      const data = await res.json().catch(() => null);
+      setMsg(
+        data?.issues?.[0]?.message === "endDate < date"
+          ? "La date de fin doit être postérieure ou égale à la date de l'événement."
+          : "Échec de la mise à jour.",
+      );
+    }
   }
 
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const res = await fetch(`/api/admin/${orgId}/events/${eventId}/settings`, {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/settings`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -62,52 +105,101 @@ export function EventSettingsForm({
   }
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <h1 className="text-2xl font-bold">Paramètres de l&apos;événement</h1>
-      {msg && <div className="rounded bg-blue-50 border border-blue-200 px-4 py-2 text-sm">{msg}</div>}
+    <div className="max-w-2xl space-y-4">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;événement</h1>
+        <p className="mt-0.5 text-sm text-slate-400">Informations, inscriptions et contact</p>
+      </div>
+      {msg && <Alert tone={msg.includes("Échec") ? "err" : "success"}>{msg}</Alert>}
 
-      <form onSubmit={saveEvent} className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Informations</h2>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre" required />
-        <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Lieu" />
-        <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        <Input
-          value={logo ?? ""}
-          onChange={(e) => setLogo(e.target.value || null)}
-          placeholder="Chemin du logo (uploads/.../logo.png)"
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={registrationOpen}
-            onChange={(e) => setRegistrationOpen(e.target.checked)}
-          />
-          Inscriptions ouvertes
-        </label>
-        <div className="text-xs text-gray-500">
-          Slug : <code>{initial.event.slug}</code> (modifiable par le staff uniquement)
-        </div>
-        <Button type="submit">Enregistrer</Button>
-      </form>
+      <Card>
+        <CardHead title="Informations" />
+        <CardBody>
+          <form onSubmit={saveEvent} className="space-y-4">
+            <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+              <Input
+                label="Date de fin (optionnelle)"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="event-description" className="block text-sm font-medium text-slate-700">
+                Description (optionnelle)
+              </label>
+              <textarea
+                id="event-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-slate-700">Logo</span>
+              {logo ? (
+                <FileBox
+                  icon="file"
+                  thumbUrl={`/api/files/${logo}`}
+                  title="Logo de l'événement"
+                  subtitle={logo}
+                  action={
+                    <Button type="button" variant="secondary" onClick={() => setLogo(null)}>
+                      Retirer
+                    </Button>
+                  }
+                />
+              ) : (
+                <Dropzone
+                  onFiles={uploadLogo}
+                  accept="image/jpeg,image/png,image/webp"
+                  title={uploadingLogo ? "Envoi…" : "Déposer un logo ou cliquer"}
+                  subtitle="JPEG, PNG ou WebP — 5 Mo max"
+                />
+              )}
+            </div>
+            <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
+            <p className="text-xs text-slate-400">
+              Slug : <code className="font-mono text-slate-600">{initial.event.slug}</code> (modifiable par le staff
+              uniquement)
+            </p>
+            <div className="flex justify-end">
+              <Button type="submit">Enregistrer</Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
 
-      <form onSubmit={saveSettings} className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">Contact (overrides)</h2>
-        <Input
-          type="email"
-          value={contactEmail}
-          onChange={(e) => setContactEmail(e.target.value)}
-          placeholder={`Email de contact (cascade : ${initial.resolved.contactEmail || "—"})`}
-        />
-        <Input
-          value={contactPhone}
-          onChange={(e) => setContactPhone(e.target.value)}
-          placeholder={`Téléphone de contact (cascade : ${initial.resolved.contactPhone || "—"})`}
-        />
-        <p className="text-xs text-gray-500">
-          Laisser vide pour hériter du niveau organisation. Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
-        </p>
-        <Button type="submit">Enregistrer</Button>
-      </form>
+      <Card>
+        <CardHead title="Contact (surcharges)" subtitle="Laisser vide pour hériter du niveau organisation." />
+        <CardBody>
+          <form onSubmit={saveSettings} className="space-y-4">
+            <Input
+              label="E-mail de contact"
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder={`Cascade : ${initial.resolved.contactEmail || "—"}`}
+            />
+            <Input
+              label="Téléphone de contact"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              placeholder={`Cascade : ${initial.resolved.contactPhone || "—"}`}
+            />
+            <p className="text-xs text-slate-400">
+              Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
+            </p>
+            <div className="flex justify-end">
+              <Button type="submit">Enregistrer</Button>
+            </div>
+          </form>
+        </CardBody>
+      </Card>
     </div>
   );
 }

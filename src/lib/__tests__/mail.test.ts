@@ -219,6 +219,39 @@ describe("buildEmail", () => {
     expect(html).toMatch(/lang="fr"/);
     expect(html).toMatch(/charset="utf-8"/i);
   });
+
+  it("renders an org website link in the footer when provided", () => {
+    const html = buildEmail({
+      title: "T",
+      body: "<p>x</p>",
+      ctx: {
+        transporter: {} as never,
+        from: "x@y",
+        contactEmail: "",
+        contactPhone: "",
+        orgWebsite: "https://acme.example",
+        settings: {} as never,
+      },
+    });
+    expect(html).toContain('href="https://acme.example"');
+    expect(html).toContain("acme.example");
+  });
+
+  it("renders only the phone line when contactEmail is empty", () => {
+    const html = buildEmail({
+      title: "T",
+      body: "<p>x</p>",
+      ctx: {
+        transporter: {} as never,
+        from: "x@y",
+        contactEmail: "",
+        contactPhone: "+225 0303",
+        settings: {} as never,
+      },
+    });
+    expect(html).toContain("+225 0303");
+    expect(html).not.toContain("mailto:");
+  });
 });
 
 describe("sendRegistrationConfirmation", () => {
@@ -396,6 +429,13 @@ describe("sendStatusNotification", () => {
     expect(sent[0].html).toContain("approuvée");
   });
 
+  it("does nothing when registration not found (logs only)", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendStatusNotification("missing-id");
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
   // v2-11 : plus de editToken. Le lien pointe vers /account/registrations/[id]
   // (login requis cote participant).
   it("sends rejection email with reason and account link", async () => {
@@ -419,6 +459,28 @@ describe("sendStatusNotification", () => {
     expect(sent[0].subject).toContain("rejetée");
     expect(sent[0].html).toContain("Photo illisible");
     expect(sent[0].html).toContain("Veuillez fournir une photo nette");
+    expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
+  });
+
+  // Couvre les branches fausses des ternaires reasonBlock/detailsBlock
+  // (mail.ts:356-359) : rejet sans motif ni details renseignes -> blocs vides.
+  it("sends rejection email without reason nor details blocks", async () => {
+    const reg = await makeReg("REJECTED");
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendStatusNotification(reg.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].subject).toContain("rejetée");
+    expect(sent[0].html).not.toContain("Motif :");
     expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
   });
 
@@ -725,7 +787,660 @@ describe("sendSmtpTest", () => {
     expect(sent[0].html).toContain("OrgT");
   });
 
+  it("uses event context for the scope label when eventId provided", async () => {
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: '"Salon" <noreply@badge.local>',
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendSmtpTest({ to: "x@y.com", eventId: "evt-1" });
+
+    expect(sent[0].html).toContain("événement");
+    expect(sent[0].html).toContain("Salon");
+  });
+
   it("rejects invalid email", async () => {
     await expect(mailModule.sendSmtpTest({ to: "not-an-email" })).rejects.toThrow(/email/i);
+  });
+});
+
+// Couvre les branches de branding de loadBrandingContext (mail.ts:45-86) qui
+// necessitent de vraies lignes en BDD : logo/website d'org, cascade logo
+// Event -> Org, et event introuvable.
+describe("resolveTransporter branding branches", () => {
+  beforeEach(async () => {
+    await resetSettings();
+  });
+
+  it("includes org logo and website when orgId provided", async () => {
+    const org = await prisma.organization.create({
+      data: {
+        name: "OrgL",
+        slug: "org-logo",
+        logo: "org-logo.png",
+        website: "https://org.example",
+      },
+    });
+    const r = await resolveTransporter({ orgId: org.id });
+    expect(r.logoUrl).toMatch(/\/api\/files\/org-logo\.png$/);
+    expect(r.orgWebsite).toBe("https://org.example");
+    expect(r.orgName).toBe("OrgL");
+  });
+
+  it("falls back to org logo and exposes org website through event branding", async () => {
+    const org = await prisma.organization.create({
+      data: {
+        name: "OrgF",
+        slug: "org-fallback",
+        logo: "org-fb-logo.png",
+        website: "https://orgfb.example",
+      },
+    });
+    // Event sans logo propre : cascade vers Organization.logo (mail.ts:57).
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "evt-fb", location: "L", date: new Date() },
+    });
+    const r = await resolveTransporter({ eventId: event.id });
+    expect(r.logoUrl).toMatch(/\/api\/files\/org-fb-logo\.png$/);
+    expect(r.orgWebsite).toBe("https://orgfb.example");
+  });
+
+  it("returns platform defaults when the event id does not exist", async () => {
+    const r = await resolveTransporter({ eventId: "does-not-exist" });
+    expect(r.from).toBe("noreply@badge.local");
+    expect(r.eventTitle).toBeUndefined();
+    expect(r.orgName).toBeUndefined();
+  });
+
+  // Couvre la branche fausse de `if (org)` (mail.ts:74) : orgId fourni mais
+  // organisation introuvable -> pas de branding, retour aux defauts plateforme.
+  it("returns platform defaults when the org id does not exist", async () => {
+    const r = await resolveTransporter({ orgId: "does-not-exist" });
+    expect(r.from).toBe("noreply@badge.local");
+    expect(r.orgName).toBeUndefined();
+    expect(r.logoUrl).toBeUndefined();
+  });
+
+  // Couvre dans resolveTransporterImpl (mail.ts:95-104) : la branche `auth` (smtpUser
+  // ET smtpPassword non vides) et les fallbacks `smtpHost || "localhost"`,
+  // `smtpPort || 587`, `smtpFrom || "noreply@badge.local"`.
+  it("configures auth and applies host/port/from fallbacks from empty smtp fields", async () => {
+    await prisma.platformSettings.update({
+      where: { id: "singleton" },
+      data: { smtpUser: "u", smtpPassword: "p", smtpHost: "", smtpPort: 0, smtpFrom: "" },
+    });
+    const r = await resolveTransporter({});
+    expect(r.from).toBe("noreply@badge.local");
+    expect(typeof r.transporter.sendMail).toBe("function");
+  });
+});
+
+describe("safeSend error handling", () => {
+  beforeEach(async () => {
+    await prisma.registration.deleteMany();
+    await prisma.category.deleteMany();
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  it("swallows transporter errors and logs instead of throwing", async () => {
+    const org = await prisma.organization.create({ data: { name: "O", slug: "safesend" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "Salon", slug: "safesend-evt", location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({
+      data: { eventId: event.id, name: "V", color: "#000", number: 1 },
+    });
+    const participant = await mkParticipantUser("safesend");
+    const reg = await prisma.registration.create({
+      data: {
+        id: "REG-SAFESEND",
+        eventId: event.id,
+        categoryId: cat.id,
+        userId: participant.id,
+        snapshotEmail: "safe@x.com",
+        snapshotLastName: "Diallo",
+        snapshotFirstName: "Amadou",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X",
+        snapshotIdDocument: "uploads/test/doc.pdf",
+      },
+    });
+
+    const throwing = {
+      sendMail: vi.fn(async () => {
+        throw new Error("SMTP down");
+      }),
+    };
+    mockResolveTransporter({
+      transporter: throwing as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(mailModule.sendRegistrationConfirmation(reg.id)).resolves.toBeUndefined();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mail] sendMail failed"),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("logs the String(err) branch when a non-Error is thrown", async () => {
+    const org = await prisma.organization.create({ data: { name: "O", slug: "safesend2" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "Salon", slug: "safesend2-evt", location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({
+      data: { eventId: event.id, name: "V", color: "#000", number: 1 },
+    });
+    const participant = await mkParticipantUser("safesend2");
+    const reg = await prisma.registration.create({
+      data: {
+        id: "REG-SAFESEND2",
+        eventId: event.id,
+        categoryId: cat.id,
+        userId: participant.id,
+        snapshotEmail: "safe2@x.com",
+        snapshotLastName: "Diallo",
+        snapshotFirstName: "Amadou",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X",
+        snapshotIdDocument: "uploads/test/doc.pdf",
+      },
+    });
+
+    const throwing = {
+      sendMail: vi.fn(async () => {
+        // rejette une valeur non-Error : couvre la branche String(err) de safeSend.
+        return Promise.reject("boom-string");
+      }),
+    };
+    mockResolveTransporter({
+      transporter: throwing as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(mailModule.sendRegistrationConfirmation(reg.id)).resolves.toBeUndefined();
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("sendBadgePrintedNotification branches", () => {
+  beforeEach(async () => {
+    await prisma.registration.deleteMany();
+    await prisma.category.deleteMany();
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  async function makePrintedReg(id: string, seed: string) {
+    const org = await prisma.organization.create({ data: { name: "O", slug: `bpb-${seed}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "Salon", slug: `bpb-evt-${seed}`, location: "L", date: new Date() },
+    });
+    const cat = await prisma.category.create({
+      data: { eventId: event.id, name: "V", color: "#000", number: 1 },
+    });
+    const participant = await mkParticipantUser(seed);
+    return prisma.registration.create({
+      data: {
+        id,
+        eventId: event.id,
+        categoryId: cat.id,
+        userId: participant.id,
+        snapshotEmail: "x@x.com",
+        snapshotLastName: "Diallo",
+        snapshotFirstName: "Amadou",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X",
+        snapshotIdDocument: "uploads/test/doc.pdf",
+        badgePrinted: true,
+        badgePrintedAt: new Date(),
+      },
+    });
+  }
+
+  it("omits the contact block when no contact info is configured", async () => {
+    const reg = await makePrintedReg("REG-BPB-NC", "bpb-nc");
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendBadgePrintedNotification(reg.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).not.toContain("Pour toute question concernant le retrait");
+  });
+
+  // Couvre la branche fausse du ternaire contactPhone (mail.ts:419) : bloc contact
+  // rendu (contactEmail present) mais sans ligne Tel (contactPhone vide).
+  it("renders only the email row when only contactEmail is set", async () => {
+    const reg = await makePrintedReg("REG-BPB-EM", "bpb-em");
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "contact@org.com",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendBadgePrintedNotification(reg.id);
+
+    expect(sent[0].html).toContain("Pour toute question concernant le retrait");
+    expect(sent[0].html).toContain("contact@org.com");
+    expect(sent[0].html).not.toContain("Tél :");
+  });
+
+  it("renders only the phone row when only contactPhone is set", async () => {
+    const reg = await makePrintedReg("REG-BPB-PH", "bpb-ph");
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "+225 0909",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendBadgePrintedNotification(reg.id);
+
+    expect(sent[0].html).toContain("Pour toute question concernant le retrait");
+    expect(sent[0].html).toContain("+225 0909");
+    expect(sent[0].html).not.toContain("Email :");
+  });
+
+  it("returns when registration not found", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendBadgePrintedNotification("missing");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mail]"),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("sendAccountVerifyEmail", () => {
+  beforeEach(async () => {
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  it("sends a verification email with a 24h confirmation link", async () => {
+    const user = await prisma.user.create({
+      data: { email: "verify@x.com", password: "x", name: "Verify User" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendAccountVerifyEmail(user.id, "plain-token-abc");
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("verify@x.com");
+    expect(sent[0].subject).toContain("Confirmez votre adresse email");
+    expect(sent[0].html).toContain("/verify-email/plain-token-abc");
+    expect(sent[0].html).toContain("Verify User");
+    expect(sent[0].html).toContain("24 heures");
+    // Sans destination : lien nu et libelle standard.
+    expect(sent[0].html).not.toContain("?next=");
+    expect(sent[0].html).toContain("Confirmer mon email<");
+  });
+
+  it("porte la destination dans le lien quand next est fourni (v4 plan 09)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "verify-next@x.com", password: "x", name: "Verify Next" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendAccountVerifyEmail(user.id, "tok-next", "/e/salon-2027/register");
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).toContain(
+      "/verify-email/tok-next?next=%2Fe%2Fsalon-2027%2Fregister",
+    );
+    expect(sent[0].html).toContain("Confirmer mon email et continuer");
+  });
+
+  it("escapes the user name (anti-XSS)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "vxss@x.com", password: "x", name: "<script>x</script>" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendAccountVerifyEmail(user.id, "tok");
+    expect(sent[0].html).not.toContain("<script>x</script>");
+    expect(sent[0].html).toContain("&lt;script&gt;");
+  });
+
+  it("returns when user not found", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendAccountVerifyEmail("missing", "tok");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mail]"),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("sendAccountPasswordReset", () => {
+  beforeEach(async () => {
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  it("sends a self-service reset email with a 1h link", async () => {
+    const user = await prisma.user.create({
+      data: { email: "sspr@x.com", password: "x", name: "SS Reset" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendAccountPasswordReset(user.id, "reset-plain-tok");
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("sspr@x.com");
+    expect(sent[0].subject).toContain("Réinitialisation");
+    expect(sent[0].html).toContain("/reset-password/reset-plain-tok");
+    expect(sent[0].html).toContain("1 heure");
+    expect(sent[0].html).toContain("SS Reset");
+  });
+
+  it("returns when user not found", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendAccountPasswordReset("missing", "tok");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mail]"),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("sendRegistrationResubmitted", () => {
+  beforeEach(async () => {
+    await prisma.registration.deleteMany();
+    await prisma.category.deleteMany();
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  it("sends a resubmission confirmation with an account link", async () => {
+    const org = await prisma.organization.create({ data: { name: "O", slug: "rsub" } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "Salon", slug: "rsub-evt", location: "Abidjan", date: new Date() },
+    });
+    const cat = await prisma.category.create({
+      data: { eventId: event.id, name: "V", color: "#000", number: 1 },
+    });
+    const participant = await mkParticipantUser("rsub");
+    const reg = await prisma.registration.create({
+      data: {
+        id: "REG-RSUB",
+        eventId: event.id,
+        categoryId: cat.id,
+        userId: participant.id,
+        snapshotEmail: "rsub@x.com",
+        snapshotLastName: "Diallo",
+        snapshotFirstName: "Amadou",
+        snapshotStructure: "S",
+        snapshotPhoto: "uploads/test/photo.jpg",
+        snapshotIdDocumentType: "CNI",
+        snapshotIdDocumentNumber: "X",
+        snapshotIdDocument: "uploads/test/doc.pdf",
+      },
+    });
+
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: "Salon",
+      settings: {} as never,
+    });
+
+    await mailModule.sendRegistrationResubmitted(reg.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("rsub@x.com");
+    expect(sent[0].subject).toContain("resoumise");
+    expect(sent[0].html).toContain("Amadou");
+    expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
+  });
+
+  it("returns when registration not found", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendRegistrationResubmitted("missing");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mail]"),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("sendUserInvitation role labels", () => {
+  beforeEach(async () => {
+    await prisma.eventMembership.deleteMany();
+    await prisma.orgMembership.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.event.deleteMany();
+    await prisma.organization.deleteMany();
+    await resetSettings();
+  });
+
+  it("injects the FR role label when a known role is provided", async () => {
+    const user = await prisma.user.create({
+      data: { email: "role-known@x.com", password: "tmp", name: "Role Known" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendUserInvitation(user.id, { role: "OWNER" });
+
+    expect(sent[0].html).toContain("Role attribue");
+    expect(sent[0].html).toContain("Proprietaire");
+  });
+
+  it("omits the role clause when an unknown role is provided", async () => {
+    const user = await prisma.user.create({
+      data: { email: "role-unknown@x.com", password: "tmp", name: "Role Unknown" },
+    });
+    const { transporter, sent } = mockTransport();
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: "x@y",
+      contactEmail: "",
+      contactPhone: "",
+      settings: {} as never,
+    });
+
+    await mailModule.sendUserInvitation(user.id, { role: "NOT_A_ROLE" });
+
+    expect(sent[0].html).not.toContain("Role attribue");
+  });
+
+  it("returns when user not found", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await mailModule.sendUserInvitation("missing");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[mail]"),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("sendProfileApproved / sendProfileRejected", () => {
+  beforeEach(async () => {
+    await prisma.profileSubmission.deleteMany();
+    await prisma.rejectionReason.deleteMany();
+    await prisma.user.deleteMany();
+    await resetSettings();
+  });
+
+  function platformTransport(sent: SentMail[]) {
+    const { transporter } = mockTransport(sent);
+    mockResolveTransporter({
+      transporter: transporter as never,
+      from: '"Badge" <noreply@badge.local>',
+      contactEmail: "",
+      contactPhone: "",
+      eventTitle: undefined,
+      orgName: undefined,
+      settings: {} as never,
+    });
+  }
+
+  it("sendProfileApproved envoie un message de validation au participant", async () => {
+    const user = await prisma.user.create({
+      data: { email: "approved@profmail.test", password: "x", name: "Awa Diallo", firstName: "Awa", lastName: "Diallo", profileStatus: "APPROVED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+
+    await mailModule.sendProfileApproved(user.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("approved@profmail.test");
+    expect(sent[0].subject).toContain("Profil validé");
+    expect(sent[0].html).toContain("Awa Diallo");
+  });
+
+  it("sendProfileRejected contient le motif et les details, sans cle de stockage", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rejected@profmail.test", password: "x", name: "Koffi Yao", firstName: "Koffi", lastName: "Yao", profileStatus: "REJECTED" },
+    });
+    await prisma.profileSubmission.create({
+      data: {
+        userId: user.id,
+        photo: "profile/secret/photos/p.png",
+        idDocumentType: "CNI",
+        idDocumentNumber: "N",
+        idDocument: "profile/secret/documents/d.pdf",
+        status: "REJECTED",
+        rejectionReasonLabel: "Piece illisible",
+        rejectionDetails: "Le numero est masque.",
+      },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+
+    await mailModule.sendProfileRejected(user.id);
+
+    expect(sent).toHaveLength(1);
+    expect(sent[0].html).toContain("Piece illisible");
+    expect(sent[0].html).toContain("Le numero est masque.");
+    expect(sent[0].html).not.toContain("profile/secret");
+  });
+
+  it("sendProfileApproved retombe sur le nom du compte si firstName/lastName absents", async () => {
+    const user = await prisma.user.create({
+      data: { email: "noname-approved@profmail.test", password: "x", name: "Compte Sans Prenom", profileStatus: "APPROVED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileApproved(user.id);
+    expect(sent[0].html).toContain("Compte Sans Prenom");
+  });
+
+  it("sendProfileRejected retombe sur le nom du compte si firstName/lastName absents", async () => {
+    const user = await prisma.user.create({
+      data: { email: "noname-rejected@profmail.test", password: "x", name: "Compte Rejete", profileStatus: "REJECTED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileRejected(user.id);
+    expect(sent[0].html).toContain("Compte Rejete");
+  });
+
+  it("sendProfileApproved sort silencieusement si l'utilisateur est absent", async () => {
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileApproved("missing-user");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("sendProfileRejected sort silencieusement si l'utilisateur est absent", async () => {
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileRejected("missing-user");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("sendProfileRejected fonctionne sans soumission (motif/details omis)", async () => {
+    const user = await prisma.user.create({
+      data: { email: "rejected-nosub@profmail.test", password: "x", name: "Sans Sub", firstName: "Sans", lastName: "Sub", profileStatus: "REJECTED" },
+    });
+    const sent: SentMail[] = [];
+    platformTransport(sent);
+    await mailModule.sendProfileRejected(user.id);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].to).toBe("rejected-nosub@profmail.test");
   });
 });

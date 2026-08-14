@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Flux mot de passe</title>
+<link rel="stylesheet" href="assets/badge.css" />
+</head>
+<body>
+  <div class="state-page" data-screen-label="03 Flux mot de passe">
+    <div class="state-head">
+      <div class="crumb"><a href="index.html">Galerie</a> / Public &amp; Auth / Flux mot de passe</div>
+      <h1>Flux mot de passe</h1>
+      <p>Quatre écrans au même gabarit : mot de passe oublié, réinitialisation, définition à l'invitation, vérification e-mail.</p>
+    </div>
+    <div class="state-row">
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot"></span> Mot de passe oublié</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="auth-head"><h1 style="font-size:22px;">Mot de passe oublié</h1><p>Saisissez votre e-mail pour recevoir un lien de réinitialisation.</p></div>
+          <div class="field" style="margin-bottom:18px;"><label>Adresse e-mail</label><input class="input" type="email" placeholder="vous@organisation.fr" /></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">Envoyer le lien</button>
+          <div class="auth-foot"><a class="link" href="connexion.html"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Retour à la connexion</a></div>
+        </div>
+      </div>
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot ok"></span> E-mail envoyé</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="success-ring" style="width:56px;height:56px;"><span data-ico="mail" data-size="26"></span></div>
+          <div class="auth-head" style="text-align:center;"><h1 style="font-size:20px;">Vérifiez votre boîte mail</h1><p>Un lien de réinitialisation a été envoyé à <b>camille.laurent@exemple.fr</b>. Il expire dans 30 minutes.</p></div>
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;">Renvoyer l'e-mail</button>
+          <div class="auth-foot"><a class="link" href="connexion.html">Retour à la connexion</a></div>
+        </div>
+      </div>
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot"></span> Réinitialisation</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="auth-head"><h1 style="font-size:22px;">Nouveau mot de passe</h1><p>Choisissez un mot de passe sécurisé.</p></div>
+          <div class="field" style="margin-bottom:6px;"><label>Mot de passe</label><input class="input" type="password" value="••••••••••••" /></div>
+          <div class="pw-meter"><span class="pw-bar f4"></span><span class="pw-bar f4"></span><span class="pw-bar f4"></span><span class="pw-bar f3"></span></div>
+          <p class="help" style="margin:0 0 16px;">Robustesse : <b style="color:var(--green-700);">forte</b> — 12 caractères, majuscule, chiffre.</p>
+          <div class="field" style="margin-bottom:18px;"><label>Confirmer le mot de passe</label><input class="input" type="password" value="••••••••••••" /></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">Réinitialiser</button>
+        </div>
+      </div>
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot"></span> Définition à l'invitation</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="auth-head"><h1 style="font-size:21px;">Bienvenue, Yanis</h1><p>Vous avez été invité par <b>Salon Tech 2026</b> en tant que <b>MANAGER</b>. Définissez votre mot de passe pour activer votre compte.</p></div>
+          <div class="field" style="margin-bottom:6px;"><label>Mot de passe</label><input class="input" type="password" value="•••••" /></div>
+          <div class="pw-meter"><span class="pw-bar f1"></span><span class="pw-bar"></span><span class="pw-bar"></span><span class="pw-bar"></span></div>
+          <p class="help" style="margin:0 0 16px;">Robustesse : <b style="color:var(--rose-700);">faible</b> — ajoutez des caractères.</p>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">Activer mon compte</button>
+        </div>
+      </div>
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot ok"></span> Vérification e-mail</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="success-ring"><span data-ico="check" data-size="34"></span></div>
+          <div class="auth-head" style="text-align:center;"><h1 style="font-size:20px;">Adresse vérifiée</h1><p>Votre adresse e-mail a bien été confirmée. Vous pouvez maintenant vous connecter.</p></div>
+          <a class="btn btn-primary" href="connexion.html" style="width:100%;justify-content:center;">Se connecter</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

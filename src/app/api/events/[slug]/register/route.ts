@@ -4,8 +4,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { loadPublicEventBySlug, PublicEventError } from "@/lib/public-event";
 import { logActivity } from "@/lib/activity-log";
+import { assertCanRegister, SubscriptionError } from "@/lib/subscription";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
+import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationConfirmation } from "@/lib/mail";
 import { generateId } from "@/lib/generate-id";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
@@ -64,6 +66,7 @@ export async function POST(
         idDocumentType: true,
         idDocumentNumber: true,
         idDocument: true,
+        profileStatus: true,
       },
     });
     if (!user) {
@@ -77,6 +80,18 @@ export async function POST(
       return NextResponse.json(
         { code: "PROFILE_INCOMPLETE", error: "Profil incomplet : complétez votre profil avant de vous inscrire." },
         { status: 400 },
+      );
+    }
+
+    // v4 (plan 09) : deposer ses pieces suffit pour s'inscrire. L'inscription
+    // restera non approuvable tant que le profil n'est pas valide (cf. approve).
+    if (!canRegisterToEvent(user.profileStatus)) {
+      return NextResponse.json(
+        {
+          code: "PROFILE_NOT_SUBMITTED",
+          error: "Complétez votre profil et déposez vos pièces avant de vous inscrire.",
+        },
+        { status: 403 },
       );
     }
 
@@ -120,17 +135,15 @@ export async function POST(
       return NextResponse.json({ code: "DOCUMENT_BLOCKED", error: "Document bloqué." }, { status: 409 });
     }
 
-    const org = await prisma.organization.findUnique({ where: { id: event.orgId } });
-    if (org?.quotaMaxRegistrations !== null && org?.quotaMaxRegistrations !== undefined) {
-      const count = await prisma.registration.count({
-        where: { event: { orgId: org.id }, status: { in: ["PENDING", "APPROVED"] } },
-      });
-      if (count >= org.quotaMaxRegistrations) {
-        return NextResponse.json(
-          { code: "QUOTA_EXCEEDED", error: "Inscriptions complètes." },
-          { status: 429 },
-        );
+    try {
+      await assertCanRegister(event.id);
+    } catch (e) {
+      if (e instanceof SubscriptionError) {
+        const error =
+          e.code === "PARTICIPANT_LIMIT" ? "Inscriptions complètes." : "Inscriptions fermées.";
+        return NextResponse.json({ code: e.code, error }, { status: e.httpStatus });
       }
+      throw e;
     }
 
     const sequential = await prisma.registration.count({

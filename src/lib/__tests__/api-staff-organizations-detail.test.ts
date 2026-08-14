@@ -44,10 +44,10 @@ function uniqueSlug(prefix = "o") {
 }
 
 // ===========================================================
-// GET /api/staff/organizations/[orgId]
+// GET /api/platform/organizations/[orgId]
 // ===========================================================
 
-describe("GET /api/staff/organizations/[orgId]", () => {
+describe("GET /api/platform/organizations/[orgId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -59,9 +59,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(401);
@@ -76,9 +76,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
@@ -91,9 +91,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
       data: { name: "Detail", slug, legalName: "Detail SARL" },
     });
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
     );
     const res = await GET(req, { params: Promise.resolve({ orgId: org.id }) });
     const json = await res.json();
@@ -107,9 +107,9 @@ describe("GET /api/staff/organizations/[orgId]", () => {
   it("returns 404 for unknown org", async () => {
     await makeStaff();
 
-    const { GET } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { GET } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations/unknown",
+      "http://localhost/api/platform/organizations/unknown",
     );
     const res = await GET(req, {
       params: Promise.resolve({ orgId: "unknown" }),
@@ -119,10 +119,10 @@ describe("GET /api/staff/organizations/[orgId]", () => {
 });
 
 // ===========================================================
-// PATCH /api/staff/organizations/[orgId]
+// PATCH /api/platform/organizations/[orgId]
 // ===========================================================
 
-describe("PATCH /api/staff/organizations/[orgId]", () => {
+describe("PATCH /api/platform/organizations/[orgId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -134,9 +134,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ name: "Y" }),
@@ -155,9 +155,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ name: "Y" }),
@@ -176,9 +176,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ name: "Y" }),
@@ -199,9 +199,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "Old", slug: slugA },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -216,9 +216,6 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
           website: "https://new.example",
           contactEmail: "c@new.example",
           contactPhone: "+33102",
-          quotaMaxEvents: 50,
-          quotaMaxRegistrations: 1000,
-          quotaMaxStorageMB: 512,
         }),
         headers: { "content-type": "application/json" },
       },
@@ -242,9 +239,6 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
     expect(updated?.website).toBe("https://new.example");
     expect(updated?.contactEmail).toBe("c@new.example");
     expect(updated?.contactPhone).toBe("+33102");
-    expect(updated?.quotaMaxEvents).toBe(50);
-    expect(updated?.quotaMaxRegistrations).toBe(1000);
-    expect(updated?.quotaMaxStorageMB).toBe(512);
 
     const log = await prisma.activityLog.findFirst({
       where: { type: "ORG_UPDATED", orgId: org.id },
@@ -259,9 +253,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -289,9 +283,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
       data: { name: "X", slug: uniqueSlug() },
     });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({
@@ -307,6 +301,75 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the request body is malformed JSON", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "X", slug: uniqueSlug() },
+    });
+
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}`,
+      {
+        method: "PATCH",
+        body: "{not-json",
+        headers: { "content-type": "application/json" },
+      },
+    );
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 NOTHING_TO_UPDATE when the body is an empty object", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "X", slug: uniqueSlug() },
+    });
+
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({}),
+        headers: { "content-type": "application/json" },
+      },
+    );
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id }),
+    });
+    const json = await res.json();
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("NOTHING_TO_UPDATE");
+  });
+
+  it("rethrows a non-P2002/P2025 prisma error", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "X", slug: uniqueSlug() },
+    });
+
+    const spy = vi
+      .spyOn(prisma.organization, "update")
+      .mockRejectedValueOnce(Object.assign(new Error("db boom"), { code: "P2003" }));
+
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ name: "Y" }),
+        headers: { "content-type": "application/json" },
+      },
+    );
+    await expect(
+      PATCH(req, { params: Promise.resolve({ orgId: org.id }) }),
+    ).rejects.toThrow("db boom");
+    spy.mockRestore();
+  });
+
   it("returns 409 on slug collision", async () => {
     await makeStaff("STAFF_ADMIN");
     const slugA = uniqueSlug("a");
@@ -316,9 +379,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
     });
     await prisma.organization.create({ data: { name: "B", slug: slugB } });
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${a.id}`,
+      `http://localhost/api/platform/organizations/${a.id}`,
       {
         method: "PATCH",
         body: JSON.stringify({ slug: slugB }),
@@ -334,9 +397,9 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
   it("returns 404 for unknown org", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { PATCH } = await import("@/app/api/staff/organizations/[orgId]/route");
+    const { PATCH } = await import("@/app/api/platform/organizations/[orgId]/route");
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations/unknown",
+      "http://localhost/api/platform/organizations/unknown",
       {
         method: "PATCH",
         body: JSON.stringify({ name: "X" }),
@@ -354,7 +417,7 @@ describe("PATCH /api/staff/organizations/[orgId]", () => {
 // POST archive + restore
 // ===========================================================
 
-describe("POST /api/staff/organizations/[orgId]/archive", () => {
+describe("POST /api/platform/organizations/[orgId]/archive", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -367,10 +430,10 @@ describe("POST /api/staff/organizations/[orgId]/archive", () => {
     });
 
     const { POST } = await import(
-      "@/app/api/staff/organizations/[orgId]/archive/route"
+      "@/app/api/platform/organizations/[orgId]/archive/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}/archive`,
+      `http://localhost/api/platform/organizations/${org.id}/archive`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
@@ -396,18 +459,55 @@ describe("POST /api/staff/organizations/[orgId]/archive", () => {
     });
 
     const { POST } = await import(
-      "@/app/api/staff/organizations/[orgId]/archive/route"
+      "@/app/api/platform/organizations/[orgId]/archive/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}/archive`,
+      `http://localhost/api/platform/organizations/${org.id}/archive`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
   });
+
+  it("returns 404 for an unknown org (real P2025)", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/archive/route"
+    );
+    const req = new NextRequest(
+      "http://localhost/api/platform/organizations/unknown/archive",
+      { method: "POST" },
+    );
+    const res = await POST(req, { params: Promise.resolve({ orgId: "unknown" }) });
+    expect(res.status).toBe(404);
+  });
+
+  it("rethrows a non-P2025 prisma error", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: { name: "A", slug: uniqueSlug("arch") },
+    });
+
+    const spy = vi
+      .spyOn(prisma.organization, "update")
+      .mockRejectedValueOnce(Object.assign(new Error("db boom"), { code: "P2003" }));
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/archive/route"
+    );
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}/archive`,
+      { method: "POST" },
+    );
+    await expect(
+      POST(req, { params: Promise.resolve({ orgId: org.id }) }),
+    ).rejects.toThrow("db boom");
+    spy.mockRestore();
+  });
 });
 
-describe("POST /api/staff/organizations/[orgId]/restore", () => {
+describe("POST /api/platform/organizations/[orgId]/restore", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -425,10 +525,10 @@ describe("POST /api/staff/organizations/[orgId]/restore", () => {
     });
 
     const { POST } = await import(
-      "@/app/api/staff/organizations/[orgId]/restore/route"
+      "@/app/api/platform/organizations/[orgId]/restore/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}/restore`,
+      `http://localhost/api/platform/organizations/${org.id}/restore`,
       { method: "POST" },
     );
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
@@ -445,13 +545,55 @@ describe("POST /api/staff/organizations/[orgId]/restore", () => {
     });
     expect(log).not.toBeNull();
   });
+
+  it("returns 404 for an unknown org (real P2025)", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/restore/route"
+    );
+    const req = new NextRequest(
+      "http://localhost/api/platform/organizations/unknown/restore",
+      { method: "POST" },
+    );
+    const res = await POST(req, { params: Promise.resolve({ orgId: "unknown" }) });
+    expect(res.status).toBe(404);
+  });
+
+  it("rethrows a non-P2025 prisma error", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({
+      data: {
+        name: "R",
+        slug: uniqueSlug("rest"),
+        archived: true,
+        archivedAt: new Date(),
+      },
+    });
+
+    const spy = vi
+      .spyOn(prisma.organization, "update")
+      .mockRejectedValueOnce(Object.assign(new Error("db boom"), { code: "P2003" }));
+
+    const { POST } = await import(
+      "@/app/api/platform/organizations/[orgId]/restore/route"
+    );
+    const req = new NextRequest(
+      `http://localhost/api/platform/organizations/${org.id}/restore`,
+      { method: "POST" },
+    );
+    await expect(
+      POST(req, { params: Promise.resolve({ orgId: org.id }) }),
+    ).rejects.toThrow("db boom");
+    spy.mockRestore();
+  });
 });
 
 // ===========================================================
-// DELETE /api/staff/organizations/[orgId]
+// DELETE /api/platform/organizations/[orgId]
 // ===========================================================
 
-describe("DELETE /api/staff/organizations/[orgId]", () => {
+describe("DELETE /api/platform/organizations/[orgId]", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -465,10 +607,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "x-confirm": `delete-${slug}` },
@@ -492,10 +634,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       { method: "DELETE" },
     );
     const res = await DELETE(req, {
@@ -533,10 +675,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "x-confirm": `delete-${slug}` },
@@ -573,10 +715,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "content-type": "application/json" },
@@ -597,10 +739,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     });
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      `http://localhost/api/staff/organizations/${org.id}`,
+      `http://localhost/api/platform/organizations/${org.id}`,
       {
         method: "DELETE",
         headers: { "x-confirm": "delete-not-the-slug" },
@@ -616,10 +758,10 @@ describe("DELETE /api/staff/organizations/[orgId]", () => {
     await makeStaff("SUPER_ADMIN");
 
     const { DELETE } = await import(
-      "@/app/api/staff/organizations/[orgId]/route"
+      "@/app/api/platform/organizations/[orgId]/route"
     );
     const req = new NextRequest(
-      "http://localhost/api/staff/organizations/unknown",
+      "http://localhost/api/platform/organizations/unknown",
       {
         method: "DELETE",
         headers: { "x-confirm": "delete-anything" },

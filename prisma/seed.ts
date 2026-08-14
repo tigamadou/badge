@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { generateId } from "../src/lib/generate-id";
+import { ensureReferenceTemplates, defaultTemplateId } from "../src/lib/badge-templates/install";
 
 const prisma = new PrismaClient();
 
@@ -49,19 +50,17 @@ const ORGS: Array<{
   city: string;
   taxId: string;
   archived?: boolean;
-  quotaMaxEvents?: number | null;
-  quotaMaxRegistrations?: number | null;
 }> = [
   { slug: "acme", name: "Acme Corporation", legalName: "Acme SARL", city: "Abidjan", taxId: "CI-001-001" },
-  { slug: "globex", name: "Globex Industries", legalName: "Globex SA", city: "Yamoussoukro", taxId: "CI-001-002", quotaMaxEvents: 10 },
+  { slug: "globex", name: "Globex Industries", legalName: "Globex SA", city: "Yamoussoukro", taxId: "CI-001-002" },
   { slug: "initech", name: "Initech", legalName: "Initech SARL", city: "Bouake", taxId: "CI-001-003" },
-  { slug: "umbrella", name: "Umbrella Corp", legalName: "Umbrella SA", city: "Daloa", taxId: "CI-001-004", quotaMaxRegistrations: 500 },
+  { slug: "umbrella", name: "Umbrella Corp", legalName: "Umbrella SA", city: "Daloa", taxId: "CI-001-004" },
   { slug: "stark", name: "Stark Industries", legalName: "Stark Innov. SARL", city: "San-Pedro", taxId: "CI-001-005" },
   { slug: "wayne", name: "Wayne Enterprises", legalName: "Wayne SARL", city: "Korhogo", taxId: "CI-001-006" },
   { slug: "cyberdyne", name: "Cyberdyne Systems", legalName: "Cyberdyne SA", city: "Man", taxId: "CI-001-007" },
   { slug: "soylent", name: "Soylent Corp", legalName: "Soylent SARL", city: "Divo", taxId: "CI-001-008", archived: true },
   { slug: "massive", name: "Massive Dynamic", legalName: "Massive Dyn. SA", city: "Gagnoa", taxId: "CI-001-009" },
-  { slug: "tyrell", name: "Tyrell Corp", legalName: "Tyrell SARL", city: "Anyama", taxId: "CI-001-010", quotaMaxEvents: 5, quotaMaxRegistrations: 200 },
+  { slug: "tyrell", name: "Tyrell Corp", legalName: "Tyrell SARL", city: "Anyama", taxId: "CI-001-010" },
 ];
 
 const FIRST_NAMES = [
@@ -221,23 +220,65 @@ async function main() {
   await cleanup();
 
   // 1. PlatformSettings
+  // Le SMTP est reecrit a chaque seed : les tests e2e et les essais manuels
+  // dans l'UI plateforme peuvent l'avoir pointe ailleurs que sur mailpit.
+  const platformSmtp = {
+    smtpHost: process.env.PLATFORM_SMTP_HOST || "mailpit",
+    smtpPort: parseInt(process.env.PLATFORM_SMTP_PORT || "1025", 10),
+    smtpFrom: process.env.PLATFORM_SMTP_FROM || "noreply@badge.local",
+    smtpUser: process.env.PLATFORM_SMTP_USER || "",
+    smtpPassword: process.env.PLATFORM_SMTP_PASSWORD || "",
+    smtpSecure: process.env.PLATFORM_SMTP_SECURE === "true",
+  };
   await prisma.platformSettings.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
-      smtpHost: process.env.PLATFORM_SMTP_HOST || "mailpit",
-      smtpPort: parseInt(process.env.PLATFORM_SMTP_PORT || "1025", 10),
-      smtpFrom: process.env.PLATFORM_SMTP_FROM || "noreply@badge.local",
-      smtpUser: process.env.PLATFORM_SMTP_USER || "",
-      smtpPassword: process.env.PLATFORM_SMTP_PASSWORD || "",
-      smtpSecure: process.env.PLATFORM_SMTP_SECURE === "true",
+      ...platformSmtp,
       recaptchaEnabled: false,
       recaptchaSiteKey: "",
       recaptchaSecretKey: "",
       badgeTemplateId: "default-v1",
     },
+    update: platformSmtp,
+  });
+
+  // 1b. Plans d'abonnement par defaut (v4). Upsert par nom (unique).
+  await prisma.plan.upsert({
+    where: { name: "Gratuit" },
+    create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100 },
     update: {},
   });
+  await prisma.plan.upsert({
+    where: { name: "Standard" },
+    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000 },
+    update: {},
+  });
+  console.log("Plans par defaut (Gratuit, Standard) prets.");
+
+  // 1b. Catalogue de motifs de rejet (v4 plan 08). Idempotent via findFirst sur le libelle.
+  const rejectionReasonSeeds: Array<{
+    label: string;
+    scope: "PROFILE" | "REGISTRATION" | "BOTH";
+    sortOrder: number;
+  }> = [
+    { label: "Photo illisible ou de mauvaise qualite", scope: "PROFILE", sortOrder: 10 },
+    { label: "Photo non conforme (visage non visible)", scope: "PROFILE", sortOrder: 20 },
+    { label: "Piece d'identite illisible", scope: "PROFILE", sortOrder: 30 },
+    { label: "Piece d'identite expiree", scope: "PROFILE", sortOrder: 40 },
+    { label: "Informations incoherentes entre la piece et le profil", scope: "PROFILE", sortOrder: 50 },
+    { label: "Document suspecte de falsification", scope: "BOTH", sortOrder: 60 },
+    { label: "Categorie demandee non justifiee", scope: "REGISTRATION", sortOrder: 70 },
+    { label: "Quota de la categorie atteint", scope: "REGISTRATION", sortOrder: 80 },
+    { label: "Inscription en doublon", scope: "REGISTRATION", sortOrder: 90 },
+  ];
+  for (const r of rejectionReasonSeeds) {
+    const existing = await prisma.rejectionReason.findFirst({ where: { label: r.label } });
+    if (!existing) {
+      await prisma.rejectionReason.create({ data: r });
+    }
+  }
+  console.log(`Motifs de rejet seedes : ${rejectionReasonSeeds.length}`);
 
   // 2. Pre-hash unique du password demo (gain ~60s sur 240 hashes).
   const passwordHash = await hash(DEMO_PASSWORD, 12);
@@ -272,8 +313,8 @@ async function main() {
   }
   console.log(`Staff users seedes : ${staffSeeds.map((s) => s.email).join(", ")}`);
 
-  // 4. Participant historique avec profil complet.
-  await prisma.user.upsert({
+  // 4. Participant historique avec profil complet (profil APPROVED, v4 plan 08).
+  const historicalParticipant = await prisma.user.upsert({
     where: { email: "participant@badge.local" },
     create: {
       email: "participant@badge.local",
@@ -289,10 +330,106 @@ async function main() {
       idDocumentNumber: "CI-AWA-001",
       idDocument: "uploads/profile/seed/awa-cni.pdf",
       participantProfileCompletedAt: new Date(),
+      profileStatus: "APPROVED",
     },
-    update: { password: passwordHash, emailVerifiedAt: new Date() },
+    update: { password: passwordHash, emailVerifiedAt: new Date(), profileStatus: "APPROVED" },
   });
   console.log("Participant historique seede : participant@badge.local");
+
+  // 4b. Soumissions de profil dans les trois etats (v4 plan 08).
+  const superAdmin = await prisma.user.findUnique({ where: { email: "admin@badge.local" } });
+
+  // 4c. Templates de badge livres avec l'application (v4 plan 12). Ils ne sont plus
+  // compiles : le seed les installe comme n'importe quel paquet, et porte desormais la
+  // garantie qu'un template par defaut existe -- garantie qui vivait dans le
+  // @default("default-v1") de PlatformSettings.badgeTemplateId.
+  await ensureReferenceTemplates(superAdmin!.id);
+  const currentSettings = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+  const pointsToExisting =
+    currentSettings !== null &&
+    (await prisma.installedBadgeTemplate.count({
+      where: { id: currentSettings.badgeTemplateId },
+    })) > 0;
+  if (!pointsToExisting) {
+    const fallback = await defaultTemplateId();
+    if (fallback) {
+      await prisma.platformSettings.update({
+        where: { id: "singleton" },
+        data: { badgeTemplateId: fallback },
+      });
+    }
+  }
+  console.log("Templates de badge de reference installes.");
+  if (
+    (await prisma.profileSubmission.count({ where: { userId: historicalParticipant.id } })) === 0
+  ) {
+    await prisma.profileSubmission.create({
+      data: {
+        userId: historicalParticipant.id,
+        photo: "uploads/profile/seed/awa-photo.jpg",
+        idDocumentType: "CNI",
+        idDocumentNumber: "CI-AWA-001",
+        idDocument: "uploads/profile/seed/awa-cni.pdf",
+        status: "APPROVED",
+        reviewedById: superAdmin?.id ?? null,
+        reviewedAt: new Date(),
+      },
+    });
+  }
+
+  const profileStateSeeds: Array<{
+    email: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    status: "PENDING" | "REJECTED";
+  }> = [
+    { email: "profil-attente@badge.local", name: "Koffi Yao", firstName: "Koffi", lastName: "Yao", status: "PENDING" },
+    { email: "profil-rejete@badge.local", name: "Mariam Bah", firstName: "Mariam", lastName: "Bah", status: "REJECTED" },
+  ];
+  const profileRejectReason = await prisma.rejectionReason.findFirst({
+    where: { label: "Piece d'identite illisible" },
+  });
+  for (const p of profileStateSeeds) {
+    const u = await prisma.user.upsert({
+      where: { email: p.email },
+      create: {
+        email: p.email,
+        password: passwordHash,
+        name: p.name,
+        isStaff: false,
+        emailVerifiedAt: new Date(),
+        firstName: p.firstName,
+        lastName: p.lastName,
+        structure: "Structure demo",
+        photo: `uploads/profile/seed/${p.firstName.toLowerCase()}-photo.jpg`,
+        idDocumentType: "CNI",
+        idDocumentNumber: `CI-${p.firstName.toUpperCase()}-001`,
+        idDocument: `uploads/profile/seed/${p.firstName.toLowerCase()}-cni.pdf`,
+        participantProfileCompletedAt: new Date(),
+        profileStatus: p.status,
+      },
+      update: { password: passwordHash, emailVerifiedAt: new Date(), profileStatus: p.status },
+    });
+    if ((await prisma.profileSubmission.count({ where: { userId: u.id } })) === 0) {
+      await prisma.profileSubmission.create({
+        data: {
+          userId: u.id,
+          photo: `uploads/profile/seed/${p.firstName.toLowerCase()}-photo.jpg`,
+          idDocumentType: "CNI",
+          idDocumentNumber: `CI-${p.firstName.toUpperCase()}-001`,
+          idDocument: `uploads/profile/seed/${p.firstName.toLowerCase()}-cni.pdf`,
+          status: p.status,
+          rejectionReasonId: p.status === "REJECTED" ? profileRejectReason?.id ?? null : null,
+          rejectionReasonLabel: p.status === "REJECTED" ? profileRejectReason?.label ?? null : null,
+          rejectionDetails: p.status === "REJECTED" ? "Le numero de piece est masque sur le scan." : null,
+          reviewedById: p.status === "REJECTED" ? superAdmin?.id ?? null : null,
+          reviewedAt: p.status === "REJECTED" ? new Date() : null,
+        },
+      });
+    }
+  }
+  console.log(`Profils demo (PENDING/REJECTED) seedes : ${profileStateSeeds.map((p) => p.email).join(", ")}`);
 
   // ADR 2026-06-01 (v2-14 Task 15) : branchement minimal vs demo.
   // Defaut (production-safe) -> s'arrete ici. Smoke test "0 org / 0 event" reste vert.
@@ -322,8 +459,6 @@ async function main() {
         website: `https://${orgDef.slug}.example.ci`,
         contactEmail: `contact@${orgDef.slug}.example.ci`,
         contactPhone: `+225 27 22 ${randInt(10, 99)} ${randInt(10, 99)} ${randInt(10, 99)}`,
-        quotaMaxEvents: orgDef.quotaMaxEvents ?? null,
-        quotaMaxRegistrations: orgDef.quotaMaxRegistrations ?? null,
         archived: orgDef.archived ?? false,
         archivedAt: orgDef.archived ? new Date() : null,
       },
@@ -380,6 +515,10 @@ async function main() {
       const eventSlug = `demo-${orgDef.slug}-${ed.key}`;
       const eventDate = daysFromNow(state.daysOffset);
 
+      // v4 (plan 07) : le premier event de chaque org porte une description et une
+      // date de fin (J+2) ; les autres restent mono-journee sans description, pour
+      // exercer les deux rendus.
+      const withDetails = i === 0;
       const event = await prisma.event.create({
         data: {
           orgId: org.id,
@@ -387,6 +526,10 @@ async function main() {
           slug: eventSlug,
           location: ed.location,
           date: eventDate,
+          endDate: withDetails ? daysFromNow(state.daysOffset + 2) : null,
+          description: withDetails
+            ? `${ed.title} : trois jours de conferences, d'ateliers et de rencontres professionnelles.`
+            : null,
           registrationOpen: state.registrationOpen,
           archived: state.archived,
           archivedAt: state.archived ? new Date() : null,

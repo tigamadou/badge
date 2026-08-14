@@ -25,20 +25,20 @@ export function BadgeWebPreviewV2({
         )}
         <div className="text-xs">
           <div className="font-bold">{event.title}</div>
-          <div className="text-gray-500">{new Date(event.date).toLocaleDateString("fr-FR")}</div>
+          <div className="text-slate-500">{new Date(event.date).toLocaleDateString("fr-FR")}</div>
         </div>
       </div>
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photoUrl} alt="" className="w-full h-40 object-cover" />
       ) : (
-        <div className="w-full h-40 bg-gray-100" />
+        <div className="w-full h-40 bg-slate-100" />
       )}
       <div className="p-2 text-center">
         <div className="font-semibold text-sm">
           {registration.firstName} {registration.lastName}
         </div>
-        <div className="text-xs text-gray-600">{registration.structure}</div>
+        <div className="text-xs text-slate-600">{registration.structure}</div>
       </div>
       <div className="p-2 text-white text-center text-sm font-semibold" style={{ background: catColor }}>
         #{registration.category.number} — {registration.category.name}
@@ -49,9 +49,9 @@ export function BadgeWebPreviewV2({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={qrDataUrl} alt="" className="w-12 h-12" />
         ) : (
-          <span className="text-xs text-gray-400">QR</span>
+          <span className="text-xs text-slate-400">QR</span>
         )}
-        <span className="text-[10px] text-gray-500">{registration.id}</span>
+        <span className="text-[10px] text-slate-500">{registration.id}</span>
       </div>
     </div>
   );

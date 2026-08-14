@@ -11,6 +11,7 @@ vi.mock("@/lib/mail", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/mail")>();
   return { ...actual, sendSmtpTest: vi.fn(async () => undefined) };
 });
+import { sendSmtpTest } from "@/lib/mail";
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
@@ -78,10 +79,10 @@ async function seedSettings(overrides: Partial<{
 }
 
 // =====================================================
-//  GET /api/staff/settings
+//  GET /api/platform/settings
 // =====================================================
 
-describe("GET /api/staff/settings", () => {
+describe("GET /api/platform/settings", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -89,8 +90,8 @@ describe("GET /api/staff/settings", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
@@ -100,8 +101,8 @@ describe("GET /api/staff/settings", () => {
       data: { email: "c@x", password: "x", name: "C" },
     });
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
@@ -120,8 +121,8 @@ describe("GET /api/staff/settings", () => {
       recaptchaSecretKey: "ANOTHER_SECRET",
     });
 
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
@@ -141,8 +142,8 @@ describe("GET /api/staff/settings", () => {
   it("creates a singleton on the fly when missing", async () => {
     await makeStaff("STAFF_OBSERVER");
 
-    const { GET } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings");
+    const { GET } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings");
     const res = await GET(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -157,10 +158,10 @@ describe("GET /api/staff/settings", () => {
 });
 
 // =====================================================
-//  PATCH /api/staff/settings
+//  PATCH /api/platform/settings
 // =====================================================
 
-describe("PATCH /api/staff/settings", () => {
+describe("PATCH /api/platform/settings", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -169,8 +170,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "new" }),
       headers: { "content-type": "application/json" },
@@ -181,8 +182,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("STAFF_OBSERVER cannot patch (403)", async () => {
     await makeStaff("STAFF_OBSERVER");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "new" }),
       headers: { "content-type": "application/json" },
@@ -193,8 +194,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("STAFF_SUPPORT cannot patch (403)", async () => {
     await makeStaff("STAFF_SUPPORT");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "new" }),
       headers: { "content-type": "application/json" },
@@ -208,8 +209,8 @@ describe("PATCH /api/staff/settings", () => {
   // log sans valeurs secretes.
   it("SUPER_ADMIN updates SMTP + reCAPTCHA fields, logs PLATFORM_SETTINGS_UPDATED without secret values", async () => {
     await makeStaff("SUPER_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({
         smtpHost: "smtp.new",
@@ -266,8 +267,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("SUPER_ADMIN can also patch", async () => {
     await makeStaff("SUPER_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "smtp.super" }),
       headers: { "content-type": "application/json" },
@@ -281,8 +282,8 @@ describe("PATCH /api/staff/settings", () => {
     await seedSettings({ smtpPassword: "EXISTING_PWD" });
     await makeStaff("STAFF_ADMIN");
 
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "h2", smtpPassword: "" }),
       headers: { "content-type": "application/json" },
@@ -307,8 +308,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("rejects unknown fields with 400 (strict schema)", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({ smtpHost: "h", unknownField: "x" }),
       headers: { "content-type": "application/json" },
@@ -324,8 +325,8 @@ describe("PATCH /api/staff/settings", () => {
 
   it("rejects empty body with 400 (NOTHING_TO_UPDATE)", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { PATCH } = await import("@/app/api/staff/settings/route");
-    const req = new NextRequest("http://localhost/api/staff/settings", {
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
       method: "PATCH",
       body: JSON.stringify({}),
       headers: { "content-type": "application/json" },
@@ -333,13 +334,25 @@ describe("PATCH /api/staff/settings", () => {
     const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
   });
+
+  it("rejects malformed JSON body with 400", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const { PATCH } = await import("@/app/api/platform/settings/route");
+    const req = new NextRequest("http://localhost/api/platform/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: "{not-json",
+    });
+    const res = await PATCH(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+  });
 });
 
 // =====================================================
-//  POST /api/staff/settings/test-smtp
+//  POST /api/platform/settings/test-smtp
 // =====================================================
 
-describe("POST /api/staff/settings/test-smtp", () => {
+describe("POST /api/platform/settings/test-smtp", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -348,8 +361,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("returns 401 without session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "ok@example.com" }),
       headers: { "content-type": "application/json" },
@@ -360,8 +373,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_OBSERVER cannot test SMTP (403)", async () => {
     await makeStaff("STAFF_OBSERVER");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "ok@example.com" }),
       headers: { "content-type": "application/json" },
@@ -372,8 +385,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_SUPPORT cannot test SMTP (403)", async () => {
     await makeStaff("STAFF_SUPPORT");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "ok@example.com" }),
       headers: { "content-type": "application/json" },
@@ -384,8 +397,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_ADMIN sends test SMTP to provided email (200)", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "target@example.com" }),
       headers: { "content-type": "application/json" },
@@ -399,8 +412,8 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("STAFF_ADMIN falls back to own session email when no body.to", async () => {
     const admin = await makeStaff("STAFF_ADMIN");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({}),
       headers: { "content-type": "application/json" },
@@ -413,13 +426,133 @@ describe("POST /api/staff/settings/test-smtp", () => {
 
   it("returns 400 for invalid email format", async () => {
     await makeStaff("STAFF_ADMIN");
-    const { POST } = await import("@/app/api/staff/settings/test-smtp/route");
-    const req = new NextRequest("http://localhost/api/staff/settings/test-smtp", {
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
       method: "POST",
       body: JSON.stringify({ to: "not-an-email" }),
       headers: { "content-type": "application/json" },
     });
     const res = await POST(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
+  });
+
+  it("treats a malformed JSON body as {} (falls back to session email)", async () => {
+    const admin = await makeStaff("STAFF_ADMIN");
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{not-json",
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.to).toBe(admin.email);
+  });
+
+  it("treats a JSON `null` body as {} (nullish fallback, falls back to session email)", async () => {
+    const admin = await makeStaff("STAFF_ADMIN");
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "null",
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.to).toBe(admin.email);
+  });
+
+  it("returns 400 NO_EMAIL_PROVIDED when no `to` is given and the session has no email", async () => {
+    const admin = await makeStaff("STAFF_ADMIN");
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: admin.id, email: "", name: admin.name, isStaff: true },
+    } as never);
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
+      method: "POST",
+      body: JSON.stringify({}),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("NO_EMAIL_PROVIDED");
+  });
+
+  it("returns 400 INVALID_EMAIL and logs ok:false when sendSmtpTest rejects with an invalid-email message", async () => {
+    const admin = await makeStaff("STAFF_ADMIN");
+    // `to` doit passer la validation zod (.email()) de la route : c'est sendSmtpTest
+    // (mocke) qui rejette ensuite avec un message "invalid email", pas le schema.
+    vi.mocked(sendSmtpTest).mockRejectedValueOnce(
+      new Error("Invalid email address: someone@example.com"),
+    );
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
+      method: "POST",
+      body: JSON.stringify({ to: "someone@example.com" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("INVALID_EMAIL");
+
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "PLATFORM_SETTINGS_UPDATED", userId: admin.id },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(log).not.toBeNull();
+    const details = log?.details as { action: string; ok: boolean; message: string };
+    expect(details.action).toBe("test-smtp");
+    expect(details.ok).toBe(false);
+  });
+
+  it("returns 500 SMTP_TEST_FAILED with message 'unknown' when sendSmtpTest rejects a non-Error value", async () => {
+    const admin = await makeStaff("STAFF_ADMIN");
+    vi.mocked(sendSmtpTest).mockRejectedValueOnce("boom-string");
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
+      method: "POST",
+      body: JSON.stringify({ to: "target@example.com" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.error).toBe("SMTP_TEST_FAILED");
+    expect(json.message).toBe("unknown");
+
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "PLATFORM_SETTINGS_UPDATED", userId: admin.id },
+      orderBy: { createdAt: "desc" },
+    });
+    const details = log?.details as { message: string };
+    expect(details.message).toBe("unknown");
+  });
+
+  it("returns 500 SMTP_TEST_FAILED and logs ok:false for a generic SMTP failure", async () => {
+    const admin = await makeStaff("STAFF_ADMIN");
+    vi.mocked(sendSmtpTest).mockRejectedValueOnce(new Error("Connection refused"));
+    const { POST } = await import("@/app/api/platform/settings/test-smtp/route");
+    const req = new NextRequest("http://localhost/api/platform/settings/test-smtp", {
+      method: "POST",
+      body: JSON.stringify({ to: "target@example.com" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.error).toBe("SMTP_TEST_FAILED");
+
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "PLATFORM_SETTINGS_UPDATED", userId: admin.id },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(log).not.toBeNull();
+    const details = log?.details as { ok: boolean; message: string };
+    expect(details.ok).toBe(false);
+    expect(details.message).toBe("Connection refused");
   });
 });

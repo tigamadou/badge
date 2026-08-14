@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Journal</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "log", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" } };</script>
+<div id="page" data-screen-label="29 Org journal">
+
+  <div class="page-head"><div><h1>Journal d'activité</h1><p class="sub">Actions au sein de Salon Tech</p></div><button class="btn-ghost-sm"><span data-ico="download" data-size="14"></span> Exporter</button></div>
+
+  <div class="toolbar wrap">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Rechercher…" /></div>
+    <button class="chip-filter"><span data-ico="filter" data-size="14"></span> Type <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="calendar" data-size="14"></span> 30 derniers jours <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="user" data-size="14"></span> Membre <span data-ico="chevron-down" data-size="14"></span></button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Horodatage</th><th>Type</th><th>Action</th><th>Auteur</th><th>Contexte</th><th></th></tr></thead>
+      <tbody>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=org'"><td class="cell-meta mono">07/06 11:02</td><td><span class="log-type acces"><span class="ld"></span> Inscriptions</span></td><td>42 inscriptions approuvées en lot</td><td>Sophie Bernard</td><td class="cell-meta">Salon Tech 2026</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=org'"><td class="cell-meta mono">07/06 09:14</td><td><span class="log-type creation"><span class="ld"></span> Membre</span></td><td>Membre invité — marc.leroy@exemple.fr (MANAGER)</td><td>Julien Roy</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=org'"><td class="cell-meta mono">06/06 16:40</td><td><span class="log-type creation"><span class="ld"></span> Création</span></td><td>Événement « Salon Tech Été » créé</td><td>Julien Roy</td><td class="cell-meta">Salon Tech Été</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=org'"><td class="cell-meta mono">06/06 02:00</td><td><span class="log-type systeme"><span class="ld"></span> Système</span></td><td>Quota de stockage &gt; 80%</td><td>Système</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=org'"><td class="cell-meta mono">05/06 15:28</td><td><span class="log-type suppression"><span class="ld"></span> Rejet</span></td><td>18 inscriptions rejetées — justificatif manquant</td><td>Sophie Bernard</td><td class="cell-meta">Salon Tech 2026</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=org'"><td class="cell-meta mono">04/06 10:11</td><td><span class="log-type modification"><span class="ld"></span> Modification</span></td><td>Modèle de catégories « Salon professionnel » modifié</td><td>Julien Roy</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager"><span class="info">1–6 sur 312</span><div class="ctrls"><button class="btn-ghost-sm" disabled style="opacity:.5;"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

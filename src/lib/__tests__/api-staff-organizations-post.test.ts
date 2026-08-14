@@ -39,7 +39,7 @@ async function cleanDb() {
   await prisma.user.deleteMany();
 }
 
-describe("POST /api/staff/organizations", () => {
+describe("POST /api/platform/organizations", () => {
   beforeEach(async () => {
     await cleanDb();
     vi.mocked(getServerSession).mockReset();
@@ -48,8 +48,8 @@ describe("POST /api/staff/organizations", () => {
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -65,8 +65,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects STAFF_OBSERVER with 403", async () => {
     await makeStaff("STAFF_OBSERVER");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -82,8 +82,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects STAFF_SUPPORT with 403", async () => {
     await makeStaff("STAFF_SUPPORT");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -99,8 +99,8 @@ describe("POST /api/staff/organizations", () => {
   it("STAFF_ADMIN creates org + new OWNER user + membership + invite token", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme Corp",
@@ -147,8 +147,8 @@ describe("POST /api/staff/organizations", () => {
   it("SUPER_ADMIN can also create org", async () => {
     await makeStaff("SUPER_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "SuperOrg",
@@ -173,8 +173,8 @@ describe("POST /api/staff/organizations", () => {
     });
     expect(existing.inviteToken).toBeNull();
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Beta",
@@ -206,8 +206,8 @@ describe("POST /api/staff/organizations", () => {
     await makeStaff("STAFF_ADMIN");
     await prisma.organization.create({ data: { name: "Acme", slug: "acme" } });
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -225,8 +225,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects missing name with 400", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         ownerEmail: "owner@acme.com",
@@ -241,8 +241,8 @@ describe("POST /api/staff/organizations", () => {
   it("rejects invalid ownerEmail with 400", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Acme",
@@ -255,11 +255,65 @@ describe("POST /api/staff/organizations", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when the request body is malformed JSON", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
+      method: "POST",
+      body: "{not-json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+  });
+
+  it("falls back to slug 'org' when the name has no alphanumeric characters", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "!!!",
+        ownerEmail: "noalnum@x.com",
+        ownerName: "Owner",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    const json = await res.json();
+    expect(res.status).toBe(201);
+    expect(json.org.slug).toBe("org");
+  });
+
+  it("falls back to the owner email as name when ownerName is omitted", async () => {
+    await makeStaff("STAFF_ADMIN");
+
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "NoOwnerName",
+        ownerEmail: "NoName@x.com",
+      }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({}) });
+    expect(res.status).toBe(201);
+
+    const owner = await prisma.user.findUnique({
+      where: { email: "noname@x.com" },
+    });
+    expect(owner).not.toBeNull();
+    expect(owner?.name).toBe("noname@x.com");
+  });
+
   it("accepts and persists all admin fields", async () => {
     await makeStaff("STAFF_ADMIN");
 
-    const { POST } = await import("@/app/api/staff/organizations/route");
-    const req = new NextRequest("http://localhost/api/staff/organizations", {
+    const { POST } = await import("@/app/api/platform/organizations/route");
+    const req = new NextRequest("http://localhost/api/platform/organizations", {
       method: "POST",
       body: JSON.stringify({
         name: "Full",
@@ -273,9 +327,6 @@ describe("POST /api/staff/organizations", () => {
         website: "https://full.example",
         contactEmail: "contact@full.example",
         contactPhone: "+33123456789",
-        quotaMaxEvents: 100,
-        quotaMaxRegistrations: 5000,
-        quotaMaxStorageMB: 2048,
         ownerEmail: "full-owner@x.com",
         ownerName: "Full Owner",
       }),
@@ -297,8 +348,5 @@ describe("POST /api/staff/organizations", () => {
     expect(org?.website).toBe("https://full.example");
     expect(org?.contactEmail).toBe("contact@full.example");
     expect(org?.contactPhone).toBe("+33123456789");
-    expect(org?.quotaMaxEvents).toBe(100);
-    expect(org?.quotaMaxRegistrations).toBe(5000);
-    expect(org?.quotaMaxStorageMB).toBe(2048);
   });
 });

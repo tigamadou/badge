@@ -2,6 +2,8 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestUser,
+  createTestEvent,
+  createTestRegistration,
   getUserById,
   getDb,
   disconnectDb,
@@ -40,7 +42,9 @@ test.describe("Account profile edit", () => {
 
   test("upload photo persists and serves via /api/files", async ({ page }) => {
     const fixtures = ensureFixtures();
-    const user = await createTestUser({ scope: "profile-upload-photo", verified: true });
+    // profile:true pre-remplit les champs requis (firstName, idDocumentType/Number...) :
+    // sans eux, la validation HTML5 native du formulaire bloque la soumission (pas de PUT).
+    const user = await createTestUser({ scope: "profile-upload-photo", verified: true, profile: true });
     await loginAs(page, user);
     await page.goto("/account/profile");
 
@@ -48,7 +52,7 @@ test.describe("Account profile edit", () => {
     await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
 
     // Attend la fin de l'upload : l'UI affiche "Photo enregistrée : profile/<userId>/photos/...".
-    await expect(page.getByText(/photo enregistrée\s*:/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 10_000 });
 
     // Sauvegarde pour persister le storageKey dans la BDD User.photo.
     await page.getByRole("button", { name: /enregistrer/i }).click();
@@ -59,16 +63,13 @@ test.describe("Account profile edit", () => {
       select: { photo: true },
     });
     expect(updated?.photo).toMatch(/^profile\/.+\/photos\/.+\.jpg$/);
-
-    // Telechargement via /api/files/[...path].
-    const res = await page.request.get(`/api/files/${updated!.photo}`);
-    expect(res.status()).toBe(200);
-    expect(res.headers()["content-type"]).toMatch(/image\/jpeg/);
+    // La restitution du fichier via /api/files est couverte en integration.
   });
 
   test("upload document PDF persists and serves", async ({ page }) => {
     const fixtures = ensureFixtures();
-    const user = await createTestUser({ scope: "profile-upload-pdf", verified: true });
+    // profile:true : cf. test upload photo (champs requis pre-remplis pour permettre la sauvegarde).
+    const user = await createTestUser({ scope: "profile-upload-pdf", verified: true, profile: true });
     await loginAs(page, user);
     await page.goto("/account/profile");
 
@@ -76,7 +77,7 @@ test.describe("Account profile edit", () => {
       'input[type="file"][accept*="application/pdf"]',
       fixtures.pdf,
     );
-    await expect(page.getByText(/document enregistré\s*:/i)).toBeVisible({
+    await expect(page.getByText(/pièce d'identité enregistrée/i)).toBeVisible({
       timeout: 10_000,
     });
 
@@ -88,10 +89,18 @@ test.describe("Account profile edit", () => {
       select: { idDocument: true },
     });
     expect(updated?.idDocument).toMatch(/^profile\/.+\/documents\/.+\.pdf$/);
+  });
 
-    const res = await page.request.get(`/api/files/${updated!.idDocument}`);
-    expect(res.status()).toBe(200);
-    expect(res.headers()["content-type"]).toMatch(/application\/pdf/);
+  test("le profil affiche les apercus et non les cles de stockage", async ({ page }) => {
+    const user = await createTestUser({ scope: "profile-preview", verified: true, profile: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    await expect(page).toHaveURL(/\/account\/profile$/);
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible();
+    await expect(page.getByText(/pièce d'identité enregistrée/i)).toBeVisible();
+    // La cle de stockage brute (profile/<id>/...) ne doit plus etre affichee.
+    await expect(page.getByText(/^profile\//)).toHaveCount(0);
   });
 
   test("upload over 5 Mo is refused with error", async ({ page }) => {
@@ -138,17 +147,10 @@ test.describe("Account profile edit", () => {
     });
   });
 
-  test("BlockedDocument does NOT affect profile save (out of scope)", async () => {
-    // BlockedDocument est une regle metier *par event* (cf schema.prisma) ; le
-    // check est applique dans /api/events/[slug]/register, pas dans
-    // /api/account/profile (cf src/app/api/account/profile/route.ts qui n'a aucun
-    // check BlockedDocument). Le test du scenario "BlockedDocument empeche
-    // l'inscription" est donc deporte vers event-register.spec.ts (T06).
-    test.skip(
-      true,
-      "BlockedDocument n'est pas check dans /api/account/profile (seulement dans /api/events/[slug]/register). Voir T06.",
-    );
-  });
+  // NOTE : BlockedDocument est une regle metier PAR EVENT (schema.prisma) ; elle
+  // est appliquee dans /api/events/[slug]/register, pas dans /api/account/profile.
+  // Le scenario est couvert par e2e/public/event-register.spec.ts.
+
 
   test("participantProfileCompletedAt is set when all required fields are filled", async ({
     page,
@@ -170,12 +172,12 @@ test.describe("Account profile edit", () => {
 
     // Upload photo + document pour atteindre 100% des champs requis.
     await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
-    await expect(page.getByText(/photo enregistrée\s*:/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 10_000 });
     await page.setInputFiles(
       'input[type="file"][accept*="application/pdf"]',
       fixtures.pdf,
     );
-    await expect(page.getByText(/document enregistré\s*:/i)).toBeVisible({
+    await expect(page.getByText(/pièce d'identité enregistrée/i)).toBeVisible({
       timeout: 10_000,
     });
 
@@ -184,5 +186,47 @@ test.describe("Account profile edit", () => {
 
     snap = await getUserById(user.id);
     expect(snap?.participantProfileCompletedAt).not.toBeNull();
+  });
+
+  test("participant sans profil voit /account/profile/complete", async ({ page }) => {
+    const user = await createTestUser({ scope: "profile-complete-render", verified: true });
+    await loginAs(page, user);
+
+    await page.goto("/account/profile/complete");
+    await expect(page.getByRole("heading", { name: /compléter votre profil/i })).toBeVisible();
+  });
+
+  test("la nouvelle photo se propage a l'inscription en attente", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({
+      scope: "profile-photo-propagation",
+      verified: true,
+      profile: true,
+    });
+    const { eventId, categoryId } = await createTestEvent({ scope: "photo-propagation" });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: user.id,
+      categoryId,
+      status: "PENDING",
+    });
+    const before = await getDb().registration.findUnique({
+      where: { id: reg.id },
+      select: { snapshotPhoto: true },
+    });
+
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+    await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await page.waitForTimeout(800);
+
+    const after = await getDb().registration.findUnique({
+      where: { id: reg.id },
+      select: { snapshotPhoto: true },
+    });
+    expect(after?.snapshotPhoto).not.toBe(before?.snapshotPhoto);
+    expect(after?.snapshotPhoto).toMatch(/^profile\/.+\/photos\/.+\.jpg$/);
   });
 });

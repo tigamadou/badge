@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Journal global</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "log", user: { name: "Marie Dubois", role: "SUPER_ADMIN" } };</script>
+<div id="page" data-screen-label="21 Staff journal global">
+
+  <div class="page-head"><div><h1>Journal d'activité</h1><p class="sub">Toutes les actions sur la plateforme</p></div><button class="btn-ghost-sm"><span data-ico="download" data-size="14"></span> Exporter</button></div>
+
+  <div class="toolbar wrap">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Rechercher…" /></div>
+    <button class="chip-filter"><span data-ico="filter" data-size="14"></span> Type <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="calendar" data-size="14"></span> 30 derniers jours <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="building-2" data-size="14"></span> Organisation <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="user" data-size="14"></span> Utilisateur <span data-ico="chevron-down" data-size="14"></span></button>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Horodatage</th><th>Type</th><th>Action</th><th>Auteur</th><th>Contexte</th><th></th></tr></thead>
+      <tbody>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=staff'"><td class="cell-meta mono">07/06 14:32</td><td><span class="log-type creation"><span class="ld"></span> Création</span></td><td>Organisation « Assises Formation » créée</td><td>Marie Dubois</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=staff'"><td class="cell-meta mono">07/06 11:08</td><td><span class="log-type systeme"><span class="ld"></span> Quota</span></td><td>Stockage relevé à 10 Go</td><td>Système</td><td class="cell-meta">Université Forum</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=staff'"><td class="cell-meta mono">06/06 16:45</td><td><span class="log-type creation"><span class="ld"></span> Création</span></td><td>Utilisateur staff « P. Garnier » ajouté</td><td>Marie Dubois</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=staff'"><td class="cell-meta mono">06/06 09:20</td><td><span class="log-type systeme"><span class="ld"></span> Système</span></td><td>Test SMTP échoué puis rétabli</td><td>Système</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=staff'"><td class="cell-meta mono">05/06 18:02</td><td><span class="log-type suppression"><span class="ld"></span> Suppression</span></td><td>Organisation « Vieux Salon » supprimée</td><td>Marie Dubois</td><td class="cell-meta">—</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+        <tr class="clickable" onclick="location.href='journal-detail.html?shell=staff'"><td class="cell-meta mono">05/06 10:15</td><td><span class="log-type connexion"><span class="ld"></span> Connexion</span></td><td>Connexion réussie</td><td>Julien Roy</td><td class="cell-meta">Salon Tech</td><td><span data-ico="chevron-right" data-size="16" style="color:var(--slate-400);"></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager"><span class="info">1–6 sur 1 204</span><div class="ctrls"><button class="btn-ghost-sm" disabled style="opacity:.5;"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -23,6 +23,13 @@ describe("logActivity", () => {
     expect(log?.eventId).toBe(event.id);
   });
 
+  it("laisse orgId null si l'event reference n'existe pas", async () => {
+    await logActivity({ type: "REGISTRATION_CREATED", eventId: "no-such-event" });
+    const log = await prisma.activityLog.findFirst();
+    expect(log?.eventId).toBe("no-such-event");
+    expect(log?.orgId).toBeNull();
+  });
+
   it("marks staffActor=true when actor is staff and target is client data", async () => {
     const staff = await prisma.user.create({
       data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_ADMIN" },

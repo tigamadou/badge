@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Événements</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "events", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" } };</script>
+<div id="page" data-screen-label="23 Org événements">
+
+  <div class="page-head"><div><h1>Événements</h1><p class="sub">3 événements</p></div><a class="btn btn-primary" href="org-event-create.html"><span data-ico="plus" data-size="16"></span> Créer un événement</a></div>
+
+  <div class="toolbar">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Rechercher…" /></div>
+    <button class="chip-filter"><span data-ico="filter" data-size="14"></span> Statut <span data-ico="chevron-down" data-size="14"></span></button>
+    <label class="check" style="margin-left:4px;"><input type="checkbox" /> Afficher les archivés</label>
+    <span class="spacer"></span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Événement</th><th>Slug</th><th>Date</th><th>Lieu</th><th>Inscriptions ouvertes</th><th>Inscriptions</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="cell-name">Salon Tech 2026</td><td class="cell-meta mono">salon-tech-2026</td><td>15 mars 2026</td><td>Paris Expo</td><td><label class="switch"><span class="track sm on"></span></label></td><td>982</td><td><div class="row-actions"><a class="btn-icon" href="event-dashboard.html"><span data-ico="external-link" data-size="16"></span></a><button class="btn-icon"><span data-ico="archive" data-size="16"></span></button></div></td></tr>
+        <tr><td class="cell-name">Salon Tech Été</td><td class="cell-meta mono">salon-tech-ete</td><td>2 juil. 2026</td><td>Nice Acropolis</td><td><label class="switch"><span class="track sm on"></span></label></td><td>214</td><td><div class="row-actions"><a class="btn-icon" href="event-dashboard.html"><span data-ico="external-link" data-size="16"></span></a><button class="btn-icon"><span data-ico="archive" data-size="16"></span></button></div></td></tr>
+        <tr style="opacity:.6;"><td class="cell-name">Salon Tech 2025 <span class="tag" style="margin-left:6px;"><span data-ico="archive" data-size="11"></span> Archivé</span></td><td class="cell-meta mono">salon-tech-2025</td><td>12 mars 2025</td><td>Paris Expo</td><td><label class="switch"><span class="track sm"></span></label></td><td>1 052</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="archive-restore" data-size="16"></span></button></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

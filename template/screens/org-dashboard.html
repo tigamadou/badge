@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Dashboard</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "dashboard", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" } };</script>
+<div id="page" data-screen-label="22 Org dashboard">
+
+  <div class="page-head"><div><h1>Tableau de bord</h1><p class="sub">Salon Tech · vue d'ensemble</p></div><a class="btn btn-primary" href="org-event-create.html"><span data-ico="plus" data-size="16"></span> Créer un événement</a></div>
+
+  <div class="alert alert-info" style="background:var(--amber-50);border-color:var(--amber-200);color:var(--amber-700);"><span data-ico="alert-triangle" data-size="16" style="vertical-align:-3px;"></span> Quota de stockage à <b>82%</b> (8,2 / 10 Go). Archivez d'anciens événements ou contactez le staff pour augmenter le quota.</div>
+
+  <div class="stat-grid" style="margin-top:8px;">
+    <div class="statcard"><div class="top"><p class="lbl">Événements</p><span class="ic"><span data-ico="calendar" data-size="18"></span></span></div><p class="val">3</p><p class="sub">2 actifs</p></div>
+    <div class="statcard"><div class="top"><p class="lbl">Inscriptions</p><span class="ic"><span data-ico="user-check" data-size="18"></span></span></div><p class="val">1 248</p><p class="sub"><span class="delta up"><span data-ico="trending-up" data-size="12"></span> +84</span> 7 j</p></div>
+    <div class="statcard"><div class="top"><p class="lbl">Membres</p><span class="ic"><span data-ico="users" data-size="18"></span></span></div><p class="val">7</p><p class="sub">1 OWNER</p></div>
+    <div class="statcard"><div class="top"><p class="lbl">Stockage</p><span class="ic"><span data-ico="hard-drive" data-size="18"></span></span></div><p class="val">8,2 Go</p><p class="sub">sur 10 Go</p></div>
+  </div>
+
+  <div class="panel-grid">
+    <div class="card">
+      <div class="card-head"><h3>Derniers événements</h3></div>
+      <div class="card-pad" style="padding-top:8px;">
+        <div class="list-row"><span class="icon-tile"><span data-ico="calendar" data-size="18"></span></span><div style="flex:1;"><div class="cell-name">Salon Tech 2026</div><div class="ds-meta">15–17 mars 2026 · Paris</div></div><label class="switch"><span class="track sm on"></span></label><span class="ds-value" style="width:60px;text-align:right;">982</span></div>
+        <div class="list-row"><span class="icon-tile"><span data-ico="calendar" data-size="18"></span></span><div style="flex:1;"><div class="cell-name">Salon Tech Été</div><div class="ds-meta">2–3 juil. 2026 · Nice</div></div><label class="switch"><span class="track sm on"></span></label><span class="ds-value" style="width:60px;text-align:right;">214</span></div>
+        <div class="list-row"><span class="icon-tile"><span data-ico="calendar" data-size="18"></span></span><div style="flex:1;"><div class="cell-name">Salon Tech 2025 <span class="tag" style="margin-left:6px;"><span data-ico="archive" data-size="11"></span> Archivé</span></div><div class="ds-meta">12–14 mars 2025</div></div><label class="switch"><span class="track sm"></span></label><span class="ds-value" style="width:60px;text-align:right;">52</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Activité récente</h3></div>
+      <div class="card-pad" style="padding-top:18px;">
+        <div class="tl">
+          <div class="tl-item"><span class="tl-dot ok"></span><div class="tl-t">42 inscriptions approuvées en lot</div><div class="tl-s">Sophie Bernard · il y a 1 h</div></div>
+          <div class="tl-item"><span class="tl-dot"></span><div class="tl-t">Membre invité — A. Petit (MANAGER)</div><div class="tl-s">Julien Roy · il y a 4 h</div></div>
+          <div class="tl-item"><span class="tl-dot warn"></span><div class="tl-t">Quota stockage &gt; 80%</div><div class="tl-s">Système · hier</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

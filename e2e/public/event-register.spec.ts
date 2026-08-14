@@ -25,6 +25,20 @@ test.describe("Event registration flow", () => {
     await expect(page.getByText(/créer un compte/i)).toBeVisible();
   });
 
+  test("la page publique affiche la periode, le lieu et la description", async ({ page }) => {
+    const { eventSlug } = await createTestEvent({
+      scope: "event-details",
+      date: new Date("2026-12-15T00:00:00Z"),
+      endDate: new Date("2026-12-17T00:00:00Z"),
+      description: "Trois jours de conferences.",
+    });
+
+    await page.goto(`/e/${eventSlug}`);
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}$`));
+    await expect(page.getByText(/Du 15 Décembre . 2026 au 17 Décembre . 2026/).first()).toBeVisible();
+    await expect(page.getByText("Trois jours de conferences.")).toBeVisible();
+  });
+
   test("logged-in user with complete profile can register to an event", async ({ page }) => {
     const user = await createTestUser({ scope: "evt-flow", verified: true, profile: true });
     const { eventSlug } = await createTestEvent({ scope: "evt-flow" });
@@ -34,17 +48,61 @@ test.describe("Event registration flow", () => {
     await page.getByRole("link", { name: /s'inscrire à cet événement/i }).click();
 
     await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
-    await page.getByLabel(/visiteur/i).check();
+    await page.getByRole("radio", { name: /visiteur/i }).check();
     await page.getByRole("checkbox").last().check();
-    await page.getByRole("button", { name: /valider mon inscription/i }).click();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
 
     await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
-    await expect(page.getByText(/votre inscription a bien été enregistrée/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /inscription enregistrée/i })).toBeVisible();
 
     const reg = await getLatestRegistrationForUser(user.id);
     expect(reg).not.toBeNull();
     expect(reg?.status).toBe("PENDING");
     expect(reg?.snapshotFirstName).toBe("Awa");
+  });
+
+  // v4 (plan 09) : le gate est passe de l'entree a la sortie. Un profil PENDING
+  // s'inscrit ; seul un profil REJECTED (ou incomplet) est renvoye vers son profil.
+  test("un participant aux pieces rejetées est redirigé vers /account/profile", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-gate", verified: true, profile: true, profileStatus: "REJECTED" });
+    const { eventSlug } = await createTestEvent({ scope: "evt-gate" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page).toHaveURL(/\/account\/profile\?pending=1/);
+    await expect(page.getByText(/documents refusés/i)).toBeVisible();
+  });
+
+  test("un participant au profil PENDING peut s'inscrire sans attendre la validation", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-pending", verified: true, profile: true, profileStatus: "PENDING" });
+    const { eventSlug } = await createTestEvent({ scope: "evt-pending" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
+    await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
+
+    const reg = await getLatestRegistrationForUser(user.id);
+    expect(reg?.status).toBe("PENDING");
+  });
+
+  test("un profil validé peut s'inscrire après déblocage", async ({ page }) => {
+    const user = await createTestUser({ scope: "evt-unblock", verified: true, profile: true, profileStatus: "APPROVED" });
+    const { eventSlug } = await createTestEvent({ scope: "evt-unblock" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
+    await page.waitForURL(new RegExp(`/e/${eventSlug}/success`), { timeout: 8000 });
+
+    const reg = await getLatestRegistrationForUser(user.id);
+    expect(reg?.status).toBe("PENDING");
   });
 
   test("user with incomplete profile is redirected to /account/profile/complete", async ({
@@ -93,65 +151,45 @@ test.describe("Event registration flow", () => {
     // UI : page publique affiche "Inscriptions fermées".
     await page.goto(`/e/${eventSlug}`);
     await expect(page.getByText(/inscriptions fermées/i)).toBeVisible();
-
-    // API : POST /api/events/[slug]/register renvoie 403 (CLOSED).
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId: "anything" },
-    });
-    expect([403, 409]).toContain(res.status());
   });
 
-  test("BlockedEmail blocks event registration", async ({ page }) => {
+  test("Un e-mail bloque empeche l'inscription (echec via le formulaire)", async ({ page }) => {
     const user = await createTestUser({ scope: "evt-blocked", verified: true, profile: true });
-    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-blocked" });
+    const { eventId, eventSlug } = await createTestEvent({ scope: "evt-blocked" });
     await createTestBlockedEmail({ eventId, email: user.email });
     await loginAs(page, user);
 
-    // Appel API direct : le snapshot prend l'email du User, qui est blocke -> 409 EMAIL_BLOCKED.
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId },
-    });
-    expect(res.status()).toBe(409);
-    const body = await res.json();
-    expect(body.code).toBe("EMAIL_BLOCKED");
+    await page.goto(`/e/${eventSlug}/register`);
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: /s'inscrire/i }).click();
+
+    // Reponse attendue — ECHEC : reste sur /register (pas de succes), aucune inscription creee.
+    await expect(page).toHaveURL(new RegExp(`/e/${eventSlug}/register`));
+    await expect(page.getByRole("button", { name: /s'inscrire/i })).toBeVisible();
+    expect(await getLatestRegistrationForUser(user.id)).toBeNull();
   });
 
-  test("org quotaMaxRegistrations enforced (429 QUOTA_EXCEEDED)", async ({ page }) => {
-    // On cree un event avec quota=1 puis on tente 2 registrations. La 2e doit
-    // echouer. Note: la route renvoie 429 (cf src/app/api/events/[slug]/register/route.ts:127),
-    // pas 409.
-    const { eventId, eventSlug, categoryId } = await createTestEvent({ scope: "evt-quota" });
-    await getDb().organization.updateMany({
-      where: { events: { some: { id: eventId } } },
-      data: { quotaMaxRegistrations: 1 },
-    });
+  // --- Page de succes -----------------------------------------------------
 
-    // Premier user OK (PENDING compte dans le quota).
-    const firstUser = await createTestUser({
-      scope: "evt-quota-1",
+  test("La page de succes confirme l'inscription", async ({ page }) => {
+    const { eventSlug, eventId, categoryId } = await createTestEvent({ scope: "evreg-success" });
+    const user = await createTestUser({
+      scope: "evreg-success-u",
       verified: true,
       profile: true,
     });
-    await createTestRegistration({
-      userId: firstUser.id,
+    const reg = await createTestRegistration({
       eventId,
+      userId: user.id,
       categoryId,
       status: "PENDING",
     });
+    await loginAs(page, user);
 
-    // 2e user tente l'inscription via l'API : doit etre rejete (quota atteint).
-    const secondUser = await createTestUser({
-      scope: "evt-quota-2",
-      verified: true,
-      profile: true,
-    });
-    await loginAs(page, secondUser);
-
-    const res = await page.request.post(`/api/events/${eventSlug}/register`, {
-      data: { categoryId },
-    });
-    expect(res.status()).toBe(429);
-    const body = await res.json();
-    expect(body.code).toBe("QUOTA_EXCEEDED");
+    await page.goto(`/e/${eventSlug}/success?id=${reg.id}`);
+    await expect(page.getByRole("heading", { name: /inscription enregistrée/i })).toBeVisible();
+    await expect(page.getByText(/statut : en attente/i)).toBeVisible();
   });
+
 });

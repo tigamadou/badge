@@ -1,28 +1,20 @@
 import type { UserContext } from "@/types/auth";
 
-export function resolveHomeRedirect(
-  ctx: UserContext | null,
-  lastOrgIdHint: string | null,
-): string {
+// v4 Bloc D : trois workspaces top-level independants (/platform, /org/[orgId],
+// /event/[eventId]). Cette fonction calcule la destination post-login :
+//   - 0 workspace accessible  -> espace participant (/account)
+//   - 1 seul workspace        -> redirection directe (pas de friction)
+//   - 2 ou plus               -> selecteur de workspace (/select)
+// Remplace l'ancien hint localStorage (illisible cote serveur).
+export function resolveHomeRedirect(ctx: UserContext | null): string {
   if (!ctx) return "/login";
 
-  const memberOrgIds = new Set(ctx.orgMemberships.map((m) => m.orgId));
+  const targets: string[] = [];
+  if (ctx.isStaff) targets.push("/platform");
+  for (const m of ctx.orgMemberships) targets.push(`/org/${m.orgId}`);
+  for (const m of ctx.eventMemberships) targets.push(`/event/${m.eventId}`);
 
-  if (ctx.isStaff) {
-    if (lastOrgIdHint) return `/admin/${lastOrgIdHint}`;
-    return "/staff";
-  }
-
-  if (memberOrgIds.size === 0) return "/profile?message=no-org";
-
-  if (lastOrgIdHint && memberOrgIds.has(lastOrgIdHint)) {
-    return `/admin/${lastOrgIdHint}`;
-  }
-
-  if (memberOrgIds.size === 1) {
-    const onlyOrgId = ctx.orgMemberships[0].orgId;
-    return `/admin/${onlyOrgId}`;
-  }
-
+  if (targets.length === 0) return "/account";
+  if (targets.length === 1) return targets[0];
   return "/select";
 }

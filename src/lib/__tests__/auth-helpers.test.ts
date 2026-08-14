@@ -7,6 +7,7 @@ import {
   hasEventPermission,
 } from "@/lib/auth-helpers";
 import type { UserContext } from "@/types/auth";
+import type { OrgRole } from "@prisma/client";
 
 const baseCtx = (over: Partial<UserContext> = {}): UserContext => ({
   user: { id: "u1", email: "u@x", name: "U" },
@@ -79,9 +80,18 @@ describe("hasOrgRole", () => {
     const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "AUDITOR" }] });
     expect(hasOrgRole(ctx, "o1", "MANAGER")).toBe(false);
   });
-  it("returns true for staff regardless of membership", () => {
+  it("staff without allowStaff does NOT get org role by default", () => {
     const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_SUPPORT" });
-    expect(hasOrgRole(ctx, "any", "OWNER")).toBe(true);
+    expect(hasOrgRole(ctx, "any", "OWNER")).toBe(false);
+  });
+  it("staff gets org role only when allowStaff is true", () => {
+    const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_SUPPORT" });
+    expect(hasOrgRole(ctx, "any", "OWNER", { allowStaff: true })).toBe(true);
+  });
+  it("member keeps its role regardless of the allowStaff flag", () => {
+    const ctx = baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] });
+    expect(hasOrgRole(ctx, "o1", "MANAGER")).toBe(true);
+    expect(hasOrgRole(ctx, "o1", "MANAGER", { allowStaff: true })).toBe(true);
   });
   it("returns false if no membership and not staff", () => {
     expect(hasOrgRole(baseCtx(), "o1", "OWNER")).toBe(false);
@@ -130,6 +140,23 @@ describe("effectiveEventRole", () => {
     });
     expect(effectiveEventRole(ctx, "e1", "o1")).toBe("STAFF");
   });
+  it("falls through to event membership when the org role is unrecognized", () => {
+    // Branche defensive l.106 (else) : org membership present mais role hors enum
+    // (ni OWNER/MANAGER ni AUDITOR) => on ne derive rien de l'org et on lit l'event.
+    const ctx = baseCtx({
+      orgMemberships: [{ orgId: "o1", role: "UNKNOWN" as unknown as OrgRole }],
+      eventMemberships: [{ eventId: "e1", role: "PRINTER" }],
+    });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBe("PRINTER");
+  });
+
+  it("returns null when the org role is unrecognized and no event membership", () => {
+    const ctx = baseCtx({
+      orgMemberships: [{ orgId: "o1", role: "UNKNOWN" as unknown as OrgRole }],
+    });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBeNull();
+  });
+
   it("returns null when no rights", () => {
     expect(effectiveEventRole(baseCtx(), "e1", "o1")).toBeNull();
   });

@@ -33,7 +33,7 @@ export default function ResubmitButton({ registrationId }: { registrationId: str
       <button
         onClick={handleClick}
         disabled={loading}
-        className="inline-flex items-center justify-center bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-50"
+        className="inline-flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-50"
       >
         {loading ? "Resoumission..." : "Resoumettre mon inscription"}
       </button>

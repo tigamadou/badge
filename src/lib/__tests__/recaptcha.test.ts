@@ -50,4 +50,39 @@ describe("verifyRecaptcha", () => {
     if (r.ok) throw new Error("expected verification to fail");
     expect(r.code).toBe("REJECTED");
   });
+
+  it("returns ok=true (no score) when google omits the score", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ success: true }),
+    });
+    const r = await verifyRecaptcha({ enabled: true, secretKey: "s", token: "t" });
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error("expected verification to pass");
+    expect(r.score).toBeUndefined();
+  });
+
+  it("passes remoteip to Google when remoteIp is provided", async () => {
+    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValueOnce({ json: async () => ({ success: true, score: 0.9 }) });
+    const r = await verifyRecaptcha({
+      enabled: true,
+      secretKey: "s",
+      token: "t",
+      remoteIp: "203.0.113.5",
+    });
+    expect(r.ok).toBe(true);
+    const body = fetchMock.mock.calls[0][1].body as URLSearchParams;
+    expect(body.get("remoteip")).toBe("203.0.113.5");
+    expect(body.get("secret")).toBe("s");
+    expect(body.get("response")).toBe("t");
+  });
+
+  it("returns NETWORK when the request throws", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("boom"));
+    const r = await verifyRecaptcha({ enabled: true, secretKey: "s", token: "t" });
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error("expected verification to fail");
+    expect(r.code).toBe("NETWORK");
+    expect(r.details).toContain("boom");
+  });
 });

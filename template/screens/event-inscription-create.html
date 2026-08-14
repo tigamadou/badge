@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Inscription manuelle</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "inscriptions", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" }, crumbs: ["Salon Tech", "Salon Tech 2026", "Inscription manuelle"] };</script>
+<div id="page" data-screen-label="33 Event création manuelle">
+
+  <a class="link" href="event-inscriptions.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Inscriptions</a>
+  <div class="page-head" style="margin-top:12px;"><div><h1>Inscription manuelle</h1><p class="sub">L'inscription sera créée avec le statut « Approuvée »</p></div></div>
+
+  <div class="card card-pad" style="max-width:760px;">
+    <div class="form-section">
+      <h3>Identité</h3>
+      <div class="row-2"><div class="field"><label>Prénom <span class="req">*</span></label><input class="input" /></div><div class="field"><label>Nom <span class="req">*</span></label><input class="input" /></div></div>
+      <div class="row-2"><div class="field" style="margin-bottom:0;"><label>E-mail <span class="req">*</span></label><input class="input" type="email" /></div><div class="field" style="margin-bottom:0;"><label>Téléphone</label><input class="input" type="tel" /></div></div>
+    </div>
+    <div class="form-section">
+      <h3>Catégorie <span class="req">*</span></h3>
+      <div class="radio-cards">
+        <div class="radio-card sel" tabindex="0"><span class="swatch" style="background:#6366f1;"></span><div><div class="rc-t">Conférencier</div></div><span class="rc-check" data-ico="check-circle" data-size="18"></span></div>
+        <div class="radio-card" tabindex="0"><span class="swatch" style="background:#14b8a6;"></span><div><div class="rc-t">Exposant</div></div><span class="rc-check" data-ico="check-circle" data-size="18"></span></div>
+        <div class="radio-card" tabindex="0"><span class="swatch" style="background:#f59e0b;"></span><div><div class="rc-t">Visiteur</div></div><span class="rc-check" data-ico="check-circle" data-size="18"></span></div>
+        <div class="radio-card" tabindex="0"><span class="swatch" style="background:#f43f5e;"></span><div><div class="rc-t">Presse</div></div><span class="rc-check" data-ico="check-circle" data-size="18"></span></div>
+      </div>
+    </div>
+    <div class="form-section" style="border-bottom:0;">
+      <h3>Photo &amp; justificatif <span class="ds-meta" style="font-weight:400;text-transform:none;letter-spacing:0;">(optionnel en saisie manuelle)</span></h3>
+      <div class="row-2">
+        <div class="dropzone" style="padding:18px;"><div class="dz-ic" data-ico="image" data-size="22"></div><div class="dz-t">Photo</div><div class="dz-s">5 Mo max</div></div>
+        <div class="dropzone" style="padding:18px;"><div class="dz-ic" data-ico="file-text" data-size="22"></div><div class="dz-t">Justificatif</div><div class="dz-s">5 Mo max</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="between" style="max-width:760px;margin-top:20px;"><button class="btn btn-secondary">Annuler</button><button class="btn btn-primary"><span data-ico="check" data-size="16"></span> Créer (approuvée)</button></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  document.querySelectorAll('#page .radio-card').forEach(function (c) { c.addEventListener('click', function () { document.querySelectorAll('#page .radio-card').forEach(function (x) { x.classList.remove('sel'); }); c.classList.add('sel'); }); });
+</script>
+</body>
+</html>

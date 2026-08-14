@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -37,47 +39,55 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white rounded-lg shadow p-8">
-        <div className="flex justify-center mb-6">
-          <Image src="/logo.png" alt="Logo" width={120} height={120} className="h-20 w-auto object-contain" />
+    <AuthCard
+      title={done ? "Vérifiez votre boîte mail" : "Mot de passe oublié"}
+      subtitle={done ? undefined : "Saisissez votre e-mail pour recevoir un lien de réinitialisation."}
+      footer={
+        <Link href="/login" className="inline-flex items-center gap-1 text-green-600 hover:underline">
+          <Icon name="arrow-left" size={13} /> Retour à la connexion
+        </Link>
+      }
+    >
+      {done ? (
+        <div className="text-center">
+          <SuccessRing>
+            <Icon name="mail" size={26} />
+          </SuccessRing>
+          <p className="text-sm text-slate-600">
+            Si un compte existe pour <b className="text-slate-900">{email}</b>, un lien de réinitialisation a été envoyé.
+          </p>
+          <Button variant="secondary" className="mt-6 w-full" onClick={() => setDone(false)}>
+            Renvoyer l&apos;e-mail
+          </Button>
         </div>
-        <h1 className="text-xl font-bold text-center mb-6">Mot de passe oublié</h1>
-
-        {done ? (
-          <div className="space-y-4 text-center">
-            <p className="text-sm text-gray-700">
-              Si un compte existe pour <strong>{email}</strong>, vous recevrez un email avec un
-              lien de réinitialisation. Vérifiez votre boîte de réception.
-            </p>
-            <p className="text-sm">
-              <Link href="/login" className="text-indigo-600 underline">Retour à la connexion</Link>
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Saisissez l&apos;adresse email de votre compte. Nous vous enverrons un lien pour
-              réinitialiser votre mot de passe.
-            </p>
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Envoi..." : "Envoyer le lien"}
-            </Button>
-            <p className="text-sm text-center text-gray-600">
-              <Link href="/login" className="text-indigo-600 underline">Retour à la connexion</Link>
-            </p>
-          </form>
-        )}
-      </div>
-    </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert tone="err">
+              <Icon name="alert-triangle" size={16} /> {error}
+            </Alert>
+          )}
+          <Input
+            label="Adresse e-mail"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="vous@organisation.fr"
+            required
+            autoComplete="email"
+            disabled={loading}
+          />
+          <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
+            {loading ? (
+              <>
+                <Spinner size={16} /> Envoi…
+              </>
+            ) : (
+              "Envoyer le lien"
+            )}
+          </Button>
+        </form>
+      )}
+    </AuthCard>
   );
 }

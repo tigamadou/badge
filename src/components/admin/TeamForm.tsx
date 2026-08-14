@@ -36,7 +36,7 @@ export function TeamForm({ initialData, onSubmit, onCancel }: TeamFormProps) {
           max={999}
           value={number}
           onChange={(e) => setNumber(parseInt(e.target.value) || 0)}
-          className="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-24 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           required
         />
       </div>
@@ -49,7 +49,7 @@ export function TeamForm({ initialData, onSubmit, onCancel }: TeamFormProps) {
           type="checkbox"
           checked={neutralBadge}
           onChange={(e) => setNeutralBadge(e.target.checked)}
-          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
         />
         <span className="text-sm text-slate-700">Badge neutre (fond blanc, couleur sur le texte)</span>
       </label>
@@ -58,7 +58,7 @@ export function TeamForm({ initialData, onSubmit, onCancel }: TeamFormProps) {
           type="checkbox"
           checked={anonymous}
           onChange={(e) => setAnonymous(e.target.checked)}
-          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
         />
         <span className="text-sm text-slate-700">Catégorie anonyme (badge sans informations personnelles, invisible sur le formulaire public)</span>
       </label>

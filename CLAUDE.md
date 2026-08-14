@@ -102,7 +102,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 - **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
 - **Soft delete partout** (`archived: bool` + `archivedAt: DateTime?`). Hard delete = action staff explicite.
 - **RBAC — séparation des rôles (v1 uniquement)** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **En v2**, cette restriction n'existe plus : `SUPER_ADMIN` est au sommet de `StaffRole` (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`) avec tous les droits sans restriction, y compris les actions métier (avec audit `staffActor=true`). Voir `docs/v2/features/multi-tenancy-rbac.md`.
-- **Rendu PDF des badges** : utilise Montserrat via Google Fonts (`https://fonts.googleapis.com/`) — préserver l'accès sortant à ce domaine.
+- **Rendu PDF des badges** : Montserrat via Google Fonts (`https://fonts.googleapis.com/`) est la police **par défaut** — préserver l'accès sortant à ce domaine. Un paquet de template peut embarquer ses propres polices (TTF/OTF), enregistrées sous une famille préfixée par template. Les images d'un paquet sont limitées à **JPEG et PNG** : `@react-pdf` ne lit pas le WebP, pourtant accepté ailleurs pour les uploads. Voir `docs/v4/features/templates-badges.md`.
 
 ---
 
@@ -126,15 +126,17 @@ make dev    # démarre les conteneurs (à faire une fois)
 
 Services disponibles :
 
-| Service | Port direct | URL via Caddy (HTTP) | Description |
-|---------|-------------|----------------------|-------------|
-| `app` | 3000 | `http://badge.local` | Next.js avec hot reload |
-| `mysql` | 3306 | — | Base de données |
-| `phpmyadmin` | 8080 | `http://pma.badge.local` | Interface admin BDD |
-| `mailpit` | 8025 | `http://mail.badge.local` | Capture d'emails |
-| `caddy` | 80 | — | Reverse proxy dev (sous-domaines `*.badge.local`) |
+| Service | Port direct | URL via Caddy (HTTPS) | Description |
+|---------|-------------|-----------------------|-------------|
+| `app` | 3785 | `https://badge.local` | Next.js avec hot reload |
+| `mysql` | 33060 | — | Base de données |
+| `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
+| `studio` | 3786 | `https://studio.badge.local` | Studio de construction de templates (dev) |
+| `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
+| `minio` | 9001 | `https://s3.badge.local` | Console MinIO |
+| `caddy` | 80 / 443 | — | Reverse proxy dev (sous-domaines `*.badge.local`, `tls internal`) |
 
-> **Pré-requis pour les URL `*.badge.local`** : ajouter au `/etc/hosts` de la machine hôte la ligne `127.0.0.1 badge.local pma.badge.local mail.badge.local`. Les ports directs (`localhost:3000`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
+> **Pré-requis pour les URL `*.badge.local`** : lancer `make dev-https` une fois (renseigne `/etc/hosts` et approuve la CA locale de Caddy — voir `docs/v4/installation.md`). Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
 
 Commandes principales :
 
@@ -142,6 +144,8 @@ Commandes principales :
 |----------|-------------|
 | `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
 | `make dev` / `make dev-down` / `make logs` | Cycle dev local |
+| `make dev-https` / `make dev-https-check` | HTTPS local : `/etc/hosts` + confiance CA Caddy (idempotent) |
+| `make studio` | Studio de templates (édition du manifeste + aperçu instantané) |
 | `make db-push` / `make db-seed` / `make db-studio` | Schéma Prisma + seed + Prisma Studio |
 | `make db-reset` | **Reset BDD dev (destructif — demander avant)** |
 

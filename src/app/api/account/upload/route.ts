@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const form = await req.formData();
     const file = form.get("file");
-    if (!(file instanceof Blob)) {
+    if (!(file instanceof File)) {
       return NextResponse.json({ code: "NO_FILE", error: "Fichier manquant." }, { status: 400 });
     }
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     assertWithinSizeLimit(buffer.length);
 
-    const origName = file instanceof File ? file.name : "upload";
+    const origName = file.name;
     const ext = extOf(origName, mime === "application/pdf" ? ".pdf" : ".bin");
     const filename = `${randomUUID()}${ext}`;
     const storageKey = accountProfileKey(session.id, kind, filename);

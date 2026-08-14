@@ -4,6 +4,10 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { FormSection } from "@/components/ui/FormControls";
+import { DocumentPreview } from "@/components/ui/DocumentPreview";
+import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Icon } from "@/components/ui/Icon";
 
 type Props = {
   initial: {
@@ -103,100 +107,106 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 bg-white rounded-lg border border-gray-200 p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          label="Prénom"
-          type="text"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          required
-        />
-        <Input
-          label="Nom"
-          type="text"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          required
-        />
-      </div>
-      <Input
-        label="Structure (entreprise, école, organisation)"
-        type="text"
-        value={structure}
-        onChange={(e) => setStructure(e.target.value)}
-        required
-      />
+    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 bg-white px-6">
+      {error && (
+        <div className="pt-6">
+          <Alert tone="err">
+            <Icon name="alert-triangle" size={16} /> {error}
+          </Alert>
+        </div>
+      )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Photo (JPEG, PNG, WebP, max 5 Mo)
-        </label>
+      <FormSection title="Identité" description="Ces informations figureront sur votre badge.">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Input label="Prénom" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+          <Input label="Nom" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+        </div>
+        <Input
+          label="Structure (entreprise, école, organisation)"
+          type="text"
+          value={structure}
+          onChange={(e) => setStructure(e.target.value)}
+          required
+        />
+      </FormSection>
+
+      <FormSection title="Photo" description="JPEG, PNG ou WebP — 5 Mo maximum.">
+        {photo ? (
+          <div className="mb-3 space-y-1">
+            <DocumentPreview storageKey={photo} label="Photo enregistrée" />
+            {uploadingPhoto && <p className="text-xs text-slate-500">Envoi en cours…</p>}
+          </div>
+        ) : null}
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
           onChange={handlePhoto}
           disabled={uploadingPhoto}
-          className="text-sm"
+          className="block text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
         />
-        {uploadingPhoto && <p className="text-xs text-gray-600 mt-1">Envoi en cours...</p>}
-        {photo && (
-          <p className="text-xs text-emerald-700 mt-1 break-all">
-            Photo enregistrée : {photo}
-          </p>
-        )}
+        {uploadingPhoto && <p className="mt-1 text-xs text-slate-500">Envoi en cours…</p>}
+      </FormSection>
+
+      <div className="pt-4 text-xs text-slate-500">
+        Toute modification de la photo ou de la pièce d&apos;identité relance la vérification par la plateforme.
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Type de pièce d&apos;identité
-          </label>
-          <select
-            value={idDocumentType}
-            onChange={(e) => setIdDocumentType(e.target.value)}
-            className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+      <FormSection title="Pièce d'identité" description="Type, numéro et justificatif.">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Type de pièce d&apos;identité</label>
+            <select
+              value={idDocumentType}
+              onChange={(e) => setIdDocumentType(e.target.value)}
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            >
+              {ID_DOC_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Input
+            label="Numéro de pièce"
+            type="text"
+            value={idDocumentNumber}
+            onChange={(e) => setIdDocumentNumber(e.target.value)}
             required
-          >
-            {ID_DOC_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+          />
         </div>
-        <Input
-          label="Numéro de pièce"
-          type="text"
-          value={idDocumentNumber}
-          onChange={(e) => setIdDocumentNumber(e.target.value)}
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Pièce d&apos;identité (PDF, JPEG, PNG, WebP, max 5 Mo)
-        </label>
+        {idDocument ? (
+          <div className="mb-3 space-y-1">
+            <DocumentPreview storageKey={idDocument} label="Pièce d'identité enregistrée" />
+            {uploadingDoc && <p className="text-xs text-slate-500">Envoi en cours…</p>}
+          </div>
+        ) : null}
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp,application/pdf"
           onChange={handleDoc}
           disabled={uploadingDoc}
-          className="text-sm"
+          className="block text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
         />
-        {uploadingDoc && <p className="text-xs text-gray-600 mt-1">Envoi en cours...</p>}
-        {idDocument && (
-          <p className="text-xs text-emerald-700 mt-1 break-all">
-            Document enregistré : {idDocument}
-          </p>
-        )}
-      </div>
+        {uploadingDoc && <p className="mt-1 text-xs text-slate-500">Envoi en cours…</p>}
+      </FormSection>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <Button type="submit" disabled={saving || uploadingPhoto || uploadingDoc}>
-        {saving ? "Enregistrement..." : "Enregistrer"}
-      </Button>
+      <div className="flex justify-end py-6">
+        <Button
+          type="submit"
+          className="flex items-center justify-center gap-2"
+          disabled={saving || uploadingPhoto || uploadingDoc}
+        >
+          {saving ? (
+            <>
+              <Spinner size={16} /> Enregistrement…
+            </>
+          ) : (
+            "Enregistrer"
+          )}
+        </Button>
+      </div>
     </form>
   );
 }

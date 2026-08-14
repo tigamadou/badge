@@ -48,13 +48,18 @@ model User {
   blocked       Boolean @default(false)
   blockedReason String?
 
+  // v4 (plan 08) : miroir de la derniere ProfileSubmission. Ecrit UNIQUEMENT par
+  // src/lib/profile-review.ts.
+  profileStatus ProfileStatus @default(INCOMPLETE)
+
   // v2-14 Task 14 : derniere connexion reussie (mise a jour par NextAuth signIn callback).
   lastLoginAt DateTime?
 
-  orgMemberships   OrgMembership[]
-  eventMemberships EventMembership[]
-  activityLogs     ActivityLog[]
-  registrations    Registration[]
+  orgMemberships     OrgMembership[]
+  eventMemberships   EventMembership[]
+  activityLogs       ActivityLog[]
+  registrations      Registration[]
+  profileSubmissions ProfileSubmission[]
 }
 
 enum StaffRole {
@@ -99,10 +104,6 @@ model Organization {
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
 
-  quotaMaxEvents        Int?
-  quotaMaxRegistrations Int?
-  quotaMaxStorageMB     Int?
-
   // v2-12 : id de template de badge override pour cette org (null = heritage platform).
   // Note (2026-05-31) : OrgSettings supprime, ce champ vit directement sur Organization.
   badgeTemplateId       String?
@@ -110,6 +111,7 @@ model Organization {
   memberships       OrgMembership[]
   events            Event[]
   categoryTemplates CategoryTemplate[]
+  subscription      Subscription?
 }
 
 model OrgMembership {
@@ -151,6 +153,10 @@ model Event {
   slug             String    @unique
   location         String
   date             DateTime
+  // v4 (plan 07) : informatif uniquement. `date` reste la date de reference pour
+  // l'ID metier, les badges et l'ouverture des inscriptions.
+  endDate          DateTime?
+  description      String?   @db.Text
   logo             String?
   registrationOpen Boolean   @default(false)
   // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).
@@ -256,6 +262,10 @@ model Registration {
   badgePrintedAt   DateTime?
   allAccessGranted Boolean            @default(false)
   rejectionReason  String?
+  // v4 (plan 08) : reference au catalogue ; `rejectionReason` conserve le libelle
+  // fige au moment de la decision.
+  rejectionReasonId  String?
+  rejectionReasonRef RejectionReason? @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
   rejectionDetails String?            @db.Text
 
   // v2-11 : snapshot inline du profil au moment de la soumission. Reecrit a
@@ -280,6 +290,101 @@ model Registration {
 }
 
 enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// v4 (plan 08) : chaque envoi de pieces cree une ligne IMMUABLE. La derniere ligne
+// fait foi ; `User.profileStatus` en est le miroir denormalise (cf. src/lib/profile-review.ts).
+model ProfileSubmission {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  photo            String
+  idDocumentType   String
+  idDocumentNumber String
+  idDocument       String
+
+  status               ProfileSubmissionStatus @default(PENDING)
+  rejectionReasonId    String?
+  rejectionReason      RejectionReason?        @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
+  // Libelle fige a la decision : renommer ou archiver un motif ne doit pas
+  // reecrire l'historique.
+  rejectionReasonLabel String?
+  rejectionDetails     String?                 @db.Text
+
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+enum ProfileSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// v4 (plan 08) : catalogue administre dans les parametres plateforme. La portee
+// filtre les motifs proposes selon le contexte de rejet.
+model RejectionReason {
+  id         String         @id @default(cuid())
+  label      String
+  scope      RejectionScope
+  sortOrder  Int            @default(0)
+  archived   Boolean        @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  profileSubmissions ProfileSubmission[]
+  registrations      Registration[]
+
+  @@index([archived, scope])
+}
+
+// v4 (plan 11) : une ligne = une VERSION FIGEE d'un template installe.
+// Reinstaller cree une nouvelle ligne : `layout` et `assetPrefix` ne sont JAMAIS
+// mis a jour. C'est ce qui garantit qu'un evenement ne voit pas son badge changer.
+// `installedById` est un identifiant nu, sans relation, comme
+// ProfileSubmission.reviewedById : c'est une donnee d'audit.
+model InstalledBadgeTemplate {
+  id            String    @id @default(cuid())
+  family        String
+  version       Int
+  label         String
+  description   String    @db.Text
+  pages         Int
+  pageWidthPx   Float
+  pageHeightPx  Float
+  layout        Json
+  assetPrefix   String
+  // v4 (spec 14) : previewPath designe l'IMAGE d'apercu declaree par le manifeste
+  // (null si le paquet n'en fournit pas) ; proofPath le PDF produit a l'installation,
+  // conserve pour verifier le rendu aux dimensions reelles.
+  previewPath   String?
+  proofPath     String?
+  formatVersion Int
+  installedById String
+  archived      Boolean   @default(false)
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([family, version])
+  @@index([archived])
+}
+
+enum RejectionScope {
+  PROFILE
+  REGISTRATION
+  BOTH
+}
+
+enum ProfileStatus {
+  INCOMPLETE
   PENDING
   APPROVED
   REJECTED
@@ -332,9 +437,11 @@ model PlatformSettings {
   recaptchaSiteKey   String  @default("")
   recaptchaSecretKey String  @default("")
   // v2-12 : template de badge par defaut de la plateforme (racine de la cascade).
-  // NOT NULL avec default -- garantit que resolveBadgeTemplateId renvoie toujours
-  // une valeur.
-  badgeTemplateId    String  @default("default-v1")
+  // v4 (plan 12) : le defaut n'est plus un identifiant litteral -- il designe desormais
+  // une ligne InstalledBadgeTemplate, dont le cuid n'est pas connu a l'avance. La chaine
+  // vide signifie « aucune racine definie » : resolveTemplate retombe alors sur la
+  // famille `default`, dont le seed garantit l'existence.
+  badgeTemplateId    String  @default("")
 }
 
 // Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs
@@ -384,6 +491,8 @@ enum ActivityType {
   REGISTRATION_UPDATED
   REGISTRATION_DELETED
   REGISTRATION_RESUBMITTED
+  // v4 (plan 15) : snapshot d'une inscription en attente realigne sur le profil.
+  REGISTRATION_SNAPSHOT_REFRESHED
   BADGE_PRINTED
   BADGE_BATCH_PRINTED
   BADGE_ALL_ACCESS_TOGGLED
@@ -434,4 +543,69 @@ enum ActivityType {
   PLATFORM_BLOCKED_EMAIL_REMOVED
   PLATFORM_BLOCKED_DOCUMENT_ADDED
   PLATFORM_BLOCKED_DOCUMENT_REMOVED
+
+  // v4 : abonnements (remplacent les quotas)
+  PLAN_CREATED
+  PLAN_UPDATED
+  SUBSCRIPTION_CREATED
+  SUBSCRIPTION_UPDATED
+  QUOTA_BYPASS
+
+  // v4 (plan 08) : validation des profils par le staff plateforme
+  PROFILE_SUBMITTED
+  PROFILE_APPROVED
+  PROFILE_REJECTED
+  REJECTION_REASON_CREATED
+  REJECTION_REASON_UPDATED
+  REJECTION_REASON_ARCHIVED
+
+  // v4 (plan 11) : catalogue des templates de badge installes
+  BADGE_TEMPLATE_INSTALLED
+  BADGE_TEMPLATE_ARCHIVED
+}
+
+// =====================================================
+//  Abonnements (v4) - remplacent les champs quota* de Organization
+// =====================================================
+
+model Plan {
+  id                      String             @id @default(cuid())
+  name                    String             @unique
+  maxEvents               Int? // null = illimite
+  maxParticipantsPerEvent Int? // null = illimite
+  // v4 : periodicite de l'offre. Un abonnement souscrit a ce plan en herite ;
+  // elle pilote le calcul de startDate/endDate (MONTHLY=30j, ANNUAL=365j).
+  period                  SubscriptionPeriod @default(MONTHLY)
+  archived                Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  subscriptions           Subscription[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum SubscriptionPeriod {
+  MONTHLY // 30 jours
+  ANNUAL // 365 jours
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  orgId     String             @unique // un abonnement courant par org
+  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan               @relation(fields: [planId], references: [id])
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @default(now())
+  endDate   DateTime? // null = sans echeance
+  // Overrides par org (null = herite du plan)
+  overrideMaxEvents               Int?
+  overrideMaxParticipantsPerEvent Int?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([planId])
 }

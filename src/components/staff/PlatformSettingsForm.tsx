@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { Switch } from "@/components/ui/FormControls";
+import { Alert, Spinner } from "@/components/ui/Feedback";
 
 export type PublicSettings = {
   smtpHost: string;
@@ -60,156 +65,85 @@ export function PlatformSettingsForm({
     if (form.smtpPassword) payload.smtpPassword = form.smtpPassword;
     if (form.recaptchaSecretKey) payload.recaptchaSecretKey = form.recaptchaSecretKey;
 
-    const res = await fetch("/api/staff/settings", {
+    const res = await fetch("/api/platform/settings", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
     setBusy(false);
     if (res.ok) {
-      setMsg("Parametres enregistres.");
+      setMsg("Paramètres enregistrés.");
       // Reset les champs secrets pour eviter de re-soumettre la meme valeur.
       setForm((f) => ({ ...f, smtpPassword: "", recaptchaSecretKey: "" }));
       router.refresh();
     } else {
       const body = await res.json().catch(() => ({}));
-      setMsg(
-        `Echec de l'enregistrement (${res.status}). ${body.error ?? ""}`.trim(),
-      );
+      setMsg(`Échec de l'enregistrement (${res.status}). ${body.error ?? ""}`.trim());
     }
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="max-w-2xl space-y-4">
       {!canEditSecrets && (
-        <div className="rounded bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-900">
-          Les champs <strong>Mot de passe SMTP</strong> et{" "}
-          <strong>Secret key reCAPTCHA</strong> sont reserves au role
-          SUPER_ADMIN. Vous pouvez modifier les autres parametres normalement.
-        </div>
+        <Alert tone="warn">
+          Les champs <strong>Mot de passe SMTP</strong> et <strong>Secret key reCAPTCHA</strong> sont réservés au rôle
+          SUPER_ADMIN. Vous pouvez modifier les autres paramètres normalement.
+        </Alert>
       )}
-      {msg && (
-        <div className="rounded bg-blue-50 border border-blue-200 px-3 py-2 text-sm">
-          {msg}
-        </div>
-      )}
+      {msg && <Alert tone="info">{msg}</Alert>}
 
-      <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">SMTP</h2>
-        <Field
-          label="Hote SMTP"
-          value={form.smtpHost}
-          onChange={(v) => setForm((f) => ({ ...f, smtpHost: v }))}
-        />
-        <Field
-          label="Port"
-          type="number"
-          value={form.smtpPort}
-          onChange={(v) => setForm((f) => ({ ...f, smtpPort: v }))}
-        />
-        <Field
-          label="Expediteur (From)"
-          type="email"
-          value={form.smtpFrom}
-          onChange={(v) => setForm((f) => ({ ...f, smtpFrom: v }))}
-        />
-        <Field
-          label="Utilisateur SMTP"
-          value={form.smtpUser}
-          onChange={(v) => setForm((f) => ({ ...f, smtpUser: v }))}
-        />
-        <Field
-          label={`Mot de passe SMTP ${
-            initial.smtpPasswordSet ? "(rempli — saisir pour remplacer)" : ""
-          }${canEditSecrets ? "" : " (reserve SUPER_ADMIN)"}`}
-          type={showSecrets ? "text" : "password"}
-          value={form.smtpPassword}
-          onChange={(v) => setForm((f) => ({ ...f, smtpPassword: v }))}
-          disabled={!canEditSecrets}
-        />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.smtpSecure}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, smtpSecure: e.target.checked }))
-            }
+      <Card>
+        <CardHead title="Serveur SMTP" subtitle="Configuration d'envoi des e-mails de la plateforme." />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input label="Hôte SMTP" value={form.smtpHost} onChange={(e) => setForm((f) => ({ ...f, smtpHost: e.target.value }))} />
+            <Input label="Port" type="number" value={form.smtpPort} onChange={(e) => setForm((f) => ({ ...f, smtpPort: e.target.value }))} />
+          </div>
+          <Input label="Expéditeur (From)" type="email" value={form.smtpFrom} onChange={(e) => setForm((f) => ({ ...f, smtpFrom: e.target.value }))} />
+          <Input label="Utilisateur SMTP" value={form.smtpUser} onChange={(e) => setForm((f) => ({ ...f, smtpUser: e.target.value }))} />
+          <Input
+            label={`Mot de passe SMTP ${initial.smtpPasswordSet ? "(rempli — saisir pour remplacer)" : ""}${canEditSecrets ? "" : " (réservé SUPER_ADMIN)"}`}
+            type={showSecrets ? "text" : "password"}
+            value={form.smtpPassword}
+            onChange={(e) => setForm((f) => ({ ...f, smtpPassword: e.target.value }))}
+            disabled={!canEditSecrets}
           />
-          TLS (smtpSecure)
-        </label>
-      </section>
+          <Switch checked={form.smtpSecure} onChange={(v) => setForm((f) => ({ ...f, smtpSecure: v }))} label="TLS (connexion sécurisée)" />
+        </CardBody>
+      </Card>
 
-      <section className="bg-white border rounded p-4 space-y-3">
-        <h2 className="font-semibold">reCAPTCHA</h2>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+      <Card>
+        <CardHead title="reCAPTCHA" subtitle="Protection anti-spam des formulaires publics." />
+        <CardBody className="space-y-4">
+          <Switch
             checked={form.recaptchaEnabled}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, recaptchaEnabled: e.target.checked }))
-            }
+            onChange={(v) => setForm((f) => ({ ...f, recaptchaEnabled: v }))}
+            label="Activé par défaut"
           />
-          Active par defaut
-        </label>
-        <Field
-          label="Site key"
-          value={form.recaptchaSiteKey}
-          onChange={(v) => setForm((f) => ({ ...f, recaptchaSiteKey: v }))}
-        />
-        <Field
-          label={`Secret key ${
-            initial.recaptchaSecretKeySet ? "(rempli — saisir pour remplacer)" : ""
-          }${canEditSecrets ? "" : " (reserve SUPER_ADMIN)"}`}
-          type={showSecrets ? "text" : "password"}
-          value={form.recaptchaSecretKey}
-          onChange={(v) => setForm((f) => ({ ...f, recaptchaSecretKey: v }))}
-          disabled={!canEditSecrets}
-        />
-      </section>
+          <Input label="Site key" value={form.recaptchaSiteKey} onChange={(e) => setForm((f) => ({ ...f, recaptchaSiteKey: e.target.value }))} />
+          <Input
+            label={`Secret key ${initial.recaptchaSecretKeySet ? "(rempli — saisir pour remplacer)" : ""}${canEditSecrets ? "" : " (réservé SUPER_ADMIN)"}`}
+            type={showSecrets ? "text" : "password"}
+            value={form.recaptchaSecretKey}
+            onChange={(e) => setForm((f) => ({ ...f, recaptchaSecretKey: e.target.value }))}
+            disabled={!canEditSecrets}
+          />
+        </CardBody>
+      </Card>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={showSecrets}
-          onChange={(e) => setShowSecrets(e.target.checked)}
-        />
-        Afficher les valeurs masquees pendant la saisie
-      </label>
+      <Switch checked={showSecrets} onChange={setShowSecrets} label="Afficher les valeurs masquées pendant la saisie" />
 
-      <button
-        onClick={save}
-        disabled={busy}
-        className="rounded bg-blue-600 text-white px-3 py-1.5 text-sm disabled:bg-slate-300"
-      >
-        {busy ? "Enregistrement..." : "Enregistrer les parametres"}
-      </button>
+      <div className="flex justify-end">
+        <Button onClick={save} className="flex items-center justify-center gap-2" disabled={busy}>
+          {busy ? (
+            <>
+              <Spinner size={16} /> Enregistrement…
+            </>
+          ) : (
+            "Enregistrer les paramètres"
+          )}
+        </Button>
+      </div>
     </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm text-slate-600">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="mt-1 w-full rounded border px-3 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
-      />
-    </label>
   );
 }

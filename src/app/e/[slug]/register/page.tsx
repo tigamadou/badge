@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { loadPublicEventBySlug, PublicEventError } from "@/lib/public-event";
 import { PublicEventLayout } from "@/components/public/PublicEventLayout";
 import { isParticipantProfileComplete } from "@/lib/participant-profile";
+import { canRegisterToEvent } from "@/lib/profile-review";
 import { ClosedView } from "../closed";
 import RegisterEventForm from "./RegisterEventForm";
 
@@ -52,11 +53,17 @@ export default async function EventRegisterPage({
       idDocumentType: true,
       idDocumentNumber: true,
       idDocument: true,
+      profileStatus: true,
     },
   });
 
   if (!user || !isParticipantProfileComplete(user)) {
     redirect(`/account/profile/complete?next=/e/${slug}/register`);
+  }
+
+  // v4 (plan 09) : profil complet mais pieces jamais deposees, ou rejetees.
+  if (!canRegisterToEvent(user.profileStatus)) {
+    redirect(`/account/profile?pending=1&next=/e/${slug}/register`);
   }
 
   const existing = await prisma.registration.findUnique({
@@ -84,7 +91,7 @@ export default async function EventRegisterPage({
             <p>Vous êtes déjà inscrit à cet événement.</p>
             <Link
               href={`/account/registrations/${existing.id}`}
-              className="mt-1 inline-block text-indigo-700 underline"
+              className="mt-1 inline-block text-green-700 underline"
             >
               Voir le détail de mon inscription
             </Link>

@@ -1,6 +1,6 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { getFile } from "@/lib/storage";
 import type { TemplateContext } from "./types";
 
 // Forme du Registration attendue par buildTemplateContext. On accepte un objet
@@ -56,15 +56,19 @@ const MIME_BY_EXT: Record<string, string> = {
   ".pdf": "application/pdf",
 };
 
+// v4 : lecture via le driver de stockage S3 (MinIO). L'ancienne lecture filesystem
+// locale ne trouvait plus les fichiers depuis la bascule S3. `uploadsRoot` est
+// conserve dans la signature pour compat (mock de test) mais ignore.
 async function readFileAsDataUrl(
   storageKey: string,
-  uploadsRoot: string,
+  _uploadsRoot: string,
 ): Promise<string> {
-  const filePath = path.join(uploadsRoot, storageKey);
-  const buf = await fs.readFile(filePath);
+  const { body, contentType } = await getFile(storageKey);
   const ext = path.extname(storageKey).toLowerCase();
-  const mime = MIME_BY_EXT[ext] ?? "application/octet-stream";
-  return `data:${mime};base64,${buf.toString("base64")}`;
+  const mime = contentType && contentType !== "application/octet-stream"
+    ? contentType
+    : MIME_BY_EXT[ext] ?? "application/octet-stream";
+  return `data:${mime};base64,${body.toString("base64")}`;
 }
 
 // Indirection mockable pour les tests. Voir __TEST__ ci-dessous.

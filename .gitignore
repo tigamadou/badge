@@ -55,5 +55,11 @@ next-env.d.ts
 /playwright-report/
 /playwright/.cache/
 
-# v2-12 : preview PNG copies au build (sources versionnees, copies non)
-/public/badge-previews/
+.plan-logs
+.superpowers
+
+# racine CA Caddy extraite temporairement par `make dev-https`
+.caddy-root.crt
+# v4 (spec 14) : atelier de creation de templates (make new-badge-template).
+# Les paquets de reference versionnes vivent dans prisma/badge-templates/.
+/badge-templates/

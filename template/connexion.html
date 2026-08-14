@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Connexion</title>
+<link rel="stylesheet" href="assets/badge.css" />
+</head>
+<body>
+  <div class="state-page" data-screen-label="02 Connexion">
+    <div class="state-head">
+      <div class="crumb"><a href="index.html">Galerie</a> / Public &amp; Auth / Connexion</div>
+      <h1>Connexion</h1>
+      <p>Carte centrée — état par défaut et état d'erreur d'identifiants.</p>
+    </div>
+    <div class="state-row">
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot ok"></span> État par défaut</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="auth-head"><h1 style="font-size:22px;">Connexion</h1><p>Accédez à votre espace de gestion.</p></div>
+          <div class="field"><label>Adresse e-mail</label><input class="input" type="email" placeholder="vous@organisation.fr" /></div>
+          <div class="field" style="margin-bottom:8px;"><label>Mot de passe</label><input class="input" type="password" placeholder="••••••••" /></div>
+          <div style="text-align:right;margin-bottom:18px;"><a class="link" style="font-size:13px;" href="mot-de-passe.html">Mot de passe oublié ?</a></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">Se connecter</button>
+          <div class="auth-foot">Besoin d'aide ? <a class="link" href="#">Contactez votre administrateur</a></div>
+        </div>
+      </div>
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot err"></span> Identifiants incorrects</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="auth-head"><h1 style="font-size:22px;">Connexion</h1><p>Accédez à votre espace de gestion.</p></div>
+          <div class="alert alert-err" style="margin-bottom:18px;"><span data-ico="alert-triangle" data-size="16" style="vertical-align:-3px;"></span> E-mail ou mot de passe incorrect.</div>
+          <div class="field"><label>Adresse e-mail</label><input class="input" type="email" value="camille.laurent@exemple.fr" style="border-color:var(--rose-600);box-shadow:0 0 0 2px var(--rose-200);" /></div>
+          <div class="field" style="margin-bottom:8px;"><label>Mot de passe</label><input class="input" type="password" value="••••••" style="border-color:var(--rose-600);box-shadow:0 0 0 2px var(--rose-200);" /></div>
+          <div style="text-align:right;margin-bottom:18px;"><a class="link" style="font-size:13px;" href="mot-de-passe.html">Mot de passe oublié ?</a></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;">Se connecter</button>
+          <div class="auth-foot">Besoin d'aide ? <a class="link" href="#">Contactez votre administrateur</a></div>
+        </div>
+      </div>
+
+      <div class="state-col">
+        <div class="state-label"><span class="dot warn"></span> Connexion en cours</div>
+        <div class="auth-card">
+          <img class="auth-logo" src="assets/logo.svg" alt="Badge" />
+          <div class="auth-head"><h1 style="font-size:22px;">Connexion</h1><p>Accédez à votre espace de gestion.</p></div>
+          <div class="field"><label>Adresse e-mail</label><input class="input" type="email" value="camille.laurent@exemple.fr" disabled /></div>
+          <div class="field" style="margin-bottom:8px;"><label>Mot de passe</label><input class="input" type="password" value="••••••••" disabled /></div>
+          <div style="text-align:right;margin-bottom:18px;"><span class="link muted" style="font-size:13px;">Mot de passe oublié ?</span></div>
+          <button class="btn btn-primary" style="width:100%;justify-content:center;opacity:.85;" disabled><span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Connexion…</button>
+          <div class="auth-foot">Besoin d'aide ? <a class="link" href="#">Contactez votre administrateur</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

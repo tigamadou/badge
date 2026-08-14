@@ -3,8 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3785:3000"
     volumes:
       - .:/app
       - /app/node_modules
@@ -15,11 +16,31 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      minio:
+        condition: service_started
+
+  # v4 (spec 16) : studio de construction de templates. Outil de developpement
+  # uniquement, jamais deploye. Meme image que `app`, meme depot monte.
+  studio:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    command: yarn tsx studio/server.ts
+    ports:
+      - "3786:3900"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - docker/compose.dev.env
+      - path: .env
+        required: false
 
   mysql:
     image: mysql:8
     ports:
-      - "3306:3306"
+      - "33060:3306"
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: badge
@@ -49,12 +70,30 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Console derriere Caddy dev (https://s3.badge.local, tls internal).
+      # L'acces direct http://localhost:9001 reste possible en parallele.
+      MINIO_BROWSER_REDIRECT_URL: https://s3.badge.local
+    volumes:
+      - minio_data_dev:/data
+
   caddy:
     image: caddy:2-alpine
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./Caddyfile.dev:/etc/caddy/Caddyfile
+      - caddy_data_dev:/data
+      - caddy_config_dev:/config
     depends_on:
       - app
       - phpmyadmin
@@ -62,3 +101,6 @@ services:
 
 volumes:
   mysql_data:
+  caddy_data_dev:
+  caddy_config_dev:
+  minio_data_dev:

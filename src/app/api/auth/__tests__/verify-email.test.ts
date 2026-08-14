@@ -13,6 +13,14 @@ function makeReq(body: unknown): NextRequest {
   });
 }
 
+function makeRawReq(rawBody: string): NextRequest {
+  return new NextRequest("http://localhost/api/auth/verify-email", {
+    method: "POST",
+    body: rawBody,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 describe("POST /api/auth/verify-email", () => {
   beforeEach(() => {
     resetRateLimitForTests();
@@ -98,5 +106,33 @@ describe("POST /api/auth/verify-email", () => {
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.emailVerifyToken).toBeNull();
     expect(updated?.emailVerifyTokenExpiry).toBeNull();
+  });
+
+  it("returns 400 INVALID_BODY when the token field is missing", async () => {
+    const { POST } = await import("@/app/api/auth/verify-email/route");
+    const res = await POST(makeReq({}));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 400 INVALID_BODY when the JSON body is malformed (req.json() rejects)", async () => {
+    const { POST } = await import("@/app/api/auth/verify-email/route");
+    const res = await POST(makeRawReq("{not-json"));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.code).toBe("INVALID_BODY");
+  });
+
+  it("returns 429 RATE_LIMITED after exceeding the request quota", async () => {
+    const { POST } = await import("@/app/api/auth/verify-email/route");
+    let last;
+    for (let i = 0; i < 21; i++) {
+      last = await POST(makeReq({ token: "quota-token" }));
+    }
+    expect(last!.status).toBe(429);
+    const json = await last!.json();
+    expect(json.code).toBe("RATE_LIMITED");
+    expect(last!.headers.get("Retry-After")).toBeTruthy();
   });
 });

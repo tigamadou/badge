@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import SetupPasswordForm from "@/components/auth/SetupPasswordForm";
+import { AuthCard } from "@/components/auth/AuthCard";
 
 type PageProps = {
   searchParams: Promise<{ token?: string | string[] }>;
@@ -7,17 +8,14 @@ type PageProps = {
 
 function InvalidLink() {
   return (
-    <div className="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-6 text-center space-y-4">
-        <h1 className="text-xl font-semibold text-slate-900">
-          Lien expire ou invalide
-        </h1>
+    <AuthCard title="Lien expiré ou invalide">
+      <div className="text-center space-y-4">
         <p className="text-sm text-slate-600">
-          Ce lien d&apos;invitation n&apos;est plus valide. Demandez un nouveau lien a l&apos;administrateur de votre organisation.
+          Ce lien d&apos;invitation n&apos;est plus valide. Demandez un nouveau lien à l&apos;administrateur de votre organisation.
         </p>
         <p className="text-sm text-slate-500">Demander un nouveau lien</p>
       </div>
-    </div>
+    </AuthCard>
   );
 }
 
@@ -45,13 +43,8 @@ export default async function SetupPasswordPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="bg-slate-50 min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-6">
-        <h1 className="text-xl font-semibold text-slate-900 mb-6 text-center">
-          Configurer votre mot de passe
-        </h1>
-        <SetupPasswordForm token={token} />
-      </div>
-    </div>
+    <AuthCard title="Configurer votre mot de passe">
+      <SetupPasswordForm token={token} />
+    </AuthCard>
   );
 }

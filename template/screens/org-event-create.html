@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Créer un événement</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "events", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" }, crumbs: ["Salon Tech", "Événements", "Créer"] };</script>
+<div id="page" data-screen-label="24 Org wizard création événement">
+
+  <a class="link" href="org-events.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Événements</a>
+  <div class="page-head" style="margin-top:12px;margin-bottom:8px;"><div><h1>Créer un événement</h1></div></div>
+
+  <div class="card card-pad" style="max-width:820px;">
+    <div class="stepper">
+      <div class="step done"><span class="num"><span data-ico="check" data-size="15"></span></span><span class="nm">Informations</span></div>
+      <div class="step-line"></div>
+      <div class="step on"><span class="num">2</span><span class="nm">Catégories</span></div>
+      <div class="step-line"></div>
+      <div class="step"><span class="num">3</span><span class="nm">Récapitulatif</span></div>
+    </div>
+
+    <h3 class="ds-h2" style="margin:0 0 4px;">Catégories de participation</h3>
+    <p class="ds-body" style="margin:0 0 18px;">Importez un modèle ou créez vos catégories manuellement.</p>
+
+    <div class="segmented" style="margin-bottom:18px;"><button class="on">Depuis un modèle</button><button>Manuelles</button></div>
+
+    <div class="field"><label>Modèle de catégories</label><div class="select-wrap"><select class="input"><option>Salon professionnel (4 catégories)</option><option>Congrès (3 catégories)</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div></div>
+
+    <div class="tbl-wrap" style="margin-top:8px;">
+      <table class="tbl">
+        <thead><tr><th>Catégorie</th><th>Couleur</th><th>N°</th><th>Anonyme</th></tr></thead>
+        <tbody>
+          <tr><td class="cell-name">Conférencier</td><td><span class="cat-dot" style="background:#6366f1;display:inline-block;vertical-align:-1px;"></span></td><td class="mono">01</td><td><span class="ds-meta">Non</span></td></tr>
+          <tr><td class="cell-name">Exposant</td><td><span class="cat-dot" style="background:#14b8a6;display:inline-block;vertical-align:-1px;"></span></td><td class="mono">02</td><td><span class="ds-meta">Non</span></td></tr>
+          <tr><td class="cell-name">Visiteur</td><td><span class="cat-dot" style="background:#f59e0b;display:inline-block;vertical-align:-1px;"></span></td><td class="mono">03</td><td><span class="ds-meta">Non</span></td></tr>
+          <tr><td class="cell-name">Presse</td><td><span class="cat-dot" style="background:#f43f5e;display:inline-block;vertical-align:-1px;"></span></td><td class="mono">04</td><td><span class="status status-approved" style="font-size:11px;"><span data-ico="check" data-size="11"></span> Oui</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="between" style="margin-top:24px;">
+      <button class="btn btn-secondary"><span data-ico="arrow-left" data-size="16"></span> Précédent</button>
+      <button class="btn btn-primary">Continuer <span data-ico="arrow-right" data-size="16"></span></button>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

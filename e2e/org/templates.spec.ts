@@ -8,72 +8,82 @@ import {
   getDb,
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
+import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 
-test.describe("T17 Org category templates", () => {
+// Page Modeles de categories — /org/[orgId]/templates
+// Nav : MANAGER+. CRUD API : MANAGER (autorise en v4).
+// Toutes les actions passent par une modale (Ajouter / Editer) ou un confirm().
+test.describe("Org — Modeles de categories", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
   });
 
-  test("OWNER cree CategoryTemplate via API", async ({ page, request }) => {
+  // --- Acces & rendu ------------------------------------------------------
+
+  test("OWNER voit le tableau des modeles", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-render" });
+    await createTestCategoryTemplate({ orgId, name: "Visiteur", color: "#4f46e5", number: 1 });
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}/templates`);
+    await expect(page.getByRole("heading", { name: /modèles/i }).first()).toBeVisible();
+    await expect(page.getByText("Visiteur")).toBeVisible();
+  });
+
+  // --- Actions UI ---------------------------------------------------------
+
+  test("OWNER cree un modele via la modale", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-create" });
     await loginAs(page, owner);
 
-    const res = await request.post(`/api/admin/${orgId}/templates`, {
-      data: { name: "Tpl OWNER", color: "#FF5733", number: 1 },
-    });
-    expect(res.status()).toBe(201);
-    const json = await res.json();
-    expect(json.template?.id).toBeTruthy();
+    await page.goto(`/org/${orgId}/templates`);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.getByRole("heading", { name: /nouveau modèle/i })).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Nom" }).fill("Presse UI");
+    await page.getByLabel("Numéro").fill("42");
+    await page.getByRole("button", { name: /^créer$/i }).click();
+
+    // La modale se ferme et la ligne apparait.
+    await expect(page.getByRole("heading", { name: /nouveau modèle/i })).toHaveCount(0);
+    await expect(page.getByText("Presse UI")).toBeVisible();
+
+    const tpl = await getDb().categoryTemplate.findFirst({ where: { orgId, name: "Presse UI" } });
+    expect(tpl?.number).toBe(42);
 
     await expectLastActivity({
       type: "CATEGORY_TEMPLATE_CREATED",
       orgId,
       userId: owner.id,
-      targetId: json.template.id,
+      targetId: tpl!.id,
     });
   });
 
-  // Note T00.1 : la POST templates est OWNER-only (source de verite : src/app/api/admin/[orgId]/templates/route.ts).
-  // La spec du plan indiquait "MANAGER cree CategoryTemplate" -- on adapte ici a la realite
-  // du code : MANAGER ne peut PAS creer, le serveur retourne 403. Le cas RBAC est aussi
-  // couvert dans rbac.spec.ts. Voir le livrable du rapport pour le flag.
-  test("MANAGER tente de creer un CategoryTemplate -> 403", async ({ page, request }) => {
-    const { orgId } = await createTestOrgWithOwner({ scope: "tpl-mgr-create" });
-    const manager = await createTestOrgMember({
-      scope: "tpl-mgr",
-      orgId,
-      role: "MANAGER",
-    });
-    await loginAs(page, manager);
-
-    const res = await request.post(`/api/admin/${orgId}/templates`, {
-      data: { name: "Tpl MANAGER", color: "#00FF00", number: 5 },
-    });
-    expect(res.status()).toBe(403);
-  });
-
-  test("OWNER edite CategoryTemplate via PATCH", async ({ page, request }) => {
+  test("OWNER edite un modele via la modale", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-edit" });
     const tpl = await createTestCategoryTemplate({
       orgId,
-      name: "Old name",
-      color: "#000000",
-      number: 7,
+      name: "Nom initial UI",
+      color: "#111111",
+      number: 20,
     });
     await loginAs(page, owner);
 
-    const res = await request.patch(
-      `/api/admin/${orgId}/templates/${tpl.id}`,
-      { data: { name: "New name", color: "#abcdef" } },
-    );
-    expect(res.status()).toBe(200);
+    await page.goto(`/org/${orgId}/templates`);
+    const row = page.locator("tr", { hasText: "Nom initial UI" });
+    await row.getByRole("button", { name: /éditer/i }).click();
+    await expect(page.getByRole("heading", { name: /modifier le modèle/i })).toBeVisible();
 
-    const db = getDb();
-    const after = await db.categoryTemplate.findUnique({ where: { id: tpl.id } });
-    expect(after?.name).toBe("New name");
-    expect(after?.color).toBe("#abcdef");
+    await page.getByRole("textbox", { name: "Nom" }).fill("Nom modifie UI");
+    await page.getByRole("button", { name: /^enregistrer$/i }).click();
+
+    await expect(page.getByText("Nom modifie UI")).toBeVisible();
+    await expect(page.getByText("Nom initial UI")).toHaveCount(0);
+
+    const after = await getDb().categoryTemplate.findUnique({ where: { id: tpl.id } });
+    expect(after?.name).toBe("Nom modifie UI");
 
     await expectLastActivity({
       type: "CATEGORY_TEMPLATE_UPDATED",
@@ -83,24 +93,25 @@ test.describe("T17 Org category templates", () => {
     });
   });
 
-  test("OWNER supprime CategoryTemplate via DELETE", async ({ page, request }) => {
+  test("OWNER supprime un modele via le bouton Supprimer", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-delete" });
     const tpl = await createTestCategoryTemplate({
       orgId,
-      name: "To delete",
-      color: "#123456",
-      number: 8,
+      name: "A supprimer UI",
+      color: "#222222",
+      number: 21,
     });
     await loginAs(page, owner);
 
-    const res = await request.delete(
-      `/api/admin/${orgId}/templates/${tpl.id}`,
-    );
-    expect(res.status()).toBe(204);
+    await page.goto(`/org/${orgId}/templates`);
+    await expect(page.getByText("A supprimer UI")).toBeVisible();
 
-    const db = getDb();
-    const after = await db.categoryTemplate.findUnique({ where: { id: tpl.id } });
-    expect(after).toBeNull();
+    page.once("dialog", (dialog) => dialog.accept());
+    const row = page.locator("tr", { hasText: "A supprimer UI" });
+    await row.getByRole("button", { name: /supprimer/i }).click();
+
+    await expect(page.getByText("A supprimer UI")).toHaveCount(0);
+    expect(await getDb().categoryTemplate.findUnique({ where: { id: tpl.id } })).toBeNull();
 
     await expectLastActivity({
       type: "CATEGORY_TEMPLATE_DELETED",
@@ -110,25 +121,48 @@ test.describe("T17 Org category templates", () => {
     });
   });
 
-  test("UI /admin/[orgId]/templates affiche le tableau et permet de creer", async ({
-    page,
-  }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-ui" });
-    await createTestCategoryTemplate({
-      orgId,
-      name: "Tpl visible",
-      color: "#abcdef",
-      number: 9,
-    });
+  // --- Etats --------------------------------------------------------------
+
+  test("Etat vide : aucun modele", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "tpl-empty" });
     await loginAs(page, owner);
 
-    await page.goto(`/admin/${orgId}/templates`);
-    await expect(page.getByRole("heading", { name: /mod[èe]les de cat[ée]gories/i })).toBeVisible();
-    await expect(page.getByText("Tpl visible")).toBeVisible();
+    await page.goto(`/org/${orgId}/templates`);
+    await expect(page.getByText(/aucun modèle/i)).toBeVisible();
+  });
 
-    // Bouton "Nouveau modele" expose le form (inline) ; on verifie sa presence
-    // sans necessairement soumettre (le form complet est couvert par les tests
-    // API plus haut).
-    await expect(page.getByRole("button", { name: /nouveau mod[èe]le/i })).toBeVisible();
+  // --- Gardes & API -------------------------------------------------------
+
+  test("MANAGER cree un modele via la modale", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "tpl-mgr" });
+    const manager = await createTestOrgMember({ scope: "tpl-mgr-user", orgId, role: "MANAGER" });
+    await loginAndEnter(page, manager, { kind: "org", id: orgId });
+
+    await page.getByRole("link", { name: /modèles/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/templates`));
+
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await page.getByRole("textbox", { name: "Nom" }).fill("Modele Manager");
+    await page.getByLabel("Numéro").fill("30");
+    await page.getByRole("button", { name: /^créer$/i }).click();
+
+    // Reponse attendue — SUCCES : la modale se ferme, la ligne apparait, persiste.
+    await expect(page.getByRole("heading", { name: /nouveau modèle/i })).toHaveCount(0);
+    await expect(page.getByText("Modele Manager")).toBeVisible();
+    const tpl = await getDb().categoryTemplate.findFirst({
+      where: { orgId, name: "Modele Manager" },
+    });
+    expect(tpl?.number).toBe(30);
+  });
+
+  // --- Gardes exprimees en etat UI ---------------------------------------
+
+  test("AUDITOR ne voit pas l'entree Modeles dans la nav", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "tpl-aud" });
+    const auditor = await createTestOrgMember({ scope: "tpl-aud-user", orgId, role: "AUDITOR" });
+    await loginAndEnter(page, auditor, { kind: "org", id: orgId });
+
+    // Les modeles sont reserves a MANAGER+ : l'entree de nav est absente.
+    await expect(page.getByRole("link", { name: /modèles/i })).toHaveCount(0);
   });
 });
