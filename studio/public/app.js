@@ -1,6 +1,7 @@
 import { html, render, useCallback, useEffect, useState } from "/vendor/preact-htm.mjs";
 import * as api from "/ui/api.js";
 import { Preview } from "/ui/preview.js";
+import { ContextForm } from "/ui/context-form.js";
 
 const TABS = [
   ["context", "Contexte"],
@@ -76,9 +77,15 @@ function App() {
               value=${manifestText}
               onInput=${(e) => setManifestText(e.target.value)}
             ></textarea>`
-          : html`<p class="placeholder">
-            Onglet « ${TABS.find(([id]) => id === tab)[1]} » à venir${schemaInfo ? "" : " (chargement…)"}.
-          </p>`}
+          : tab === "context"
+            ? html`<${ContextForm}
+                context=${context}
+                schemaInfo=${schemaInfo}
+                onChange=${setContext}
+              />`
+            : html`<p class="placeholder">
+                Onglet « ${TABS.find(([id]) => id === tab)[1]} » à venir.
+              </p>`}
         <ul class="errors" hidden=${errors.length === 0}>
           ${errors.map((e) => html`<li>${e}</li>`)}
         </ul>

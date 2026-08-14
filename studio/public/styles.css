@@ -112,3 +112,65 @@ object {
   font-size: 13px;
   opacity: 0.7;
 }
+
+.form {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  margin: 0;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+.field input {
+  padding: 0.3rem 0.4rem;
+  font: inherit;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.form button {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+}

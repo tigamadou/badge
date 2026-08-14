@@ -25,7 +25,7 @@
 | 9. Upload de ressources vers l'atelier | [x] | 2026-08-14 | |
 | 10. Scaffold + pack depuis le studio | [x] | 2026-08-14 | Lot B termine, lint/typecheck/test verts |
 | 11. UI : socle Preact (parité JSON + aperçu) | [x] | 2026-08-14 | Verif navigateur a refaire manuellement : MCP Chrome indisponible en session headless |
-| 12. UI : onglet Contexte | [ ] | | |
+| 12. UI : onglet Contexte | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
 | 13. UI : onglet Blocs | [ ] | | |
 | 14. UI : métadonnées, polices, ressources, nouveau template | [ ] | | |
 | 15. UI : génération du paquet + parcours complet + doc | [ ] | | |
@@ -682,7 +682,7 @@ render(html`<${App} />`, document.getElementById("app"));
 **Interfaces:**
 - Produces : `ContextForm({ context, schemaInfo, onChange })` — rend les quatre sections (participant, catégorie, événement, badge) ; `onChange(nextContextInput)` remonte un `ContextInput` (voir Task 7) ; boutons presets depuis `schemaInfo.presets` (`onChange(preset.input)`).
 
-- [ ] **Step 1 : Implémenter `context-form.js`** — champs contrôlés (`value` + `onInput`) pour : participant prénom/nom/structure + **upload photo** ; catégorie nom/couleur (`<input type="color">`)/cases anonyme + neutre ; événement titre/lieu/date (`<input type="date">` → ISO) + **upload logo** (+ bouton « retirer ») ; badge id/verifyUrl. Upload générique :
+- [x] **Step 1 : Implémenter `context-form.js`** — champs contrôlés (`value` + `onInput`) pour : participant prénom/nom/structure + **upload photo** ; catégorie nom/couleur (`<input type="color">`)/cases anonyme + neutre ; événement titre/lieu/date (`<input type="date">` → ISO) + **upload logo** (+ bouton « retirer ») ; badge id/verifyUrl. Upload générique :
 
 ```js
 function readAsDataUrl(file, cb) {
@@ -694,9 +694,9 @@ function readAsDataUrl(file, cb) {
 ```
 
 La photo/le logo restent en mémoire client (data URL dans le contexte envoyé au rendu) — rien n'est écrit dans l'atelier ici.
-- [ ] **Step 2 : Brancher dans `app.js`** — l'onglet Contexte rend `ContextForm` ; tout changement de contexte déclenche l'aperçu (même debounce que le manifeste).
-- [ ] **Step 3 : Vérification navigateur** — changer le prénom → l'aperçu suit ; uploader une photo JPEG → visible sur le badge ; cocher « anonyme » → les blocs conditionnels basculent ; presets : chaque bouton remplit le formulaire et l'aperçu correspond aux cinq anciens cas ; date modifiée → date rendue formatée.
-- [ ] **Step 4 : Point de commit (proposer)** — `feat(v4): formulaire de contexte libre du studio`
+- [x] **Step 2 : Brancher dans `app.js`** — l'onglet Contexte rend `ContextForm` ; tout changement de contexte déclenche l'aperçu (même debounce que le manifeste).
+- [x] **Step 3 : Vérification navigateur** — changer le prénom → l'aperçu suit ; uploader une photo JPEG → visible sur le badge ; cocher « anonyme » → les blocs conditionnels basculent ; presets : chaque bouton remplit le formulaire et l'aperçu correspond aux cinq anciens cas ; date modifiée → date rendue formatée.
+- [x] **Step 4 : Point de commit (proposer)** — `feat(v4): formulaire de contexte libre du studio`
 
 ### Task 13 : Onglet Blocs
 
