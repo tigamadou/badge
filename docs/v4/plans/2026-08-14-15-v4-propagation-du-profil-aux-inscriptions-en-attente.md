@@ -29,7 +29,7 @@
 | Task | Description | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Type d'action `REGISTRATION_SNAPSHOT_REFRESHED` | [x] | 2026-08-14 | 2 tests ; enum propage par `make db-push` |
-| 2 | Module de synchronisation — sélection et réécriture | [ ] | | |
+| 2 | Module de synchronisation — sélection et réécriture | [x] | 2026-08-14 | 6 tests verts |
 | 3 | Module de synchronisation — règle de blocage document | [ ] | | |
 | 4 | Branchement dans `PUT /api/account/profile` + audit | [ ] | | |
 | 5 | Détail d'inscription côté organisation — retrait de l'encart | [ ] | | |
@@ -159,7 +159,7 @@ export async function refreshPendingRegistrationSnapshots(
 
 La Task 3 complète cette même fonction avec la règle de blocage ; la Task 4 la consomme depuis la route.
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Créer `src/lib/__tests__/registration-snapshot-sync.test.ts` :
 
@@ -347,7 +347,7 @@ describe("refreshPendingRegistrationSnapshots", () => {
 
 Le test d'idempotence appelle la fonction deux fois : le premier appel aligne le snapshot (l'inscription part avec des valeurs volontairement différentes du profil), le second doit être un no-op — vérifié sur `updatedAt`, que Prisma met à jour à chaque écriture.
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/registration-snapshot-sync.test.ts
@@ -355,7 +355,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Attendu : ÉCHEC à la résolution du module — `Cannot find module '@/lib/registration-snapshot-sync'`.
 
-- [ ] **Étape 3 : Implémenter le module**
+- [x] **Étape 3 : Implémenter le module**
 
 Créer `src/lib/registration-snapshot-sync.ts` :
 
@@ -461,7 +461,7 @@ export async function refreshPendingRegistrationSnapshots(
 }
 ```
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/registration-snapshot-sync.test.ts
@@ -469,7 +469,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__test
 
 Attendu : SUCCÈS sur les six tests.
 
-- [ ] **Étape 5 : Vérifier lint et types**
+- [x] **Étape 5 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck
