@@ -84,6 +84,9 @@ export type ImageBlock = BlockBase & {
   type: "image";
   source?: string;
   asset?: string;
+  // Cadrage de l'image dans son bloc : `cover` remplit quitte a rogner (defaut),
+  // `contain` inscrit l'image entiere, `fill` etire. Un logo se declare `contain`.
+  objectFit?: "cover" | "contain" | "fill";
 };
 
 export type QrBlock = BlockBase & { type: "qr" };

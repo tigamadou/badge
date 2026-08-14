@@ -18,7 +18,7 @@
 | 2. Bordures par côté (remplace borderTopPx) | [x] | 2026-08-14 | |
 | 3. Coins arrondis par coin (+ QR) | [x] | 2026-08-14 | |
 | 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [x] | 2026-08-14 | |
-| 5. objectFit des images | [ ] | | |
+| 5. objectFit des images | [x] | 2026-08-14 | |
 | 6. Doc feature : format enrichi | [ ] | | |
 | 7. Contexte dynamique serveur (context.ts, render, presets) | [ ] | | |
 | 8. Routes render/schema-info + statiques vendor-ui | [ ] | | |
@@ -326,7 +326,7 @@ it("enregistre une police avec son style italique", () => {
 **Interfaces:**
 - Produces : `ImageBlock.objectFit?: "cover" | "contain" | "fill"` (défaut `cover`, comportement actuel inchangé). S'applique aussi au rendu du QR ? **Non** — le QR reste `cover` (toujours carré par construction).
 
-- [ ] **Step 1 : Tests qui échouent** —
+- [x] **Step 1 : Tests qui échouent** —
 
 ```ts
 // schema.test.ts
@@ -350,10 +350,10 @@ it("applique objectFit contain a une image", () => {
 });
 ```
 
-- [ ] **Step 2 : Vérifier l'échec.**
-- [ ] **Step 3 : Implémentation** — type + `objectFit: z.enum(["cover", "contain", "fill"]).optional()` dans le bloc image du schéma ; renderer : `objectFit: block.type === "image" ? (block.objectFit ?? "cover") : "cover"`.
-- [ ] **Step 4 : Vérifier le vert.**
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): objectFit configurable sur les blocs image`
+- [x] **Step 2 : Vérifier l'échec.**
+- [x] **Step 3 : Implémentation** — type + `objectFit: z.enum(["cover", "contain", "fill"]).optional()` dans le bloc image du schéma ; renderer : `objectFit: block.type === "image" ? (block.objectFit ?? "cover") : "cover"`.
+- [x] **Step 4 : Vérifier le vert.**
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): objectFit configurable sur les blocs image`
 
 ### Task 6 : Documentation du format enrichi
 

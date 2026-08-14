@@ -105,6 +105,18 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,AAA");
   });
 
+  it("applique objectFit contain a une image", () => {
+    const t = build(
+      manifest([
+        {
+          type: "image", page: 1, x: 0, y: 0, w: 331, h: 402,
+          source: "participant.photoDataUrl", objectFit: "contain",
+        },
+      ]),
+    );
+    expect(renderToJson(t.Component, CTX).objectFits).toContain("contain");
+  });
+
   it("rend le QR code sans source explicite", () => {
     const t = build(manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 189, h: 189 }]));
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,BBB");

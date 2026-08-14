@@ -25,6 +25,8 @@ export type Collected = {
   radii: Array<Record<string, number>>;
   // Marges internes des cadres (View) rencontrees.
   viewPaddings: number[];
+  // Modes de cadrage des images rencontres.
+  objectFits: string[];
   pageCount: number;
 };
 
@@ -99,6 +101,9 @@ function walk(node: ReactNode, out: Collected): void {
   }
   if (Object.keys(radii).length > 0) out.radii.push(radii);
   if (typeof style.padding === "number") out.viewPaddings.push(style.padding);
+  if (node.type === "IMAGE" && typeof style.objectFit === "string") {
+    out.objectFits.push(style.objectFit);
+  }
 
   walk(props.children ?? null, out);
 }
@@ -118,6 +123,7 @@ export function renderToJson(
     borderWidths: [],
     radii: [],
     viewPaddings: [],
+    objectFits: [],
     pageCount: 0,
   };
   walk(createElement(Component, { ctx }), out);

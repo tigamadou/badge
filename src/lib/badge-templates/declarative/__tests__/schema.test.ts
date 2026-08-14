@@ -215,6 +215,18 @@ describe("parseManifest", () => {
     expect(errorsOf(res)).toMatch(/incompatible/i);
   });
 
+  it("accepte objectFit sur un bloc image", () => {
+    const res = parse({
+      blocks: [
+        {
+          type: "image", page: 1, x: 0, y: 0, w: 118, h: 118,
+          source: "event.logoDataUrl", objectFit: "contain",
+        },
+      ],
+    });
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
   it("refuse un bloc image portant a la fois source et asset", () => {
     const res = parse(
       {

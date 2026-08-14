@@ -173,7 +173,7 @@ function renderBlock(
         ...frame(block),
         ...borderStyles(block, ctx),
         ...radiusStyles(block),
-        objectFit: "cover",
+        objectFit: block.type === "image" ? (block.objectFit ?? "cover") : "cover",
       }}
     />
   );

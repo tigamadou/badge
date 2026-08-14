@@ -70,6 +70,7 @@ const blockSchema = z.discriminatedUnion("type", [
     type: z.literal("image"),
     source: z.string().optional(),
     asset: z.string().optional(),
+    objectFit: z.enum(["cover", "contain", "fill"]).optional(),
     ...baseShape,
   }),
   z.object({ type: z.literal("qr"), ...baseShape }),
