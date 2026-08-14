@@ -18,7 +18,8 @@ export type ReadResult =
 
 // Le type est deduit des octets d'en-tete, jamais de l'extension : une image WebP
 // renommee en .png doit etre refusee, car @react-pdf ne sait pas la lire.
-function sniff(body: Buffer): "image/png" | "image/jpeg" | "font/ttf" | null {
+// Exporte depuis la spec 16 : le studio applique la meme regle que l'installation.
+export function sniff(body: Buffer): "image/png" | "image/jpeg" | "font/ttf" | null {
   if (
     body.length >= 8 &&
     body[0] === 0x89 &&

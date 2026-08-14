@@ -28,7 +28,7 @@
 
 | Task | Description | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Accès à l'atelier — `workshop.ts` | [ ] | | |
+| 1 | Accès à l'atelier — `workshop.ts` | [x] | 2026-08-14 | 9 tests ; `sniff` promu en export (153 tests badge-templates verts) |
 | 2 | Variantes de contexte — `contexts.ts` | [ ] | | |
 | 3 | Validation et rendu — `render.ts` | [ ] | | |
 | 4 | Serveur HTTP — `server.ts` | [ ] | | |
@@ -62,7 +62,7 @@ export function writeManifest(root: string, name: string, manifest: string): Pro
 
 Pourquoi promouvoir `sniff` plutôt que déduire le type de l'extension : le studio doit appliquer **la même règle** que l'installation. Un WebP renommé `.png` s'afficherait sinon au studio et serait refusé au téléversement.
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Créer `studio/__tests__/workshop.test.ts` :
 
@@ -172,7 +172,7 @@ describe("writeManifest", () => {
 });
 ```
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/workshop.test.ts
@@ -180,7 +180,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : ÉCHEC à la résolution — `Cannot find module '../workshop'`.
 
-- [ ] **Étape 3 : Exporter `sniff`**
+- [x] **Étape 3 : Exporter `sniff`**
 
 Dans `src/lib/badge-templates/package-reader.ts`, ligne 21, ajouter le mot-clé `export` et compléter le commentaire existant :
 
@@ -191,7 +191,7 @@ Dans `src/lib/badge-templates/package-reader.ts`, ligne 21, ajouter le mot-clé 
 export function sniff(body: Buffer): "image/png" | "image/jpeg" | "font/ttf" | null {
 ```
 
-- [ ] **Étape 4 : Écrire `workshop.ts`**
+- [x] **Étape 4 : Écrire `workshop.ts`**
 
 Créer `studio/workshop.ts` :
 
@@ -297,7 +297,7 @@ export async function writeManifest(
 }
 ```
 
-- [ ] **Étape 5 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 5 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/workshop.test.ts
@@ -305,7 +305,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : SUCCÈS sur les neuf tests.
 
-- [ ] **Étape 6 : Vérifier que l'export de `sniff` n'a rien cassé**
+- [x] **Étape 6 : Vérifier que l'export de `sniff` n'a rien cassé**
 
 ```bash
 make lint && make typecheck && docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates
