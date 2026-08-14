@@ -45,17 +45,17 @@ describe("renderManifest", () => {
   });
 
   it("remonte les erreurs de validation du manifeste", async () => {
-    const horsPage = JSON.parse(MINIMAL);
-    horsPage.blocks[0].x = 1000;
+    const sourceInconnue = JSON.parse(MINIMAL);
+    sourceInconnue.blocks[0].text = "{participant.inconnu}";
     const res = await renderManifest({
-      manifest: JSON.stringify(horsPage),
+      manifest: JSON.stringify(sourceInconnue),
       assets: [],
       variantId: "complet",
     });
 
     expect(res.ok).toBe(false);
     if (res.ok) return;
-    expect(res.errors.join(" ")).toContain("hors de la page");
+    expect(res.errors.join(" ")).toContain("source inconnue");
   });
 
   it("signale une variante inconnue", async () => {

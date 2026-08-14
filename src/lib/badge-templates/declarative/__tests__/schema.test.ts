@@ -38,14 +38,9 @@ describe("parseManifest", () => {
     expect(parse({ formatVersion: 2 }).ok).toBe(false);
   });
 
-  it("refuse un bloc qui sort de la page en largeur", () => {
-    const res = parse({ blocks: [{ ...VALID.blocks[0], x: 700, w: 400 }] });
-    expect(res.ok).toBe(false);
-    expect(errorsOf(res)).toMatch(/hors de la page/i);
-  });
-
-  it("refuse un bloc qui sort de la page en hauteur", () => {
-    expect(parse({ blocks: [{ ...VALID.blocks[0], y: 590, h: 94 }] }).ok).toBe(false);
+  it("accepte un bloc qui depasse la page (fond perdu, juge a l'oeil dans l'apercu)", () => {
+    expect(parse({ blocks: [{ ...VALID.blocks[0], x: 700, w: 400 }] }).ok).toBe(true);
+    expect(parse({ blocks: [{ ...VALID.blocks[0], y: 590, h: 94 }] }).ok).toBe(true);
   });
 
   it("refuse un bloc dont la page depasse le nombre de pages", () => {
@@ -257,7 +252,7 @@ describe("parseManifest", () => {
   it("accumule plusieurs erreurs en une passe", () => {
     const res = parse({
       blocks: [
-        { ...VALID.blocks[0], x: 900 },
+        { ...VALID.blocks[0], text: "{participant.secretField}" },
         { type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "pas-une-couleur" },
       ],
     });

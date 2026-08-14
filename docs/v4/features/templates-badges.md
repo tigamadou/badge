@@ -204,7 +204,9 @@ Toutes les coordonnées et dimensions — tailles de police comprises — sont e
 **pixels à 300 dpi** (1 px = 1/300 pouce, converti en points PDF au rendu :
 1 px = 0,24 pt). Une carte CR80 paysage fait 1011 × 638 px. L'auteur d'un template
 reporte telles quelles les valeurs de sa maquette print 300 dpi, positionnées en
-absolu depuis le coin supérieur gauche de la page.
+absolu depuis le coin supérieur gauche de la page. Un bloc peut déborder de la page
+sans que la validation s'y oppose — le fond perdu est un cas print légitime, et le
+dépassement se juge à l'œil dans l'aperçu du studio.
 
 ### Types de blocs
 
@@ -293,7 +295,7 @@ déclarant le même alias s'écraseraient sans ce préfixe.
 `parseManifest` refuse, en une passe et avec un message par erreur :
 
 - un `formatVersion` inconnu, une `family` qui n'est pas un slug kebab-case ;
-- un bloc hors des bornes de la page, ou dont la page dépasse `page.count` ;
+- un bloc dont la page dépasse `page.count` ;
 - plus de 60 blocs ;
 - une source inconnue ou de type incompatible ;
 - un bloc `image` portant à la fois `source` et `asset`, ou aucun des deux ;

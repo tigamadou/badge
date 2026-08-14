@@ -157,9 +157,8 @@ function checkBlock(
   const label = `bloc ${index + 1}`;
   const { page } = manifest;
 
-  if (block.x + block.w > page.widthPx || block.y + block.h > page.heightPx) {
-    errors.push(`${label} : hors de la page.`);
-  }
+  // Un bloc qui depasse la page n'est PAS une erreur : le fond perdu est un cas
+  // print legitime, et le depassement se juge a l'oeil dans l'apercu du studio.
   if (block.page > page.count) {
     errors.push(`${label} : page ${block.page} alors que le manifeste en declare ${page.count}.`);
   }
