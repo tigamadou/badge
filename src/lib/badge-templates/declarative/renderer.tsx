@@ -50,6 +50,24 @@ function frame(block: Block) {
   };
 }
 
+// `border` couvre les quatre cotes ; une declaration par cote prime sur lui.
+function borderStyles(block: Block, ctx: TemplateContext) {
+  const sides = {
+    Top: block.borderTop ?? block.border,
+    Right: block.borderRight ?? block.border,
+    Bottom: block.borderBottom ?? block.border,
+    Left: block.borderLeft ?? block.border,
+  } as const;
+  const out: Record<string, unknown> = {};
+  for (const [side, declared] of Object.entries(sides)) {
+    if (!declared) continue;
+    out[`border${side}Width`] = px(declared.widthPx);
+    out[`border${side}Color`] = colorOf(declared.color, ctx);
+    out[`border${side}Style`] = declared.style ?? "solid";
+  }
+  return out;
+}
+
 function renderText(
   block: TextBlock,
   ctx: TemplateContext,
@@ -62,7 +80,7 @@ function renderText(
     block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, block.w) : block.style.sizePx;
 
   return (
-    <View key={key} style={frame(block)}>
+    <View key={key} style={{ ...frame(block), ...borderStyles(block, ctx) }}>
       <Text
         style={{
           fontFamily: block.style.font ? fontMap[block.style.font] : DEFAULT_FONT_FAMILY,
@@ -99,10 +117,9 @@ function renderBlock(
         key={key}
         style={{
           ...frame(block),
+          ...borderStyles(block, ctx),
           backgroundColor: colorOf(block.fill, ctx),
           borderRadius: block.radiusPx ? px(block.radiusPx) : undefined,
-          borderTopWidth: block.borderTopPx !== undefined ? px(block.borderTopPx) : undefined,
-          borderTopColor: block.borderColor ? colorOf(block.borderColor, ctx) : undefined,
         }}
       />
     );
@@ -122,6 +139,7 @@ function renderBlock(
       src={src}
       style={{
         ...frame(block),
+        ...borderStyles(block, ctx),
         objectFit: "cover",
         borderRadius: block.type === "image" && block.radiusPx ? px(block.radiusPx) : undefined,
       }}

@@ -29,6 +29,12 @@ const conditionSchema = z.union([
 // Une condition seule, ou une conjonction.
 const visibleIfSchema = z.union([conditionSchema, z.array(conditionSchema).min(1)]);
 
+const borderSideSchema = z.object({
+  widthPx: z.number().min(0),
+  color: z.string().min(1),
+  style: z.enum(["solid", "dashed", "dotted"]).optional(),
+});
+
 const baseShape = {
   page: z.number().int().positive(),
   x: z.number().min(0),
@@ -37,6 +43,11 @@ const baseShape = {
   h: z.number().positive(),
   rotate: z.number().min(-360).max(360).optional(),
   opacity: z.number().min(0).max(1).optional(),
+  border: borderSideSchema.optional(),
+  borderTop: borderSideSchema.optional(),
+  borderRight: borderSideSchema.optional(),
+  borderBottom: borderSideSchema.optional(),
+  borderLeft: borderSideSchema.optional(),
   visibleIf: visibleIfSchema.optional(),
 };
 
@@ -54,8 +65,6 @@ const blockSchema = z.discriminatedUnion("type", [
     type: z.literal("rect"),
     fill: z.string(),
     radiusPx: z.number().min(0).optional(),
-    borderTopPx: z.number().min(0).optional(),
-    borderColor: z.string().optional(),
     ...baseShape,
   }),
 ]);
@@ -163,6 +172,10 @@ function checkBlock(
   // print legitime, et le depassement se juge a l'oeil dans l'apercu du studio.
   if (block.page > page.count) {
     errors.push(`${label} : page ${block.page} alors que le manifeste en declare ${page.count}.`);
+  }
+  for (const side of ["border", "borderTop", "borderRight", "borderBottom", "borderLeft"] as const) {
+    const declared = block[side];
+    if (declared) checkColor(declared.color, `${label} (bordure)`, errors);
   }
   if (block.visibleIf) {
     const conditions = Array.isArray(block.visibleIf) ? block.visibleIf : [block.visibleIf];

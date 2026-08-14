@@ -145,13 +145,16 @@ describe("buildDeclarativeTemplate", () => {
       manifest([
         {
           type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 94,
-          fill: "#ffffff", radiusPx: 12, borderTopPx: 4, borderColor: "category.color",
+          fill: "#ffffff", radiusPx: 12,
+          borderTop: { widthPx: 4, color: "category.color" },
         },
       ]),
     );
     // La bordure prend sa couleur d'une source, comme la bande de categorie en mode
     // neutre : c'est ce que faisait le template historique.
-    expect(renderToJson(t.Component, CTX).fills).toContain("#ffffff");
+    const out = renderToJson(t.Component, CTX);
+    expect(out.fills).toContain("#ffffff");
+    expect(out.borderWidths).toContain(px(4));
   });
 
   it("applique un arrondi a une image", () => {

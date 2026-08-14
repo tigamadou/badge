@@ -31,9 +31,16 @@ export type Condition =
 // conjonction, ce cas ne serait pas exprimable.
 export type VisibleIf = Condition | Condition[];
 
+export type BorderStyle = "solid" | "dashed" | "dotted";
+
+// Une bordure : largeur en px, couleur (hexadecimale ou source de couleur), style.
+export type BorderSide = { widthPx: number; color: string; style?: BorderStyle };
+
 // `rotate` (degres, sens horaire) pivote le bloc autour de son centre : declarer le
 // cadre NON pivote (comme dans Figma avant rotation), la rotation s'applique ensuite.
 // `opacity` (0 a 1) s'applique au bloc entier.
+// `border` couvre les quatre cotes ; un `borderTop`/`Right`/`Bottom`/`Left` prime
+// sur lui pour le cote concerne.
 type BlockBase = {
   page: number;
   x: number;
@@ -42,6 +49,11 @@ type BlockBase = {
   h: number;
   rotate?: number;
   opacity?: number;
+  border?: BorderSide;
+  borderTop?: BorderSide;
+  borderRight?: BorderSide;
+  borderBottom?: BorderSide;
+  borderLeft?: BorderSide;
   visibleIf?: VisibleIf;
 };
 
@@ -63,8 +75,6 @@ export type RectBlock = BlockBase & {
   type: "rect";
   fill: string;
   radiusPx?: number;
-  borderTopPx?: number;
-  borderColor?: string;
 };
 
 export type Block = TextBlock | ImageBlock | QrBlock | RectBlock;

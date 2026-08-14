@@ -15,7 +15,7 @@
 | Task | Statut | Date | Notes |
 |---|---|---|---|
 | 1. opacity + rotate sur tous les blocs | [x] | 2026-08-14 | |
-| 2. Bordures par côté (remplace borderTopPx) | [ ] | | |
+| 2. Bordures par côté (remplace borderTopPx) | [x] | 2026-08-14 | |
 | 3. Coins arrondis par coin (+ QR) | [ ] | | |
 | 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [ ] | | |
 | 5. objectFit des images | [ ] | | |
@@ -116,7 +116,7 @@ export type BorderSide = { widthPx: number; color: string; style?: BorderStyle }
 ```
 `borderTopPx` et `borderColor` disparaissent de `RectBlock`. La couleur d'une bordure accepte hexa ou source couleur (comme `fill`).
 
-- [ ] **Step 1 : Tests qui échouent** — `schema.test.ts` : remplacer le test « accepte une bande avec bordure » :
+- [x] **Step 1 : Tests qui échouent** — `schema.test.ts` : remplacer le test « accepte une bande avec bordure » :
 
 ```ts
 it("accepte des bordures globales et par cote", () => {
@@ -146,8 +146,8 @@ it("refuse une couleur de bordure invalide", () => {
 
 `renderer.test.tsx` : remplacer « applique un arrondi et une bordure a un aplat » (retirer `borderTopPx`/`borderColor`, utiliser `borderTop: { widthPx: 4, color: "category.color" }`) et étendre `render-to-json` : collecter `borderWidths: number[]` (`style.borderTopWidth` etc. numériques). Vérifier `out.borderWidths` contient `px(4)`.
 
-- [ ] **Step 2 : Vérifier l'échec** — mêmes commandes vitest ; les anciens champs n'existant plus dans les tests, l'échec vient du schéma qui ignore `border`.
-- [ ] **Step 3 : Implémentation** —
+- [x] **Step 2 : Vérifier l'échec** — mêmes commandes vitest ; les anciens champs n'existant plus dans les tests, l'échec vient du schéma qui ignore `border`.
+- [x] **Step 3 : Implémentation** —
   - Types : ajouter `BorderStyle`, `BorderSide`, les cinq champs optionnels sur `BlockBase` ; supprimer `borderTopPx`/`borderColor` de `RectBlock`.
   - Schéma : `const borderSideSchema = z.object({ widthPx: z.number().min(0), color: z.string().min(1), style: z.enum(["solid", "dashed", "dotted"]).optional() });` dans `baseShape` : `border: borderSideSchema.optional(), borderTop: ..., borderRight: ..., borderBottom: ..., borderLeft: ...`. Dans `checkBlock`, valider chaque couleur de bordure présente via `checkColor(side.color, \`${label} (bordure)\`, errors)`.
   - Renderer : nouvelle fonction
@@ -173,8 +173,8 @@ function borderStyles(block: Block, ctx: TemplateContext) {
 
   appliquée dans le rendu des `rect`, `image` et `qr` (spread après `frame(block)`), et sur le `<View>` des textes. Retirer `borderTopWidth`/`borderTopColor` spécifiques au rect.
   - Migration : dans `prisma/badge-templates/default/manifest.json`, remplacer `"borderTopPx": 1.3, "borderColor": "category.color"` par `"borderTop": { "widthPx": 1.3, "color": "category.color" }` (grep `borderTopPx` sur le dépôt pour attraper d'autres occurrences, scaffold compris).
-- [ ] **Step 4 : Vérifier le vert** — vitest declarative + `yarn vitest run src/lib/badge-templates studio scripts` (les seeds migrés passent `reference-packages.test.ts`).
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): bordures completes par cote sur tous les blocs`
+- [x] **Step 4 : Vérifier le vert** — vitest declarative + `yarn vitest run src/lib/badge-templates studio scripts` (les seeds migrés passent `reference-packages.test.ts`).
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): bordures completes par cote sur tous les blocs`
 
 ### Task 3 : Coins arrondis par coin (+ blocs QR)
 

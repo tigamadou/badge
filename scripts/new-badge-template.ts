@@ -81,7 +81,7 @@ moins **1,45 x la taille de police** (par ligne de texte).
 | \`text\` | Un texte | \`text\` (gabarit), \`style\` |
 | \`image\` | Une image | \`source\` **ou** \`asset\`, jamais les deux ; \`radiusPx\` |
 | \`qr\` | Le QR code du badge | aucun |
-| \`rect\` | Un aplat | \`fill\`, \`radiusPx\`, \`borderTopPx\`, \`borderColor\` |
+| \`rect\` | Un aplat | \`fill\`, \`radiusPx\` |
 
 ### Gabarits de texte
 

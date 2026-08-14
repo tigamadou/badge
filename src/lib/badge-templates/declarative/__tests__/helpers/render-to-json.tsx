@@ -19,6 +19,8 @@ export type Collected = {
   transforms: string[];
   // Opacites rencontrees sur n'importe quel noeud.
   opacities: number[];
+  // Largeurs de bordure (tous cotes confondus) rencontrees sur n'importe quel noeud.
+  borderWidths: number[];
   pageCount: number;
 };
 
@@ -78,6 +80,10 @@ function walk(node: ReactNode, out: Collected): void {
   if (typeof style.backgroundColor === "string") out.fills.push(style.backgroundColor);
   if (typeof style.transform === "string") out.transforms.push(style.transform);
   if (typeof style.opacity === "number") out.opacities.push(style.opacity);
+  for (const side of ["Top", "Right", "Bottom", "Left"]) {
+    const width = style[`border${side}Width`];
+    if (typeof width === "number") out.borderWidths.push(width);
+  }
 
   walk(props.children ?? null, out);
 }
@@ -94,6 +100,7 @@ export function renderToJson(
     textStyles: [],
     transforms: [],
     opacities: [],
+    borderWidths: [],
     pageCount: 0,
   };
   walk(createElement(Component, { ctx }), out);

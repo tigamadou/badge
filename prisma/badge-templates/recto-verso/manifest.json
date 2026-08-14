@@ -238,14 +238,16 @@
       "w": 280,
       "h": 94,
       "fill": "#ffffff",
-      "borderTopPx": 1.3,
-      "borderColor": "category.color",
       "visibleIf": [
         {
           "path": "category.neutralBadge",
           "equals": true
         }
-      ]
+      ],
+      "borderTop": {
+        "widthPx": 1.3,
+        "color": "category.color"
+      }
     },
     {
       "type": "text",

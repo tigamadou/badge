@@ -96,16 +96,30 @@ describe("parseManifest", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("accepte une bande avec bordure", () => {
+  it("accepte des bordures globales et par cote", () => {
     const res = parse({
       blocks: [
         {
-          type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 94,
-          fill: "#ffffff", borderTopPx: 4, borderColor: "category.color",
+          type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 94, fill: "#ffffff",
+          border: { widthPx: 2, color: "#112233", style: "dashed" },
+          borderTop: { widthPx: 4, color: "category.color" },
         },
       ],
     });
-    expect(res.ok).toBe(true);
+    expect(res.ok, errorsOf(res)).toBe(true);
+  });
+
+  it("refuse une couleur de bordure invalide", () => {
+    const res = parse({
+      blocks: [
+        {
+          type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, fill: "#ffffff",
+          border: { widthPx: 1, color: "rouge" },
+        },
+      ],
+    });
+    expect(res.ok).toBe(false);
+    expect(errorsOf(res)).toMatch(/bordure/i);
   });
 
   it("accepte rotate et opacity sur tout type de bloc", () => {
