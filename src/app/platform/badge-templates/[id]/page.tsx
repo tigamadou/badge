@@ -79,7 +79,7 @@ export default async function BadgeTemplateDetailPage({
         </div>
         <p className="mt-1 text-sm text-slate-600">
           {template.family} · version {template.version} · {template.pages} page
-          {template.pages > 1 ? "s" : ""} · {template.pageWidthMm}×{template.pageHeightMm} mm ·
+          {template.pages > 1 ? "s" : ""} · {template.pageWidthPx}×{template.pageHeightPx} px ·
           installé le {formatDate(template.createdAt)}
         </p>
         {template.description && (

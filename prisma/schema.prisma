@@ -358,8 +358,8 @@ model InstalledBadgeTemplate {
   label         String
   description   String    @db.Text
   pages         Int
-  pageWidthMm   Float
-  pageHeightMm  Float
+  pageWidthPx   Float
+  pageHeightPx  Float
   layout        Json
   assetPrefix   String
   // v4 (spec 14) : previewPath designe l'IMAGE d'apercu declaree par le manifeste

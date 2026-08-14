@@ -15,8 +15,8 @@ const MANIFEST = {
   family: "salon-2027",
   label: "Badge Salon",
   description: "",
-  page: { widthMm: 85.6, heightMm: 54, count: 1 },
-  blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 85.6, h: 54, asset: "assets/fond.png" }],
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
+  blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" }],
 };
 
 async function zipOf(files: Record<string, Buffer | string>): Promise<Buffer> {
@@ -180,7 +180,7 @@ describe("readTemplatePackage", () => {
         MANIFEST.blocks[0],
         {
           type: "text", page: 1, x: 0, y: 0, w: 40, h: 6, text: "{event.title}",
-          style: { font: "titre", sizePt: 10, color: "#000000", overflow: "clip" },
+          style: { font: "titre", sizePx: 42, color: "#000000", overflow: "clip" },
         },
       ],
     };

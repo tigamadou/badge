@@ -52,8 +52,8 @@ describe("installTemplate", () => {
       family: "avec-fond",
       label: "Avec fond",
       description: "",
-      page: { widthMm: 85.6, heightMm: 54, count: 1 },
-      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 85.6, h: 54, asset: "assets/fond.png" }],
+      page: { widthPx: 1011, heightPx: 638, count: 1 },
+      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" }],
     };
 
     const created = await installTemplate({
@@ -75,7 +75,7 @@ describe("installTemplate", () => {
       label: "Avec apercu",
       description: "",
       preview: "assets/apercu.png",
-      page: { widthMm: 85.6, heightMm: 54, count: 1 },
+      page: { widthPx: 1011, heightPx: 638, count: 1 },
       blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
     };
 
@@ -96,7 +96,7 @@ describe("installTemplate", () => {
       family: "sans-apercu",
       label: "Sans apercu",
       description: "",
-      page: { widthMm: 85.6, heightMm: 54, count: 1 },
+      page: { widthPx: 1011, heightPx: 638, count: 1 },
       blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
     };
 
@@ -114,7 +114,7 @@ describe("installTemplate", () => {
       family: "sans-ressource",
       label: "Sans ressource",
       description: "",
-      page: { widthMm: 85.6, heightMm: 54, count: 1 },
+      page: { widthPx: 1011, heightPx: 638, count: 1 },
       blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 10, h: 10, asset: "assets/absent.png" }],
     };
 

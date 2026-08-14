@@ -6,7 +6,7 @@ const MINIMAL = JSON.stringify({
   family: "test-mini",
   label: "Test minimal",
   description: "",
-  page: { widthMm: 85.6, heightMm: 54, count: 1 },
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
   blocks: [
     {
       type: "text",
@@ -16,7 +16,7 @@ const MINIMAL = JSON.stringify({
       w: 40,
       h: 6,
       text: "{participant.firstName} {participant.lastName}",
-      style: { sizePt: 10, color: "#0f172a", overflow: "clip" },
+      style: { sizePx: 42, color: "#0f172a", overflow: "clip" },
     },
   ],
 });
@@ -46,7 +46,7 @@ describe("renderManifest", () => {
 
   it("remonte les erreurs de validation du manifeste", async () => {
     const horsPage = JSON.parse(MINIMAL);
-    horsPage.blocks[0].x = 200;
+    horsPage.blocks[0].x = 1000;
     const res = await renderManifest({
       manifest: JSON.stringify(horsPage),
       assets: [],

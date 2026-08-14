@@ -33,7 +33,7 @@ const LAYOUT = {
   family: "salon",
   label: "Salon",
   description: "",
-  page: { widthMm: 85.6, heightMm: 54, count: 1 },
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
   blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
 };
 
@@ -45,8 +45,8 @@ async function install(installedById: string) {
       label: "Salon",
       description: "",
       pages: 1,
-      pageWidthMm: 85.6,
-      pageHeightMm: 54,
+      pageWidthPx: 1011,
+      pageHeightPx: 638,
       layout: LAYOUT,
       assetPrefix: "badge-templates/x/",
       formatVersion: 1,

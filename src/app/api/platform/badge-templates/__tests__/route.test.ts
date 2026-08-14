@@ -38,7 +38,7 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
     family: "salon-2027",
     label: "Badge Salon",
     description: "Un badge de test.",
-    page: { widthMm: 85.6, heightMm: 54, count: 1 },
+    page: { widthPx: 1011, heightPx: 638, count: 1 },
     blocks: [
       {
         type: "text",
@@ -48,7 +48,7 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
         w: 40,
         h: 8,
         text: "{participant.firstName}",
-        style: { sizePt: 12, color: "#0f172a", overflow: "clip" },
+        style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
       },
     ],
     ...overrides,
@@ -180,7 +180,7 @@ describe("POST /api/platform/badge-templates", () => {
 
     const manifest = manifestOf({
       blocks: [
-        { type: "image", page: 1, x: 0, y: 0, w: 85.6, h: 54, asset: "assets/fond.png" },
+        { type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" },
       ],
     });
     const res = await post(
@@ -255,7 +255,7 @@ describe("POST /api/platform/badge-templates", () => {
           w: 40,
           h: 8,
           text: "{participant.firstName}",
-          style: { font: "titre", sizePt: 12, color: "#0f172a", overflow: "clip" },
+          style: { font: "titre", sizePx: 50, color: "#0f172a", overflow: "clip" },
         },
       ],
     });
@@ -288,8 +288,8 @@ describe("GET /api/platform/badge-templates", () => {
         label: "Salon",
         description: "",
         pages: 1,
-        pageWidthMm: 85.6,
-        pageHeightMm: 54,
+        pageWidthPx: 1011,
+        pageHeightPx: 638,
         layout: {},
         assetPrefix: "x/",
         formatVersion: 1,

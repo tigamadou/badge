@@ -3,9 +3,10 @@ import { join, resolve } from "node:path";
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-// Le squelette declare `assets/apercu.png` : l'auteur doit y deposer son image. Tant
-// qu'elle manque, `make pack-badge-template` refuse d'empaqueter -- ce qui est le
-// rappel le plus utile possible.
+// Le squelette declare `assets/apercu.png` par defaut, mais seul le champ `preview`
+// du manifeste fait foi : l'auteur peut le pointer vers n'importe quelle image du
+// paquet. Tant que le fichier declare manque, `make pack-badge-template` refuse
+// d'empaqueter -- ce qui est le rappel le plus utile possible.
 function manifestOf(family: string) {
   return {
     formatVersion: 1,
@@ -13,29 +14,29 @@ function manifestOf(family: string) {
     label: `Badge ${family}`,
     description: "Decrivez ici le badge en une phrase.",
     preview: "assets/apercu.png",
-    page: { widthMm: 85.6, heightMm: 54, count: 1 },
+    page: { widthPx: 1011, heightPx: 638, count: 1 },
     blocks: [
-      { type: "rect", page: 1, x: 0, y: 46, w: 85.6, h: 8, fill: "category.color" },
+      { type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 95, fill: "category.color" },
       {
         type: "text",
         page: 1,
-        x: 4,
-        y: 6,
-        w: 60,
-        h: 8,
+        x: 47,
+        y: 71,
+        w: 709,
+        h: 95,
         text: "{participant.firstName} {participant.lastName}",
-        style: { sizePt: 12, weight: 700, color: "#0f172a", overflow: "shrink", minSizePt: 8 },
+        style: { sizePx: 50, weight: 700, color: "#0f172a", overflow: "shrink", minSizePx: 33 },
       },
       {
         type: "text",
         page: 1,
         x: 0,
-        y: 48.5,
-        w: 85.6,
-        h: 4,
+        y: 573,
+        w: 1011,
+        h: 47,
         text: "{category.name}",
         style: {
-          sizePt: 9,
+          sizePx: 38,
           weight: 700,
           align: "center",
           color: "#ffffff",
@@ -43,7 +44,7 @@ function manifestOf(family: string) {
           transform: "uppercase",
         },
       },
-      { type: "qr", page: 1, x: 64, y: 30, w: 16, h: 16 },
+      { type: "qr", page: 1, x: 756, y: 354, w: 189, h: 189 },
     ],
   };
 }
@@ -54,25 +55,28 @@ Squelette genere par \`make new-badge-template NAME=${family}\`.
 
 ## Marche a suivre
 
-1. Deposez votre image d'apercu dans \`assets/apercu.png\` (JPEG ou PNG, 5 Mo maximum).
-   C'est elle qui illustrera le template au catalogue.
+1. Deposez votre image d'apercu (JPEG ou PNG, 5 Mo maximum) dans \`assets/\` et
+   pointez le champ \`preview\` du manifeste vers elle (\`assets/apercu.png\` par
+   defaut, mais le nom est libre). C'est elle qui illustrera le template au catalogue.
 2. Modifiez \`manifest.json\` : libelle, description, blocs.
 3. Empaquetez : \`make pack-badge-template NAME=${family}\`
 4. Installez l'archive obtenue depuis \`/platform/badge-templates\`.
 
 ## Format du manifeste
 
-Toutes les coordonnees sont en **millimetres**, positionnees en absolu depuis le coin
-superieur gauche de la page.
+Toutes les coordonnees et dimensions (tailles de police comprises) sont en
+**pixels a 300 dpi** (1 px = 1/300 pouce ; une carte CR80 paysage fait 1011 × 638 px),
+positionnees en absolu depuis le coin superieur gauche de la page. Reportez telles
+quelles les valeurs de votre maquette print 300 dpi.
 
 ### Types de blocs
 
 | Type | Role | Champs propres |
 |---|---|---|
 | \`text\` | Un texte | \`text\` (gabarit), \`style\` |
-| \`image\` | Une image | \`source\` **ou** \`asset\`, jamais les deux ; \`radiusMm\` |
+| \`image\` | Une image | \`source\` **ou** \`asset\`, jamais les deux ; \`radiusPx\` |
 | \`qr\` | Le QR code du badge | aucun |
-| \`rect\` | Un aplat | \`fill\`, \`radiusMm\`, \`borderTopPt\`, \`borderColor\` |
+| \`rect\` | Un aplat | \`fill\`, \`radiusPx\`, \`borderTopPx\`, \`borderColor\` |
 
 ### Gabarits de texte
 
@@ -120,7 +124,7 @@ La mise en page etant absolue, un texte trop long ne se replace pas seul :
 
 | \`overflow\` | Effet |
 |---|---|
-| \`shrink\` | Reduit la police jusqu'a \`minSizePt\` (obligatoire dans ce mode) |
+| \`shrink\` | Reduit la police jusqu'a \`minSizePx\` (obligatoire dans ce mode) |
 | \`truncate\` | Coupe et ajoute une ellipse |
 | \`clip\` | Laisse deborder |
 
@@ -164,7 +168,7 @@ function main(): void {
   try {
     const dir = createSkeleton(name, resolve("badge-templates"));
     console.log(`Squelette cree : ${dir}`);
-    console.log("  1. Deposez votre image dans assets/apercu.png");
+    console.log("  1. Deposez votre image d'apercu dans assets/ (champ preview du manifeste)");
     console.log("  2. Modifiez manifest.json");
     console.log(`  3. make pack-badge-template NAME=${name}`);
   } catch (err) {

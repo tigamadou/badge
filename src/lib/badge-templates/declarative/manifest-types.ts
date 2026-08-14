@@ -2,14 +2,17 @@ export type Overflow = "shrink" | "truncate" | "clip";
 
 export type FontWeight = 400 | 500 | 600 | 700;
 
+// Toutes les dimensions du manifeste sont en pixels a 300 dpi (1px = 0,24pt PDF),
+// y compris les tailles de police : l'auteur d'un template reporte telles quelles
+// les valeurs de sa maquette print, sans conversion.
 export type TextStyle = {
   font?: string;
-  sizePt: number;
+  sizePx: number;
   weight?: FontWeight;
   align?: "left" | "center" | "right";
   color: string;
   overflow: Overflow;
-  minSizePt?: number;
+  minSizePx?: number;
   transform?: "uppercase" | "lowercase" | "none";
   letterSpacing?: number;
   lineHeight?: number;
@@ -46,7 +49,7 @@ export type ImageBlock = BlockBase & {
   type: "image";
   source?: string;
   asset?: string;
-  radiusMm?: number;
+  radiusPx?: number;
 };
 
 export type QrBlock = BlockBase & { type: "qr" };
@@ -54,8 +57,8 @@ export type QrBlock = BlockBase & { type: "qr" };
 export type RectBlock = BlockBase & {
   type: "rect";
   fill: string;
-  radiusMm?: number;
-  borderTopPt?: number;
+  radiusPx?: number;
+  borderTopPx?: number;
   borderColor?: string;
 };
 
@@ -71,7 +74,7 @@ export type TemplateManifest = {
   // Image d'apercu du badge, fournie par l'auteur du paquet et affichee au catalogue.
   // Optionnelle : sans elle, l'interface montre un placeholder.
   preview?: string;
-  page: { widthMm: number; heightMm: number; count: number };
+  page: { widthPx: number; heightPx: number; count: number };
   fonts?: FontDeclaration[];
   blocks: Block[];
 };

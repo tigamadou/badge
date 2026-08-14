@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { renderToJson } from "./helpers/render-to-json";
 import { buildDeclarativeTemplate } from "../index";
+import { px } from "../../px";
 import type { TemplateManifest } from "../manifest-types";
 import type { TemplateContext } from "../../types";
 
@@ -31,7 +32,7 @@ function manifest(blocks: TemplateManifest["blocks"], count = 1): TemplateManife
     family: "t",
     label: "T",
     description: "",
-    page: { widthMm: 85.6, heightMm: 54, count },
+    page: { widthPx: 1011, heightPx: 638, count },
     blocks,
   };
 }
@@ -41,9 +42,9 @@ const build = (m: TemplateManifest) => buildDeclarativeTemplate(m, assets, "t1")
 
 describe("buildDeclarativeTemplate", () => {
   it("expose une meta derivee du manifeste", () => {
-    const t = build(manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }]));
+    const t = build(manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 118, h: 118 }]));
     expect(t.meta.id).toBe("t1");
-    expect(t.meta.pageSize).toEqual({ width: "85.6mm", height: "54mm" });
+    expect(t.meta.pageSize).toEqual({ width: "1011px", height: "638px" });
     expect(t.meta.pages).toBe(1);
   });
 
@@ -51,9 +52,9 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 4, y: 4, w: 60, h: 8,
+          type: "text", page: 1, x: 47, y: 47, w: 709, h: 94,
           text: "{participant.firstName} {participant.lastName}",
-          style: { sizePt: 12, color: "#0f172a", overflow: "clip" },
+          style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
         },
       ]),
     );
@@ -64,8 +65,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 4, y: 4, w: 40, h: 8, text: "#{badge.id}",
-          style: { sizePt: 7, color: "#64748b", overflow: "clip" },
+          type: "text", page: 1, x: 47, y: 47, w: 472, h: 94, text: "#{badge.id}",
+          style: { sizePx: 29, color: "#64748b", overflow: "clip" },
         },
       ]),
     );
@@ -76,8 +77,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 0, y: 0, w: 40, h: 8, text: "{category.name}",
-          style: { sizePt: 9, color: "#ffffff", overflow: "clip", transform: "uppercase" },
+          type: "text", page: 1, x: 0, y: 0, w: 472, h: 94, text: "{category.name}",
+          style: { sizePx: 38, color: "#ffffff", overflow: "clip", transform: "uppercase" },
         },
       ]),
     );
@@ -90,7 +91,7 @@ describe("buildDeclarativeTemplate", () => {
 
   it("rend une image issue d'une ressource du paquet", () => {
     const t = build(
-      manifest([{ type: "image", page: 1, x: 0, y: 0, w: 85.6, h: 54, asset: "assets/fond.png" }]),
+      manifest([{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" }]),
     );
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,assets/fond.png");
   });
@@ -98,14 +99,14 @@ describe("buildDeclarativeTemplate", () => {
   it("rend une image issue du contexte", () => {
     const t = build(
       manifest([
-        { type: "image", page: 1, x: 0, y: 0, w: 28, h: 34, source: "participant.photoDataUrl" },
+        { type: "image", page: 1, x: 0, y: 0, w: 331, h: 402, source: "participant.photoDataUrl" },
       ]),
     );
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,AAA");
   });
 
   it("rend le QR code sans source explicite", () => {
-    const t = build(manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 16, h: 16 }]));
+    const t = build(manifest([{ type: "qr", page: 1, x: 0, y: 0, w: 189, h: 189 }]));
     expect(renderToJson(t.Component, CTX).images).toContain("data:image/png;base64,BBB");
   });
 
@@ -113,8 +114,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 4, y: 4, w: 40, h: 8, text: "{participant.firstName}",
-          style: { sizePt: 12, color: "#0f172a", overflow: "clip" },
+          type: "text", page: 1, x: 47, y: 47, w: 472, h: 94, text: "{participant.firstName}",
+          style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
           visibleIf: { path: "category.anonymous", equals: true },
         },
       ]),
@@ -130,7 +131,7 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "rect", page: 1, x: 4, y: 6, w: 28, h: 34, fill: "#e2e8f0",
+          type: "rect", page: 1, x: 47, y: 71, w: 331, h: 402, fill: "#e2e8f0",
           visibleIf: { path: "participant.photoDataUrl", isEmpty: true },
         },
       ]),
@@ -143,8 +144,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "rect", page: 1, x: 0, y: 46, w: 85.6, h: 8,
-          fill: "#ffffff", radiusMm: 1, borderTopPt: 1, borderColor: "category.color",
+          type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 94,
+          fill: "#ffffff", radiusPx: 12, borderTopPx: 4, borderColor: "category.color",
         },
       ]),
     );
@@ -157,8 +158,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "image", page: 1, x: 4, y: 6, w: 28, h: 34,
-          source: "participant.photoDataUrl", radiusMm: 1,
+          type: "image", page: 1, x: 47, y: 71, w: 331, h: 402,
+          source: "participant.photoDataUrl", radiusPx: 12,
         },
       ]),
     );
@@ -167,7 +168,7 @@ describe("buildDeclarativeTemplate", () => {
 
   it("resout une couleur de remplissage depuis une source", () => {
     const t = build(
-      manifest([{ type: "rect", page: 1, x: 0, y: 46, w: 85.6, h: 8, fill: "category.color" }]),
+      manifest([{ type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 94, fill: "category.color" }]),
     );
     expect(renderToJson(t.Component, CTX).fills).toContain("#4f46e5");
   });
@@ -176,8 +177,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest(
         [
-          { type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 },
-          { type: "qr", page: 2, x: 0, y: 0, w: 10, h: 10 },
+          { type: "qr", page: 1, x: 0, y: 0, w: 118, h: 118 },
+          { type: "qr", page: 2, x: 0, y: 0, w: 118, h: 118 },
         ],
         2,
       ),
@@ -193,21 +194,22 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 4, y: 4, w: 20, h: 6, text: "{participant.firstName}",
-          style: { sizePt: 12, color: "#000000", overflow: "shrink", minSizePt: 6 },
+          type: "text", page: 1, x: 47, y: 47, w: 236, h: 71, text: "{participant.firstName}",
+          style: { sizePx: 50, color: "#000000", overflow: "shrink", minSizePx: 25 },
         },
       ]),
     );
-    expect(renderToJson(t.Component, long).fontSizes[0]).toBeLessThan(12);
-    expect(renderToJson(t.Component, CTX).fontSizes[0]).toBe(12);
+    // Les tailles rendues sont en points PDF : 50px a 300 dpi valent 12pt.
+    expect(renderToJson(t.Component, long).fontSizes[0]).toBeLessThan(px(50));
+    expect(renderToJson(t.Component, CTX).fontSizes[0]).toBe(px(50));
   });
 
   it("laisse intact un texte qui tient dans son cadre en mode truncate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 0, y: 0, w: 60, h: 8, text: "{participant.firstName}",
-          style: { sizePt: 8, color: "#000000", overflow: "truncate" },
+          type: "text", page: 1, x: 0, y: 0, w: 709, h: 94, text: "{participant.firstName}",
+          style: { sizePx: 33, color: "#000000", overflow: "truncate" },
         },
       ]),
     );
@@ -218,8 +220,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 0, y: 0, w: 0.5, h: 4, text: "{participant.firstName}",
-          style: { sizePt: 12, color: "#000000", overflow: "truncate" },
+          type: "text", page: 1, x: 0, y: 0, w: 6, h: 47, text: "{participant.firstName}",
+          style: { sizePx: 50, color: "#000000", overflow: "truncate" },
         },
       ]),
     );
@@ -230,8 +232,8 @@ describe("buildDeclarativeTemplate", () => {
     const withFont: TemplateManifest = {
       ...manifest([
         {
-          type: "text", page: 1, x: 0, y: 0, w: 40, h: 8, text: "{event.title}",
-          style: { font: "titre", sizePt: 10, color: "#000000", overflow: "clip" },
+          type: "text", page: 1, x: 0, y: 0, w: 472, h: 94, text: "{event.title}",
+          style: { font: "titre", sizePx: 42, color: "#000000", overflow: "clip" },
         },
       ]),
       fonts: [{ alias: "titre", file: "fonts/A.ttf" }],
@@ -249,8 +251,8 @@ describe("buildDeclarativeTemplate", () => {
     const t = build(
       manifest([
         {
-          type: "text", page: 1, x: 4, y: 4, w: 20, h: 6, text: "{participant.firstName}",
-          style: { sizePt: 12, color: "#000000", overflow: "truncate" },
+          type: "text", page: 1, x: 47, y: 47, w: 236, h: 71, text: "{participant.firstName}",
+          style: { sizePx: 50, color: "#000000", overflow: "truncate" },
         },
       ]),
     );

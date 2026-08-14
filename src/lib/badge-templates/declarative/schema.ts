@@ -10,12 +10,12 @@ const weightSchema = z.union([z.literal(400), z.literal(500), z.literal(600), z.
 
 const styleSchema = z.object({
   font: z.string().min(1).optional(),
-  sizePt: z.number().positive().max(200),
+  sizePx: z.number().positive().max(800),
   weight: weightSchema.optional(),
   align: z.enum(["left", "center", "right"]).optional(),
   color: z.string().min(1),
   overflow: z.enum(["shrink", "truncate", "clip"]),
-  minSizePt: z.number().positive().max(200).optional(),
+  minSizePx: z.number().positive().max(800).optional(),
   transform: z.enum(["uppercase", "lowercase", "none"]).optional(),
   letterSpacing: z.number().optional(),
   lineHeight: z.number().positive().optional(),
@@ -44,15 +44,15 @@ const blockSchema = z.discriminatedUnion("type", [
     type: z.literal("image"),
     source: z.string().optional(),
     asset: z.string().optional(),
-    radiusMm: z.number().min(0).optional(),
+    radiusPx: z.number().min(0).optional(),
     ...baseShape,
   }),
   z.object({ type: z.literal("qr"), ...baseShape }),
   z.object({
     type: z.literal("rect"),
     fill: z.string(),
-    radiusMm: z.number().min(0).optional(),
-    borderTopPt: z.number().min(0).optional(),
+    radiusPx: z.number().min(0).optional(),
+    borderTopPx: z.number().min(0).optional(),
     borderColor: z.string().optional(),
     ...baseShape,
   }),
@@ -65,8 +65,8 @@ const manifestSchema = z.object({
   description: z.string().max(1000),
   preview: z.string().min(1).optional(),
   page: z.object({
-    widthMm: z.number().positive().max(1000),
-    heightMm: z.number().positive().max(1000),
+    widthPx: z.number().positive().max(12000),
+    heightPx: z.number().positive().max(12000),
     count: z.number().int().positive().max(4),
   }),
   fonts: z
@@ -118,11 +118,11 @@ function checkTextBlock(
   }
   for (const path of paths) checkSource(path, "text", label, errors);
   checkColor(block.style.color, `${label} (couleur)`, errors);
-  if (block.style.overflow === "shrink" && block.style.minSizePt === undefined) {
-    errors.push(`${label} : overflow "shrink" exige un minSizePt.`);
+  if (block.style.overflow === "shrink" && block.style.minSizePx === undefined) {
+    errors.push(`${label} : overflow "shrink" exige un minSizePx.`);
   }
-  if (block.style.minSizePt !== undefined && block.style.minSizePt > block.style.sizePt) {
-    errors.push(`${label} : minSizePt superieur a sizePt.`);
+  if (block.style.minSizePx !== undefined && block.style.minSizePx > block.style.sizePx) {
+    errors.push(`${label} : minSizePx superieur a sizePx.`);
   }
   if (block.style.font && !(manifest.fonts ?? []).some((f) => f.alias === block.style.font)) {
     errors.push(`${label} : police "${block.style.font}" non declaree.`);
@@ -157,7 +157,7 @@ function checkBlock(
   const label = `bloc ${index + 1}`;
   const { page } = manifest;
 
-  if (block.x + block.w > page.widthMm || block.y + block.h > page.heightMm) {
+  if (block.x + block.w > page.widthPx || block.y + block.h > page.heightPx) {
     errors.push(`${label} : hors de la page.`);
   }
   if (block.page > page.count) {

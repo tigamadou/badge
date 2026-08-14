@@ -11,7 +11,7 @@ const LAYOUT = {
   family: "salon",
   label: "Salon",
   description: "",
-  page: { widthMm: 85.6, heightMm: 54, count: 1 },
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
   blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
 };
 
@@ -25,8 +25,8 @@ async function install(
       label: overrides.label ?? "Salon",
       description: "",
       pages: 1,
-      pageWidthMm: 85.6,
-      pageHeightMm: 54,
+      pageWidthPx: 1011,
+      pageHeightPx: 638,
       layout: LAYOUT,
       assetPrefix: "badge-templates/test/",
       formatVersion: 1,
@@ -87,17 +87,17 @@ describe("resolveTemplate", () => {
         label: "Avec ressources",
         description: "",
         pages: 1,
-        pageWidthMm: 85.6,
-        pageHeightMm: 54,
+        pageWidthPx: 1011,
+        pageHeightPx: 638,
         layout: {
           formatVersion: 1,
           family: "avec-assets",
           label: "Avec ressources",
           description: "",
-          page: { widthMm: 85.6, heightMm: 54, count: 1 },
+          page: { widthPx: 1011, heightPx: 638, count: 1 },
           fonts: [{ alias: "titre", file: "fonts/A.ttf" }],
           blocks: [
-            { type: "image", page: 1, x: 0, y: 0, w: 85.6, h: 54, asset: "assets/fond.png" },
+            { type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/fond.png" },
           ],
         },
         assetPrefix: prefix,
@@ -180,7 +180,7 @@ describe("listAvailableTemplates", () => {
     const row = await install();
     const list = await listAvailableTemplates();
     const found = list.find((t) => t.id === row.id);
-    expect(found?.pageSize).toEqual({ width: "85.6mm", height: "54mm" });
+    expect(found?.pageSize).toEqual({ width: "1011px", height: "638px" });
   });
 
   it("rend une chaine vide comme apercu tant qu'aucun n'est genere", async () => {

@@ -8,7 +8,7 @@ const OK: TemplateManifest = {
   family: "t",
   label: "T",
   description: "",
-  page: { widthMm: 85.6, heightMm: 54, count: 1 },
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
   blocks: [
     {
       type: "text",
@@ -18,7 +18,7 @@ const OK: TemplateManifest = {
       w: 40,
       h: 8,
       text: "{participant.firstName}",
-      style: { sizePt: 12, color: "#0f172a", overflow: "clip" },
+      style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
     },
   ],
 };
@@ -33,7 +33,7 @@ describe("renderProof", () => {
   it("rend un paquet utilisant une ressource embarquee", async () => {
     const withAsset: TemplateManifest = {
       ...OK,
-      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 85.6, h: 54, asset: "assets/f.png" }],
+      blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 1011, h: 638, asset: "assets/f.png" }],
     };
     const png = Buffer.from([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,

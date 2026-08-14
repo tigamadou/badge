@@ -116,7 +116,7 @@ export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
     label: row.label,
     description: row.description,
     pages: row.pages,
-    pageSize: { width: `${row.pageWidthMm}mm`, height: `${row.pageHeightMm}mm` },
+    pageSize: { width: `${row.pageWidthPx}px`, height: `${row.pageHeightPx}px` },
     previewSrc: previewUrl(row.previewPath),
   }));
 }

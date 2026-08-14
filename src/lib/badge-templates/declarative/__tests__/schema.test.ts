@@ -6,17 +6,17 @@ const VALID = {
   family: "salon-2027",
   label: "Badge Salon",
   description: "Un badge de test.",
-  page: { widthMm: 85.6, heightMm: 54, count: 1 },
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
   blocks: [
     {
       type: "text",
       page: 1,
-      x: 4,
-      y: 4,
-      w: 40,
-      h: 8,
+      x: 47,
+      y: 47,
+      w: 472,
+      h: 94,
       text: "{participant.firstName}",
-      style: { sizePt: 12, color: "#0f172a", overflow: "clip" },
+      style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
     },
   ],
 };
@@ -39,13 +39,13 @@ describe("parseManifest", () => {
   });
 
   it("refuse un bloc qui sort de la page en largeur", () => {
-    const res = parse({ blocks: [{ ...VALID.blocks[0], x: 60, w: 40 }] });
+    const res = parse({ blocks: [{ ...VALID.blocks[0], x: 700, w: 400 }] });
     expect(res.ok).toBe(false);
     expect(errorsOf(res)).toMatch(/hors de la page/i);
   });
 
   it("refuse un bloc qui sort de la page en hauteur", () => {
-    expect(parse({ blocks: [{ ...VALID.blocks[0], y: 50, h: 10 }] }).ok).toBe(false);
+    expect(parse({ blocks: [{ ...VALID.blocks[0], y: 590, h: 94 }] }).ok).toBe(false);
   });
 
   it("refuse un bloc dont la page depasse le nombre de pages", () => {
@@ -105,8 +105,8 @@ describe("parseManifest", () => {
     const res = parse({
       blocks: [
         {
-          type: "rect", page: 1, x: 0, y: 46, w: 85.6, h: 8,
-          fill: "#ffffff", borderTopPt: 1, borderColor: "category.color",
+          type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 94,
+          fill: "#ffffff", borderTopPx: 4, borderColor: "category.color",
         },
       ],
     });
@@ -119,8 +119,8 @@ describe("parseManifest", () => {
         {
           ...VALID.blocks[0],
           style: {
-            sizePt: 9, color: "#ffffff", overflow: "clip",
-            transform: "uppercase", letterSpacing: 0.5, lineHeight: 1.2,
+            sizePx: 38, color: "#ffffff", overflow: "clip",
+            transform: "uppercase", letterSpacing: 2, lineHeight: 1.2,
           },
         },
       ],
@@ -131,7 +131,7 @@ describe("parseManifest", () => {
   it("refuse une source de type incompatible avec le bloc", () => {
     const res = parse({
       blocks: [
-        { type: "image", page: 1, x: 0, y: 0, w: 10, h: 10, source: "participant.firstName" },
+        { type: "image", page: 1, x: 0, y: 0, w: 118, h: 118, source: "participant.firstName" },
       ],
     });
     expect(res.ok).toBe(false);
@@ -147,8 +147,8 @@ describe("parseManifest", () => {
             page: 1,
             x: 0,
             y: 0,
-            w: 10,
-            h: 10,
+            w: 118,
+            h: 118,
             source: "participant.photoDataUrl",
             asset: "assets/f.png",
           },
@@ -160,12 +160,12 @@ describe("parseManifest", () => {
   });
 
   it("refuse un bloc image sans source ni asset", () => {
-    expect(parse({ blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 10, h: 10 }] }).ok).toBe(false);
+    expect(parse({ blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 118, h: 118 }] }).ok).toBe(false);
   });
 
   it("refuse un asset absent du paquet", () => {
     const res = parse(
-      { blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 10, h: 10, asset: "assets/absent.png" }] },
+      { blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 118, h: 118, asset: "assets/absent.png" }] },
       [],
     );
     expect(res.ok).toBe(false);
@@ -174,7 +174,7 @@ describe("parseManifest", () => {
 
   it("accepte un asset present dans le paquet", () => {
     const res = parse(
-      { blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 10, h: 10, asset: "assets/fond.png" }] },
+      { blocks: [{ type: "image", page: 1, x: 0, y: 0, w: 118, h: 118, asset: "assets/fond.png" }] },
       ["assets/fond.png"],
     );
     expect(res.ok).toBe(true);
@@ -182,14 +182,14 @@ describe("parseManifest", () => {
 
   it("refuse une couleur ni hexadecimale ni source de couleur", () => {
     const res = parse({
-      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, fill: "rouge" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "rouge" }],
     });
     expect(res.ok).toBe(false);
   });
 
   it("accepte une couleur issue d'une source de type couleur", () => {
     const res = parse({
-      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, fill: "category.color" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "category.color" }],
     });
     expect(res.ok).toBe(true);
   });
@@ -218,22 +218,22 @@ describe("parseManifest", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("refuse overflow shrink sans minSizePt", () => {
+  it("refuse overflow shrink sans minSizePx", () => {
     const res = parse({
       blocks: [
-        { ...VALID.blocks[0], style: { sizePt: 12, color: "#000000", overflow: "shrink" } },
+        { ...VALID.blocks[0], style: { sizePx: 50, color: "#000000", overflow: "shrink" } },
       ],
     });
     expect(res.ok).toBe(false);
-    expect(errorsOf(res)).toMatch(/minSizePt/);
+    expect(errorsOf(res)).toMatch(/minSizePx/);
   });
 
-  it("refuse un minSizePt superieur au sizePt", () => {
+  it("refuse un minSizePx superieur au sizePx", () => {
     const res = parse({
       blocks: [
         {
           ...VALID.blocks[0],
-          style: { sizePt: 10, color: "#000000", overflow: "shrink", minSizePt: 12 },
+          style: { sizePx: 42, color: "#000000", overflow: "shrink", minSizePx: 50 },
         },
       ],
     });
@@ -257,8 +257,8 @@ describe("parseManifest", () => {
   it("accumule plusieurs erreurs en une passe", () => {
     const res = parse({
       blocks: [
-        { ...VALID.blocks[0], x: 90 },
-        { type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, fill: "pas-une-couleur" },
+        { ...VALID.blocks[0], x: 900 },
+        { type: "rect", page: 1, x: 0, y: 0, w: 118, h: 118, fill: "pas-une-couleur" },
       ],
     });
     expect(res.ok).toBe(false);

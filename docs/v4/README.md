@@ -36,6 +36,7 @@ conservees : elles portent le *pourquoi* des decisions.
 - [Spec 14 — Apercu image et generation de template](specs/2026-08-11-14-v4-apercu-image-et-generation-de-template.md)
 - [Spec 15 — Propagation du profil aux inscriptions en attente](specs/2026-08-14-15-v4-propagation-du-profil-aux-inscriptions-en-attente.md)
 - [Spec 16 — Studio de construction de templates](specs/2026-08-14-16-v4-studio-de-construction-de-templates.md) · [Feature](features/templates-badges.md)
+- [Spec 17 — Manifeste en pixels 300 dpi](specs/2026-08-14-17-v4-manifeste-en-pixels-300-dpi.md) · [Feature](features/templates-badges.md)
 
 Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterieures
 (commits `a8ef855` et `b4af4c6`) et n'ont pas de spec associee.

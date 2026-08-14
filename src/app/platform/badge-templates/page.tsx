@@ -72,7 +72,7 @@ export default async function PlatformBadgeTemplatesPage() {
                     </span>
                   </p>
                   <p className="text-xs text-slate-500">
-                    {t.pages} page{t.pages > 1 ? "s" : ""} · {t.pageWidthMm}×{t.pageHeightMm} mm ·
+                    {t.pages} page{t.pages > 1 ? "s" : ""} · {t.pageWidthPx}×{t.pageHeightPx} px ·
                     installé le {formatDate(t.createdAt)}
                   </p>
                 </div>

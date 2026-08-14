@@ -1,6 +1,6 @@
 import { Document, Image, Page, Text, View } from "@react-pdf/renderer";
 import type { TemplateContext } from "../types";
-import { mm } from "../mm";
+import { px } from "../px";
 import type { Block, TemplateManifest, TextBlock, TextStyle } from "./manifest-types";
 import { resolveSource } from "./resolve-source";
 import { isBlockVisible } from "./conditions";
@@ -18,30 +18,31 @@ function colorOf(value: string, ctx: TemplateContext): string {
 // @react-pdf ne mesure pas le texte hors rendu. 0,55 em par caractere approche
 // Montserrat en graisse normale : l'objectif n'est pas d'etre exact mais de garantir
 // qu'un texte trop long retrecit ou se coupe au lieu de deborder du cadre.
+// Tailles et largeurs partagent la meme unite (px 300 dpi), le calcul reste donc
+// entierement en pixels ; seule l'emission du style convertit en points.
 const CHAR_RATIO = 0.55;
 
-function shrinkToFit(text: string, style: TextStyle, widthMm: number): number {
-  const maxPt = mm(widthMm);
-  /* v8 ignore next -- le schema exige minSizePt des que overflow vaut "shrink",
+function shrinkToFit(text: string, style: TextStyle, widthPx: number): number {
+  /* v8 ignore next -- le schema exige minSizePx des que overflow vaut "shrink",
      et shrinkToFit n'est appele que dans ce mode ; garde defensive */
-  const min = style.minSizePt ?? style.sizePt;
-  let size = style.sizePt;
-  while (size > min && text.length * size * CHAR_RATIO > maxPt) size -= 0.5;
+  const min = style.minSizePx ?? style.sizePx;
+  let size = style.sizePx;
+  while (size > min && text.length * size * CHAR_RATIO > widthPx) size -= 2;
   return Math.max(size, min);
 }
 
-function truncateToFit(text: string, style: TextStyle, widthMm: number): string {
-  const maxChars = Math.floor(mm(widthMm) / (style.sizePt * CHAR_RATIO));
+function truncateToFit(text: string, style: TextStyle, widthPx: number): string {
+  const maxChars = Math.floor(widthPx / (style.sizePx * CHAR_RATIO));
   return text.length <= maxChars ? text : `${text.slice(0, Math.max(0, maxChars - 1))}…`;
 }
 
 function frame(block: Block) {
   return {
     position: "absolute" as const,
-    left: mm(block.x),
-    top: mm(block.y),
-    width: mm(block.w),
-    height: mm(block.h),
+    left: px(block.x),
+    top: px(block.y),
+    width: px(block.w),
+    height: px(block.h),
   };
 }
 
@@ -53,22 +54,23 @@ function renderText(
 ) {
   const raw = renderTextTemplate(block.text, ctx);
   const content = block.style.overflow === "truncate" ? truncateToFit(raw, block.style, block.w) : raw;
-  const fontSize =
-    block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, block.w) : block.style.sizePt;
+  const sizePx =
+    block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, block.w) : block.style.sizePx;
 
   return (
     <View key={key} style={frame(block)}>
       <Text
         style={{
           fontFamily: block.style.font ? fontMap[block.style.font] : DEFAULT_FONT_FAMILY,
-          fontSize,
+          fontSize: px(sizePx),
           fontWeight: block.style.weight,
           textAlign: block.style.align,
           color: colorOf(block.style.color, ctx),
           // La casse est confiee a @react-pdf plutot qu'appliquee a la chaine : c'est
           // ce que font les templates historiques, et le moteur gere la locale.
           textTransform: block.style.transform,
-          letterSpacing: block.style.letterSpacing,
+          letterSpacing:
+            block.style.letterSpacing !== undefined ? px(block.style.letterSpacing) : undefined,
           lineHeight: block.style.lineHeight,
         }}
       >
@@ -94,8 +96,8 @@ function renderBlock(
         style={{
           ...frame(block),
           backgroundColor: colorOf(block.fill, ctx),
-          borderRadius: block.radiusMm ? mm(block.radiusMm) : undefined,
-          borderTopWidth: block.borderTopPt,
+          borderRadius: block.radiusPx ? px(block.radiusPx) : undefined,
+          borderTopWidth: block.borderTopPx !== undefined ? px(block.borderTopPx) : undefined,
           borderTopColor: block.borderColor ? colorOf(block.borderColor, ctx) : undefined,
         }}
       />
@@ -117,7 +119,7 @@ function renderBlock(
       style={{
         ...frame(block),
         objectFit: "cover",
-        borderRadius: block.type === "image" && block.radiusMm ? mm(block.radiusMm) : undefined,
+        borderRadius: block.type === "image" && block.radiusPx ? px(block.radiusPx) : undefined,
       }}
     />
   );
@@ -142,7 +144,7 @@ export function DeclarativeDocument({
       {pages.map((pageNumber) => (
         <Page
           key={`page-${pageNumber}`}
-          size={{ width: mm(manifest.page.widthMm), height: mm(manifest.page.heightMm) }}
+          size={{ width: px(manifest.page.widthPx), height: px(manifest.page.heightPx) }}
           style={{ backgroundColor: "#ffffff", fontFamily: DEFAULT_FONT_FAMILY }}
         >
           {manifest.blocks

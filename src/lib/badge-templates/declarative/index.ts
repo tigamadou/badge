@@ -22,7 +22,7 @@ export function buildDeclarativeTemplate(
       label: manifest.label,
       description: manifest.description,
       pages: manifest.page.count,
-      pageSize: { width: `${manifest.page.widthMm}mm`, height: `${manifest.page.heightMm}mm` },
+      pageSize: { width: `${manifest.page.widthPx}px`, height: `${manifest.page.heightPx}px` },
       previewSrc: "",
       version: manifest.formatVersion,
     },
