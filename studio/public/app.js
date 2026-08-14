@@ -3,12 +3,16 @@ import * as api from "/ui/api.js";
 import { Preview } from "/ui/preview.js";
 import { ContextForm } from "/ui/context-form.js";
 import { BlocksEditor } from "/ui/blocks-editor.js";
+import { MetaPanel } from "/ui/meta-panel.js";
 
 const TABS = [
   ["context", "Contexte"],
   ["blocks", "Blocs"],
+  ["package", "Paquet"],
   ["json", "JSON"],
 ];
+
+const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 // Les erreurs de validation nomment leur bloc (« bloc 3 : ... ») : on les range
 // par index pour les afficher sur l'entree fautive de la liste.
@@ -55,6 +59,31 @@ function App() {
     setErrors([]);
   }, []);
 
+  // Rechargement des seules ressources : appele apres un depot de fichier, pour
+  // que les listes deroulantes (apercu, asset, police) voient le nouveau fichier.
+  const refreshAssets = useCallback(async () => {
+    const read = await api.getTemplate(current);
+    setAssets(read.assets ?? []);
+  }, [current]);
+
+  const createTemplate = useCallback(async () => {
+    const name = prompt("Nom du template (minuscules-et-tirets) :");
+    if (!name) return;
+    if (!NAME_PATTERN.test(name)) {
+      setStatus("Nom invalide (minuscules-et-tirets)");
+      return;
+    }
+    const res = await api.createTemplate(name);
+    if (!res.ok) {
+      setStatus(res.error);
+      return;
+    }
+    setTemplates(await api.listTemplates());
+    selectTemplate(name);
+    setStatus("Template créé");
+    setTimeout(() => setStatus(""), 2000);
+  }, [selectTemplate]);
+
   useEffect(() => {
     api.listTemplates().then((list) => {
       setTemplates(list);
@@ -86,6 +115,7 @@ function App() {
       >
         ${templates.map((t) => html`<option value=${t.name}>${t.name}</option>`)}
       </select>
+      <button type="button" onClick=${createTemplate}>Nouveau template</button>
       <button type="button" onClick=${save}>Enregistrer</button>
       <span role="status">${status}</span>
     </header>
@@ -118,7 +148,17 @@ function App() {
                 schemaInfo=${schemaInfo}
                 onChange=${setContext}
               />`
-            : manifest
+            : tab === "package"
+              ? manifest
+                ? html`<${MetaPanel}
+                    name=${current}
+                    manifest=${manifest}
+                    assets=${assets}
+                    onChange=${updateManifest}
+                    onAssetsChanged=${refreshAssets}
+                  />`
+                : html`<p class="placeholder">Corrigez le JSON pour éditer le paquet.</p>`
+              : manifest
               ? html`<${BlocksEditor}
                   manifest=${manifest}
                   schemaInfo=${schemaInfo}

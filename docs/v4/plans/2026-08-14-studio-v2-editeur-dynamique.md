@@ -27,7 +27,7 @@
 | 11. UI : socle Preact (parité JSON + aperçu) | [x] | 2026-08-14 | Verif navigateur a refaire manuellement : MCP Chrome indisponible en session headless |
 | 12. UI : onglet Contexte | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
 | 13. UI : onglet Blocs | [x] | 2026-08-14 | Verif navigateur a refaire manuellement |
-| 14. UI : métadonnées, polices, ressources, nouveau template | [ ] | | |
+| 14. UI : métadonnées, polices, ressources, nouveau template | [x] | 2026-08-14 | Onglet Paquet ; verif navigateur a refaire manuellement |
 | 15. UI : génération du paquet + parcours complet + doc | [ ] | | |
 
 ## Global Constraints
@@ -742,10 +742,10 @@ export const BLOCK_DEFAULTS = {
 **Interfaces:**
 - Produces : `MetaPanel({ manifest, assets, name, onChange, onAssetsChanged })` — édite `family`, `label`, `description`, `preview` (select des fichiers `assets/`), `fonts` (liste dynamique : alias, fichier — select des fichiers `fonts/` —, weight, italique, ✕ / + police) ; zone d'upload (deux boutons « Ajouter une image », « Ajouter une police ») → `api.uploadAsset` puis `onAssetsChanged()` (recharge `getTemplate` pour rafraîchir les listes). Avertissement inline si `preview` ou un fichier de police déclaré n'est plus dans la liste des fichiers présents.
 
-- [ ] **Step 1 : Implémenter `meta-panel.js`** (formulaires contrôlés, resérialisation via `onChange` comme l'éditeur de blocs).
-- [ ] **Step 2 : « Nouveau template »** dans le header : prompt du nom (valider le slug côté client avec le même motif `/^[a-z0-9]+(-[a-z0-9]+)*$/`), `api.createTemplate`, recharger la liste, sélectionner le nouveau.
-- [ ] **Step 3 : Vérification navigateur** — créer un template neuf ; uploader une image dans `assets/` (elle apparaît dans les selects `preview`/asset) ; uploader une police TTF, la déclarer avec un alias, l'utiliser dans un bloc texte, la voir dans l'aperçu ; supprimer le fichier au Finder → l'avertissement inline apparaît au rechargement.
-- [ ] **Step 4 : Point de commit (proposer)** — `feat(v4): panneau paquet du studio (metadonnees, polices, ressources)`
+- [x] **Step 1 : Implémenter `meta-panel.js`** (formulaires contrôlés, resérialisation via `onChange` comme l'éditeur de blocs).
+- [x] **Step 2 : « Nouveau template »** dans le header : prompt du nom (valider le slug côté client avec le même motif `/^[a-z0-9]+(-[a-z0-9]+)*$/`), `api.createTemplate`, recharger la liste, sélectionner le nouveau.
+- [x] **Step 3 : Vérification navigateur** — créer un template neuf ; uploader une image dans `assets/` (elle apparaît dans les selects `preview`/asset) ; uploader une police TTF, la déclarer avec un alias, l'utiliser dans un bloc texte, la voir dans l'aperçu ; supprimer le fichier au Finder → l'avertissement inline apparaît au rechargement.
+- [x] **Step 4 : Point de commit (proposer)** — `feat(v4): panneau paquet du studio (metadonnees, polices, ressources)`
 
 ### Task 15 : Génération du paquet + parcours complet + documentation
 
