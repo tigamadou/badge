@@ -20,7 +20,7 @@
 | 4. Typo étendue (italique, décoration, justify, maxLines, fond/padding) | [x] | 2026-08-14 | |
 | 5. objectFit des images | [x] | 2026-08-14 | |
 | 6. Doc feature : format enrichi | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
-| 7. Contexte dynamique serveur (context.ts, render, presets) | [ ] | | |
+| 7. Contexte dynamique serveur (context.ts, render, presets) | [x] | 2026-08-14 | |
 | 8. Routes render/schema-info + statiques vendor-ui | [ ] | | |
 | 9. Upload de ressources vers l'atelier | [ ] | | |
 | 10. Scaffold + pack depuis le studio | [ ] | | |
@@ -396,7 +396,7 @@ export async function buildContext(input?: ContextInput): Promise<TemplateContex
 ```
 - `studio/render.tsx` : `renderManifest({ manifest, assets, context })` où `context: TemplateContext` (le paramètre `variantId` disparaît).
 
-- [ ] **Step 1 : Tests qui échouent** — `studio/__tests__/context.test.ts` :
+- [x] **Step 1 : Tests qui échouent** — `studio/__tests__/context.test.ts` :
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -432,8 +432,8 @@ describe("buildContext", () => {
 
 Adapter `render.test.ts` : `renderManifest({ manifest: MINIMAL, assets: [], context: await buildContext() })` ; le test « variante inconnue » disparaît ; ajouter « rend chaque preset » (boucle sur `PRESETS`, `buildContext(p.input)`).
 
-- [ ] **Step 2 : Vérifier l'échec** — `yarn vitest run studio` → module `../context` introuvable.
-- [ ] **Step 3 : Implémentation** — créer `studio/context.ts` en réutilisant le contenu de `contexts.ts` (constante `DEMO_PHOTO`, `SAMPLE_CONTEXT` comme socle des défauts, `generateQRCodeDataURL`) :
+- [x] **Step 2 : Vérifier l'échec** — `yarn vitest run studio` → module `../context` introuvable.
+- [x] **Step 3 : Implémentation** — créer `studio/context.ts` en réutilisant le contenu de `contexts.ts` (constante `DEMO_PHOTO`, `SAMPLE_CONTEXT` comme socle des défauts, `generateQRCodeDataURL`) :
 
 ```ts
 export async function buildContext(input: ContextInput = DEFAULT_CONTEXT_INPUT): Promise<TemplateContext> {
@@ -453,8 +453,8 @@ export async function buildContext(input: ContextInput = DEFAULT_CONTEXT_INPUT):
 ```
 
 `PRESETS` reprend les cinq variantes actuelles sous forme d'`input` (ex. `{ id: "anonyme", label: "Catégorie anonyme", input: { category: { anonymous: true } } }` ; `textes-longs` reprend les valeurs longues de l'actuel `contexts.ts`). `renderMani​fest` prend `context` et le passe tel quel à `buildDeclarativeTemplate` (supprimer `buildVariantContext`). Supprimer `contexts.ts` et l'import `listVariants` de `server.ts` (la route `/api/variants` est retirée en Task 8 ; en attendant la faire répondre 404 en la supprimant dès maintenant si les tests serveur le permettent — sinon la neutraliser en Task 8).
-- [ ] **Step 4 : Vérifier le vert** — `yarn vitest run studio`.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): contexte de previsualisation dynamique du studio`
+- [x] **Step 4 : Vérifier le vert** — `yarn vitest run studio`.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): contexte de previsualisation dynamique du studio`
 
 ### Task 8 : Routes `render` (contexte), `schema-info`, statiques `vendor/`–`ui/`
 

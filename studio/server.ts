@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse, type Server } 
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { listTemplates, readTemplate, writeManifest } from "./workshop";
-import { listVariants } from "./contexts";
+import { buildContext, PRESETS, type ContextInput } from "./context";
 import { renderManifest } from "./render";
 
 // Resolu depuis la racine du depot plutot que depuis le fichier : `package.json` ne
@@ -46,7 +46,7 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
   }
 
   if (req.method === "GET" && path === "/api/variants") {
-    sendJson(res, 200, { variants: listVariants() });
+    sendJson(res, 200, { variants: PRESETS.map(({ id, label }) => ({ id, label })) });
     return;
   }
 
@@ -81,16 +81,16 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
 
   if (req.method === "POST" && path === "/api/render") {
     const body = (await readBody(req)) as
-      | { name?: unknown; manifest?: unknown; variant?: unknown }
+      | { name?: unknown; manifest?: unknown; variant?: unknown; context?: unknown }
       | null;
-    if (
-      typeof body?.name !== "string" ||
-      typeof body.manifest !== "string" ||
-      typeof body.variant !== "string"
-    ) {
+    if (typeof body?.name !== "string" || typeof body.manifest !== "string") {
       sendJson(res, 400, { error: "INVALID_BODY" });
       return;
     }
+    // Un `variant` nomme reste accepte le temps que l'interface bascule sur le
+    // formulaire de contexte : il designe simplement le preset de depart.
+    const preset = PRESETS.find((p) => p.id === body.variant);
+    const contextInput = (body.context ?? preset?.input) as ContextInput | undefined;
     const read = await readTemplate(root, body.name);
     if (!read) {
       sendJson(res, 404, { error: "TEMPLATE_NOT_FOUND" });
@@ -101,7 +101,7 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
     const result = await renderManifest({
       manifest: body.manifest,
       assets: read.assets,
-      variantId: body.variant,
+      context: await buildContext(contextInput),
     });
     if (!result.ok) {
       sendJson(res, 422, { errors: result.errors });

@@ -2,7 +2,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { buildDeclarativeTemplate, parseManifest } from "../src/lib/badge-templates/declarative";
 import { assetsToResolver } from "../src/lib/badge-templates/render-proof";
 import type { PackageAsset } from "../src/lib/badge-templates/package-reader";
-import { buildVariantContext } from "./contexts";
+import type { TemplateContext } from "../src/lib/badge-templates/types";
 
 export type RenderResult = { ok: true; pdf: Buffer } | { ok: false; errors: string[] };
 
@@ -13,7 +13,7 @@ const STUDIO_TEMPLATE_ID = "studio-preview";
 export async function renderManifest(args: {
   manifest: string;
   assets: PackageAsset[];
-  variantId: string;
+  context: TemplateContext;
 }): Promise<RenderResult> {
   let raw: unknown;
   try {
@@ -28,14 +28,11 @@ export async function renderManifest(args: {
   );
   if (!parsed.ok) return { ok: false, errors: parsed.errors };
 
-  const ctx = await buildVariantContext(args.variantId);
-  if (!ctx) return { ok: false, errors: [`Variante inconnue : "${args.variantId}".`] };
-
   const { Component } = buildDeclarativeTemplate(
     parsed.manifest,
     assetsToResolver(args.assets),
     STUDIO_TEMPLATE_ID,
   );
-  const pdf = await renderToBuffer(<Component ctx={ctx} />);
+  const pdf = await renderToBuffer(<Component ctx={args.context} />);
   return { ok: true, pdf };
 }

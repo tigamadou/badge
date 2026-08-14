@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderManifest } from "../render";
+import { buildContext, PRESETS } from "../context";
 
 const MINIMAL = JSON.stringify({
   formatVersion: 1,
@@ -23,7 +24,11 @@ const MINIMAL = JSON.stringify({
 
 describe("renderManifest", () => {
   it("rend un PDF pour un manifeste valide", async () => {
-    const res = await renderManifest({ manifest: MINIMAL, assets: [], variantId: "complet" });
+    const res = await renderManifest({
+      manifest: MINIMAL,
+      assets: [],
+      context: await buildContext(),
+    });
 
     expect(res.ok).toBe(true);
     if (!res.ok) return;
@@ -31,15 +36,23 @@ describe("renderManifest", () => {
     expect(res.pdf.length).toBeGreaterThan(500);
   });
 
-  it("rend chaque variante", async () => {
-    for (const variantId of ["complet", "sans-photo", "anonyme", "neutre", "textes-longs"]) {
-      const res = await renderManifest({ manifest: MINIMAL, assets: [], variantId });
+  it("rend chaque preset", async () => {
+    for (const preset of PRESETS) {
+      const res = await renderManifest({
+        manifest: MINIMAL,
+        assets: [],
+        context: await buildContext(preset.input),
+      });
       expect(res.ok).toBe(true);
     }
   });
 
   it("signale un JSON illisible sans lever", async () => {
-    const res = await renderManifest({ manifest: "{ pas du json", assets: [], variantId: "complet" });
+    const res = await renderManifest({
+      manifest: "{ pas du json",
+      assets: [],
+      context: await buildContext(),
+    });
 
     expect(res).toEqual({ ok: false, errors: ["Manifeste invalide : JSON illisible."] });
   });
@@ -50,17 +63,11 @@ describe("renderManifest", () => {
     const res = await renderManifest({
       manifest: JSON.stringify(sourceInconnue),
       assets: [],
-      variantId: "complet",
+      context: await buildContext(),
     });
 
     expect(res.ok).toBe(false);
     if (res.ok) return;
     expect(res.errors.join(" ")).toContain("source inconnue");
-  });
-
-  it("signale une variante inconnue", async () => {
-    const res = await renderManifest({ manifest: MINIMAL, assets: [], variantId: "inexistant" });
-
-    expect(res).toEqual({ ok: false, errors: ['Variante inconnue : "inexistant".'] });
   });
 });
