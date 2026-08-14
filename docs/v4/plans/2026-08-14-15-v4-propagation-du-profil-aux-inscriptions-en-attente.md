@@ -19,6 +19,7 @@
 - `fileParallelism: false` : ne **jamais** lancer deux runs Vitest en parallèle. Chaque `make test` **vide la base de dev** → relancer `make db-seed` pour reprendre l'app manuellement.
 - Toute action sensible passe par `logActivity()` ; tout nouveau type d'action exige une valeur dans l'enum `ActivityType` de `prisma/schema.prisma`.
 - Avant de considérer une tâche finie : `make lint`, `make typecheck`, `make test`.
+- **Étapes marquées « À LA CHARGE DE L'UTILISATEUR »** : en exécution automatisée (`scripts/run-plans.sh`), ne pas les exécuter ni prétendre les avoir vérifiées. Faire ce que l'encadré demande, cocher la case pour ne pas bloquer la boucle, et consigner la mention correspondante dans la colonne Notes de la table `## Progression`, afin que l'utilisateur retrouve la liste de ce qui lui reste à faire.
 - **Commits** : aucun commit à l'initiative de l'agent en session interactive — les étapes de vérification remplacent les étapes de commit. Exception unique : une exécution pilotée par `scripts/run-plans.sh`, dont le prompt impose **un commit par tâche validée** ; dans ce cas, un commit par tâche, jamais de lot, jamais après un Verify en échec.
 
 ---
@@ -980,7 +981,9 @@ make test-e2e
 
 Attendu : SUCCÈS, y compris les tests existants du même fichier.
 
-- [ ] **Étape 5 : Vérifier visuellement dans le navigateur**
+- [ ] **Étape 5 : Vérifier visuellement dans le navigateur — À LA CHARGE DE L'UTILISATEUR**
+
+> **En session automatisée, ne pas cocher cette étape comme vérifiée.** Un agent headless ne peut pas juger un rendu ; le test E2E de l'étape 2 couvre l'essentiel. Cocher en consignant dans la table `## Progression` : « recette visuelle du détail d'inscription à faire par l'utilisateur ».
 
 Sur `https://badge.local`, ouvrir le détail d'une inscription en tant que membre d'organisation : la carte ne montre que la photo, la ligne « Identité » porte le statut de vérification, aucun encart de pièce n'apparaît. Se reconnecter en staff plateforme et rouvrir la même page : l'aperçu de la pièce est bien là.
 

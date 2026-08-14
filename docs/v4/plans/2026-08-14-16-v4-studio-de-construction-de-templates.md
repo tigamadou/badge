@@ -19,6 +19,7 @@
 - Motif de nom de template, identique à `scripts/new-badge-template.ts:4` : `^[a-z0-9]+(-[a-z0-9]+)*$`.
 - Ports : l'application occupe `3785`, le studio prend `3786` (exposé), `3900` à l'intérieur du conteneur.
 - Avant de considérer une tâche finie : `make lint`, `make typecheck`, `make test`.
+- **Étapes marquées « À LA CHARGE DE L'UTILISATEUR »** : en exécution automatisée (`scripts/run-plans.sh`), ne pas les exécuter ni prétendre les avoir vérifiées. Faire ce que l'encadré demande, cocher la case pour ne pas bloquer la boucle, et consigner la mention correspondante dans la colonne Notes de la table `## Progression`, afin que l'utilisateur retrouve la liste de ce qui lui reste à faire.
 - **Commits** : aucun commit à l'initiative de l'agent en session interactive — les étapes de vérification remplacent les étapes de commit. Exception unique : une exécution pilotée par `scripts/run-plans.sh`, dont le prompt impose **un commit par tâche validée** ; dans ce cas, un commit par tâche, jamais de lot, jamais après un Verify en échec.
 
 ---
@@ -1067,7 +1068,9 @@ studio:
 	@echo "Studio : http://localhost:3786 (ou https://studio.badge.local apres make dev-https)"
 ```
 
-- [ ] **Étape 4 : Enregistrer le domaine local**
+- [ ] **Étape 4 : Enregistrer le domaine local — À LA CHARGE DE L'UTILISATEUR**
+
+> **Ne pas exécuter cette commande en session automatisée.** `make dev-https-hosts` écrit dans `/etc/hosts` via `sudo` : sans terminal interactif, elle attend un mot de passe et bloque la boucle. Cocher cette étape en consignant dans la table `## Progression` : « `make dev-https-hosts` à lancer manuellement ». Rien n'est bloqué pour la suite : le studio reste joignable sur `http://localhost:3786`, seul l'accès `https://studio.badge.local` attend cette commande.
 
 Rien à modifier dans le `Makefile` : `DEV_DOMAINS` (ligne 155) est **dérivé du `Caddyfile.dev`** par `grep -oE '^[A-Za-z0-9.-]+\.local'`. L'ajout de l'étape 2 suffit ; il reste à propager l'entrée dans `/etc/hosts` :
 
@@ -1075,7 +1078,7 @@ Rien à modifier dans le `Makefile` : `DEV_DOMAINS` (ligne 155) est **dérivé d
 make dev-https-hosts
 ```
 
-Attendu : la commande signale l'ajout de `studio.badge.local` (mot de passe administrateur demandé), ou indique que le fichier est déjà à jour.
+Attendu, quand l'utilisateur la lance : la commande signale l'ajout de `studio.badge.local` (mot de passe administrateur demandé), ou indique que le fichier est déjà à jour.
 
 - [ ] **Étape 5 : Démarrer et vérifier**
 
@@ -1349,7 +1352,9 @@ async function boot() {
 boot();
 ```
 
-- [ ] **Étape 4 : Vérifier dans le navigateur**
+- [ ] **Étape 4 : Vérifier dans le navigateur — À LA CHARGE DE L'UTILISATEUR**
+
+> **En session automatisée, ne pas cocher cette étape comme vérifiée.** Un agent headless ne peut pas juger un rendu. Démarrer le service, vérifier que `GET /` répond 200 et que `POST /api/render` renvoie un PDF, puis cocher en consignant dans la table `## Progression` : « recette visuelle du studio à faire par l'utilisateur (6 points) ».
 
 ```bash
 make studio
