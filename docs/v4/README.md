@@ -16,9 +16,8 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 
 ### Plans a implementer
 
-Numerotes selon leur ordre d'execution (suffixe `-NN-` apres la date) :
-
-- [16 — Studio de construction de templates](plans/2026-08-14-16-v4-studio-de-construction-de-templates.md) — service de developpement separe : edition du manifeste avec apercu PDF instantane. [Spec](specs/2026-08-14-16-v4-studio-de-construction-de-templates.md).
+Aucun plan en attente. Les plans sont numerotes selon leur ordre d'execution
+(suffixe `-NN-` apres la date) et retires du depot une fois implementes.
 
 ### Chantiers livres
 
@@ -36,6 +35,7 @@ conservees : elles portent le *pourquoi* des decisions.
 - [Spec 13 — Page de detail d'un template de badge](specs/2026-08-11-13-v4-page-de-detail-d-un-template-de-badge.md)
 - [Spec 14 — Apercu image et generation de template](specs/2026-08-11-14-v4-apercu-image-et-generation-de-template.md)
 - [Spec 15 — Propagation du profil aux inscriptions en attente](specs/2026-08-14-15-v4-propagation-du-profil-aux-inscriptions-en-attente.md)
+- [Spec 16 — Studio de construction de templates](specs/2026-08-14-16-v4-studio-de-construction-de-templates.md) · [Feature](features/templates-badges.md)
 
 Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterieures
 (commits `a8ef855` et `b4af4c6`) et n'ont pas de spec associee.
@@ -71,7 +71,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Page de detail d'un template (plan 13) | Livre — apercu, utilisateurs, versions de la famille, ressources, manifeste telechargeable |
 | Apercu image et outillage (plan 14) | Livre — vignette image du paquet, PDF d'epreuve conserve, `make new-badge-template` et `make pack-badge-template` |
 | Propagation du profil aux inscriptions (plan 15) | Livre — les snapshot* sont figes a l'approbation et non plus a la creation ; audit `REGISTRATION_SNAPSHOT_REFRESHED` ; la piece d'identite disparait du detail cote organisation. **Recette visuelle a faire** |
-| Studio de construction de templates (plan 16) | A implementer |
+| Studio de construction de templates (plan 16) | Livre — service de dev separe (`make studio`, port 3786), edition du manifeste avec apercu PDF a la frappe et cinq jeux de donnees. **Recette visuelle a faire** ; `make dev-https-hosts` a lancer pour studio.badge.local |
 
 Pour un chantier livre, le detail task par task vit dans l'historique git du plan
 supprime ; le *pourquoi* reste dans la spec.
