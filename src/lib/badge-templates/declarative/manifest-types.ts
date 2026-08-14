@@ -2,9 +2,9 @@ export type Overflow = "shrink" | "truncate" | "clip";
 
 export type FontWeight = 400 | 500 | 600 | 700;
 
-// Toutes les dimensions du manifeste sont en pixels a 300 dpi (1px = 0,24pt PDF),
+// Toutes les dimensions du manifeste sont en pixels CSS a 96 dpi (1px = 0,75pt PDF),
 // y compris les tailles de police : l'auteur d'un template reporte telles quelles
-// les valeurs de sa maquette print, sans conversion.
+// les valeurs de sa maquette Figma, sans conversion.
 export type TextStyle = {
   font?: string;
   sizePx: number;

@@ -18,7 +18,7 @@ function colorOf(value: string, ctx: TemplateContext): string {
 // @react-pdf ne mesure pas le texte hors rendu. 0,55 em par caractere approche
 // Montserrat en graisse normale : l'objectif n'est pas d'etre exact mais de garantir
 // qu'un texte trop long retrecit ou se coupe au lieu de deborder du cadre.
-// Tailles et largeurs partagent la meme unite (px 300 dpi), le calcul reste donc
+// Tailles et largeurs partagent la meme unite (px 96 dpi), le calcul reste donc
 // entierement en pixels ; seule l'emission du style convertit en points.
 const CHAR_RATIO = 0.55;
 

@@ -4,21 +4,21 @@
   "label": "Badge recto-verso",
   "description": "Badge portrait deux faces. Recto : titre, photo, identite et QR code. Verso : logo, evenement, periode et bande categorie.",
   "page": {
-    "widthPx": 874,
-    "heightPx": 1240,
+    "widthPx": 279.69,
+    "heightPx": 396.85,
     "count": 2
   },
   "blocks": [
     {
       "type": "text",
       "page": 1,
-      "x": 71,
-      "y": 118,
-      "w": 732,
-      "h": 59,
+      "x": 23,
+      "y": 38,
+      "w": 234,
+      "h": 22,
       "text": "{event.title}",
       "style": {
-        "sizePx": 46,
+        "sizePx": 15,
         "weight": 600,
         "align": "center",
         "color": "#0f172a",
@@ -28,12 +28,12 @@
     {
       "type": "image",
       "page": 1,
-      "x": 142,
-      "y": 236,
-      "w": 591,
-      "h": 709,
+      "x": 45,
+      "y": 76,
+      "w": 189,
+      "h": 227,
       "source": "participant.photoDataUrl",
-      "radiusPx": 24,
+      "radiusPx": 7.6,
       "visibleIf": [
         {
           "path": "category.anonymous",
@@ -48,12 +48,12 @@
     {
       "type": "rect",
       "page": 1,
-      "x": 142,
-      "y": 236,
-      "w": 591,
-      "h": 709,
+      "x": 45,
+      "y": 76,
+      "w": 189,
+      "h": 227,
       "fill": "#e2e8f0",
-      "radiusPx": 24,
+      "radiusPx": 7.6,
       "visibleIf": [
         {
           "path": "category.anonymous",
@@ -64,12 +64,12 @@
     {
       "type": "rect",
       "page": 1,
-      "x": 142,
-      "y": 236,
-      "w": 591,
-      "h": 709,
+      "x": 45,
+      "y": 76,
+      "w": 189,
+      "h": 227,
       "fill": "#e2e8f0",
-      "radiusPx": 24,
+      "radiusPx": 7.6,
       "visibleIf": [
         {
           "path": "category.anonymous",
@@ -84,13 +84,13 @@
     {
       "type": "text",
       "page": 1,
-      "x": 71,
-      "y": 1004,
-      "w": 732,
-      "h": 71,
+      "x": 23,
+      "y": 321,
+      "w": 234,
+      "h": 28,
       "text": "{participant.firstName} {participant.lastName}",
       "style": {
-        "sizePx": 58,
+        "sizePx": 19,
         "weight": 700,
         "align": "center",
         "color": "#0f172a",
@@ -106,13 +106,13 @@
     {
       "type": "text",
       "page": 1,
-      "x": 71,
-      "y": 1004,
-      "w": 732,
-      "h": 71,
+      "x": 23,
+      "y": 321,
+      "w": 234,
+      "h": 28,
       "text": "Participant anonyme",
       "style": {
-        "sizePx": 58,
+        "sizePx": 19,
         "weight": 700,
         "align": "center",
         "color": "#0f172a",
@@ -128,13 +128,13 @@
     {
       "type": "text",
       "page": 1,
-      "x": 71,
-      "y": 1087,
-      "w": 732,
-      "h": 47,
+      "x": 23,
+      "y": 348,
+      "w": 234,
+      "h": 18,
       "text": "{participant.structure}",
       "style": {
-        "sizePx": 38,
+        "sizePx": 12,
         "align": "center",
         "color": "#475569",
         "overflow": "clip"
@@ -149,21 +149,21 @@
     {
       "type": "qr",
       "page": 1,
-      "x": 272,
-      "y": 803,
-      "w": 331,
-      "h": 331
+      "x": 87,
+      "y": 257,
+      "w": 106,
+      "h": 106
     },
     {
       "type": "text",
       "page": 1,
-      "x": 71,
-      "y": 1157,
-      "w": 732,
-      "h": 47,
+      "x": 23,
+      "y": 370,
+      "w": 234,
+      "h": 15,
       "text": "#{badge.id}",
       "style": {
-        "sizePx": 29,
+        "sizePx": 9,
         "align": "center",
         "color": "#64748b",
         "overflow": "clip"
@@ -172,10 +172,10 @@
     {
       "type": "image",
       "page": 2,
-      "x": 331,
-      "y": 118,
-      "w": 213,
-      "h": 213,
+      "x": 106,
+      "y": 38,
+      "w": 68,
+      "h": 68,
       "source": "event.logoDataUrl",
       "visibleIf": [
         {
@@ -187,13 +187,13 @@
     {
       "type": "text",
       "page": 2,
-      "x": 71,
-      "y": 378,
-      "w": 732,
-      "h": 94,
+      "x": 23,
+      "y": 121,
+      "w": 234,
+      "h": 31,
       "text": "{event.title}",
       "style": {
-        "sizePx": 67,
+        "sizePx": 21,
         "weight": 700,
         "align": "center",
         "color": "#0f172a",
@@ -203,13 +203,13 @@
     {
       "type": "text",
       "page": 2,
-      "x": 71,
-      "y": 496,
-      "w": 732,
-      "h": 118,
+      "x": 23,
+      "y": 159,
+      "w": 234,
+      "h": 38,
       "text": "{event.date} \n {event.location}",
       "style": {
-        "sizePx": 38,
+        "sizePx": 12,
         "align": "center",
         "color": "#475569",
         "overflow": "clip"
@@ -219,9 +219,9 @@
       "type": "rect",
       "page": 2,
       "x": 0,
-      "y": 945,
-      "w": 874,
-      "h": 295,
+      "y": 302,
+      "w": 280,
+      "h": 94,
       "fill": "category.color",
       "visibleIf": [
         {
@@ -234,11 +234,11 @@
       "type": "rect",
       "page": 2,
       "x": 0,
-      "y": 945,
-      "w": 874,
-      "h": 295,
+      "y": 302,
+      "w": 280,
+      "h": 94,
       "fill": "#ffffff",
-      "borderTopPx": 4,
+      "borderTopPx": 1.3,
       "borderColor": "category.color",
       "visibleIf": [
         {
@@ -251,18 +251,18 @@
       "type": "text",
       "page": 2,
       "x": 0,
-      "y": 1051,
-      "w": 874,
-      "h": 83,
+      "y": 336,
+      "w": 280,
+      "h": 28,
       "text": "{category.name}",
       "style": {
-        "sizePx": 58,
+        "sizePx": 19,
         "weight": 700,
         "align": "center",
         "color": "#ffffff",
         "overflow": "clip",
         "transform": "uppercase",
-        "letterSpacing": 4.2
+        "letterSpacing": 1.3
       },
       "visibleIf": [
         {
@@ -275,18 +275,18 @@
       "type": "text",
       "page": 2,
       "x": 0,
-      "y": 1051,
-      "w": 874,
-      "h": 83,
+      "y": 336,
+      "w": 280,
+      "h": 28,
       "text": "{category.name}",
       "style": {
-        "sizePx": 58,
+        "sizePx": 19,
         "weight": 700,
         "align": "center",
         "color": "category.color",
         "overflow": "clip",
         "transform": "uppercase",
-        "letterSpacing": 4.2
+        "letterSpacing": 1.3
       },
       "visibleIf": [
         {

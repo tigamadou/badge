@@ -199,7 +199,7 @@ describe("buildDeclarativeTemplate", () => {
         },
       ]),
     );
-    // Les tailles rendues sont en points PDF : 50px a 300 dpi valent 12pt.
+    // Les tailles rendues sont en points PDF : 50px a 96 dpi valent 37,5pt.
     expect(renderToJson(t.Component, long).fontSizes[0]).toBeLessThan(px(50));
     expect(renderToJson(t.Component, CTX).fontSizes[0]).toBe(px(50));
   });

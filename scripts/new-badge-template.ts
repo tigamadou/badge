@@ -14,29 +14,29 @@ function manifestOf(family: string) {
     label: `Badge ${family}`,
     description: "Decrivez ici le badge en une phrase.",
     preview: "assets/apercu.png",
-    page: { widthPx: 1011, heightPx: 638, count: 1 },
+    page: { widthPx: 323.53, heightPx: 204.09, count: 1 },
     blocks: [
-      { type: "rect", page: 1, x: 0, y: 543, w: 1011, h: 95, fill: "category.color" },
+      { type: "rect", page: 1, x: 0, y: 174, w: 323.5, h: 30, fill: "category.color" },
       {
         type: "text",
         page: 1,
-        x: 47,
-        y: 71,
-        w: 709,
-        h: 95,
+        x: 15,
+        y: 23,
+        w: 227,
+        h: 30,
         text: "{participant.firstName} {participant.lastName}",
-        style: { sizePx: 50, weight: 700, color: "#0f172a", overflow: "shrink", minSizePx: 33 },
+        style: { sizePx: 16, weight: 700, color: "#0f172a", overflow: "shrink", minSizePx: 11 },
       },
       {
         type: "text",
         page: 1,
         x: 0,
-        y: 573,
-        w: 1011,
-        h: 47,
+        y: 183,
+        w: 323.5,
+        h: 18,
         text: "{category.name}",
         style: {
-          sizePx: 38,
+          sizePx: 12,
           weight: 700,
           align: "center",
           color: "#ffffff",
@@ -44,7 +44,7 @@ function manifestOf(family: string) {
           transform: "uppercase",
         },
       },
-      { type: "qr", page: 1, x: 756, y: 354, w: 189, h: 189 },
+      { type: "qr", page: 1, x: 242, y: 113, w: 60, h: 60 },
     ],
   };
 }
@@ -65,9 +65,14 @@ Squelette genere par \`make new-badge-template NAME=${family}\`.
 ## Format du manifeste
 
 Toutes les coordonnees et dimensions (tailles de police comprises) sont en
-**pixels a 300 dpi** (1 px = 1/300 pouce ; une carte CR80 paysage fait 1011 × 638 px),
-positionnees en absolu depuis le coin superieur gauche de la page. Reportez telles
-quelles les valeurs de votre maquette print 300 dpi.
+**pixels CSS a 96 dpi** — la convention de Figma et du web (1 px = 1/96 pouce ;
+une carte CR80 paysage fait 323,53 × 204,09 px), positionnees en absolu depuis le
+coin superieur gauche de la page. Reportez telles quelles les valeurs de votre
+maquette Figma.
+
+Attention : \`@react-pdf\` n'affiche pas un texte dont le cadre est plus bas que sa
+ligne — il le supprime sans erreur. Donnez a chaque bloc \`text\` une hauteur d'au
+moins **1,45 x la taille de police** (par ligne de texte).
 
 ### Types de blocs
 

@@ -185,28 +185,32 @@ renommée en `.png` est refusée.
   "family": "salon-2027",
   "label": "Badge Salon 2027",
   "description": "Badge recto-verso avec fond personnalisé.",
-  "page": { "widthPx": 1011, "heightPx": 638, "count": 1 },
+  "page": { "widthPx": 323.53, "heightPx": 204.09, "count": 1 },
   "fonts": [{ "alias": "titre", "file": "fonts/Inter-Bold.ttf", "weight": 700 }],
   "blocks": [
-    { "type": "image", "page": 1, "x": 0, "y": 0, "w": 1011, "h": 638,
+    { "type": "image", "page": 1, "x": 0, "y": 0, "w": 323.53, "h": 204.09,
       "asset": "assets/fond.png" },
-    { "type": "text", "page": 1, "x": 425, "y": 94, "w": 543, "h": 83,
+    { "type": "text", "page": 1, "x": 136, "y": 30, "w": 174, "h": 27,
       "text": "{participant.firstName} {participant.lastName}",
-      "style": { "font": "titre", "sizePx": 50, "color": "#0f172a",
-                 "overflow": "shrink", "minSizePx": 33 },
+      "style": { "font": "titre", "sizePx": 16, "color": "#0f172a",
+                 "overflow": "shrink", "minSizePx": 11 },
       "visibleIf": { "path": "category.anonymous", "equals": false } },
-    { "type": "qr", "page": 1, "x": 732, "y": 354, "w": 213, "h": 213 }
+    { "type": "qr", "page": 1, "x": 234, "y": 113, "w": 68, "h": 68 }
   ]
 }
 ```
 
 Toutes les coordonnées et dimensions — tailles de police comprises — sont en
-**pixels à 300 dpi** (1 px = 1/300 pouce, converti en points PDF au rendu :
-1 px = 0,24 pt). Une carte CR80 paysage fait 1011 × 638 px. L'auteur d'un template
-reporte telles quelles les valeurs de sa maquette print 300 dpi, positionnées en
-absolu depuis le coin supérieur gauche de la page. Un bloc peut déborder de la page
-sans que la validation s'y oppose — le fond perdu est un cas print légitime, et le
-dépassement se juge à l'œil dans l'aperçu du studio.
+**pixels CSS à 96 dpi**, la convention de Figma et du web (1 px = 1/96 pouce,
+converti en points PDF au rendu : 1 px = 0,75 pt). Une carte CR80 paysage fait
+323,53 × 204,09 px. L'auteur d'un template reporte telles quelles les valeurs de sa
+maquette Figma, positionnées en absolu depuis le coin supérieur gauche de la page.
+Un bloc peut déborder de la page sans que la validation s'y oppose — le fond perdu
+est un cas print légitime, et le dépassement se juge à l'œil dans l'aperçu du studio.
+
+Piège connu : `@react-pdf` n'affiche pas un texte dont le cadre est plus bas que sa
+ligne — il le supprime sans erreur ni rognage. Donner à chaque bloc `text` une
+hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
 
 ### Types de blocs
 

@@ -10,12 +10,12 @@ const weightSchema = z.union([z.literal(400), z.literal(500), z.literal(600), z.
 
 const styleSchema = z.object({
   font: z.string().min(1).optional(),
-  sizePx: z.number().positive().max(800),
+  sizePx: z.number().positive().max(270),
   weight: weightSchema.optional(),
   align: z.enum(["left", "center", "right"]).optional(),
   color: z.string().min(1),
   overflow: z.enum(["shrink", "truncate", "clip"]),
-  minSizePx: z.number().positive().max(800).optional(),
+  minSizePx: z.number().positive().max(270).optional(),
   transform: z.enum(["uppercase", "lowercase", "none"]).optional(),
   letterSpacing: z.number().optional(),
   lineHeight: z.number().positive().optional(),
@@ -65,8 +65,8 @@ const manifestSchema = z.object({
   description: z.string().max(1000),
   preview: z.string().min(1).optional(),
   page: z.object({
-    widthPx: z.number().positive().max(12000),
-    heightPx: z.number().positive().max(12000),
+    widthPx: z.number().positive().max(4000),
+    heightPx: z.number().positive().max(4000),
     count: z.number().int().positive().max(4),
   }),
   fonts: z

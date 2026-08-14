@@ -2,19 +2,19 @@ import { describe, expect, it } from "vitest";
 import { px } from "../px";
 
 describe("px", () => {
-  it("convertit 300 px (1 pouce a 300 dpi) en 72 points PDF", () => {
-    expect(px(300)).toBeCloseTo(72, 10);
+  it("convertit 96 px (1 pouce a 96 dpi) en 72 points PDF", () => {
+    expect(px(96)).toBeCloseTo(72, 10);
   });
 
-  it("convertit 1 px en 0,24 point", () => {
-    expect(px(1)).toBeCloseTo(0.24, 10);
+  it("convertit 1 px en 0,75 point", () => {
+    expect(px(1)).toBeCloseTo(0.75, 10);
   });
 
   it("laisse zero inchange", () => {
     expect(px(0)).toBe(0);
   });
 
-  it("donne une page CR80 de 1011 px de large au format physique attendu (242,64 pt)", () => {
-    expect(px(1011)).toBeCloseTo(242.64, 10);
+  it("donne au badge Figma de 317,48 px de large son format physique de 84 mm (238,11 pt)", () => {
+    expect(px(317.48)).toBeCloseTo(238.11, 10);
   });
 });
