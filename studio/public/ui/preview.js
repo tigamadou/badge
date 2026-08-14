@@ -37,11 +37,9 @@ export function Preview({ name, manifestText, context, onErrors, onStatus }) {
   // derniere au demontage.
   useEffect(() => () => src && URL.revokeObjectURL(src), [src]);
 
-  return html`
-    <section class="preview">
-      ${src
-        ? html`<object type="application/pdf" data=${src}></object>`
-        : html`<p class="placeholder">Aperçu en attente…</p>`}
-    </section>
-  `;
+  // Le composant vit dans le canvas central : il ne rend que l'apercu, les erreurs
+  // etant affichees sous lui par l'application.
+  return src
+    ? html`<object type="application/pdf" data=${src}></object>`
+    : html`<p class="placeholder">Aperçu en attente…</p>`;
 }

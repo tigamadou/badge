@@ -5,13 +5,6 @@ import { ContextForm } from "/ui/context-form.js";
 import { BlocksEditor } from "/ui/blocks-editor.js";
 import { MetaPanel } from "/ui/meta-panel.js";
 
-const TABS = [
-  ["context", "Contexte"],
-  ["blocks", "Blocs"],
-  ["package", "Paquet"],
-  ["json", "JSON"],
-];
-
 const NAME_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 // Les erreurs de validation nomment leur bloc (« bloc 3 : ... ») : on les range
@@ -34,7 +27,9 @@ function App() {
   const [manifestText, setManifestText] = useState("");
   // `null` = contexte par defaut du serveur ; l'onglet Contexte le remplace.
   const [context, setContext] = useState(null);
-  const [tab, setTab] = useState("blocks");
+  // Chemin du bloc selectionne (tableau d'indices) ou null : il pilote l'inspecteur.
+  const [selection, setSelection] = useState(null);
+  const [rightView, setRightView] = useState("inspector");
   const [errors, setErrors] = useState([]);
   const [status, setStatus] = useState("");
   const [schemaInfo, setSchemaInfo] = useState(null);
@@ -57,6 +52,7 @@ function App() {
     setManifestText(read.manifest);
     setAssets(read.assets ?? []);
     setErrors([]);
+    setSelection(null);
   }, []);
 
   // Rechargement des seules ressources : appele apres un depot de fichier, pour
@@ -135,71 +131,75 @@ function App() {
       >
         ${templates.map((t) => html`<option value=${t.name}>${t.name}</option>`)}
       </select>
-      <button type="button" onClick=${createTemplate}>Nouveau template</button>
+      <button type="button" onClick=${createTemplate}>Nouveau</button>
       <button type="button" onClick=${save}>Enregistrer</button>
       <button type="button" onClick=${pack}>Générer le paquet</button>
+      <button
+        type="button"
+        class=${rightView === "json" ? "active" : ""}
+        onClick=${() => setRightView(rightView === "json" ? "inspector" : "json")}
+      >
+        JSON
+      </button>
       <span role="status">${status}</span>
     </header>
-    <main>
-      <section class="editor">
-        <nav class="tabs">
-          ${TABS.map(
-            ([id, label]) => html`
-              <button
-                type="button"
-                class=${tab === id ? "active" : ""}
-                onClick=${() => setTab(id)}
-              >
-                ${label}
-              </button>
-            `,
-          )}
-        </nav>
 
-        ${tab === "json"
+    <main class="cols">
+      <aside class="left">
+        <h2 class="panel-title">Blocs</h2>
+        ${manifest
+          ? html`<${BlocksEditor}
+              manifest=${manifest}
+              schemaInfo=${schemaInfo}
+              assets=${assets}
+              blockErrors=${blockErrors}
+              onChange=${updateManifest}
+            />`
+          : html`<p class="placeholder">Corrigez le JSON pour éditer les blocs.</p>`}
+
+        <div class="context-panel">
+          <h2 class="panel-title">Contexte</h2>
+          <${ContextForm} context=${context} schemaInfo=${schemaInfo} onChange=${setContext} />
+        </div>
+      </aside>
+
+      <section class="canvas">
+        <${Preview}
+          name=${current}
+          manifestText=${manifestText}
+          context=${context}
+          onErrors=${setErrors}
+          onStatus=${setStatus}
+        />
+        ${errors.length > 0
+          ? html`<ul class="errors-strip">
+              ${errors.map((e) => html`<li>${e}</li>`)}
+            </ul>`
+          : null}
+      </section>
+
+      <aside class="right">
+        ${rightView === "json"
           ? html`<textarea
+              class="json"
               spellcheck="false"
               aria-label="Manifeste"
               value=${manifestText}
               onInput=${(e) => setManifestText(e.target.value)}
             ></textarea>`
-          : tab === "context"
-            ? html`<${ContextForm}
-                context=${context}
-                schemaInfo=${schemaInfo}
-                onChange=${setContext}
-              />`
-            : tab === "package"
-              ? manifest
-                ? html`<${MetaPanel}
-                    name=${current}
-                    manifest=${manifest}
-                    assets=${assets}
-                    onChange=${updateManifest}
-                    onAssetsChanged=${refreshAssets}
-                  />`
-                : html`<p class="placeholder">Corrigez le JSON pour éditer le paquet.</p>`
-              : manifest
-              ? html`<${BlocksEditor}
+          : manifest
+            ? html`
+                <h2 class="panel-title">Paquet</h2>
+                <${MetaPanel}
+                  name=${current}
                   manifest=${manifest}
-                  schemaInfo=${schemaInfo}
                   assets=${assets}
-                  blockErrors=${blockErrors}
                   onChange=${updateManifest}
-                />`
-              : html`<p class="placeholder">Corrigez le JSON pour éditer les blocs.</p>`}
-
-        <ul class="errors" hidden=${errors.length === 0}>
-          ${errors.map((e) => html`<li>${e}</li>`)}
-        </ul>
-      </section>
-      <${Preview}
-        name=${current}
-        manifestText=${manifestText}
-        context=${context}
-        onErrors=${setErrors}
-        onStatus=${setStatus}
-      />
+                  onAssetsChanged=${refreshAssets}
+                />
+              `
+            : html`<p class="placeholder">Corrigez le JSON pour éditer le paquet.</p>`}
+      </aside>
     </main>
   `;
 }

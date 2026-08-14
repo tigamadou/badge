@@ -20,7 +20,7 @@
 | 4. Type `group` (conteneur récursif) | [x] | 2026-08-14 | |
 | 5. Doc du format (feature + scaffold) | [x] | 2026-08-14 | Lot A termine, lint/typecheck/test verts |
 | 6. `blocks-tree.js` : opérations d'arbre pures (TDD) | [x] | 2026-08-14 | |
-| 7. Layout 3 colonnes + thème sombre + bascule JSON | [ ] | | |
+| 7. Layout 3 colonnes + thème sombre + bascule JSON | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
 | 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [ ] | | |
 | 9. Inspecteur : contrôles par nature + Paquet par défaut | [ ] | | |
 | 10. Contexte en bas à gauche + erreurs canvas + doc + vérif finale | [ ] | | |
@@ -552,7 +552,7 @@ describe("blocks-tree", () => {
   <aside class="right">  rightView === "json" ? <textarea JSON> : selection ? <BlockInspector/> : <MetaPanel/>
 ```
 
-- [ ] **Step 1 : `styles.css`** — réécriture complète, thème sombre unique via variables :
+- [x] **Step 1 : `styles.css`** — réécriture complète, thème sombre unique via variables :
 
 ```css
 :root {
@@ -578,7 +578,7 @@ main.cols { flex: 1; display: grid; grid-template-columns: 280px 1fr 300px; min-
 ```
 
   (+ styles boutons/inputs/selects sombres, `.errors-strip` en bandeau bas du canvas, `.tabs` supprimés).
-- [ ] **Step 2 : `app.js`** — retirer l'état `tab` et le rendu par onglets ; ajouter `selection`/`rightView` ; le header gagne un bouton `JSON` (classe `active` quand `rightView === "json"`) ; colonne droite :
+- [x] **Step 2 : `app.js`** — retirer l'état `tab` et le rendu par onglets ; ajouter `selection`/`rightView` ; le header gagne un bouton `JSON` (classe `active` quand `rightView === "json"`) ; colonne droite :
 
 ```js
 ${rightView === "json"
@@ -592,9 +592,9 @@ ${rightView === "json"
 ```
 
   La colonne gauche rend `BlocksEditor` existant (restylé en Task 8) et, dessous, `ContextForm` existant (repositionné en Task 10) — le studio reste fonctionnel à chaque task. `selection` est remis à `null` quand le template change ou quand le JSON devient invalide.
-- [ ] **Step 3 : `preview.js`** — le composant rend dans `.canvas` ; les erreurs ne s'affichent plus dans la colonne éditeur mais remontent à `app.js` qui les rend en `.errors-strip` sous l'aperçu (max ~3 lignes, défilement).
-- [ ] **Step 4 : Vérification** — `curl -s http://localhost:3786/ | grep app.js` (le shell sert), `curl` sur `/styles.css` (nouvelles variables présentes) ; noter la passe visuelle manuelle dans la Progression.
-- [ ] **Step 5 : Point de commit** — `feat(v4): studio en trois colonnes, theme sombre et bascule JSON`
+- [x] **Step 3 : `preview.js`** — le composant rend dans `.canvas` ; les erreurs ne s'affichent plus dans la colonne éditeur mais remontent à `app.js` qui les rend en `.errors-strip` sous l'aperçu (max ~3 lignes, défilement).
+- [x] **Step 4 : Vérification** — `curl -s http://localhost:3786/ | grep app.js` (le shell sert), `curl` sur `/styles.css` (nouvelles variables présentes) ; noter la passe visuelle manuelle dans la Progression.
+- [x] **Step 5 : Point de commit** — `feat(v4): studio en trois colonnes, theme sombre et bascule JSON`
 
 ### Task 8 : Panneau Blocs — arbre, renommage, grouper/dégrouper
 
