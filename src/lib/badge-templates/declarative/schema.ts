@@ -39,7 +39,13 @@ const baseShape = {
 };
 
 const blockSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("text"), text: z.string().min(1), style: styleSchema, ...baseShape }),
+  z.object({
+    type: z.literal("text"),
+    text: z.string().min(1),
+    style: styleSchema,
+    rotate: z.number().min(-360).max(360).optional(),
+    ...baseShape,
+  }),
   z.object({
     type: z.literal("image"),
     source: z.string().optional(),

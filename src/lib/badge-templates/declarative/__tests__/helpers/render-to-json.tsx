@@ -15,6 +15,8 @@ export type Collected = {
   // layout absolu atteignent le meme resultat visuel par des moyens differents, donc
   // comparer leurs coordonnees n'aurait aucun sens. Le placement se verifie a l'oeil.
   textStyles: Array<Record<string, unknown>>;
+  // Chaines de transformation CSS rencontrees sur n'importe quel noeud (rotation).
+  transforms: string[];
   pageCount: number;
 };
 
@@ -72,6 +74,7 @@ function walk(node: ReactNode, out: Collected): void {
   }
 
   if (typeof style.backgroundColor === "string") out.fills.push(style.backgroundColor);
+  if (typeof style.transform === "string") out.transforms.push(style.transform);
 
   walk(props.children ?? null, out);
 }
@@ -86,6 +89,7 @@ export function renderToJson(
     fills: [],
     fontSizes: [],
     textStyles: [],
+    transforms: [],
     pageCount: 0,
   };
   walk(createElement(Component, { ctx }), out);

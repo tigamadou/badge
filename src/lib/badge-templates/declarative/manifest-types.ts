@@ -43,7 +43,14 @@ type BlockBase = {
 // `text` est un gabarit : les segments `{chemin}` sont remplaces par la valeur du
 // contexte, le reste est litteral. Permet « {participant.firstName} {participant.lastName} »
 // ou « #{badge.id} » sans multiplier les blocs.
-export type TextBlock = BlockBase & { type: "text"; text: string; style: TextStyle };
+// `rotate` (degres, sens horaire) pivote le bloc autour de son centre : declarer le
+// cadre NON pivote (comme dans Figma avant rotation), la rotation s'applique ensuite.
+export type TextBlock = BlockBase & {
+  type: "text";
+  text: string;
+  style: TextStyle;
+  rotate?: number;
+};
 
 export type ImageBlock = BlockBase & {
   type: "image";

@@ -14,7 +14,7 @@ export const SAMPLE_CONTEXT: TemplateContext = {
   event: {
     title: "Événement de démonstration",
     date: new Date("2027-12-15T00:00:00Z"),
-    location: "Niamey",
+    location: "Cotonou",
     logoDataUrl: null,
   },
   badge: {

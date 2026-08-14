@@ -108,6 +108,15 @@ describe("parseManifest", () => {
     expect(res.ok).toBe(true);
   });
 
+  it("accepte un bloc texte pivote", () => {
+    expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: 90 }] }).ok).toBe(true);
+    expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: -90 }] }).ok).toBe(true);
+  });
+
+  it("refuse une rotation hors bornes", () => {
+    expect(parse({ blocks: [{ ...VALID.blocks[0], rotate: 400 }] }).ok).toBe(false);
+  });
+
   it("accepte les styles de texte etendus", () => {
     const res = parse({
       blocks: [

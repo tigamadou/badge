@@ -228,6 +228,33 @@ describe("buildDeclarativeTemplate", () => {
     expect(renderToJson(t.Component, CTX).texts).toEqual(["…"]);
   });
 
+  it("pivote un bloc texte declarant rotate", () => {
+    const t = build(
+      manifest([
+        {
+          type: "text", page: 1, x: 217, y: 101, w: 112, h: 20, rotate: 90,
+          text: "{badge.id}",
+          style: { sizePx: 13, color: "#000000", overflow: "clip" },
+        },
+      ]),
+    );
+    const out = renderToJson(t.Component, CTX);
+    expect(out.texts).toEqual(["BDG-1"]);
+    expect(out.transforms).toContain("rotate(90deg)");
+  });
+
+  it("n'emet aucune transformation sans rotate", () => {
+    const t = build(
+      manifest([
+        {
+          type: "text", page: 1, x: 0, y: 0, w: 472, h: 94, text: "{badge.id}",
+          style: { sizePx: 38, color: "#000000", overflow: "clip" },
+        },
+      ]),
+    );
+    expect(renderToJson(t.Component, CTX).transforms).toEqual([]);
+  });
+
   it("utilise la police declaree par le manifeste", () => {
     const withFont: TemplateManifest = {
       ...manifest([

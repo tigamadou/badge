@@ -58,7 +58,15 @@ function renderText(
     block.style.overflow === "shrink" ? shrinkToFit(raw, block.style, block.w) : block.style.sizePx;
 
   return (
-    <View key={key} style={frame(block)}>
+    <View
+      key={key}
+      style={{
+        ...frame(block),
+        // Rotation autour du centre du cadre (transform-origin par defaut de
+        // @react-pdf) : le manifeste declare le cadre non pivote, comme Figma.
+        transform: block.rotate !== undefined ? `rotate(${block.rotate}deg)` : undefined,
+      }}
+    >
       <Text
         style={{
           fontFamily: block.style.font ? fontMap[block.style.font] : DEFAULT_FONT_FAMILY,

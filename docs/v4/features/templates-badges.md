@@ -220,7 +220,7 @@ hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
 
 | Type | Rôle | Champs propres |
 |---|---|---|
-| `text` | Un texte | `text` (gabarit), `style` |
+| `text` | Un texte | `text` (gabarit), `style`, `rotate` (degrés, sens horaire, ±360 ; pivote autour du centre du cadre — déclarer le cadre non pivoté, comme dans Figma) |
 | `image` | Une image | `source` **ou** `asset`, jamais les deux ; `radiusPx` |
 | `qr` | Le QR code du badge | — |
 | `rect` | Un aplat | `fill`, `radiusPx`, `borderTopPx`, `borderColor` |
