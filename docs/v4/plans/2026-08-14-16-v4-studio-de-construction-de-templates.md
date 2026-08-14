@@ -33,7 +33,7 @@
 | 3 | Validation et rendu — `render.tsx` | [x] | 2026-08-14 | 5 tests ; rendu PDF reel via buildDeclarativeTemplate |
 | 4 | Serveur HTTP — `server.ts` | [x] | 2026-08-14 | 9 tests par appels HTTP reels sur port ephemere |
 | 5 | Infrastructure — docker-compose, Caddy, Makefile | [x] | 2026-08-14 | service demarre, /api/templates repond. **`make dev-https-hosts` a lancer manuellement** (sudo) pour https://studio.badge.local ; localhost:3786 fonctionne sans |
-| 6 | Interface — page, édition, aperçu | [ ] | | |
+| 6 | Interface — page, édition, aperçu | [x] | 2026-08-14 | page et ressources en 200, rendu PDF reel verifie (20 Ko, variantes distinctes). **Recette visuelle (6 points) a faire par l'utilisateur** |
 | 7 | Documentation | [ ] | | |
 
 Statuts : `[ ]` pending · `[~]` in_progress · `[x]` completed · `[-]` abandoned.
@@ -1112,7 +1112,7 @@ Attendu : `essai-studio` apparaît avec `hasManifest: true`.
 
 Pas de test automatisé ici : outil de développement local, non déployé, et la politique de tests ne couvre pas les interfaces en unitaire. La vérification est visuelle, à l'étape 4.
 
-- [ ] **Étape 1 : Écrire la page**
+- [x] **Étape 1 : Écrire la page**
 
 Créer `studio/public/index.html` :
 
@@ -1147,7 +1147,7 @@ Créer `studio/public/index.html` :
 </html>
 ```
 
-- [ ] **Étape 2 : Écrire la feuille de style**
+- [x] **Étape 2 : Écrire la feuille de style**
 
 Créer `studio/public/styles.css` :
 
@@ -1231,7 +1231,7 @@ object {
 }
 ```
 
-- [ ] **Étape 3 : Écrire la logique client**
+- [x] **Étape 3 : Écrire la logique client**
 
 Créer `studio/public/app.js` :
 
@@ -1352,7 +1352,7 @@ async function boot() {
 boot();
 ```
 
-- [ ] **Étape 4 : Vérifier dans le navigateur — À LA CHARGE DE L'UTILISATEUR**
+- [x] **Étape 4 : Vérifier dans le navigateur — À LA CHARGE DE L'UTILISATEUR**
 
 > **En session automatisée, ne pas cocher cette étape comme vérifiée.** Un agent headless ne peut pas juger un rendu. Démarrer le service, vérifier que `GET /` répond 200 et que `POST /api/render` renvoie un PDF, puis cocher en consignant dans la table `## Progression` : « recette visuelle du studio à faire par l'utilisateur (6 points) ».
 
@@ -1369,7 +1369,7 @@ Ouvrir `http://localhost:3786`. Vérifier, sur le template `essai-studio` créé
 5. `Ctrl/Cmd+S` affiche « Enregistré » et le fichier sur le disque contient bien la nouvelle valeur ;
 6. recharger la page rouvre le manifeste enregistré.
 
-- [ ] **Étape 5 : Vérifier lint et types**
+- [x] **Étape 5 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck && make test
