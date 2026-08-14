@@ -1,9 +1,18 @@
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { listTemplates, readTemplate, saveAsset, writeManifest, type AssetDir } from "./workshop";
+import {
+  isValidTemplateName,
+  listTemplates,
+  readTemplate,
+  saveAsset,
+  writeManifest,
+  type AssetDir,
+} from "./workshop";
 import { buildContext, PRESETS, type ContextInput } from "./context";
 import { CONDITION_PATHS, SOURCES } from "../src/lib/badge-templates/declarative/sources";
+import { createSkeleton } from "../scripts/new-badge-template";
+import { packFromStudio } from "./pack";
 import { renderManifest } from "./render";
 
 // Resolu depuis la racine du depot plutot que depuis le fichier : `package.json` ne
@@ -64,6 +73,46 @@ async function handle(root: string, req: IncomingMessage, res: ServerResponse): 
 
   if (req.method === "GET" && path === "/api/templates") {
     sendJson(res, 200, { templates: await listTemplates(root) });
+    return;
+  }
+
+  if (req.method === "POST" && path === "/api/templates") {
+    const body = (await readBody(req)) as { name?: unknown } | null;
+    if (typeof body?.name !== "string" || !isValidTemplateName(body.name)) {
+      sendJson(res, 400, { error: "INVALID_NAME" });
+      return;
+    }
+    try {
+      createSkeleton(body.name, root);
+    } catch (err) {
+      // Le seul echec possible ici est un dossier deja present : le nom vient
+      // d'etre valide contre le meme motif que createSkeleton.
+      sendJson(res, 409, { error: (err as Error).message });
+      return;
+    }
+    sendJson(res, 201, { ok: true });
+    return;
+  }
+
+  const packMatch = /^\/api\/templates\/([^/]+)\/pack$/.exec(path);
+  if (req.method === "POST" && packMatch) {
+    const name = decodeURIComponent(packMatch[1]);
+    const body = (await readBody(req)) as { manifest?: unknown } | null;
+    if (typeof body?.manifest !== "string") {
+      sendJson(res, 400, { error: "INVALID_BODY" });
+      return;
+    }
+    const packed = await packFromStudio(root, name, body.manifest);
+    if (!packed.ok) {
+      sendJson(res, 422, { errors: packed.errors });
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": "application/zip",
+      "content-disposition": `attachment; filename="${name}.zip"`,
+      "cache-control": "no-store",
+    });
+    res.end(packed.zip);
     return;
   }
 

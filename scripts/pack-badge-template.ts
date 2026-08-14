@@ -12,11 +12,10 @@ function collect(dir: string, sub: string): Array<{ path: string; body: Buffer }
     .map((e) => ({ path: `${sub}/${e.name}`, body: readFileSync(join(full, e.name)) }));
 }
 
-// Empaquette un dossier de travail en archive installable. Le manifeste est valide
-// AVANT l'ecriture : mieux vaut echouer ici, ou le message est immediat, qu'au
-// televersement.
-export async function packTemplate(name: string, root: string): Promise<string> {
-  const dir = resolve(root, name);
+// Construit l'archive en memoire depuis un dossier de travail. Le manifeste est
+// valide AVANT l'ecriture : mieux vaut echouer ici, ou le message est immediat,
+// qu'au televersement. Partage avec le studio, qui empaquette sans passer par le CLI.
+export async function buildArchive(dir: string): Promise<Buffer> {
   if (!existsSync(dir)) {
     throw new Error(`dossier introuvable : ${dir}`);
   }
@@ -45,8 +44,14 @@ export async function packTemplate(name: string, root: string): Promise<string> 
   zip.file("manifest.json", JSON.stringify(parsed.manifest, null, 2));
   for (const file of files) zip.file(file.path, file.body);
 
+  return zip.generateAsync({ type: "nodebuffer" });
+}
+
+// Empaquette un dossier de travail en archive installable, ecrite a cote de lui.
+export async function packTemplate(name: string, root: string): Promise<string> {
+  const archive = await buildArchive(resolve(root, name));
   const target = resolve(root, `${name}.zip`);
-  writeFileSync(target, await zip.generateAsync({ type: "nodebuffer" }));
+  writeFileSync(target, archive);
   return target;
 }
 

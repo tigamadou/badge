@@ -23,7 +23,7 @@
 | 7. Contexte dynamique serveur (context.ts, render, presets) | [x] | 2026-08-14 | |
 | 8. Routes render/schema-info + statiques vendor-ui | [x] | 2026-08-14 | |
 | 9. Upload de ressources vers l'atelier | [x] | 2026-08-14 | |
-| 10. Scaffold + pack depuis le studio | [ ] | | |
+| 10. Scaffold + pack depuis le studio | [x] | 2026-08-14 | Lot B termine, lint/typecheck/test verts |
 | 11. UI : socle Preact (parité JSON + aperçu) | [ ] | | |
 | 12. UI : onglet Contexte | [ ] | | |
 | 13. UI : onglet Blocs | [ ] | | |
@@ -574,11 +574,11 @@ Côté serveur : un test 200 (upload PNG base64 → fichier présent puis visibl
   - `studio/pack.ts` : `export async function packFromStudio(root: string, name: string, manifest: string): Promise<{ ok: true; zip: Buffer } | { ok: false; errors: string[] }>` — `writeManifest` d'abord (le zip reflète TOUJOURS ce qui est enregistré), puis `buildArchive`, erreurs de validation capturées.
   - Serveur : `POST /api/templates` body `{ name }` → 201 `{ ok: true }` | 409 si existe | 400 (réutilise `createSkeleton` de `scripts/new-badge-template`) ; `POST /api/templates/:name/pack` body `{ manifest: string }` → 200 zip (`content-type: application/zip`, `content-disposition: attachment; filename="<name>.zip"`) | 422 `{ errors }` | 404.
 
-- [ ] **Step 1 : Tests qui échouent** — `pack.test.ts` : atelier temporaire contenant un template valide (manifeste minimal + `assets/apercu.png` factice PNG) → `packFromStudio` retourne `ok: true` et un buffer commençant par `PK` ; un manifeste invalide (JSON illisible, puis bloc fautif) → `ok: false` avec messages ; le manifeste passé est bien écrit sur disque avant pack (relire le fichier). Serveur : 201 sur création (`GET /api/templates` liste le nouveau), 409 sur doublon, 200 zip sur pack, 422 sinon.
-- [ ] **Step 2 : Vérifier l'échec.**
-- [ ] **Step 3 : Implémentation** — refactor `buildArchive` (déplacer le corps de `packTemplate`, la validation et JSZip ; `generateAsync({ type: "nodebuffer" })`) ; `studio/pack.ts` ; routes serveur (création : valider `isValidTemplateName`, `mkdir` absent → `createSkeleton(name, root)` dans un try/catch 409 sur « existe deja »).
-- [ ] **Step 4 : Vérifier le vert** — `yarn vitest run studio scripts` puis fin de lot : `make lint && make typecheck && make test`.
-- [ ] **Step 5 : Point de commit (proposer)** — `feat(v4): creation de template et generation du paquet depuis le studio`
+- [x] **Step 1 : Tests qui échouent** — `pack.test.ts` : atelier temporaire contenant un template valide (manifeste minimal + `assets/apercu.png` factice PNG) → `packFromStudio` retourne `ok: true` et un buffer commençant par `PK` ; un manifeste invalide (JSON illisible, puis bloc fautif) → `ok: false` avec messages ; le manifeste passé est bien écrit sur disque avant pack (relire le fichier). Serveur : 201 sur création (`GET /api/templates` liste le nouveau), 409 sur doublon, 200 zip sur pack, 422 sinon.
+- [x] **Step 2 : Vérifier l'échec.**
+- [x] **Step 3 : Implémentation** — refactor `buildArchive` (déplacer le corps de `packTemplate`, la validation et JSZip ; `generateAsync({ type: "nodebuffer" })`) ; `studio/pack.ts` ; routes serveur (création : valider `isValidTemplateName`, `mkdir` absent → `createSkeleton(name, root)` dans un try/catch 409 sur « existe deja »).
+- [x] **Step 4 : Vérifier le vert** — `yarn vitest run studio scripts` puis fin de lot : `make lint && make typecheck && make test`.
+- [x] **Step 5 : Point de commit (proposer)** — `feat(v4): creation de template et generation du paquet depuis le studio`
 
 ---
 

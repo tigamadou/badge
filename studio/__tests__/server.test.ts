@@ -154,6 +154,61 @@ describe("POST /api/templates/:name/assets", () => {
   });
 });
 
+describe("POST /api/templates", () => {
+  const create = (body: unknown) =>
+    fetch(`${base}/api/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  it("cree un squelette et l'expose a la liste", async () => {
+    expect((await create({ name: "forum" })).status).toBe(201);
+    const list = await fetch(`${base}/api/templates`).then((r) => r.json());
+    expect(list.templates.map((t: { name: string }) => t.name)).toContain("forum");
+  });
+
+  it("repond 409 quand le dossier existe deja", async () => {
+    expect((await create({ name: "salon" })).status).toBe(409);
+  });
+
+  it("repond 400 pour un nom invalide", async () => {
+    expect((await create({ name: "Pas Valide" })).status).toBe(400);
+    expect((await create({})).status).toBe(400);
+  });
+});
+
+describe("POST /api/templates/:name/pack", () => {
+  const pack = (name: string, manifest: unknown) =>
+    fetch(`${base}/api/templates/${name}/pack`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ manifest }),
+    });
+
+  it("renvoie l'archive du template", async () => {
+    const res = await pack("salon", MINIMAL);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("application/zip");
+    expect(res.headers.get("content-disposition")).toContain('filename="salon.zip"');
+    const zip = Buffer.from(await res.arrayBuffer());
+    expect(zip.subarray(0, 2).toString("latin1")).toBe("PK");
+  });
+
+  it("repond 422 pour un manifeste invalide", async () => {
+    expect((await pack("salon", "{ pas du json")).status).toBe(422);
+  });
+
+  it("repond 400 sans manifeste", async () => {
+    const res = await fetch(`${base}/api/templates/salon/pack`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("POST /api/render", () => {
   it("rend avec un contexte partiel fourni", async () => {
     const res = await fetch(`${base}/api/render`, {
