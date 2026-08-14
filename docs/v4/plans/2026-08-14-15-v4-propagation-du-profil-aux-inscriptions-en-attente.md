@@ -31,7 +31,7 @@
 | 1 | Type d'action `REGISTRATION_SNAPSHOT_REFRESHED` | [x] | 2026-08-14 | 2 tests ; enum propage par `make db-push` |
 | 2 | Module de synchronisation — sélection et réécriture | [x] | 2026-08-14 | 6 tests verts |
 | 3 | Module de synchronisation — règle de blocage document | [x] | 2026-08-14 | 9 tests ; couverture module 100% (make test-coverage global tombe en OOM, couverture ciblee utilisee) |
-| 4 | Branchement dans `PUT /api/account/profile` + audit | [ ] | | |
+| 4 | Branchement dans `PUT /api/account/profile` + audit | [x] | 2026-08-14 | 3 tests API + 1 E2E ; suite complete verte (1549 tests) |
 | 5 | Détail d'inscription côté organisation — retrait de l'encart | [ ] | | |
 | 6 | Documentation | [ ] | | |
 
@@ -665,7 +665,7 @@ Attendu : `src/lib/registration-snapshot-sync.ts` à 100 % en lignes, branches, 
 - Consomme : `refreshPendingRegistrationSnapshots()` (Tasks 2-3) et la valeur `REGISTRATION_SNAPSHOT_REFRESHED` (Task 1).
 - Produit : le comportement final visible du côté API ; rien n'en dépend en aval.
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Ajouter à `src/app/api/account/__tests__/profile.test.ts` un `describe` dédié. Il réutilise `withSession`, `makeReq` et `COMPLETE_PROFILE` déjà définis dans le fichier :
 
@@ -778,7 +778,7 @@ describe("PUT /api/account/profile — propagation aux inscriptions en attente",
 
 Le troisième test passe un numéro bloqué **au niveau de l'événement** : le blocage plateforme (`eventId: null`) est déjà refusé en amont par la route avec un 403 (`src/app/api/account/profile/route.ts:111-121`), il ne peut donc pas atteindre la propagation.
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/app/api/account/__tests__/profile.test.ts
@@ -786,7 +786,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/app/api/ac
 
 Attendu : ÉCHEC — le snapshot reste sur l'ancienne photo et aucun `ActivityLog` n'est créé.
 
-- [ ] **Étape 3 : Implémenter le branchement**
+- [x] **Étape 3 : Implémenter le branchement**
 
 Dans `src/app/api/account/profile/route.ts`, ajouter les imports :
 
@@ -817,7 +817,7 @@ puis, juste après l'appel `await submitProfile(session.id);` et avant le `retur
     }
 ```
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run src/app/api/account/__tests__/profile.test.ts
@@ -825,7 +825,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run src/app/api/ac
 
 Attendu : SUCCÈS.
 
-- [ ] **Étape 5 : Écrire le test E2E de bout en bout**
+- [x] **Étape 5 : Écrire le test E2E de bout en bout**
 
 Ajouter dans `e2e/public/account-profile.spec.ts`, à l'intérieur du `test.describe` existant. Il suit le test « upload photo persists » déjà présent, en y ajoutant une inscription en attente :
 
@@ -867,7 +867,7 @@ Ajouter dans `e2e/public/account-profile.spec.ts`, à l'intérieur du `test.desc
 
 Compléter l'import du fichier avec `createTestEvent` et `createTestRegistration`, déjà exportés par `e2e/helpers/db.ts`.
 
-- [ ] **Étape 6 : Lancer le test E2E et vérifier qu'il passe**
+- [x] **Étape 6 : Lancer le test E2E et vérifier qu'il passe**
 
 ```bash
 make test-e2e
@@ -875,7 +875,7 @@ make test-e2e
 
 Attendu : SUCCÈS. Si l'exécution est lancée avant la Task 4, ce test échoue — c'est le comportement attendu d'un test écrit avant son implémentation.
 
-- [ ] **Étape 7 : Lancer la suite complète**
+- [x] **Étape 7 : Lancer la suite complète**
 
 ```bash
 make lint && make typecheck && make test

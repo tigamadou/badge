@@ -2,6 +2,8 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestUser,
+  createTestEvent,
+  createTestRegistration,
   getUserById,
   getDb,
   disconnectDb,
@@ -192,5 +194,39 @@ test.describe("Account profile edit", () => {
 
     await page.goto("/account/profile/complete");
     await expect(page.getByRole("heading", { name: /compléter votre profil/i })).toBeVisible();
+  });
+
+  test("la nouvelle photo se propage a l'inscription en attente", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({
+      scope: "profile-photo-propagation",
+      verified: true,
+      profile: true,
+    });
+    const { eventId, categoryId } = await createTestEvent({ scope: "photo-propagation" });
+    const reg = await createTestRegistration({
+      eventId,
+      userId: user.id,
+      categoryId,
+      status: "PENDING",
+    });
+    const before = await getDb().registration.findUnique({
+      where: { id: reg.id },
+      select: { snapshotPhoto: true },
+    });
+
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+    await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.jpeg);
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+    await page.waitForTimeout(800);
+
+    const after = await getDb().registration.findUnique({
+      where: { id: reg.id },
+      select: { snapshotPhoto: true },
+    });
+    expect(after?.snapshotPhoto).not.toBe(before?.snapshotPhoto);
+    expect(after?.snapshotPhoto).toMatch(/^profile\/.+\/photos\/.+\.jpg$/);
   });
 });

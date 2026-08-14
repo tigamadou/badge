@@ -352,3 +352,108 @@ describe("PUT /api/account/profile", () => {
     });
   });
 });
+
+describe("PUT /api/account/profile — propagation aux inscriptions en attente", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  async function seedPendingRegistration(scope: string) {
+    const user = await prisma.user.create({
+      data: {
+        email: `sync-${scope}@profile.test`,
+        password: "x",
+        name: "P",
+        ...COMPLETE_PROFILE,
+      },
+    });
+    const org = await prisma.organization.create({
+      data: { name: `Org ${scope}`, slug: `org-sync-${scope}` },
+    });
+    const event = await prisma.event.create({
+      data: {
+        orgId: org.id,
+        title: "Event",
+        slug: `event-sync-${scope}`,
+        location: "L",
+        date: new Date("2026-12-15"),
+      },
+    });
+    const category = await prisma.category.create({
+      data: { eventId: event.id, name: "Cat", color: "#123456", number: 1 },
+    });
+    const registration = await prisma.registration.create({
+      data: {
+        id: `reg-profile-${scope}`,
+        userId: user.id,
+        eventId: event.id,
+        categoryId: category.id,
+        status: "PENDING",
+        snapshotFirstName: COMPLETE_PROFILE.firstName,
+        snapshotLastName: COMPLETE_PROFILE.lastName,
+        snapshotEmail: user.email,
+        snapshotStructure: COMPLETE_PROFILE.structure,
+        snapshotPhoto: COMPLETE_PROFILE.photo,
+        snapshotIdDocumentType: COMPLETE_PROFILE.idDocumentType,
+        snapshotIdDocumentNumber: COMPLETE_PROFILE.idDocumentNumber,
+        snapshotIdDocument: COMPLETE_PROFILE.idDocument,
+      },
+    });
+    return { user, org, event, registration };
+  }
+
+  it("repercute la nouvelle photo jusqu'au snapshot et journalise", async () => {
+    const { user, org, event, registration } = await seedPendingRegistration("a");
+    await withSession({ id: user.id, email: user.email, name: user.name, isStaff: false });
+
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq({ photo: "profile/u/photos/new.jpg" }, "PUT"));
+
+    expect(res.status).toBe(200);
+    const after = await prisma.registration.findUniqueOrThrow({ where: { id: registration.id } });
+    expect(after.snapshotPhoto).toBe("profile/u/photos/new.jpg");
+
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "REGISTRATION_SNAPSHOT_REFRESHED", targetId: registration.id },
+    });
+    expect(log).not.toBeNull();
+    expect(log?.eventId).toBe(event.id);
+    expect(log?.orgId).toBe(org.id);
+    expect(log?.userId).toBe(user.id);
+    expect(log?.details).toMatchObject({ outcome: "refreshed" });
+  });
+
+  it("ne journalise rien quand aucun champ de snapshot ne change", async () => {
+    const { user } = await seedPendingRegistration("b");
+    await withSession({ id: user.id, email: user.email, name: user.name, isStaff: false });
+
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq({ photo: COMPLETE_PROFILE.photo }, "PUT"));
+
+    expect(res.status).toBe(200);
+    const count = await prisma.activityLog.count({
+      where: { type: "REGISTRATION_SNAPSHOT_REFRESHED" },
+    });
+    expect(count).toBe(0);
+  });
+
+  it("journalise le saut quand le nouveau numero de piece est bloque", async () => {
+    const { user, event, registration } = await seedPendingRegistration("c");
+    await prisma.blockedDocument.create({
+      data: { eventId: event.id, documentNumber: "BLOQUE-9", reason: "Fraude" },
+    });
+    await withSession({ id: user.id, email: user.email, name: user.name, isStaff: false });
+
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq({ idDocumentNumber: "BLOQUE-9" }, "PUT"));
+
+    expect(res.status).toBe(200);
+    const after = await prisma.registration.findUniqueOrThrow({ where: { id: registration.id } });
+    expect(after.snapshotIdDocumentNumber).toBe(COMPLETE_PROFILE.idDocumentNumber);
+
+    const log = await prisma.activityLog.findFirstOrThrow({
+      where: { type: "REGISTRATION_SNAPSHOT_REFRESHED", targetId: registration.id },
+    });
+    expect(log.details).toMatchObject({ outcome: "skipped_document_blocked" });
+  });
+});

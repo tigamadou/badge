@@ -6,6 +6,7 @@ import { logActivity } from "@/lib/activity-log";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { computeParticipantProfileCompletedAt } from "@/lib/participant-profile";
 import { submitProfile, getCurrentSubmission } from "@/lib/profile-review";
+import { refreshPendingRegistrationSnapshots } from "@/lib/registration-snapshot-sync";
 
 const ID_DOC_TYPES = ["CNI", "Passeport", "Permis", "Autre"] as const;
 
@@ -158,6 +159,25 @@ export async function PUT(req: NextRequest) {
     // repasse le profil en attente de validation. Les champs non lies a l'identite
     // (nom, prenom, structure) ne declenchent rien : submitProfile compare les pieces.
     await submitProfile(session.id);
+
+    // v4 (plan 15) : les inscriptions encore en attente suivent le profil. Une
+    // inscription validee reste figee. Pas de catch : masquer un echec ici ne se
+    // verrait qu'a l'impression du badge, et l'operation est idempotente.
+    const refreshed = await refreshPendingRegistrationSnapshots(session.id);
+    for (const outcome of refreshed) {
+      await logActivity({
+        type: "REGISTRATION_SNAPSHOT_REFRESHED",
+        userId: session.id,
+        targetId: outcome.registrationId,
+        eventId: outcome.eventId,
+        orgId: outcome.orgId,
+        details:
+          outcome.outcome === "refreshed"
+            ? { outcome: outcome.outcome, fields: outcome.fields }
+            : { outcome: outcome.outcome },
+        req,
+      });
+    }
 
     return NextResponse.json({ user: updated });
   } catch (err) {
