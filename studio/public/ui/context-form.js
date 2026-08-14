@@ -1,5 +1,6 @@
 import { html } from "/vendor/preact-htm.mjs";
 import { readAsDataUrl } from "/ui/api.js";
+import { Dropzone } from "/ui/controls.js";
 
 // Formulaire du contexte de previsualisation. Il produit un ContextInput partiel
 // (voir studio/context.ts) : les champs vides retombent sur les defauts du serveur.
@@ -29,19 +30,15 @@ function Toggle({ label, checked, onValue }) {
 
 function ImagePicker({ label, value, onValue }) {
   return html`
-    <${Field} label=${label}>
-      <span class="row">
-        <input
-          type="file"
-          accept="image/png,image/jpeg"
-          onChange=${async (e) => {
-            const file = e.target.files?.[0];
-            if (file) onValue(await readAsDataUrl(file));
-          }}
-        />
-        ${value ? html`<button type="button" onClick=${() => onValue("")}>Retirer</button>` : null}
-      </span>
-    <//>
+    <div class="row">
+      <${Dropzone}
+        label=${label}
+        accept="image/png,image/jpeg"
+        preview=${value || null}
+        onFile=${async (file) => onValue(await readAsDataUrl(file))}
+      />
+      ${value ? html`<button type="button" onClick=${() => onValue("")}>Retirer</button>` : null}
+    </div>
   `;
 }
 
@@ -57,7 +54,7 @@ export function ContextForm({ context, schemaInfo, onChange }) {
 
   return html`
     <div class="form">
-      <section>
+      <div class="presets">
         <h2>Préréglages</h2>
         <div class="row wrap">
           ${(schemaInfo?.presets ?? []).map(
@@ -66,10 +63,10 @@ export function ContextForm({ context, schemaInfo, onChange }) {
             `,
           )}
         </div>
-      </section>
+      </div>
 
-      <section>
-        <h2>Participant</h2>
+      <details open>
+        <summary>Participant</summary>
         <${Text}
           label="Prénom"
           value=${value.participant?.firstName}
@@ -90,10 +87,10 @@ export function ContextForm({ context, schemaInfo, onChange }) {
           value=${value.participant?.photoDataUrl}
           onValue=${(v) => patch("participant", { photoDataUrl: v })}
         />
-      </section>
+      </details>
 
-      <section>
-        <h2>Catégorie</h2>
+      <details>
+        <summary>Catégorie</summary>
         <${Text}
           label="Libellé"
           value=${value.category?.name}
@@ -115,10 +112,10 @@ export function ContextForm({ context, schemaInfo, onChange }) {
           checked=${value.category?.neutralBadge}
           onValue=${(v) => patch("category", { neutralBadge: v })}
         />
-      </section>
+      </details>
 
-      <section>
-        <h2>Événement</h2>
+      <details>
+        <summary>Événement</summary>
         <${Text}
           label="Titre"
           value=${value.event?.title}
@@ -140,10 +137,10 @@ export function ContextForm({ context, schemaInfo, onChange }) {
           value=${value.event?.logoDataUrl}
           onValue=${(v) => patch("event", { logoDataUrl: v || null })}
         />
-      </section>
+      </details>
 
-      <section>
-        <h2>Badge</h2>
+      <details>
+        <summary>Badge</summary>
         <${Text}
           label="Identifiant"
           value=${value.badge?.id}
@@ -154,7 +151,7 @@ export function ContextForm({ context, schemaInfo, onChange }) {
           value=${value.badge?.verifyUrl}
           onValue=${(v) => patch("badge", { verifyUrl: v })}
         />
-      </section>
+      </details>
     </div>
   `;
 }

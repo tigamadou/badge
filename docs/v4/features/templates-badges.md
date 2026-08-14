@@ -107,19 +107,32 @@ make pack-badge-template NAME=salon-2027  # produit l'archive
 ```
 
 Le **studio** (`make studio`) est un outil de développement local, jamais déployé, qui
-ne connaît ni la base ni le stockage. Il se compose de quatre onglets à gauche et d'un
-**aperçu PDF permanent** à droite, rafraîchi à chaque modification. Le rendu porte sur le
-texte de l'éditeur, donc avant enregistrement ; un manifeste invalide affiche ses erreurs
-sans effacer l'aperçu précédent.
+ne connaît ni la base ni le stockage. Son interface est organisée **en trois colonnes**,
+sur un thème sombre :
 
-| Onglet | Rôle |
+| Colonne | Contenu |
 |---|---|
-| **Contexte** | Le jeu de données du rendu, entièrement libre : identité et structure du participant, **photo** et **logo** déposés depuis le navigateur, catégorie (libellé, couleur, bascules *anonyme* et *neutre*), titre / lieu / date de l'événement, identifiant et URL de vérification (le QR est produit pour de vrai). Cinq **préréglages** — participant complet, sans photo, catégorie anonyme, badge neutre, textes très longs — préremplissent le formulaire pour éprouver les `visibleIf` et les modes de débordement. |
-| **Blocs** | L'éditeur dynamique : ajouter un bloc par type, le dupliquer, le déplacer, le supprimer ; chaque bloc déplié offre ses champs typés (position, rotation, opacité, coins, bordures, style de texte complet, cadrage d'image, conditions d'affichage). Les sources et chemins autorisés sont proposés en listes déroulantes, et un avertissement signale un cadre texte trop bas pour sa police. |
-| **Paquet** | Famille, libellé, description, dimensions de page, image d'aperçu, polices déclarées (alias, fichier, graisse, italique) et **dépôt de ressources** dans `assets/` / `fonts/` — avec les mêmes contrôles qu'à l'installation (type déduit des octets, 5 Mo pour une image, 2 Mo pour une police). |
-| **JSON** | Le manifeste brut, synchronisé dans les deux sens avec les onglets Blocs et Paquet : le formulaire pour le confort, le JSON pour les cas fins et le copier-coller. |
+| **Gauche** | En haut le **panneau de calques** : l'arbre des blocs, sans numéros — icône et libellé de type (Texte, Rectangle, Carré, Cercle, QR Code, Groupe) ou le `name` du bloc. Sélection au clic, renommage inline (✎), déplacement, duplication, suppression au survol ; cases à cocher pour **Grouper** des frères, bouton **Dégrouper** sur un groupe. En bas le **contexte** de prévisualisation en sections repliables (participant, catégorie, événement, badge) avec ses préréglages et le dépôt de photo / logo. |
+| **Centre** | Le **canevas** : l'aperçu PDF rafraîchi à chaque modification, et sous lui le bandeau des erreurs de validation — les erreurs localisées (« bloc 3 › 2 ») marquent aussi l'entrée fautive de l'arbre. |
+| **Droite** | L'**inspecteur** du bloc sélectionné, dont les paramètres sont regroupés **par fonction** : Identité, Disposition, Apparence, Coins et bordures, Typographie, Contenu, Conditions. Sans sélection, la colonne affiche les propriétés du **paquet** (famille, libellé, description, aperçu, polices, dépôt de ressources). Le bouton **JSON** de la barre supérieure y bascule le manifeste brut, synchronisé dans les deux sens. |
 
-Deux boutons complètent la barre supérieure : **Nouveau template** (même squelette que
+Les contrôles suivent la nature de la donnée : grille **X Y L H** pour la géométrie,
+sliders pour la rotation et l'opacité, boutons segmentés pour les choix fermés
+(alignement, casse, cadrage, débordement), bascules **I U S** pour le style de texte,
+pastille + hexadécimal + menu de sources pour les couleurs, zones de dépôt avec
+vignette pour les fichiers.
+
+Le rendu porte sur le texte de l'éditeur, donc avant enregistrement ; un manifeste
+invalide affiche ses erreurs sans effacer l'aperçu précédent. Un avertissement signale
+un cadre texte trop bas pour sa police.
+
+**Grouper** calcule le cadre englobant des blocs choisis et convertit leurs
+coordonnées en relatif : le PDF ne bouge pas d'un pixel. **Dégrouper** fait l'inverse,
+et refuse de s'appliquer à un groupe portant une rotation, une opacité ou une
+condition — ces effets de conteneur ne se reportent pas sur les enfants sans changer
+le rendu.
+
+Deux boutons complètent la barre supérieure : **Nouveau** (même squelette que
 `make new-badge-template`) et **Générer le paquet**, qui enregistre le manifeste puis
 télécharge le zip prêt à téléverser dans `/platform/badge-templates` — l'empaquetage
 passe par le même code que `make pack-badge-template`, donc aucun écart possible.

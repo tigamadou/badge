@@ -487,3 +487,34 @@ textarea.json {
 .block-form .field {
   grid-template-columns: 6.5rem 1fr;
 }
+
+/* ------------------------------------------------- panneau de contexte */
+
+.form details {
+  border-top: 1px solid var(--border);
+  padding-top: 0.35rem;
+}
+
+.form summary {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0.15rem 0;
+  list-style-position: inside;
+}
+
+.form details[open] {
+  padding-bottom: 0.35rem;
+}
+
+.form details > *:not(summary) {
+  margin-top: 0.3rem;
+}
+
+.presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}

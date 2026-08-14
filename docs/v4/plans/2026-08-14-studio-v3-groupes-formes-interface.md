@@ -23,7 +23,7 @@
 | 7. Layout 3 colonnes + thème sombre + bascule JSON | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
 | 8. Panneau Blocs : arbre, renommage, grouper/dégrouper | [x] | 2026-08-14 | Verif visuelle navigateur a faire a la main |
 | 9. Inspecteur : contrôles par nature + Paquet par défaut | [x] | 2026-08-14 | Sections fonctionnelles ; verif visuelle a faire a la main |
-| 10. Contexte en bas à gauche + erreurs canvas + doc + vérif finale | [ ] | | |
+| 10. Contexte en bas à gauche + erreurs canvas + doc + vérif finale | [x] | 2026-08-14 | Parcours API valide (groupe + cercle a fond image + carre + QR rendus) ; passe visuelle navigateur des criteres 2/3/4 a faire a la main |
 
 ## Global Constraints
 
@@ -661,8 +661,8 @@ export function Dropzone({ label, accept, preview, onFile })        // zone de d
 - Modify: `docs/v4/features/templates-badges.md` (section studio)
 - Modify: `docs/v4/plans/2026-08-14-studio-v3-groupes-formes-interface.md` (Progression)
 
-- [ ] **Step 1 : `context-form.js`** — envelopper chaque section (Participant, Catégorie, Événement, Badge) dans un `<details>` stylé (`<summary>` en `.panel-title`, Participant ouvert par défaut) ; presets en rangée de puces cliquables en tête ; uploads photo/logo en `Dropzone` avec vignette. Le panneau vit sous le panneau Blocs dans la colonne gauche (séparateur `border-top`).
-- [ ] **Step 2 : Bandeau d'erreurs** — sous l'aperçu dans `.canvas` : `.errors-strip` (fond `--danger` translucide, max 3 lignes avec défilement) ; les erreurs localisées « bloc N › M » marquent aussi l'entrée correspondante de l'arbre (classe `.faulty` — adapter `groupErrorsByBlock` pour parser les chemins : `/^bloc ([\d ›]+)/` → tableau d'indices).
-- [ ] **Step 3 : Documentation** — dans `templates-badges.md`, réécrire la description du studio : trois colonnes (calques + contexte | canvas | inspecteur/Paquet/JSON), groupes (créer, imbriquer, renommer, dégrouper et sa restriction), formes carré/cercle, contrôles par nature, thème sombre.
-- [ ] **Step 4 : Vérification finale** — `make lint && make typecheck && make test` ; parcours curl complet (templates, render avec un manifeste contenant un groupe + carré + cercle nommés, pack) ; mettre à jour la table Progression en notant que **la passe visuelle navigateur (critères 2, 3, 4 de la spec) reste à faire à la main**.
-- [ ] **Step 5 : Point de commit** — `feat(v4): contexte repliable, erreurs sur canvas et doc du studio v3`
+- [x] **Step 1 : `context-form.js`** — envelopper chaque section (Participant, Catégorie, Événement, Badge) dans un `<details>` stylé (`<summary>` en `.panel-title`, Participant ouvert par défaut) ; presets en rangée de puces cliquables en tête ; uploads photo/logo en `Dropzone` avec vignette. Le panneau vit sous le panneau Blocs dans la colonne gauche (séparateur `border-top`).
+- [x] **Step 2 : Bandeau d'erreurs** — sous l'aperçu dans `.canvas` : `.errors-strip` (fond `--danger` translucide, max 3 lignes avec défilement) ; les erreurs localisées « bloc N › M » marquent aussi l'entrée correspondante de l'arbre (classe `.faulty` — adapter `groupErrorsByBlock` pour parser les chemins : `/^bloc ([\d ›]+)/` → tableau d'indices).
+- [x] **Step 3 : Documentation** — dans `templates-badges.md`, réécrire la description du studio : trois colonnes (calques + contexte | canvas | inspecteur/Paquet/JSON), groupes (créer, imbriquer, renommer, dégrouper et sa restriction), formes carré/cercle, contrôles par nature, thème sombre.
+- [x] **Step 4 : Vérification finale** — `make lint && make typecheck && make test` ; parcours curl complet (templates, render avec un manifeste contenant un groupe + carré + cercle nommés, pack) ; mettre à jour la table Progression en notant que **la passe visuelle navigateur (critères 2, 3, 4 de la spec) reste à faire à la main**.
+- [x] **Step 5 : Point de commit** — `feat(v4): contexte repliable, erreurs sur canvas et doc du studio v3`
