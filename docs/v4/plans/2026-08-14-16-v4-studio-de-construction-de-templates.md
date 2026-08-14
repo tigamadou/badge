@@ -29,7 +29,7 @@
 | Task | Description | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Accès à l'atelier — `workshop.ts` | [x] | 2026-08-14 | 9 tests ; `sniff` promu en export (153 tests badge-templates verts) |
-| 2 | Variantes de contexte — `contexts.ts` | [ ] | | |
+| 2 | Variantes de contexte — `contexts.ts` | [x] | 2026-08-14 | 6 tests ; ecart : le nom de la variante textes-longs du plan (26 car.) ne passait pas son propre seuil de 30, allonge |
 | 3 | Validation et rendu — `render.ts` | [ ] | | |
 | 4 | Serveur HTTP — `server.ts` | [ ] | | |
 | 5 | Infrastructure — docker-compose, Caddy, Makefile | [ ] | | |
@@ -333,7 +333,7 @@ export function buildVariantContext(id: string): Promise<TemplateContext | null>
 
 `buildVariantContext` est asynchrone parce que le QR est réellement produit. Elle renvoie `null` pour un identifiant inconnu, ce qui donne un `422` côté serveur.
 
-- [ ] **Étape 1 : Écrire les tests qui échouent**
+- [x] **Étape 1 : Écrire les tests qui échouent**
 
 Créer `studio/__tests__/contexts.test.ts` :
 
@@ -389,7 +389,7 @@ describe("buildVariantContext", () => {
 });
 ```
 
-- [ ] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
+- [x] **Étape 2 : Lancer les tests et vérifier qu'ils échouent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/contexts.test.ts
@@ -397,7 +397,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : ÉCHEC à la résolution — `Cannot find module '../contexts'`.
 
-- [ ] **Étape 3 : Écrire `contexts.ts`**
+- [x] **Étape 3 : Écrire `contexts.ts`**
 
 Créer `studio/contexts.ts` :
 
@@ -482,7 +482,7 @@ export async function buildVariantContext(id: string): Promise<TemplateContext |
 }
 ```
 
-- [ ] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
+- [x] **Étape 4 : Lancer les tests et vérifier qu'ils passent**
 
 ```bash
 docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests__/contexts.test.ts
@@ -490,7 +490,7 @@ docker compose -f docker-compose.dev.yml exec app yarn vitest run studio/__tests
 
 Attendu : SUCCÈS. Si `DEMO_PHOTO` est refusée par `@react-pdf` à la Task 3, la remplacer par un PNG de mêmes caractéristiques (encodage base64 d'un PNG 2×3 opaque) — jamais par un JPEG, `@react-pdf` étant plus strict sur ce format.
 
-- [ ] **Étape 5 : Vérifier lint et types**
+- [x] **Étape 5 : Vérifier lint et types**
 
 ```bash
 make lint && make typecheck
