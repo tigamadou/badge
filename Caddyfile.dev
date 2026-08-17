@@ -17,8 +17,3 @@ s3.badge.local {
 	tls internal
 	reverse_proxy minio:9001
 }
-
-studio.badge.local {
-	tls internal
-	reverse_proxy studio:3900
-}

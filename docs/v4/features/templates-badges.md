@@ -92,23 +92,27 @@ ou placeholder.
 
 ## Créer un template
 
-```bash
-make studio   # ouvre le studio sur http://localhost:3786
-# tout se fait ensuite dans le studio : creer le template, deposer les images
-# et les polices, composer les blocs, generer le paquet.
-```
+La création se fait dans **PDF Studio**, un projet dédié qui vit à côté de ce dépôt
+(`../pdfStudio`) : `make dev` là-bas, puis `http://pdfstudio.localhost` (ou
+`http://localhost:3900` en accès direct). Tout s'y fait : créer le template, déposer
+les images et les polices, composer les blocs, générer le paquet à téléverser ici.
 
-Le studio suffit de bout en bout ; les commandes restent disponibles pour un usage
-hors interface :
+> Historique : le studio a d'abord vécu dans ce dépôt (`studio/`, specs 16, 18, 19)
+> avant d'être extrait en projet autonome. Il embarque sa **propre copie** du moteur
+> déclaratif : toute évolution du format (`src/lib/badge-templates/declarative/`) doit
+> être **reportée dans pdfStudio**, et réciproquement, tant que l'application ne
+> consomme pas ce projet directement.
+
+Les commandes locales restent disponibles pour un usage hors interface :
 
 ```bash
 make new-badge-template NAME=salon-2027   # cree le squelette
 make pack-badge-template NAME=salon-2027  # produit l'archive
 ```
 
-Le **studio** (`make studio`) est un outil de développement local, jamais déployé, qui
-ne connaît ni la base ni le stockage. Son interface est organisée **en trois colonnes**,
-sur un thème sombre :
+Le studio est un outil de développement local, jamais déployé, qui ne connaît ni la
+base ni le stockage. Son interface est organisée **en trois colonnes**, sur un thème
+sombre :
 
 | Colonne | Contenu |
 |---|---|
@@ -135,13 +139,14 @@ le rendu.
 Deux boutons complètent la barre supérieure : **Nouveau** (même squelette que
 `make new-badge-template`) et **Générer le paquet**, qui enregistre le manifeste puis
 télécharge le zip prêt à téléverser dans `/platform/badge-templates` — l'empaquetage
-passe par le même code que `make pack-badge-template`, donc aucun écart possible.
+suit les mêmes règles de validation que l'installation, donc aucun écart possible.
 
 L'interface est écrite en **Preact + htm sans étape de build** : la bibliothèque est
-vendorisée dans `studio/public/vendor/` (version figée, licence MIT), les composants
-vivent dans `studio/public/ui/`.
+vendorisée (version figée, licence MIT) dans le projet pdfStudio (`src/public/vendor/`),
+les composants dans `src/public/ui/`.
 
-Le squelette naît dans `badge-templates/<nom>/`, à la racine du dépôt — un dossier
+Côté pdfStudio, l'atelier est `templates/<nom>/` (non versionné) ; côté badge, le
+squelette de `make new-badge-template` naît dans `badge-templates/<nom>/` — un dossier
 **gitignoré**, atelier de travail à ne pas confondre avec `prisma/badge-templates/`, qui
 contient les paquets de référence installés par le seed. Il contient un `manifest.json`
 minimal mais fonctionnel, un `README.md` documentant le format, et un dossier `assets/`.

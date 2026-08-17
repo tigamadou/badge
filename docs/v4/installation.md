@@ -14,7 +14,6 @@ sa CA interne (`tls internal`). Le HTTP est redirige vers HTTPS.
 | `app` | 3785 | `https://badge.local` | Next.js avec hot reload |
 | `mysql` | 33060 | -- | Base de donnees MySQL |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
-| `studio` | 3786 | `https://studio.badge.local` | Studio de construction de templates (dev) |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
 | `minio` | 9001 | `https://s3.badge.local` | Console MinIO (stockage S3) |
 | `caddy` | 80 / 443 | -- | Reverse proxy dev HTTPS |
