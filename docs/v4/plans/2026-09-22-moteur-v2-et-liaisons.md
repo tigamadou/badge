@@ -10,16 +10,36 @@
 
 **Spec:** `docs/v4/specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md`
 
+## Progression
+
+| Task | Intitulé | Statut | Date | Notes |
+|---|---|---|---|---|
+| 1 | Copier le moteur et sceller le dossier | [ ] | | |
+| 2 | `bindings.ts` — vocabulaire badge et validation | [ ] | | |
+| 3 | `build-values.ts` — du contexte aux valeurs | [ ] | | |
+| 4 | Colonne `bindings` en base | [ ] | | |
+| 5 | ◆ Bascule — moteur v2, route d'installation à liaisons | [ ] | | |
+| 6 | Route d'inspection et écran de liaison | [ ] | | |
+| 7 | Migration des templates installés (script, en dev) | [ ] | | |
+| 8 | Nettoyage et documentation | [ ] | | |
+| — | Vérification finale | [ ] | | |
+
+Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettre à jour la ligne après chaque task validée (tests verts + critères d'acceptation) ; en cas d'interruption, passer à `[~]` et noter précisément l'état.
+
 ## Global Constraints
 
+- **Aucun déploiement dans ce plan.** Le plan s'arrête sur la branche `development`, suite verte en local. Aucune commande `make prod-*`, `make preprod-*`, `make deploy`, `make upload`, ni connexion SSH. Le script de migration des lignes (tâche 7) ne s'exécute que contre la base **de dev**. La séquence de release décrite dans la spec (§ « Migration des lignes en base ») relève de l'utilisateur, hors plan.
+- **Aucun commit sans demande explicite de l'utilisateur.** Les étapes « Point de commit » proposent un message ; elles ne valent pas autorisation. Pas de trailer ni de mention d'outil IA dans les messages.
 - **`src/lib/badge-templates/engine/**` est scellé.** Il ne se modifie que par `scripts/sync-engine.ts`. Toute correction du moteur se fait **dans pdfStudio**, puis se resynchronise. Un agent qui veut « juste corriger une ligne » dans ce dossier doit s'arrêter et le signaler.
 - **Couverture 100 %** (lignes, branches, fonctions, instructions) sur `src/lib/**` et `src/app/api/**`, `engine/**` excepté (exclusion posée en tâche 1). Un test manquant casse la CI.
-- **Le dépôt pdfStudio doit être présent en `../pdfStudio`** pour les tâches 1 et 9. Sa branche doit être à jour : le portage copie l'état de `src/engine/` tel quel.
-- **Pas de `prisma/migrations`** dans ce dépôt : le schéma se pousse (`make db-push` en dev, `make prod-db-push` en prod).
+- **Le dépôt pdfStudio doit être présent en `../pdfStudio`**, branche à jour : le portage copie l'état de `src/engine/` tel quel. Il est **lu** en tâche 1 (sync-engine), en tâche 5 (copie de `src/server/migrate-v1.ts`, comparaison de `templates/ex-305v`) et à la vérification finale (sync sans diff).
+- **pdfStudio est hors de ce dépôt** : la seule écriture prévue là-bas (README, tâche 8, step 3) exige une **autorisation explicite de l'utilisateur** avant d'être faite, et ne se commite pas depuis ce dépôt.
+- **Pas de `prisma/migrations`** dans ce dépôt : le schéma se pousse (`make db-push`, en dev).
+- **Actions à demander avant** : `make db-reset` (destructif) et toute modification de `docker-compose*.yml`, `Dockerfile*`, `Caddyfile`, `.env*`.
 - Les tests partagent une base MySQL unique, remise à zéro avant chaque test (`src/test-setup.ts`) et exécutés **séquentiellement** (`fileParallelism: false`). Ne jamais supposer une base vierge autrement.
 - Commentaires **en français**, expliquant le *pourquoi*. C'est la norme du dépôt, y compris dans les fichiers copiés (ils viennent déjà ainsi).
 - Les 15 sources du domaine badge, avec leur type, sont **exactement** celles de l'actuel `src/lib/badge-templates/declarative/sources.ts`. Ne pas en inventer, ne pas en retirer.
-- Lancer un fichier de test : `npx vitest run <chemin>`. Toute la suite : `npm test`. Types : `npx tsc --noEmit`.
+- Les commandes tournent dans le **conteneur de dev** (`make dev` au préalable ; la base de test y est joignable). Un fichier de test : `docker compose -f docker-compose.dev.yml exec app yarn vitest run <chemin>`. Vérification complète : `make lint && make typecheck && make test` ; couverture : `make test-coverage`. Seul `scripts/sync-engine.ts` tourne **sur l'hôte** (`npx tsx`), parce qu'il lit `../pdfStudio`, non monté dans le conteneur.
 
 ---
 
@@ -125,7 +145,7 @@ describe("parite du moteur", () => {
 
 - [ ] **Step 4: Lancer le test**
 
-Run: `npx vitest run src/lib/badge-templates/__tests__/engine-parity.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/engine-parity.test.ts`
 Expected: PASS.
 
 - [ ] **Step 5: Exclure `engine/` de la couverture**
@@ -152,10 +172,12 @@ sync-engine:
 
 - [ ] **Step 7: Vérifier que rien n'est cassé**
 
-Run: `npm test`
+Run: `make test`
 Expected: PASS — les tests du moteur portés s'exécutent maintenant en plus des anciens. **Si un test porté échoue, ne pas le corriger sur place** : le noter et le remonter, c'est un signal que la copie ne tourne pas dans les mêmes conditions que chez elle.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
 git add scripts/sync-engine.ts src/lib/badge-templates/engine src/lib/badge-templates/__tests__/engine-parity.test.ts vitest.config.ts Makefile
@@ -291,7 +313,7 @@ describe("suggestBindings", () => {
 
 - [ ] **Step 2: Lancer les tests pour les voir échouer**
 
-Run: `npx vitest run src/lib/badge-templates/__tests__/bindings.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/bindings.test.ts`
 Expected: FAIL — `Cannot find module '../bindings'`.
 
 - [ ] **Step 3: Écrire l'implémentation**
@@ -376,10 +398,12 @@ export function suggestBindings(variables: VariableDeclaration[]): Bindings {
 
 - [ ] **Step 4: Lancer les tests pour les voir passer**
 
-Run: `npx vitest run src/lib/badge-templates/__tests__/bindings.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/bindings.test.ts`
 Expected: PASS — 10 tests.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
 git add src/lib/badge-templates/bindings.ts src/lib/badge-templates/__tests__/bindings.test.ts
@@ -479,7 +503,7 @@ describe("buildValues", () => {
 
 - [ ] **Step 2: Lancer les tests pour les voir échouer**
 
-Run: `npx vitest run src/lib/badge-templates/__tests__/build-values.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/build-values.test.ts`
 Expected: FAIL — `Cannot find module '../build-values'`.
 
 - [ ] **Step 3: Écrire l'implémentation**
@@ -540,10 +564,12 @@ export function buildValues(
 
 - [ ] **Step 4: Lancer les tests pour les voir passer**
 
-Run: `npx vitest run src/lib/badge-templates/__tests__/build-values.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/build-values.test.ts`
 Expected: PASS — 7 tests.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
 git add src/lib/badge-templates/build-values.ts src/lib/badge-templates/__tests__/build-values.test.ts
@@ -584,10 +610,12 @@ Expected: la colonne est créée et le client Prisma régénéré (le Makefile l
 
 - [ ] **Step 3: Vérifier que la suite passe toujours**
 
-Run: `npm test`
+Run: `make test`
 Expected: PASS — la colonne est additive, rien ne la lit encore.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
 git add prisma/schema.prisma
@@ -601,17 +629,20 @@ git commit -m "feat(bdd): table de liaison des variables sur un template install
 **Files:**
 - Modify: `src/lib/badge-templates/types.ts`, `resolve.ts`, `install.ts`
 - Modify: `src/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route.tsx`
+- Modify: `src/app/api/platform/badge-templates/route.ts` et `src/app/api/platform/badge-templates/__tests__/route.test.ts`
 - Create: `src/lib/badge-templates/migrate-v1.ts` (porté de pdfStudio)
 - Modify: `prisma/badge-templates/{default,recto-verso}/manifest.json`, `badge-templates/ex-305v/manifest.json`
 - Create: `prisma/badge-templates/{default,recto-verso}/bindings.json`
 - Delete: `src/lib/badge-templates/declarative/` (tout le dossier), `fonts.ts`, `package-reader.ts`, `px.ts`, `render-proof.tsx` et leurs tests
-- Test: `src/lib/badge-templates/__tests__/{resolve.test.tsx,install.test.ts,reference-packages.test.ts}`
+- Test: `src/lib/badge-templates/__tests__/{resolve.test.tsx,install.test.ts,reference-packages.test.ts}`, `src/app/api/platform/badge-templates/[id]/__tests__/route.test.ts` (fixture v2)
 
 **Interfaces:**
 - Consumes: `engine/` (tâche 1) ; `Bindings`, `validateBindings` (tâche 2) ; `buildValues` (tâche 3) ; la colonne `bindings` (tâche 4).
-- Produces: `BadgeTemplate` = `{ meta, variables: VariableDeclaration[], bindings: Bindings, Component: ComponentType<{ values: VariableValues }> }` ; `installTemplate({ manifest, assets, bindings, installedById })` avec `bindings` **obligatoire** ; `readReferencePackage(family)` rend en plus `bindings` ; `migrateManifest(input, entries)` et `V1_VARIABLES`, réutilisés par la tâche 7.
+- Produces: `BadgeTemplate` = `{ meta, variables: VariableDeclaration[], bindings: Bindings, Component: ComponentType<{ values: VariableValues }> }` ; `installTemplate({ manifest, assets, bindings, installedById })` avec `bindings` **obligatoire** ; `readReferencePackage(family)` rend en plus `bindings` ; `migrateManifest(input, entries)` et `V1_VARIABLES`, réutilisés par la tâche 7 ; `POST /api/platform/badge-templates` exige un champ de formulaire `bindings` (JSON sérialisé), consommé par l'écran de la tâche 6.
 
-**Cette tâche est volontairement grosse : elle ne se découpe pas.** Dès qu'un fichier pointe vers `engine/`, il reçoit un schéma v2 qui refuse les manifestes v1 et un `Component` qui prend `values` — le dépôt ne compile et ne passe ses tests qu'une fois la bascule entière faite. Ne pas commiter à mi-chemin.
+**Cette tâche est volontairement grosse : elle ne se découpe pas.** Dès qu'un fichier pointe vers `engine/`, il reçoit un schéma v2 qui refuse les manifestes v1 et un `Component` qui prend `values` — le dépôt ne compile et ne passe ses tests qu'une fois la bascule entière faite. La route d'installation en fait partie : c'est l'appelant de `installTemplate`, elle ne compile plus sans `bindings`. Ne pas commiter à mi-chemin.
+
+**État connu entre la tâche 5 et la tâche 6** : l'API d'installation exige `bindings`, mais `BadgeTemplateInstaller.tsx` ne l'envoie pas encore. Le téléversement depuis l'interface répond donc 400 (« liaisons : champ manquant. ») et le scénario de téléversement de `e2e/platform/badge-templates.spec.ts` est rouge jusqu'à la tâche 6. C'est attendu ; la suite Vitest, elle, doit être verte.
 
 - [ ] **Step 1: Réorienter les imports vers `engine/`**
 
@@ -825,6 +856,55 @@ Les manifestes migrés déclarent les 15 variables v1, nommées exactement comme
 
 - [ ] **Step 11: Adapter les tests existants**
 
+**Fixtures v1 à passer en v2.** Le schéma v2 refuse `formatVersion: 1` : tout fixture de manifeste encore en v1 dans les tests restants doit être réécrit. La liste exhaustive (hors fichiers supprimés au step 2 et hors `scripts/new-badge-template.ts`, retiré en tâche 8) :
+
+```bash
+grep -rlnE 'formatVersion"?: ?1' src scripts e2e | grep -v node_modules
+```
+
+- `src/app/api/platform/badge-templates/__tests__/route.test.ts` (`manifestOf`)
+- `src/app/api/platform/badge-templates/[id]/__tests__/route.test.ts` (`LAYOUT`, et le `formatVersion: 1` de la ligne créée → `2`)
+- `src/lib/badge-templates/__tests__/install.test.ts`
+- `src/lib/badge-templates/__tests__/resolve.test.tsx`
+
+(`e2e/platform/badge-templates.spec.ts` se traite en tâche 6, avec le parcours de liaison.)
+
+Forme v2 de référence — elle déclare ses variables, et le texte n'utilise que des variables déclarées. Une variable au nom de source (suggérée par identité) et une au nom libre (à lier à la main) couvrent les deux cas de l'écran de liaison :
+
+```ts
+function manifestOf(overrides: Record<string, unknown> = {}) {
+  return {
+    formatVersion: 2,
+    family: "salon-2027",
+    label: "Badge Salon",
+    description: "Un badge de test.",
+    page: { widthPx: 1011, heightPx: 638, count: 1 },
+    variables: [
+      { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
+      { name: "structure", kind: "text", label: "Structure", sample: "Organisation" },
+    ],
+    blocks: [
+      {
+        type: "text",
+        page: 1,
+        x: 4,
+        y: 4,
+        w: 400,
+        h: 60,
+        text: "{participant.firstName} — {structure}",
+        style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
+      },
+    ],
+    ...overrides,
+  };
+}
+
+// Table de liaison complete pour ce fixture.
+const BINDINGS = { "participant.firstName": "participant.firstName", structure: "participant.structure" };
+```
+
+Si un fixture existant exerce une fonctionnalité précise (ressource, police, plusieurs pages), garder ses blocs et n'ajouter que `formatVersion: 2` et les `variables` qu'ils référencent. Les erreurs de `parseManifest` nomment la variable manquante.
+
 Dans `src/lib/badge-templates/__tests__/resolve.test.tsx`, remplacer les rendus `<Component ctx={…} />` par `<Component values={…} />` et ajouter :
 
 ```tsx
@@ -840,7 +920,7 @@ Dans `src/lib/badge-templates/__tests__/resolve.test.tsx`, remplacer les rendus 
   });
 ```
 
-Dans `src/lib/badge-templates/__tests__/install.test.ts`, compléter **tous** les appels à `installTemplate` avec une table (l'identité des 15 variables convient) et ajouter :
+Dans `src/lib/badge-templates/__tests__/install.test.ts`, compléter **tous** les appels à `installTemplate` avec une table complète pour le manifeste passé (`BINDINGS` pour le fixture v2 du début de ce step) et ajouter :
 
 ```ts
   it("refuse une table de liaison incomplete", async () => {
@@ -868,20 +948,86 @@ Dans `src/lib/badge-templates/__tests__/reference-packages.test.ts`, ajouter pou
     });
 ```
 
-- [ ] **Step 12: Vérifier**
+- [ ] **Step 12: Faire accepter les liaisons à la route d'installation**
 
-Run: `npm test && npx tsc --noEmit`
-Expected: PASS des deux. **C'est ici que la bascule se valide** : si la suite passe, l'application rend désormais par le moteur v2. La route d'installation ne compile pas encore avec un champ `bindings` — elle est traitée en tâche 6 ; en attendant, lui passer une table vide provoquerait un refus légitime. Si son test échoue pour cette raison, le noter et poursuivre.
+Dans `src/app/api/platform/badge-templates/route.ts`, ajouter l'import :
 
-- [ ] **Step 13: Recharger la base et regarder un badge**
-
-```bash
-make db-reset && make db-seed && make dev
+```ts
+import { validateBindings, type Bindings } from "@/lib/badge-templates/bindings";
 ```
 
-Ouvrir un badge d'une inscription de démonstration : il doit s'imprimer comme avant.
+Après `const { manifest, assets } = read;`, ajouter la lecture et la validation :
 
-- [ ] **Step 14: Commit**
+```ts
+  const raw = form?.get("bindings");
+  if (typeof raw !== "string") {
+    return badRequest(["liaisons : champ manquant."]);
+  }
+  let bindings: Bindings;
+  try {
+    bindings = JSON.parse(raw) as Bindings;
+  } catch {
+    return badRequest(["liaisons : JSON illisible."]);
+  }
+  // Refus avec la liste COMPLETE des erreurs : l'ecran de liaison les affiche
+  // toutes d'un coup, plutot qu'une par tentative.
+  const bindingErrors = validateBindings(manifest.variables, bindings);
+  if (bindingErrors.length > 0) return badRequest(bindingErrors);
+```
+
+Puis passer `bindings` à l'appel `installTemplate({ manifest, assets, bindings, installedById: … })`.
+
+Dans `src/app/api/platform/badge-templates/__tests__/route.test.ts`, faire poser par `requestWith` un champ `bindings` valant `JSON.stringify(BINDINGS)` (le fixture v2 du step 11), avec un second paramètre optionnel pour le remplacer, puis ajouter les trois refus :
+
+```ts
+  it("refuse une installation sans champ de liaisons", async () => {
+    const form = new FormData();
+    form.set("archive", new File([archive], "t.zip"));
+    const res = await POST(new NextRequest("http://localhost/api/platform/badge-templates", { method: "POST", body: form }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual(["liaisons : champ manquant."]);
+  });
+
+  it("refuse des liaisons illisibles", async () => {
+    const form = new FormData();
+    form.set("archive", new File([archive], "t.zip"));
+    form.set("bindings", "{pas du json");
+    const res = await POST(new NextRequest("http://localhost/api/platform/badge-templates", { method: "POST", body: form }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual(["liaisons : JSON illisible."]);
+  });
+
+  it("refuse une installation dont les liaisons sont incompletes", async () => {
+    const form = new FormData();
+    form.set("archive", new File([archive], "t.zip"));
+    form.set("bindings", JSON.stringify({}));
+    const res = await POST(new NextRequest("http://localhost/api/platform/badge-templates", { method: "POST", body: form }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors[0]).toContain("aucune source choisie");
+    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
+  });
+```
+
+Les trois branches ajoutées sont couvertes : le seuil de 100 % sur `src/app/api/**` tient.
+
+- [ ] **Step 13: Vérifier**
+
+Run: `make lint && make typecheck && make test`
+Expected: PASS des trois. **C'est ici que la bascule se valide** : si la suite passe, l'application rend désormais par le moteur v2. Puis `make test-coverage` : 100 % hors `engine/`.
+
+- [ ] **Step 14: Recharger la base et regarder un badge**
+
+`make db-reset` est **destructif** : demander l'accord de l'utilisateur avant de le lancer. S'il refuse : la base de dev garde ses lignes v1, que le moteur v2 ne sait plus rendre ; reporter ce contrôle visuel après la tâche 7 (migration `--apply` en dev) et le noter dans la Progression.
+
+```bash
+make db-reset   # uniquement avec l'accord explicite de l'utilisateur ; enchaine deja le seed
+```
+
+Ouvrir un badge d'une inscription de démonstration : il doit s'imprimer comme avant. Ne pas vérifier le téléversement ici : il attend la tâche 6.
+
+- [ ] **Step 15: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
 git add -A src/lib/badge-templates src/app/api prisma/badge-templates badge-templates scripts
@@ -890,51 +1036,128 @@ git commit -m "feat(rendu): bascule sur le moteur v2, rendu par dictionnaire de 
 
 ---
 
-### Task 6: Route d'inspection, route d'installation, écran de liaison
+### Task 6: Route d'inspection et écran de liaison
 
 **Files:**
 - Create: `src/app/api/platform/badge-templates/inspect/route.ts`
 - Create: `src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`
-- Modify: `src/app/api/platform/badge-templates/route.ts`
-- Modify: `src/app/api/platform/badge-templates/__tests__/route.test.ts`
 - Modify: `src/components/staff/BadgeTemplateInstaller.tsx`
+- Modify: `e2e/platform/badge-templates.spec.ts`
 
 **Interfaces:**
-- Consumes: `SOURCE_KINDS`, `suggestBindings`, `validateBindings`, `Bindings` (tâche 2) ; `installTemplate` avec son argument `bindings` (tâche 5) ; `readTemplatePackage`, `MAX_ARCHIVE_BYTES` de `@/lib/badge-templates/engine/package-reader`.
-- Produces: `POST /api/platform/badge-templates/inspect` → `{ variables: VariableDeclaration[], suggested: Bindings, sources: Record<string, VariableKind> }` ; `POST /api/platform/badge-templates` accepte en plus un champ de formulaire `bindings` (JSON sérialisé).
+- Consumes: `SOURCE_KINDS`, `suggestBindings`, `Bindings` (tâche 2) ; `POST /api/platform/badge-templates` avec son champ `bindings` obligatoire (tâche 5) ; `readTemplatePackage`, `MAX_ARCHIVE_BYTES` de `@/lib/badge-templates/engine/package-reader`.
+- Produces: `POST /api/platform/badge-templates/inspect` → `{ variables: VariableDeclaration[], suggested: Bindings, sources: Record<string, VariableKind> }`.
 
 - [ ] **Step 1: Écrire le test de la route d'inspection**
 
-Créer `src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`, en calquant l'installation de session et de staff sur le fichier de test voisin `src/app/api/platform/badge-templates/__tests__/route.test.ts` (mêmes mocks `getServerSession` / `requireStaff`, même fabrication d'archive ZIP) :
+Créer `src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`. En-tête identique au fichier voisin `src/app/api/platform/badge-templates/__tests__/route.test.ts` : copier tels quels ses imports, le `vi.mock("next-auth", …)`, `withSession`, `noSession`, `makeStaff`, `PNG`, `archiveOf`, ainsi que le `manifestOf` v2 posé en tâche 5. Puis :
 
 ```ts
+function inspectRequest(body: FormData | string, headers?: Record<string, string>): NextRequest {
+  return new NextRequest("http://localhost/api/platform/badge-templates/inspect", {
+    method: "POST",
+    body,
+    headers,
+  });
+}
+
+function formWith(archive: Buffer): FormData {
+  const form = new FormData();
+  form.set("archive", new File([new Uint8Array(archive)], "template.zip", { type: "application/zip" }));
+  return form;
+}
+
+async function inspect(body: FormData | string, headers?: Record<string, string>) {
+  const { POST } = await import("../route");
+  return POST(inspectRequest(body, headers));
+}
+
+async function asAdmin() {
+  const staff = await makeStaff("STAFF_ADMIN");
+  withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+  return staff;
+}
+
+describe("POST /api/platform/badge-templates/inspect", () => {
+  beforeEach(async () => {
+    await prisma.installedBadgeTemplate.deleteMany({});
+  });
+
   it("rend les variables, la suggestion et les sources, sans rien installer", async () => {
-    const res = await POST(requestWith(archive));
+    await asAdmin();
+    const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) })));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.variables.map((v: { name: string }) => v.name)).toContain("participant.firstName");
-    expect(body.suggested["participant.firstName"]).toBe("participant.firstName");
+    expect(body.variables.map((v: { name: string }) => v.name)).toEqual(["participant.firstName", "structure"]);
+    // Identite pour le nom de source, rien pour le nom libre : il reste a decider.
+    expect(body.suggested).toEqual({ "participant.firstName": "participant.firstName" });
     expect(body.sources["category.color"]).toBe("color");
+    expect(Object.keys(body.sources)).toHaveLength(15);
     expect(await prisma.installedBadgeTemplate.count()).toBe(0);
   });
 
-  it("refuse un paquet invalide", async () => {
-    const res = await POST(requestWith(Buffer.from("ceci n'est pas un zip")));
-    expect(res.status).toBe(400);
-  });
-
-  it("refuse un utilisateur non authentifie", async () => {
+  it("refuse sans session (401)", async () => {
     // Meme garde que la route d'installation : l'inspection lit le contenu d'un
     // paquet, ce n'est pas une surface publique.
-    const res = await POST(requestWith(archive));
+    noSession();
+    const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) })));
     expect(res.status).toBe(401);
   });
+
+  it("refuse un STAFF_SUPPORT (403)", async () => {
+    const staff = await makeStaff("STAFF_SUPPORT");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+    const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) })));
+    expect(res.status).toBe(403);
+  });
+
+  it("propage une erreur non-AuthError levee pendant le controle de role", async () => {
+    await asAdmin();
+    const spy = vi.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("boom-inspect"));
+    await expect(
+      inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }))),
+    ).rejects.toThrow("boom-inspect");
+    spy.mockRestore();
+  });
+
+  it("refuse une requete sans fichier (400)", async () => {
+    await asAdmin();
+    const res = await inspect(new FormData());
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors.join()).toMatch(/fichier manquant/i);
+  });
+
+  it("refuse une requete dont le corps n'est pas un formulaire (400)", async () => {
+    await asAdmin();
+    const res = await inspect("pas un formulaire", { "content-type": "multipart/form-data; boundary=xxx" });
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors.join()).toMatch(/fichier manquant/i);
+  });
+
+  it("refuse une archive depassant la borne de taille (400)", async () => {
+    await asAdmin();
+    const form = new FormData();
+    form.set("archive", new File([new Uint8Array(11 * 1024 * 1024)], "gros.zip"));
+    const res = await inspect(form);
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors.join()).toMatch(/taille/i);
+  });
+
+  it("refuse un paquet invalide (400) en listant les erreurs", async () => {
+    await asAdmin();
+    const res = await inspect(formWith(await archiveOf({ "assets/f.png": PNG })));
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors.join()).toMatch(/manifest\.json/i);
+  });
+});
 ```
+
+Ces huit cas couvrent chaque branche de la route : le seuil de 100 % sur `src/app/api/**` tient.
 
 - [ ] **Step 2: Lancer le test pour le voir échouer**
 
-Run: `npx vitest run src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`
-Expected: FAIL — la route n'existe pas.
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`
+Expected: FAIL — `Cannot find module '../route'`.
 
 - [ ] **Step 3: Écrire la route d'inspection**
 
@@ -949,6 +1172,10 @@ import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@/lib/badge-templates/en
 import { SOURCE_KINDS, suggestBindings } from "@/lib/badge-templates/bindings";
 
 export const runtime = "nodejs";
+
+function badRequest(errors: string[]) {
+  return NextResponse.json({ error: "INVALID_PACKAGE", errors }, { status: 400 });
+}
 
 // Lecture seule, volontairement separee de l'installation : rien n'est ecrit
 // tant que l'administrateur n'a pas vu et complete ses liaisons. L'archive
@@ -970,19 +1197,14 @@ export async function POST(req: NextRequest) {
   const form = await req.formData().catch(() => null);
   const file = form?.get("archive");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "INVALID_PACKAGE", errors: ["archive : fichier manquant."] }, { status: 400 });
+    return badRequest(["archive : fichier manquant."]);
   }
   if (file.size > MAX_ARCHIVE_BYTES) {
-    return NextResponse.json(
-      { error: "INVALID_PACKAGE", errors: [`archive : taille superieure a ${MAX_ARCHIVE_BYTES} octets.`] },
-      { status: 400 },
-    );
+    return badRequest([`archive : taille superieure a ${MAX_ARCHIVE_BYTES} octets.`]);
   }
 
   const read = await readTemplatePackage(Buffer.from(await file.arrayBuffer()));
-  if (!read.ok) {
-    return NextResponse.json({ error: "INVALID_PACKAGE", errors: read.errors }, { status: 400 });
-  }
+  if (!read.ok) return badRequest(read.errors);
 
   return NextResponse.json({
     variables: read.manifest.variables,
@@ -992,57 +1214,14 @@ export async function POST(req: NextRequest) {
 }
 ```
 
+Pas de `logActivity` : la route n'écrit rien et ne change aucun état, c'est l'installation qui journalise.
+
 - [ ] **Step 4: Lancer le test**
 
-Run: `npx vitest run src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`
-Expected: PASS.
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/app/api/platform/badge-templates/inspect/__tests__/route.test.ts`
+Expected: PASS — 8 tests.
 
-- [ ] **Step 5: Faire accepter les liaisons à la route d'installation**
-
-Dans `src/app/api/platform/badge-templates/route.ts`, ajouter l'import :
-
-```ts
-import { validateBindings, type Bindings } from "@/lib/badge-templates/bindings";
-```
-
-Après `const { manifest, assets } = read;`, ajouter la lecture et la validation :
-
-```ts
-  const raw = form?.get("bindings");
-  if (typeof raw !== "string") {
-    return badRequest(["liaisons : champ manquant."]);
-  }
-  let bindings: Bindings;
-  try {
-    bindings = JSON.parse(raw) as Bindings;
-  } catch {
-    return badRequest(["liaisons : JSON illisible."]);
-  }
-  const bindingErrors = validateBindings(manifest.variables, bindings);
-  if (bindingErrors.length > 0) return badRequest(bindingErrors);
-```
-
-Puis passer `bindings` à l'appel `installTemplate({ manifest, assets, bindings, installedById: … })`.
-
-Ajouter dans `src/app/api/platform/badge-templates/__tests__/route.test.ts` un cas de refus, et compléter les appels existants avec le champ `bindings` :
-
-```ts
-  it("refuse une installation dont les liaisons sont incompletes", async () => {
-    const form = new FormData();
-    form.set("archive", new File([archive], "t.zip"));
-    form.set("bindings", JSON.stringify({}));
-    const res = await POST(new NextRequest("http://localhost/api/platform/badge-templates", { method: "POST", body: form }));
-    expect(res.status).toBe(400);
-    expect((await res.json()).errors[0]).toContain("aucune source choisie");
-  });
-```
-
-- [ ] **Step 6: Lancer les tests des deux routes**
-
-Run: `npx vitest run src/app/api/platform/badge-templates`
-Expected: PASS.
-
-- [ ] **Step 7: Construire l'écran de liaison**
+- [ ] **Step 5: Construire l'écran de liaison**
 
 Dans `src/components/staff/BadgeTemplateInstaller.tsx`, passer à deux écrans. Remplacer l'état et la fonction `install` par :
 
@@ -1163,25 +1342,35 @@ Câbler l'`<input type="file">` sur `inspect` au lieu de `install`, et rendre le
       )}
 ```
 
-- [ ] **Step 8: Étendre l'e2e**
+- [ ] **Step 6: Étendre l'e2e**
 
-Dans `e2e/platform/badge-templates.spec.ts`, le parcours de téléversement traverse maintenant l'écran : après le dépôt du fichier, attendre le tableau (`Liaisons des variables`), choisir une source pour chaque ligne non pré-remplie, puis cliquer « Installer ».
+Dans `e2e/platform/badge-templates.spec.ts` :
 
-- [ ] **Step 9: Vérifier**
+1. Réécrire `manifestOf(family)` au format v2. Le fixture actuel est en v1, et en millimètres (`widthMm`, `heightMm`) : partir du `manifestOf` v2 posé en tâche 5 (en `widthPx`/`heightPx`), avec `family` en paramètre et sérialisé par `JSON.stringify`.
+2. Le parcours de téléversement traverse maintenant l'écran : après le dépôt du fichier, attendre le titre `Liaisons des variables` ; vérifier que la ligne `participant.firstName` est pré-remplie et que le bouton « Installer » est **désactivé** tant que `structure` n'est pas décidée ; choisir `participant.structure` pour `structure` ; cliquer « Installer » ; attendre le message de succès.
 
-Run: `npm test && npx tsc --noEmit`
-Expected: PASS — toute la suite, paquets de référence compris.
+Run: `make test-e2e` (conteneurs de dev démarrés).
+Expected: PASS, y compris les scénarios déjà présents du fichier.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 7: Vérifier**
+
+Run: `make lint && make typecheck && make test && make test-coverage`
+Expected: PASS — toute la suite, paquets de référence compris, 100 % hors `engine/`.
+
+Puis **vérifier dans le navigateur** (`https://badge.local` ou `http://localhost:3785`, compte staff du seed) : téléverser une archive exportée de pdfStudio, contrôler le pré-remplissage, le filtrage des sources par type, le bouton grisé tant qu'une ligne n'est pas décidée, l'option « laisser vide », puis l'installation. Rapporter ce qui a été vu, pas ce qui devrait l'être.
+
+- [ ] **Step 8: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
-git add src/app/api/platform/badge-templates src/components/staff/BadgeTemplateInstaller.tsx e2e/platform/badge-templates.spec.ts
+git add src/app/api/platform/badge-templates/inspect src/components/staff/BadgeTemplateInstaller.tsx e2e/platform/badge-templates.spec.ts
 git commit -m "feat(installation): ecran de liaison des variables au televersement"
 ```
 
 ---
 
-### Task 7: Migrer les templates installés en base
+### Task 7: Migrer les templates installés en base (script, exécuté en dev uniquement)
 
 **Files:**
 - Create: `scripts/migrate-installed-templates-v2.ts`
@@ -1238,7 +1427,7 @@ async function installV1Row(id: string) {
   // L'utilisateur installateur : meme fabrication que dans les tests voisins
   // (cf. src/lib/badge-templates/__tests__/install.test.ts).
   const user = await prisma.user.create({
-    data: { email: `${id}@test.local`, name: "Test", passwordHash: "x" },
+    data: { email: `${id}@test.local`, name: "Test", password: "x" },
   });
   await prisma.installedBadgeTemplate.create({
     data: {
@@ -1297,11 +1486,11 @@ describe("migrateInstalledTemplates", () => {
 });
 ```
 
-Le `LAYOUT_V1` ci-dessus suffit : il couvre les deux conversions que fait `migrateManifest` (un gabarit de texte, et un `visibleIf` dont la clé `path` devient `variable`). Si la création de l'utilisateur ne compile pas, aligner ses champs sur ceux du fichier voisin `src/lib/badge-templates/__tests__/install.test.ts`, qui en fabrique déjà un.
+Le `LAYOUT_V1` ci-dessus suffit : il couvre les deux conversions que fait `migrateManifest` (un gabarit de texte, et un `visibleIf` dont la clé `path` devient `variable`). Le modèle `User` a pour champs obligatoires `email`, `password` et `name`.
 
 - [ ] **Step 2: Lancer le test pour le voir échouer**
 
-Run: `npx vitest run scripts/__tests__/migrate-installed-templates-v2.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run scripts/__tests__/migrate-installed-templates-v2.test.ts`
 Expected: FAIL — module introuvable.
 
 - [ ] **Step 3: Écrire le script**
@@ -1310,10 +1499,10 @@ Créer `scripts/migrate-installed-templates-v2.ts` :
 
 ```ts
 import { PrismaClient } from "@prisma/client";
-import { listPrefix } from "@/lib/storage";
-import { migrateManifest, V1_VARIABLES } from "@/lib/badge-templates/migrate-v1";
-import { parseManifest } from "@/lib/badge-templates/engine/declarative/schema";
-import { validateBindings, type Bindings } from "@/lib/badge-templates/bindings";
+import { listPrefix } from "../src/lib/storage";
+import { migrateManifest, V1_VARIABLES } from "../src/lib/badge-templates/migrate-v1";
+import { parseManifest } from "../src/lib/badge-templates/engine/declarative/schema";
+import { validateBindings, type Bindings } from "../src/lib/badge-templates/bindings";
 
 const prisma = new PrismaClient();
 
@@ -1338,7 +1527,9 @@ export async function migrateInstalledTemplates(options: {
   for (const row of rows) {
     // migrateManifest n'attache un sample d'image que si la ressource existe :
     // il lui faut donc la liste reelle des fichiers du paquet.
-    const entries = (await listPrefix(row.assetPrefix)).map((key) =>
+    // listPrefix rend des { key, size } aux cles completes ; le manifeste parle
+    // en chemins relatifs au paquet (« assets/photo-demo.png »).
+    const entries = (await listPrefix(row.assetPrefix)).map(({ key }) =>
       key.slice(row.assetPrefix.length),
     );
 
@@ -1390,48 +1581,94 @@ async function main(): Promise<void> {
 if (process.argv[1]?.endsWith("migrate-installed-templates-v2.ts")) void main();
 ```
 
-**Si `listPrefix` n'existe pas dans `@/lib/storage`**, regarder ce que le module expose (`grep -n "^export" src/lib/storage.ts`) et utiliser la fonction de listage disponible ; `deletePrefix` en suppose une.
+Les imports sont relatifs, comme dans les autres scripts du dossier (`scripts/pack-badge-template.ts`, `scripts/migrate-badge-template-refs.ts`).
 
 - [ ] **Step 4: Lancer les tests**
 
-Run: `npx vitest run scripts/__tests__/migrate-installed-templates-v2.test.ts`
+Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run scripts/__tests__/migrate-installed-templates-v2.test.ts`
 Expected: PASS — 4 tests.
 
 - [ ] **Step 5: Étendre le contrôle de cohérence**
 
-Dans `scripts/validate-badge-templates.ts`, en plus des `badgeTemplateId` orphelins, signaler les tables incomplètes :
+`scripts/validate-badge-templates.ts` n'a pas de drapeau d'échec : il sort par `process.exit` dès qu'il conclut. Trois modifications.
+
+En tête, ajouter les imports :
 
 ```ts
-  // Meme script, deuxieme garde : une ligne dont les liaisons ne couvrent pas
-  // toutes les variables imprimerait des champs vides sans que personne l'ait voulu.
-  for (const row of await prisma.installedBadgeTemplate.findMany()) {
-    const manifest = row.layout as unknown as { variables: VariableDeclaration[] };
-    const errors = validateBindings(manifest.variables ?? [], (row.bindings ?? {}) as Bindings);
-    if (errors.length > 0) {
-      console.error(`[liaisons] ${row.family} v${row.version} : ${errors.join(" | ")}`);
-      failed = true;
+import type { VariableDeclaration } from "../src/lib/badge-templates/engine/declarative/manifest-types";
+import { validateBindings, type Bindings } from "../src/lib/badge-templates/bindings";
+```
+
+Élargir la sélection initiale pour lire le manifeste et la table :
+
+```ts
+  const installed = await prisma.installedBadgeTemplate.findMany({
+    select: { id: true, family: true, version: true, formatVersion: true, layout: true, bindings: true },
+  });
+```
+
+Juste après le contrôle `hasDefaultFamily`, collecter les lignes défaillantes :
+
+```ts
+  // Deuxieme garde du meme script : une ligne restee en v1 n'est plus rendable par
+  // le moteur v2, et une ligne dont les liaisons ne couvrent pas toutes les
+  // variables imprimerait des champs vides sans que personne l'ait voulu.
+  const bindingIssues: string[] = [];
+  for (const t of installed) {
+    if (t.formatVersion !== 2) {
+      bindingIssues.push(`${t.family} v${t.version} : encore au format v${t.formatVersion} (make migrate-installed-templates).`);
+      continue;
     }
+    const variables = (t.layout as unknown as { variables: VariableDeclaration[] }).variables;
+    const errors = validateBindings(variables, (t.bindings ?? {}) as Bindings);
+    if (errors.length > 0) bindingIssues.push(`${t.family} v${t.version} : ${errors.join(" | ")}`);
   }
 ```
 
-(`failed` est la variable de sortie déjà présente dans le script ; l'adapter à son nom réel.)
+Puis remplacer la condition de succès `if (orphans.length === 0) {` par `if (orphans.length === 0 && bindingIssues.length === 0) {`, et, avant la ligne `` console.error(`KO : ${orphans.length} badgeTemplateId orphelin(s) detecte(s) :`); ``, insérer :
+
+```ts
+  if (bindingIssues.length > 0) {
+    console.error(`KO : ${bindingIssues.length} template(s) aux liaisons incompletes :`);
+    for (const issue of bindingIssues) console.error(`  - ${issue}`);
+  }
+  if (orphans.length === 0) process.exit(1);
+```
+
+(Ce `process.exit(1)` évite d'afficher « 0 orphelin(s) » quand seules les liaisons sont en cause.) Mettre à jour le commentaire d'en-tête du script : il valide désormais aussi le format et les liaisons.
 
 - [ ] **Step 6: Ajouter la cible Makefile**
 
+Dans la liste `.PHONY` puis dans le corps du `Makefile`, à côté de `validate-badge-templates` :
+
 ```make
-# Migre les templates installes du format v1 vers le v2 (dry-run par defaut).
-# A EXECUTER APRES `prod-db-push` ET AVANT la bascule du trafic : le moteur v2
-# ne sait pas rendre une ligne restee en v1.
+# Migre les templates installes du format v1 vers le v2 (dry-run par defaut,
+# ARGS=--apply pour ecrire). Le moteur v2 ne sait pas rendre une ligne restee en v1.
 migrate-installed-templates:
-	docker exec badge-app npx tsx scripts/migrate-installed-templates-v2.ts $(ARGS)
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v2.ts $(ARGS)
 ```
+
+La cible vise le conteneur **de dev**, comme `validate-badge-templates`. Ne pas créer de variante `prod-*` : l'exécution en production relève de la release, hors de ce plan.
 
 - [ ] **Step 7: Vérifier**
 
-Run: `npm test && npx tsc --noEmit`
-Expected: PASS.
+Run: `make lint && make typecheck && make test && make test-coverage`
+Expected: PASS, 100 % hors `engine/`.
 
-- [ ] **Step 8: Commit**
+Puis, **contre la base de dev uniquement** :
+
+```bash
+make migrate-installed-templates                 # dry-run : liste ce qui serait migre
+make migrate-installed-templates ARGS=--apply    # ecrit, en dev
+make migrate-installed-templates                 # doit rapporter « migres : 0 » (idempotence)
+make validate-badge-templates                    # doit sortir OK
+```
+
+Si la base de dev a été remise à zéro en tâche 5, il n'y a aucune ligne v1 : le dry-run rapporte 0, c'est normal. Sinon, ouvrir ensuite un badge rendu depuis un template migré et le comparer à l'ancien rendu (réserve de fuseau : voir la spec).
+
+- [ ] **Step 8: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
 git add scripts/migrate-installed-templates-v2.ts scripts/__tests__/migrate-installed-templates-v2.test.ts scripts/validate-badge-templates.ts Makefile
@@ -1444,39 +1681,77 @@ git commit -m "feat(migration): templates installes du format v1 vers le v2"
 
 **Files:**
 - Delete: `scripts/new-badge-template.ts`, `scripts/__tests__/new-badge-template.test.ts`
-- Modify: `Makefile`, `README.md`, `docs/README.md` si la commande y figure
-- Modify: `../pdfStudio/README.md`
+- Modify: `Makefile` (cible `new-badge-template` retirée de `.PHONY` et du corps)
+- Modify: `docs/v4/features/templates-badges.md`
+- Modify: `docs/v4/installation.md`
+- Modify: `docs/v4/README.md`
+- Modify: `docs/v4/specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md` (statut)
+- Modify (**hors dépôt, sur autorisation explicite**) : `../pdfStudio/README.md`
 
 **Interfaces:**
-- Consumes: rien.
+- Consumes: tout ce qui précède, pour décrire l'état réel.
 - Produces: rien.
 
 - [ ] **Step 1: Retirer le générateur de squelette**
 
 ```bash
-grep -rn "new-badge-template" --include="*.ts" --include="Makefile" --include="*.md" . | grep -v node_modules
+grep -rn "new-badge-template" --include="*.ts" --include="Makefile" --include="*.md" . | grep -v node_modules | grep -v "docs/v4/plans\|docs/v4/specs"
 git rm scripts/new-badge-template.ts scripts/__tests__/new-badge-template.test.ts
 ```
 
-Retirer la cible correspondante du `Makefile` et toute mention dans les docs.
+Retirer la cible `new-badge-template` du `Makefile` (entrée `.PHONY` ligne ~11, corps ligne ~349). Les plans et specs passés ne se réécrivent pas : ils gardent leur mention historique.
 
-- [ ] **Step 2: Documenter la répartition dans le README du badge**
+- [ ] **Step 2: Mettre à jour la doc de la feature**
 
-Dans la section des templates de badges, ajouter :
+`docs/v4/features/templates-badges.md` décrit encore le format v1. Section par section :
+
+- **En-tête** : ajouter la spec 20 à côté de la spec 10 comme source du *pourquoi*.
+- **État actuel** : ajouter le paragraphe suivant.
+
+  ```markdown
+  Le moteur de rendu (`src/lib/badge-templates/engine/`) est une **copie scellée** de
+  `pdfStudio/src/engine/`. On ne le modifie jamais ici : corriger dans pdfStudio, puis
+  `make sync-engine`. Un test de parité (`engine-parity.test.ts`) refuse toute édition
+  faite sur place ; `engine/SOURCE.md` dit de quel commit pdfStudio la copie provient.
+  Le moteur ne connaît aucun nom métier : il rend un document sur un dictionnaire de
+  valeurs, que `build-values.ts` dérive du contexte d'inscription et de la table de
+  liaison du template.
+  ```
+
+- **Installation** : décrire les deux temps — `POST /api/platform/badge-templates/inspect` (lecture seule, rend `variables`, `suggested`, `sources`), puis l'écran de liaison (un sélecteur par variable, filtré par type ; trois états : non décidé, « laisser vide », une source ; bouton grisé tant qu'une ligne n'est pas décidée), puis `POST /api/platform/badge-templates` avec `archive` + `bindings`, refusé en 400 avec la liste complète des erreurs. Préciser que les paquets livrés (`default`, `recto-verso`) portent leur table dans `prisma/badge-templates/<famille>/bindings.json`, et qu'une table ne s'édite pas après installation : il faut réinstaller.
+- **Structure d'un paquet** : mentionner `bindings.json`, **propre aux paquets livrés** avec l'application (pdfStudio n'en produit pas).
+- **Manifeste** : remplacer l'exemple et la description v1 par le format v2 (`formatVersion: 2`, `variables`, `conditions`, `presets`). La source de vérité est `src/lib/badge-templates/engine/declarative/schema.ts` ; la description détaillée du format existe déjà dans `../pdfStudio/docs/superpowers/specs/2026-09-18-manifeste-v2-variables-design.md` — la reprendre en l'adaptant, sans inventer de champ absent du schéma.
+- **Sources disponibles** : devient « Liaisons et sources ». Garder le tableau des 15 sources (elles vivent désormais dans `bindings.ts`, `SOURCE_KINDS`), mais expliquer qu'un manifeste ne les référence plus : il déclare des variables aux noms libres, et la table de liaison dit quelle source alimente chaque variable. Une variable liée à une source d'un autre type est refusée. Une variable « laissée vide » n'est pas écrite : `isEmpty` joue. `event.date` est transmise brute : le **format de date appartient à la variable** (cinq formats, calendaire en UTC) et non plus à `formatFrenchDate`.
+- **Conditions d'affichage** : passer à `visibleIf.variable` et aux conditions nommées ; supprimer la restriction « seuls `category.anonymous` et `category.neutralBadge` » (`CONDITION_PATHS` n'existe plus).
+- **Créer un template** : retirer toute mention de `make new-badge-template` ; le studio crée, l'application installe et rend.
+- **Migration d'une base antérieure** : ajouter `make migrate-installed-templates` (dry-run par défaut, `ARGS=--apply` pour écrire, idempotent, table de liaison par identité, templates archivés compris), la réserve de fuseau de la spec 20, le fait que les épreuves existantes ne sont pas regénérées, et l'extension de `make validate-badge-templates` (lignes restées en v1, liaisons incomplètes).
+
+- [ ] **Step 3: Mettre à jour l'installation et l'index**
+
+Dans `docs/v4/installation.md`, dans le tableau des commandes de templates, retirer la ligne `make new-badge-template` et ajouter :
 
 ```markdown
-Les templates ne se créent plus ici : ils se composent dans **pdfStudio**, qui produit
-une archive `.zip`. L'application la reçoit, demande à quelle donnée correspond chaque
-variable déclarée (écran de liaison), puis l'installe et la rend.
-
-Le moteur de `src/lib/badge-templates/engine/` est une **copie scellée** de
-`pdfStudio/src/engine/` : on ne le modifie jamais ici. Corriger dans pdfStudio, puis
-`make sync-engine`. Un test de parité refuse toute édition faite sur place.
+| `make sync-engine` | Resynchronise le moteur `src/lib/badge-templates/engine/` depuis `../pdfStudio` (sur l'hôte) |
+| `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installés du format v1 vers le v2 (dry-run par défaut) |
 ```
 
-- [ ] **Step 3: Documenter la même chose côté studio**
+et compléter le paragraphe sur `make validate-badge-templates` : il signale aussi les lignes restées en v1 et les tables de liaison incomplètes.
 
-Dans `../pdfStudio/README.md`, remplacer le paragraphe qui dit que le moteur est « une copie du moteur de l'application badge — toute évolution de format doit être reportée des deux côtés » par la procédure réelle :
+Dans `docs/v4/README.md`, ajouter sous la spec 19 :
+
+```markdown
+- [Spec 20 — Moteur v2 et liaisons de variables](specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md) · [Plan](plans/2026-09-22-moteur-v2-et-liaisons.md) · [Feature](features/templates-badges.md)
+```
+
+- [ ] **Step 4: Passer la spec en « implémentée »**
+
+Dans l'en-tête de `docs/v4/specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md`, remplacer `**à implémenter**` par `**implémentée** (<date du jour>)`. Ne rien changer d'autre à la spec : c'est l'ADR, elle garde son raisonnement d'origine.
+
+- [ ] **Step 5: Documenter la même chose côté studio — sur autorisation uniquement**
+
+`../pdfStudio` est **hors de ce dépôt**. Avant toute écriture, demander explicitement à l'utilisateur l'autorisation de modifier `../pdfStudio/README.md`. Sans accord, sauter ce step, le marquer dans la Progression et fournir le texte ci-dessous dans le compte rendu.
+
+Avec accord : remplacer le paragraphe qui dit que le moteur est « une copie du moteur de l'application badge — toute évolution de format doit être reportée des deux côtés » par :
 
 ```markdown
 Le moteur de rendu (`src/engine/`) fait autorité : l'application badge en héberge une
@@ -1485,15 +1760,19 @@ toute édition locale). Une évolution du format se fait donc **ici**, puis se r
 là-bas par une resynchronisation — jamais l'inverse.
 ```
 
-- [ ] **Step 4: Vérifier**
+Ce changement ne se commite pas depuis ce dépôt ; un éventuel commit dans pdfStudio suit la même règle (demande explicite de l'utilisateur).
 
-Run: `npm test && npx tsc --noEmit`
+- [ ] **Step 6: Vérifier**
+
+Run: `make lint && make typecheck && make test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Point de commit — uniquement sur demande explicite de l'utilisateur**
+
+Ne pas commiter de sa propre initiative : proposer le commit ci-dessous et attendre le feu vert.
 
 ```bash
-git add -A
+git add Makefile scripts docs/v4/features/templates-badges.md docs/v4/installation.md docs/v4/README.md docs/v4/specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md docs/v4/plans/2026-09-22-moteur-v2-et-liaisons.md
 git commit -m "docs(templates): le studio cree, l'application installe et rend"
 ```
 
@@ -1501,24 +1780,21 @@ git commit -m "docs(templates): le studio cree, l'application installe et rend"
 
 ## Vérification finale
 
-- [ ] `npm test` — toute la suite passe, couverture 100 % hors `engine/`.
-- [ ] `npx tsc --noEmit` — aucune erreur.
-- [ ] `npx tsx scripts/sync-engine.ts --from ../pdfStudio` puis `git status` : **aucun diff** dans `engine/`.
-- [ ] Un `.zip` exporté de pdfStudio (variables aux noms libres) se téléverse, montre son écran de liaison pré-rempli, refuse l'installation tant qu'une ligne n'est pas décidée, puis s'installe.
+Tout se passe **en local, sur la branche `development`**. Aucune étape ne touche la production.
+
+- [ ] `make lint && make typecheck && make test` — passe.
+- [ ] `make test-coverage` — 100 % hors `engine/`.
+- [ ] `make test-e2e` — passe, parcours de liaison compris.
+- [ ] `make sync-engine` (sur l'hôte) puis `git status` : **aucun diff** dans `engine/`.
+- [ ] Dans le navigateur : un `.zip` exporté de pdfStudio (variables aux noms libres) se téléverse, montre son écran de liaison pré-rempli, refuse l'installation tant qu'une ligne n'est pas décidée, puis s'installe.
 - [ ] Un badge rendu depuis ce template porte les bonnes valeurs, la date au format déclaré par le manifeste, et respecte les conditions nommées.
 - [ ] Une variable « laissée vide » s'imprime vide et déclenche les blocs `isEmpty`.
-- [ ] `migrate-installed-templates-v2 --apply` migre toutes les lignes v1, est idempotent, et un badge rendu depuis un template migré est identique à l'ancien — à la réserve de fuseau documentée dans la spec.
-- [ ] `validate-badge-templates` signale une table de liaison incomplète.
+- [ ] En dev : `make migrate-installed-templates ARGS=--apply` migre toutes les lignes v1, un second passage rapporte 0 (idempotence), et un badge rendu depuis un template migré est identique à l'ancien — à la réserve de fuseau documentée dans la spec.
+- [ ] `make validate-badge-templates` sort OK, et signale une table de liaison incomplète quand on en fabrique une (vider `bindings` d'une ligne en dev, relancer, puis restaurer par `make db-seed` ou en réinstallant).
+- [ ] La section `## Progression` est à jour, toutes les tasks à `[x]` (ou `[-]` justifié).
 
-## Procédure de déploiement
+## Hors plan : mise en production
 
-L'ordre n'est pas libre : après la tâche 5, une ligne restée en v1 n'est plus rendable.
+**Ce plan ne déploie pas.** Il s'arrête à une branche `development` verte ; aucun agent n'exécute de commande `prod-*`, `preprod-*`, `deploy` ou `upload`, ni ne se connecte en SSH.
 
-```
-1. make prod-db-push                                  colonne bindings
-2. make migrate-installed-templates ARGS=--apply      toutes les lignes passent en v2
-3. bascule du trafic vers la nouvelle version
-```
-
-Les trois dans la même fenêtre, sans service entre 1 et 3. En cas d'échec à l'étape 2,
-le rapport nomme chaque ligne sautée et sa raison : les corriger avant de basculer.
+Pour mémoire, à l'intention de l'utilisateur qui décidera de la release : depuis la tâche 5, le moteur v2 ne sait plus rendre une ligne restée en v1. L'ordre de mise en production n'est donc pas libre — pousser le schéma, migrer les lignes, puis seulement basculer le trafic, dans la même fenêtre. La séquence est décrite dans la spec (§ « Migration des lignes en base », conséquence 2) ; la cible `migrate-installed-templates` créée ici vise le conteneur de dev, et son équivalent de production est à prévoir au moment de la release.
