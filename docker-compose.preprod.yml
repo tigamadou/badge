@@ -73,7 +73,9 @@ services:
   # les ports sont publies pour faciliter le debug de la preprod.
   minio:
     container_name: badge-minio-preprod
-    image: minio/minio:latest
+    # MinIO ne publie plus son image sur Docker Hub : `minio/minio` n'est plus
+    # telechargeable. Le registre officiel est quay.io.
+    image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     env_file:
       - .env.preprod
