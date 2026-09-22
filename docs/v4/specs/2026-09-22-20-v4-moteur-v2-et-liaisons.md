@@ -238,9 +238,11 @@ Idempotent (il ne regarde que `formatVersion = 1`), reprenable ligne par ligne.
    On ne regénère pas : `proofPath` existe déjà et reste.
 
 2. **L'ordre de déploiement n'est pas libre.** Puisqu'il n'y a plus qu'un moteur, une ligne
-   encore en v1 n'est plus rendable par le nouveau code. La séquence de release est :
-   `prisma migrate deploy` → `migrate-installed-templates-v2 --apply` → **puis seulement**
-   bascule du trafic. Les trois dans la même fenêtre, sans service entre les deux.
+   encore en v1 n'est plus rendable par le nouveau code. Ce dépôt n'a pas de dossier
+   `prisma/migrations` — le schéma se pousse (`make prod-db-push`) — donc la séquence de
+   release est : `make prod-db-push` → `migrate-installed-templates-v2 --apply` →
+   **puis seulement** bascule du trafic. Les trois dans la même fenêtre, sans service
+   entre les deux.
 
 ## Garde-fou de parité
 
@@ -278,7 +280,7 @@ Le README de pdfStudio et celui de ce dépôt décrivent la procédure dans les 
 ```
 1. engine/ copié + sync-engine + test de parité        rien ne le consomme encore
 2. bindings.ts + build-values.ts (TDD)                 pas encore branchés
-3. Prisma : colonne bindings                           additive, déployable seule
+3. Prisma : colonne bindings (db push)                 additive, déployable seule
 4. install.ts + /inspect + écran de liaison + e2e
 5. ◆ BASCULE : resolve.ts et la route de rendu passent à values,
      sources.ts / resolve-source.ts / sample-context.ts et les doublons supprimés
