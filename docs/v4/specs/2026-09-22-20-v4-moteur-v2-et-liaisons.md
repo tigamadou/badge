@@ -1,6 +1,6 @@
 # Spec v4 — Moteur v2 dans l'application badge, et liaisons de variables
 
-> **Statut** : conception validée — 2026-09-22 — **à implémenter**
+> **Statut** : conception validée — 2026-09-22 — **implémentée** (2026-09-22)
 > **Type** : remplacement du moteur de rendu + extension du modèle d'installation
 > **Périmètre** : v4
 > **Dépend de** : [`2026-08-14-19-…studio-v3-groupes-formes-interface`](2026-08-14-19-v4-studio-v3-groupes-formes-interface.md)

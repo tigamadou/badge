@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { parseManifest } from "../declarative/schema";
+import { parseManifest } from "../engine/declarative/schema";
+import { validateBindings } from "../bindings";
 import { REFERENCE_DIR } from "../install";
 
 // Les manifestes livres avec l'application sont installes par le seed. S'ils etaient
@@ -26,6 +27,14 @@ describe("paquets de reference", () => {
       const raw = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
       const res = parseManifest(raw, []);
       expect(res.ok, res.ok === false ? res.errors.join(" | ") : "").toBe(true);
+    });
+
+    it(`${family} : sa table de liaison est valide`, () => {
+      const dir = resolve(REFERENCE_DIR, family);
+      const parsed = parseManifest(JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")), []);
+      if (!parsed.ok) throw new Error(parsed.errors.join(" | "));
+      const bindings = JSON.parse(readFileSync(join(dir, "bindings.json"), "utf8"));
+      expect(validateBindings(parsed.manifest.variables, bindings)).toEqual([]);
     });
 
     it(`${family} : le manifeste declare la famille du dossier`, () => {

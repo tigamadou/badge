@@ -14,15 +14,15 @@
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Copier le moteur et sceller le dossier | [ ] | | |
-| 2 | `bindings.ts` — vocabulaire badge et validation | [ ] | | |
-| 3 | `build-values.ts` — du contexte aux valeurs | [ ] | | |
-| 4 | Colonne `bindings` en base | [ ] | | |
-| 5 | ◆ Bascule — moteur v2, route d'installation à liaisons | [ ] | | |
-| 6 | Route d'inspection et écran de liaison | [ ] | | |
-| 7 | Migration des templates installés (script, en dev) | [ ] | | |
-| 8 | Nettoyage et documentation | [ ] | | |
-| — | Vérification finale | [ ] | | |
+| 1 | Copier le moteur et sceller le dossier | [x] | 2026-09-22 | copie du commit pdfStudio 608bf3e |
+| 2 | `bindings.ts` — vocabulaire badge et validation | [x] | 2026-09-22 | |
+| 3 | `build-values.ts` — du contexte aux valeurs | [x] | 2026-09-22 | |
+| 4 | Colonne `bindings` en base | [x] | 2026-09-22 | |
+| 5 | ◆ Bascule — moteur v2, route d'installation à liaisons | [x] | 2026-09-22 | db-reset fait ; T8 step 1 avance ; assets de groupes precharges |
+| 6 | Route d'inspection et écran de liaison | [x] | 2026-09-22 | + aria-label des selects, garde anti double-clic |
+| 7 | Migration des templates installés (script, en dev) | [x] | 2026-09-22 | dev : 0 ligne v1 (base remise a zero en T5) ; validate OK |
+| 8 | Nettoyage et documentation | [x] | 2026-09-22 | step 1 fait en T5 ; README pdfStudio modifie (autorise) |
+| — | Vérification finale | [x] | 2026-09-23 | navigateur OK (liaison, bouton grisé, laisser vide, installation, date long, condition nommée, repli isEmpty, badge réel) ; copie = pdfStudio 608bf3e ; pdfStudio est depuis passé à e40f7b6 (catégorie) : resynchronisation à décider ; aucune ligne v1 en dev (base remise à zéro) ; gate couverture rouge sur 3 écarts préexistants |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettre à jour la ligne après chaque task validée (tests verts + critères d'acceptation) ; en cas d'interruption, passer à `[~]` et noter précisément l'état.
 

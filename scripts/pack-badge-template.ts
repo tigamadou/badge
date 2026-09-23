@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import JSZip from "jszip";
-import { parseManifest } from "../src/lib/badge-templates/declarative/schema";
+import { parseManifest } from "../src/lib/badge-templates/engine/declarative/schema";
 
 // Collecte les fichiers d'un sous-dossier du paquet (assets/ ou fonts/), s'il existe.
 function collect(dir: string, sub: string): Array<{ path: string; body: Buffer }> {

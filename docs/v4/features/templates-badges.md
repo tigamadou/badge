@@ -1,7 +1,10 @@
 # Templates de badge
 
 > Ce document décrit le *quoi* et le *comment* actuels. Le *pourquoi* vit dans
-> [`../specs/2026-08-11-10-v4-format-et-moteur-de-templates-declaratifs.md`](../specs/2026-08-11-10-v4-format-et-moteur-de-templates-declaratifs.md).
+> [`../specs/2026-08-11-10-v4-format-et-moteur-de-templates-declaratifs.md`](../specs/2026-08-11-10-v4-format-et-moteur-de-templates-declaratifs.md)
+> (format v1 et premier moteur) et dans
+> [`../specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md`](../specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md)
+> (moteur v2 partagé avec pdfStudio, et liaisons de variables).
 
 ## État actuel
 
@@ -30,23 +33,73 @@ absente, la résolution **échoue bruyamment** en nommant `make db-seed` : une b
 template est une anomalie d'exploitation, qu'il vaut mieux voir échouer qu'imprimer un
 badge vide.
 
+Le moteur de rendu (`src/lib/badge-templates/engine/`) est une **copie scellée** de
+`pdfStudio/src/engine/`. On ne le modifie jamais ici : corriger dans pdfStudio, puis
+`make sync-engine`. Un test de parité (`engine-parity.test.ts`) refuse toute édition
+faite sur place ; `engine/SOURCE.md` dit de quel commit pdfStudio la copie provient.
+Le moteur ne connaît aucun nom métier : il rend un document sur un dictionnaire de
+valeurs, que `build-values.ts` dérive du contexte d'inscription et de la table de
+liaison du template.
+
+`AssetResolver` — la fonction qui donne au moteur l'image ou la police déjà encodée
+pour un chemin de ressource — est **synchrone** : `resolveTemplate`
+(`src/lib/badge-templates/resolve.ts`, `blockAssets`/`referencedAssets`) précharge
+donc, avant de construire le composant, **tous** les fonds `image.asset` référencés
+par l'arbre de blocs, y compris ceux posés dans un `group` imbriqué à n'importe
+quelle profondeur (`blockAssets` descend récursivement) — plus les fichiers de
+`fonts`. Une ressource oubliée dans ce préchargement ferait échouer le rendu, pas
+juste s'afficher vide.
+
 ## Installation
 
 Le staff plateforme (`STAFF_ADMIN` ou au-dessus) dépose une archive sur
-`/platform/badge-templates`. `POST /api/platform/badge-templates` enchaîne, et s'arrête
-à la première erreur :
+`/platform/badge-templates`, en **deux temps**.
 
-1. contrôles d'archive et validation du manifeste — refus 400 avec **la liste complète**
-   des erreurs, pour corriger le paquet en une passe ;
-2. refus si la famille collisionne avec un identifiant du registre compilé ;
-3. calcul de la version : `max(version) + 1` pour cette famille, ou 1 ;
-4. **rendu d'épreuve** avec un contexte de démonstration figé ;
-5. écriture des ressources et de l'aperçu dans le stockage ;
-6. création de la ligne, puis `logActivity(BADGE_TEMPLATE_INSTALLED)`.
+**1. Inspection, lecture seule.** `POST /api/platform/badge-templates/inspect` lit
+l'archive (contrôles + `parseManifest`) et n'écrit rien. Il rend `variables` (nom,
+`kind`, libellé, tels que déclarés par le manifeste), `suggested` (pré-remplissage :
+`suggestBindings` ne propose une source que si le nom de la variable est exactement
+celui d'une source connue **et** que les types s'accordent — aucune heuristique sur
+les noms proches) et `sources` (les 15 entrées de `SOURCE_KINDS`, avec leur type).
+
+**2. L'écran de liaison.** `BadgeTemplateInstaller.tsx` affiche un tableau, une ligne
+par variable : nom, type, et un sélecteur de source **filtré aux sources du même
+type**. Trois états par ligne : non décidé (case vide, valeur `undefined`), « laisser
+vide » (`null`), ou une source. Le bouton « Installer » reste grisé tant qu'une ligne
+n'est pas décidée, et se grise à nouveau pendant la requête (`installing`), pour
+empêcher une double soumission. Chaque sélecteur porte un nom accessible
+(`aria-label="Source de la variable <nom>"`).
+
+**3. L'installation.** `POST /api/platform/badge-templates` reçoit l'archive **et**
+le champ `bindings` (JSON) — l'archive transite donc deux fois, ce que
+`MAX_ARCHIVE_BYTES` borne déjà des deux côtés. La route enchaîne, et s'arrête à la
+première erreur :
+
+1. contrôles d'archive et validation du manifeste — refus 400 avec **la liste
+   complète** des erreurs, pour corriger le paquet en une passe ;
+2. lecture de `bindings` : un champ manquant, un JSON illisible, ou une valeur qui
+   n'est pas un objet (`null` et un tableau sont du JSON valide mais invalides ici)
+   refusent respectivement avec « liaisons : champ manquant. », « liaisons : JSON
+   illisible. » ou « liaisons : objet attendu. » ;
+3. `validateBindings(manifest.variables, bindings)` — refus 400 avec la liste
+   complète des erreurs : variable non décidée (clé absente), source inconnue, type
+   incompatible entre la variable et la source choisie ;
+4. calcul de la version : `max(version) + 1` pour cette famille, ou 1 ;
+5. **rendu d'épreuve** avec les `sample` du manifeste (`samplesOf`), pas avec les
+   liaisons : une épreuve montre le template, pas un participant ;
+6. écriture des ressources et de l'aperçu dans le stockage ;
+7. création de la ligne (`layout` **et** `bindings`), puis
+   `logActivity(BADGE_TEMPLATE_INSTALLED)`.
 
 La ligne n'est créée qu'après une preuve de rendu réussie : aucune entrée du catalogue
 ne peut être irrécupérable. Si le rendu échoue, les ressources déjà écrites sont
 supprimées — un paquet refusé ne laisse rien derrière lui.
+
+Les paquets **livrés avec l'application** (`default`, `recto-verso`) portent leur
+table de liaison en dépôt, sous `prisma/badge-templates/<famille>/bindings.json` —
+lue par `ensureReferenceTemplates` au seed, qui n'a pas d'administrateur devant lui
+pour la choisir. pdfStudio n'en produit pas : c'est une convention propre à ce dépôt,
+pour ses propres paquets.
 
 ### Versions figées
 
@@ -56,7 +109,9 @@ c'est le `cuid` de cette ligne que stockent `Event.badgeTemplateId`,
 qu'une version, pour toujours : un événement ne peut pas voir son badge changer sous ses
 pieds. Aucune route n'expose de modification de `layout`, `family` ou `assetPrefix` —
 le schéma Zod de la route d'archivage est `.strict()`, ce qui en fait une règle appliquée
-et non une convention.
+et non une convention. **Une table de liaison ne s'édite pas après installation** non
+plus : il n'existe aucune route pour ça — corriger une liaison suppose de réinstaller
+le paquet.
 
 ### Archivage
 
@@ -98,15 +153,18 @@ La création se fait dans **PDF Studio**, un projet dédié qui vit à côté de
 les images et les polices, composer les blocs, générer le paquet à téléverser ici.
 
 > Historique : le studio a d'abord vécu dans ce dépôt (`studio/`, specs 16, 18, 19)
-> avant d'être extrait en projet autonome. Il embarque sa **propre copie** du moteur
-> déclaratif : toute évolution du format (`src/lib/badge-templates/declarative/`) doit
-> être **reportée dans pdfStudio**, et réciproquement, tant que l'application ne
-> consomme pas ce projet directement.
+> avant d'être extrait en projet autonome. Depuis la spec 20, le moteur de rendu
+> (`src/engine/` côté pdfStudio) **fait autorité** : l'application en héberge une
+> **copie scellée** dans `src/lib/badge-templates/engine/`, resynchronisée par
+> `make sync-engine`, jamais éditée sur place. Une évolution du format se fait donc
+> dans pdfStudio, puis se reporte ici — plus jamais l'inverse.
 
-Les commandes locales restent disponibles pour un usage hors interface :
+Le studio crée les templates ; **l'application les installe et les rend** — il
+n'existe plus de générateur de squelette côté badge. Pour un usage hors interface,
+sur un `manifest.json` déjà écrit à la main sous `badge-templates/<nom>/` (dossier
+gitignoré) :
 
 ```bash
-make new-badge-template NAME=salon-2027   # cree le squelette
 make pack-badge-template NAME=salon-2027  # produit l'archive
 ```
 
@@ -116,7 +174,7 @@ sombre :
 
 | Colonne | Contenu |
 |---|---|
-| **Gauche** | En haut le **panneau de calques** : l'arbre des blocs, sans numéros — icône et libellé de type (Texte, Rectangle, Carré, Cercle, QR Code, Groupe) ou le `name` du bloc. Sélection au clic, renommage inline (✎), déplacement, duplication, suppression au survol ; cases à cocher pour **Grouper** des frères, bouton **Dégrouper** sur un groupe. En bas le **contexte** de prévisualisation en sections repliables (participant, catégorie, événement, badge) avec ses préréglages et le dépôt de photo / logo. |
+| **Gauche** | En haut le **panneau de calques** : l'arbre des blocs, sans numéros — icône et libellé de type (Texte, Rectangle, Carré, Cercle, Groupe) ou le `name` du bloc. Il n'y a plus de type `QR Code` depuis le format v2 : un QR est une variable `image` posée dans une forme, comme n'importe quelle autre image. Sélection au clic, renommage inline (✎), déplacement, duplication, suppression au survol ; cases à cocher pour **Grouper** des frères, bouton **Dégrouper** sur un groupe. En bas le **contexte** de prévisualisation en sections repliables (participant, catégorie, événement, badge) avec ses préréglages et le dépôt de photo / logo. |
 | **Centre** | Le **canevas** : l'aperçu PDF rafraîchi à chaque modification, et sous lui le bandeau des erreurs de validation — les erreurs localisées (« bloc 3 › 2 ») marquent aussi l'entrée fautive de l'arbre. |
 | **Droite** | L'**inspecteur** du bloc sélectionné, dont les paramètres sont regroupés **par fonction** : Identité, Disposition, Apparence, Coins et bordures, Typographie, Contenu, Conditions. Sans sélection, la colonne affiche les propriétés du **paquet** (famille, libellé, description, aperçu, polices, dépôt de ressources). Le bouton **JSON** de la barre supérieure y bascule le manifeste brut, synchronisé dans les deux sens. |
 
@@ -136,20 +194,22 @@ et refuse de s'appliquer à un groupe portant une rotation, une opacité ou une
 condition — ces effets de conteneur ne se reportent pas sur les enfants sans changer
 le rendu.
 
-Deux boutons complètent la barre supérieure : **Nouveau** (même squelette que
-`make new-badge-template`) et **Générer le paquet**, qui enregistre le manifeste puis
-télécharge le zip prêt à téléverser dans `/platform/badge-templates` — l'empaquetage
-suit les mêmes règles de validation que l'installation, donc aucun écart possible.
+Deux boutons complètent la barre supérieure : **Nouveau** (un squelette v2 minimal)
+et **Générer le paquet**, qui enregistre le manifeste puis télécharge le zip prêt à
+téléverser dans `/platform/badge-templates` — l'empaquetage suit les mêmes règles de
+validation que l'installation, donc aucun écart possible. C'est le chemin normal :
+le studio crée, l'application installe et rend.
 
 L'interface est écrite en **Preact + htm sans étape de build** : la bibliothèque est
 vendorisée (version figée, licence MIT) dans le projet pdfStudio (`src/public/vendor/`),
 les composants dans `src/public/ui/`.
 
-Côté pdfStudio, l'atelier est `templates/<nom>/` (non versionné) ; côté badge, le
-squelette de `make new-badge-template` naît dans `badge-templates/<nom>/` — un dossier
-**gitignoré**, atelier de travail à ne pas confondre avec `prisma/badge-templates/`, qui
-contient les paquets de référence installés par le seed. Il contient un `manifest.json`
-minimal mais fonctionnel, un `README.md` documentant le format, et un dossier `assets/`.
+Côté pdfStudio, l'atelier est `templates/<nom>/` (non versionné). Côté badge,
+`badge-templates/<nom>/` — un dossier **gitignoré**, à ne pas confondre avec
+`prisma/badge-templates/`, qui contient les paquets de référence installés par le
+seed — reste disponible comme atelier manuel pour qui préfère écrire un
+`manifest.json` à la main et l'empaqueter avec `make pack-badge-template`, sans
+passer par le studio.
 
 `pack-badge-template` **valide le manifeste avant d'écrire l'archive** et refuse d'en
 produire une invalide : mieux vaut échouer à l'empaquetage, où le message est immédiat,
@@ -194,13 +254,18 @@ Trois emplacements et rien d'autre. Toute autre entrée fait échouer la validat
 archive dont on ignore une partie du contenu est une archive dont on ne maîtrise pas le
 comportement.
 
+`bindings.json` n'apparaît **pas** dans cette liste : un `.zip` téléversé n'en porte
+jamais, sa table de liaison se décide sur l'écran d'installation (voir plus haut).
+Ce fichier est **propre aux paquets livrés avec l'application**
+(`prisma/badge-templates/<famille>/`) — pdfStudio n'en produit pas.
+
 **Les images sont limitées à JPEG et PNG.** `@react-pdf/image` ne reconnaît pas WebP,
 que le reste du projet accepte pourtant pour les uploads utilisateur : un WebP dans un
 paquet produirait un badge cassé.
 
 ### Contrôles appliqués à l'archive
 
-`src/lib/badge-templates/package-reader.ts` est le **seul** module autorisé à ouvrir une
+`src/lib/badge-templates/engine/package-reader.ts` (copie scellée du moteur) est le **seul** module autorisé à ouvrir une
 archive. Tout est vérifié avant extraction.
 
 | Contrôle | Valeur | Raison |
@@ -218,14 +283,32 @@ renommée en `.png` est refusée.
 
 ## Manifeste
 
+Le moteur v2 ne connaît **aucun nom métier** : un manifeste déclare son propre
+vocabulaire dans `variables`, et les blocs y font référence par leur nom. La source
+de vérité du format est `src/lib/badge-templates/engine/declarative/schema.ts` (le
+schéma Zod) et `manifest-types.ts` (les types) — ce document en donne une lecture,
+pas une resynthèse : en cas d'écart, le schéma fait foi.
+
 ```json
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "family": "salon-2027",
   "label": "Badge Salon 2027",
   "description": "Badge recto-verso avec fond personnalisé.",
+  "preview": "assets/apercu.png",
   "page": { "widthPx": 323.53, "heightPx": 204.09, "count": 1 },
   "fonts": [{ "alias": "titre", "file": "fonts/Inter-Bold.ttf", "weight": 700 }],
+  "variables": [
+    { "name": "participant.firstName", "kind": "text", "label": "Prénom", "sample": "Awa" },
+    { "name": "participant.lastName", "kind": "text", "label": "Nom", "sample": "Diallo" },
+    { "name": "participant.photoDataUrl", "kind": "image", "label": "Photo" },
+    { "name": "category.anonymous", "kind": "boolean", "label": "Badge anonyme", "sample": false },
+    { "name": "event.date", "kind": "date", "label": "Date", "format": "long",
+      "sample": "2027-12-15T00:00:00.000Z" }
+  ],
+  "presets": [
+    { "label": "Sans photo", "values": { "participant.photoDataUrl": "" } }
+  ],
   "blocks": [
     { "type": "rect", "page": 1, "x": 0, "y": 0, "w": 323.53, "h": 204.09,
       "image": { "asset": "assets/fond.png" } },
@@ -233,8 +316,7 @@ renommée en `.png` est refusée.
       "text": "{participant.firstName} {participant.lastName}",
       "style": { "font": "titre", "sizePx": 16, "color": "#0f172a",
                  "overflow": "shrink", "minSizePx": 11 },
-      "visibleIf": { "path": "category.anonymous", "equals": false } },
-    { "type": "qr", "page": 1, "x": 234, "y": 113, "w": 68, "h": 68 },
+      "visibleIf": { "variable": "category.anonymous", "equals": false } },
     { "type": "group", "page": 1, "x": 12, "y": 12, "w": 100, "h": 120, "name": "Photo",
       "blocks": [
         { "type": "circle", "x": 0, "y": 0, "w": 100, "h": 100,
@@ -243,6 +325,47 @@ renommée en `.png` est refusée.
   ]
 }
 ```
+
+Le type de bloc `qr` **a disparu en v2** : un QR code est une variable `image`
+(`badge.qrCodeDataUrl` côté application) posée dans une forme, comme n'importe quelle
+autre image — `fond.png` ci-dessus, ou la photo dans le groupe. Un manifeste v1
+(`formatVersion: 1`) est refusé par `parseManifest` avec un message renvoyant vers la
+migration (voir « Migration d'une base antérieure » plus bas) ; il ne descend plus au
+détail des erreurs de schéma pour ce cas précis.
+
+### Champ `variables`
+
+Chaque entrée déclare une référence utilisable par les blocs : `name` (grammaire
+`^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)*$`, trois segments au plus, 60 caractères au
+plus — un nom pointé comme `participant.firstName` ou un nom plat comme `mention`
+sont tous deux valides), `kind` (`text`, `image`, `boolean`, `date`, `color`),
+`label` (affiché à l'écran de liaison), `sample` optionnel (alimente l'aperçu du
+studio et le rendu d'épreuve — pour une variable `image`, un chemin d'asset du
+paquet, validé comme l'est `preview`), et `format` (uniquement pour `kind: "date"`,
+voir plus bas). 40 variables au plus par manifeste.
+
+### Champ `conditions`
+
+Des conditions **nommées**, réutilisables par plusieurs blocs via `visibleIf: { "use":
+"<nom>" }` :
+
+```json
+"conditions": [
+  { "name": "estAnonyme", "when": { "variable": "category.anonymous", "equals": true } }
+]
+```
+
+`when` accepte une condition ou une liste (conjonction), exactement comme un
+`visibleIf` littéral — mais sans `use` : une condition nommée ne peut pas en référencer
+une autre, ce qui exclut tout cycle par construction. 40 conditions au plus.
+
+### Champ `presets`
+
+Un jeu de valeurs partiel, proposé dans le studio pour éprouver un cas limite (sans
+photo, textes très longs, catégorie anonyme…). Chaque clé de `values` désigne une
+variable déclarée, avec un type cohérent — une valeur d'image s'y écrit comme un
+`sample` d'image (un chemin d'asset du paquet, ou `""` pour l'absence de valeur).
+Aucun effet sur le rendu réel : `presets` ne sert qu'à l'aperçu côté studio.
 
 Toutes les coordonnées et dimensions — tailles de police comprises — sont en
 **pixels CSS à 96 dpi**, la convention de Figma et du web (1 px = 1/96 pouce,
@@ -265,7 +388,6 @@ hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
 | Type | Rôle | Champs propres |
 |---|---|---|
 | `text` | Un texte | `text` (gabarit), `style` |
-| `qr` | Le QR code du badge | — |
 | `rect` | Un rectangle | fond : `fill` et/ou `image` |
 | `square` | Un carré — la validation exige `w = h` | fond : `fill` et/ou `image` |
 | `circle` | Un cercle — rayon implicite `min(w,h)/2`, une ellipse si `w ≠ h` ; `radiusPx` interdit | fond : `fill` et/ou `image` |
@@ -275,7 +397,7 @@ hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
 
 Une forme (`rect`, `square`, `circle`) porte **au moins un** fond :
 
-- `fill` — une couleur hexadécimale ou une source de type couleur ;
+- `fill` — une couleur hexadécimale ou une variable de type couleur ;
 - `image` — `{ source | asset, fit }` : une source image du contexte **ou** une
   ressource du paquet (jamais les deux), cadrée par `fit` (`cover` par défaut,
   `contain`, `fill`).
@@ -296,16 +418,18 @@ Outre `page`, `x`, `y`, `w`, `h` et `visibleIf` :
 | `border` | Bordure des quatre côtés : `{ widthPx, color, style }` où `style` vaut `solid` (défaut), `dashed` ou `dotted` |
 | `borderTop`, `borderRight`, `borderBottom`, `borderLeft` | Même forme que `border`, et **prime** sur lui pour le côté concerné |
 
-Les couleurs de bordure acceptent, comme `fill`, une valeur hexadécimale ou un chemin
-de source de type couleur.
+Les couleurs de bordure acceptent, comme `fill`, une valeur hexadécimale ou le nom
+d'une variable de type couleur.
 
 Les **ombres portées et les dégradés ne sont pas supportés** : `@react-pdf` n'a ni
 ombre ni flou (limite du moteur, décision de la spec 18).
 
 ### Gabarits de texte
 
-Le champ `text` mélange littéraux et références : les segments `{chemin}` sont remplacés
-par la valeur, le reste est écrit tel quel.
+Le champ `text` mélange littéraux et références : les segments `{nom}` sont remplacés
+par la valeur de la **variable déclarée** de ce nom, le reste est écrit tel quel. Le
+nom référencé peut être pointé (`participant.firstName`) ou plat (`mention`) : les
+deux formes sont légales depuis le format v2.
 
 ```
 "{participant.firstName} {participant.lastName}"   →  Awa Diallo
@@ -313,9 +437,16 @@ par la valeur, le reste est écrit tel quel.
 "Participant anonyme"                               →  Participant anonyme
 ```
 
-### Sources disponibles
+### Liaisons et sources
 
-| Chemin | Type |
+Un manifeste **ne référence plus** de vocabulaire câblé dans le moteur : il déclare
+des variables aux noms libres (`variables`, ci-dessus), et c'est une **table de
+liaison** — propre à l'application, choisie à l'installation — qui dit quelle donnée
+métier alimente chaque variable. Le moteur (`engine/`) ne connaît aucune de ces 15
+entrées ; elles vivent dans `src/lib/badge-templates/bindings.ts`
+(`SOURCE_KINDS`), hors du dossier scellé :
+
+| Source | Type |
 |---|---|
 | `participant.firstName`, `participant.lastName`, `participant.structure` | texte |
 | `participant.photoDataUrl` | image |
@@ -323,32 +454,63 @@ par la valeur, le reste est écrit tel quel.
 | `category.color` | couleur |
 | `category.neutralBadge`, `category.anonymous` | booléen |
 | `event.title`, `event.location` | texte |
-| `event.date` | date (formatée comme dans les e-mails) |
+| `event.date` | date, transmise **brute** (voir plus bas) |
 | `event.logoDataUrl` | image |
 | `badge.id`, `badge.verifyUrl` | texte |
 | `badge.qrCodeDataUrl` | image |
 
-Un bloc consommant une source d'un type incompatible est refusé à la validation : le
-fond image d'une forme ne peut pas pointer sur `participant.firstName`.
+`validateBindings` refuse une variable liée à une source d'un type différent — la
+même garde que portait autrefois le `kind` de l'ancienne liste blanche `SOURCES`,
+déplacée d'un cran, à l'installation plutôt qu'à la validation du manifeste. Une
+variable **« laissée vide »** (`null` dans la table de liaison) n'est pas écrite :
+`buildValues` saute cette clé, `resolveVariable` retombe sur le vide du type, et
+`isEmpty` joue son rôle de repli exactement comme pour une variable jamais renseignée.
 
-Les champs `fill` et `color` acceptent soit une couleur hexadécimale (`#4f46e5`), soit
-un chemin de source de type couleur (`category.color`).
+`event.date` est transmise **brute**, en ISO : **le format d'affichage appartient à
+la variable**, pas à la source. `formatFrenchDate` ne sert plus le rendu du badge —
+il reste inchangé pour les e-mails, qui restent en français local (voir « Dates » plus
+bas). Les champs `fill` et `color` acceptent soit une couleur hexadécimale
+(`#4f46e5`), soit le nom d'une variable de type `color`.
+
+### Dates
+
+Chaque variable `date` porte un `format` (`long` par défaut) :
+
+| `format` | Rendu | Options `Intl.DateTimeFormat("fr-FR")` |
+|---|---|---|
+| `long` | 15 décembre 2027 | `day: numeric, month: long, year: numeric` |
+| `court` | 15/12/2027 | `day: 2-digit, month: 2-digit, year: numeric` |
+| `moisAnnee` | décembre 2027 | `month: long, year: numeric` |
+| `annee` | 2027 | `year: numeric` |
+| `iso` | 2027-12-15 | — |
+
+Toutes les options (sauf `iso`) forcent `timeZone: "UTC"` : une date de manifeste est
+**calendaire**, pas un instant — le 15 décembre reste le 15 décembre quel que soit le
+fuseau du serveur qui rend le PDF. `long` reproduit exactement l'ancien
+`formatFrenchDate`, à cette réserve de fuseau près (voir la spec 20, § « Dates », pour
+la portée exacte de cette différence sur un template migré).
 
 ### Conditions d'affichage
 
-`visibleIf` accepte une condition, ou une liste dont **toutes** doivent être vraies.
+`visibleIf` accepte une condition littérale, une référence `{ "use": "<nom>" }` vers
+une condition déclarée dans `conditions` (voir plus haut), ou une liste — de l'un ou
+l'autre — dont **toutes** les entrées doivent être vraies.
 
 ```json
 "visibleIf": [
-  { "path": "category.anonymous", "equals": false },
-  { "path": "participant.photoDataUrl", "isEmpty": false }
+  { "variable": "category.anonymous", "equals": false },
+  { "variable": "participant.photoDataUrl", "isEmpty": false }
 ]
 ```
 
-- `equals` compare un booléen. Seuls `category.anonymous` et `category.neutralBadge`
-  sont admis sous cette forme.
-- `isEmpty` teste l'absence de valeur, sur n'importe quelle source. C'est ce qui permet
-  les blocs de repli — le rectangle gris affiché quand le participant n'a pas de photo.
+- `equals` compare une variable de `kind: "boolean"` à une valeur ; la validation
+  refuse un `equals` sur une variable d'un autre type. **Aucune restriction de nom** :
+  la v1 n'admettait cette forme que sur `category.anonymous` et `category.neutralBadge`
+  (`CONDITION_PATHS`) ; ce garde-fou n'existe plus en v2, `equals` s'applique à
+  n'importe quelle variable booléenne déclarée.
+- `isEmpty` teste l'absence de valeur, sur n'importe quel type. C'est ce qui permet
+  les blocs de repli — le rectangle gris affiché quand le participant n'a pas de
+  photo, ou quand la variable qui l'alimente a été laissée vide à l'installation.
 
 Un badge dont l'apparence change selon une condition se décrit avec **deux blocs
 superposés portant des conditions inverses**. C'est ainsi que la bande de catégorie
@@ -375,7 +537,7 @@ déclaré, `@react-pdf` coupe avec une ellipse.
 | `sizePx`, `minSizePx` | Taille de police, et plancher du mode `shrink` |
 | `font`, `weight` | Alias d'une police déclarée dans `fonts` ; graisse 400 / 500 / 600 / 700 |
 | `fontStyle` | `italic` (Montserrat italique est enregistrée par défaut) |
-| `color` | Hexadécimale ou source de type couleur |
+| `color` | Hexadécimale ou variable de type couleur |
 | `align` | `left`, `center`, `right`, `justify` |
 | `transform` | `uppercase`, `lowercase`, `none` |
 | `decoration` | `underline`, `line-through` |
@@ -401,20 +563,39 @@ déclarant le même alias s'écraseraient sans ce préfixe.
 descendent récursivement dans les groupes, et les messages nomment le chemin du bloc
 fautif (« bloc 3 › 2 : … ») :
 
-- un `formatVersion` inconnu, une `family` qui n'est pas un slug kebab-case ;
+- un `formatVersion` différent de `2` (un `1` renvoie vers la migration, un autre est
+  simplement refusé), une `family` qui n'est pas un slug kebab-case ;
+- une `variable` déclarée deux fois, un nom hors grammaire ou de plus de trois
+  segments, plus de 40 variables ; un `sample` incohérent avec le `kind` (booléen
+  hors booléen, hexadécimal hors couleur, ISO hors date, ressource absente du
+  paquet pour une image) ; un `format` posé sur une variable non `date` ;
+- une `condition` nommée déclarée deux fois, ou dont le `when` échoue les mêmes
+  contrôles qu'un `visibleIf` littéral ; plus de 40 conditions ;
+- un `preset` dont une clé ne désigne aucune variable déclarée, ou dont le type de
+  la valeur ne correspond pas ;
 - un bloc dont la page dépasse `page.count` ; une `page` manquante à la racine ou
   déclarée sur un enfant de groupe ;
-- plus de 60 blocs, **groupes et enfants compris** (l'arbre est compté à plat) ;
-- une source inconnue ou de type incompatible ;
+- plus de 60 blocs, **groupes et enfants compris** (l'arbre est compté à plat,
+  descente récursive dans les groupes imbriqués) ;
+- une référence `{nom}` (texte), `image.source` ou couleur vers une variable **non
+  déclarée**, ou déclarée d'un `kind` incompatible avec l'usage (`text`/`date` pour
+  un gabarit de texte, `image` pour un fond, `color` — ou hexadécimal — pour une
+  couleur) ; une référence `{ "use": "<nom>" }` vers une condition non déclarée ;
 - une forme sans fond, ou dont le fond `image` porte à la fois `source` et `asset`,
   ou aucun des deux ;
 - un `square` dont `w ≠ h`, un `circle` portant un `radiusPx` ;
 - une ressource ou une police déclarée mais absente du paquet ;
 - un `style.font` sans `alias` correspondant ;
 - `overflow: "shrink"` sans `minSizePx`, ou un `minSizePx` supérieur au `sizePx` ;
-- une couleur ni hexadécimale ni source de couleur (remplissage, texte, fond du
-  texte, bordures) ;
-- un `visibleIf` de forme `equals` sur un chemin non booléen.
+- une couleur ni hexadécimale ni variable de type couleur (remplissage, texte, fond
+  du texte, bordures) ;
+- un `visibleIf` (ou un `when` de condition nommée) de forme `equals` sur une
+  variable non booléenne.
+
+Ce que `parseManifest` valide **ne couvre pas** la table de liaison : un manifeste
+peut être valide alors même qu'aucune de ses variables n'a encore de source choisie.
+C'est `validateBindings` (`src/lib/badge-templates/bindings.ts`), appelée séparément
+à l'installation et par `validate-badge-templates`, qui porte ce second contrôle.
 
 Le validateur est une fonction **pure** : aucun accès réseau ni base. Il est donc
 réutilisable côté client par un futur éditeur visuel.
@@ -442,5 +623,68 @@ moyens différents ; le placement se vérifie à l'œil, sur un badge imprimé.
 colonnes de la cascade. Idempotent, et il signale toute valeur qui ne désigne aucun
 template plutôt que de deviner. Une base neuve n'en a pas besoin : `make db-seed` suffit.
 
-`make validate-badge-templates` vérifie qu'aucune référence n'est orpheline et que la
-famille `default` existe bien.
+`make migrate-installed-templates [ARGS=--apply]` migre les lignes `InstalledBadgeTemplate`
+encore au format v1 (`formatVersion = 1`) vers le v2, depuis la spec 20. Le moteur v2 ne
+sait plus rendre une ligne v1 : **aucune coexistence n'est possible**. Une ligne restée en
+v1 fait échouer la résolution (`resolveTemplate` lève une erreur explicite qui nomme cette
+cible), donc l'impression de chaque badge qui en dépend répond 500. Pour chaque ligne : `migrateManifest` (porté de pdfStudio) convertit
+le manifeste, la table de liaison est posée en **identité** (les variables produites
+portent exactement le nom des 15 sources v1, aucun choix humain requis), et
+`validateBindings` garde le résultat avant écriture. **Dry-run par défaut** ; `ARGS=--apply`
+pour écrire. Idempotent (ne regarde que `formatVersion = 1`), et couvre les templates
+**archivés** — un template archivé reste résolvable, donc migrable.
+
+### Ordre de release obligatoire
+
+Conséquence directe (spec 20, § « Migration des lignes en base ») : sur toute base qui
+contient des lignes v1, la mise en service du moteur v2 suit **cet ordre, dans la même
+fenêtre, sans trafic entre les étapes** :
+
+1. **Pousser le schéma** (colonne `InstalledBadgeTemplate.bindings`) sur la base cible.
+2. **Lancer `migrate-installed-templates-v2 --apply`** contre cette même base (un dry-run
+   juste avant est recommandé), puis `validate-badge-templates` pour confirmer qu'il ne
+   reste aucune ligne v1.
+3. **Seulement ensuite**, ouvrir le trafic sur la nouvelle version.
+
+Faits d'outillage à connaître avant de planifier la release :
+
+- La cible Makefile `migrate-installed-templates` vise **uniquement le conteneur de dev**
+  (`docker compose -f docker-compose.dev.yml exec app …`). Il n'existe pas d'équivalent
+  production.
+- L'image de production (`Dockerfile`, étape `runner` en mode standalone) ne contient ni
+  `scripts/`, ni `src/`, ni `tsx` : le script **ne peut pas** tourner dedans.
+- `docker-entrypoint.sh` exécute `prisma db push` puis sert l'application **immédiatement** :
+  démarrer la nouvelle image pousse le schéma et ouvre le trafic d'un même geste, sans
+  laisser de place à l'étape 2.
+
+Le script doit donc être lancé depuis un environnement qui dispose des sources (le
+conteneur de dev, ou un conteneur d'outillage ponctuel) avec `DATABASE_URL` pointée sur la
+base cible, **avant** que la nouvelle image ne reçoive du trafic — par exemple : schéma
+poussé depuis cet environnement, migration, puis démarrage de la nouvelle image (son
+`db push` n'a alors plus rien à faire). La mécanique concrète de production (accès à la
+base, conteneur utilisé, coupure éventuelle) est **à arrêter au moment de la release** ;
+elle sort du périmètre de la spec 20.
+
+### Réserves de la migration
+
+Deux réserves à connaître :
+
+- Les échantillons d'image du studio (`assets/photo-demo.png`, etc.) n'existent pas dans
+  les paquets v1 installés ; `migrateManifest` laisse alors ces variables sans `sample`,
+  sans effet sur les badges réels. Le PDF d'épreuve (`proofPath`) existant **n'est pas
+  régénéré** après migration.
+- Fuseau : un template migré rend sa date **à l'identique** du v1, sauf si le serveur
+  tourne à l'ouest de l'UTC — la date avance alors d'un jour, vers la bonne valeur
+  calendaire (voir la spec 20, § « Dates »).
+
+**Message trompeur à connaître** : quand `parseManifest` (moteur v2, donc aussi
+pdfStudio) refuse un manifeste `formatVersion: 1`, le message renvoie vers
+`make migrate-template NAME=<famille>` — la commande **de pdfStudio**, pour un
+manifeste d'atelier. Pour une **ligne déjà installée** dans ce dépôt, l'équivalent
+est `make migrate-installed-templates` ci-dessus : le message du moteur ne le sait
+pas, il est identique des deux côtés puisque le moteur est une copie scellée.
+
+`make validate-badge-templates` vérifie qu'aucune référence n'est orpheline, que la
+famille `default` existe bien, et — depuis la spec 20 — signale aussi toute ligne restée
+au format v1 et toute table de liaison incomplète (variable non décidée, source inconnue,
+type incompatible).

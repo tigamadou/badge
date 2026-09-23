@@ -1,19 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
-import { SAMPLE_CONTEXT } from "../declarative/sample-context";
-import { renderToJson } from "../declarative/__tests__/helpers/render-to-json";
+import { renderToJson } from "../engine/declarative/__tests__/helpers/render-to-json";
 import { resolveTemplate, listAvailableTemplates, templateExists, previewUrl } from "../resolve";
 import { ensureReferenceTemplates, defaultTemplateId } from "../install";
 
 const LAYOUT = {
-  formatVersion: 1,
+  formatVersion: 2,
   family: "salon",
   label: "Salon",
   description: "",
   page: { widthPx: 1011, heightPx: 638, count: 1 },
-  blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
+  variables: [{ name: "badge.qrCodeDataUrl", kind: "image", label: "QR code" }],
+  blocks: [
+    { type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, image: { source: "badge.qrCodeDataUrl" } },
+  ],
 };
+
+// Table de liaison complete pour LAYOUT : sans elle, chaque resolution journaliserait.
+const BINDINGS = { "badge.qrCodeDataUrl": "badge.qrCodeDataUrl" };
 
 async function install(
   overrides: Partial<{ family: string; version: number; archived: boolean; label: string }> = {},
@@ -28,8 +33,9 @@ async function install(
       pageWidthPx: 1011,
       pageHeightPx: 638,
       layout: LAYOUT,
+      bindings: BINDINGS,
       assetPrefix: "badge-templates/test/",
-      formatVersion: 1,
+      formatVersion: 2,
       installedById: "u1",
       archived: overrides.archived ?? false,
     },
@@ -90,18 +96,19 @@ describe("resolveTemplate", () => {
         pageWidthPx: 1011,
         pageHeightPx: 638,
         layout: {
-          formatVersion: 1,
+          formatVersion: 2,
           family: "avec-assets",
           label: "Avec ressources",
           description: "",
           page: { widthPx: 1011, heightPx: 638, count: 1 },
           fonts: [{ alias: "titre", file: "fonts/A.ttf" }],
+          variables: [],
           blocks: [
             { type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/fond.png" } },
           ],
         },
         assetPrefix: prefix,
-        formatVersion: 1,
+        formatVersion: 2,
         installedById: "u1",
       },
     });
@@ -110,7 +117,119 @@ describe("resolveTemplate", () => {
     expect(t.meta.label).toBe("Avec ressources");
     // Le rendu doit consommer les ressources prechargees : l'image de fond apparait
     // dans l'arbre sous forme de data URL, preuve que le stockage a bien ete lu.
-    const rendu = renderToJson(t.Component, SAMPLE_CONTEXT);
+    const rendu = renderToJson(<t.Component values={{}} />);
+    expect(rendu.images.some((src) => src.startsWith("data:image/png;base64,"))).toBe(true);
+  });
+
+  it("expose les variables du manifeste et la table de liaison stockee", async () => {
+    const row = await install();
+    const t = await resolveTemplate(row.id);
+    expect(t.variables).toEqual(LAYOUT.variables);
+    expect(t.bindings).toEqual(BINDINGS);
+  });
+
+  it("journalise une table de liaison incomplete sans echouer", async () => {
+    const { id } = await install();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    // Ligne installee puis videe de ses liaisons : on veut un badge imprime et
+    // un avertissement, jamais une exception.
+    await prisma.installedBadgeTemplate.update({ where: { id }, data: { bindings: {} } });
+    const template = await resolveTemplate(id);
+    expect(template.bindings).toEqual({});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("liaisons incompletes"));
+    warn.mockRestore();
+  });
+
+  it("traite une table de liaison JSON null comme une table vide", async () => {
+    const { id } = await install();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    // La colonne est NOT NULL, mais la valeur JSON `null` y reste possible (ecriture
+    // hors Prisma) : le rendu doit tenir, avec un avertissement.
+    await prisma.$executeRaw`UPDATE InstalledBadgeTemplate SET bindings = CAST('null' AS JSON) WHERE id = ${id}`;
+    const template = await resolveTemplate(id);
+    expect(template.bindings).toEqual({});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("liaisons incompletes"));
+    warn.mockRestore();
+  });
+
+  it.each([
+    ["un scalaire", 42],
+    ["une chaine", "badge.id"],
+    ["un tableau", ["badge.qrCodeDataUrl"]],
+  ])("traite une table de liaison qui est %s comme une table vide", async (_label, value) => {
+    const { id } = await install();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    // Un tableau passerait `typeof === "object"` : il doit lui aussi etre ecarte,
+    // sinon ses indices seraient pris pour des noms de variables.
+    await prisma.installedBadgeTemplate.update({ where: { id }, data: { bindings: value } });
+    const template = await resolveTemplate(id);
+    expect(template.bindings).toEqual({});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("liaisons incompletes"));
+    warn.mockRestore();
+  });
+
+  it("refuse explicitement une ligne restee au format v1, en nommant la migration", async () => {
+    const { id } = await install();
+    await prisma.installedBadgeTemplate.update({ where: { id }, data: { formatVersion: 1 } });
+    await expect(resolveTemplate(id)).rejects.toThrow(/format v1.*make migrate-installed-templates/);
+  });
+
+  it("precharge une ressource posee dans un groupe imbrique", async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const prefix = `badge-templates/resolve-groupe-${Date.now()}/`;
+    await uploadFile(`${prefix}assets/fond.png`, png, "image/png");
+
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "groupe",
+        version: 1,
+        label: "Groupe",
+        description: "",
+        pages: 1,
+        pageWidthPx: 1011,
+        pageHeightPx: 638,
+        layout: {
+          formatVersion: 2,
+          family: "groupe",
+          label: "Groupe",
+          description: "",
+          page: { widthPx: 1011, heightPx: 638, count: 1 },
+          variables: [],
+          blocks: [
+            {
+              type: "group",
+              page: 1,
+              x: 0,
+              y: 0,
+              w: 500,
+              h: 500,
+              blocks: [
+                {
+                  type: "group",
+                  x: 10,
+                  y: 10,
+                  w: 200,
+                  h: 200,
+                  blocks: [
+                    { type: "square", x: 0, y: 0, w: 50, h: 50, image: { asset: "assets/fond.png" } },
+                    { type: "rect", x: 60, y: 0, w: 50, h: 50, fill: "#ff0000" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        bindings: {},
+        assetPrefix: prefix,
+        formatVersion: 2,
+        installedById: "u1",
+      },
+    });
+
+    // Avant correction, la ressource d'un enfant de groupe n'etait pas prechargee :
+    // le rendu levait « ressource absente du stockage ».
+    const t = await resolveTemplate(row.id);
+    const rendu = renderToJson(<t.Component values={{}} />);
     expect(rendu.images.some((src) => src.startsWith("data:image/png;base64,"))).toBe(true);
   });
 

@@ -2,8 +2,9 @@ import type { InstalledBadgeTemplate } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFile } from "@/lib/storage";
 import type { BadgeTemplate } from "./types";
-import { buildDeclarativeTemplate, type AssetResolver } from "./declarative";
-import type { Block, TemplateManifest } from "./declarative/manifest-types";
+import { buildDeclarativeTemplate, type AssetResolver } from "./engine/declarative";
+import type { Block, TemplateManifest } from "./engine/declarative/manifest-types";
+import { validateBindings, type Bindings } from "./bindings";
 
 export type TemplateSummary = {
   id: string;
@@ -25,16 +26,20 @@ export function previewUrl(previewPath: string | null): string {
   return previewPath ? `/api/files/${previewPath}` : "";
 }
 
+// Fonds image des formes d'un arbre de blocs. Descend dans les groupes, a toute
+// profondeur : une ressource posee dans un groupe doit etre prechargee comme les autres.
+function blockAssets(blocks: Block[]): string[] {
+  return blocks.flatMap((b): string[] => {
+    if (b.type === "group") return blockAssets(b.blocks);
+    if (b.type === "text") return [];
+    return b.image?.asset ? [b.image.asset] : [];
+  });
+}
+
 // Noms de ressources referencees par un layout : fonds image des formes et fichiers
 // de police. Sert a precharger avant construction, `AssetResolver` etant synchrone.
 function referencedAssets(manifest: TemplateManifest): string[] {
-  const fromBlocks = manifest.blocks
-    .filter(
-      (b: Block): b is Extract<Block, { type: "rect" | "square" | "circle" }> =>
-        b.type === "rect" || b.type === "square" || b.type === "circle",
-    )
-    .map((b) => b.image?.asset)
-    .filter((a): a is string => typeof a === "string");
+  const fromBlocks = blockAssets(manifest.blocks);
   const fromFonts = (manifest.fonts ?? []).map((f) => f.file);
   return [...new Set([...fromBlocks, ...fromFonts])];
 }
@@ -58,12 +63,40 @@ async function loadAssetResolver(row: InstalledBadgeTemplate): Promise<AssetReso
   };
 }
 
+// La colonne JSON peut contenir n'importe quoi (scalaire, tableau) si elle a ete
+// ecrite a la main. Tout ce qui n'est pas un objet simple vaut « aucune liaison » :
+// validateBindings le signalera, sans empecher l'impression.
+function readBindings(value: unknown): Bindings {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Bindings)
+    : {};
+}
+
 async function buildFromRow(row: InstalledBadgeTemplate): Promise<BadgeTemplate> {
+  // Le moteur v2 ne sait pas rendre un layout v1 : sans ce garde, la construction
+  // echoue plus loin sur une TypeError sans rapport avec la vraie cause.
+  if (row.formatVersion !== 2) {
+    throw new Error(
+      `resolveTemplate : le template "${row.id}" est encore au format v${row.formatVersion}. Migrer les templates installés (make migrate-installed-templates).`,
+    );
+  }
   const manifest = row.layout as unknown as TemplateManifest;
+  const bindings = readBindings(row.bindings);
   const assets = await loadAssetResolver(row);
   const template = buildDeclarativeTemplate(manifest, assets, row.id);
+
+  // Une table imparfaite ne doit JAMAIS empecher un badge de s'imprimer : l'ecran
+  // d'installation et le script de migration garantissent la completude en amont,
+  // ce journal n'est la que pour attraper la derive.
+  const errors = validateBindings(manifest.variables, bindings);
+  if (errors.length > 0) {
+    console.warn(`[badge-templates] liaisons incompletes pour "${row.id}" : ${errors.join(" | ")}`);
+  }
+
   return {
     ...template,
+    variables: manifest.variables,
+    bindings,
     meta: { ...template.meta, previewSrc: previewUrl(row.previewPath) },
   };
 }

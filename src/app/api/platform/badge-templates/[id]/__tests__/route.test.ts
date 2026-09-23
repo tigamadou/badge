@@ -29,12 +29,15 @@ async function makeStaff(staffRole: StaffRoleStr) {
 }
 
 const LAYOUT = {
-  formatVersion: 1,
+  formatVersion: 2,
   family: "salon",
   label: "Salon",
   description: "",
   page: { widthPx: 1011, heightPx: 638, count: 1 },
-  blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
+  variables: [{ name: "badge.qrCodeDataUrl", kind: "image", label: "QR code" }],
+  blocks: [
+    { type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, image: { source: "badge.qrCodeDataUrl" } },
+  ],
 };
 
 async function install(installedById: string) {
@@ -48,8 +51,9 @@ async function install(installedById: string) {
       pageWidthPx: 1011,
       pageHeightPx: 638,
       layout: LAYOUT,
+      bindings: { "badge.qrCodeDataUrl": "badge.qrCodeDataUrl" },
       assetPrefix: "badge-templates/x/",
-      formatVersion: 1,
+      formatVersion: 2,
       installedById,
     },
   });

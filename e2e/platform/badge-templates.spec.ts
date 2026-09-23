@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import JSZip from "jszip";
@@ -20,34 +20,42 @@ async function writeArchive(name: string, files: Record<string, Buffer | string>
 
 function manifestOf(family: string) {
   return JSON.stringify({
-    formatVersion: 1,
+    formatVersion: 2,
     family,
     label: "Badge E2E",
     description: "Template installe par un test e2e.",
-    page: { widthMm: 85.6, heightMm: 54, count: 1 },
+    page: { widthPx: 1011, heightPx: 638, count: 1 },
+    variables: [
+      { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
+      { name: "structure", kind: "text", label: "Structure", sample: "Organisation" },
+    ],
     blocks: [
-      {
-        type: "rect",
-        page: 1,
-        x: 0,
-        y: 46,
-        w: 85.6,
-        h: 8,
-        fill: "category.color",
-      },
       {
         type: "text",
         page: 1,
         x: 4,
-        y: 6,
-        w: 60,
-        h: 8,
-        text: "{participant.firstName} {participant.lastName}",
-        style: { sizePt: 12, weight: 700, color: "#0f172a", overflow: "clip" },
+        y: 4,
+        w: 400,
+        h: 60,
+        text: "{participant.firstName} — {structure}",
+        style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
       },
-      { type: "qr", page: 1, x: 64, y: 28, w: 16, h: 16 },
     ],
   });
+}
+
+// Depose l'archive, traverse l'ecran de liaison (la seule variable non suggeree,
+// "structure", est liee a participant.structure) et lance l'installation. Les
+// tests qui n'examinent pas l'ecran de liaison en detail passent par ce raccourci.
+async function installViaUi(page: Page, archive: string) {
+  await page.setInputFiles('input[type="file"]', archive);
+  await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toBeVisible({
+    timeout: 15_000,
+  });
+  await page
+    .getByRole("combobox", { name: "Source de la variable structure" })
+    .selectOption("participant.structure");
+  await page.getByRole("button", { name: "Installer" }).click();
 }
 
 test.describe("Platform — Templates de badge", () => {
@@ -68,6 +76,34 @@ test.describe("Platform — Templates de badge", () => {
     await expect(page.getByRole("heading", { name: /templates de badge/i })).toBeVisible();
 
     await page.setInputFiles('input[type="file"]', archive);
+    await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // participant.firstName est suggeree d'office (identite nom-source) ; structure
+    // reste a decider, et le bouton refuse de s'activer tant que ce n'est pas fait.
+    // Chaque select porte un aria-label nommant sa variable : la cible directement,
+    // sans ambiguite avec les options qu'il propose (memes sources pour les deux
+    // variables, toutes deux de type texte).
+    const firstNameSelect = page.getByRole("combobox", {
+      name: "Source de la variable participant.firstName",
+    });
+    await expect(firstNameSelect).toHaveValue("participant.firstName");
+
+    // La table montre nom, libelle et type (en francais) de chaque variable.
+    const firstNameRow = page.getByRole("row").filter({ has: firstNameSelect });
+    await expect(firstNameRow.getByRole("cell").nth(0)).toHaveText("participant.firstName");
+    await expect(firstNameRow.getByRole("cell").nth(1)).toHaveText("Prénom");
+    await expect(firstNameRow.getByRole("cell").nth(2)).toHaveText("texte");
+
+    const installButton = page.getByRole("button", { name: "Installer" });
+    await expect(installButton).toBeDisabled();
+
+    const structureSelect = page.getByRole("combobox", { name: "Source de la variable structure" });
+    await structureSelect.selectOption("participant.structure");
+    await expect(installButton).toBeEnabled();
+    await installButton.click();
+
     // Cible le bandeau de succes de l'installeur : le nom de famille apparait aussi
     // dans la ligne ajoutee au catalogue.
     await expect(page.getByTestId("install-success")).toContainText(
@@ -122,7 +158,7 @@ test.describe("Platform — Templates de badge", () => {
     await loginAs(page, staff);
 
     await page.goto("/platform/badge-templates");
-    await page.setInputFiles('input[type="file"]', archive);
+    await installViaUi(page, archive);
     await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
@@ -148,7 +184,7 @@ test.describe("Platform — Templates de badge", () => {
     await loginAs(page, staff);
 
     await page.goto("/platform/badge-templates");
-    await page.setInputFiles('input[type="file"]', archive);
+    await installViaUi(page, archive);
     await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
@@ -182,7 +218,7 @@ test.describe("Platform — Templates de badge", () => {
     await loginAs(page, staff);
 
     await page.goto("/platform/badge-templates");
-    await page.setInputFiles('input[type="file"]', archive);
+    await installViaUi(page, archive);
     await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
@@ -196,6 +232,32 @@ test.describe("Platform — Templates de badge", () => {
     // Sur le detail, l'apercu est le PDF d'epreuve : le rendu reel, affiche
     // directement. L'image fournie sert de vignette au catalogue.
     await expect(page.locator(`object[data="/api/files/${installed!.proofPath}"]`)).toHaveCount(1);
+  });
+
+  test("une seconde inspection en echec efface la precedente", async ({ page }) => {
+    const family = `e2e-reinspect-${Date.now()}`;
+    const valide = await writeArchive(`${family}.zip`, { "manifest.json": manifestOf(family) });
+    const invalide = await writeArchive(`${family}-invalide.zip`, {
+      "assets/fond.png": Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    });
+
+    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-reinspect" });
+    await loginAs(page, staff);
+    await page.goto("/platform/badge-templates");
+
+    await page.setInputFiles('input[type="file"]', valide);
+    await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Le second fichier est refuse : l'ecran de liaison du premier ne doit pas
+    // rester arme, sinon « Installer » enverrait l'ancien fichier.
+    await page.setInputFiles('input[type="file"]', invalide);
+    await expect(page.getByTestId("install-errors")).toContainText(/le paquet a été refusé/i, {
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Installer" })).toHaveCount(0);
   });
 
   test("une archive invalide est refusee avec ses erreurs", async ({ page }) => {

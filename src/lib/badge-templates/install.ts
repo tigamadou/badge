@@ -2,10 +2,11 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { deletePrefix, uploadFile } from "@/lib/storage";
-import { parseManifest } from "./declarative/schema";
-import type { TemplateManifest } from "./declarative/manifest-types";
-import type { PackageAsset } from "./package-reader";
-import { renderProof } from "./render-proof";
+import { parseManifest } from "./engine/declarative/schema";
+import type { TemplateManifest } from "./engine/declarative/manifest-types";
+import type { PackageAsset } from "./engine/package-reader";
+import { renderProof } from "./engine/render-proof";
+import { validateBindings, type Bindings } from "./bindings";
 
 export const REFERENCE_DIR = "prisma/badge-templates";
 
@@ -17,9 +18,17 @@ export type InstallResult = { id: string; family: string; version: number };
 export async function installTemplate(args: {
   manifest: TemplateManifest;
   assets: PackageAsset[];
+  bindings: Bindings;
   installedById: string;
 }): Promise<InstallResult> {
-  const { manifest, assets, installedById } = args;
+  const { manifest, assets, bindings, installedById } = args;
+
+  // Un paquet dont les variables ne sont pas toutes decidees n'entre pas au
+  // catalogue : la route et le seed ont deja eu l'occasion de le completer.
+  const errors = validateBindings(manifest.variables, bindings);
+  if (errors.length > 0) {
+    throw new Error(`installTemplate : liaisons invalides — ${errors.join(" | ")}`);
+  }
 
   const previous = await prisma.installedBadgeTemplate.findFirst({
     where: { family: manifest.family },
@@ -62,6 +71,7 @@ export async function installTemplate(args: {
       pageWidthPx: manifest.page.widthPx,
       pageHeightPx: manifest.page.heightPx,
       layout: manifest as unknown as object,
+      bindings: bindings as unknown as object,
       assetPrefix,
       previewPath,
       proofPath,
@@ -74,9 +84,17 @@ export async function installTemplate(args: {
   return created;
 }
 
-function readReferencePackage(family: string): { manifest: TemplateManifest; assets: PackageAsset[] } {
+function readReferencePackage(family: string): {
+  manifest: TemplateManifest;
+  assets: PackageAsset[];
+  bindings: Bindings;
+} {
   const dir = resolve(REFERENCE_DIR, family);
   const raw = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
+  // Les paquets livres avec l'application portent leur table de liaison en depot :
+  // le seed n'a pas d'administrateur devant lui pour la choisir. C'est CE depot qui
+  // l'ecrit, pour ses propres paquets — pdfStudio n'en produit pas.
+  const bindings = JSON.parse(readFileSync(join(dir, "bindings.json"), "utf8")) as Bindings;
 
   // Les paquets de reference sont versionnes en arborescence, pas en archive : une
   // arborescence se relit et se compare en revue, la ou un ZIP binaire serait opaque.
@@ -100,7 +118,7 @@ function readReferencePackage(family: string): { manifest: TemplateManifest; ass
     throw new Error(`paquet de reference "${family}" invalide : ${parsed.errors.join(" | ")}`);
   }
   /* v8 ignore stop */
-  return { manifest: parsed.manifest, assets };
+  return { manifest: parsed.manifest, assets, bindings };
 }
 
 // Installe les templates livres avec l'application s'ils sont absents. IDEMPOTENT :
@@ -115,8 +133,8 @@ export async function ensureReferenceTemplates(installedById: string): Promise<v
   for (const family of families) {
     const existing = await prisma.installedBadgeTemplate.count({ where: { family } });
     if (existing > 0) continue;
-    const { manifest, assets } = readReferencePackage(family);
-    await installTemplate({ manifest, assets, installedById });
+    const { manifest, assets, bindings } = readReferencePackage(family);
+    await installTemplate({ manifest, assets, bindings, installedById });
   }
 }
 

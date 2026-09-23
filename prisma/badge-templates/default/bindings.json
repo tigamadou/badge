@@ -1,0 +1,17 @@
+{
+  "participant.firstName": "participant.firstName",
+  "participant.lastName": "participant.lastName",
+  "participant.structure": "participant.structure",
+  "participant.photoDataUrl": "participant.photoDataUrl",
+  "category.name": "category.name",
+  "category.color": "category.color",
+  "category.neutralBadge": "category.neutralBadge",
+  "category.anonymous": "category.anonymous",
+  "event.title": "event.title",
+  "event.date": "event.date",
+  "event.location": "event.location",
+  "event.logoDataUrl": "event.logoDataUrl",
+  "badge.id": "badge.id",
+  "badge.verifyUrl": "badge.verifyUrl",
+  "badge.qrCodeDataUrl": "badge.qrCodeDataUrl"
+}
