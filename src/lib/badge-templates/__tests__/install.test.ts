@@ -1,7 +1,35 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { ensureReferenceTemplates, defaultTemplateId, installTemplate } from "../install";
-import type { TemplateManifest } from "../declarative/manifest-types";
+import type { TemplateManifest } from "../engine/declarative/manifest-types";
+
+// Manifeste v2 de reference : une variable au nom de source, une au nom libre.
+const manifest: TemplateManifest = {
+  formatVersion: 2,
+  family: "salon-2027",
+  label: "Badge Salon",
+  description: "Un badge de test.",
+  page: { widthPx: 1011, heightPx: 638, count: 1 },
+  variables: [
+    { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
+    { name: "structure", kind: "text", label: "Structure", sample: "Organisation" },
+  ],
+  blocks: [
+    {
+      type: "text",
+      page: 1,
+      x: 4,
+      y: 4,
+      w: 400,
+      h: 60,
+      text: "{participant.firstName} — {structure}",
+      style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
+    },
+  ],
+};
+
+// Table de liaison complete pour ce fixture.
+const BINDINGS = { "participant.firstName": "participant.firstName", structure: "participant.structure" };
 
 describe("ensureReferenceTemplates", () => {
   beforeEach(async () => {
@@ -47,18 +75,20 @@ describe("installTemplate", () => {
 
   it("installe un manifeste accompagne de ses ressources", async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
-    const manifest: TemplateManifest = {
-      formatVersion: 1,
+    const avecFond: TemplateManifest = {
+      formatVersion: 2,
       family: "avec-fond",
       label: "Avec fond",
       description: "",
       page: { widthPx: 1011, heightPx: 638, count: 1 },
+      variables: [],
       blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/fond.png" } }],
     };
 
     const created = await installTemplate({
-      manifest,
+      manifest: avecFond,
       assets: [{ path: "assets/fond.png", body: png, contentType: "image/png" }],
+      bindings: {},
       installedById: "u1",
     });
 
@@ -69,19 +99,10 @@ describe("installTemplate", () => {
 
   it("stocke l'image d'apercu declaree et le PDF d'epreuve separement", async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
-    const manifest: TemplateManifest = {
-      formatVersion: 1,
-      family: "avec-apercu",
-      label: "Avec apercu",
-      description: "",
-      preview: "assets/apercu.png",
-      page: { widthPx: 1011, heightPx: 638, count: 1 },
-      blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
-    };
-
     const created = await installTemplate({
-      manifest,
+      manifest: { ...manifest, preview: "assets/apercu.png" },
       assets: [{ path: "assets/apercu.png", body: png, contentType: "image/png" }],
+      bindings: BINDINGS,
       installedById: "u1",
     });
 
@@ -91,16 +112,7 @@ describe("installTemplate", () => {
   });
 
   it("laisse previewPath nul quand le paquet ne declare pas d'apercu", async () => {
-    const manifest: TemplateManifest = {
-      formatVersion: 1,
-      family: "sans-apercu",
-      label: "Sans apercu",
-      description: "",
-      page: { widthPx: 1011, heightPx: 638, count: 1 },
-      blocks: [{ type: "qr", page: 1, x: 0, y: 0, w: 10, h: 10 }],
-    };
-
-    const created = await installTemplate({ manifest, assets: [], installedById: "u1" });
+    const created = await installTemplate({ manifest, assets: [], bindings: BINDINGS, installedById: "u1" });
 
     const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: created.id } });
     expect(row?.previewPath).toBeNull();
@@ -109,19 +121,33 @@ describe("installTemplate", () => {
   });
 
   it("propage l'echec d'un rendu impossible", async () => {
-    const manifest: TemplateManifest = {
-      formatVersion: 1,
+    const sansRessource: TemplateManifest = {
+      formatVersion: 2,
       family: "sans-ressource",
       label: "Sans ressource",
       description: "",
       page: { widthPx: 1011, heightPx: 638, count: 1 },
+      variables: [],
       blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, image: { asset: "assets/absent.png" } }],
     };
 
     await expect(
-      installTemplate({ manifest, assets: [], installedById: "u1" }),
+      installTemplate({ manifest: sansRessource, assets: [], bindings: {}, installedById: "u1" }),
     ).rejects.toBeDefined();
     expect(await prisma.installedBadgeTemplate.count()).toBe(0);
+  });
+
+  it("refuse une table de liaison incomplete", async () => {
+    await expect(
+      installTemplate({ manifest, assets: [], bindings: {}, installedById: "u1" }),
+    ).rejects.toThrow(/aucune source choisie/);
+  });
+
+  it("stocke la table de liaison", async () => {
+    const bindings = Object.fromEntries(manifest.variables.map((v) => [v.name, null]));
+    const created = await installTemplate({ manifest, assets: [], bindings, installedById: "u1" });
+    const row = await prisma.installedBadgeTemplate.findUniqueOrThrow({ where: { id: created.id } });
+    expect(row.bindings).toEqual(bindings);
   });
 });
 

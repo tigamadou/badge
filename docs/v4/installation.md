@@ -113,17 +113,34 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 
 > **Templates de badge** (v4, plan 12) : `make db-seed` installe aussi les modeles de
 > badge livres avec l'application, depuis `prisma/badge-templates/`. Sans lui, aucun
-> badge n'est imprimable et `resolveTemplate` echoue explicitement. Deux cibles
-> associees : `make validate-badge-templates` verifie qu'aucune reference n'est
-> orpheline, et `make migrate-badge-template-refs` convertit les anciennes references
-> texte d'une base anterieure au plan 12 (inutile sur une base neuve).
+> badge n'est imprimable et `resolveTemplate` echoue explicitement. `make
+> validate-badge-templates` verifie qu'aucune reference n'est orpheline, que chaque
+> template installe est au format v2 (le moteur ne sait plus rendre du v1) et que ses
+> liaisons de variables sont completes ; `make migrate-badge-template-refs` convertit
+> les anciennes references texte d'une base anterieure au plan 12 (inutile sur une
+> base neuve).
 
 | Commande | Description |
 |----------|-------------|
-| `make new-badge-template NAME=<slug>` | Cree un squelette de template dans `badge-templates/<slug>/` (atelier gitignore) |
-| `make pack-badge-template NAME=<slug>` | Empaquette ce dossier en archive installable, apres validation du manifeste |
+| `make sync-engine` | Resynchronise le moteur `src/lib/badge-templates/engine/` depuis `../pdfStudio` (sur l'hote) |
+| `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installes du format v1 vers le v2 (dry-run par defaut) |
+| `make pack-badge-template NAME=<slug>` | Empaquette `badge-templates/<slug>/` (atelier gitignore, ecrit a la main ou via le studio pdfStudio) en archive installable, apres validation du manifeste |
 
 Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
+
+> **Release du moteur v2 (spec 20) — ordre obligatoire.** Le moteur v2 ne sait plus rendre
+> une ligne `InstalledBadgeTemplate` au format v1 (l'impression du badge repond 500). Sur une
+> base qui en contient, dans la meme fenetre et sans trafic entre les etapes :
+> 1) pousser le schema (colonne `bindings`), 2) lancer
+> `migrate-installed-templates-v2 --apply` contre la base cible (puis
+> `validate-badge-templates`), 3) seulement ensuite ouvrir le trafic sur la nouvelle version.
+> La cible `make migrate-installed-templates` ne vise **que le conteneur de dev** ; l'image
+> de production (standalone) ne contient ni `scripts/`, ni `src/`, ni `tsx`, et
+> `docker-entrypoint.sh` fait `prisma db push` puis sert aussitot. Le script se lance donc
+> depuis un environnement qui a les sources (conteneur de dev ou conteneur d'outillage
+> ponctuel, `DATABASE_URL` pointee sur la base cible) **avant** que la nouvelle image ne
+> recoive du trafic. La mecanique concrete de production est a arreter au moment de la
+> release. Detail : `docs/v4/features/templates-badges.md`, § « Ordre de release obligatoire ».
 
 **Pre-requis Playwright / MinIO** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet

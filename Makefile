@@ -7,8 +7,8 @@
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
         test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
-        validate-badge-templates migrate-badge-template-refs \
-        new-badge-template pack-badge-template \
+        validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
+        pack-badge-template sync-engine \
         upload deploy upload-prod deploy-prod upload-preprod deploy-preprod \
         upload-prod-dry upload-preprod-dry net-create \
         download-uploads download-db
@@ -336,23 +336,25 @@ test-e2e-ui:
 validate-badge-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
 
+# Migre les templates installes du format v1 vers le v2 (dry-run par defaut,
+# ARGS=--apply pour ecrire). Le moteur v2 ne sait pas rendre une ligne restee en v1.
+migrate-installed-templates:
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v2.ts $(ARGS)
+
 # v4 (plan 12) : convertit les anciennes references texte ("default-v1") vers les cuid
 # des templates installes. Idempotent. Utile sur une base de dev anterieure au plan 12 ;
 # une base neuve est deja correcte apres `make db-seed`.
 migrate-badge-template-refs:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-badge-template-refs.ts
 
-# v4 (spec 14) : cree un squelette de template dans badge-templates/<NAME>/ (atelier
-# gitignore, distinct de prisma/badge-templates/ qui contient les paquets de reference).
-# Le studio de construction de templates vit desormais dans le projet dedie
-# pdfStudio (../pdfStudio, domaine local http://pdfstudio.localhost).
-new-badge-template:
-	docker compose -f docker-compose.dev.yml exec -e NAME=$(NAME) app yarn tsx scripts/new-badge-template.ts
-
 # v4 (spec 14) : empaquette badge-templates/<NAME>/ en archive installable. Valide le
 # manifeste avant d'ecrire : mieux vaut echouer ici qu'au televersement.
 pack-badge-template:
 	docker compose -f docker-compose.dev.yml exec -e NAME=$(NAME) app yarn tsx scripts/pack-badge-template.ts
+
+# Resynchronise le moteur declaratif depuis pdfStudio (voir engine/SOURCE.md).
+sync-engine:
+	npx tsx scripts/sync-engine.ts --from ../pdfStudio
 
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint

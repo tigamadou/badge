@@ -1,5 +1,5 @@
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "family": "default",
   "label": "Badge standard",
   "description": "Badge mono-face au format carte bancaire (CR80 paysage). Photo a gauche, identite et QR code a droite, bande categorie pleine couleur en bas.",
@@ -8,6 +8,127 @@
     "heightPx": 204.09,
     "count": 1
   },
+  "variables": [
+    {
+      "name": "participant.firstName",
+      "kind": "text",
+      "label": "Prenom",
+      "sample": "Awa"
+    },
+    {
+      "name": "participant.lastName",
+      "kind": "text",
+      "label": "Nom",
+      "sample": "Diallo"
+    },
+    {
+      "name": "participant.structure",
+      "kind": "text",
+      "label": "Structure",
+      "sample": "Organisation de démonstration"
+    },
+    {
+      "name": "participant.photoDataUrl",
+      "kind": "image",
+      "label": "Photo"
+    },
+    {
+      "name": "category.name",
+      "kind": "text",
+      "label": "Categorie",
+      "sample": "Visiteur"
+    },
+    {
+      "name": "category.color",
+      "kind": "color",
+      "label": "Couleur de categorie",
+      "sample": "#4f46e5"
+    },
+    {
+      "name": "category.neutralBadge",
+      "kind": "boolean",
+      "label": "Badge neutre",
+      "sample": false
+    },
+    {
+      "name": "category.anonymous",
+      "kind": "boolean",
+      "label": "Badge anonyme",
+      "sample": false
+    },
+    {
+      "name": "event.title",
+      "kind": "text",
+      "label": "Titre de l'evenement",
+      "sample": "Événement de démonstration"
+    },
+    {
+      "name": "event.date",
+      "kind": "date",
+      "label": "Date",
+      "format": "long",
+      "sample": "2027-12-15T00:00:00.000Z"
+    },
+    {
+      "name": "event.location",
+      "kind": "text",
+      "label": "Lieu",
+      "sample": "Cotonou"
+    },
+    {
+      "name": "event.logoDataUrl",
+      "kind": "image",
+      "label": "Logo de l'evenement"
+    },
+    {
+      "name": "badge.id",
+      "kind": "text",
+      "label": "Identifiant",
+      "sample": "DEMO-0001"
+    },
+    {
+      "name": "badge.verifyUrl",
+      "kind": "text",
+      "label": "Lien de verification",
+      "sample": "https://badge.local/verify/DEMO-0001"
+    },
+    {
+      "name": "badge.qrCodeDataUrl",
+      "kind": "image",
+      "label": "QR code"
+    }
+  ],
+  "presets": [
+    {
+      "label": "Sans photo",
+      "values": {
+        "participant.photoDataUrl": ""
+      }
+    },
+    {
+      "label": "Categorie anonyme",
+      "values": {
+        "category.anonymous": true
+      }
+    },
+    {
+      "label": "Badge neutre",
+      "values": {
+        "category.neutralBadge": true,
+        "category.anonymous": false
+      }
+    },
+    {
+      "label": "Textes tres longs",
+      "values": {
+        "participant.firstName": "Marie-Christine Elisabeth",
+        "participant.lastName": "Ouedraogo-Zoungrana Kabore Sawadogo",
+        "participant.structure": "Direction generale de la cooperation internationale et des partenariats institutionnels",
+        "event.title": "Forum international sur la transformation numerique des administrations publiques",
+        "category.name": "Delegation officielle accompagnante"
+      }
+    }
+  ],
   "blocks": [
     {
       "type": "rect",
@@ -19,11 +140,11 @@
       "radiusPx": 3.8,
       "visibleIf": [
         {
-          "path": "category.anonymous",
+          "variable": "category.anonymous",
           "equals": false
         },
         {
-          "path": "participant.photoDataUrl",
+          "variable": "participant.photoDataUrl",
           "isEmpty": false
         }
       ],
@@ -42,7 +163,7 @@
       "radiusPx": 3.8,
       "visibleIf": [
         {
-          "path": "category.anonymous",
+          "variable": "category.anonymous",
           "equals": true
         }
       ]
@@ -58,11 +179,11 @@
       "radiusPx": 3.8,
       "visibleIf": [
         {
-          "path": "category.anonymous",
+          "variable": "category.anonymous",
           "equals": false
         },
         {
-          "path": "participant.photoDataUrl",
+          "variable": "participant.photoDataUrl",
           "isEmpty": true
         }
       ]
@@ -99,7 +220,7 @@
       },
       "visibleIf": [
         {
-          "path": "category.anonymous",
+          "variable": "category.anonymous",
           "equals": false
         }
       ]
@@ -121,7 +242,7 @@
       },
       "visibleIf": [
         {
-          "path": "category.anonymous",
+          "variable": "category.anonymous",
           "equals": true
         }
       ]
@@ -141,7 +262,7 @@
       },
       "visibleIf": [
         {
-          "path": "category.anonymous",
+          "variable": "category.anonymous",
           "equals": false
         }
       ]
@@ -161,12 +282,16 @@
       }
     },
     {
-      "type": "qr",
+      "type": "rect",
       "page": 1,
       "x": 252,
       "y": 106,
       "w": 60,
-      "h": 60
+      "h": 60,
+      "image": {
+        "source": "badge.qrCodeDataUrl",
+        "fit": "contain"
+      }
     },
     {
       "type": "rect",
@@ -178,7 +303,7 @@
       "fill": "category.color",
       "visibleIf": [
         {
-          "path": "category.neutralBadge",
+          "variable": "category.neutralBadge",
           "equals": false
         }
       ]
@@ -193,7 +318,7 @@
       "fill": "#ffffff",
       "visibleIf": [
         {
-          "path": "category.neutralBadge",
+          "variable": "category.neutralBadge",
           "equals": true
         }
       ],
@@ -221,7 +346,7 @@
       },
       "visibleIf": [
         {
-          "path": "category.neutralBadge",
+          "variable": "category.neutralBadge",
           "equals": false
         }
       ]
@@ -245,7 +370,7 @@
       },
       "visibleIf": [
         {
-          "path": "category.neutralBadge",
+          "variable": "category.neutralBadge",
           "equals": true
         }
       ]

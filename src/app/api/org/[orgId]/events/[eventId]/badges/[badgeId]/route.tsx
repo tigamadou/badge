@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveBadgeTemplateId } from "@/lib/settings";
 import { resolveTemplate } from "@/lib/badge-templates/resolve";
 import { buildTemplateContext } from "@/lib/badge-templates/build-context";
+import { buildValues } from "@/lib/badge-templates/build-values";
 
 export const runtime = "nodejs";
 
@@ -78,7 +79,8 @@ export const GET = withEventAuth(
     });
 
     const Component = template.Component;
-    const stream = await renderToStream(<Component ctx={templateCtx} />);
+    const values = buildValues(templateCtx, template.variables, template.bindings);
+    const stream = await renderToStream(<Component values={values} />);
     // ReadableStream Web compatible : le `Response` Next.js accepte un stream Node
     // wrappe. On streame en TransformStream pour rester non-bloquant.
     const webStream = new ReadableStream({

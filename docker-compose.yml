@@ -74,7 +74,9 @@ services:
   # accessible via tunnel SSH temporaire si besoin.
   minio:
     container_name: badge-minio
-    image: minio/minio:latest
+    # MinIO ne publie plus son image sur Docker Hub : `minio/minio` n'est plus
+    # telechargeable. Le registre officiel est quay.io.
+    image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     env_file:
       - .env.production

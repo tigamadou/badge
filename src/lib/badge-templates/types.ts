@@ -1,4 +1,6 @@
 import type { ComponentType } from "react";
+import type { VariableDeclaration, VariableValues } from "./engine/declarative/manifest-types";
+import type { Bindings } from "./bindings";
 
 export type PageSize = {
   width: string;
@@ -41,7 +43,12 @@ export type TemplateContext = {
   };
 };
 
+// Le moteur ne sait plus ce qu'est un badge : il rend un document sur un
+// dictionnaire de valeurs. L'application y joint ce qu'il faut pour le remplir —
+// les variables declarees et la table de liaison choisie a l'installation.
 export type BadgeTemplate = {
   meta: TemplateMeta;
-  Component: ComponentType<{ ctx: TemplateContext }>;
+  variables: VariableDeclaration[];
+  bindings: Bindings;
+  Component: ComponentType<{ values: VariableValues }>;
 };

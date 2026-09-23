@@ -39,6 +39,7 @@ conservees : elles portent le *pourquoi* des decisions.
 - [Spec 17 — Manifeste en pixels](specs/2026-08-14-17-v4-manifeste-en-pixels.md) · [Feature](features/templates-badges.md)
 - [Spec 18 — Studio v2 : éditeur dynamique de badges](specs/2026-08-14-18-v4-studio-v2-editeur-dynamique.md) · [Feature](features/templates-badges.md)
 - [Spec 19 — Studio v3 : groupes, formes et interface en trois colonnes](specs/2026-08-14-19-v4-studio-v3-groupes-formes-interface.md) · [Feature](features/templates-badges.md)
+- [Spec 20 — Moteur v2 et liaisons de variables](specs/2026-09-22-20-v4-moteur-v2-et-liaisons.md) · [Plan](plans/2026-09-22-moteur-v2-et-liaisons.md) · [Feature](features/templates-badges.md)
 
 Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterieures
 (commits `a8ef855` et `b4af4c6`) et n'ont pas de spec associee.
@@ -72,7 +73,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Catalogue et installation de templates (plan 11) | Livre — televersement d'archive par le staff, template installe selectionnable comme les autres |
 | Bascule des templates livres (plan 12) | Livre — `default` et `recto-verso` deviennent des donnees ; le registre compile est supprime |
 | Page de detail d'un template (plan 13) | Livre — apercu, utilisateurs, versions de la famille, ressources, manifeste telechargeable |
-| Apercu image et outillage (plan 14) | Livre — vignette image du paquet, PDF d'epreuve conserve, `make new-badge-template` et `make pack-badge-template` |
+| Apercu image et outillage (plan 14) | Livre — vignette image du paquet, PDF d'epreuve conserve, outillage local `make new-badge-template` et `make pack-badge-template` (le premier retire depuis la spec 20 : le studio pdfStudio cree desormais les templates) |
 | Propagation du profil aux inscriptions (plan 15) | Livre — les snapshot* sont figes a l'approbation et non plus a la creation ; audit `REGISTRATION_SNAPSHOT_REFRESHED` ; la piece d'identite disparait du detail cote organisation. **Recette visuelle a faire** |
 | Studio de construction de templates (plan 16) | Livre — service de dev separe (`make studio`, port 3786), edition du manifeste avec apercu PDF a la frappe et cinq jeux de donnees. **Recette visuelle a faire** ; `make dev-https-hosts` a lancer pour studio.badge.local |
 

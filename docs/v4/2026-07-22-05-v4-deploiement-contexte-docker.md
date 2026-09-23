@@ -137,7 +137,7 @@ services:
   # Stockage objet S3-compatible (cf. v4 Task 5.1). L'API S3 (9000) n'est jamais
   # exposee publiquement : `app` l'atteint en HTTP sur le reseau Docker interne.
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data

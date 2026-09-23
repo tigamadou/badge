@@ -34,20 +34,24 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
 
 function manifestOf(overrides: Record<string, unknown> = {}) {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     family: "salon-2027",
     label: "Badge Salon",
     description: "Un badge de test.",
     page: { widthPx: 1011, heightPx: 638, count: 1 },
+    variables: [
+      { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
+      { name: "structure", kind: "text", label: "Structure", sample: "Organisation" },
+    ],
     blocks: [
       {
         type: "text",
         page: 1,
         x: 4,
         y: 4,
-        w: 40,
-        h: 8,
-        text: "{participant.firstName}",
+        w: 400,
+        h: 60,
+        text: "{participant.firstName} — {structure}",
         style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
       },
     ],
@@ -55,24 +59,28 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// Table de liaison complete pour ce fixture.
+const BINDINGS = { "participant.firstName": "participant.firstName", structure: "participant.structure" };
+
 async function archiveOf(files: Record<string, Buffer | string>): Promise<Buffer> {
   const zip = new JSZip();
   for (const [path, content] of Object.entries(files)) zip.file(path, content);
   return zip.generateAsync({ type: "nodebuffer" });
 }
 
-function requestWith(archive: Buffer): NextRequest {
+function requestWith(archive: Buffer, bindings: string = JSON.stringify(BINDINGS)): NextRequest {
   const form = new FormData();
   form.set("archive", new File([new Uint8Array(archive)], "template.zip", { type: "application/zip" }));
+  form.set("bindings", bindings);
   return new NextRequest("http://localhost/api/platform/badge-templates", {
     method: "POST",
     body: form,
   });
 }
 
-async function post(archive: Buffer) {
+async function post(archive: Buffer, bindings?: string) {
   const { POST } = await import("../route");
-  return POST(requestWith(archive));
+  return POST(requestWith(archive, bindings));
 }
 
 describe("POST /api/platform/badge-templates", () => {
@@ -238,6 +246,55 @@ describe("POST /api/platform/badge-templates", () => {
     spy.mockRestore();
   });
 
+  it("refuse une installation sans champ de liaisons", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+    const archive = await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) });
+
+    const { POST } = await import("../route");
+    const form = new FormData();
+    form.set("archive", new File([new Uint8Array(archive)], "t.zip"));
+    const res = await POST(
+      new NextRequest("http://localhost/api/platform/badge-templates", { method: "POST", body: form }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual(["liaisons : champ manquant."]);
+  });
+
+  it("refuse des liaisons illisibles", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+
+    const res = await post(
+      await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }),
+      "{pas du json",
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual(["liaisons : JSON illisible."]);
+  });
+
+  it.each(["null", "[]", "42"])("refuse des liaisons qui ne sont pas un objet (%s)", async (raw) => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+
+    const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }), raw);
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual(["liaisons : objet attendu."]);
+  });
+
+  it("refuse une installation dont les liaisons sont incompletes", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+
+    const res = await post(
+      await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }),
+      JSON.stringify({}),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors[0]).toContain("aucune source choisie");
+    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
+  });
+
   it("ne cree aucune ligne si le rendu d'epreuve echoue", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
@@ -292,7 +349,7 @@ describe("GET /api/platform/badge-templates", () => {
         pageHeightPx: 638,
         layout: {},
         assetPrefix: "x/",
-        formatVersion: 1,
+        formatVersion: 2,
         installedById: staff.id,
       },
     });
