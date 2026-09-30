@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { listPrefix } from "../src/lib/storage";
 import { migrateManifest, V1_VARIABLES } from "../src/lib/badge-templates/migrate-v1";
-import { parseManifest } from "../src/lib/badge-templates/engine/declarative/schema";
+import { parseManifest } from "@tigamadou/pdf-engine";
 import { validateBindings, type Bindings } from "../src/lib/badge-templates/bindings";
 
 const prisma = new PrismaClient();

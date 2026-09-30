@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { VariableDeclaration, VariableValues } from "./engine/declarative/manifest-types";
+import type { VariableDeclaration, VariableValues } from "@tigamadou/pdf-engine";
 import type { Bindings } from "./bindings";
 
 export type PageSize = {

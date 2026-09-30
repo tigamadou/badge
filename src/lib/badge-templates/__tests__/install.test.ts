@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { ensureReferenceTemplates, defaultTemplateId, installTemplate } from "../install";
-import type { TemplateManifest } from "../engine/declarative/manifest-types";
+import type { TemplateManifest } from "@tigamadou/pdf-engine";
 
 // Manifeste v2 de reference : une variable au nom de source, une au nom libre.
 const manifest: TemplateManifest = {
@@ -9,6 +9,7 @@ const manifest: TemplateManifest = {
   family: "salon-2027",
   label: "Badge Salon",
   description: "Un badge de test.",
+  category: "badge",
   page: { widthPx: 1011, heightPx: 638, count: 1 },
   variables: [
     { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
@@ -80,6 +81,7 @@ describe("installTemplate", () => {
       family: "avec-fond",
       label: "Avec fond",
       description: "",
+      category: "badge",
       page: { widthPx: 1011, heightPx: 638, count: 1 },
       variables: [],
       blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 1011, h: 638, image: { asset: "assets/fond.png" } }],
@@ -126,6 +128,7 @@ describe("installTemplate", () => {
       family: "sans-ressource",
       label: "Sans ressource",
       description: "",
+      category: "badge",
       page: { widthPx: 1011, heightPx: 638, count: 1 },
       variables: [],
       blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, image: { asset: "assets/absent.png" } }],

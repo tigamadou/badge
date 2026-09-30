@@ -2,8 +2,7 @@ import type { InstalledBadgeTemplate } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFile } from "@/lib/storage";
 import type { BadgeTemplate } from "./types";
-import { buildDeclarativeTemplate, type AssetResolver } from "./engine/declarative";
-import type { Block, TemplateManifest } from "./engine/declarative/manifest-types";
+import { buildDeclarativeTemplate, type AssetResolver, type Block, type TemplateManifest } from "@tigamadou/pdf-engine";
 import { validateBindings, type Bindings } from "./bindings";
 
 export type TemplateSummary = {
@@ -26,19 +25,23 @@ export function previewUrl(previewPath: string | null): string {
   return previewPath ? `/api/files/${previewPath}` : "";
 }
 
-// Fonds image des formes d'un arbre de blocs. Descend dans les groupes, a toute
-// profondeur : une ressource posee dans un groupe doit etre prechargee comme les autres.
+// Ressources des blocs d'un arbre : fonds image des formes et images des puces de
+// liste. Descend dans les groupes, a toute profondeur : une ressource posee dans un
+// groupe doit etre prechargee comme les autres.
 function blockAssets(blocks: Block[]): string[] {
   return blocks.flatMap((b): string[] => {
     if (b.type === "group") return blockAssets(b.blocks);
     if (b.type === "text") return [];
+    if (b.type === "list") {
+      return b.bullet.type === "image" && b.bullet.asset ? [b.bullet.asset] : [];
+    }
     return b.image?.asset ? [b.image.asset] : [];
   });
 }
 
-// Noms de ressources referencees par un layout : fonds image des formes et fichiers
+// Noms de ressources referencees par un layout : ressources des blocs et fichiers
 // de police. Sert a precharger avant construction, `AssetResolver` etant synchrone.
-function referencedAssets(manifest: TemplateManifest): string[] {
+export function referencedAssets(manifest: TemplateManifest): string[] {
   const fromBlocks = blockAssets(manifest.blocks);
   const fromFonts = (manifest.fonts ?? []).map((f) => f.file);
   return [...new Set([...fromBlocks, ...fromFonts])];

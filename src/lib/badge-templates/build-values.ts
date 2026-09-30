@@ -1,6 +1,6 @@
 import type { Bindings } from "./bindings";
 import type { TemplateContext } from "./types";
-import type { VariableDeclaration, VariableValues } from "./engine/declarative/manifest-types";
+import type { VariableDeclaration, VariableValues } from "@tigamadou/pdf-engine";
 
 // Table explicite plutot qu'un acces dynamique par split(".") : le compilateur
 // verifie chaque acces, et une source retiree du contexte devient une erreur de

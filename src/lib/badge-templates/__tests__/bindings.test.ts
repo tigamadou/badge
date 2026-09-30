@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SOURCE_KINDS, suggestBindings, validateBindings } from "../bindings";
-import type { VariableDeclaration } from "../engine/declarative/manifest-types";
+import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 
 const variables: VariableDeclaration[] = [
   { name: "prenom", kind: "text", label: "Prenom" },

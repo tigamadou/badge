@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+      secrets:
+        - npm_token
     restart: unless-stopped
     ports:
       - "3785:3000"
@@ -13,6 +15,8 @@ services:
       - docker/compose.dev.env
       - path: .env
         required: false
+    environment:
+      NPM_TOKEN: ${NPM_TOKEN}
     depends_on:
       mysql:
         condition: service_healthy
@@ -91,3 +95,9 @@ volumes:
   caddy_data_dev:
   caddy_config_dev:
   minio_data_dev:
+
+secrets:
+  # Jeton du registre GitHub Packages, lu dans l'environnement de l'hote (.env du
+  # dossier de deploiement). Sert uniquement au build (yarn install).
+  npm_token:
+    environment: NPM_TOKEN

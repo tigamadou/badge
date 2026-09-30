@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@/lib/badge-templates/engine/package-reader";
+import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
 import { installTemplate } from "@/lib/badge-templates/install";
 import { validateBindings, type Bindings } from "@/lib/badge-templates/bindings";
 

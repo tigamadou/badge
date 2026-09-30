@@ -8,7 +8,8 @@
         test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
-        pack-badge-template sync-engine \
+        pack-badge-template \
+        verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
         upload deploy upload-prod deploy-prod upload-preprod deploy-preprod \
         upload-prod-dry upload-preprod-dry net-create \
         download-uploads download-db
@@ -58,7 +59,7 @@ prod: net-create
 	docker compose up -d --build
 
 prod-build: net-create
-	docker compose down && docker compose up --build -d
+	docker compose build && docker compose down && docker compose up -d
 
 prod-down:
 	docker compose down
@@ -88,7 +89,7 @@ preprod: net-create
 	$(PREPROD_COMPOSE) up -d --build
 
 preprod-build: net-create
-	$(PREPROD_COMPOSE) down && $(PREPROD_COMPOSE) up --build -d
+	$(PREPROD_COMPOSE) build && $(PREPROD_COMPOSE) down && $(PREPROD_COMPOSE) up -d
 
 preprod-down:
 	$(PREPROD_COMPOSE) down
@@ -341,6 +342,35 @@ validate-badge-templates:
 migrate-installed-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v2.ts $(ARGS)
 
+# Montee de version du moteur : rend chaque template installe avec ses echantillons
+# et ses prereglages, compare a la reference (S3 badge-templates/_engine/), regenere
+# l'epreuve (proof-engine-<version>.pdf, ecrite dans le S3 de l'environnement meme sans
+# --accept) des templates dont le rendu change ou installes apres la derniere reference.
+# Templates archives inclus. ARGS=--accept enregistre la reference de CET environnement
+# (chaque environnement a la sienne), apres examen de ses epreuves. Code 1 si refuse.
+verify-engine:
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)
+
+# Sur le serveur, AVANT de deployer : envoie le code (sans reconstruire l'application),
+# reconstruit l'outil et verifie contre les donnees de l'environnement. Les epreuves
+# sont ecrites dans le S3 de l'environnement (a ouvrir via /api/files/<proofPath>).
+# ARGS=--accept : uniquement apres examen des epreuves de cet environnement.
+verify-engine-preprod: upload-preprod
+	ssh $(SERVER) "cd $(PREPROD_DIR) && $(PREPROD_COMPOSE) --profile tools build tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
+
+verify-engine-prod: upload-prod
+	ssh $(SERVER) "cd $(PROD_DIR) && docker compose --profile tools build tools && docker compose --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
+
+# Exporte les templates installes vers un dossier a deposer dans le corpus de
+# pdfStudio (packages/engine/corpus/). OUT=dossier (defaut : backups/engine-corpus).
+export-engine-corpus:
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/export-engine-corpus.ts $(or $(OUT),backups/engine-corpus)
+
+export-engine-corpus-prod:
+	ssh $(SERVER) "rm -rf /tmp/engine-corpus && cd $(PROD_DIR) && docker compose --profile tools build tools && docker compose --profile tools run --rm -v /tmp/engine-corpus:/out tools yarn tsx scripts/export-engine-corpus.ts /out"
+	@mkdir -p backups/engine-corpus
+	rsync -avz $(SERVER):/tmp/engine-corpus/ ./backups/engine-corpus/
+
 # v4 (plan 12) : convertit les anciennes references texte ("default-v1") vers les cuid
 # des templates installes. Idempotent. Utile sur une base de dev anterieure au plan 12 ;
 # une base neuve est deja correcte apres `make db-seed`.
@@ -351,10 +381,6 @@ migrate-badge-template-refs:
 # manifeste avant d'ecrire : mieux vaut echouer ici qu'au televersement.
 pack-badge-template:
 	docker compose -f docker-compose.dev.yml exec -e NAME=$(NAME) app yarn tsx scripts/pack-badge-template.ts
-
-# Resynchronise le moteur declaratif depuis pdfStudio (voir engine/SOURCE.md).
-sync-engine:
-	npx tsx scripts/sync-engine.ts --from ../pdfStudio
 
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint

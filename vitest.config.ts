@@ -29,11 +29,6 @@ export default defineConfig({
         // Assets binaires et fichiers type-only : aucune logique executable.
         "src/lib/**/*.png",
         "src/lib/badge-templates/**/types.ts",
-        // Le moteur est une COPIE scellee de pdfStudio (scripts/sync-engine.ts) :
-        // personne ne peut y ajouter la ligne de test manquante sans faire echouer
-        // le test de parite. Ses propres tests tournent et gardent leur valeur de
-        // non-regression, mais le seuil de ce depot ne s'y applique pas.
-        "src/lib/badge-templates/engine/**",
         // Templates React-PDF (rendu) : couverts par build-context + E2E generation badge,
         // pas par l'unitaire (cf. plan : composants React couverts par E2E).
         "src/lib/badge-templates/**/template.tsx",

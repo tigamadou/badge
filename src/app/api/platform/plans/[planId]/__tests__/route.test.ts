@@ -97,6 +97,7 @@ describe("PATCH /api/platform/plans/[planId]", () => {
     const res = await PATCH(
       req(`/api/platform/plans/${plan.id}`, "PATCH", {
         name: newName,
+        period: "ANNUAL",
         maxEvents: 5,
         maxParticipantsPerEvent: 50,
         archived: true,
@@ -106,6 +107,7 @@ describe("PATCH /api/platform/plans/[planId]", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.plan.name).toBe(newName);
+    expect(json.plan.period).toBe("ANNUAL");
     expect(json.plan.maxEvents).toBe(5);
     expect(json.plan.maxParticipantsPerEvent).toBe(50);
     expect(json.plan.archived).toBe(true);

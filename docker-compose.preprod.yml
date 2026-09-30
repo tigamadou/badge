@@ -20,6 +20,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      secrets:
+        - npm_token
     ports:
       - "3500:3000"
     env_file:
@@ -101,6 +103,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
+      secrets:
+        - npm_token
     env_file:
       - .env.preprod
     volumes:
@@ -121,3 +125,9 @@ networks:
   web:
     external: true
     name: badge_web
+
+secrets:
+  # Jeton du registre GitHub Packages, lu dans l'environnement de l'hote (.env du
+  # dossier de deploiement). Sert uniquement au build (yarn install).
+  npm_token:
+    environment: NPM_TOKEN

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireStaff, AuthError } from "@/lib/auth-guards";
-import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@/lib/badge-templates/engine/package-reader";
+import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
 import { SOURCE_KINDS, suggestBindings } from "@/lib/badge-templates/bindings";
 
 export const runtime = "nodejs";

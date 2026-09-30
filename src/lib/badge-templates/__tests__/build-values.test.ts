@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildValues } from "../build-values";
 import type { TemplateContext } from "../types";
-import type { VariableDeclaration } from "../engine/declarative/manifest-types";
+import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 
 const ctx: TemplateContext = {
   participant: {

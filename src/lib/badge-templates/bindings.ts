@@ -1,4 +1,4 @@
-import type { VariableDeclaration, VariableKind } from "./engine/declarative/manifest-types";
+import type { VariableDeclaration, VariableKind } from "@tigamadou/pdf-engine";
 
 // Le vocabulaire du domaine badge. Il vivait dans le moteur (declarative/sources.ts) ;
 // le moteur v2 ne connait plus aucun nom metier, alors il remonte ici — hors du

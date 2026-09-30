@@ -133,13 +133,12 @@ jamais à jour. L'identifiant stocké par la cascade `Event → Org → Platform
 de la ligne, si bien qu'un événement ne peut pas voir son badge changer. Un template
 archivé reste **résolvable** — il disparaît du sélecteur, pas des badges existants.
 
-Le moteur déclaratif vit dans `src/lib/badge-templates/engine/` : c'est une **copie
-scellée** du moteur v2 de pdfStudio, mise à jour uniquement par `make sync-engine` (un test
-de parité refuse toute édition sur place). Il est pur — ni Prisma, ni stockage, ni réseau —
+Le moteur de rendu est le package `@tigamadou/pdf-engine`, publié depuis pdfStudio sur GitHub Packages. Monter de version : `yarn add @tigamadou/pdf-engine@<version>`, puis `make verify-engine` (voir « Monter de version le moteur »).
+Il est pur — ni Prisma, ni stockage, ni réseau —
 et ne connaît aucun nom métier : il reçoit un manifeste, un résolveur de ressources et des
-valeurs de variables. L'ouverture d'archive est confinée à `engine/package-reader.ts`, qui
+valeurs de variables. L'ouverture d'archive est confinée au sous-chemin `@tigamadou/pdf-engine/package`, qui
 applique toutes les bornes de sécurité avant extraction. Le vocabulaire du domaine badge
-reste hors de la copie, dans le code dont l'application est propriétaire :
+reste hors du moteur, dans le code dont l'application est propriétaire :
 `bindings.ts` (les 15 sources et leur type, validation et suggestion de la table de
 liaison stockée dans `InstalledBadgeTemplate.bindings`) et `build-values.ts` (lecture du
 contexte d'un badge vers les valeurs des variables, selon cette table). Détail :

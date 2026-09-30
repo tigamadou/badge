@@ -2,7 +2,7 @@
 // le bloc de parite de rendu dont les fixtures vivent dans le studio.
 import { describe, it, expect } from "vitest";
 import { migrateManifest } from "../migrate-v1";
-import { parseManifest } from "../engine/declarative/schema";
+import { parseManifest } from "@tigamadou/pdf-engine";
 
 const V1 = {
   formatVersion: 1,

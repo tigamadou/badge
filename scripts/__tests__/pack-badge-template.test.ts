@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { packTemplate } from "../pack-badge-template";
-import { readTemplatePackage } from "@/lib/badge-templates/engine/package-reader";
+import { readTemplatePackage } from "@tigamadou/pdf-engine/package";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 let racine: string;

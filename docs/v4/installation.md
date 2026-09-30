@@ -122,7 +122,6 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 
 | Commande | Description |
 |----------|-------------|
-| `make sync-engine` | Resynchronise le moteur `src/lib/badge-templates/engine/` depuis `../pdfStudio` (sur l'hote) |
 | `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installes du format v1 vers le v2 (dry-run par defaut) |
 | `make pack-badge-template NAME=<slug>` | Empaquette `badge-templates/<slug>/` (atelier gitignore, ecrit a la main ou via le studio pdfStudio) en archive installable, apres validation du manifeste |
 
@@ -145,6 +144,24 @@ Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
 **Pre-requis Playwright / MinIO** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
 (MinIO) doit tourner (`make dev` le demarre) pour les tests d'upload.
+
+## Jeton du registre
+
+Le moteur de rendu est le package `@tigamadou/pdf-engine`, publié depuis pdfStudio sur GitHub Packages. Monter de version : `yarn add @tigamadou/pdf-engine@<version>`, puis `make verify-engine` (voir « Monter de version le moteur »).
+
+Le package est privé : l'installation exige un jeton GitHub (classic) de portée
+`read:packages`, lu par `.npmrc` dans la variable `NPM_TOKEN`. Il n'est jamais écrit dans
+un fichier versionné. Trois emplacements :
+
+1. **Poste local** : `NPM_TOKEN=...` dans le `.env` du dépôt (gitignoré) ; Compose le
+   transmet au build de `Dockerfile.dev` (secret de build) et au conteneur.
+2. **CI** : secret de dépôt GitHub `NPM_TOKEN` (Settings > Secrets and variables > Actions).
+   Les pull requests venant d'un fork ne reçoivent pas ce secret : leur installation
+   échoue en 401.
+3. **Serveur** : dans le `.env` du dossier de déploiement (celui qui contient le
+   `docker-compose.yml`), lu par Compose pour l'interpolation, ou dans l'environnement du
+   shell. Jamais dans `.env.production` / `.env.preprod` : ces fichiers sont copiés dans
+   une couche de l'image du builder et y laisseraient le jeton.
 
 ## Integration continue (GitHub Actions)
 
