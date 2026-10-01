@@ -155,13 +155,8 @@ les images et les polices, composer les blocs, générer le paquet à télévers
 > versionnée. Le moteur de rendu est le package `@tigamadou/pdf-engine`, publié depuis pdfStudio sur GitHub Packages. Monter de version : `yarn add @tigamadou/pdf-engine@<version>`, puis `make verify-engine` (voir « Monter de version le moteur »). Une évolution du format se fait donc dans pdfStudio, puis se reporte ici — plus jamais l'inverse.
 
 Le studio crée les templates ; **l'application les installe et les rend** — il
-n'existe plus de générateur de squelette côté badge. Pour un usage hors interface,
-sur un `manifest.json` déjà écrit à la main sous `badge-templates/<nom>/` (dossier
-gitignoré) :
-
-```bash
-make pack-badge-template NAME=salon-2027  # produit l'archive
-```
+n'existe côté badge ni générateur de squelette ni outil d'empaquetage : toute archive
+installable sort du bouton **Générer le paquet** du studio.
 
 Le studio est un outil de développement local, jamais déployé, qui ne connaît ni la
 base ni le stockage. Son interface est organisée **en trois colonnes**, sur un thème
@@ -199,17 +194,14 @@ L'interface est écrite en **Preact + htm sans étape de build** : la bibliothè
 vendorisée (version figée, licence MIT) dans le projet pdfStudio (`src/public/vendor/`),
 les composants dans `src/public/ui/`.
 
-Côté pdfStudio, l'atelier est `templates/<nom>/` (non versionné). Côté badge,
-`badge-templates/<nom>/` — un dossier **gitignoré**, à ne pas confondre avec
-`prisma/badge-templates/`, qui contient les paquets de référence installés par le
-seed — reste disponible comme atelier manuel pour qui préfère écrire un
-`manifest.json` à la main et l'empaqueter avec `make pack-badge-template`, sans
-passer par le studio.
+L'atelier est `templates/<nom>/` côté pdfStudio (non versionné). Côté badge, le seul
+dossier de paquets est `prisma/badge-templates/`, qui contient les paquets de référence
+installés par le seed.
 
-`pack-badge-template` **valide le manifeste avant d'écrire l'archive** et refuse d'en
-produire une invalide : mieux vaut échouer à l'empaquetage, où le message est immédiat,
-qu'au téléversement. En particulier, un `preview` déclaré sans image déposée fait échouer
-l'empaquetage — c'est le rappel le plus utile possible.
+> Historique : jusqu'à cette bascule, un atelier gitignoré `badge-templates/<nom>/` et
+> la commande `make pack-badge-template` permettaient d'empaqueter un manifeste écrit à
+> la main sans passer par le studio. Ils ont été retirés : le studio est désormais
+> l'unique chemin de création.
 
 ### Où consulter un template
 

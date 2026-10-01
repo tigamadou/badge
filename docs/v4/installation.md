@@ -123,7 +123,6 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 | Commande | Description |
 |----------|-------------|
 | `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installes du format v1 vers le v2 (dry-run par defaut) |
-| `make pack-badge-template NAME=<slug>` | Empaquette `badge-templates/<slug>/` (atelier gitignore, ecrit a la main ou via le studio pdfStudio) en archive installable, apres validation du manifeste |
 
 Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
 

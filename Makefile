@@ -8,7 +8,6 @@
         test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
-        pack-badge-template \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
         upload deploy upload-prod deploy-prod upload-preprod deploy-preprod \
         upload-prod-dry upload-preprod-dry net-create \
@@ -376,11 +375,6 @@ export-engine-corpus-prod:
 # une base neuve est deja correcte apres `make db-seed`.
 migrate-badge-template-refs:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-badge-template-refs.ts
-
-# v4 (spec 14) : empaquette badge-templates/<NAME>/ en archive installable. Valide le
-# manifeste avant d'ecrire : mieux vaut echouer ici qu'au televersement.
-pack-badge-template:
-	docker compose -f docker-compose.dev.yml exec -e NAME=$(NAME) app yarn tsx scripts/pack-badge-template.ts
 
 lint:
 	docker compose -f docker-compose.dev.yml exec app yarn lint
