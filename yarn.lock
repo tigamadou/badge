@@ -1436,10 +1436,10 @@
     postcss "^8.5.6"
     tailwindcss "4.2.4"
 
-"@tigamadou/pdf-engine@^1.1.1":
-  version "1.1.1"
-  resolved "https://npm.pkg.github.com/download/@tigamadou/pdf-engine/1.1.1/293cbceba1c243d1540a09cc050a815a7da33ed6#293cbceba1c243d1540a09cc050a815a7da33ed6"
-  integrity sha512-EmY4fxz+nby4/JczIxGJaUF5leo9Yky4MuRzdjRsMDAOgfveoEQ9XA3N0wpyzRi0zlF2yrYh/S/c0ruUkQN0Jw==
+"@tigamadou/pdf-engine@^1.2.0":
+  version "1.2.0"
+  resolved "https://npm.pkg.github.com/download/@tigamadou/pdf-engine/1.2.0/1a2ef08ac591af08f3448be4c79f7b1215802729#1a2ef08ac591af08f3448be4c79f7b1215802729"
+  integrity sha512-9N5uM/KlN/lT5Csi9eTFmdsfTIZeV/3TuIEEN/9wnPFSKeZM4+/tg4NpL3BBC+VfTgRheuHHWVFICozxFW1yWg==
   dependencies:
     jszip "^3.10.1"
     qrcode "^1.5.4"

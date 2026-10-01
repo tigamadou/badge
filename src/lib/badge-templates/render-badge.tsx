@@ -2,10 +2,11 @@ import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { resolveBadgeTemplateId } from "@/lib/settings";
 import { resolveTemplate } from "./resolve";
+import { resolveEventTemplateId } from "./event-template-variables";
 import { buildTemplateContext } from "./build-context";
 import { buildValues } from "./build-values";
+import { optionVariables } from "./template-options";
 
 // Relations necessaires au rendu d'un badge (contexte du template, controle
 // d'appartenance a l'evenement, statut, nommage du fichier).
@@ -18,6 +19,8 @@ export const badgeRegistrationInclude = {
       location: true,
       logo: true,
       securityInstructions: true,
+      banner: true,
+      templateOptions: true,
       badgeTemplateId: true,
       orgId: true,
     },
@@ -33,15 +36,9 @@ export async function loadBadgeRegistration(id: string): Promise<BadgeRegistrati
   return prisma.registration.findUnique({ where: { id }, include: badgeRegistrationInclude });
 }
 
-// Lit le badgeTemplateId de PlatformSettings (singleton). En son absence, on rend une
-// chaine vide : resolveTemplate la traitera comme un identifiant inconnu et retombera
-// sur la famille `default` en le signalant.
-async function getPlatformBadgeTemplateId(): Promise<{ badgeTemplateId: string }> {
-  const platform = await prisma.platformSettings.findUnique({
-    where: { id: "singleton" },
-    select: { badgeTemplateId: true },
-  });
-  return platform ?? { badgeTemplateId: "" };
+// Template effectif d'un evenement : evenement -> organisation -> plateforme.
+export async function resolveEventTemplate(event: { badgeTemplateId: string | null; orgId: string }) {
+  return resolveTemplate(await resolveEventTemplateId(event));
 }
 
 // Rend le PDF d'un badge avec le template effectif (evenement -> organisation ->
@@ -49,16 +46,7 @@ async function getPlatformBadgeTemplateId(): Promise<{ badgeTemplateId: string }
 export async function renderBadgePdf(
   registration: BadgeRegistration,
 ): Promise<{ pdf: Buffer; templateId: string }> {
-  const [organization, platform] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: registration.event.orgId },
-      select: { badgeTemplateId: true },
-    }),
-    getPlatformBadgeTemplateId(),
-  ]);
-  const template = await resolveTemplate(
-    resolveBadgeTemplateId({ badgeTemplateId: registration.event.badgeTemplateId }, organization, platform),
-  );
+  const template = await resolveEventTemplate(registration.event);
 
   const templateCtx = await buildTemplateContext({
     id: registration.id,
@@ -73,8 +61,14 @@ export async function renderBadgePdf(
       location: registration.event.location,
       logo: registration.event.logo,
       securityInstructions: registration.event.securityInstructions,
+      banner: registration.event.banner,
+      templateOptions: registration.event.templateOptions,
     },
     category: registration.category,
+  }, {
+    optionImages: optionVariables(template.variables, template.bindings)
+      .filter((v) => v.kind === "image")
+      .map((v) => v.name),
   });
 
   const Component = template.Component;

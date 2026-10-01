@@ -37,6 +37,12 @@ export type TemplateContext = {
     logoDataUrl: string | null;
     // Consignes de securite de l'evenement, deja nettoyees.
     securityInstructions: string[];
+    bannerDataUrl: string | null;
+    // Valeur brute de Event.templateOptions (deja ramenee a un objet).
+    templateOptions: Record<string, unknown>;
+    // Options image deja lues en data URL (nom -> data URL), pour garder
+    // buildValues synchrone.
+    templateOptionImages: Record<string, string>;
   };
   badge: {
     id: string;

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
 import { installTemplate } from "@/lib/badge-templates/install";
-import { validateBindings, type Bindings } from "@/lib/badge-templates/bindings";
+import { checkBadgePackage, computeBindings } from "@/lib/badge-templates/bindings";
 
 export const runtime = "nodejs";
 
@@ -43,25 +43,10 @@ export async function POST(req: NextRequest) {
 
   const { manifest, assets } = read;
 
-  const raw = form?.get("bindings");
-  if (typeof raw !== "string") {
-    return badRequest(["liaisons : champ manquant."]);
-  }
-  let bindings: Bindings;
-  try {
-    bindings = JSON.parse(raw) as Bindings;
-  } catch {
-    return badRequest(["liaisons : JSON illisible."]);
-  }
-  // `null` ou un tableau sont du JSON valide, mais validateBindings les parcourt
-  // comme un objet : on les refuse ici plutot que de laisser la route lever.
-  if (typeof bindings !== "object" || bindings === null || Array.isArray(bindings)) {
-    return badRequest(["liaisons : objet attendu."]);
-  }
-  // Refus avec la liste COMPLETE des erreurs : l'ecran de liaison les affiche
-  // toutes d'un coup, plutot qu'une par tentative.
-  const bindingErrors = validateBindings(manifest.variables, bindings);
-  if (bindingErrors.length > 0) return badRequest(bindingErrors);
+  // Les liaisons sont calculees ici, jamais recues : le serveur est seul juge.
+  const packageErrors = checkBadgePackage(manifest);
+  if (packageErrors.length > 0) return badRequest(packageErrors);
+  const bindings = computeBindings(manifest.variables);
 
   // v4 (plan 12) : plus de registre compile, donc plus de collision possible.
   // Reinstaller une famille livree (`default`) en cree simplement une nouvelle

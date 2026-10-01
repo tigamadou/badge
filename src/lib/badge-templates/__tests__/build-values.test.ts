@@ -17,6 +17,9 @@ const ctx: TemplateContext = {
     location: "Cotonou",
     logoDataUrl: null,
     securityInstructions: ["Restez dans la zone."],
+    bannerDataUrl: "data:image/png;base64,CCC",
+    templateOptions: { showColorBar: false, zone: "C" },
+    templateOptionImages: { visuel: "data:image/png;base64,DDD" },
   },
   badge: { id: "DEMO-1", verifyUrl: "https://badge.local/verify/DEMO-1", qrCodeDataUrl: "data:image/png;base64,BBB", allAccess: true },
 };
@@ -28,6 +31,35 @@ const declare = (name: string, kind: VariableDeclaration["kind"]): VariableDecla
 });
 
 describe("buildValues", () => {
+  it("lit la banniere", () => {
+    expect(buildValues(ctx, [declare("b", "image")], { b: "event.bannerDataUrl" })).toEqual({
+      b: "data:image/png;base64,CCC",
+    });
+  });
+
+  it("lit les options : reglee, defaut sample, image, rien pour un texte non regle", () => {
+    const variables = [
+      { ...declare("showColorBar", "boolean"), sample: true },
+      { ...declare("showQrOnBack", "boolean"), sample: true },
+      declare("zone", "text"),
+      declare("autre", "text"),
+      declare("visuel", "image"),
+    ];
+    const bindings = Object.fromEntries(variables.map((x) => [x.name, "option"]));
+    expect(buildValues(ctx, variables, bindings)).toEqual({
+      showColorBar: false,
+      showQrOnBack: true,
+      zone: "C",
+      visuel: "data:image/png;base64,DDD",
+    });
+  });
+
+  it("READERS couvre exactement le contrat", async () => {
+    const { READERS } = await import("../build-values");
+    const { BADGE_CONTRACT, contractKinds } = await import("@tigamadou/pdf-engine/contracts");
+    expect(Object.keys(READERS).sort()).toEqual([...contractKinds(BADGE_CONTRACT).keys()].sort());
+  });
+
   it("lit chaque variable par sa source", () => {
     const values = buildValues(ctx, [declare("prenom", "text"), declare("couleur", "color")], {
       prenom: "participant.firstName",
@@ -90,6 +122,10 @@ describe("buildValues", () => {
     });
     expect(Object.hasOwn(values, "constructor")).toBe(true);
     expect(values.constructor).toBe("Awa");
+  });
+
+  it("n'ecrit rien pour une option image nommee constructor sans image", () => {
+    expect(buildValues(ctx, [declare("constructor", "image")], { constructor: "option" })).toEqual({});
   });
 
   it("leve sur une source qui n'existe que sur le prototype", () => {

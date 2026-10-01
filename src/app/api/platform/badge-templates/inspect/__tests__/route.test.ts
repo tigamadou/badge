@@ -37,10 +37,11 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
     family: "salon-2027",
     label: "Badge Salon",
     description: "Un badge de test.",
+    category: "badge",
     page: { widthPx: 1011, heightPx: 638, count: 1 },
     variables: [
       { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
-      { name: "structure", kind: "text", label: "Structure", sample: "Organisation" },
+      { name: "showColorBar", kind: "boolean", label: "Bandeau de couleur", sample: true },
     ],
     blocks: [
       {
@@ -50,7 +51,7 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
         y: 4,
         w: 400,
         h: 60,
-        text: "{participant.firstName} — {structure}",
+        text: "{participant.firstName}",
         style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
       },
     ],
@@ -94,19 +95,105 @@ describe("POST /api/platform/badge-templates/inspect", () => {
     await prisma.installedBadgeTemplate.deleteMany({});
   });
 
-  it("rend les variables, la suggestion et les sources, sans rien installer", async () => {
+  it("rend le resume du paquet (contrat, options, liaisons) sans rien installer", async () => {
     await asAdmin();
     const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) })));
     expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.variables.map((v: { name: string }) => v.name)).toEqual(["participant.firstName", "structure"]);
-    // Identite pour le nom de source, rien pour le nom libre : il reste a decider.
-    expect(body.suggested).toEqual({ "participant.firstName": "participant.firstName" });
-    expect(body.sources["category.color"]).toBe("color");
-    expect(body.sources["badge.allAccess"]).toBe("boolean");
-    expect(body.sources["event.securityInstructions"]).toBe("list");
-    expect(Object.keys(body.sources)).toHaveLength(17);
+    expect(await res.json()).toEqual({
+      family: "salon-2027",
+      label: "Badge Salon",
+      pages: 1,
+      nextVersion: 1,
+      preview: null,
+      contractVariables: [{ name: "participant.firstName", kind: "text", label: "Prénom" }],
+      options: [{ name: "showColorBar", kind: "boolean", label: "Bandeau de couleur" }],
+      bindings: { "participant.firstName": "participant.firstName", showColorBar: "option" },
+    });
     expect(await prisma.installedBadgeTemplate.count()).toBe(0);
+  });
+
+  it("rend l'apercu du paquet en data URL", async () => {
+    await asAdmin();
+    const res = await inspect(
+      formWith(
+        await archiveOf({
+          "manifest.json": JSON.stringify(manifestOf({ preview: "assets/apercu.png" })),
+          "assets/apercu.png": PNG,
+        }),
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).preview).toBe(`data:image/png;base64,${PNG.toString("base64")}`);
+  });
+
+  it("annonce la version suivante quand la famille existe deja", async () => {
+    const staff = await asAdmin();
+    await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "salon-2027",
+        version: 1,
+        label: "Salon",
+        description: "",
+        pages: 1,
+        pageWidthPx: 1011,
+        pageHeightPx: 638,
+        layout: {},
+        assetPrefix: "x/",
+        formatVersion: 2,
+        installedById: staff.id,
+      },
+    });
+    const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) })));
+    expect((await res.json()).nextVersion).toBe(2);
+  });
+
+  it("refuse un paquet a ancien nom (400) avec le nom attendu", async () => {
+    await asAdmin();
+    const manifest = manifestOf({
+      variables: [{ name: "firstName", kind: "text", label: "Prénom", sample: "Awa" }],
+      blocks: [
+        {
+          type: "text",
+          page: 1,
+          x: 4,
+          y: 4,
+          w: 400,
+          h: 60,
+          text: "{firstName}",
+          style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
+        },
+      ],
+    });
+    const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifest) })));
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual([
+      'variable "firstName" : ancien nom, réexporter le template depuis le studio (attendu "participant.firstName").',
+    ]);
+  });
+
+  it("refuse un paquet d'une autre categorie (400)", async () => {
+    await asAdmin();
+    const res = await inspect(
+      formWith(await archiveOf({ "manifest.json": JSON.stringify(manifestOf({ category: "carte-visite" })) })),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: "INVALID_PACKAGE",
+      errors: ['catégorie "carte-visite" : seuls les templates de badge s\'installent ici.'],
+    });
+  });
+
+  it("refuse une cle du contrat declaree avec un mauvais type (400)", async () => {
+    await asAdmin();
+    const manifest = manifestOf({
+      variables: [{ name: "participant.firstName", kind: "image", label: "Prénom" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, fill: "#000000" }],
+    });
+    const res = await inspect(formWith(await archiveOf({ "manifest.json": JSON.stringify(manifest) })));
+    expect(res.status).toBe(400);
+    expect((await res.json()).errors).toEqual([
+      'variable "participant.firstName" : badge la fournit en text, déclarée en image.',
+    ]);
   });
 
   it("refuse sans session (401)", async () => {

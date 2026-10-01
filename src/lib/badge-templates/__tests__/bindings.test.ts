@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { SOURCE_KINDS, suggestBindings, validateBindings } from "../bindings";
-import type { VariableDeclaration } from "@tigamadou/pdf-engine";
+import { BADGE_CONTRACT, contractKinds } from "@tigamadou/pdf-engine/contracts";
+import {
+  checkBadgePackage,
+  computeBindings,
+  LEGACY_NAMES,
+  OPTION_BINDING,
+  SOURCE_KINDS,
+  validateBindings,
+} from "../bindings";
+import type { TemplateManifest, VariableDeclaration } from "@tigamadou/pdf-engine";
 
 const variables: VariableDeclaration[] = [
   { name: "prenom", kind: "text", label: "Prenom" },
@@ -10,7 +18,7 @@ const variables: VariableDeclaration[] = [
 
 describe("SOURCE_KINDS", () => {
   it("expose les sources du domaine badge", () => {
-    expect(Object.keys(SOURCE_KINDS)).toHaveLength(17);
+    expect(Object.keys(SOURCE_KINDS)).toHaveLength(18);
     expect(SOURCE_KINDS["event.securityInstructions"]).toBe("list");
     expect(SOURCE_KINDS["participant.firstName"]).toBe("text");
     expect(SOURCE_KINDS["category.color"]).toBe("color");
@@ -96,26 +104,102 @@ describe("validateBindings", () => {
   });
 });
 
-describe("suggestBindings", () => {
-  it("propose l'identite quand le nom est une source du meme type", () => {
-    const declared: VariableDeclaration[] = [
-      { name: "participant.firstName", kind: "text", label: "Prenom" },
-      { name: "event.date", kind: "date", label: "Date" },
-    ];
-    expect(suggestBindings(declared)).toEqual({
+const vd = (name: string, kind: VariableDeclaration["kind"]) => ({ name, kind, label: name });
+
+describe("computeBindings", () => {
+  it("lie une cle du contrat a elle-meme et le reste en option", () => {
+    expect(
+      computeBindings([
+        vd("participant.firstName", "text"),
+        vd("event.bannerDataUrl", "image"),
+        vd("showColorBar", "boolean"),
+        vd("zone", "text"),
+      ]),
+    ).toEqual({
       "participant.firstName": "participant.firstName",
-      "event.date": "event.date",
+      "event.bannerDataUrl": "event.bannerDataUrl",
+      showColorBar: OPTION_BINDING,
+      zone: OPTION_BINDING,
     });
   });
 
-  it("ne propose rien pour un nom libre", () => {
-    expect(suggestBindings(variables)).toEqual({});
+  it("traite en option une cle du contrat de mauvais type ou un nom du prototype", () => {
+    expect(
+      computeBindings([vd("participant.firstName", "image"), vd("constructor", "text")]),
+    ).toEqual({ "participant.firstName": OPTION_BINDING, constructor: OPTION_BINDING });
   });
 
-  it("ne propose rien quand le nom correspond mais pas le type", () => {
-    const declared: VariableDeclaration[] = [
-      { name: "participant.firstName", kind: "image", label: "Prenom" },
+  it("produit des liaisons que validateBindings accepte", () => {
+    const declared = [vd("participant.firstName", "text"), vd("showColorBar", "boolean")];
+    expect(validateBindings(declared, computeBindings(declared))).toEqual([]);
+  });
+});
+
+describe("checkBadgePackage", () => {
+  const manifest = (declared: Array<ReturnType<typeof vd>>) =>
+    ({ category: "badge", variables: declared }) as unknown as TemplateManifest;
+
+  it("refuse une categorie autre que badge", () => {
+    const autre = { category: "autre", variables: [vd("firstName", "text")] } as unknown as TemplateManifest;
+    expect(checkBadgePackage(autre)).toEqual([
+      'catégorie "autre" : seuls les templates de badge s\'installent ici.',
+    ]);
+  });
+
+  it("accepte un paquet conforme", () => {
+    expect(
+      checkBadgePackage(manifest([vd("participant.firstName", "text"), vd("showColorBar", "boolean")])),
+    ).toEqual([]);
+  });
+
+  it("refuse un ancien nom avec le nom attendu", () => {
+    expect(checkBadgePackage(manifest([vd("firstName", "text")]))).toEqual([
+      'variable "firstName" : ancien nom, réexporter le template depuis le studio (attendu "participant.firstName").',
+    ]);
+  });
+
+  it("refuse une cle hors contrat sous un prefixe reserve", () => {
+    expect(checkBadgePackage(manifest([vd("participant.fristName", "text")]))[0]).toContain(
+      "préfixe réservé",
+    );
+  });
+
+  it("couvre les 18 anciens noms", () => {
+    expect(Object.keys(LEGACY_NAMES)).toHaveLength(18);
+    expect(LEGACY_NAMES.isAnonymous).toBe("category.anonymous");
+  });
+});
+
+describe("sources issues du contrat", () => {
+  it("SOURCE_KINDS est exactement le contrat badge", () => {
+    expect(SOURCE_KINDS).toEqual(Object.fromEntries(contractKinds(BADGE_CONTRACT)));
+    expect(SOURCE_KINDS["event.bannerDataUrl"]).toBe("image");
+  });
+});
+
+describe("liaison option", () => {
+  const v = (name: string, kind: "text" | "boolean" | "image" | "list" | "color" | "date") => ({
+    name,
+    kind,
+    label: name,
+  });
+
+  it("accepte option pour tout type", () => {
+    const vars = [
+      v("showColorBar", "boolean"),
+      v("zone", "text"),
+      v("visuel", "image"),
+      v("lignes", "list"),
+      v("teinte", "color"),
+      v("jour", "date"),
     ];
-    expect(suggestBindings(declared)).toEqual({});
+    const bindings = Object.fromEntries(vars.map((x) => [x.name, OPTION_BINDING]));
+    expect(validateBindings(vars, bindings)).toEqual([]);
+  });
+
+  it("refuse option sur un nom a prefixe reserve", () => {
+    expect(
+      validateBindings([v("participant.fristName", "text")], { "participant.fristName": OPTION_BINDING }),
+    ).toEqual(['variable "participant.fristName" : une option ne peut pas porter le préfixe réservé "participant.".']);
   });
 });

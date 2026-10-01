@@ -343,4 +343,73 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
       await prisma.installedBadgeTemplate.delete({ where: { id: row.id } });
     }
   });
+
+  it("imprime les options du badge : defaut, valeur reglee et interrupteur coupe", async () => {
+    const { org, event, reg } = await setupFixtures("ADMIN");
+    const layout = {
+      formatVersion: 2,
+      family: "options-test",
+      label: "Options",
+      description: "",
+      category: "badge",
+      page: { widthPx: 320, heightPx: 460, count: 1 },
+      variables: [
+        { name: "showColorBar", kind: "boolean", label: "Bandeau", sample: true },
+        { name: "zone", kind: "text", label: "Zone" },
+        { name: "event.bannerDataUrl", kind: "image", label: "Banniere" },
+        { name: "visuel", kind: "image", label: "Visuel" },
+      ],
+      blocks: [
+        {
+          type: "text", page: 1, x: 10, y: 10, w: 200, h: 30,
+          text: "BANDEAU",
+          style: { sizePx: 14, color: "#000000", overflow: "clip" },
+          visibleIf: { variable: "showColorBar", equals: true },
+        },
+        {
+          type: "text", page: 1, x: 10, y: 60, w: 200, h: 30,
+          text: "{zone}",
+          style: { sizePx: 14, color: "#000000", overflow: "clip" },
+        },
+      ],
+    };
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "options-test", version: 1, label: "Options", description: "",
+        pages: 1, pageWidthPx: 320, pageHeightPx: 460, layout,
+        bindings: {
+          showColorBar: "option",
+          zone: "option",
+          visuel: "option",
+          "event.bannerDataUrl": "event.bannerDataUrl",
+        },
+        assetPrefix: "badge-templates/options-test/", formatVersion: 2, installedById: "u1",
+      },
+    });
+    try {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { badgeTemplateId: row.id, templateOptions: { zone: "Zone C", visuel: "absent/visuel.png" } },
+      });
+      const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route");
+      const call = () =>
+        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+          params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+        });
+
+      const avec = extractPdfText(await bodyToBuffer(await call()));
+      expect(avec).toContain("BANDEAU");
+      expect(avec).toContain("Zone C");
+
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { templateOptions: { zone: "Zone C", showColorBar: false } },
+      });
+      const sans = extractPdfText(await bodyToBuffer(await call()));
+      expect(sans).not.toContain("BANDEAU");
+      expect(sans).toContain("Zone C");
+    } finally {
+      await prisma.installedBadgeTemplate.delete({ where: { id: row.id } });
+    }
+  });
 });

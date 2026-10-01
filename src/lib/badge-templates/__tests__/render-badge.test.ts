@@ -5,7 +5,7 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
 import { createBadgeFixtures } from "./badge-fixtures";
-import { loadBadgeRegistration, renderBadgePdf } from "../render-badge";
+import { loadBadgeRegistration, renderBadgePdf, resolveEventTemplate } from "../render-badge";
 
 function countPdfPages(buf: Buffer): number {
   const matches = buf.toString("latin1").match(/\/Type\s*\/Page(?![s])/g);
@@ -64,4 +64,11 @@ describe("loadBadgeRegistration / renderBadgePdf", () => {
     const { templateId } = await renderBadgePdf(reg);
     expect(templateId).toBe(defaultId);
   }, 30_000);
+
+  it("resolveEventTemplate : famille default sans template, recto-verso via l'organisation", async () => {
+    const { event, org, defaultId, rectoVersoId } = await createBadgeFixtures();
+    expect((await resolveEventTemplate(event)).meta.id).toBe(defaultId);
+    await prisma.organization.update({ where: { id: org.id }, data: { badgeTemplateId: rectoVersoId } });
+    expect((await resolveEventTemplate(event)).meta.id).toBe(rectoVersoId);
+  });
 });
