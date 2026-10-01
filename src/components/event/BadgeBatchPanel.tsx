@@ -1,131 +1,143 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BadgeBatchExportV2 } from "@/components/badge/BadgeBatchExportV2";
-import type { BadgeEvent, BadgeRegistration } from "@/components/badge/BadgeDocumentV2";
-import { PDFViewer } from "@react-pdf/renderer";
-import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { useState } from "react";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
-import { Spinner, ProgressBar } from "@/components/ui/Feedback";
-import { MiniBadge } from "@/components/badge/MiniBadge";
-import { Icon } from "@/components/ui/Icon";
+import { CatPill } from "@/components/ui/Labels";
+import { MAX_BADGES_PER_BATCH } from "@/lib/badge-batch";
 
-type BatchItem = { registration: BadgeRegistration; qrDataUrl: string };
+export type BatchBadge = {
+  id: string;
+  // Nom affiche, ou "Identité masquée" pour une categorie anonyme (calcule cote serveur).
+  label: string;
+  categoryName: string;
+  categoryColor: string;
+  printed: boolean;
+};
 
+// Impression par lot : liste des badges selectionnes, apercu du PDF serveur du
+// badge choisi, ZIP d'un PDF par badge pour l'imprimante a badges, marquage explicite.
 export function BadgeBatchPanel({
   orgId,
   eventId,
-  ids,
-  baseUrl,
+  archived,
+  badges,
+  ignored,
 }: {
   orgId: string;
   eventId: string;
-  ids: string[];
-  baseUrl: string;
+  archived: boolean;
+  badges: BatchBadge[];
+  ignored: number;
 }) {
-  const [items, setItems] = useState<BatchItem[]>([]);
-  const [event, setEvent] = useState<BadgeEvent | null>(null);
-  const [done, setDone] = useState(false);
+  const [currentId, setCurrentId] = useState<string | null>(badges[0]?.id ?? null);
+  const [printedIds, setPrintedIds] = useState<Set<string>>(
+    () => new Set(badges.filter((b) => b.printed).map((b) => b.id)),
+  );
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const evtRes = await fetch(`/api/org/${orgId}/events/${eventId}`);
-      if (!evtRes.ok) return;
-      const evtJson = await evtRes.json();
-      if (cancelled) return;
-      setEvent({
-        title: evtJson.event.title,
-        date: new Date(evtJson.event.date),
-        logo: evtJson.event.logo ?? null,
+  const base = `/api/org/${orgId}/events/${eventId}`;
+  const ids = badges.map((b) => b.id);
+  const tooMany = badges.length > MAX_BADGES_PER_BATCH;
+
+  async function markPrinted() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`${base}/registrations/print`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids }),
       });
-      for (const id of ids) {
-        const r = await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${id}`);
-        if (!r.ok) continue;
-        const j = await r.json();
-        const reg = j.registration;
-        const qr = await generateQRCodeDataURL(`${baseUrl}/verify/${reg.id}`);
-        if (cancelled) return;
-        const item: BatchItem = {
-          registration: {
-            id: reg.id,
-            firstName: reg.firstName,
-            lastName: reg.lastName,
-            structure: reg.structure,
-            photo: reg.photo,
-            allAccessGranted: reg.allAccessGranted,
-            category: {
-              name: reg.category.name,
-              color: reg.category.color,
-              number: reg.category.number,
-              neutralBadge: reg.category.neutralBadge,
-              anonymous: reg.category.anonymous,
-            },
-          },
-          qrDataUrl: qr,
-        };
-        setItems((prev) => [...prev, item]);
+      if (!res.ok) {
+        setMessage("Le marquage a échoué.");
+        return;
       }
-      if (!cancelled) setDone(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [orgId, eventId, ids, baseUrl]);
-
-  const total = ids.length;
-  const pct = total > 0 ? Math.round((items.length / total) * 100) : 0;
+      const json = await res.json();
+      setPrintedIds(new Set(ids));
+      setMessage(`${json.printed} badge(s) marqué(s) imprimé(s).`);
+    } catch {
+      setMessage("Le marquage a échoué.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHead
-          title="Génération des badges"
-          subtitle={done ? "Génération terminée" : "Préparation du document PDF…"}
-          action={
-            done ? (
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700">
-                <Icon name="check" size={16} /> Prêt
-              </span>
-            ) : (
-              <Spinner size={20} />
-            )
-          }
-        />
-        <CardBody className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <ProgressBar pct={pct} />
-            </div>
-            <span className="text-sm tabular-nums text-slate-500">
-              {items.length} / {total}
-            </span>
-          </div>
-          {items.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-              {items.map((it) => (
-                <MiniBadge
-                  key={it.registration.id}
-                  name={
-                    it.registration.category.anonymous
-                      ? "Anonyme"
-                      : `${it.registration.firstName} ${it.registration.lastName}`
-                  }
-                  category={it.registration.category.name}
-                  categoryColor={it.registration.category.neutralBadge ? "#334155" : it.registration.category.color}
-                  state="done"
-                />
-              ))}
-            </div>
-          )}
-        </CardBody>
-      </Card>
+    <div className="space-y-4">
+      {ignored > 0 && (
+        <p className="text-[13px] text-amber-700">
+          {ignored} identifiant(s) ignoré(s) : introuvables ou non approuvés.
+        </p>
+      )}
 
-      {event && done && items.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200">
-          <PDFViewer style={{ width: "100%", height: 800 }}>
-            <BadgeBatchExportV2 items={items} event={event} />
-          </PDFViewer>
+      {badges.length === 0 ? (
+        <p className="text-sm text-slate-500">Aucun badge à imprimer.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+          <Card>
+            <CardHead title="Badges du lot" subtitle={`${badges.length} badge(s)`} />
+            <CardBody className="space-y-3">
+              <ul className="max-h-[560px] divide-y divide-slate-100 overflow-y-auto">
+                {badges.map((b) => (
+                  <li key={b.id}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentId(b.id)}
+                      aria-current={b.id === currentId ? "true" : undefined}
+                      className={`flex w-full items-center justify-between gap-2 px-2 py-2 text-left text-[13px] ${
+                        b.id === currentId ? "bg-slate-100" : "hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>
+                        <span className="block font-medium text-slate-800">{b.label}</span>
+                        <span className="block text-slate-400">N° {b.id}</span>
+                      </span>
+                      <span className="flex flex-col items-end gap-1">
+                        <CatPill color={b.categoryColor} label={b.categoryName} />
+                        {printedIds.has(b.id) && <span className="text-[11px] text-emerald-700">Imprimé</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap gap-2">
+                {tooMany ? (
+                  <p className="text-[13px] text-amber-700">
+                    Un lot compte au plus {MAX_BADGES_PER_BATCH} badges : réduisez la sélection.
+                  </p>
+                ) : (
+                  <a
+                    href={`${base}/badges/print-zip?ids=${encodeURIComponent(ids.join(","))}`}
+                    className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Télécharger le lot (.zip)
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={markPrinted}
+                  disabled={archived || busy}
+                  className="inline-flex items-center rounded-lg bg-green-600 px-3 py-2 text-[13px] font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Marquer imprimés
+                </button>
+              </div>
+              {archived && (
+                <p className="text-[13px] text-slate-500">Événement archivé : le marquage est désactivé.</p>
+              )}
+              {message && <p className="text-[13px] text-slate-600">{message}</p>}
+            </CardBody>
+          </Card>
+
+          {currentId && (
+            <iframe
+              title="Aperçu du badge"
+              src={`${base}/badges/${currentId}`}
+              className="h-[640px] w-full rounded-xl border border-slate-200 bg-white"
+            />
+          )}
         </div>
       )}
     </div>

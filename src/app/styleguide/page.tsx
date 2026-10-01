@@ -23,7 +23,6 @@ import { Tabs, Segmented } from "@/components/ui/Tabs";
 import { OrgLogo, PickCard, PickCardDashed } from "@/components/ui/PickCard";
 import { VerifyBanner } from "@/components/ui/VerifyBanner";
 import { LogType, KeyValue, Diff, Payload } from "@/components/ui/JournalBlocks";
-import { BadgeCard } from "@/components/badge/BadgeCard";
 import { MiniBadge } from "@/components/badge/MiniBadge";
 import { ScannerFrame, ScanResult } from "@/components/event/ScannerFrame";
 
@@ -211,7 +210,6 @@ export default function StyleguidePage() {
       </Section>
 
       <Section title="Badge & scanner & verification">
-        <BadgeCard org="Salon Tech" name="Yanis Bernard" category="EXPOSANT" categoryColor="#16a34a" qr={<div className="h-full w-full bg-slate-900" />} meta="ID 4821" allAccess />
         <div className="grid grid-cols-3 gap-2">
           <MiniBadge name="A. Dupont" category="Visiteur" categoryColor="#2563eb" state="done" />
           <MiniBadge name="B. Martin" category="Presse" categoryColor="#dc2626" state="generating" />

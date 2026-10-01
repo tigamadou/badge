@@ -6,14 +6,13 @@ import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
-// Spy sur renderToStream : delegue a l'implementation reelle par defaut (tous les tests
-// existants font un rendu PDF veritable), sauf le test qui force une erreur de stream pour
-// exercer la branche `stream.on("error", ...)` (l.109) -- non atteignable via un rendu reel.
+// renderToBuffer delegue au vrai rendu, sauf le test d'echec de rendu.
 vi.mock("@react-pdf/renderer", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@react-pdf/renderer")>();
-  return { ...actual, renderToStream: vi.fn(actual.renderToStream) };
+  return { ...actual, renderToBuffer: vi.fn(actual.renderToBuffer) };
 });
-import { renderToStream } from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
+
 import { extractPdfText } from "@tigamadou/pdf-engine/testing";
 
 // Compte les Page objects dans un buffer PDF (cf. render.test.tsx).
@@ -28,6 +27,8 @@ async function bodyToBuffer(res: Response): Promise<Buffer> {
   return Buffer.from(ab);
 }
 
+let seq = 0;
+
 async function setupFixtures(
   role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER" = "ADMIN",
   opts: { orgOwner?: boolean } = {},
@@ -36,6 +37,7 @@ async function setupFixtures(
   // role event PUR (ex. VIEWER rejete faute de badge.print), passer { orgOwner: false }
   // afin que le role effectif ne soit pas remonte au niveau ADMIN par l'appartenance org.
   const { orgOwner = true } = opts;
+  const stamp = `${Date.now()}-${++seq}`;
   // v4 (plan 12) : les templates livres sont installes en base, plus compiles.
   await ensureReferenceTemplates("seed-test");
   const defaultId = (await defaultTemplateId())!;
@@ -60,7 +62,7 @@ async function setupFixtures(
 
   const admin = await prisma.user.create({
     data: {
-      email: `tpl-admin-${Date.now()}@v2-12.test`,
+      email: `tpl-admin-${stamp}@v2-12.test`,
       password: "x",
       name: "Tpl Admin",
       isStaff: false,
@@ -68,7 +70,7 @@ async function setupFixtures(
     },
   });
   const org = await prisma.organization.create({
-    data: { name: "Tpl Org", slug: `tpl-org-${Date.now()}` },
+    data: { name: "Tpl Org", slug: `tpl-org-${stamp}` },
   });
   if (orgOwner) {
     await prisma.orgMembership.create({
@@ -79,7 +81,7 @@ async function setupFixtures(
     data: {
       orgId: org.id,
       title: "Tpl Salon",
-      slug: `tpl-evt-${Date.now()}`,
+      slug: `tpl-evt-${stamp}`,
       location: "Abidjan",
       date: new Date("2026-10-01"),
     },
@@ -92,7 +94,7 @@ async function setupFixtures(
   });
   const reg = await prisma.registration.create({
     data: {
-      id: `BADGE-${Date.now()}`,
+      id: `BADGE-${stamp}`,
       eventId: event.id,
       categoryId: category.id,
       userId: admin.id,
@@ -190,6 +192,21 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(json.error).toBe("EVENT_FORBIDDEN");
   });
 
+  it("500 RENDER_FAILED en JSON si le rendu echoue", async () => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    vi.mocked(renderToBuffer).mockRejectedValueOnce(new Error("boom-render"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+    });
+    expect(res.status).toBe(500);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(await res.json()).toEqual({ error: "RENDER_FAILED", id: reg.id });
+    expect(err).toHaveBeenCalledTimes(1);
+    err.mockRestore();
+  }, 30_000);
+
   it("retourne 404 NOT_FOUND pour un badgeId inexistant", async () => {
     const { org, event } = await setupFixtures();
     const { GET } = await import("../route");
@@ -214,21 +231,39 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(res.headers.get("x-template-id")).toBe(defaultId);
   }, 30_000);
 
-  it("propage une erreur de stream au reader de la reponse (controller.error)", async () => {
+  it("nomme le fichier d'apres l'inscription, en ligne par defaut", async () => {
     const { org, event, reg } = await setupFixtures();
-    const { EventEmitter } = await import("node:events");
-    const fakeStream = new EventEmitter();
-    vi.mocked(renderToStream).mockResolvedValueOnce(fakeStream as unknown as NodeJS.ReadableStream);
-
     const { GET } = await import("../route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`);
     const res = await GET(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
     });
-    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toBe(`inline; filename="${reg.id}-awa-diallo.pdf"`);
+  }, 30_000);
 
-    fakeStream.emit("error", new Error("boom-render"));
-    await expect(res.arrayBuffer()).rejects.toThrow();
+  it("?download=1 force le telechargement", async () => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    const req = new NextRequest(
+      `http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}?download=1`,
+    );
+    const res = await GET(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toBe(`attachment; filename="${reg.id}-awa-diallo.pdf"`);
+  }, 30_000);
+
+  it("retourne 404 pour une inscription d'un autre evenement", async () => {
+    // `other` d'abord : le second setupFixtures fixe la session sur son propre admin.
+    const other = await setupFixtures();
+    const { org, event } = await setupFixtures();
+    const { GET } = await import("../route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${other.reg.id}`);
+    const res = await GET(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: other.reg.id }),
+    });
+    expect(res.status).toBe(404);
   });
 
   it("imprime les consignes de l'evenement, l'initiale de categorie et l'All Access", async () => {
@@ -294,7 +329,10 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
       const avec = extractPdfText(await bodyToBuffer(await call()));
       expect(avec).toContain("[V]");
       expect(avec).toContain("ALL ACCESS");
-      expect(avec).toContain("Restez dans la zone indiquee.");
+      // Point final omis expres : extractPdfText (@tigamadou/pdf-engine/testing) fusionne les
+      // tables ToUnicode de toutes les polices, ce qui peut mal decoder un glyphe selon les
+      // rendus precedents du processus.
+      expect(avec).toContain("Restez dans la zone indiquee");
 
       // L'All Access retire apres coup disparait du badge suivant.
       await prisma.registration.update({ where: { id: reg.id }, data: { allAccessGranted: false } });

@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { hasEventPermission } from "@/lib/auth-helpers";
+import { loadUserContext } from "@/lib/user-context";
 import { prisma } from "@/lib/prisma";
-import { generateQRCodeDataURL } from "@/lib/qrcode";
-import { formatEventDate } from "@/lib/format-date";
-import { BadgeDownloadV2 } from "@/components/badge/BadgeDownloadV2";
-import { BadgeCard } from "@/components/badge/BadgeCard";
+import { BadgePrintActions } from "@/components/badge/BadgePrintActions";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { CatPill } from "@/components/ui/Labels";
@@ -18,27 +19,31 @@ export default async function BadgeDetailPage({
 }) {
   const { eventId, badgeId } = await params;
   const orgId = await getEventOrgId(eventId);
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    redirect(`/login?callbackUrl=/event/${eventId}/badges/${badgeId}`);
+  }
+  const ctx = await loadUserContext(session.user.id);
+  if (!ctx) redirect("/login");
+  // Garde avant toute lecture d'inscription : le layout de l'evenement laisse passer tout role.
+  if (!hasEventPermission(ctx, eventId, orgId, "badge.print")) {
+    redirect(`/event/${eventId}`);
+  }
   const registration = await prisma.registration.findUnique({
     where: { id: badgeId },
     include: {
       category: true,
-      event: { select: { title: true, date: true, logo: true, orgId: true } },
+      event: { select: { orgId: true, archived: true } },
     },
   });
   if (!registration || registration.eventId !== eventId || registration.event.orgId !== orgId) {
     notFound();
   }
 
-  const baseUrl = process.env.BASE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const qrDataUrl = await generateQRCodeDataURL(`${baseUrl}/verify/${registration.id}`);
-
   const anonymous = registration.category.anonymous;
-  const displayName = anonymous
-    ? "Identité masquée"
-    : `${registration.snapshotFirstName} ${registration.snapshotLastName}`;
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <Link
         href={`/event/${eventId}/badges`}
         className="inline-flex items-center gap-1 text-[13px] text-slate-400 hover:text-slate-600"
@@ -46,81 +51,44 @@ export default async function BadgeDetailPage({
         <Icon name="arrow-left" size={13} /> Badges
       </Link>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[257px_1fr]">
-        <div>
-          <BadgeCard
-            org={registration.event.title}
-            name={displayName}
-            role={anonymous ? undefined : registration.snapshotStructure}
-            category={registration.category.name}
-            categoryColor={registration.category.neutralBadge ? "#334155" : registration.category.color}
-            qr={
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={qrDataUrl} alt="QR code du badge" className="h-full w-full" />
-            }
-            meta={
-              <>
-                N° {registration.id}
-                <br />
-                {formatEventDate(registration.event.date)}
-              </>
-            }
-            allAccess={registration.allAccessGranted}
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+        <BadgePrintActions
+          orgId={orgId}
+          eventId={eventId}
+          registrationId={registration.id}
+          approved={registration.status === "APPROVED"}
+          archived={registration.event.archived}
+          printed={registration.badgePrinted}
+          printedAt={registration.badgePrintedAt?.toISOString() ?? null}
+        />
 
-        <div className="space-y-6">
-          <Card>
-            <CardHead title="Informations" />
-            <CardBody>
-              <KeyValue
-                items={[
-                  {
-                    label: "Catégorie",
-                    value: <CatPill color={registration.category.color} label={registration.category.name} />,
-                  },
-                  { label: "Statut du badge", value: registration.badgePrinted ? "Imprimé" : "Non imprimé" },
-                  { label: "ALL ACCESS", value: registration.allAccessGranted ? "Oui" : "Non" },
-                ]}
-              />
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHead title="Actions" />
-            <CardBody className="space-y-3">
-              <BadgeDownloadV2
-                registration={{
-                  id: registration.id,
-                  firstName: registration.snapshotFirstName,
-                  lastName: registration.snapshotLastName,
-                  structure: registration.snapshotStructure,
-                  photo: registration.snapshotPhoto,
-                  allAccessGranted: registration.allAccessGranted,
-                  category: {
-                    name: registration.category.name,
-                    color: registration.category.color,
-                    number: registration.category.number,
-                    neutralBadge: registration.category.neutralBadge,
-                    anonymous: registration.category.anonymous,
-                  },
-                }}
-                event={{
-                  title: registration.event.title,
-                  date: registration.event.date,
-                  logo: registration.event.logo,
-                }}
-                qrDataUrl={qrDataUrl}
-              />
-              <Link
-                href={`/event/${eventId}/registrations/${registration.id}`}
-                className="inline-flex text-[13px] font-medium text-green-600 hover:underline"
-              >
-                Voir l&apos;inscription
-              </Link>
-            </CardBody>
-          </Card>
-        </div>
+        <Card>
+          <CardHead title="Informations" />
+          <CardBody className="space-y-3">
+            <KeyValue
+              items={[
+                { label: "N°", value: registration.id },
+                {
+                  label: "Nom",
+                  value: anonymous
+                    ? "Identité masquée"
+                    : `${registration.snapshotFirstName} ${registration.snapshotLastName}`,
+                },
+                {
+                  label: "Catégorie",
+                  value: <CatPill color={registration.category.color} label={registration.category.name} />,
+                },
+                { label: "ALL ACCESS", value: registration.allAccessGranted ? "Oui" : "Non" },
+              ]}
+            />
+            <Link
+              href={`/event/${eventId}/registrations/${registration.id}`}
+              className="inline-flex text-[13px] font-medium text-green-600 hover:underline"
+            >
+              Voir l&apos;inscription
+            </Link>
+          </CardBody>
+        </Card>
       </div>
     </div>
   );
