@@ -19,7 +19,7 @@
     "@aws-sdk/client-s3": "^3.1090.0",
     "@prisma/client": "^6.6.0",
     "@react-pdf/renderer": "^4.5.1",
-    "@tigamadou/pdf-engine": "^1.1.0",
+    "@tigamadou/pdf-engine": "^1.1.1",
     "bcryptjs": "^2.4.3",
     "file-saver": "^2.0.5",
     "html5-qrcode": "^2.3.8",

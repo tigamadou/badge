@@ -329,9 +329,10 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
       const avec = extractPdfText(await bodyToBuffer(await call()));
       expect(avec).toContain("[V]");
       expect(avec).toContain("ALL ACCESS");
-      // Point final omis expres : extractPdfText (@tigamadou/pdf-engine/testing) fusionne les
-      // tables ToUnicode de toutes les polices, ce qui peut mal decoder un glyphe selon les
-      // rendus precedents du processus.
+      // Point final omis expres : apres d'autres rendus dans le meme processus, la table
+      // ToUnicode ecrite par @react-pdf associe parfois le glyphe du point a une valeur
+      // vide (`<0017><>`). Le point est bien dessine, mais aucun lecteur de texte ne
+      // peut le retrouver. Defaut de @react-pdf, sans effet sur le badge imprime.
       expect(avec).toContain("Restez dans la zone indiquee");
 
       // L'All Access retire apres coup disparait du badge suivant.
