@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Organisations</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "orgs", user: { name: "Marie Dubois", role: "SUPER_ADMIN" } };</script>
+<div id="page" data-screen-label="13 Staff organisations">
+
+  <div class="page-head">
+    <div><h1>Organisations</h1><p class="sub">24 organisations · 2 archivées</p></div>
+    <a class="btn btn-primary" href="staff-org-create.html"><span data-ico="plus" data-size="16"></span> Créer une organisation</a>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Rechercher une organisation…" /></div>
+    <button class="chip-filter"><span data-ico="filter" data-size="14"></span> Statut <span data-ico="chevron-down" data-size="14"></span></button>
+    <label class="check" style="margin-left:4px;"><input type="checkbox" /> Afficher les archivées</label>
+    <span class="spacer"></span>
+    <span class="ds-meta">24 résultats</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Organisation</th><th>Slug</th><th>OWNERs</th><th>Événements</th><th>Inscriptions</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="org-logo" style="width:30px;height:30px;font-size:12px;">UF</span><span class="cell-name">Université Forum</span></div></td><td class="cell-meta mono">univ-forum</td><td><div class="avatar-group"><span class="avatar sm">PG</span><span class="avatar sm">ML</span></div></td><td>5</td><td>2 105</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="external-link" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="org-logo" style="width:30px;height:30px;font-size:12px;">ST</span><span class="cell-name">Salon Tech</span></div></td><td class="cell-meta mono">salon-tech</td><td><div class="avatar-group"><span class="avatar sm">MD</span></div></td><td>3</td><td>1 248</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="external-link" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="org-logo" style="width:30px;height:30px;font-size:12px;">EX</span><span class="cell-name">ExpoPro Lyon</span></div></td><td class="cell-meta mono">expopro-lyon</td><td><div class="avatar-group"><span class="avatar sm">JR</span><span class="avatar sm">CL</span></div></td><td>2</td><td>880</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="external-link" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="org-logo" style="width:30px;height:30px;font-size:12px;">CM</span><span class="cell-name">Congrès Médical</span></div></td><td class="cell-meta mono">congres-medical</td><td><div class="avatar-group"><span class="avatar sm">SB</span></div></td><td>1</td><td>540</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="external-link" data-size="16"></span></button><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr style="opacity:.6;"><td><div class="flex gap12" style="align-items:center;"><span class="org-logo" style="width:30px;height:30px;font-size:12px;">AC</span><span class="cell-name">Archives Congrès <span class="tag" style="margin-left:6px;"><span data-ico="archive" data-size="11"></span> Archivée</span></span></div></td><td class="cell-meta mono">archives-congres</td><td><span class="ds-meta">—</span></td><td>0</td><td>1 920</td><td><div class="row-actions"><button class="btn-icon"><span data-ico="archive-restore" data-size="16"></span></button></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager"><span class="info">1–5 sur 24</span><div class="ctrls"><button class="btn-ghost-sm" disabled style="opacity:.5;"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

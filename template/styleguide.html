@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Styleguide</title>
+<link rel="stylesheet" href="assets/badge.css" />
+<style>
+  body { background: var(--bg-app); }
+  .sg-top { background: #fff; border-bottom: 1px solid var(--border-card); padding: 28px 0; }
+  .sg-wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  .sg-top .sg-wrap { display: flex; align-items: center; gap: 16px; }
+  .sg-top h1 { font-size: 24px; font-weight: 600; margin: 0; color: var(--fg1); }
+  .sg-top p { margin: 4px 0 0; font-size: 14px; color: var(--fg3); }
+  .sg-sec { padding: 44px 0; border-bottom: 1px solid var(--border-card); }
+  .sg-sec h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--fg3); margin: 0 0 4px; font-weight: 600; }
+  .sg-sec .sec-title { font-size: 20px; font-weight: 600; color: var(--fg1); margin: 0 0 24px; }
+  .sg-grid { display: grid; gap: 16px; }
+  .swatch { border: 1px solid var(--border-card); border-radius: 10px; overflow: hidden; background: #fff; }
+  .swatch .chip { height: 64px; }
+  .swatch .meta { padding: 10px 12px; }
+  .swatch .nm { font-size: 13px; font-weight: 500; color: var(--fg1); }
+  .swatch .hex { font-size: 12px; color: var(--fg3); font-family: var(--font-mono); margin-top: 2px; }
+  .sg-cols-6 { grid-template-columns: repeat(6, 1fr); }
+  .sg-cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .sg-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .sg-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .sg-cols-6, .sg-cols-5, .sg-cols-4 { grid-template-columns: repeat(3, 1fr); } }
+  .demo { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .panel { background: #fff; border: 1px solid var(--border-card); border-radius: 12px; padding: 24px; }
+  .lbl-row { font-size: 12px; color: var(--fg3); margin: 0 0 10px; text-transform: uppercase; letter-spacing: .05em; }
+  .type-row { display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+  .type-row:last-child { border-bottom: 0; }
+  .type-row .tag-min { width: 130px; font-size: 12px; color: var(--fg3); font-family: var(--font-mono); flex: none; }
+  .radius-demo { width: 90px; height: 64px; background: var(--slate-100); border: 1px solid var(--border-card); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 11px; color: var(--fg3); font-family: var(--font-mono); }
+  .space-demo { background: var(--green-600); height: 16px; border-radius: 3px; }
+  .elev { width: 120px; height: 80px; background: #fff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--fg3); }
+  .toc { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+  .toc a { font-size: 13px; color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="sg-top">
+    <div class="sg-wrap">
+      <img src="assets/logo.svg" alt="Badge" style="height:38px;" />
+      <div>
+        <h1>Styleguide</h1>
+        <p>Tokens &amp; composants — direction artistique Badge (marine + vert, Inter UI · Montserrat badges)</p>
+      </div>
+      <div style="margin-left:auto;"><a class="btn btn-secondary btn-sm" href="index.html"><span data-ico="grid" data-size="15"></span> Galerie des écrans</a></div>
+    </div>
+  </div>
+
+  <div class="sg-wrap">
+
+    <!-- COLORS -->
+    <section class="sg-sec" id="colors">
+      <h2>Fondations</h2>
+      <div class="sec-title">Couleurs</div>
+
+      <p class="lbl-row">Marque</p>
+      <div class="sg-grid sg-cols-4" style="margin-bottom:28px;">
+        <div class="swatch"><div class="chip" style="background:#004D74;"></div><div class="meta"><div class="nm">Marine (sidebar)</div><div class="hex">#004D74</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#16a34a;"></div><div class="meta"><div class="nm">Vert (accent)</div><div class="hex">#16a34a · green-600</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#22c55e;"></div><div class="meta"><div class="nm">Vert nav actif</div><div class="hex">#22c55e · green-500</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#36ab58;"></div><div class="meta"><div class="nm">Vert logo</div><div class="hex">#36ab58</div></div></div>
+      </div>
+
+      <p class="lbl-row">Neutres — Slate</p>
+      <div class="sg-grid sg-cols-5" style="margin-bottom:28px;">
+        <div class="swatch"><div class="chip" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;"></div><div class="meta"><div class="nm">slate-50</div><div class="hex">#f8fafc</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#f1f5f9;"></div><div class="meta"><div class="nm">slate-100</div><div class="hex">#f1f5f9</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#e2e8f0;"></div><div class="meta"><div class="nm">slate-200</div><div class="hex">#e2e8f0</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#cbd5e1;"></div><div class="meta"><div class="nm">slate-300</div><div class="hex">#cbd5e1</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#94a3b8;"></div><div class="meta"><div class="nm">slate-400</div><div class="hex">#94a3b8</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#64748b;"></div><div class="meta"><div class="nm">slate-500</div><div class="hex">#64748b</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#475569;"></div><div class="meta"><div class="nm">slate-600</div><div class="hex">#475569</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#334155;"></div><div class="meta"><div class="nm">slate-700</div><div class="hex">#334155</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#1e293b;"></div><div class="meta"><div class="nm">slate-800</div><div class="hex">#1e293b</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#0f172a;"></div><div class="meta"><div class="nm">slate-900</div><div class="hex">#0f172a</div></div></div>
+      </div>
+
+      <p class="lbl-row">Sémantiques — statuts &amp; alertes (icône + libellé, jamais la couleur seule)</p>
+      <div class="sg-grid sg-cols-4">
+        <div class="swatch"><div class="chip" style="background:#10b981;"></div><div class="meta"><div class="nm">Approuvé / succès</div><div class="hex">emerald</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#f59e0b;"></div><div class="meta"><div class="nm">En attente</div><div class="hex">amber</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#f43f5e;"></div><div class="meta"><div class="nm">Rejeté / danger</div><div class="hex">rose</div></div></div>
+        <div class="swatch"><div class="chip" style="background:#2563eb;"></div><div class="meta"><div class="nm">Information</div><div class="hex">blue</div></div></div>
+      </div>
+    </section>
+
+    <!-- TYPE -->
+    <section class="sg-sec" id="type">
+      <h2>Fondations</h2>
+      <div class="sec-title">Typographie</div>
+      <div class="grid2">
+        <div class="panel">
+          <p class="lbl-row">Inter — interface</p>
+          <div class="type-row"><span class="tag-min">ds-h1 · 20/600</span><span class="ds-h1">Inscriptions</span></div>
+          <div class="type-row"><span class="tag-min">ds-h2 · 16/600</span><span class="ds-h2">Vue d'ensemble</span></div>
+          <div class="type-row"><span class="tag-min">ds-body · 14/400</span><span class="ds-body">Corps de texte courant, dense mais lisible.</span></div>
+          <div class="type-row"><span class="tag-min">ds-label · 14/500</span><span class="ds-label">Adresse e-mail</span></div>
+          <div class="type-row"><span class="tag-min">ds-meta · 12/400</span><span class="ds-meta">Mis à jour il y a 3 min</span></div>
+          <div class="type-row"><span class="tag-min">ds-th · 12/500 maj</span><span class="ds-th">Catégorie</span></div>
+        </div>
+        <div class="panel">
+          <p class="lbl-row">Montserrat — badges imprimés</p>
+          <div style="font-family:var(--font-badge);">
+            <div style="font-size:28px;font-weight:700;color:var(--fg1);">Camille Laurent</div>
+            <div style="font-size:15px;font-weight:600;color:var(--fg2);margin-top:4px;">Conférencière</div>
+            <div style="margin-top:16px;padding:8px 14px;background:var(--brand-navy);color:#fff;border-radius:8px;display:inline-block;font-weight:700;letter-spacing:.05em;text-transform:uppercase;font-size:13px;">VIP — Accès total</div>
+          </div>
+          <p class="help" style="margin-top:20px;">Montserrat est réservé au rendu du badge physique (nom, rôle, bandeau catégorie) pour un contraste fort et une bonne lisibilité à distance.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPACING / RADII / ELEVATION -->
+    <section class="sg-sec" id="spacing">
+      <h2>Fondations</h2>
+      <div class="sec-title">Espacement, rayons &amp; ombres</div>
+      <div class="grid2">
+        <div class="panel">
+          <p class="lbl-row">Espacement — base 4px</p>
+          <div class="stack" style="gap:10px;">
+            <div class="space-demo" style="width:4px;"></div><span class="ds-meta">4 · space-1</span>
+            <div class="space-demo" style="width:8px;"></div><span class="ds-meta">8 · space-2</span>
+            <div class="space-demo" style="width:16px;"></div><span class="ds-meta">16 · space-4</span>
+            <div class="space-demo" style="width:24px;"></div><span class="ds-meta">24 · space-6 (padding carte)</span>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="lbl-row">Rayons</p>
+          <div class="demo">
+            <div class="radius-demo" style="border-radius:8px;">8px lg</div>
+            <div class="radius-demo" style="border-radius:12px;">12px xl</div>
+            <div class="radius-demo" style="border-radius:16px;">16px 2xl</div>
+            <div class="radius-demo" style="border-radius:9999px;">full</div>
+          </div>
+          <p class="lbl-row" style="margin-top:24px;">Ombres — plat par défaut, ombre réservée aux modales</p>
+          <div class="demo">
+            <div class="elev" style="border:1px solid var(--border-card);">bordure</div>
+            <div class="elev" style="box-shadow:var(--shadow-modal);">modale</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUTTONS -->
+    <section class="sg-sec" id="buttons">
+      <h2>Composants</h2>
+      <div class="sec-title">Boutons</div>
+      <div class="panel">
+        <div class="demo" style="margin-bottom:18px;">
+          <button class="btn btn-primary"><span data-ico="plus" data-size="16"></span> Créer un événement</button>
+          <button class="btn btn-secondary">Annuler</button>
+          <button class="btn btn-danger"><span data-ico="trash-2" data-size="16"></span> Supprimer</button>
+          <button class="btn btn-primary" disabled style="opacity:.5;cursor:not-allowed;">Désactivé</button>
+        </div>
+        <div class="demo">
+          <button class="btn btn-primary btn-sm">Petit</button>
+          <button class="btn btn-secondary btn-sm">Secondaire</button>
+          <button class="btn-ghost-sm"><span data-ico="filter" data-size="14"></span> Filtrer</button>
+          <button class="btn-icon"><span data-ico="more-horizontal" data-size="18"></span></button>
+        </div>
+        <p class="help" style="margin-top:16px;">États : survol assombrit d'un cran · focus clavier anneau vert visible · désactivé opacité réduite.</p>
+      </div>
+    </section>
+
+    <!-- FORMS -->
+    <section class="sg-sec" id="forms">
+      <h2>Composants</h2>
+      <div class="sec-title">Champs de formulaire</div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="field"><label>Adresse e-mail <span class="req">*</span></label><input class="input" type="email" value="camille.laurent@exemple.fr" /></div>
+          <div class="field"><label>Catégorie</label><div class="select-wrap"><select class="input"><option>Conférencier</option><option>Exposant</option><option>Visiteur</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div></div>
+          <div class="field" style="margin-bottom:0;"><label>Champ en erreur</label><input class="input" value="invalide" style="border-color:var(--rose-600);box-shadow:0 0 0 2px var(--rose-200);" /><p class="err">Format d'e-mail invalide.</p></div>
+        </div>
+        <div class="panel">
+          <div class="field"><label>Note</label><textarea class="input" rows="3">Motif de rejet…</textarea></div>
+          <div class="field"><label>Champ désactivé</label><input class="input" value="Verrouillé (SUPER_ADMIN requis)" disabled /></div>
+          <div class="demo" style="margin-top:6px;">
+            <label class="switch"><span class="track on"></span> Inscriptions ouvertes</label>
+            <label class="check"><input type="checkbox" checked /> ALL ACCESS</label>
+          </div>
+          <div class="segmented" style="margin-top:18px;">
+            <button class="on">Tous</button><button>Staff</button><button>Clients</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATUS + CATEGORY -->
+    <section class="sg-sec" id="status">
+      <h2>Composants</h2>
+      <div class="sec-title">Statuts &amp; catégories</div>
+      <div class="grid2">
+        <div class="panel">
+          <p class="lbl-row">StatusBadge — icône + libellé</p>
+          <div class="demo">
+            <span class="status status-approved"><span data-ico="check" data-size="12" style="vertical-align:-1px;"></span> Approuvée</span>
+            <span class="status status-pending"><span data-ico="clock" data-size="12" style="vertical-align:-1px;"></span> En attente</span>
+            <span class="status status-rejected"><span data-ico="x" data-size="12" style="vertical-align:-1px;"></span> Rejetée</span>
+          </div>
+          <p class="lbl-row" style="margin-top:24px;">Rôles</p>
+          <div class="demo">
+            <span class="role-badge navy">SUPER_ADMIN</span>
+            <span class="role-badge">OWNER</span>
+            <span class="role-badge slate">MANAGER</span>
+            <span class="role-badge amber">AUDITOR</span>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="lbl-row">Pastilles de catégorie colorées</p>
+          <div class="stack" style="gap:12px;">
+            <span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier <span class="cat-num">#01</span></span>
+            <span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant <span class="cat-num">#02</span></span>
+            <span class="cat-pill"><span class="cat-dot" style="background:#f59e0b;"></span> Visiteur <span class="cat-num">#03</span></span>
+            <span class="cat-pill"><span class="cat-dot" style="background:#f43f5e;"></span> Presse <span class="cat-num">#04</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPI -->
+    <section class="sg-sec" id="kpi">
+      <h2>Composants</h2>
+      <div class="sec-title">KPI-cards</div>
+      <div class="stat-grid">
+        <div class="statcard"><div class="top"><p class="lbl">Inscriptions</p><span class="ic"><span data-ico="user-check" data-size="18"></span></span></div><p class="val">1 248</p><p class="sub"><span class="delta up"><span data-ico="trending-up" data-size="12"></span> +12%</span> vs. 30 j</p></div>
+        <div class="statcard"><div class="top"><p class="lbl">Approuvées</p><span class="ic"><span data-ico="check-circle" data-size="18"></span></span></div><p class="val">982</p><p class="sub">78,7% du total</p></div>
+        <div class="statcard"><div class="top"><p class="lbl">Badges imprimés</p><span class="ic"><span data-ico="printer" data-size="18"></span></span></div><p class="val">640</p><p class="sub">sur 982 approuvées</p></div>
+        <div class="statcard"><div class="top"><p class="lbl">Stockage</p><span class="ic"><span data-ico="hard-drive" data-size="18"></span></span></div><p class="val">3,2 Go</p><p class="sub">sur 10 Go</p></div>
+      </div>
+    </section>
+
+    <!-- TABLE -->
+    <section class="sg-sec" id="table">
+      <h2>Composants</h2>
+      <div class="sec-title">Table &amp; pagination</div>
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Nom</th><th>E-mail</th><th>Catégorie</th><th>Statut</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="cell-name">Camille Laurent</td><td class="cell-meta">camille.laurent@exemple.fr</td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+            <tr><td class="cell-name">Yanis Bernard</td><td class="cell-meta">yanis.bernard@exemple.fr</td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><span class="status status-pending"><span data-ico="clock" data-size="12"></span> En attente</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+            <tr><td class="cell-name">Inès Moreau</td><td class="cell-meta">ines.moreau@exemple.fr</td><td><span class="cat-pill"><span class="cat-dot" style="background:#f43f5e;"></span> Presse</span></td><td><span class="status status-rejected"><span data-ico="x" data-size="12"></span> Rejetée</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager"><span class="info">1–3 sur 1 248</span><div class="ctrls"><button class="btn-ghost-sm"><span data-ico="chevron-left" data-size="14"></span> Précédent</button><button class="btn-ghost-sm">Suivant <span data-ico="chevron-right" data-size="14"></span></button></div></div>
+    </section>
+
+    <!-- ALERTS + EMPTY + MODAL -->
+    <section class="sg-sec" id="feedback">
+      <h2>Composants</h2>
+      <div class="sec-title">Retours &amp; états</div>
+      <div class="alert alert-ok"><span data-ico="check-circle" data-size="16" style="vertical-align:-3px;"></span> Modifications enregistrées.</div>
+      <div class="alert alert-err"><span data-ico="alert-triangle" data-size="16" style="vertical-align:-3px;"></span> Identifiants incorrects. Vérifiez votre e-mail et votre mot de passe.</div>
+      <div class="alert alert-info"><span data-ico="info" data-size="16" style="vertical-align:-3px;"></span> Quota de stockage à 82% — pensez à archiver d'anciens événements.</div>
+      <div class="grid2" style="margin-top:20px;">
+        <div class="card"><div class="empty"><span class="eico" data-ico="calendar" data-size="44"></span><p class="t">Aucun événement</p><p class="s">Créez votre premier événement pour commencer.</p><button class="btn btn-primary btn-sm"><span data-ico="plus" data-size="15"></span> Créer un événement</button></div></div>
+          <div class="card"><div class="center-state"><div class="spinner"></div><p class="ds-body muted">Chargement des inscriptions…</p></div></div>
+      </div>
+    </section>
+
+    <!-- BADGE PREVIEW -->
+    <section class="sg-sec" id="badge" style="border-bottom:0;">
+      <h2>Composants</h2>
+      <div class="sec-title">Aperçu de badge — 100 × 140 mm</div>
+      <div class="demo" style="gap:28px;align-items:flex-start;">
+        <div class="badge-card">
+          <div class="bc-band"></div>
+          <div class="bc-top"><span class="org-logo" style="width:30px;height:30px;font-size:13px;">ST</span><span class="bc-org">Salon Tech 2026</span></div>
+          <div class="bc-photo"><span data-ico="user" data-size="40"></span></div>
+          <div class="bc-name">Camille Laurent</div>
+          <div class="bc-role">Conférencière</div>
+          <div class="bc-catband" style="background:#6366f1;">Conférencier</div>
+          <div class="bc-foot"><span class="qr-box bc-qr"></span><div class="bc-meta">ID · 0241-8837<br/>15–17 mars 2026<br/>Paris Expo</div></div>
+        </div>
+        <div class="badge-card">
+          <div class="bc-allaccess">ALL ACCESS</div>
+          <div class="bc-band" style="background:#6366f1;"></div>
+          <div class="bc-top"><span class="org-logo" style="width:30px;height:30px;font-size:13px;">ST</span><span class="bc-org">Salon Tech 2026</span></div>
+          <div class="bc-photo"><span data-ico="user" data-size="40"></span></div>
+          <div class="bc-name">Anonyme</div>
+          <div class="bc-role">Catégorie anonyme</div>
+          <div class="bc-catband" style="background:#f43f5e;">Presse</div>
+          <div class="bc-foot"><span class="qr-box bc-qr"></span><div class="bc-meta">ID · 0241-9120<br/>15–17 mars 2026<br/>Paris Expo</div></div>
+        </div>
+        <p class="help" style="max-width:240px;">Rendu fidèle au PDF imprimé. Le bandeau catégorie reprend la couleur de la pastille. La mention « ALL ACCESS » et la catégorie anonyme (nom masqué) sont des variantes.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="assets/icons.js"></script>
+</body>
+</html>

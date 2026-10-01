@@ -1,0 +1,10 @@
+---
+description: Règles d'implémentation et workflow du projet Badge (multi-versions)
+alwaysApply: true
+---
+
+Toutes les règles d'implémentation, conventions, workflow Git, garde-fous et actions à risque sont définies dans `CLAUDE.md` à la racine du projet. Ce fichier est la **source unique de vérité** pour tous les agents IA — modifier `CLAUDE.md`, pas ce fichier.
+
+Avant toute tâche : identifier la version active du travail (`docs/README.md`), lire la doc correspondante (`docs/<version>/`), et chercher une spec/plan existant. Si rien n'existe → produire une spec avant de coder.
+
+@CLAUDE.md

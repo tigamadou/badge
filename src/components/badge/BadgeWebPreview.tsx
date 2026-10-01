@@ -52,7 +52,7 @@ export function BadgeWebPreview({
         {/* Photo | QR Code | ID vertical */}
         <div className="flex items-center mb-3">
           <div
-            className="bg-gray-300 flex items-center justify-center flex-shrink-0"
+            className="bg-slate-300 flex items-center justify-center flex-shrink-0"
             style={{ width: 80, height: 103 }}
           >
             {registration.photo ? (
@@ -63,7 +63,7 @@ export function BadgeWebPreview({
                 style={{ width: 80, height: 103 }}
               />
             ) : (
-              <span className="text-[8px] text-gray-500">PHOTO</span>
+              <span className="text-[8px] text-slate-500">PHOTO</span>
             )}
           </div>
 
@@ -93,7 +93,7 @@ export function BadgeWebPreview({
         <p className="text-[14px] font-bold text-black">
           {formatBadgeName(registration.firstName, registration.lastName)}
         </p>
-        <p className="text-[10px] text-gray-700">{formatBadgeStructure(registration.structure)}</p>
+        <p className="text-[10px] text-slate-700">{formatBadgeStructure(registration.structure)}</p>
       </div>
 
       {/* Bande ALL ACCESS (conditionnelle) */}

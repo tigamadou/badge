@@ -1,0 +1,19 @@
+badge.local {
+	tls internal
+	reverse_proxy app:3000
+}
+
+pma.badge.local {
+	tls internal
+	reverse_proxy phpmyadmin:80
+}
+
+mail.badge.local {
+	tls internal
+	reverse_proxy mailpit:8025
+}
+
+s3.badge.local {
+	tls internal
+	reverse_proxy minio:9001
+}

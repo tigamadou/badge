@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Galerie des écrans</title>
+<link rel="stylesheet" href="assets/badge.css" />
+<style>
+  body { background: var(--bg-app); }
+  .top { background: var(--brand-navy); color: #fff; }
+  .top .wrap { max-width: 1180px; margin: 0 auto; padding: 36px 28px; }
+  .top img { height: 40px; }
+  .top h1 { font-size: 26px; font-weight: 600; margin: 18px 0 6px; }
+  .top p { font-size: 15px; color: rgba(255,255,255,.72); margin: 0; max-width: 620px; line-height: 1.55; }
+  .top .links { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .top .pill { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,.12); color: #fff; padding: 8px 14px; border-radius: 9px; font-size: 14px; font-weight: 500; text-decoration: none; }
+  .top .pill:hover { background: rgba(255,255,255,.2); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  .group { padding: 40px 0 8px; }
+  .group-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .group-head h2 { font-size: 18px; font-weight: 600; color: var(--fg1); margin: 0; }
+  .group-head .ct { font-size: 13px; color: var(--fg3); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 980px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .scard { background: #fff; border: 1px solid var(--border-card); border-radius: 12px; padding: 16px; text-decoration: none; display: flex; flex-direction: column; gap: 10px; transition: border-color .12s, transform .12s; }
+  .scard:hover { border-color: var(--green-600); transform: translateY(-2px); }
+  .scard .num { font-size: 12px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .scard .ttl { font-size: 14px; font-weight: 600; color: var(--fg1); line-height: 1.3; }
+  .scard .dsc { font-size: 12px; color: var(--fg3); line-height: 1.45; }
+  .scard .ic { width: 34px; height: 34px; border-radius: 9px; background: var(--slate-100); color: var(--slate-500); display: flex; align-items: center; justify-content: center; }
+  .scard.soon { opacity: .55; pointer-events: none; }
+  .foot { padding: 40px 0 60px; color: var(--fg3); font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="wrap">
+      <img src="assets/logo-light.svg" alt="Badge" />
+      <h1>Galerie des écrans</h1>
+      <p>Système de design complet et maquettes haute-fidélité pour Badge — plateforme SaaS B2B de gestion de badges d'événements. 44 écrans répartis en 5 espaces, plus le styleguide.</p>
+      <div class="links">
+        <a class="pill" href="styleguide.html"><span data-ico="sliders" data-size="16"></span> Styleguide — tokens &amp; composants</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="group">
+      <div class="group-head"><h2>Public &amp; Authentification</h2><span class="ct">8 écrans · sans sidebar, centrés</span></div>
+      <div class="grid">
+        <a class="scard" href="accueil.html"><span class="ic" data-ico="building" data-size="18"></span><span class="num">01</span><span class="ttl">Accueil</span><span class="dsc">Landing centrée, logo, baseline, connexion.</span></a>
+        <a class="scard" href="connexion.html"><span class="ic" data-ico="lock" data-size="18"></span><span class="num">02</span><span class="ttl">Connexion</span><span class="dsc">Carte centrée, e-mail + mot de passe, erreur.</span></a>
+        <a class="scard" href="mot-de-passe.html"><span class="ic" data-ico="key" data-size="18"></span><span class="num">03</span><span class="ttl">Flux mot de passe</span><span class="dsc">Oublié · réinitialisation · invitation · vérif.</span></a>
+        <a class="scard" href="inscription-publique.html"><span class="ic" data-ico="user-plus" data-size="18"></span><span class="num">04</span><span class="ttl">Inscription publique</span><span class="dsc">/e/[slug] — sections, radio-cards, uploads.</span></a>
+        <a class="scard" href="confirmation.html"><span class="ic" data-ico="check-circle" data-size="18"></span><span class="num">05</span><span class="ttl">Confirmation</span><span class="dsc">Page rassurante, succès, rappel e-mail.</span></a>
+        <a class="scard" href="verification-badge.html"><span class="ic" data-ico="shield-check" data-size="18"></span><span class="num">06</span><span class="ttl">Vérification de badge</span><span class="dsc">Mobile-first, bannière valide / non valide.</span></a>
+        <a class="scard" href="apercu-badge.html"><span class="ic" data-ico="id-card" data-size="18"></span><span class="num">07</span><span class="ttl">Aperçu badge</span><span class="dsc">Rendu fidèle centré + télécharger.</span></a>
+        <a class="scard" href="selecteur-organisation.html"><span class="ic" data-ico="grid" data-size="18"></span><span class="num">08</span><span class="ttl">Sélecteur d'organisation</span><span class="dsc">Grille de cartes + mode staff.</span></a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><h2>Compte participant</h2><span class="ct">3 écrans</span></div>
+      <div class="grid">
+        <a class="scard" href="participant-dashboard.html"><span class="ic" data-ico="layout-dashboard" data-size="18"></span><span class="num">09</span><span class="ttl">Tableau de bord</span><span class="dsc">Mes inscriptions, cartes + état vide.</span></a>
+        <a class="scard" href="participant-profil.html"><span class="ic" data-ico="user" data-size="18"></span><span class="num">10</span><span class="ttl">Profil</span><span class="dsc">Identité + mot de passe (+ onboarding).</span></a>
+        <a class="scard" href="participant-inscription.html"><span class="ic" data-ico="file-text" data-size="18"></span><span class="num">11</span><span class="ttl">Détail inscription</span><span class="dsc">Récap, aperçus, motif de rejet, timeline.</span></a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><h2>Espace Staff</h2><span class="ct">10 écrans · sidebar marine</span></div>
+      <div class="grid">
+        <a class="scard" href="screens/staff-dashboard.html"><span class="ic" data-ico="layout-dashboard" data-size="18"></span><span class="num">12</span><span class="ttl">Dashboard</span><span class="dsc">KPI, top 5 orgs, activité récente.</span></a>
+        <a class="scard" href="screens/staff-orgs.html"><span class="ic" data-ico="building-2" data-size="18"></span><span class="num">13</span><span class="ttl">Organisations</span><span class="dsc">Recherche, filtre archivées, table.</span></a>
+        <a class="scard" href="screens/staff-org-create.html"><span class="ic" data-ico="plus" data-size="18"></span><span class="num">14</span><span class="ttl">Création d'organisation</span><span class="dsc">Identité, adresse, quotas.</span></a>
+        <a class="scard" href="screens/staff-org-detail.html"><span class="ic" data-ico="building" data-size="18"></span><span class="num">15</span><span class="ttl">Détail organisation</span><span class="dsc">Onglets : vue, membres, quotas, params.</span></a>
+        <a class="scard" href="screens/staff-users.html"><span class="ic" data-ico="users" data-size="18"></span><span class="num">16</span><span class="ttl">Utilisateurs</span><span class="dsc">Filtres staff/clients/archivés, table.</span></a>
+        <a class="scard" href="screens/staff-user-create.html"><span class="ic" data-ico="user-plus" data-size="18"></span><span class="num">17</span><span class="ttl">Création d'utilisateur</span><span class="dsc">Type staff/client, rôle conditionnel.</span></a>
+        <a class="scard" href="screens/staff-user-detail.html"><span class="ic" data-ico="user-check" data-size="18"></span><span class="num">18</span><span class="ttl">Détail utilisateur</span><span class="dsc">Fiche, appartenances, actions.</span></a>
+        <a class="scard" href="screens/staff-settings.html"><span class="ic" data-ico="settings" data-size="18"></span><span class="num">19</span><span class="ttl">Paramètres plateforme</span><span class="dsc">SMTP, reCAPTCHA, branding.</span></a>
+        <a class="scard" href="screens/staff-badge-template.html"><span class="ic" data-ico="id-card" data-size="18"></span><span class="num">20</span><span class="ttl">Template de badge</span><span class="dsc">Galerie de templates plateforme.</span></a>
+        <a class="scard" href="screens/staff-log.html"><span class="ic" data-ico="scroll-text" data-size="18"></span><span class="num">21</span><span class="ttl">Journal global</span><span class="dsc">Filtres, table / timeline.</span></a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><h2>Espace Organisation</h2><span class="ct">8 écrans · sidebar marine + nom org</span></div>
+      <div class="grid">
+        <a class="scard" href="screens/org-dashboard.html"><span class="ic" data-ico="layout-dashboard" data-size="18"></span><span class="num">22</span><span class="ttl">Dashboard</span><span class="dsc">KPI, alerte quota, events, activité.</span></a>
+        <a class="scard" href="screens/org-events.html"><span class="ic" data-ico="calendar" data-size="18"></span><span class="num">23</span><span class="ttl">Événements</span><span class="dsc">Filtres, table, toggle inscriptions.</span></a>
+        <a class="scard" href="screens/org-event-create.html"><span class="ic" data-ico="plus" data-size="18"></span><span class="num">24</span><span class="ttl">Wizard création event</span><span class="dsc">3 étapes + indicateur de progression.</span></a>
+        <a class="scard" href="screens/org-members.html"><span class="ic" data-ico="users" data-size="18"></span><span class="num">25</span><span class="ttl">Membres org</span><span class="dsc">Rôles OWNER/MANAGER/AUDITOR.</span></a>
+        <a class="scard" href="screens/org-category-templates.html"><span class="ic" data-ico="tags" data-size="18"></span><span class="num">26</span><span class="ttl">Modèles de catégories</span><span class="dsc">Table couleur/numéro, modal d'édition.</span></a>
+        <a class="scard" href="screens/org-settings.html"><span class="ic" data-ico="settings" data-size="18"></span><span class="num">27</span><span class="ttl">Paramètres org</span><span class="dsc">Identité, quotas en lecture seule.</span></a>
+        <a class="scard" href="screens/org-badge-template.html"><span class="ic" data-ico="id-card" data-size="18"></span><span class="num">28</span><span class="ttl">Template de badge org</span><span class="dsc">Galerie + hériter de la plateforme.</span></a>
+        <a class="scard" href="screens/org-log.html"><span class="ic" data-ico="scroll-text" data-size="18"></span><span class="num">29</span><span class="ttl">Journal org</span><span class="dsc">Filtres, table / timeline.</span></a>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><h2>Espace Événement</h2><span class="ct">15 écrans · sidebar marine + org &gt; event</span></div>
+      <div class="grid">
+        <a class="scard" href="screens/event-dashboard.html"><span class="ic" data-ico="layout-dashboard" data-size="18"></span><span class="num">30</span><span class="ttl">Dashboard event</span><span class="dsc">KPI statut, graphique 30 j, variantes rôle.</span></a>
+        <a class="scard" href="screens/event-inscriptions.html"><span class="ic" data-ico="user-check" data-size="18"></span><span class="num">31</span><span class="ttl">Inscriptions</span><span class="dsc">Table dense, actions batch, filtres.</span></a>
+        <a class="scard" href="screens/event-inscriptions-viewer.html"><span class="ic" data-ico="eye" data-size="18"></span><span class="num">32</span><span class="ttl">Vue agrégée (VIEWER)</span><span class="dsc">KPI + table sans données personnelles.</span></a>
+        <a class="scard" href="screens/event-inscription-create.html"><span class="ic" data-ico="plus" data-size="18"></span><span class="num">33</span><span class="ttl">Création manuelle</span><span class="dsc">Formulaire sans reCAPTCHA, approuvé.</span></a>
+        <a class="scard" href="screens/event-inscription-detail.html"><span class="ic" data-ico="file-text" data-size="18"></span><span class="num">34</span><span class="ttl">Détail inscription</span><span class="dsc">2 colonnes, barre d'actions, doublons.</span></a>
+        <a class="scard" href="screens/event-badges.html"><span class="ic" data-ico="id-card" data-size="18"></span><span class="num">35</span><span class="ttl">Impression badges</span><span class="dsc">Recherche, export zip, toggle ALL ACCESS.</span></a>
+        <a class="scard" href="screens/event-badge-preview.html"><span class="ic" data-ico="printer" data-size="18"></span><span class="num">36</span><span class="ttl">Aperçu &amp; impression</span><span class="dsc">Grand rendu PDF + panneau d'actions.</span></a>
+        <a class="scard" href="screens/event-badge-batch.html"><span class="ic" data-ico="grid" data-size="18"></span><span class="num">37</span><span class="ttl">Impression batch</span><span class="dsc">Vignettes + génération avec progression.</span></a>
+        <a class="scard" href="screens/event-categories.html"><span class="ic" data-ico="tags" data-size="18"></span><span class="num">38</span><span class="ttl">Catégories</span><span class="dsc">Table, import template, modal.</span></a>
+        <a class="scard" href="screens/event-members.html"><span class="ic" data-ico="users" data-size="18"></span><span class="num">39</span><span class="ttl">Membres event</span><span class="dsc">Rôles ADMIN/OPERATOR/PRINTER/VIEWER.</span></a>
+        <a class="scard" href="screens/event-scanner.html"><span class="ic" data-ico="scan-line" data-size="18"></span><span class="num">40</span><span class="ttl">Scanner QR</span><span class="dsc">Caméra + résultat vert/rouge, historique.</span></a>
+        <a class="scard" href="screens/event-settings.html"><span class="ic" data-ico="settings" data-size="18"></span><span class="num">41</span><span class="ttl">Paramètres event</span><span class="dsc">Toggle inscriptions, contact, blocages.</span></a>
+        <a class="scard" href="screens/event-badge-template.html"><span class="ic" data-ico="id-card" data-size="18"></span><span class="num">42</span><span class="ttl">Template de badge event</span><span class="dsc">Galerie + hériter de l'organisation.</span></a>
+        <a class="scard" href="screens/event-blocklists.html"><span class="ic" data-ico="ban" data-size="18"></span><span class="num">43</span><span class="ttl">Listes de blocage</span><span class="dsc">Emails / documents, modal d'ajout.</span></a>
+        <a class="scard" href="screens/event-log.html"><span class="ic" data-ico="scroll-text" data-size="18"></span><span class="num">44</span><span class="ttl">Journal event</span><span class="dsc">Filtres, table cliquable harmonisée.</span></a>
+        <a class="scard" href="screens/journal-detail.html?shell=event"><span class="ic" data-ico="file-text" data-size="18"></span><span class="num">45</span><span class="ttl">Détail d'entrée de journal</span><span class="dsc">Partagé staff/org/event · diff + métadonnées.</span></a>
+      </div>
+    </div>
+
+    <div class="foot">Badge — système de design &amp; maquettes · direction artistique marine + vert · interface française · accessibilité AA.</div>
+  </div>
+
+  <script src="assets/icons.js"></script>
+</body>
+</html>

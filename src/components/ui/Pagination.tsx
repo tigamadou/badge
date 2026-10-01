@@ -91,9 +91,9 @@ export function Pagination({
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
                 p === page
-                  ? "bg-indigo-600 text-white cursor-pointer"
+                  ? "bg-green-600 text-white cursor-pointer"
                   : "text-slate-600 hover:bg-slate-100 cursor-pointer"
               }`}
               aria-current={p === page ? "page" : undefined}
@@ -123,7 +123,7 @@ export function Pagination({
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           aria-label="Nombre de résultats par page"
         >
           {PAGE_SIZE_OPTIONS.map((size) => (

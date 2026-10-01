@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Paramètres</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "settings", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" } };</script>
+<div id="page" data-screen-label="27 Org paramètres">
+
+  <div class="page-head"><div><h1>Paramètres</h1><p class="sub">Salon Tech</p></div></div>
+
+  <div class="card card-pad" style="max-width:760px;">
+    <div class="form-section">
+      <h3>Identité</h3>
+      <div class="row-2"><div class="field"><label>Nom</label><input class="input" value="Salon Tech" /></div><div class="field"><label>Slug</label><input class="input mono" value="salon-tech" disabled /></div></div>
+      <div class="field" style="margin-bottom:0;"><label>Logo</label><div class="filebox"><span class="thumb">ST</span><div style="flex:1;"><div class="fb-t">logo-salontech.png</div><div class="fb-s">240 Ko</div></div><button class="btn btn-secondary btn-sm">Changer</button></div></div>
+    </div>
+    <div class="form-section">
+      <h3>Adresse</h3>
+      <div class="field"><label>Adresse</label><input class="input" value="52 rue de la Tech" /></div>
+      <div class="row-2"><div class="field" style="margin-bottom:0;"><label>Code postal</label><input class="input" value="75015" /></div><div class="field" style="margin-bottom:0;"><label>Ville</label><input class="input" value="Paris" /></div></div>
+    </div>
+    <div class="form-section">
+      <h3>Administratif</h3>
+      <div class="row-2"><div class="field" style="margin-bottom:0;"><label>SIRET</label><input class="input mono" value="812 345 678 00012" /></div><div class="field" style="margin-bottom:0;"><label>N° TVA</label><input class="input mono" value="FR42 812345678" /></div></div>
+    </div>
+    <div class="form-section">
+      <h3>Contact</h3>
+      <div class="row-2"><div class="field" style="margin-bottom:0;"><label>E-mail</label><input class="input" value="contact@salontech.fr" /></div><div class="field" style="margin-bottom:0;"><label>Téléphone</label><input class="input" value="01 23 45 67 89" /></div></div>
+    </div>
+    <div class="form-section" style="border-bottom:0;">
+      <h3>Quotas <span class="ds-meta" style="font-weight:400;text-transform:none;letter-spacing:0;">(lecture seule — gérés par le staff)</span></h3>
+      <div class="quota"><div class="qh"><span class="lbl">Stockage</span><span class="val">8,2 / 10 Go</span></div><div class="qbar"><div class="qfill warn" style="width:82%;"></div></div></div>
+      <div class="quota" style="margin-bottom:0;"><div class="qh"><span class="lbl">Événements</span><span class="val">3 / 10</span></div><div class="qbar"><div class="qfill" style="width:30%;"></div></div></div>
+    </div>
+  </div>
+
+  <div class="flex gap12" style="justify-content:flex-end;max-width:760px;margin-top:20px;"><button class="btn btn-secondary">Annuler</button><button class="btn btn-primary"><span data-ico="check" data-size="16"></span> Enregistrer</button></div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -32,9 +32,16 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.production.example
+
+# Claude Code (preferences personnelles, non partagees)
+.claude/settings.local.json
 
 # uploads
 /uploads
+
+# Badge v2 - backups locaux (mysqldump + uploads.tar.gz)
+backups/
 
 # vercel
 .vercel
@@ -42,3 +49,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright (v2-11)
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+.plan-logs
+.superpowers
+
+# racine CA Caddy extraite temporairement par `make dev-https`
+.caddy-root.crt

@@ -1,0 +1,67 @@
+import { Page } from "@playwright/test";
+import {
+  createTestStaff,
+  createTestOrgMember,
+  createTestEventMember,
+  TestUser,
+  TestStaffRole,
+  TestOrgRole,
+  TestEventRole,
+} from "./db";
+
+// Login via le formulaire /login. Reprend le pattern des specs existantes :
+// remplir les champs, soumettre, attendre la sortie de /login.
+export async function loginAs(
+  page: Page,
+  user: { email: string; password: string },
+): Promise<void> {
+  await page.goto("/login");
+  // Le formulaire /login reskine libelle le champ "Adresse e-mail" (regex robuste
+  // pour tolerer d'eventuelles variantes "Email"/"E-mail").
+  await page.getByLabel(/e-?mail/i).fill(user.email);
+  await page.getByLabel("Mot de passe").fill(user.password);
+  await page.getByRole("button", { name: /se connecter/i }).click();
+  // 20 s (au lieu de 8) : sous la charge d'un run complet sequentiel (workers=1),
+  // le POST callback NextAuth + la redirection peuvent depasser 8 s -> flakes.
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 20000 });
+}
+
+// Cree un staff avec le role demande, login dans la page, et retourne l'user.
+export async function loginAsStaff(
+  page: Page,
+  opts: { role: TestStaffRole; scope: string },
+): Promise<TestUser> {
+  const user = await createTestStaff({ role: opts.role, scope: opts.scope });
+  await loginAs(page, user);
+  return user;
+}
+
+// Cree un membre org avec le role demande, login dans la page, et retourne l'user.
+export async function loginAsOrgMember(
+  page: Page,
+  opts: { orgId: string; role: TestOrgRole; scope: string },
+): Promise<TestUser> {
+  const user = await createTestOrgMember({
+    scope: opts.scope,
+    orgId: opts.orgId,
+    role: opts.role,
+  });
+  await loginAs(page, user);
+  return user;
+}
+
+// Cree un membre event avec le role demande (et OrgMembership AUDITOR via le
+// helper db.ts), login dans la page, et retourne l'user.
+export async function loginAsEventMember(
+  page: Page,
+  opts: { orgId: string; eventId: string; role: TestEventRole; scope: string },
+): Promise<TestUser> {
+  const user = await createTestEventMember({
+    scope: opts.scope,
+    orgId: opts.orgId,
+    eventId: opts.eventId,
+    role: opts.role,
+  });
+  await loginAs(page, user);
+  return user;
+}

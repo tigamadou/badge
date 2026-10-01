@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Scanner</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "scan", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Paul Lefèvre", role: "OPERATOR" } };</script>
+<div id="page" data-screen-label="40 Event scanner QR">
+
+  <div class="page-head"><div><h1>Scanner</h1><p class="sub">Contrôle d'accès · Salon Tech 2026</p></div><span class="tag"><span class="dot ok" style="background:var(--green-500);"></span> Caméra active</span></div>
+
+  <div class="grid-2col" style="grid-template-columns:1fr 380px;align-items:start;">
+    <div class="card card-pad" style="background:var(--slate-900);">
+      <div class="scan-frame">
+        <div class="grid-bg"></div>
+        <div class="scan-reticle"><span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span></div>
+        <div class="scan-laser"></div>
+      </div>
+      <p style="text-align:center;color:var(--slate-400);font-size:13px;margin:16px 0 0;">Présentez le QR code du badge dans le cadre</p>
+    </div>
+
+    <div class="stack" style="gap:16px;">
+      <!-- Result -->
+      <div class="scan-result valid">
+        <span class="sr-ic"><span data-ico="check" data-size="28"></span></span>
+        <div class="sr-t">Accès autorisé</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:16px;">
+          <div class="bc-photo" style="margin:0;width:64px;height:64px;border-radius:12px;"><span data-ico="user" data-size="26"></span></div>
+          <div style="font-weight:700;color:var(--fg1);font-family:var(--font-badge);font-size:17px;">Camille Laurent</div>
+          <span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span>
+        </div>
+      </div>
+
+      <!-- Manual fallback -->
+      <div class="card card-pad" style="padding:16px;">
+        <label class="ds-label" style="display:block;margin-bottom:6px;">Saisie manuelle</label>
+        <div class="input-group"><input class="input mono" placeholder="N° de badge…" /><button class="btn btn-secondary"><span data-ico="search" data-size="16"></span></button></div>
+      </div>
+
+      <!-- Session history -->
+      <div class="card card-pad" style="padding:16px;">
+        <h3 class="ds-h2" style="margin:0 0 8px;">Historique de session <span class="ds-meta" style="font-weight:400;">· 14 scans</span></h3>
+        <div class="session-row"><span data-ico="check-circle" data-size="16" style="color:var(--green-600);"></span><span style="flex:1;">Camille Laurent</span><span class="ds-meta">09:41</span></div>
+        <div class="session-row"><span data-ico="check-circle" data-size="16" style="color:var(--green-600);"></span><span style="flex:1;">Thomas Rey</span><span class="ds-meta">09:40</span></div>
+        <div class="session-row"><span data-ico="circle-x" data-size="16" style="color:var(--rose-600);"></span><span style="flex:1;">Badge révoqué</span><span class="ds-meta">09:38</span></div>
+        <div class="session-row"><span data-ico="check-circle" data-size="16" style="color:var(--green-600);"></span><span style="flex:1;">Léa Girard</span><span class="ds-meta">09:37</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

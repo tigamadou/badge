@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Badges</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "badges", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" } };</script>
+<div id="page" data-screen-label="35 Event impression badges">
+
+  <div class="page-head"><div><h1>Badges</h1><p class="sub">982 badges éligibles · 640 imprimés</p></div><div class="flex gap8"><button class="btn btn-secondary"><span data-ico="download" data-size="16"></span> Exporter en ZIP</button><a class="btn btn-primary" href="event-badge-batch.html"><span data-ico="printer" data-size="16"></span> Impression batch</a></div></div>
+
+  <div class="toolbar wrap">
+    <div class="search-input"><span class="ico" data-ico="search" data-size="16"></span><input class="input" placeholder="Nom, e-mail…" /></div>
+    <button class="chip-filter"><span data-ico="tag" data-size="14"></span> Catégorie <span data-ico="chevron-down" data-size="14"></span></button>
+    <button class="chip-filter"><span data-ico="printer" data-size="14"></span> État impression <span data-ico="chevron-down" data-size="14"></span></button>
+    <span class="spacer"></span>
+    <span class="ds-meta"><span data-ico="info" data-size="13" style="vertical-align:-2px;"></span> Vue PRINTER : épurée, sans données sensibles</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Nom</th><th>Catégorie</th><th>ALL ACCESS</th><th>État</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="cell-name">Camille Laurent</td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><label class="switch"><span class="track sm on"></span></label></td><td><span class="status status-approved"><span data-ico="printer" data-size="12"></span> Imprimé</span></td><td><div class="row-actions"><a class="btn-icon" href="event-badge-preview.html"><span data-ico="eye" data-size="16"></span></a><a class="btn-icon" href="event-badge-preview.html"><span data-ico="printer" data-size="16"></span></a></div></td></tr>
+        <tr><td class="cell-name">Yanis Bernard</td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><label class="switch"><span class="track sm"></span></label></td><td><span class="tag"><span data-ico="clock" data-size="11"></span> À imprimer</span></td><td><div class="row-actions"><a class="btn-icon" href="event-badge-preview.html"><span data-ico="eye" data-size="16"></span></a><a class="btn-icon" href="event-badge-preview.html"><span data-ico="printer" data-size="16"></span></a></div></td></tr>
+        <tr><td class="cell-name">Léa Girard</td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><label class="switch"><span class="track sm on"></span></label></td><td><span class="status status-approved"><span data-ico="printer" data-size="12"></span> Imprimé</span></td><td><div class="row-actions"><a class="btn-icon" href="event-badge-preview.html"><span data-ico="eye" data-size="16"></span></a><a class="btn-icon" href="event-badge-preview.html"><span data-ico="printer" data-size="16"></span></a></div></td></tr>
+        <tr><td class="cell-name">Thomas Rey</td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><label class="switch"><span class="track sm"></span></label></td><td><span class="tag"><span data-ico="clock" data-size="11"></span> À imprimer</span></td><td><div class="row-actions"><a class="btn-icon" href="event-badge-preview.html"><span data-ico="eye" data-size="16"></span></a><a class="btn-icon" href="event-badge-preview.html"><span data-ico="printer" data-size="16"></span></a></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Staff · Détail utilisateur</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "staff", active: "users", user: { name: "Marie Dubois", role: "SUPER_ADMIN" }, crumbs: ["Staff", "Utilisateurs", "Julien Roy"] };</script>
+<div id="page" data-screen-label="18 Staff détail utilisateur">
+
+  <a class="link" href="staff-users.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Utilisateurs</a>
+  <div class="page-head" style="margin-top:12px;">
+    <div class="flex gap16" style="align-items:center;"><span class="avatar" style="width:48px;height:48px;font-size:16px;">JR</span><div><h1>Julien Roy</h1><p class="sub">julien.roy@salontech.fr · Compte client</p></div></div>
+    <div class="flex gap8"><button class="btn-ghost-sm"><span data-ico="refresh-cw" data-size="14"></span> Réinitialiser le mot de passe</button><button class="btn-ghost-sm" style="color:var(--rose-700);border-color:var(--rose-200);"><span data-ico="archive" data-size="14"></span> Archiver</button></div>
+  </div>
+
+  <div class="grid-2col">
+    <div class="card">
+      <div class="card-head"><h3>Appartenances</h3><p>Organisations et rôles</p></div>
+      <div class="card-pad" style="padding-top:8px;">
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:12px;">ST</span><div style="flex:1;"><div class="cell-name">Salon Tech</div><div class="ds-meta mono">salon-tech</div></div><span class="role-badge">OWNER</span><button class="btn-icon"><span data-ico="sliders" data-size="16"></span></button></div>
+        <div class="list-row"><span class="org-logo" style="width:32px;height:32px;font-size:12px;">EX</span><div style="flex:1;"><div class="cell-name">ExpoPro Lyon</div><div class="ds-meta mono">expopro-lyon</div></div><span class="role-badge slate">MANAGER</span><button class="btn-icon"><span data-ico="sliders" data-size="16"></span></button></div>
+        <button class="btn btn-secondary btn-sm" style="margin-top:14px;"><span data-ico="plus" data-size="15"></span> Lier à une organisation</button>
+      </div>
+    </div>
+
+    <div class="card card-pad">
+      <h3 class="ds-h2" style="margin:0 0 16px;">Informations</h3>
+      <div class="stack" style="gap:0;">
+        <div class="list-row"><span class="ds-body" style="width:130px;color:var(--fg3);">Statut</span><span class="status status-approved"><span data-ico="check" data-size="12"></span> Actif</span></div>
+        <div class="list-row"><span class="ds-body" style="width:130px;color:var(--fg3);">Type</span><span class="ds-value">Client</span></div>
+        <div class="list-row"><span class="ds-body" style="width:130px;color:var(--fg3);">Créé le</span><span class="ds-value">12 janv. 2026</span></div>
+        <div class="list-row"><span class="ds-body" style="width:130px;color:var(--fg3);">Dernière connexion</span><span class="ds-value">Hier · 18:22</span></div>
+        <div class="list-row"><span class="ds-body" style="width:130px;color:var(--fg3);">E-mail vérifié</span><span class="ds-value"><span data-ico="check-circle" data-size="14" style="color:var(--green-600);vertical-align:-2px;"></span> Oui</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

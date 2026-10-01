@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Aperçu badge</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "badges", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" }, crumbs: ["Salon Tech", "Salon Tech 2026", "Badges", "Camille Laurent"] };</script>
+<div id="page" data-screen-label="36 Event aperçu impression badge">
+
+  <a class="link" href="event-badges.html" style="font-size:13px;"><span data-ico="arrow-left" data-size="13" style="vertical-align:-2px;"></span> Badges</a>
+  <div class="page-head" style="margin-top:12px;"><div><h1>Aperçu du badge</h1><p class="sub">Camille Laurent · Conférencier</p></div></div>
+
+  <div class="grid-2col" style="grid-template-columns:1fr 320px;align-items:start;">
+    <div class="card card-pad" style="display:flex;align-items:center;justify-content:center;background:var(--slate-100);min-height:520px;">
+      <div class="badge-card" style="box-shadow:var(--shadow-modal);transform:scale(1.15);transform-origin:center;">
+        <div class="bc-band"></div>
+        <div class="bc-top"><span class="org-logo" style="width:30px;height:30px;font-size:13px;">ST</span><span class="bc-org">Salon Tech 2026</span></div>
+        <div class="bc-photo"><span data-ico="user" data-size="40"></span></div>
+        <div class="bc-name">Camille Laurent</div>
+        <div class="bc-role">Conférencière</div>
+        <div class="bc-catband" style="background:#6366f1;">Conférencier</div>
+        <div class="bc-foot"><span class="qr-box bc-qr"></span><div class="bc-meta">ID · 0241-8837<br/>15–17 mars 2026<br/>Paris Expo</div></div>
+      </div>
+    </div>
+
+    <div class="stack" style="gap:16px;">
+      <div class="card card-pad">
+        <h3 class="ds-h2" style="margin:0 0 16px;">Actions</h3>
+        <label class="switch" style="margin-bottom:16px;"><span class="track on"></span> <b style="color:var(--fg1);font-weight:500;">ALL ACCESS</b></label>
+        <div class="stack" style="gap:10px;">
+          <button class="btn btn-primary" style="justify-content:center;"><span data-ico="printer" data-size="16"></span> Marquer imprimé</button>
+          <button class="btn btn-secondary" style="justify-content:center;"><span data-ico="download" data-size="16"></span> Télécharger le PDF</button>
+        </div>
+      </div>
+      <div class="card card-pad">
+        <h3 class="ds-h2" style="margin:0 0 12px;">Informations</h3>
+        <div class="stack" style="gap:0;">
+          <div class="list-row" style="padding:8px 0;"><span class="ds-body" style="width:110px;color:var(--fg3);">Statut</span><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></div>
+          <div class="list-row" style="padding:8px 0;"><span class="ds-body" style="width:110px;color:var(--fg3);">Impression</span><span class="ds-value">Imprimé · 06/06</span></div>
+          <div class="list-row" style="padding:8px 0;"><span class="ds-body" style="width:110px;color:var(--fg3);">N° badge</span><span class="ds-value mono">0241-8837</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

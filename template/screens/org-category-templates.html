@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Modèles de catégories</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "templates", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" } };</script>
+<div id="page" data-screen-label="26 Org modèles catégories">
+
+  <div class="page-head"><div><h1>Modèles de catégories</h1><p class="sub">Réutilisables lors de la création d'événements</p></div><button class="btn btn-primary" onclick="document.getElementById('m').hidden=false"><span data-ico="plus" data-size="16"></span> Nouvelle catégorie</button></div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Catégorie</th><th>Couleur</th><th>N°</th><th>Anonyme</th><th>ALL ACCESS</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="cell-name">Conférencier</td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Indigo</span></td><td class="mono">01</td><td><label class="switch"><span class="track sm"></span></label></td><td><label class="switch"><span class="track sm on"></span></label></td><td><div class="row-actions"><button class="btn-icon" onclick="document.getElementById('m').hidden=false"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+        <tr><td class="cell-name">Exposant</td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Teal</span></td><td class="mono">02</td><td><label class="switch"><span class="track sm"></span></label></td><td><label class="switch"><span class="track sm"></span></label></td><td><div class="row-actions"><button class="btn-icon" onclick="document.getElementById('m').hidden=false"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+        <tr><td class="cell-name">Visiteur</td><td><span class="cat-pill"><span class="cat-dot" style="background:#f59e0b;"></span> Ambre</span></td><td class="mono">03</td><td><label class="switch"><span class="track sm"></span></label></td><td><label class="switch"><span class="track sm"></span></label></td><td><div class="row-actions"><button class="btn-icon" onclick="document.getElementById('m').hidden=false"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+        <tr><td class="cell-name">Presse</td><td><span class="cat-pill"><span class="cat-dot" style="background:#f43f5e;"></span> Rose</span></td><td class="mono">04</td><td><label class="switch"><span class="track sm on"></span></label></td><td><label class="switch"><span class="track sm"></span></label></td><td><div class="row-actions"><button class="btn-icon" onclick="document.getElementById('m').hidden=false"><span data-ico="pencil" data-size="16"></span></button></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="overlay" id="m">
+  <div class="modal">
+    <div class="mh"><h3>Modifier la catégorie</h3></div>
+    <div class="mb">
+      <div class="field"><label>Nom</label><input class="input" value="Conférencier" /></div>
+      <div class="row-2"><div class="field"><label>Numéro</label><input class="input mono" value="01" /></div><div class="field"><label>Couleur</label>
+        <div class="flex gap8 wrap">
+          <span class="cat-dot" style="background:#6366f1;width:24px;height:24px;outline:2px solid var(--green-600);outline-offset:2px;"></span>
+          <span class="cat-dot" style="background:#14b8a6;width:24px;height:24px;"></span>
+          <span class="cat-dot" style="background:#f59e0b;width:24px;height:24px;"></span>
+          <span class="cat-dot" style="background:#f43f5e;width:24px;height:24px;"></span>
+          <span class="cat-dot" style="background:#2563eb;width:24px;height:24px;"></span>
+        </div></div>
+      </div>
+      <div class="stack" style="gap:12px;margin-top:6px;">
+        <label class="switch"><span class="track on"></span> ALL ACCESS par défaut</label>
+        <label class="switch"><span class="track"></span> Catégorie anonyme (nom masqué)</label>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-secondary" onclick="document.getElementById('m').hidden=true">Annuler</button><button class="btn btn-primary" onclick="document.getElementById('m').hidden=true">Enregistrer</button></div>
+  </div>
+</div>
+
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { requireStaff, AuthError } from "@/lib/auth-guards";
+import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
+import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
+import { installTemplate } from "@/lib/badge-templates/install";
+import { checkBadgePackage, computeBindings } from "@/lib/badge-templates/bindings";
+
+export const runtime = "nodejs";
+
+function badRequest(errors: string[]) {
+  return NextResponse.json({ error: "INVALID_PACKAGE", errors }, { status: 400 });
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
+  }
+  try {
+    await requireStaff(session.user.id, "STAFF_ADMIN");
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
+    }
+    throw err;
+  }
+
+  const form = await req.formData().catch(() => null);
+  const file = form?.get("archive");
+  if (!(file instanceof File)) {
+    return badRequest(["archive : fichier manquant."]);
+  }
+  if (file.size > MAX_ARCHIVE_BYTES) {
+    return badRequest([`archive : taille superieure a ${MAX_ARCHIVE_BYTES} octets.`]);
+  }
+
+  const archive = Buffer.from(await file.arrayBuffer());
+  const read = await readTemplatePackage(archive);
+  if (!read.ok) return badRequest(read.errors);
+
+  const { manifest, assets } = read;
+
+  // Les liaisons sont calculees ici, jamais recues : le serveur est seul juge.
+  const packageErrors = checkBadgePackage(manifest);
+  if (packageErrors.length > 0) return badRequest(packageErrors);
+  const bindings = computeBindings(manifest.variables);
+
+  // v4 (plan 12) : plus de registre compile, donc plus de collision possible.
+  // Reinstaller une famille livree (`default`) en cree simplement une nouvelle
+  // version, ce qui est le comportement voulu.
+  let created;
+  try {
+    created = await installTemplate({
+      manifest,
+      assets,
+      bindings,
+      installedById: session.user.id as string,
+    });
+  } catch (err) {
+    // Un paquet qui ne s'imprime pas n'entre pas au catalogue. installTemplate a
+    // deja nettoye les ressources ; il reste a traduire l'echec pour l'installateur.
+    return badRequest([
+      `rendu d'epreuve : le paquet n'a pas pu etre imprime (${(err as Error).message}).`,
+    ]);
+  }
+
+  await logActivity({
+    type: "BADGE_TEMPLATE_INSTALLED",
+    userId: session.user.id as string,
+    targetId: created.id,
+    details: { family: created.family, version: created.version },
+    req,
+  });
+
+  return NextResponse.json(created, { status: 201 });
+}
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
+  }
+  try {
+    await requireStaff(session.user.id, "STAFF_OBSERVER");
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
+    }
+    throw err;
+  }
+
+  const templates = await prisma.installedBadgeTemplate.findMany({
+    orderBy: [{ family: "asc" }, { version: "desc" }],
+    select: {
+      id: true,
+      family: true,
+      version: true,
+      label: true,
+      description: true,
+      pages: true,
+      previewPath: true,
+      archived: true,
+      createdAt: true,
+    },
+  });
+  return NextResponse.json({ templates });
+}

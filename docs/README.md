@@ -1,51 +1,68 @@
-# Documentation - Investiture
+# Documentation - Badge
 
-Systeme de gestion de badges pour la ceremonie d'investiture du President de la Republique du Benin. L'application gere l'inscription des participants, l'approbation administrative, la generation de badges PDF avec QR codes, et le controle d'acces par scan.
+Cette documentation est versionnee. Chaque version majeure de l'application a
+sa propre documentation autonome.
 
-## Documentation technique
+> **Nettoyage du 2026-07-17** : les documentations v1, v2 et v3 (plans et specs
+> deja implementes ou abandonnes) ont ete supprimees. Seule la **v4** est
+> conservee. L'historique reste accessible via git si besoin.
 
-- [Architecture](architecture.md) -- Stack, structure du projet, flux de donnees, securite
-- [Installation et deploiement](installation.md) -- Docker, configuration, commandes
-- [Base de donnees](base-de-donnees.md) -- Schema Prisma, modeles, migrations, seed
+## Versions disponibles
 
-## Reference API
+| Version | Statut | Documentation |
+|---------|--------|---------------|
+| **v4** | En construction | [docs/v4/](v4/) |
 
-- [Vue d'ensemble](api/README.md)
-- [Authentification](api/authentification.md) -- Login, setup password
-- [Inscriptions](api/inscriptions.md) -- CRUD inscriptions, impression batch
-- [Utilisateurs](api/utilisateurs.md) -- Gestion des comptes (SUPER_ADMIN)
-- [Categories](api/categories.md) -- Gestion des categories
-- [Scan](api/scan.md) -- Scan QR
-- [Journal d'activite](api/journal-activite.md) -- Logs d'activite
-- [Evenement](api/evenement.md) -- Configuration de l'evenement
-- [Parametres](api/parametres.md) -- SMTP et contact
-- [Fichiers](api/fichiers.md) -- Upload et telechargement
+## Quelle version consulter ?
 
-## Specifications fonctionnelles et techniques
+- **Vous travaillez sur l'application** : consultez la documentation
+  [v4](v4/), seule version active.
 
-- [Inscription publique](features/inscription-publique.md)
-- [Authentification et roles](features/authentification-et-roles.md)
-- [Gestion des inscriptions](features/gestion-inscriptions.md)
-- [Gestion des utilisateurs](features/gestion-utilisateurs.md)
-- [Gestion des categories](features/gestion-categories.md)
-- [Configuration de l'evenement](features/configuration-evenement.md)
-- [Badges](features/badges.md)
-- [Export badges PDF](features/export-badges-pdf.md)
-- [Scan QR](features/scan-qr.md)
-- [Journal d'activite](features/journal-activite.md)
-- [Notifications email](features/notifications-email.md)
-- [Parametres systeme](features/parametres-systeme.md)
+Si vous etes un outil IA et que la version n'est pas explicite dans la demande
+de l'utilisateur, **demandez avant de coder**.
 
-## Guide utilisateur
+## Convention de versionnement
 
-- [Introduction](guide-utilisateur/README.md)
-- [Connexion et profil](guide-utilisateur/connexion.md)
-- [Tableau de bord](guide-utilisateur/tableau-de-bord.md)
-- [Inscriptions](guide-utilisateur/inscriptions.md)
-- [Badges](guide-utilisateur/badges.md)
-- [Scanner QR](guide-utilisateur/scanner.md)
-- [Journal d'activite](guide-utilisateur/journal-activite.md)
-- [Categories](guide-utilisateur/categories.md)
-- [Evenement](guide-utilisateur/evenement.md)
-- [Utilisateurs](guide-utilisateur/utilisateurs.md)
-- [Parametres](guide-utilisateur/parametres.md)
+La version de la documentation suit la version majeure de l'application. Les
+changements mineurs (corrections, ajouts non rupteurs) sont integres dans la
+version courante. Une nouvelle version de la doc est creee uniquement lors
+d'une refonte fonctionnelle majeure.
+
+## Statuts possibles
+
+| Statut | Signification | Regles de modification |
+|--------|---------------|------------------------|
+| **Production** | Version actuellement deployee en production. | Modifications conservatrices uniquement (corrections, clarifications, ajouts non rupteurs). Pas de refonte. |
+| **En construction** | Version en cours de redaction ou d'implementation. | Refontes autorisees dans le perimetre de la spec. Toute evolution est documentee dans la version cible. |
+| **Archivee** | Version superseded par une plus recente. | Lecture seule. Ne jamais modifier. Conservee a titre historique. |
+
+## Structure attendue d'une version
+
+Chaque version contient au minimum :
+
+```
+docs/<version>/
+  README.md                 # Index, vue d'ensemble, etat d'avancement
+  architecture.md           # Stack, structure du projet, securite, RBAC, garde-fous metier
+  installation.md           # Env vars, services, commandes, dependances externes
+  features/                 # Une spec par feature majeure
+  specs/                    # ADR : decisions de design (capture du *pourquoi*)
+  plans/                    # Plans d'implementation avec tracker de progression en tete
+  api/                      # (optionnel) Reference API
+  guide-utilisateur/        # (optionnel) Documentation utilisateur final
+```
+
+Les details exacts par version sont indiques dans son propre `README.md`.
+
+## Contenu actuel de la v4
+
+- **Index & etat** : [`v4/README.md`](v4/README.md)
+- **Architecture** : [`v4/architecture.md`](v4/architecture.md) — espaces separes,
+  RBAC, pouvoir staff explicite, stockage, garde-fous.
+- **Installation** : [`v4/installation.md`](v4/installation.md) — env, services, HTTPS local.
+- **Plans** : [`v4/plans/`](v4/plans/) — les plans deja implementes sont retires
+  (le code fait foi). Trois plans en cours, a executer dans l'ordre du suffixe
+  `-NN-` : `01` corrections de bugs pre-E2E, `02` abonnements, `03` reorganisation E2E.
+- **Features** : [`v4/features/`](v4/features/) — espaces-separes, stockage-s3, abonnements.
+- **Specs** : [`v4/specs/2026-05-31-v4-stockage-s3-et-backups.md`](v4/specs/2026-05-31-v4-stockage-s3-et-backups.md)
+  — ADR stockage S3/MinIO + backups (migree depuis l'ancienne spec v3-01).

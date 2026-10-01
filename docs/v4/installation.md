@@ -1,0 +1,189 @@
+# Installation - Badge v4
+
+> Cette page complete le `README.md` racine avec les specificites v4. Pour la
+> methode generale de demarrage (`make dev`, seed, variables d'environnement),
+> se referer au README.
+
+## Services et URLs (dev)
+
+Le reverse proxy Caddy sert les sous-domaines `*.badge.local` en **HTTPS** via
+sa CA interne (`tls internal`). Le HTTP est redirige vers HTTPS.
+
+| Service | Port direct | URL via Caddy (HTTPS) | Description |
+|---------|-------------|-----------------------|-------------|
+| `app` | 3785 | `https://badge.local` | Next.js avec hot reload |
+| `mysql` | 33060 | -- | Base de donnees MySQL |
+| `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
+| `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
+| `minio` | 9001 | `https://s3.badge.local` | Console MinIO (stockage S3) |
+| `caddy` | 80 / 443 | -- | Reverse proxy dev HTTPS |
+
+Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`)
+restent exposes en parallele.
+
+## HTTPS local
+
+Il n'y a **aucun certificat a generer** : Caddy signe lui-meme les certificats
+`*.badge.local` avec une autorite locale (`Caddy Local Authority`) creee au
+premier demarrage et persistee dans le volume `caddy_data_dev`. Le travail
+consiste seulement a resoudre les domaines vers `127.0.0.1` et a faire confiance
+a cette racine.
+
+### 1. Tout configurer en une commande
+
+```bash
+make dev            # la stack doit tourner (la CA est generee par le conteneur)
+make dev-https      # /etc/hosts + approbation de la CA (mot de passe admin demande)
+make dev-https-check
+```
+
+`make dev-https` est **idempotent** : il n'ajoute a `/etc/hosts` que les domaines
+manquants et ne reinstalle pas une CA deja approuvee. Les domaines traites sont
+lus dans `Caddyfile.dev`, donc ajouter un site au proxy suffit a le couvrir.
+
+| Commande | Role |
+|----------|------|
+| `make dev-https` | Enchaine `dev-https-hosts` + `dev-https-trust`. |
+| `make dev-https-hosts` | Ajoute les domaines manquants a `/etc/hosts`. |
+| `make dev-https-trust` | Extrait la racine CA du conteneur et l'installe dans le magasin systeme (macOS : trousseau Systeme ; Linux : `/usr/local/share/ca-certificates`). |
+| `make dev-https-check` | Verifie sans `-k` que la chaine est valide sur chaque domaine. |
+| `make dev-https-untrust` | Retire les CA Caddy du magasin systeme. |
+
+> **Apres un `docker compose -f docker-compose.dev.yml down -v`** : le volume
+> `caddy_data_dev` disparait, Caddy regenere une CA differente et l'ancienne
+> racine approuvee ne vaut plus rien. Lancer `make dev-https-untrust` puis
+> `make dev-https` pour repartir propre (sinon les vieilles racines s'accumulent
+> dans le trousseau).
+
+**Firefox** utilise son propre magasin de certificats et n'est pas couvert par
+ces cibles : importer la racine via *Parametres > Vie privee et securite >
+Certificats*. Pour l'obtenir :
+
+```bash
+docker compose -f docker-compose.dev.yml cp caddy:/data/caddy/pki/authorities/local/root.crt ./caddy-root.crt
+```
+
+### 2. Aligner l'URL de base de l'app
+
+L'app doit se savoir servie en `https://badge.local` pour que les liens des
+emails et les callbacks NextAuth soient coherents. La valeur committable vit
+dans `docker/compose.dev.env` :
+
+```
+NEXTAUTH_URL=https://badge.local
+```
+
+> Attention : un `.env` present a la racine du projet est charge **apres**
+> `docker/compose.dev.env` et **ecrase** cette valeur. Si vous avez un `.env`
+> local avec `NEXTAUTH_URL=http://localhost:3000`, mettez-le a jour vers
+> `https://badge.local` (ou retirez la ligne) puis recreez le conteneur app :
+> `docker compose -f docker-compose.dev.yml up -d --no-deps app`. Ce redemarrage
+> invalide les sessions en cours (changement d'origine http -> https).
+
+### Verification
+
+```bash
+make dev-https-check   # attendu : une ligne "OK <domaine> (http=308 -> https=200)" par site
+```
+
+Une ligne `KO` signifie soit que le domaine n'est pas dans `/etc/hosts`, soit que
+la CA approuvee ne correspond plus a celle du conteneur (cas du `down -v`).
+
+Dans le navigateur (apres confiance CA) : `https://badge.local` affiche le
+cadenas sans avertissement. Les liens captures dans Mailpit
+(`https://mail.badge.local`) commencent par `https://badge.local`.
+
+## Tests
+
+Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
+
+| Commande | Description |
+|----------|-------------|
+| `make test` | Suite Vitest complete (unitaire lib + integration API). |
+| `make test-unit` | Sous-ensemble unitaire cible sur `src/lib`. |
+| `make test-coverage` | Vitest + rapport de couverture V8. **Seuils 100%** (lignes/branches/fonctions/statements) sur `src/lib/**` et `src/app/api/**` = gate (`vitest.config.ts`). |
+| `make test-e2e` | Playwright (chromium systeme) dans le conteneur, contre `http://localhost:3000`. |
+| `make test-e2e-ui` | Playwright mode UI depuis l'hote (fenetre Electron ; app sur `localhost:3785`). |
+| `make test-all` | `lint` + `typecheck` + `test` + `test-e2e`, s'arrete au premier echec. |
+
+> **Attention** : `make test` (et `test-coverage`/`test-all`) **vide la base de dev**
+> (`src/test-setup.ts` fait un `deleteMany` global en `beforeEach`). Relancer
+> `make db-seed` ensuite pour retrouver les comptes de dev. Les tests e2e seedent
+> leurs propres fixtures (`e2e/helpers/`) et ne dependent pas du seed global.
+
+> **Templates de badge** (v4, plan 12) : `make db-seed` installe aussi les modeles de
+> badge livres avec l'application, depuis `prisma/badge-templates/`. Sans lui, aucun
+> badge n'est imprimable et `resolveTemplate` echoue explicitement. `make
+> validate-badge-templates` verifie qu'aucune reference n'est orpheline, que chaque
+> template installe est au format v2 (le moteur ne sait plus rendre du v1) et que ses
+> liaisons de variables sont completes ; `make migrate-badge-template-refs` convertit
+> les anciennes references texte d'une base anterieure au plan 12 (inutile sur une
+> base neuve).
+
+| Commande | Description |
+|----------|-------------|
+| `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installes du format v1 vers le v2 (dry-run par defaut) |
+
+Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
+
+> **Release du moteur v2 (spec 20) — ordre obligatoire.** Le moteur v2 ne sait plus rendre
+> une ligne `InstalledBadgeTemplate` au format v1 (l'impression du badge repond 500). Sur une
+> base qui en contient, dans la meme fenetre et sans trafic entre les etapes :
+> 1) pousser le schema (colonne `bindings`), 2) lancer
+> `migrate-installed-templates-v2 --apply` contre la base cible (puis
+> `validate-badge-templates`), 3) seulement ensuite ouvrir le trafic sur la nouvelle version.
+> La cible `make migrate-installed-templates` ne vise **que le conteneur de dev** ; l'image
+> de production (standalone) ne contient ni `scripts/`, ni `src/`, ni `tsx`, et
+> `docker-entrypoint.sh` fait `prisma db push` puis sert aussitot. Le script se lance donc
+> depuis un environnement qui a les sources (conteneur de dev ou conteneur d'outillage
+> ponctuel, `DATABASE_URL` pointee sur la base cible) **avant** que la nouvelle image ne
+> recoive du trafic. La mecanique concrete de production est a arreter au moment de la
+> release. Detail : `docs/v4/features/templates-badges.md`, § « Ordre de release obligatoire ».
+
+**Pre-requis Playwright / MinIO** : le chromium systeme est installe dans le conteneur
+`app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
+(MinIO) doit tourner (`make dev` le demarre) pour les tests d'upload.
+
+## Jeton du registre
+
+Le moteur de rendu est le package `@tigamadou/pdf-engine`, publié depuis pdfStudio sur GitHub Packages. Monter de version : `yarn add @tigamadou/pdf-engine@<version>`, puis `make verify-engine` (voir « Monter de version le moteur »).
+
+Le package est privé : l'installation exige un jeton GitHub (classic) de portée
+`read:packages`, lu par `.npmrc` dans la variable `NPM_TOKEN`. Il n'est jamais écrit dans
+un fichier versionné. Trois emplacements :
+
+1. **Poste local** : `NPM_TOKEN=...` dans le `.env` du dépôt (gitignoré) ; Compose le
+   transmet au build de `Dockerfile.dev` (secret de build) et au conteneur.
+2. **CI** : secret de dépôt GitHub `NPM_TOKEN` (Settings > Secrets and variables > Actions).
+   Les pull requests venant d'un fork ne reçoivent pas ce secret : leur installation
+   échoue en 401.
+3. **Serveur** : dans le `.env` du dossier de déploiement (celui qui contient le
+   `docker-compose.yml`), lu par Compose pour l'interpolation, ou dans l'environnement du
+   shell. Jamais dans `.env.production` / `.env.preprod` : ces fichiers sont copiés dans
+   une couche de l'image du builder et y laisseraient le jeton.
+
+## Integration continue (GitHub Actions)
+
+Le workflow `.github/workflows/ci.yml` s'execute sur chaque **push** et **pull request**
+vers `development`. Quatre jobs paralleles bloquants :
+
+1. **lint** — `yarn lint` (ESLint, 0 erreur ; warnings au niveau baseline toleres).
+2. **typecheck** — `yarn tsc --noEmit`.
+3. **unit-integration** — service MySQL 8, `prisma db push`, `yarn vitest run --coverage` (les seuils 100% font gate).
+4. **e2e** — services MySQL + Mailpit + MinIO, `prisma db seed`, build Next + `yarn start`, `yarn playwright test` (rapport uploade en artefact si echec).
+
+> Le job **e2e** reste rouge tant que la couverture E2E (Phase 3 du plan
+> `v4-02`) n'est pas verte. Ne l'ajouter aux checks **requis** qu'une fois la
+> suite Playwright stabilisee.
+
+### Protection de branche (action manuelle GitHub)
+
+A configurer a la main dans **Settings > Branches > Branch protection rules** du depot :
+
+- Regle sur `development` : **Require a pull request before merging** (interdit le push direct).
+- **Require status checks to pass before merging** + selectionner les checks requis :
+  `lint`, `typecheck`, `unit-integration` (ajouter `e2e` une fois la Phase 3 verte).
+- **Require branches to be up to date before merging** (recommande).
+
+> Cette activation est une operation **manuelle** de l'administrateur du depot :
+> elle ne peut pas etre automatisee par le workflow lui-meme.

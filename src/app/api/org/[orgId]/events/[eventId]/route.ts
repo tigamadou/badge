@@ -1,0 +1,166 @@
+import { NextResponse } from "next/server";
+import { isDeepStrictEqual } from "node:util";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { withEventAuth } from "@/lib/with-event-auth";
+import { logActivity } from "@/lib/activity-log";
+import {
+  MAX_SECURITY_INSTRUCTIONS,
+  MAX_SECURITY_INSTRUCTION_CHARS,
+  cleanSecurityInstructions,
+  readSecurityInstructions,
+} from "@/lib/security-instructions";
+import { readTemplateOptions, templateOptionsSchema } from "@/lib/badge-templates/template-options";
+
+export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
+  // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
+  const event = await prisma.event.findUniqueOrThrow({
+    where: { id: eventId },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      location: true,
+      date: true,
+      endDate: true,
+      description: true,
+      logo: true,
+      banner: true,
+      templateOptions: true,
+      securityInstructions: true,
+      registrationOpen: true,
+      archived: true,
+      createdAt: true,
+      orgId: true,
+      organization: { select: { id: true, name: true, slug: true } },
+      _count: { select: { registrations: true, categories: true, memberships: true } },
+    },
+  });
+  return NextResponse.json({
+    event: {
+      ...event,
+      securityInstructions: readSecurityInstructions(event.securityInstructions),
+      templateOptions: readTemplateOptions(event.templateOptions),
+    },
+  });
+});
+
+const patchSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  location: z.string().max(200).optional(),
+  date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  endDate: z
+    .string()
+    .datetime()
+    .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .nullable()
+    .optional(),
+  description: z.string().max(5000).nullable().optional(),
+  logo: z.string().nullable().optional(),
+  banner: z.string().nullable().optional(),
+  templateOptions: templateOptionsSchema.optional(),
+  registrationOpen: z.boolean().optional(),
+  securityInstructions: z
+    .array(z.string().max(MAX_SECURITY_INSTRUCTION_CHARS))
+    .max(MAX_SECURITY_INSTRUCTIONS)
+    .optional(),
+  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
+});
+
+export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, async (req, { orgId, eventId, session }) => {
+  const json = await req.json().catch(() => null);
+  const parsed = patchSchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
+  }
+
+  const before = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { registrationOpen: true, date: true, securityInstructions: true, templateOptions: true },
+  });
+
+  // v4 (plan 07) : la date de fin se compare a la date effective apres patch.
+  if (parsed.data.endDate) {
+    const effectiveDate = parsed.data.date ? new Date(parsed.data.date) : before?.date;
+    if (effectiveDate && new Date(parsed.data.endDate) < effectiveDate) {
+      return NextResponse.json(
+        { error: "VALIDATION", issues: [{ path: ["endDate"], message: "endDate < date" }] },
+        { status: 400 },
+      );
+    }
+  }
+
+  const data: Prisma.EventUpdateInput = {};
+  if (parsed.data.title !== undefined) data.title = parsed.data.title;
+  if (parsed.data.location !== undefined) data.location = parsed.data.location;
+  if (parsed.data.date !== undefined) data.date = new Date(parsed.data.date);
+  if (parsed.data.description !== undefined) data.description = parsed.data.description;
+  if (parsed.data.endDate !== undefined) {
+    data.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
+  }
+  if (parsed.data.logo !== undefined) data.logo = parsed.data.logo;
+  if (parsed.data.banner !== undefined) data.banner = parsed.data.banner;
+  if (parsed.data.templateOptions !== undefined) {
+    // Les listes sont nettoyees comme les consignes (espaces, lignes vides).
+    const cleanedOptions = Object.fromEntries(
+      Object.entries(parsed.data.templateOptions).map(([key, value]) => [
+        key,
+        Array.isArray(value) ? cleanSecurityInstructions(value) : value,
+      ]),
+    );
+    // Ecrit uniquement si l'objet differe de celui stocke (journal limite aux vrais changements) ; comparaison insensible a l'ordre des cles (MySQL reordonne le JSON).
+    if (!isDeepStrictEqual(readTemplateOptions(before?.templateOptions), cleanedOptions)) {
+      data.templateOptions = cleanedOptions;
+    }
+  }
+  if (parsed.data.registrationOpen !== undefined) data.registrationOpen = parsed.data.registrationOpen;
+  if (parsed.data.securityInstructions !== undefined) {
+    const cleaned = cleanSecurityInstructions(parsed.data.securityInstructions);
+    // Ecrit uniquement si la liste nettoyee differe de celle stockee.
+    if (JSON.stringify(readSecurityInstructions(before?.securityInstructions)) !== JSON.stringify(cleaned)) {
+      data.securityInstructions = cleaned;
+    }
+  }
+  if (parsed.data.slug !== undefined && session.user.isStaff) data.slug = parsed.data.slug;
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "NOTHING_TO_UPDATE" }, { status: 400 });
+  }
+
+  try {
+    const event = await prisma.event.update({ where: { id: eventId }, data });
+
+    await logActivity({
+      type: "EVENT_UPDATED",
+      userId: session.user.id,
+      orgId,
+      eventId,
+      details: { changedFields: Object.keys(data) },
+      req,
+    });
+
+    if (parsed.data.registrationOpen !== undefined && before?.registrationOpen !== parsed.data.registrationOpen) {
+      await logActivity({
+        type: parsed.data.registrationOpen ? "EVENT_REGISTRATION_OPENED" : "EVENT_REGISTRATION_CLOSED",
+        userId: session.user.id,
+        orgId,
+        eventId,
+        req,
+      });
+    }
+
+    return NextResponse.json({
+      event: {
+        ...event,
+        securityInstructions: readSecurityInstructions(event.securityInstructions),
+        templateOptions: readTemplateOptions(event.templateOptions),
+      },
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "SLUG_TAKEN" }, { status: 409 });
+    }
+    throw err;
+  }
+});

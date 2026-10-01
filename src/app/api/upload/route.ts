@@ -1,54 +1,82 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { uploadFile } from "@/lib/storage";
+import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
+import {
+  isAllowedMime,
+  assertWithinSizeLimit,
+  uploadFile,
+  eventPhotoKey,
+  eventIdDocumentKey,
+  MAX_UPLOAD_BYTES,
+  type UploadKind,
+} from "@/lib/storage";
+import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
-const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const ALLOWED_DOC_TYPES = [...ALLOWED_IMAGE_TYPES, "application/pdf"];
+export const runtime = "nodejs";
 
-export async function POST(req: NextRequest) {
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  const type = formData.get("type") as string; // "logo" | "photo"
-  const registrationId = formData.get("registrationId") as string | null;
+function parseContext(ctx: string | null): { slug: string } | null {
+  if (!ctx) return null;
+  const m = ctx.match(/^event:(.+)$/);
+  return m ? { slug: m[1] } : null;
+}
 
-  if (!file || !type) {
-    return NextResponse.json({ error: "Fichier et type requis" }, { status: 400 });
+function parseKind(k: string | null): UploadKind | null {
+  return k === "photo" || k === "document" ? k : null;
+}
+
+function extOf(name: string, fallback: string): string {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i).toLowerCase() : fallback;
+}
+
+export async function POST(req: Request) {
+  const url = new URL(req.url);
+  const ctx = parseContext(url.searchParams.get("context"));
+  const kind = parseKind(url.searchParams.get("kind"));
+  if (!ctx || !kind) {
+    return NextResponse.json({ error: "Bad request", code: "BAD_CONTEXT" }, { status: 400 });
   }
 
-  const allowedTypes = type === "idDocument" ? ALLOWED_DOC_TYPES : ALLOWED_IMAGE_TYPES;
-  if (!allowedTypes.includes(file.type)) {
-    return NextResponse.json({ error: "Type de fichier non autorisé" }, { status: 400 });
+  const ip = extractClientIp(new Headers(req.headers));
+  const rl = checkRateLimit(ip, "upload");
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Trop de requêtes", code: "RATE_LIMITED" },
+      { status: 429, headers: { "retry-after": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
   }
 
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "Fichier trop volumineux (max 5 MB)" }, { status: 400 });
+  const event = await prisma.event.findUnique({ where: { slug: ctx.slug } });
+  if (!event) return NextResponse.json({ error: "Not found", code: "NOT_FOUND" }, { status: 404 });
+  if (event.archived || !event.registrationOpen) {
+    return NextResponse.json({ error: "Inscriptions fermées", code: "CLOSED" }, { status: 403 });
   }
 
-  const ext = file.name.split(".").pop() || "jpg";
-  let key: string;
-
-  if (type === "logo") {
-    key = `logos/event-logo.${ext}`;
-  } else if (type === "photo" && registrationId) {
-    key = `photos/${registrationId}.${ext}`;
-  } else if (type === "idDocument" && registrationId) {
-    key = `documents/${registrationId}.${ext}`;
-  } else {
-    return NextResponse.json({ error: "Type invalide ou registrationId manquant" }, { status: 400 });
+  const form = await req.formData();
+  const file = form.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "Fichier manquant", code: "NO_FILE" }, { status: 400 });
   }
-
-  // Pour les photos publiques (formulaire inscription), pas besoin d'auth
-  // Pour le logo, vérifier l'auth admin
-  if (type === "logo") {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
-    }
+  const mime = file.type || "application/octet-stream";
+  if (!isAllowedMime(mime, kind)) {
+    return NextResponse.json({ error: "Type interdit", code: "BAD_TYPE" }, { status: 415 });
   }
-
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: "Fichier trop volumineux (5 Mo max)", code: "TOO_LARGE" }, { status: 413 });
+  }
   const buffer = Buffer.from(await file.arrayBuffer());
-  const path = await uploadFile(key, buffer, file.type);
-  return NextResponse.json({ path });
+  assertWithinSizeLimit(buffer.length);
+
+  const origName = file.name;
+  const ext = extOf(origName, mime === "application/pdf" ? ".pdf" : ".bin");
+  const filename = `${randomUUID()}${ext}`;
+  const storageKey = kind === "photo"
+    ? eventPhotoKey(event.id, filename)
+    : eventIdDocumentKey(event.id, filename);
+
+  await uploadFile(storageKey, buffer, mime);
+
+  // v4 Task 5.3 : contrat unifie avec /api/account/upload -> { storageKey }.
+  // L'ancien flux de token HMAC signe (verifyUploadToken) etait mort (jamais consomme).
+  return NextResponse.json({ storageKey, originalName: origName, kind, size: buffer.length });
 }

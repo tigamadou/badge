@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Org · Membres</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "org", active: "members", org: { name: "Salon Tech" }, user: { name: "Julien Roy", role: "OWNER" } };</script>
+<div id="page" data-screen-label="25 Org membres">
+
+  <div class="page-head"><div><h1>Membres</h1><p class="sub">7 membres · 1 OWNER, 4 MANAGER, 2 AUDITOR</p></div><button class="btn btn-primary"><span data-ico="user-plus" data-size="16"></span> Inviter un membre</button></div>
+
+  <div class="card card-pad" style="margin-bottom:16px;">
+    <div class="flex gap12 wrap" style="align-items:flex-end;">
+      <div class="field" style="margin-bottom:0;flex:1;min-width:220px;"><label>Inviter par e-mail</label><input class="input" placeholder="prenom.nom@exemple.fr" /></div>
+      <div class="field" style="margin-bottom:0;width:180px;"><label>Rôle</label><div class="select-wrap"><select class="input"><option>MANAGER</option><option>OWNER</option><option>AUDITOR</option></select><span class="ico" data-ico="chevron-down" data-size="16"></span></div></div>
+      <button class="btn btn-primary"><span data-ico="send" data-size="16"></span> Envoyer l'invitation</button>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Membre</th><th>E-mail</th><th>Rôle</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">JR</span><span class="cell-name">Julien Roy</span></div></td><td class="cell-meta">julien.roy@salontech.fr</td><td><span class="role-badge">OWNER</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Actif</span></td><td><div class="row-actions"><button class="btn-icon" title="Dernier OWNER — action verrouillée" style="opacity:.4;cursor:not-allowed;"><span data-ico="lock" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">AP</span><span class="cell-name">Aline Petit</span></div></td><td class="cell-meta">aline.petit@salontech.fr</td><td><div class="select-wrap" style="display:inline-block;"><select class="input" style="padding:4px 28px 4px 10px;font-size:13px;width:auto;"><option>MANAGER</option><option>OWNER</option><option>AUDITOR</option></select><span class="ico" data-ico="chevron-down" data-size="14"></span></div></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Actif</span></td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm">SB</span><span class="cell-name">Sophie Bernard</span></div></td><td class="cell-meta">sophie.bernard@salontech.fr</td><td><span class="role-badge amber">AUDITOR</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Actif</span></td><td><div class="row-actions"><button class="btn-icon" style="color:var(--rose-600);"><span data-ico="trash-2" data-size="16"></span></button></div></td></tr>
+        <tr><td><div class="flex gap12" style="align-items:center;"><span class="avatar sm" style="background:var(--amber-50);color:var(--amber-700);">?</span><span class="cell-name">marc.leroy@exemple.fr</span></div></td><td class="cell-meta">—</td><td><span class="role-badge slate">MANAGER</span></td><td><span class="status status-pending"><span data-ico="clock" data-size="12"></span> Invité</span></td><td><div class="row-actions"><button class="btn-icon"><span data-ico="send" data-size="16"></span></button></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="help" style="margin-top:12px;"><span data-ico="info" data-size="13" style="vertical-align:-2px;"></span> Le dernier OWNER ne peut pas être rétrogradé ni supprimé — désignez d'abord un autre OWNER.</p>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

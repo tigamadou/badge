@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Mon tableau de bord</title>
+<link rel="stylesheet" href="assets/badge.css" />
+<style>
+  .acct-top { display: flex; align-items: center; padding: 16px 28px; background: #fff; border-bottom: 1px solid var(--border-card); position: sticky; top: 0; z-index: 5; }
+  .acct-top img { height: 28px; }
+  .acct-top .sp { flex: 1; }
+  .acct-top .nav { display: flex; gap: 4px; margin-left: 28px; }
+  .acct-top .nav a { font-size: 14px; color: var(--fg2); text-decoration: none; padding: 7px 12px; border-radius: 8px; font-weight: 500; }
+  .acct-top .nav a.on { background: var(--accent-nav-bg); color: var(--green-700); }
+  .acct-top .nav a:hover { background: var(--slate-100); }
+  .acct-wrap { max-width: 880px; margin: 0 auto; padding: 36px 24px 80px; }
+  .reg-card { display: flex; gap: 16px; align-items: center; padding: 18px; }
+  .reg-card .rc-date { width: 56px; text-align: center; flex: none; background: var(--slate-50); border: 1px solid var(--border-card); border-radius: 10px; padding: 8px 0; }
+  .reg-card .rc-date .d { font-size: 20px; font-weight: 700; color: var(--fg1); line-height: 1; }
+  .reg-card .rc-date .m { font-size: 11px; text-transform: uppercase; color: var(--fg3); margin-top: 2px; }
+</style>
+</head>
+<body>
+  <div data-screen-label="09 Participant dashboard">
+    <div class="acct-top">
+      <img src="assets/logo.svg" alt="Badge" />
+      <nav class="nav"><a class="on" href="participant-dashboard.html">Mes inscriptions</a><a href="participant-profil.html">Profil</a></nav>
+      <span class="sp"></span>
+      <div class="user-chip"><span class="nm" style="font-size:14px;color:var(--fg2);">Camille Laurent</span><span class="avatar">CL</span></div>
+    </div>
+
+    <div class="acct-wrap">
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:24px;font-weight:600;color:var(--fg1);margin:0 0 4px;">Bonjour Camille</h1>
+        <p class="ds-body">Retrouvez ici toutes vos inscriptions et vos badges.</p>
+      </div>
+
+      <div class="ds-th" style="margin-bottom:12px;">Mes inscriptions · 3</div>
+      <div class="stack" style="gap:12px;">
+
+        <a class="card reg-card" href="participant-inscription.html" style="text-decoration:none;">
+          <div class="rc-date"><div class="d">15</div><div class="m">mars</div></div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:600;color:var(--fg1);">Salon Tech 2026</div>
+            <div class="ds-meta" style="margin-top:3px;"><span data-ico="map-pin" data-size="12" style="vertical-align:-2px;"></span> Paris Expo · <span data-ico="tag" data-size="12" style="vertical-align:-2px;"></span> Conférencier</div>
+          </div>
+          <span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span>
+          <span data-ico="chevron-right" data-size="18" style="color:var(--slate-400);"></span>
+        </a>
+
+        <a class="card reg-card" href="participant-inscription.html" style="text-decoration:none;">
+          <div class="rc-date"><div class="d">04</div><div class="m">juin</div></div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:600;color:var(--fg1);">Congrès Médical 2026</div>
+            <div class="ds-meta" style="margin-top:3px;"><span data-ico="map-pin" data-size="12" style="vertical-align:-2px;"></span> Lyon · <span data-ico="tag" data-size="12" style="vertical-align:-2px;"></span> Visiteur</div>
+          </div>
+          <span class="status status-pending"><span data-ico="clock" data-size="12"></span> En attente</span>
+          <span data-ico="chevron-right" data-size="18" style="color:var(--slate-400);"></span>
+        </a>
+
+        <a class="card reg-card" href="participant-inscription.html" style="text-decoration:none;">
+          <div class="rc-date"><div class="d">22</div><div class="m">sept</div></div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:600;color:var(--fg1);">ExpoPro Lyon</div>
+            <div class="ds-meta" style="margin-top:3px;"><span data-ico="map-pin" data-size="12" style="vertical-align:-2px;"></span> Lyon · <span data-ico="tag" data-size="12" style="vertical-align:-2px;"></span> Exposant</div>
+          </div>
+          <span class="status status-rejected"><span data-ico="x" data-size="12"></span> Rejetée</span>
+          <span data-ico="chevron-right" data-size="18" style="color:var(--slate-400);"></span>
+        </a>
+
+      </div>
+
+      <!-- État vide -->
+      <div class="state-label" style="margin:40px 0 12px;"><span class="dot warn"></span> État vide</div>
+      <div class="card"><div class="empty"><span class="eico" data-ico="id-card" data-size="44"></span><p class="t">Aucune inscription</p><p class="s">Vos inscriptions à des événements apparaîtront ici.</p></div></div>
+
+    </div>
+  </div>
+  <script src="assets/icons.js"></script>
+</body>
+</html>

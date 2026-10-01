@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Vue agrégée</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "inscriptions", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Marc Petit", role: "VIEWER" }, banner: "readonly" };</script>
+<div id="page" data-screen-label="32 Event vue agrégée VIEWER">
+
+  <div class="page-head"><div><h1>Vue agrégée</h1><p class="sub">Données non nominatives — rôle VIEWER</p></div></div>
+
+  <div class="stat-grid">
+    <div class="statcard"><p class="lbl">Total</p><p class="val">1 248</p></div>
+    <div class="statcard"><p class="lbl">Approuvées</p><p class="val" style="color:var(--emerald-700);">982</p></div>
+    <div class="statcard"><p class="lbl">En attente</p><p class="val" style="color:var(--amber-700);">184</p></div>
+    <div class="statcard"><p class="lbl">Badges imprimés</p><p class="val">640</p></div>
+  </div>
+
+  <div class="card" style="margin-top:24px;">
+    <div class="card-head"><h3>Répartition par catégorie</h3><p>Sans données personnelles</p></div>
+    <table class="tbl">
+      <thead><tr><th>Catégorie</th><th>Statut</th><th>Badge imprimé</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td><span data-ico="check-circle" data-size="16" style="color:var(--green-600);"></span> 142</td><td class="cell-name">156</td></tr>
+        <tr><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td><span data-ico="check-circle" data-size="16" style="color:var(--green-600);"></span> 210</td><td class="cell-name">298</td></tr>
+        <tr><td><span class="cat-pill"><span class="cat-dot" style="background:#f59e0b;"></span> Visiteur</span></td><td><span class="status status-pending"><span data-ico="clock" data-size="12"></span> En attente</span></td><td><span class="ds-meta">—</span></td><td class="cell-name">640</td></tr>
+        <tr><td><span class="cat-pill"><span class="cat-dot" style="background:#f43f5e;"></span> Presse</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td><span data-ico="check-circle" data-size="16" style="color:var(--green-600);"></span> 28</td><td class="cell-name">42</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+</body>
+</html>

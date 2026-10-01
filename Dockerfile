@@ -1,14 +1,21 @@
+# syntax=docker/dockerfile:1
 FROM node:22-alpine AS deps
 WORKDIR /app
 RUN corepack enable
-COPY package.json yarn.lock .yarnrc.yml ./
-RUN yarn install || yarn install
+COPY package.json yarn.lock .yarnrc.yml .npmrc ./
+# Le jeton du registre est un secret de build : il n'existe que pendant cette
+# commande et n'est ecrit dans aucune couche de l'image.
+RUN --mount=type=secret,id=npm_token \
+    export NPM_TOKEN="$(cat /run/secrets/npm_token)" && (yarn install || yarn install)
 
 FROM node:22-alpine AS builder
 WORKDIR /app
 RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# .npmrc est copie avec les sources : yarn exige que NPM_TOKEN soit defini (vide ici,
+# le jeton reel n'est necessaire qu'a l'installation).
+ENV NPM_TOKEN=
 RUN yarn prisma generate --schema=./prisma/schema.prisma
 RUN yarn build
 

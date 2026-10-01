@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Badge — Event · Dashboard</title>
+<link rel="stylesheet" href="../assets/badge.css" />
+</head>
+<body>
+<script>window.BADGE = { shell: "event", active: "dashboard", org: { name: "Salon Tech" }, event: { name: "Salon Tech 2026" }, user: { name: "Sophie Bernard", role: "ADMIN" } };</script>
+<div id="page" data-screen-label="30 Event dashboard">
+
+  <div class="page-head"><div><h1>Tableau de bord</h1><p class="sub">Salon Tech 2026 · 15–17 mars 2026</p></div><div class="flex gap8"><a class="btn btn-secondary" href="event-scanner.html"><span data-ico="scan-line" data-size="16"></span> Scanner</a><a class="btn btn-primary" href="event-inscription-create.html"><span data-ico="plus" data-size="16"></span> Inscription</a></div></div>
+
+  <div class="stat-grid g5">
+    <div class="statcard"><p class="lbl">Total</p><p class="val">1 248</p><p class="sub">inscriptions</p></div>
+    <div class="statcard"><p class="lbl">Approuvées</p><p class="val" style="color:var(--emerald-700);">982</p><p class="sub">78,7%</p></div>
+    <div class="statcard"><p class="lbl">En attente</p><p class="val" style="color:var(--amber-700);">184</p><p class="sub">14,7%</p></div>
+    <div class="statcard"><p class="lbl">Rejetées</p><p class="val" style="color:var(--rose-700);">82</p><p class="sub">6,6%</p></div>
+    <div class="statcard"><p class="lbl">Badges imprimés</p><p class="val">640</p><p class="sub">sur 982</p></div>
+  </div>
+
+  <div class="panel-grid" style="grid-template-columns:1.5fr 1fr;">
+    <div class="card">
+      <div class="card-head"><h3>Inscriptions — 30 derniers jours</h3><p>Volume quotidien</p></div>
+      <div class="card-pad">
+        <div class="minichart" id="mc"></div>
+        <div class="flex" style="justify-content:space-between;margin-top:10px;"><span class="ds-meta">7 fév.</span><span class="ds-meta">22 fév.</span><span class="ds-meta">7 mars</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Contrôle d'accès</h3></div>
+      <div class="card-pad">
+        <div class="quota"><div class="qh"><span class="lbl">Scans effectués</span><span class="val">1 204</span></div><div class="qbar"><div class="qfill" style="width:74%;"></div></div></div>
+        <div class="quota"><div class="qh"><span class="lbl">Quota inscriptions</span><span class="val">1 248 / 1 500</span></div><div class="qbar"><div class="qfill warn" style="width:83%;"></div></div></div>
+        <div class="alert alert-info" style="margin:14px 0 0;"><span data-ico="info" data-size="15" style="vertical-align:-3px;"></span> Variantes par rôle : OPERATOR voit une version allégée, VIEWER une vue agrégée sans données nominatives.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px;">
+    <div class="card-head"><h3>10 dernières inscriptions</h3></div>
+    <table class="tbl">
+      <thead><tr><th>Nom</th><th>Catégorie</th><th>Statut</th><th>Date</th></tr></thead>
+      <tbody>
+        <tr><td class="cell-name">Camille Laurent</td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td class="cell-meta">il y a 12 min</td></tr>
+        <tr><td class="cell-name">Yanis Bernard</td><td><span class="cat-pill"><span class="cat-dot" style="background:#14b8a6;"></span> Exposant</span></td><td><span class="status status-pending"><span data-ico="clock" data-size="12"></span> En attente</span></td><td class="cell-meta">il y a 28 min</td></tr>
+        <tr><td class="cell-name">Inès Moreau</td><td><span class="cat-pill"><span class="cat-dot" style="background:#f43f5e;"></span> Presse</span></td><td><span class="status status-rejected"><span data-ico="x" data-size="12"></span> Rejetée</span></td><td class="cell-meta">il y a 41 min</td></tr>
+        <tr><td class="cell-name">Hugo Faure</td><td><span class="cat-pill"><span class="cat-dot" style="background:#f59e0b;"></span> Visiteur</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td class="cell-meta">il y a 1 h</td></tr>
+        <tr><td class="cell-name">Léa Girard</td><td><span class="cat-pill"><span class="cat-dot" style="background:#6366f1;"></span> Conférencier</span></td><td><span class="status status-approved"><span data-ico="check" data-size="12"></span> Approuvée</span></td><td class="cell-meta">il y a 1 h</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+<script src="../assets/icons.js"></script>
+<script src="../assets/shell.js"></script>
+<script>
+  (function () {
+    var v = [8,12,9,14,18,11,7,15,22,19,13,17,24,28,21,16,12,20,26,31,27,23,18,25,33,29,35,30,38,42];
+    var max = Math.max.apply(null, v);
+    document.getElementById('mc').innerHTML = v.map(function (x) { return '<i style="height:' + Math.round(x / max * 100) + '%"></i>'; }).join('');
+  })();
+</script>
+</body>
+</html>

@@ -28,6 +28,16 @@ describe("formatBadgeName", () => {
     expect(formatBadgeName("Jean François Alain", "Kouassi-Barry")).toBe("J. F. KOUASSI-BARRY");
   });
 
+  it("drops several initials from the right across multiple while iterations", () => {
+    // 4 prenoms, tous abreges : "A. B. C. D. ABCDEFGHIJKL" = 24 > 20.
+    // Boucle while : pop -> "A. B. C. ABCDEFGHIJKL" = 21 > 20 (if faux, on reboucle),
+    // pop -> "A. B. ABCDEFGHIJKL" = 18 <= 20 (if vrai, retour). Couvre les deux
+    // branches du if dans la boucle while (l.33).
+    expect(
+      formatBadgeName("Alexandre Benjamin Christophe Dominique", "Abcdefghijkl"),
+    ).toBe("A. B. ABCDEFGHIJKL");
+  });
+
   it("handles single firstName that fits", () => {
     expect(formatBadgeName("Ali", "Ba")).toBe("Ali BA");
   });

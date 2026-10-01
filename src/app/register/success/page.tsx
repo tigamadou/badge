@@ -1,18 +1,18 @@
 import Link from "next/link";
+import { AuthCard } from "@/components/auth/AuthCard";
 
 export default function RegisterSuccessPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center max-w-md">
-        <h1 className="text-2xl font-bold mb-4">Inscription envoyée</h1>
-        <p className="text-gray-600 mb-6">
+    <AuthCard title="Inscription envoyée">
+      <div className="text-center space-y-4">
+        <p className="text-sm text-slate-600">
           Votre inscription a bien été reçue. Vous recevrez un email de confirmation
           lorsqu&apos;elle sera validée.
         </p>
-        <Link href="/" className="text-blue-600 hover:underline text-sm">
+        <Link href="/" className="text-green-600 hover:underline text-sm">
           Faire une autre inscription
         </Link>
       </div>
-    </div>
+    </AuthCard>
   );
 }

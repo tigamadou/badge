@@ -1,0 +1,171 @@
+name: CI
+
+# Interpretation v4-02 Phase 5 : declenche sur chaque push et pull request vers `development`.
+# 4 jobs paralleles bloquants : lint, typecheck, unit-integration (vraie MySQL), e2e (stack complete).
+#
+# NB : le job `e2e` restera ROUGE tant que la Phase 3 (couverture E2E) n'est pas verte.
+# Ne le declarer "required" en protection de branche qu'une fois la suite Playwright au vert
+# (cf. docs/v4/installation.md > "Protection de branche").
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [development]
+
+# Annule les runs precedents encore en cours sur la meme ref (economie de minutes CI).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Cles reCAPTCHA de test Google (passent toujours) + secrets factices : jamais de vrai secret en CI.
+  NEXTAUTH_SECRET: ci-only-secret-not-for-prod
+  NEXTAUTH_URL: http://localhost:3000
+  UPLOAD_TOKEN_SECRET: ci-upload-secret
+  NEXT_PUBLIC_RECAPTCHA_SITE_KEY: 6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI
+  RECAPTCHA_SECRET_KEY: 6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn prisma generate
+      # ESLint : 0 erreur = gate (les warnings au niveau baseline sont toleres).
+      - run: yarn lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn prisma generate
+      - run: yarn tsc --noEmit
+
+  unit-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: badge
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn prisma generate
+      # Cree le schema sur la MySQL de service (les tests d'integration font leur propre seed
+      # via deleteMany + create ; pas besoin de db-seed global).
+      - run: yarn prisma db push --skip-generate
+      # Seuils coverage 100% (vitest.config.ts) = gate : un trou fait echouer le job.
+      - run: yarn vitest run --coverage
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: badge
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+      mailpit:
+        image: axllent/mailpit:latest
+        ports:
+          - 1025:1025
+          - 8025:8025
+      minio:
+        image: quay.io/minio/minio:latest
+        env:
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
+          MINIO_DEFAULT_BUCKETS: badge-dev
+        ports:
+          - 9000:9000
+    env:
+      DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge
+      PLATFORM_SMTP_HOST: 127.0.0.1
+      PLATFORM_SMTP_PORT: "1025"
+      PLATFORM_SMTP_FROM: noreply@badge.local
+      PLATFORM_SMTP_SECURE: "false"
+      S3_ENDPOINT: http://127.0.0.1:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: badge-dev
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: yarn prisma generate
+      - run: yarn prisma db push --skip-generate
+      - run: yarn prisma db seed
+      # Navigateur Playwright (chromium) + dependances systeme.
+      - run: yarn playwright install --with-deps chromium
+      - run: yarn build
+      # Demarre le serveur Next en arriere-plan puis attend qu'il reponde.
+      - run: yarn start &
+      - run: npx wait-on http://localhost:3000 --timeout 120000
+      - run: yarn playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
