@@ -1,6 +1,8 @@
 import path from "node:path";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { getFile } from "@/lib/storage";
+import { readSecurityInstructions } from "@/lib/security-instructions";
+import { readTemplateOptions } from "./template-options";
 import type { TemplateContext } from "./types";
 
 // Forme du Registration attendue par buildTemplateContext. On accepte un objet
@@ -12,11 +14,17 @@ export type RegistrationForContext = {
   snapshotLastName: string;
   snapshotStructure: string;
   snapshotPhoto: string;
+  allAccessGranted: boolean;
   event: {
     title: string;
     date: Date;
     location: string;
     logo: string | null;
+    // Valeur brute de la colonne JSON.
+    securityInstructions: unknown;
+    banner: string | null;
+    // Valeur brute de la colonne JSON.
+    templateOptions: unknown;
   };
   category: {
     name: string;
@@ -33,6 +41,8 @@ export type BuildContextOptions = {
   // Racine du systeme de fichiers d'uploads. Par defaut process.cwd()/uploads.
   // Surcharger en test pour pointer sur des fixtures.
   uploadsRoot?: string;
+  // Noms des options image du template rendu (a charger en data URL).
+  optionImages?: string[];
 };
 
 function resolveBaseUrl(explicit?: string): string {
@@ -85,15 +95,31 @@ export async function buildTemplateContext(
   const baseUrl = resolveBaseUrl(options?.baseUrl);
   const verifyUrl = `${baseUrl}/verify/${encodeURIComponent(registration.id)}`;
 
-  const [photoDataUrl, logoDataUrl, qrCodeDataUrl] = await Promise.all([
+  const [photoDataUrl, logoDataUrl, bannerDataUrl, qrCodeDataUrl] = await Promise.all([
     internals.readFileAsDataUrl(registration.snapshotPhoto, uploadsRoot).catch(() => ""),
     registration.event.logo
       ? internals
           .readFileAsDataUrl(registration.event.logo, uploadsRoot)
           .catch(() => null)
       : Promise.resolve(null),
+    registration.event.banner
+      ? internals
+          .readFileAsDataUrl(registration.event.banner, uploadsRoot)
+          .catch(() => null)
+      : Promise.resolve(null),
     internals.generateQRCodeDataURL(verifyUrl),
   ]);
+
+  const templateOptions = readTemplateOptions(registration.event.templateOptions);
+  const templateOptionImages: Record<string, string> = {};
+  await Promise.all(
+    (options?.optionImages ?? []).map(async (name) => {
+      const key = templateOptions[name];
+      if (typeof key !== "string" || key === "") return;
+      const dataUrl = await internals.readFileAsDataUrl(key, uploadsRoot).catch(() => null);
+      if (dataUrl) templateOptionImages[name] = dataUrl;
+    }),
+  );
 
   return {
     participant: {
@@ -113,11 +139,16 @@ export async function buildTemplateContext(
       date: registration.event.date,
       location: registration.event.location,
       logoDataUrl,
+      securityInstructions: readSecurityInstructions(registration.event.securityInstructions),
+      bannerDataUrl,
+      templateOptions,
+      templateOptionImages,
     },
     badge: {
       id: registration.id,
       verifyUrl,
       qrCodeDataUrl,
+      allAccess: registration.allAccessGranted,
     },
   };
 }

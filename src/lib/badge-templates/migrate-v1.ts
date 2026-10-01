@@ -1,12 +1,12 @@
 // Portage de pdfStudio/src/server/migrate-v1.ts. Ecarts VOLONTAIRES avec l'original,
 // a reappliquer lors d'un futur re-portage :
-// - chemin d'import du moteur : "./engine/..." (copie scellee) au lieu de "../engine/..." ;
+// - le moteur vient du package @tigamadou/pdf-engine ;
 // - V1_VARIABLES_SANS_SAMPLE_IMAGE retire : seul le squelette du studio s'en servait ;
 // - `rest` construit par Object.fromEntries/filter au lieu d'une destructuration a
 //   variables ignorees, signalee par la regle no-unused-vars du lint ;
 // - garde `visibleIf === undefined` retire de migrateConditions : l'appelant ne la
 //   transmet que definie, la branche etait morte (et bloquait la couverture 100 %).
-import type { VariableDeclaration } from "./engine/declarative/manifest-types";
+import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 
 // Le vocabulaire du format v1, fige. C'est la seule survivance du domaine badge
 // dans le code : l'ancien SOURCES et l'ancien SAMPLE_CONTEXT fusionnes en une table

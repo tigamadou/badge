@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestEvent,
+  createTestEventMember,
   createTestRegistration,
   createTestUser,
   disconnectDb,
@@ -124,7 +125,7 @@ test.describe("Event — Badges", () => {
 
   // --- Actions UI ---------------------------------------------------------
 
-  test("La page de detail d'un badge s'affiche", async ({ page }) => {
+  test("La page d'un badge montre le PDF serveur et marque imprime", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-detail" });
     const admin = await makeEventAdminUser({ scope: "bdg-detail", eventId, orgId });
     const participant = await createTestUser({
@@ -142,27 +143,76 @@ test.describe("Event — Badges", () => {
 
     await page.goto(`/event/${eventId}/badges/${reg.id}`);
     await expect(page.getByRole("link", { name: /voir l'inscription/i })).toBeVisible();
+    await expect(page.locator('iframe[title="Aperçu du badge"]')).toBeVisible();
+    await expect(page.getByRole("link", { name: "Télécharger" })).toHaveAttribute(
+      "href",
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}?download=1`,
+    );
+
+    // Le PDF servi est celui du moteur.
+    const pdf = await page.request.get(`/api/org/${orgId}/events/${eventId}/badges/${reg.id}`);
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()["content-type"]).toBe("application/pdf");
+
+    // Marquage explicite.
+    await page.getByRole("button", { name: "Marquer imprimé" }).click();
+    await expect(page.getByText(/imprimé le/i)).toBeVisible();
+    const updated = await getDb().registration.findUnique({ where: { id: reg.id } });
+    expect(updated?.badgePrinted).toBe(true);
+    await expectLastActivity({ type: "BADGE_PRINTED", userId: admin.id, eventId });
   });
 
-  test("L'apercu par lot rend les badges demandes", async ({ page }) => {
+  test("La page de lot montre le PDF serveur et livre un ZIP", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-batch" });
     const admin = await makeEventAdminUser({ scope: "bdg-batch", eventId, orgId });
-    const participant = await createTestUser({
-      scope: "bdg-batch-p",
-      verified: true,
-      profile: true,
-    });
-    const reg = await createTestRegistration({
+    const participant = await createTestUser({ scope: "bdg-batch-p", verified: true, profile: true });
+    const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
+    const pendingUser = await createTestUser({ scope: "bdg-batch-q", verified: true, profile: true });
+    const pending = await createTestRegistration({
       eventId,
-      userId: participant.id,
+      userId: pendingUser.id,
       categoryId,
-      status: "APPROVED",
+      status: "PENDING",
     });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    // /badges/print est un apercu PDF : pas de bouton d'action.
-    const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id}`);
+    const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id},${pending.id},inconnu`);
     expect(res?.status()).toBe(200);
+    await expect(page.getByText("2 identifiant(s) ignoré(s) : introuvables ou non approuvés.")).toBeVisible();
+    await expect(page.locator('iframe[title="Aperçu du badge"]')).toHaveAttribute(
+      "src",
+      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
+    );
+
+    const zipLink = page.getByRole("link", { name: "Télécharger le lot (.zip)" });
+    const href = await zipLink.getAttribute("href");
+    const zip = await page.request.get(href!);
+    expect(zip.status()).toBe(200);
+    expect(zip.headers()["content-type"]).toBe("application/zip");
+
+    await page.getByRole("button", { name: "Marquer imprimés" }).click();
+    await expect(page.getByText("1 badge(s) marqué(s) imprimé(s).")).toBeVisible();
+    await expectLastActivity({ type: "BADGE_BATCH_PRINTED", userId: admin.id, eventId });
+  });
+
+  // --- Garde des pages -----------------------------------------------------
+
+  test("Un VIEWER pur est redirige hors des pages de badge, sans voir le participant", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-viewer" });
+    const viewer = await createTestEventMember({ scope: "bdg-viewer", eventId, orgId, role: "VIEWER" });
+    const participant = await createTestUser({ scope: "bdg-viewer-p", verified: true, profile: true });
+    const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
+    await loginAndEnter(page, viewer, { kind: "event", id: eventId });
+
+    for (const path of [`/event/${eventId}/badges/print?ids=${reg.id}`, `/event/${eventId}/badges/${reg.id}`]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(new RegExp(`/event/${eventId}$`));
+      // Le tableau de bord de l'evenement liste d'autres informations (accessibles au VIEWER) :
+      // on verifie donc l'absence du contenu propre aux pages de badge.
+      await expect(page.getByRole("heading", { name: "Impression par lot" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: /voir l'inscription/i })).toHaveCount(0);
+      await expect(page.getByText(reg.id)).toHaveCount(0);
+    }
   });
 
   // --- Etats --------------------------------------------------------------

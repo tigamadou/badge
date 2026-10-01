@@ -193,6 +193,18 @@ describe("withEventAuth", () => {
     expect(captured).toBe("STAFF");
   });
 
+  it("leve une erreur si ni minRole ni permission ne sont fournis (mauvais usage)", async () => {
+    const { org, event } = await setup();
+    const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
+    mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const handler = withEventAuth({}, async () => new Response("ok"));
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`);
+    await expect(
+      handler(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) }),
+    ).rejects.toThrow("withEventAuth: minRole ou permission requis");
+  });
+
   it("refuses archived event by default", async () => {
     const { org, event } = await setup();
     await prisma.event.update({ where: { id: event.id }, data: { archived: true } });

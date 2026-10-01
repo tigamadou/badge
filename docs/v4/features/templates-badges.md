@@ -33,10 +33,7 @@ absente, la résolution **échoue bruyamment** en nommant `make db-seed` : une b
 template est une anomalie d'exploitation, qu'il vaut mieux voir échouer qu'imprimer un
 badge vide.
 
-Le moteur de rendu (`src/lib/badge-templates/engine/`) est une **copie scellée** de
-`pdfStudio/src/engine/`. On ne le modifie jamais ici : corriger dans pdfStudio, puis
-`make sync-engine`. Un test de parité (`engine-parity.test.ts`) refuse toute édition
-faite sur place ; `engine/SOURCE.md` dit de quel commit pdfStudio la copie provient.
+Le moteur de rendu est le package `@tigamadou/pdf-engine`, publié depuis pdfStudio sur GitHub Packages. Monter de version : `yarn add @tigamadou/pdf-engine@<version>`, puis `make verify-engine` (voir « Monter de version le moteur »).
 Le moteur ne connaît aucun nom métier : il rend un document sur un dictionnaire de
 valeurs, que `build-values.ts` dérive du contexte d'inscription et de la table de
 liaison du template.
@@ -60,7 +57,7 @@ l'archive (contrôles + `parseManifest`) et n'écrit rien. Il rend `variables` (
 `kind`, libellé, tels que déclarés par le manifeste), `suggested` (pré-remplissage :
 `suggestBindings` ne propose une source que si le nom de la variable est exactement
 celui d'une source connue **et** que les types s'accordent — aucune heuristique sur
-les noms proches) et `sources` (les 15 entrées de `SOURCE_KINDS`, avec leur type).
+les noms proches) et `sources` (les 17 entrées de `SOURCE_KINDS`, avec leur type).
 
 **2. L'écran de liaison.** `BadgeTemplateInstaller.tsx` affiche un tableau, une ligne
 par variable : nom, type, et un sélecteur de source **filtré aux sources du même
@@ -154,19 +151,12 @@ les images et les polices, composer les blocs, générer le paquet à télévers
 
 > Historique : le studio a d'abord vécu dans ce dépôt (`studio/`, specs 16, 18, 19)
 > avant d'être extrait en projet autonome. Depuis la spec 20, le moteur de rendu
-> (`src/engine/` côté pdfStudio) **fait autorité** : l'application en héberge une
-> **copie scellée** dans `src/lib/badge-templates/engine/`, resynchronisée par
-> `make sync-engine`, jamais éditée sur place. Une évolution du format se fait donc
-> dans pdfStudio, puis se reporte ici — plus jamais l'inverse.
+> **fait autorité** dans pdfStudio et l'application le consomme comme dépendance
+> versionnée. Le moteur de rendu est le package `@tigamadou/pdf-engine`, publié depuis pdfStudio sur GitHub Packages. Monter de version : `yarn add @tigamadou/pdf-engine@<version>`, puis `make verify-engine` (voir « Monter de version le moteur »). Une évolution du format se fait donc dans pdfStudio, puis se reporte ici — plus jamais l'inverse.
 
 Le studio crée les templates ; **l'application les installe et les rend** — il
-n'existe plus de générateur de squelette côté badge. Pour un usage hors interface,
-sur un `manifest.json` déjà écrit à la main sous `badge-templates/<nom>/` (dossier
-gitignoré) :
-
-```bash
-make pack-badge-template NAME=salon-2027  # produit l'archive
-```
+n'existe côté badge ni générateur de squelette ni outil d'empaquetage : toute archive
+installable sort du bouton **Générer le paquet** du studio.
 
 Le studio est un outil de développement local, jamais déployé, qui ne connaît ni la
 base ni le stockage. Son interface est organisée **en trois colonnes**, sur un thème
@@ -204,17 +194,14 @@ L'interface est écrite en **Preact + htm sans étape de build** : la bibliothè
 vendorisée (version figée, licence MIT) dans le projet pdfStudio (`src/public/vendor/`),
 les composants dans `src/public/ui/`.
 
-Côté pdfStudio, l'atelier est `templates/<nom>/` (non versionné). Côté badge,
-`badge-templates/<nom>/` — un dossier **gitignoré**, à ne pas confondre avec
-`prisma/badge-templates/`, qui contient les paquets de référence installés par le
-seed — reste disponible comme atelier manuel pour qui préfère écrire un
-`manifest.json` à la main et l'empaqueter avec `make pack-badge-template`, sans
-passer par le studio.
+L'atelier est `templates/<nom>/` côté pdfStudio (non versionné). Côté badge, le seul
+dossier de paquets est `prisma/badge-templates/`, qui contient les paquets de référence
+installés par le seed.
 
-`pack-badge-template` **valide le manifeste avant d'écrire l'archive** et refuse d'en
-produire une invalide : mieux vaut échouer à l'empaquetage, où le message est immédiat,
-qu'au téléversement. En particulier, un `preview` déclaré sans image déposée fait échouer
-l'empaquetage — c'est le rappel le plus utile possible.
+> Historique : jusqu'à cette bascule, un atelier gitignoré `badge-templates/<nom>/` et
+> la commande `make pack-badge-template` permettaient d'empaqueter un manifeste écrit à
+> la main sans passer par le studio. Ils ont été retirés : le studio est désormais
+> l'unique chemin de création.
 
 ### Où consulter un template
 
@@ -265,7 +252,7 @@ paquet produirait un badge cassé.
 
 ### Contrôles appliqués à l'archive
 
-`src/lib/badge-templates/engine/package-reader.ts` (copie scellée du moteur) est le **seul** module autorisé à ouvrir une
+`@tigamadou/pdf-engine/package` (`readTemplatePackage`, dans le package du moteur) est le **seul** module autorisé à ouvrir une
 archive. Tout est vérifié avant extraction.
 
 | Contrôle | Valeur | Raison |
@@ -285,8 +272,8 @@ renommée en `.png` est refusée.
 
 Le moteur v2 ne connaît **aucun nom métier** : un manifeste déclare son propre
 vocabulaire dans `variables`, et les blocs y font référence par leur nom. La source
-de vérité du format est `src/lib/badge-templates/engine/declarative/schema.ts` (le
-schéma Zod) et `manifest-types.ts` (les types) — ce document en donne une lecture,
+de vérité du format est le schéma Zod et les types du package `@tigamadou/pdf-engine` (`declarative/schema` et
+`declarative/manifest-types`) — ce document en donne une lecture,
 pas une resynthèse : en cas d'écart, le schéma fait foi.
 
 ```json
@@ -442,7 +429,7 @@ deux formes sont légales depuis le format v2.
 Un manifeste **ne référence plus** de vocabulaire câblé dans le moteur : il déclare
 des variables aux noms libres (`variables`, ci-dessus), et c'est une **table de
 liaison** — propre à l'application, choisie à l'installation — qui dit quelle donnée
-métier alimente chaque variable. Le moteur (`engine/`) ne connaît aucune de ces 15
+métier alimente chaque variable. Le moteur (`@tigamadou/pdf-engine`) ne connaît aucune de ces 17
 entrées ; elles vivent dans `src/lib/badge-templates/bindings.ts`
 (`SOURCE_KINDS`), hors du dossier scellé :
 
@@ -458,6 +445,15 @@ entrées ; elles vivent dans `src/lib/badge-templates/bindings.ts`
 | `event.logoDataUrl` | image |
 | `badge.id`, `badge.verifyUrl` | texte |
 | `badge.qrCodeDataUrl` | image |
+
+Deux sources ont été ajoutées après les quinze d'origine :
+
+| Source | Type | Donnée |
+|---|---|---|
+| `badge.allAccess` | booléen | All Access accordé à l'inscription (bouton All Access de la fiche participant) |
+| `event.securityInstructions` | liste | Consignes de sécurité saisies dans les paramètres de l'événement (une par ligne, 30 au plus, 500 caractères) |
+
+L'initiale d'une catégorie ne demande aucune source : le template l'obtient avec `{categoryName|initiale}` (moteur ≥ 1.1.0), `categoryName` étant lié à `category.name`.
 
 `validateBindings` refuse une variable liée à une source d'un type différent — la
 même garde que portait autrefois le `kind` de l'ancienne liste blanche `SOURCES`,
@@ -682,9 +678,52 @@ pdfStudio) refuse un manifeste `formatVersion: 1`, le message renvoie vers
 `make migrate-template NAME=<famille>` — la commande **de pdfStudio**, pour un
 manifeste d'atelier. Pour une **ligne déjà installée** dans ce dépôt, l'équivalent
 est `make migrate-installed-templates` ci-dessus : le message du moteur ne le sait
-pas, il est identique des deux côtés puisque le moteur est une copie scellée.
+pas, il est identique des deux côtés puisque le moteur est le même package.
 
 `make validate-badge-templates` vérifie qu'aucune référence n'est orpheline, que la
 famille `default` existe bien, et — depuis la spec 20 — signale aussi toute ligne restée
 au format v1 et toute table de liaison incomplète (variable non décidée, source inconnue,
 type incompatible).
+
+## Monter de version le moteur
+
+Le moteur de rendu est le package `@tigamadou/pdf-engine` (publié depuis pdfStudio).
+Les badges sont re-rendus à la demande : une nouvelle version du moteur redessine
+aussi les badges déjà émis. Avant chaque déploiement d'une nouvelle version :
+
+1. `yarn add @tigamadou/pdf-engine@<version>` (conteneur de dev), puis `make test`.
+2. `make verify-engine` : rend chaque template installé (**archivés compris** : leurs
+   badges déjà émis restent rendables) avec ses échantillons et ses préréglages et
+   compare à la référence. Un template **refusé** bloque (code 1). Un rendu **changé**,
+   ou un template installé depuis la dernière référence, régénère son épreuve
+   `proof-engine-<version>.pdf` à côté de `proof.pdf` : les comparer. Les épreuves sont
+   écrites dans le S3 de l'environnement **même sans `--accept`**. Pour en ouvrir une :
+   `/api/files/<proofPath>` (la route sert les clés `badge-templates/`) ou la console MinIO.
+3. Même vérification sur les données réelles, sans redéployer l'application :
+   `make verify-engine-preprod`, puis `make verify-engine-prod`.
+4. Si les changements sont acceptés : `--accept` est **par environnement** (chacun a sa
+   propre référence dans son S3) : `make verify-engine-preprod ARGS=--accept` /
+   `make verify-engine-prod ARGS=--accept`, seulement après examen des épreuves de cet
+   environnement. Puis `make deploy-preprod` / `make deploy-prod`.
+
+Après l'installation d'un nouveau template, lancer `make verify-engine-prod ARGS=--accept`
+pour qu'il entre dans la référence.
+
+La première fois, aucune référence n'existe : tous les templates sont « sans
+référence » ; `ARGS=--accept` l'enregistre. Premier déploiement : l'application
+embarquait auparavant une version plus ancienne du moteur ; la première référence est
+enregistrée avec la 1.0.0. Comparer l'épreuve `proof-engine-1.0.0.pdf` de chaque
+template à son `proof.pdf` avant d'accepter.
+
+Avant le premier déploiement : vérifier que le serveur a `NPM_TOKEN` dans
+`~/prod/badge/.env` et `~/preprod/badge/.env`, et `docker compose version` >= 2.23.
+`make verify-engine-prod` exerce le même chemin de secret de build sans toucher à
+l'application.
+
+Pour que pdfStudio protège les templates de production dans son corpus de
+non-régression : `make export-engine-corpus-prod`, puis déposer le contenu de
+`backups/engine-corpus/` dans `pdfStudio/packages/engine/corpus/`.
+
+Une version **majeure** du moteur peut exiger de migrer les layouts stockés : suivre
+les instructions de sa note de version (même patron que
+`scripts/migrate-installed-templates-v2.ts`), puis `make verify-engine`.

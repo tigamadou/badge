@@ -1436,6 +1436,15 @@
     postcss "^8.5.6"
     tailwindcss "4.2.4"
 
+"@tigamadou/pdf-engine@^1.2.0":
+  version "1.2.0"
+  resolved "https://npm.pkg.github.com/download/@tigamadou/pdf-engine/1.2.0/1a2ef08ac591af08f3448be4c79f7b1215802729#1a2ef08ac591af08f3448be4c79f7b1215802729"
+  integrity sha512-9N5uM/KlN/lT5Csi9eTFmdsfTIZeV/3TuIEEN/9wnPFSKeZM4+/tg4NpL3BBC+VfTgRheuHHWVFICozxFW1yWg==
+  dependencies:
+    jszip "^3.10.1"
+    qrcode "^1.5.4"
+    zod "^4.4.3"
+
 "@tybys/wasm-util@^0.10.0", "@tybys/wasm-util@^0.10.1":
   version "0.10.2"
   resolved "https://registry.yarnpkg.com/@tybys/wasm-util/-/wasm-util-0.10.2.tgz#12b3a1b33db1f9cad4ddff1f604ab7dd00bf464e"
@@ -5220,3 +5229,8 @@ yoga-layout@^3.2.1:
   version "4.4.3"
   resolved "https://registry.yarnpkg.com/zod/-/zod-4.4.3.tgz#b680f172885d18bbebf21a834ea25e55a1bbf356"
   integrity sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==
+
+zod@^4.4.3:
+  version "4.6.5"
+  resolved "https://registry.yarnpkg.com/zod/-/zod-4.6.5.tgz#e3af3edbdc260239c52f73caad05dbbffe6e82cd"
+  integrity sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==

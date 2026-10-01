@@ -35,7 +35,13 @@ jobs:
           node-version: 22
           cache: yarn
       - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       # ESLint : 0 erreur = gate (les warnings au niveau baseline sont toleres).
       - run: yarn lint
@@ -49,7 +55,13 @@ jobs:
           node-version: 22
           cache: yarn
       - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       - run: yarn tsc --noEmit
 
@@ -75,7 +87,13 @@ jobs:
           node-version: 22
           cache: yarn
       - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       # Cree le schema sur la MySQL de service (les tests d'integration font leur propre seed
       # via deleteMany + create ; pas besoin de db-seed global).
@@ -102,7 +120,7 @@ jobs:
           - 1025:1025
           - 8025:8025
       minio:
-        image: bitnami/minio:latest
+        image: quay.io/minio/minio:latest
         env:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
@@ -128,7 +146,13 @@ jobs:
           node-version: 22
           cache: yarn
       - run: corepack enable
+      # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
+      - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       - run: yarn prisma db push --skip-generate
       - run: yarn prisma db seed

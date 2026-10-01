@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
+import {
+  MAX_SECURITY_INSTRUCTIONS,
+  MAX_SECURITY_INSTRUCTION_CHARS,
+  cleanSecurityInstructions,
+  readSecurityInstructions,
+} from "@/lib/security-instructions";
+import { readTemplateOptions, templateOptionsSchema } from "@/lib/badge-templates/template-options";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
   // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
@@ -18,6 +26,9 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       endDate: true,
       description: true,
       logo: true,
+      banner: true,
+      templateOptions: true,
+      securityInstructions: true,
       registrationOpen: true,
       archived: true,
       createdAt: true,
@@ -26,7 +37,13 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       _count: { select: { registrations: true, categories: true, memberships: true } },
     },
   });
-  return NextResponse.json({ event });
+  return NextResponse.json({
+    event: {
+      ...event,
+      securityInstructions: readSecurityInstructions(event.securityInstructions),
+      templateOptions: readTemplateOptions(event.templateOptions),
+    },
+  });
 });
 
 const patchSchema = z.object({
@@ -41,7 +58,13 @@ const patchSchema = z.object({
     .optional(),
   description: z.string().max(5000).nullable().optional(),
   logo: z.string().nullable().optional(),
+  banner: z.string().nullable().optional(),
+  templateOptions: templateOptionsSchema.optional(),
   registrationOpen: z.boolean().optional(),
+  securityInstructions: z
+    .array(z.string().max(MAX_SECURITY_INSTRUCTION_CHARS))
+    .max(MAX_SECURITY_INSTRUCTIONS)
+    .optional(),
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
 });
 
@@ -54,7 +77,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
 
   const before = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { registrationOpen: true, date: true },
+    select: { registrationOpen: true, date: true, securityInstructions: true, templateOptions: true },
   });
 
   // v4 (plan 07) : la date de fin se compare a la date effective apres patch.
@@ -77,7 +100,28 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
     data.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
   }
   if (parsed.data.logo !== undefined) data.logo = parsed.data.logo;
+  if (parsed.data.banner !== undefined) data.banner = parsed.data.banner;
+  if (parsed.data.templateOptions !== undefined) {
+    // Les listes sont nettoyees comme les consignes (espaces, lignes vides).
+    const cleanedOptions = Object.fromEntries(
+      Object.entries(parsed.data.templateOptions).map(([key, value]) => [
+        key,
+        Array.isArray(value) ? cleanSecurityInstructions(value) : value,
+      ]),
+    );
+    // Ecrit uniquement si l'objet differe de celui stocke (journal limite aux vrais changements) ; comparaison insensible a l'ordre des cles (MySQL reordonne le JSON).
+    if (!isDeepStrictEqual(readTemplateOptions(before?.templateOptions), cleanedOptions)) {
+      data.templateOptions = cleanedOptions;
+    }
+  }
   if (parsed.data.registrationOpen !== undefined) data.registrationOpen = parsed.data.registrationOpen;
+  if (parsed.data.securityInstructions !== undefined) {
+    const cleaned = cleanSecurityInstructions(parsed.data.securityInstructions);
+    // Ecrit uniquement si la liste nettoyee differe de celle stockee.
+    if (JSON.stringify(readSecurityInstructions(before?.securityInstructions)) !== JSON.stringify(cleaned)) {
+      data.securityInstructions = cleaned;
+    }
+  }
   if (parsed.data.slug !== undefined && session.user.isStaff) data.slug = parsed.data.slug;
 
   if (Object.keys(data).length === 0) {
@@ -106,7 +150,13 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
       });
     }
 
-    return NextResponse.json({ event });
+    return NextResponse.json({
+      event: {
+        ...event,
+        securityInstructions: readSecurityInstructions(event.securityInstructions),
+        templateOptions: readTemplateOptions(event.templateOptions),
+      },
+    });
   } catch (err) {
     if ((err as { code?: string }).code === "P2002") {
       return NextResponse.json({ error: "SLUG_TAKEN" }, { status: 409 });

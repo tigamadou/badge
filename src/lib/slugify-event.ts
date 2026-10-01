@@ -8,7 +8,7 @@ export function slugifyEvent(input: string): string {
 }
 
 export async function uniqueEventSlug(title: string): Promise<string> {
-  const base = slugifyEvent(title) || "event";
+  const base = slugifyEvent(title);
   let candidate = base;
   let i = 2;
   // Le caller traite la rare race TOCTOU via try/catch sur P2002.

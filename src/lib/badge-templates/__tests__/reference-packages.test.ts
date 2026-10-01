@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
-import { parseManifest } from "../engine/declarative/schema";
+import { parseManifest } from "@tigamadou/pdf-engine";
 import { validateBindings } from "../bindings";
 import { REFERENCE_DIR } from "../install";
 

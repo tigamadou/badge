@@ -38,6 +38,7 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
     family: "salon-2027",
     label: "Badge Salon",
     description: "Un badge de test.",
+    category: "badge",
     page: { widthPx: 1011, heightPx: 638, count: 1 },
     variables: [
       { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
@@ -59,19 +60,16 @@ function manifestOf(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// Table de liaison complete pour ce fixture.
-const BINDINGS = { "participant.firstName": "participant.firstName", structure: "participant.structure" };
-
 async function archiveOf(files: Record<string, Buffer | string>): Promise<Buffer> {
   const zip = new JSZip();
   for (const [path, content] of Object.entries(files)) zip.file(path, content);
   return zip.generateAsync({ type: "nodebuffer" });
 }
 
-function requestWith(archive: Buffer, bindings: string = JSON.stringify(BINDINGS)): NextRequest {
+function requestWith(archive: Buffer, bindings?: string): NextRequest {
   const form = new FormData();
   form.set("archive", new File([new Uint8Array(archive)], "template.zip", { type: "application/zip" }));
-  form.set("bindings", bindings);
+  if (bindings !== undefined) form.set("bindings", bindings);
   return new NextRequest("http://localhost/api/platform/badge-templates", {
     method: "POST",
     body: form,
@@ -246,52 +244,60 @@ describe("POST /api/platform/badge-templates", () => {
     spy.mockRestore();
   });
 
-  it("refuse une installation sans champ de liaisons", async () => {
+  it("calcule les liaisons cote serveur et ignore celles du client", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
-    const archive = await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) });
+    const expected = { "participant.firstName": "participant.firstName", structure: "option" };
 
-    const { POST } = await import("../route");
-    const form = new FormData();
-    form.set("archive", new File([new Uint8Array(archive)], "t.zip"));
-    const res = await POST(
-      new NextRequest("http://localhost/api/platform/badge-templates", { method: "POST", body: form }),
-    );
-    expect(res.status).toBe(400);
-    expect((await res.json()).errors).toEqual(["liaisons : champ manquant."]);
+    for (const sent of [undefined, JSON.stringify({ "participant.firstName": null })]) {
+      await prisma.installedBadgeTemplate.deleteMany({});
+      const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }), sent);
+      expect(res.status).toBe(201);
+      const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: (await res.json()).id } });
+      expect(row?.bindings).toEqual(expected);
+    }
   });
 
-  it("refuse des liaisons illisibles", async () => {
+  it("refuse un paquet a ancien nom (400)", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+    const manifest = manifestOf({
+      variables: [{ name: "firstName", kind: "text", label: "Prénom", sample: "Awa" }],
+      blocks: [
+        {
+          type: "text",
+          page: 1,
+          x: 4,
+          y: 4,
+          w: 400,
+          h: 60,
+          text: "{firstName}",
+          style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
+        },
+      ],
+    });
 
-    const res = await post(
-      await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }),
-      "{pas du json",
-    );
+    const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifest) }));
     expect(res.status).toBe(400);
-    expect((await res.json()).errors).toEqual(["liaisons : JSON illisible."]);
+    expect((await res.json()).errors).toEqual([
+      'variable "firstName" : ancien nom, réexporter le template depuis le studio (attendu "participant.firstName").',
+    ]);
+    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
   });
 
-  it.each(["null", "[]", "42"])("refuse des liaisons qui ne sont pas un objet (%s)", async (raw) => {
+  it("refuse une cle du contrat declaree avec un mauvais type (400)", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+    const manifest = manifestOf({
+      variables: [{ name: "participant.firstName", kind: "image", label: "Prénom" }],
+      blocks: [{ type: "rect", page: 1, x: 0, y: 0, w: 10, h: 10, fill: "#000000" }],
+    });
 
-    const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }), raw);
+    const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifest) }));
     expect(res.status).toBe(400);
-    expect((await res.json()).errors).toEqual(["liaisons : objet attendu."]);
-  });
-
-  it("refuse une installation dont les liaisons sont incompletes", async () => {
-    const staff = await makeStaff("STAFF_ADMIN");
-    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
-
-    const res = await post(
-      await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }),
-      JSON.stringify({}),
-    );
-    expect(res.status).toBe(400);
-    expect((await res.json()).errors[0]).toContain("aucune source choisie");
+    expect((await res.json()).errors).toEqual([
+      'variable "participant.firstName" : badge la fournit en text, déclarée en image.',
+    ]);
     expect(await prisma.installedBadgeTemplate.count()).toBe(0);
   });
 

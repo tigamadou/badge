@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
-import { renderToJson } from "../engine/declarative/__tests__/helpers/render-to-json";
+import { renderToJson } from "@tigamadou/pdf-engine/testing";
 import { resolveTemplate, listAvailableTemplates, templateExists, previewUrl } from "../resolve";
 import { ensureReferenceTemplates, defaultTemplateId } from "../install";
 
@@ -247,6 +247,101 @@ describe("resolveTemplate", () => {
     // Base sans seed : mieux vaut echouer bruyamment qu'imprimer un badge vide.
     await expect(resolveTemplate("inconnu-xyz")).rejects.toThrow(/make db-seed/);
     warn.mockRestore();
+  });
+
+  it("precharge l'image d'une puce de liste", async () => {
+    await prisma.installedBadgeTemplate.deleteMany({});
+    await uploadFile("badge-templates/puce/assets/puce.png", Buffer.from("PUCE"), "image/png");
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "consignes",
+        version: 1,
+        label: "Consignes",
+        description: "",
+        pages: 1,
+        pageWidthPx: 300,
+        pageHeightPx: 200,
+        layout: {
+          formatVersion: 2,
+          family: "consignes",
+          label: "Consignes",
+          description: "",
+          category: "badge",
+          page: { widthPx: 300, heightPx: 200, count: 1 },
+          variables: [{ name: "consignes", kind: "list", label: "Consignes", sample: ["Un"] }],
+          blocks: [
+            {
+              type: "list",
+              page: 1,
+              x: 10,
+              y: 10,
+              w: 200,
+              h: 100,
+              source: "consignes",
+              bullet: { type: "image", sizePx: 8, gapPx: 4, asset: "assets/puce.png" },
+              items: { maxItems: 5, maxChars: 100, maxLines: 2, lineHeightPx: 12 },
+              style: { sizePx: 10, color: "#000000" },
+            },
+          ],
+        },
+        bindings: { consignes: null },
+        assetPrefix: "badge-templates/puce/",
+        formatVersion: 2,
+        installedById: "u1",
+      },
+    });
+
+    const template = await resolveTemplate(row.id);
+    const out = renderToJson(<template.Component values={{ consignes: ["Restez dans la zone."] }} />);
+    expect(out.texts).toContain("Restez dans la zone.");
+    expect(out.images).toEqual([`data:image/png;base64,${Buffer.from("PUCE").toString("base64")}`]);
+  });
+
+  it("ne precharge rien pour une puce qui n'est pas une image", async () => {
+    await prisma.installedBadgeTemplate.deleteMany({});
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "consignes",
+        version: 1,
+        label: "Consignes",
+        description: "",
+        pages: 1,
+        pageWidthPx: 300,
+        pageHeightPx: 200,
+        layout: {
+          formatVersion: 2,
+          family: "consignes",
+          label: "Consignes",
+          description: "",
+          category: "badge",
+          page: { widthPx: 300, heightPx: 200, count: 1 },
+          variables: [{ name: "consignes", kind: "list", label: "Consignes", sample: ["Un"] }],
+          blocks: [
+            {
+              type: "list",
+              page: 1,
+              x: 10,
+              y: 10,
+              w: 200,
+              h: 100,
+              source: "consignes",
+              bullet: { type: "disc", sizePx: 3, gapPx: 4, color: "#000000" },
+              items: { maxItems: 5, maxChars: 100, maxLines: 2, lineHeightPx: 12 },
+              style: { sizePx: 10, color: "#000000" },
+            },
+          ],
+        },
+        bindings: { consignes: null },
+        assetPrefix: "badge-templates/puce/",
+        formatVersion: 2,
+        installedById: "u1",
+      },
+    });
+
+    const template = await resolveTemplate(row.id);
+    const out = renderToJson(<template.Component values={{ consignes: ["Restez dans la zone."] }} />);
+    expect(out.texts).toContain("Restez dans la zone.");
+    expect(out.images).toEqual([]);
   });
 });
 

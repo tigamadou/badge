@@ -7,6 +7,9 @@ import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/FormControls";
 import { Alert } from "@/components/ui/Feedback";
 import { Dropzone, FileBox } from "@/components/ui/FileBox";
+import { linesToInstructions } from "@/lib/security-instructions";
+import { BadgeOptionsFields, type BadgeOption } from "@/components/event/BadgeOptionsFields";
+import { mergeTemplateOptions, normalizeEditedOptions, type OptionValue } from "@/lib/badge-templates/template-options";
 
 type Initial = {
   event: {
@@ -18,10 +21,15 @@ type Initial = {
     description: string | null;
     slug: string;
     logo: string | null;
+    banner: string | null;
+    securityInstructions: string[];
     registrationOpen: boolean;
   };
   settings: { contactEmail: string | null; contactPhone: string | null };
   resolved: { contactEmail: string; contactPhone: string };
+  options: BadgeOption[];
+  optionValues: Record<string, OptionValue | null>;
+  storedOptions: Record<string, unknown>;
 };
 
 export function EventSettingsForm({
@@ -40,7 +48,15 @@ export function EventSettingsForm({
   const [description, setDescription] = useState(initial.event.description ?? "");
   const [logo, setLogo] = useState<string | null>(initial.event.logo);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [banner, setBanner] = useState<string | null>(initial.event.banner);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [optionValues, setOptionValues] = useState(initial.optionValues);
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
+  // Brouillon brut : re-deriver la zone de texte depuis la liste nettoyee
+  // effacerait la ligne vide qu'on vient d'ouvrir avec Entree.
+  const [instructionsDraft, setInstructionsDraft] = useState(
+    initial.event.securityInstructions.join("\n"),
+  );
   const [contactEmail, setContactEmail] = useState(initial.settings.contactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(initial.settings.contactPhone ?? "");
   const [msg, setMsg] = useState<string | null>(null);
@@ -62,6 +78,36 @@ export function EventSettingsForm({
     setLogo(storageKey);
   }
 
+  async function uploadBanner(files: FileList) {
+    const file = files[0];
+    if (!file) return;
+    setUploadingBanner(true);
+    setMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+    setUploadingBanner(false);
+    if (!res.ok) {
+      setMsg("Échec de l'envoi de la bannière.");
+      return;
+    }
+    const { storageKey } = await res.json();
+    setBanner(storageKey);
+  }
+
+  async function uploadOptionImage(file: File): Promise<string | null> {
+    setMsg(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+    if (!res.ok) {
+      setMsg("Échec de l'envoi de l'image.");
+      return null;
+    }
+    const { storageKey } = await res.json();
+    return storageKey;
+  }
+
   async function saveEvent(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
@@ -75,18 +121,30 @@ export function EventSettingsForm({
         endDate: endDate || null,
         description: description || null,
         logo,
+        banner,
+        securityInstructions: linesToInstructions(instructionsDraft),
         registrationOpen,
+        ...(initial.options.length > 0
+          ? { templateOptions: mergeTemplateOptions(
+                initial.storedOptions,
+                normalizeEditedOptions(initial.options, optionValues),
+              ) }
+          : {}),
       }),
     });
     if (res.ok) {
       setMsg("Événement mis à jour.");
     } else {
       const data = await res.json().catch(() => null);
-      setMsg(
-        data?.issues?.[0]?.message === "endDate < date"
-          ? "La date de fin doit être postérieure ou égale à la date de l'événement."
-          : "Échec de la mise à jour.",
-      );
+      if (data?.issues?.[0]?.message === "endDate < date") {
+        setMsg("La date de fin doit être postérieure ou égale à la date de l'événement.");
+      } else if (data?.issues?.[0]?.path?.[0] === "securityInstructions") {
+        setMsg("Consignes : 30 au plus, 500 caractères chacune.");
+      } else if (data?.issues?.[0]?.path?.[0] === "templateOptions") {
+        setMsg("Options du badge : valeur refusée (texte de 500 caractères au plus, 30 lignes au plus).");
+      } else {
+        setMsg("Échec de la mise à jour.");
+      }
     }
   }
 
@@ -110,7 +168,7 @@ export function EventSettingsForm({
         <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;événement</h1>
         <p className="mt-0.5 text-sm text-slate-400">Informations, inscriptions et contact</p>
       </div>
-      {msg && <Alert tone={msg.includes("Échec") ? "err" : "success"}>{msg}</Alert>}
+      {msg && <Alert tone={/Échec|refusée/.test(msg) ? "err" : "success"}>{msg}</Alert>}
 
       <Card>
         <CardHead title="Informations" />
@@ -162,6 +220,46 @@ export function EventSettingsForm({
                 />
               )}
             </div>
+            <div className="space-y-2">
+              <span className="block text-sm font-medium text-slate-700">Bannière</span>
+              {banner ? (
+                <FileBox
+                  icon="file"
+                  thumbUrl={`/api/files/${banner}`}
+                  title="Bannière de l'événement"
+                  subtitle={banner}
+                  action={
+                    <Button type="button" variant="secondary" onClick={() => setBanner(null)}>
+                      Retirer
+                    </Button>
+                  }
+                />
+              ) : (
+                <Dropzone
+                  onFiles={uploadBanner}
+                  accept="image/jpeg,image/png,image/webp"
+                  title={uploadingBanner ? "Envoi…" : "Déposer une bannière ou cliquer"}
+                  subtitle="JPEG, PNG ou WebP — 5 Mo max"
+                />
+              )}
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="event-security-instructions" className="block text-sm font-medium text-slate-700">
+                Consignes de sécurité (optionnelles)
+              </label>
+              <textarea
+                id="event-security-instructions"
+                value={instructionsDraft}
+                onChange={(e) => setInstructionsDraft(e.target.value)}
+                rows={5}
+                placeholder="Une consigne par ligne"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-slate-400">
+                Imprimées sur les badges dont le template affiche les consignes. Une par ligne,
+                30 au plus, 500 caractères chacune.
+              </p>
+            </div>
             <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
             <p className="text-xs text-slate-400">
               Slug : <code className="font-mono text-slate-600">{initial.event.slug}</code> (modifiable par le staff
@@ -173,6 +271,13 @@ export function EventSettingsForm({
           </form>
         </CardBody>
       </Card>
+
+      <BadgeOptionsFields
+        options={initial.options}
+        values={optionValues}
+        onChange={(name, value) => setOptionValues((prev) => ({ ...prev, [name]: value }))}
+        onUpload={uploadOptionImage}
+      />
 
       <Card>
         <CardHead title="Contact (surcharges)" subtitle="Laisser vide pour hériter du niveau organisation." />

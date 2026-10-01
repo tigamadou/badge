@@ -2,10 +2,9 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { deletePrefix, uploadFile } from "@/lib/storage";
-import { parseManifest } from "./engine/declarative/schema";
-import type { TemplateManifest } from "./engine/declarative/manifest-types";
-import type { PackageAsset } from "./engine/package-reader";
-import { renderProof } from "./engine/render-proof";
+import { parseManifest, type TemplateManifest } from "@tigamadou/pdf-engine";
+import type { PackageAsset } from "@tigamadou/pdf-engine/package";
+import { renderProof } from "@tigamadou/pdf-engine/proof";
 import { validateBindings, type Bindings } from "./bindings";
 
 export const REFERENCE_DIR = "prisma/badge-templates";

@@ -24,10 +24,11 @@ function manifestOf(family: string) {
     family,
     label: "Badge E2E",
     description: "Template installe par un test e2e.",
+    category: "badge",
     page: { widthPx: 1011, heightPx: 638, count: 1 },
     variables: [
       { name: "participant.firstName", kind: "text", label: "Prénom", sample: "Awa" },
-      { name: "structure", kind: "text", label: "Structure", sample: "Organisation" },
+      { name: "participant.lastName", kind: "text", label: "Nom", sample: "Diallo" },
     ],
     blocks: [
       {
@@ -37,25 +38,25 @@ function manifestOf(family: string) {
         y: 4,
         w: 400,
         h: 60,
-        text: "{participant.firstName} — {structure}",
+        text: "{participant.firstName} {participant.lastName}",
         style: { sizePx: 50, color: "#0f172a", overflow: "clip" },
       },
     ],
   });
 }
 
-// Depose l'archive, traverse l'ecran de liaison (la seule variable non suggeree,
-// "structure", est liee a participant.structure) et lance l'installation. Les
-// tests qui n'examinent pas l'ecran de liaison en detail passent par ce raccourci.
+// Ouvre la modale, depose l'archive, attend le recapitulatif puis lance l'installation
+// et attend le message de succes. Ne ferme pas la modale.
 async function installViaUi(page: Page, archive: string) {
+  await page.getByRole("button", { name: "Installer un template", exact: true }).click();
   await page.setInputFiles('input[type="file"]', archive);
-  await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toBeVisible({
-    timeout: 15_000,
-  });
-  await page
-    .getByRole("combobox", { name: "Source de la variable structure" })
-    .selectOption("participant.structure");
-  await page.getByRole("button", { name: "Installer" }).click();
+  await expect(page.getByText(/Données de badge/)).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Installer", exact: true }).click();
+}
+
+// Le bouton « Fermer » du recapitulatif suit, dans le DOM, la croix d'en-tete du dialogue.
+function closeButton(page: Page) {
+  return page.getByRole("button", { name: "Fermer", exact: true }).last();
 }
 
 test.describe("Platform — Templates de badge", () => {
@@ -75,41 +76,20 @@ test.describe("Platform — Templates de badge", () => {
     await expect(page).toHaveURL(/\/platform\/badge-templates/);
     await expect(page.getByRole("heading", { name: /templates de badge/i })).toBeVisible();
 
+    await page.getByRole("button", { name: "Installer un template", exact: true }).click();
     await page.setInputFiles('input[type="file"]', archive);
-    await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toBeVisible({
-      timeout: 15_000,
-    });
 
-    // participant.firstName est suggeree d'office (identite nom-source) ; structure
-    // reste a decider, et le bouton refuse de s'activer tant que ce n'est pas fait.
-    // Chaque select porte un aria-label nommant sa variable : la cible directement,
-    // sans ambiguite avec les options qu'il propose (memes sources pour les deux
-    // variables, toutes deux de type texte).
-    const firstNameSelect = page.getByRole("combobox", {
-      name: "Source de la variable participant.firstName",
-    });
-    await expect(firstNameSelect).toHaveValue("participant.firstName");
+    // Le recapitulatif liste les donnees du contrat reconnues dans le paquet.
+    await expect(page.getByText("Données de badge (2)")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(family).first()).toBeVisible();
 
-    // La table montre nom, libelle et type (en francais) de chaque variable.
-    const firstNameRow = page.getByRole("row").filter({ has: firstNameSelect });
-    await expect(firstNameRow.getByRole("cell").nth(0)).toHaveText("participant.firstName");
-    await expect(firstNameRow.getByRole("cell").nth(1)).toHaveText("Prénom");
-    await expect(firstNameRow.getByRole("cell").nth(2)).toHaveText("texte");
+    await page.getByRole("button", { name: "Installer", exact: true }).click();
+    await expect(page.getByText("Template installé (version 1)")).toBeVisible({ timeout: 15_000 });
+    await closeButton(page).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
 
-    const installButton = page.getByRole("button", { name: "Installer" });
-    await expect(installButton).toBeDisabled();
-
-    const structureSelect = page.getByRole("combobox", { name: "Source de la variable structure" });
-    await structureSelect.selectOption("participant.structure");
-    await expect(installButton).toBeEnabled();
-    await installButton.click();
-
-    // Cible le bandeau de succes de l'installeur : le nom de famille apparait aussi
-    // dans la ligne ajoutee au catalogue.
-    await expect(page.getByTestId("install-success")).toContainText(
-      new RegExp(`${family}.*version 1`, "i"),
-      { timeout: 15_000 },
-    );
+    // La ligne apparait au catalogue apres router.refresh().
+    await expect(page.getByText(family).first()).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
@@ -159,7 +139,7 @@ test.describe("Platform — Templates de badge", () => {
 
     await page.goto("/platform/badge-templates");
     await installViaUi(page, archive);
-    await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Template installé (version 1)")).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
@@ -185,7 +165,7 @@ test.describe("Platform — Templates de badge", () => {
 
     await page.goto("/platform/badge-templates");
     await installViaUi(page, archive);
-    await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Template installé (version 1)")).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
@@ -219,7 +199,7 @@ test.describe("Platform — Templates de badge", () => {
 
     await page.goto("/platform/badge-templates");
     await installViaUi(page, archive);
-    await expect(page.getByTestId("install-success")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Template installé (version 1)")).toBeVisible({ timeout: 15_000 });
 
     const prisma = getDb();
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
@@ -234,33 +214,7 @@ test.describe("Platform — Templates de badge", () => {
     await expect(page.locator(`object[data="/api/files/${installed!.proofPath}"]`)).toHaveCount(1);
   });
 
-  test("une seconde inspection en echec efface la precedente", async ({ page }) => {
-    const family = `e2e-reinspect-${Date.now()}`;
-    const valide = await writeArchive(`${family}.zip`, { "manifest.json": manifestOf(family) });
-    const invalide = await writeArchive(`${family}-invalide.zip`, {
-      "assets/fond.png": Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    });
-
-    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-reinspect" });
-    await loginAs(page, staff);
-    await page.goto("/platform/badge-templates");
-
-    await page.setInputFiles('input[type="file"]', valide);
-    await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toBeVisible({
-      timeout: 15_000,
-    });
-
-    // Le second fichier est refuse : l'ecran de liaison du premier ne doit pas
-    // rester arme, sinon « Installer » enverrait l'ancien fichier.
-    await page.setInputFiles('input[type="file"]', invalide);
-    await expect(page.getByTestId("install-errors")).toContainText(/le paquet a été refusé/i, {
-      timeout: 15_000,
-    });
-    await expect(page.getByRole("heading", { name: /liaisons des variables/i })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Installer" })).toHaveCount(0);
-  });
-
-  test("une archive invalide est refusee avec ses erreurs", async ({ page }) => {
+  test("une archive invalide est refusee avec ses erreurs, sans rien installer", async ({ page }) => {
     const archive = await writeArchive(`e2e-invalide-${Date.now()}.zip`, {
       "assets/fond.png": Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     });
@@ -271,14 +225,53 @@ test.describe("Platform — Templates de badge", () => {
     await page.goto("/platform/badge-templates");
     const before = await getDb().installedBadgeTemplate.count();
 
+    await page.getByRole("button", { name: "Installer un template", exact: true }).click();
     await page.setInputFiles('input[type="file"]', archive);
-    // Le texte d'aide du formulaire mentionne aussi manifest.json, et Next expose son
-    // propre role="alert" (route announcer) : on cible le bloc d'erreurs de l'installeur.
-    const erreurs = page.getByTestId("install-errors");
-    await expect(erreurs).toContainText(/le paquet a été refusé/i, { timeout: 15_000 });
-    await expect(erreurs).toContainText(/manifest\.json/i);
+    await expect(page.getByRole("dialog").getByText(/manifest\.json/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Choisir un autre fichier" })).toBeVisible();
+    await expect(page.getByText(/Données de badge/)).toHaveCount(0);
 
     expect(await getDb().installedBadgeTemplate.count()).toBe(before);
+  });
+
+  test("une archive a ancien nom de variable est refusee avec le nom attendu", async ({ page }) => {
+    const family = `e2e-legacy-${Date.now()}`;
+    const manifest = JSON.parse(manifestOf(family));
+    manifest.variables[0] = { name: "firstName", kind: "text", label: "Prénom", sample: "Awa" };
+    manifest.blocks[0].text = "{firstName} {participant.lastName}";
+    const archive = await writeArchive(`${family}.zip`, { "manifest.json": JSON.stringify(manifest) });
+
+    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-legacy" });
+    await loginAs(page, staff);
+    await page.goto("/platform/badge-templates");
+
+    await page.getByRole("button", { name: "Installer un template", exact: true }).click();
+    await page.setInputFiles('input[type="file"]', archive);
+    await expect(page.getByRole("dialog")).toContainText(
+      /ancien nom, réexporter le template depuis le studio/i,
+      { timeout: 15_000 },
+    );
+    await expect(page.getByRole("dialog")).toContainText("participant.firstName");
+    expect(await getDb().installedBadgeTemplate.count({ where: { family } })).toBe(0);
+  });
+
+  test("un fichier .pdf est refuse localement, sans requete d'analyse", async ({ page }) => {
+    const pdf = join(TMP, `e2e-refus-${Date.now()}.pdf`);
+    writeFileSync(pdf, "%PDF-1.4\n");
+
+    const staff = await createTestStaff({ role: "STAFF_ADMIN", scope: "bt-pdf" });
+    await loginAs(page, staff);
+    await page.goto("/platform/badge-templates");
+
+    let inspectRequests = 0;
+    page.on("request", (req) => {
+      if (req.url().includes("/api/platform/badge-templates/inspect")) inspectRequests++;
+    });
+
+    await page.getByRole("button", { name: "Installer un template", exact: true }).click();
+    await page.setInputFiles('input[type="file"]', pdf);
+    await expect(page.getByText("Seules les archives .zip sont acceptées.")).toBeVisible();
+    expect(inspectRequests).toBe(0);
   });
 
   test("un STAFF_OBSERVER consulte le catalogue sans pouvoir installer", async ({ page }) => {
@@ -288,6 +281,6 @@ test.describe("Platform — Templates de badge", () => {
     await page.goto("/platform/badge-templates");
     await expect(page).toHaveURL(/\/platform\/badge-templates/);
     await expect(page.getByRole("heading", { name: /templates de badge/i })).toBeVisible();
-    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Installer un template", exact: true })).toHaveCount(0);
   });
 });

@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { VariableDeclaration, VariableValues } from "./engine/declarative/manifest-types";
+import type { VariableDeclaration, VariableValues } from "@tigamadou/pdf-engine";
 import type { Bindings } from "./bindings";
 
 export type PageSize = {
@@ -35,11 +35,21 @@ export type TemplateContext = {
     date: Date;
     location: string;
     logoDataUrl: string | null;
+    // Consignes de securite de l'evenement, deja nettoyees.
+    securityInstructions: string[];
+    bannerDataUrl: string | null;
+    // Valeur brute de Event.templateOptions (deja ramenee a un objet).
+    templateOptions: Record<string, unknown>;
+    // Options image deja lues en data URL (nom -> data URL), pour garder
+    // buildValues synchrone.
+    templateOptionImages: Record<string, string>;
   };
   badge: {
     id: string;
     verifyUrl: string;
     qrCodeDataUrl: string;
+    // All Access accorde individuellement a l'inscription (Registration.allAccessGranted).
+    allAccess: boolean;
   };
 };
 

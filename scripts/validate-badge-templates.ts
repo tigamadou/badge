@@ -8,7 +8,7 @@
 //
 // Sortie : 0 = tout OK. 1 = au moins un probleme trouve (orphelin, format ou liaisons).
 import { PrismaClient } from "@prisma/client";
-import type { VariableDeclaration } from "../src/lib/badge-templates/engine/declarative/manifest-types";
+import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 import { validateBindings, type Bindings } from "../src/lib/badge-templates/bindings";
 
 const prisma = new PrismaClient();

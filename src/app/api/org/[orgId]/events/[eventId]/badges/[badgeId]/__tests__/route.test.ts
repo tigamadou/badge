@@ -6,14 +6,14 @@ import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
-// Spy sur renderToStream : delegue a l'implementation reelle par defaut (tous les tests
-// existants font un rendu PDF veritable), sauf le test qui force une erreur de stream pour
-// exercer la branche `stream.on("error", ...)` (l.109) -- non atteignable via un rendu reel.
+// renderToBuffer delegue au vrai rendu, sauf le test d'echec de rendu.
 vi.mock("@react-pdf/renderer", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@react-pdf/renderer")>();
-  return { ...actual, renderToStream: vi.fn(actual.renderToStream) };
+  return { ...actual, renderToBuffer: vi.fn(actual.renderToBuffer) };
 });
-import { renderToStream } from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
+
+import { extractPdfText } from "@tigamadou/pdf-engine/testing";
 
 // Compte les Page objects dans un buffer PDF (cf. render.test.tsx).
 function countPdfPages(buf: Buffer): number {
@@ -27,6 +27,8 @@ async function bodyToBuffer(res: Response): Promise<Buffer> {
   return Buffer.from(ab);
 }
 
+let seq = 0;
+
 async function setupFixtures(
   role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER" = "ADMIN",
   opts: { orgOwner?: boolean } = {},
@@ -35,6 +37,7 @@ async function setupFixtures(
   // role event PUR (ex. VIEWER rejete faute de badge.print), passer { orgOwner: false }
   // afin que le role effectif ne soit pas remonte au niveau ADMIN par l'appartenance org.
   const { orgOwner = true } = opts;
+  const stamp = `${Date.now()}-${++seq}`;
   // v4 (plan 12) : les templates livres sont installes en base, plus compiles.
   await ensureReferenceTemplates("seed-test");
   const defaultId = (await defaultTemplateId())!;
@@ -59,7 +62,7 @@ async function setupFixtures(
 
   const admin = await prisma.user.create({
     data: {
-      email: `tpl-admin-${Date.now()}@v2-12.test`,
+      email: `tpl-admin-${stamp}@v2-12.test`,
       password: "x",
       name: "Tpl Admin",
       isStaff: false,
@@ -67,7 +70,7 @@ async function setupFixtures(
     },
   });
   const org = await prisma.organization.create({
-    data: { name: "Tpl Org", slug: `tpl-org-${Date.now()}` },
+    data: { name: "Tpl Org", slug: `tpl-org-${stamp}` },
   });
   if (orgOwner) {
     await prisma.orgMembership.create({
@@ -78,7 +81,7 @@ async function setupFixtures(
     data: {
       orgId: org.id,
       title: "Tpl Salon",
-      slug: `tpl-evt-${Date.now()}`,
+      slug: `tpl-evt-${stamp}`,
       location: "Abidjan",
       date: new Date("2026-10-01"),
     },
@@ -91,7 +94,7 @@ async function setupFixtures(
   });
   const reg = await prisma.registration.create({
     data: {
-      id: `BADGE-${Date.now()}`,
+      id: `BADGE-${stamp}`,
       eventId: event.id,
       categoryId: category.id,
       userId: admin.id,
@@ -189,6 +192,21 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(json.error).toBe("EVENT_FORBIDDEN");
   });
 
+  it("500 RENDER_FAILED en JSON si le rendu echoue", async () => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    vi.mocked(renderToBuffer).mockRejectedValueOnce(new Error("boom-render"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+    });
+    expect(res.status).toBe(500);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(await res.json()).toEqual({ error: "RENDER_FAILED", id: reg.id });
+    expect(err).toHaveBeenCalledTimes(1);
+    err.mockRestore();
+  }, 30_000);
+
   it("retourne 404 NOT_FOUND pour un badgeId inexistant", async () => {
     const { org, event } = await setupFixtures();
     const { GET } = await import("../route");
@@ -213,20 +231,185 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(res.headers.get("x-template-id")).toBe(defaultId);
   }, 30_000);
 
-  it("propage une erreur de stream au reader de la reponse (controller.error)", async () => {
+  it("nomme le fichier d'apres l'inscription, en ligne par defaut", async () => {
     const { org, event, reg } = await setupFixtures();
-    const { EventEmitter } = await import("node:events");
-    const fakeStream = new EventEmitter();
-    vi.mocked(renderToStream).mockResolvedValueOnce(fakeStream as unknown as NodeJS.ReadableStream);
-
     const { GET } = await import("../route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`);
     const res = await GET(req, {
       params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
     });
-    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toBe(`inline; filename="${reg.id}-awa-diallo.pdf"`);
+  }, 30_000);
 
-    fakeStream.emit("error", new Error("boom-render"));
-    await expect(res.arrayBuffer()).rejects.toThrow();
+  it("?download=1 force le telechargement", async () => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    const req = new NextRequest(
+      `http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}?download=1`,
+    );
+    const res = await GET(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toBe(`attachment; filename="${reg.id}-awa-diallo.pdf"`);
+  }, 30_000);
+
+  it("retourne 404 pour une inscription d'un autre evenement", async () => {
+    // `other` d'abord : le second setupFixtures fixe la session sur son propre admin.
+    const other = await setupFixtures();
+    const { org, event } = await setupFixtures();
+    const { GET } = await import("../route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${other.reg.id}`);
+    const res = await GET(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: other.reg.id }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("imprime les consignes de l'evenement, l'initiale de categorie et l'All Access", async () => {
+    const { org, event, reg } = await setupFixtures("ADMIN");
+    const layout = {
+      formatVersion: 2,
+      family: "consignes-test",
+      label: "Consignes",
+      description: "",
+      category: "badge",
+      page: { widthPx: 320, heightPx: 460, count: 1 },
+      variables: [
+        { name: "categoryName", kind: "text", label: "Categorie" },
+        { name: "isAllAccess", kind: "boolean", label: "All Access" },
+        { name: "securityInstructions", kind: "list", label: "Consignes" },
+      ],
+      blocks: [
+        {
+          type: "text", page: 1, x: 10, y: 10, w: 100, h: 40,
+          text: "[{categoryName|initiale}]",
+          style: { sizePx: 20, color: "#000000", overflow: "clip" },
+        },
+        {
+          type: "text", page: 1, x: 10, y: 60, w: 200, h: 30,
+          text: "ALL ACCESS",
+          style: { sizePx: 14, color: "#000000", overflow: "clip" },
+          visibleIf: { variable: "isAllAccess", equals: true },
+        },
+        {
+          type: "list", page: 1, x: 10, y: 100, w: 280, h: 300,
+          source: "securityInstructions",
+          bullet: { type: "disc", sizePx: 3, color: "#000000", gapPx: 5 },
+          items: { maxItems: 5, maxChars: 120, maxLines: 3, lineHeightPx: 13 },
+          style: { sizePx: 10, color: "#000000" },
+        },
+      ],
+    };
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "consignes-test", version: 1, label: "Consignes", description: "",
+        pages: 1, pageWidthPx: 320, pageHeightPx: 460, layout,
+        bindings: {
+          categoryName: "category.name",
+          isAllAccess: "badge.allAccess",
+          securityInstructions: "event.securityInstructions",
+        },
+        assetPrefix: "badge-templates/consignes-test/", formatVersion: 2, installedById: "u1",
+      },
+    });
+    try {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { badgeTemplateId: row.id, securityInstructions: ["Restez dans la zone indiquee."] },
+      });
+      await prisma.registration.update({ where: { id: reg.id }, data: { allAccessGranted: true } });
+
+      const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route");
+      const call = () =>
+        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+          params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+        });
+
+      const avec = extractPdfText(await bodyToBuffer(await call()));
+      expect(avec).toContain("[V]");
+      expect(avec).toContain("ALL ACCESS");
+      // Point final omis expres : apres d'autres rendus dans le meme processus, la table
+      // ToUnicode ecrite par @react-pdf associe parfois le glyphe du point a une valeur
+      // vide (`<0017><>`). Le point est bien dessine, mais aucun lecteur de texte ne
+      // peut le retrouver. Defaut de @react-pdf, sans effet sur le badge imprime.
+      expect(avec).toContain("Restez dans la zone indiquee");
+
+      // L'All Access retire apres coup disparait du badge suivant.
+      await prisma.registration.update({ where: { id: reg.id }, data: { allAccessGranted: false } });
+      const sans = extractPdfText(await bodyToBuffer(await call()));
+      expect(sans).not.toContain("ALL ACCESS");
+    } finally {
+      await prisma.installedBadgeTemplate.delete({ where: { id: row.id } });
+    }
+  });
+
+  it("imprime les options du badge : defaut, valeur reglee et interrupteur coupe", async () => {
+    const { org, event, reg } = await setupFixtures("ADMIN");
+    const layout = {
+      formatVersion: 2,
+      family: "options-test",
+      label: "Options",
+      description: "",
+      category: "badge",
+      page: { widthPx: 320, heightPx: 460, count: 1 },
+      variables: [
+        { name: "showColorBar", kind: "boolean", label: "Bandeau", sample: true },
+        { name: "zone", kind: "text", label: "Zone" },
+        { name: "event.bannerDataUrl", kind: "image", label: "Banniere" },
+        { name: "visuel", kind: "image", label: "Visuel" },
+      ],
+      blocks: [
+        {
+          type: "text", page: 1, x: 10, y: 10, w: 200, h: 30,
+          text: "BANDEAU",
+          style: { sizePx: 14, color: "#000000", overflow: "clip" },
+          visibleIf: { variable: "showColorBar", equals: true },
+        },
+        {
+          type: "text", page: 1, x: 10, y: 60, w: 200, h: 30,
+          text: "{zone}",
+          style: { sizePx: 14, color: "#000000", overflow: "clip" },
+        },
+      ],
+    };
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "options-test", version: 1, label: "Options", description: "",
+        pages: 1, pageWidthPx: 320, pageHeightPx: 460, layout,
+        bindings: {
+          showColorBar: "option",
+          zone: "option",
+          visuel: "option",
+          "event.bannerDataUrl": "event.bannerDataUrl",
+        },
+        assetPrefix: "badge-templates/options-test/", formatVersion: 2, installedById: "u1",
+      },
+    });
+    try {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { badgeTemplateId: row.id, templateOptions: { zone: "Zone C", visuel: "absent/visuel.png" } },
+      });
+      const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route");
+      const call = () =>
+        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+          params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+        });
+
+      const avec = extractPdfText(await bodyToBuffer(await call()));
+      expect(avec).toContain("BANDEAU");
+      expect(avec).toContain("Zone C");
+
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { templateOptions: { zone: "Zone C", showColorBar: false } },
+      });
+      const sans = extractPdfText(await bodyToBuffer(await call()));
+      expect(sans).not.toContain("BANDEAU");
+      expect(sans).toContain("Zone C");
+    } finally {
+      await prisma.installedBadgeTemplate.delete({ where: { id: row.id } });
+    }
   });
 });

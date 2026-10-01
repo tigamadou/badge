@@ -15,11 +15,15 @@ const baseRegistration: RegistrationForContext = {
   snapshotLastName: "Diallo",
   snapshotStructure: "ENSEA",
   snapshotPhoto: "events/evt/photos/abc.jpg",
+  allAccessGranted: false,
   event: {
     title: "Salon 2026",
     date: new Date("2026-10-01"),
     location: "Abidjan",
     logo: "events/evt/logo.png",
+    securityInstructions: null,
+    banner: null,
+    templateOptions: null,
   },
   category: {
     name: "Visiteur",
@@ -39,6 +43,13 @@ describe("buildTemplateContext", () => {
     );
   });
 
+  it("reporte l'All Access accorde a l'inscription", async () => {
+    const ctx = await buildTemplateContext({ ...baseRegistration, allAccessGranted: true });
+    expect(ctx.badge.allAccess).toBe(true);
+    const sans = await buildTemplateContext(baseRegistration);
+    expect(sans.badge.allAccess).toBe(false);
+  });
+
   it("compose un contexte complet (photo + logo + QR)", async () => {
     const ctx = await buildTemplateContext(baseRegistration, {
       baseUrl: "https://badge.test",
@@ -56,6 +67,15 @@ describe("buildTemplateContext", () => {
     expect(ctx.badge.id).toBe("REG-001");
     expect(ctx.badge.verifyUrl).toBe("https://badge.test/verify/REG-001");
     expect(ctx.badge.qrCodeDataUrl).toBe("data:image/png;base64,STUB_QR");
+  });
+
+  it("normalise les consignes de securite de l'evenement", async () => {
+    const ctx = await buildTemplateContext({
+      ...baseRegistration,
+      event: { ...baseRegistration.event, securityInstructions: [" Un ", 2, "Deux"] },
+    });
+    expect(ctx.event.securityInstructions).toEqual(["Un", "Deux"]);
+    expect((await buildTemplateContext(baseRegistration)).event.securityInstructions).toEqual([]);
   });
 
   it("retourne logoDataUrl null si event.logo est null", async () => {
@@ -79,6 +99,56 @@ describe("buildTemplateContext", () => {
     vi.mocked(__TEST__.readFileAsDataUrl).mockRejectedValue(new Error("ENOENT"));
     const ctx = await buildTemplateContext(baseRegistration, { baseUrl: "https://badge.test" });
     expect(ctx.event.logoDataUrl).toBeNull();
+  });
+
+  it("charge la banniere de l'evenement", async () => {
+    const ctx = await buildTemplateContext({
+      ...baseRegistration,
+      event: { ...baseRegistration.event, banner: "events/evt/banner.png" },
+    });
+    expect(ctx.event.bannerDataUrl).toBe("data:image/png;base64,STUB_events/evt/banner.png");
+    expect((await buildTemplateContext(baseRegistration)).event.bannerDataUrl).toBeNull();
+  });
+
+  it("retourne bannerDataUrl null si la lecture de la banniere echoue", async () => {
+    vi.mocked(__TEST__.readFileAsDataUrl).mockRejectedValue(new Error("ENOENT"));
+    const ctx = await buildTemplateContext({
+      ...baseRegistration,
+      event: { ...baseRegistration.event, banner: "events/evt/banner.png" },
+    });
+    expect(ctx.event.bannerDataUrl).toBeNull();
+  });
+
+  it("charge les options image demandees et garde les options", async () => {
+    const templateOptions = { visuel: "uploads/v.png", zone: "C" };
+    const ctx = await buildTemplateContext(
+      { ...baseRegistration, event: { ...baseRegistration.event, templateOptions } },
+      { optionImages: ["visuel", "absente"] },
+    );
+    expect(ctx.event.templateOptions).toEqual(templateOptions);
+    expect(ctx.event.templateOptionImages).toEqual({
+      visuel: "data:image/png;base64,STUB_uploads/v.png",
+    });
+  });
+
+  it("omet une option image dont la lecture echoue", async () => {
+    vi.mocked(__TEST__.readFileAsDataUrl).mockImplementation(async (key: string) => {
+      if (key === "uploads/v.png") throw new Error("ENOENT");
+      return "data:image/png;base64,OK";
+    });
+    const ctx = await buildTemplateContext(
+      { ...baseRegistration, event: { ...baseRegistration.event, templateOptions: { visuel: "uploads/v.png" } } },
+      { optionImages: ["visuel"] },
+    );
+    expect(ctx.event.templateOptionImages).toEqual({});
+  });
+
+  it("ramene des options corrompues a un objet vide", async () => {
+    const ctx = await buildTemplateContext({
+      ...baseRegistration,
+      event: { ...baseRegistration.event, templateOptions: "casse" },
+    });
+    expect(ctx.event.templateOptions).toEqual({});
   });
 
   it("propage le flag anonymous depuis la category", async () => {
