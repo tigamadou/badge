@@ -120,7 +120,7 @@ jobs:
           - 1025:1025
           - 8025:8025
       minio:
-        image: bitnami/minio:latest
+        image: quay.io/minio/minio:latest
         env:
           MINIO_ROOT_USER: minioadmin
           MINIO_ROOT_PASSWORD: minioadmin
