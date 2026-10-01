@@ -9,12 +9,14 @@ const variables: VariableDeclaration[] = [
 ];
 
 describe("SOURCE_KINDS", () => {
-  it("expose les quinze sources du domaine badge", () => {
-    expect(Object.keys(SOURCE_KINDS)).toHaveLength(15);
+  it("expose les sources du domaine badge", () => {
+    expect(Object.keys(SOURCE_KINDS)).toHaveLength(17);
+    expect(SOURCE_KINDS["event.securityInstructions"]).toBe("list");
     expect(SOURCE_KINDS["participant.firstName"]).toBe("text");
     expect(SOURCE_KINDS["category.color"]).toBe("color");
     expect(SOURCE_KINDS["event.date"]).toBe("date");
     expect(SOURCE_KINDS["badge.qrCodeDataUrl"]).toBe("image");
+    expect(SOURCE_KINDS["badge.allAccess"]).toBe("boolean");
   });
 });
 

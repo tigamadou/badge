@@ -8,7 +8,7 @@ import type { VariableDeclaration, VariableValues } from "@tigamadou/pdf-engine"
 //
 // Difference avec l'ancien resolve-source : on lit BRUT. `event.date` sort en Date
 // et le formatage appartient au manifeste, via le `format` de la variable.
-const READERS: Record<string, (c: TemplateContext) => string | boolean | Date> = {
+const READERS: Record<string, (c: TemplateContext) => string | boolean | Date | string[]> = {
   "participant.firstName": (c) => c.participant.firstName,
   "participant.lastName": (c) => c.participant.lastName,
   "participant.structure": (c) => c.participant.structure,
@@ -21,9 +21,11 @@ const READERS: Record<string, (c: TemplateContext) => string | boolean | Date> =
   "event.date": (c) => c.event.date,
   "event.location": (c) => c.event.location,
   "event.logoDataUrl": (c) => c.event.logoDataUrl ?? "",
+  "event.securityInstructions": (c) => c.event.securityInstructions,
   "badge.id": (c) => c.badge.id,
   "badge.verifyUrl": (c) => c.badge.verifyUrl,
   "badge.qrCodeDataUrl": (c) => c.badge.qrCodeDataUrl,
+  "badge.allAccess": (c) => c.badge.allAccess,
 };
 
 export function buildValues(

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { resolvePublicSettings } from "@/lib/settings";
 import { EventSettingsForm } from "@/components/event/EventSettingsForm";
 import { getEventOrgId } from "@/lib/event-org";
+import { readSecurityInstructions } from "@/lib/security-instructions";
 
 export default async function EventSettingsPage({
   params,
@@ -21,6 +22,7 @@ export default async function EventSettingsPage({
       description: true,
       slug: true,
       logo: true,
+      securityInstructions: true,
       registrationOpen: true,
     },
   });
@@ -34,6 +36,7 @@ export default async function EventSettingsPage({
       initial={{
         event: {
           ...event,
+          securityInstructions: readSecurityInstructions(event.securityInstructions),
           date: event.date.toISOString(),
           endDate: event.endDate ? event.endDate.toISOString() : null,
         },

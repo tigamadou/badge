@@ -16,9 +16,11 @@ export const SOURCE_KINDS: Record<string, VariableKind> = {
   "event.date": "date",
   "event.location": "text",
   "event.logoDataUrl": "image",
+  "event.securityInstructions": "list",
   "badge.id": "text",
   "badge.verifyUrl": "text",
   "badge.qrCodeDataUrl": "image",
+  "badge.allAccess": "boolean",
 };
 
 // Nom de variable -> chemin de source, ou null pour « laisser vide ». L'ABSENCE

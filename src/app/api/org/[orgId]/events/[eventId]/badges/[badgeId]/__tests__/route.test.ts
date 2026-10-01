@@ -14,6 +14,7 @@ vi.mock("@react-pdf/renderer", async (importOriginal) => {
   return { ...actual, renderToStream: vi.fn(actual.renderToStream) };
 });
 import { renderToStream } from "@react-pdf/renderer";
+import { extractPdfText } from "@tigamadou/pdf-engine/testing";
 
 // Compte les Page objects dans un buffer PDF (cf. render.test.tsx).
 function countPdfPages(buf: Buffer): number {
@@ -228,5 +229,79 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
 
     fakeStream.emit("error", new Error("boom-render"));
     await expect(res.arrayBuffer()).rejects.toThrow();
+  });
+
+  it("imprime les consignes de l'evenement, l'initiale de categorie et l'All Access", async () => {
+    const { org, event, reg } = await setupFixtures("ADMIN");
+    const layout = {
+      formatVersion: 2,
+      family: "consignes-test",
+      label: "Consignes",
+      description: "",
+      category: "badge",
+      page: { widthPx: 320, heightPx: 460, count: 1 },
+      variables: [
+        { name: "categoryName", kind: "text", label: "Categorie" },
+        { name: "isAllAccess", kind: "boolean", label: "All Access" },
+        { name: "securityInstructions", kind: "list", label: "Consignes" },
+      ],
+      blocks: [
+        {
+          type: "text", page: 1, x: 10, y: 10, w: 100, h: 40,
+          text: "[{categoryName|initiale}]",
+          style: { sizePx: 20, color: "#000000", overflow: "clip" },
+        },
+        {
+          type: "text", page: 1, x: 10, y: 60, w: 200, h: 30,
+          text: "ALL ACCESS",
+          style: { sizePx: 14, color: "#000000", overflow: "clip" },
+          visibleIf: { variable: "isAllAccess", equals: true },
+        },
+        {
+          type: "list", page: 1, x: 10, y: 100, w: 280, h: 300,
+          source: "securityInstructions",
+          bullet: { type: "disc", sizePx: 3, color: "#000000", gapPx: 5 },
+          items: { maxItems: 5, maxChars: 120, maxLines: 3, lineHeightPx: 13 },
+          style: { sizePx: 10, color: "#000000" },
+        },
+      ],
+    };
+    const row = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: "consignes-test", version: 1, label: "Consignes", description: "",
+        pages: 1, pageWidthPx: 320, pageHeightPx: 460, layout,
+        bindings: {
+          categoryName: "category.name",
+          isAllAccess: "badge.allAccess",
+          securityInstructions: "event.securityInstructions",
+        },
+        assetPrefix: "badge-templates/consignes-test/", formatVersion: 2, installedById: "u1",
+      },
+    });
+    try {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { badgeTemplateId: row.id, securityInstructions: ["Restez dans la zone indiquee."] },
+      });
+      await prisma.registration.update({ where: { id: reg.id }, data: { allAccessGranted: true } });
+
+      const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route");
+      const call = () =>
+        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+          params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+        });
+
+      const avec = extractPdfText(await bodyToBuffer(await call()));
+      expect(avec).toContain("[V]");
+      expect(avec).toContain("ALL ACCESS");
+      expect(avec).toContain("Restez dans la zone indiquee.");
+
+      // L'All Access retire apres coup disparait du badge suivant.
+      await prisma.registration.update({ where: { id: reg.id }, data: { allAccessGranted: false } });
+      const sans = extractPdfText(await bodyToBuffer(await call()));
+      expect(sans).not.toContain("ALL ACCESS");
+    } finally {
+      await prisma.installedBadgeTemplate.delete({ where: { id: row.id } });
+    }
   });
 });

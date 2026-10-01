@@ -1,6 +1,7 @@
 import path from "node:path";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
 import { getFile } from "@/lib/storage";
+import { readSecurityInstructions } from "@/lib/security-instructions";
 import type { TemplateContext } from "./types";
 
 // Forme du Registration attendue par buildTemplateContext. On accepte un objet
@@ -12,11 +13,14 @@ export type RegistrationForContext = {
   snapshotLastName: string;
   snapshotStructure: string;
   snapshotPhoto: string;
+  allAccessGranted: boolean;
   event: {
     title: string;
     date: Date;
     location: string;
     logo: string | null;
+    // Valeur brute de la colonne JSON.
+    securityInstructions: unknown;
   };
   category: {
     name: string;
@@ -113,11 +117,13 @@ export async function buildTemplateContext(
       date: registration.event.date,
       location: registration.event.location,
       logoDataUrl,
+      securityInstructions: readSecurityInstructions(registration.event.securityInstructions),
     },
     badge: {
       id: registration.id,
       verifyUrl,
       qrCodeDataUrl,
+      allAccess: registration.allAccessGranted,
     },
   };
 }

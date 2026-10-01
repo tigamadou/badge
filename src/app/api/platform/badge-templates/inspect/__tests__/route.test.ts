@@ -103,7 +103,9 @@ describe("POST /api/platform/badge-templates/inspect", () => {
     // Identite pour le nom de source, rien pour le nom libre : il reste a decider.
     expect(body.suggested).toEqual({ "participant.firstName": "participant.firstName" });
     expect(body.sources["category.color"]).toBe("color");
-    expect(Object.keys(body.sources)).toHaveLength(15);
+    expect(body.sources["badge.allAccess"]).toBe("boolean");
+    expect(body.sources["event.securityInstructions"]).toBe("list");
+    expect(Object.keys(body.sources)).toHaveLength(17);
     expect(await prisma.installedBadgeTemplate.count()).toBe(0);
   });
 

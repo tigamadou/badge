@@ -16,8 +16,9 @@ const ctx: TemplateContext = {
     date: new Date("2027-12-15T00:00:00.000Z"),
     location: "Cotonou",
     logoDataUrl: null,
+    securityInstructions: ["Restez dans la zone."],
   },
-  badge: { id: "DEMO-1", verifyUrl: "https://badge.local/verify/DEMO-1", qrCodeDataUrl: "data:image/png;base64,BBB" },
+  badge: { id: "DEMO-1", verifyUrl: "https://badge.local/verify/DEMO-1", qrCodeDataUrl: "data:image/png;base64,BBB", allAccess: true },
 };
 
 const declare = (name: string, kind: VariableDeclaration["kind"]): VariableDeclaration => ({
@@ -39,6 +40,11 @@ describe("buildValues", () => {
     // Le format appartient desormais au manifeste : resolveVariable l'applique.
     const values = buildValues(ctx, [declare("dateEvent", "date")], { dateEvent: "event.date" });
     expect(values.dateEvent).toBe("2027-12-15T00:00:00.000Z");
+  });
+
+  it("lit les consignes de l'evenement comme une liste", () => {
+    const values = buildValues(ctx, [declare("consignes", "list")], { consignes: "event.securityInstructions" });
+    expect(values.consignes).toEqual(["Restez dans la zone."]);
   });
 
   it("garde les booleens tels quels", () => {
@@ -90,5 +96,10 @@ describe("buildValues", () => {
     expect(() => buildValues(ctx, [declare("x", "text")], { x: "toString" })).toThrow(
       'buildValues : source inconnue "toString"',
     );
+  });
+
+  it("lit l'All Access de l'inscription", () => {
+    const values = buildValues(ctx, [declare("isAllAccess", "boolean")], { isAllAccess: "badge.allAccess" });
+    expect(values.isAllAccess).toBe(true);
   });
 });

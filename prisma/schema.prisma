@@ -158,6 +158,9 @@ model Event {
   endDate          DateTime?
   description      String?   @db.Text
   logo             String?
+  // Consignes de securite imprimees sur les badges (liste de textes, variable
+  // `list` des templates). Nullable : null vaut « aucune consigne ».
+  securityInstructions Json?
   registrationOpen Boolean   @default(false)
   // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).
   badgeTemplateId  String?

@@ -4,6 +4,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
+import {
+  MAX_SECURITY_INSTRUCTIONS,
+  MAX_SECURITY_INSTRUCTION_CHARS,
+  cleanSecurityInstructions,
+  readSecurityInstructions,
+} from "@/lib/security-instructions";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
   // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
@@ -18,6 +24,7 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       endDate: true,
       description: true,
       logo: true,
+      securityInstructions: true,
       registrationOpen: true,
       archived: true,
       createdAt: true,
@@ -26,7 +33,9 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
       _count: { select: { registrations: true, categories: true, memberships: true } },
     },
   });
-  return NextResponse.json({ event });
+  return NextResponse.json({
+    event: { ...event, securityInstructions: readSecurityInstructions(event.securityInstructions) },
+  });
 });
 
 const patchSchema = z.object({
@@ -42,6 +51,10 @@ const patchSchema = z.object({
   description: z.string().max(5000).nullable().optional(),
   logo: z.string().nullable().optional(),
   registrationOpen: z.boolean().optional(),
+  securityInstructions: z
+    .array(z.string().max(MAX_SECURITY_INSTRUCTION_CHARS))
+    .max(MAX_SECURITY_INSTRUCTIONS)
+    .optional(),
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
 });
 
@@ -54,7 +67,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
 
   const before = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { registrationOpen: true, date: true },
+    select: { registrationOpen: true, date: true, securityInstructions: true },
   });
 
   // v4 (plan 07) : la date de fin se compare a la date effective apres patch.
@@ -78,6 +91,13 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
   }
   if (parsed.data.logo !== undefined) data.logo = parsed.data.logo;
   if (parsed.data.registrationOpen !== undefined) data.registrationOpen = parsed.data.registrationOpen;
+  if (parsed.data.securityInstructions !== undefined) {
+    const cleaned = cleanSecurityInstructions(parsed.data.securityInstructions);
+    // Ecrit uniquement si la liste nettoyee differe de celle stockee.
+    if (JSON.stringify(readSecurityInstructions(before?.securityInstructions)) !== JSON.stringify(cleaned)) {
+      data.securityInstructions = cleaned;
+    }
+  }
   if (parsed.data.slug !== undefined && session.user.isStaff) data.slug = parsed.data.slug;
 
   if (Object.keys(data).length === 0) {
@@ -106,7 +126,9 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
       });
     }
 
-    return NextResponse.json({ event });
+    return NextResponse.json({
+      event: { ...event, securityInstructions: readSecurityInstructions(event.securityInstructions) },
+    });
   } catch (err) {
     if ((err as { code?: string }).code === "P2002") {
       return NextResponse.json({ error: "SLUG_TAKEN" }, { status: 409 });

@@ -7,6 +7,7 @@ import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/FormControls";
 import { Alert } from "@/components/ui/Feedback";
 import { Dropzone, FileBox } from "@/components/ui/FileBox";
+import { linesToInstructions } from "@/lib/security-instructions";
 
 type Initial = {
   event: {
@@ -18,6 +19,7 @@ type Initial = {
     description: string | null;
     slug: string;
     logo: string | null;
+    securityInstructions: string[];
     registrationOpen: boolean;
   };
   settings: { contactEmail: string | null; contactPhone: string | null };
@@ -41,6 +43,11 @@ export function EventSettingsForm({
   const [logo, setLogo] = useState<string | null>(initial.event.logo);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
+  // Brouillon brut : re-deriver la zone de texte depuis la liste nettoyee
+  // effacerait la ligne vide qu'on vient d'ouvrir avec Entree.
+  const [instructionsDraft, setInstructionsDraft] = useState(
+    initial.event.securityInstructions.join("\n"),
+  );
   const [contactEmail, setContactEmail] = useState(initial.settings.contactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(initial.settings.contactPhone ?? "");
   const [msg, setMsg] = useState<string | null>(null);
@@ -75,6 +82,7 @@ export function EventSettingsForm({
         endDate: endDate || null,
         description: description || null,
         logo,
+        securityInstructions: linesToInstructions(instructionsDraft),
         registrationOpen,
       }),
     });
@@ -82,11 +90,13 @@ export function EventSettingsForm({
       setMsg("Événement mis à jour.");
     } else {
       const data = await res.json().catch(() => null);
-      setMsg(
-        data?.issues?.[0]?.message === "endDate < date"
-          ? "La date de fin doit être postérieure ou égale à la date de l'événement."
-          : "Échec de la mise à jour.",
-      );
+      if (data?.issues?.[0]?.message === "endDate < date") {
+        setMsg("La date de fin doit être postérieure ou égale à la date de l'événement.");
+      } else if (data?.issues?.[0]?.path?.[0] === "securityInstructions") {
+        setMsg("Consignes : 30 au plus, 500 caractères chacune.");
+      } else {
+        setMsg("Échec de la mise à jour.");
+      }
     }
   }
 
@@ -161,6 +171,23 @@ export function EventSettingsForm({
                   subtitle="JPEG, PNG ou WebP — 5 Mo max"
                 />
               )}
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="event-security-instructions" className="block text-sm font-medium text-slate-700">
+                Consignes de sécurité (optionnelles)
+              </label>
+              <textarea
+                id="event-security-instructions"
+                value={instructionsDraft}
+                onChange={(e) => setInstructionsDraft(e.target.value)}
+                rows={5}
+                placeholder="Une consigne par ligne"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-slate-400">
+                Imprimées sur les badges dont le template affiche les consignes. Une par ligne,
+                30 au plus, 500 caractères chacune.
+              </p>
             </div>
             <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
             <p className="text-xs text-slate-400">

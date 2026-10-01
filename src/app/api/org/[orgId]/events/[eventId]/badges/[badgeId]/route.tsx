@@ -36,7 +36,7 @@ export const GET = withEventAuth(
     const registration = await prisma.registration.findUnique({
       where: { id: badgeId },
       include: {
-        event: { select: { id: true, title: true, date: true, location: true, logo: true, badgeTemplateId: true, orgId: true } },
+        event: { select: { id: true, title: true, date: true, location: true, logo: true, securityInstructions: true, badgeTemplateId: true, orgId: true } },
         category: {
           select: { name: true, color: true, neutralBadge: true, anonymous: true },
         },
@@ -69,11 +69,13 @@ export const GET = withEventAuth(
       snapshotLastName: registration.snapshotLastName,
       snapshotStructure: registration.snapshotStructure,
       snapshotPhoto: registration.snapshotPhoto,
+      allAccessGranted: registration.allAccessGranted,
       event: {
         title: registration.event.title,
         date: registration.event.date,
         location: registration.event.location,
         logo: registration.event.logo,
+        securityInstructions: registration.event.securityInstructions,
       },
       category: registration.category,
     });

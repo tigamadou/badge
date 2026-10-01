@@ -21,6 +21,7 @@ const KIND_LABELS: Record<string, string> = {
   boolean: "booléen",
   date: "date",
   color: "couleur",
+  list: "liste",
 };
 
 // Object.hasOwn : une variable nommee `constructor` ou `toString` ne doit pas

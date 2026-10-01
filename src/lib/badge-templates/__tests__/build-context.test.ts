@@ -15,11 +15,13 @@ const baseRegistration: RegistrationForContext = {
   snapshotLastName: "Diallo",
   snapshotStructure: "ENSEA",
   snapshotPhoto: "events/evt/photos/abc.jpg",
+  allAccessGranted: false,
   event: {
     title: "Salon 2026",
     date: new Date("2026-10-01"),
     location: "Abidjan",
     logo: "events/evt/logo.png",
+    securityInstructions: null,
   },
   category: {
     name: "Visiteur",
@@ -39,6 +41,13 @@ describe("buildTemplateContext", () => {
     );
   });
 
+  it("reporte l'All Access accorde a l'inscription", async () => {
+    const ctx = await buildTemplateContext({ ...baseRegistration, allAccessGranted: true });
+    expect(ctx.badge.allAccess).toBe(true);
+    const sans = await buildTemplateContext(baseRegistration);
+    expect(sans.badge.allAccess).toBe(false);
+  });
+
   it("compose un contexte complet (photo + logo + QR)", async () => {
     const ctx = await buildTemplateContext(baseRegistration, {
       baseUrl: "https://badge.test",
@@ -56,6 +65,15 @@ describe("buildTemplateContext", () => {
     expect(ctx.badge.id).toBe("REG-001");
     expect(ctx.badge.verifyUrl).toBe("https://badge.test/verify/REG-001");
     expect(ctx.badge.qrCodeDataUrl).toBe("data:image/png;base64,STUB_QR");
+  });
+
+  it("normalise les consignes de securite de l'evenement", async () => {
+    const ctx = await buildTemplateContext({
+      ...baseRegistration,
+      event: { ...baseRegistration.event, securityInstructions: [" Un ", 2, "Deux"] },
+    });
+    expect(ctx.event.securityInstructions).toEqual(["Un", "Deux"]);
+    expect((await buildTemplateContext(baseRegistration)).event.securityInstructions).toEqual([]);
   });
 
   it("retourne logoDataUrl null si event.logo est null", async () => {

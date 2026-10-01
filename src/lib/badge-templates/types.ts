@@ -35,11 +35,15 @@ export type TemplateContext = {
     date: Date;
     location: string;
     logoDataUrl: string | null;
+    // Consignes de securite de l'evenement, deja nettoyees.
+    securityInstructions: string[];
   };
   badge: {
     id: string;
     verifyUrl: string;
     qrCodeDataUrl: string;
+    // All Access accorde individuellement a l'inscription (Registration.allAccessGranted).
+    allAccess: boolean;
   };
 };
 

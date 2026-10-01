@@ -57,7 +57,7 @@ l'archive (contrôles + `parseManifest`) et n'écrit rien. Il rend `variables` (
 `kind`, libellé, tels que déclarés par le manifeste), `suggested` (pré-remplissage :
 `suggestBindings` ne propose une source que si le nom de la variable est exactement
 celui d'une source connue **et** que les types s'accordent — aucune heuristique sur
-les noms proches) et `sources` (les 15 entrées de `SOURCE_KINDS`, avec leur type).
+les noms proches) et `sources` (les 17 entrées de `SOURCE_KINDS`, avec leur type).
 
 **2. L'écran de liaison.** `BadgeTemplateInstaller.tsx` affiche un tableau, une ligne
 par variable : nom, type, et un sélecteur de source **filtré aux sources du même
@@ -437,7 +437,7 @@ deux formes sont légales depuis le format v2.
 Un manifeste **ne référence plus** de vocabulaire câblé dans le moteur : il déclare
 des variables aux noms libres (`variables`, ci-dessus), et c'est une **table de
 liaison** — propre à l'application, choisie à l'installation — qui dit quelle donnée
-métier alimente chaque variable. Le moteur (`@tigamadou/pdf-engine`) ne connaît aucune de ces 15
+métier alimente chaque variable. Le moteur (`@tigamadou/pdf-engine`) ne connaît aucune de ces 17
 entrées ; elles vivent dans `src/lib/badge-templates/bindings.ts`
 (`SOURCE_KINDS`), hors du dossier scellé :
 
@@ -453,6 +453,15 @@ entrées ; elles vivent dans `src/lib/badge-templates/bindings.ts`
 | `event.logoDataUrl` | image |
 | `badge.id`, `badge.verifyUrl` | texte |
 | `badge.qrCodeDataUrl` | image |
+
+Deux sources ont été ajoutées après les quinze d'origine :
+
+| Source | Type | Donnée |
+|---|---|---|
+| `badge.allAccess` | booléen | All Access accordé à l'inscription (bouton All Access de la fiche participant) |
+| `event.securityInstructions` | liste | Consignes de sécurité saisies dans les paramètres de l'événement (une par ligne, 30 au plus, 500 caractères) |
+
+L'initiale d'une catégorie ne demande aucune source : le template l'obtient avec `{categoryName|initiale}` (moteur ≥ 1.1.0), `categoryName` étant lié à `category.name`.
 
 `validateBindings` refuse une variable liée à une source d'un type différent — la
 même garde que portait autrefois le `kind` de l'ancienne liste blanche `SOURCES`,

@@ -312,6 +312,89 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
       PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) }),
     ).rejects.toThrow();
   });
+
+  it("enregistre les consignes de securite nettoyees", async () => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ securityInstructions: ["  Restez dans la zone. ", "", "Badge visible."] }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.event.securityInstructions).toEqual(["Restez dans la zone.", "Badge visible."]);
+    const updated = await prisma.event.findUnique({ where: { id: event.id } });
+    expect(updated?.securityInstructions).toEqual(["Restez dans la zone.", "Badge visible."]);
+  });
+
+  it("n'ecrit pas les consignes inchangees (changedFields sans securityInstructions)", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.event.update({ where: { id: event.id }, data: { securityInstructions: ["Identique"] } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title: "Autre titre", securityInstructions: [" Identique ", ""] }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(200);
+    const log = await prisma.activityLog.findFirst({ where: { type: "EVENT_UPDATED", eventId: event.id } });
+    const fields = (log?.details as { changedFields: string[] }).changedFields;
+    expect(fields).toContain("title");
+    expect(fields).not.toContain("securityInstructions");
+  });
+
+  it("renvoie 400 NOTHING_TO_UPDATE quand seules des consignes inchangees sont envoyees", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.event.update({ where: { id: event.id }, data: { securityInstructions: ["Identique"] } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ securityInstructions: ["Identique"] }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("NOTHING_TO_UPDATE");
+  });
+
+  it("vide les consignes avec un tableau vide", async () => {
+    const { u, org, event } = await seedAdmin();
+    await prisma.event.update({ where: { id: event.id }, data: { securityInstructions: ["Ancienne"] } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ securityInstructions: [] }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(200);
+    const updated = await prisma.event.findUnique({ where: { id: event.id } });
+    expect(updated?.securityInstructions).toEqual([]);
+  });
+
+  it.each([
+    ["trop de consignes", Array.from({ length: 31 }, (_, i) => `Consigne ${i}`)],
+    ["une consigne trop longue", ["x".repeat(501)]],
+  ])("refuse %s (400 VALIDATION)", async (_cas, securityInstructions) => {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ securityInstructions }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("VALIDATION");
+  });
 });
 
 describe("GET /api/org/[orgId]/events/[eventId]", () => {
@@ -332,6 +415,7 @@ describe("GET /api/org/[orgId]/events/[eventId]", () => {
     expect(json.event.orgId).toBe(org.id);
     expect(json.event.organization).toEqual({ id: org.id, name: org.name, slug: org.slug });
     expect(json.event._count).toEqual({ registrations: 0, categories: 0, memberships: 1 });
+    expect(json.event.securityInstructions).toEqual([]);
   });
 });
 
