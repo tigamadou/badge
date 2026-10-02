@@ -4,6 +4,32 @@
 > methode generale de demarrage (`make dev`, seed, variables d'environnement),
 > se referer au README.
 
+## Initialiser un nouveau poste
+
+```bash
+git clone <depot> && cd badge
+make init
+```
+
+`make init` enchaine, en s'arretant au premier echec :
+
+| Etape | Cible | Role |
+|-------|-------|------|
+| 1 | `init-check` | Verifie `docker`, `docker compose` v2, `openssl`, `curl`, `nc`, le daemon Docker et que les ports publies par `docker-compose.dev.yml` sont libres (controle saute si la stack tourne deja). |
+| 2 | `init-env` | Garantit `NPM_TOKEN` dans `.env` : valeur existante, sinon variable du shell, sinon saisie masquee (voir « Jeton du registre »). N'ecrit que cette ligne. |
+| 3 | `dev-build` | Build de l'image dev et demarrage de la stack. |
+| 4 | `init-wait` | Attend que l'app reponde sur `localhost:3785` (5 min max ; le premier `yarn install` est long). |
+| 5 | `db-push` puis `db-seed` | Schema Prisma et donnees de dev (dont les templates de badge). |
+| 6 | `dev-https` puis `dev-https-check` | `/etc/hosts` + CA Caddy (mot de passe admin demande), puis verification. |
+
+Comptes crees par le seed : `admin@badge.local` (SUPER_ADMIN), `admin2@`, `support@`,
+`observer@`, `participant@badge.local`, mot de passe `123456` (cf. `prisma/seed.ts`).
+
+> Un port deja pris (autre stack Docker exposant 80/443, MySQL local sur 33060...) fait
+> echouer `init-check` avec la liste des ports : arreter le service concerne et relancer.
+> Pour que l'IDE voie les types Prisma, lancer aussi `yarn install` sur l'hote (avec
+> `NPM_TOKEN` exporte) puis `make db-generate`.
+
 ## Services et URLs (dev)
 
 Le reverse proxy Caddy sert les sous-domaines `*.badge.local` en **HTTPS** via
