@@ -141,6 +141,7 @@ Commandes principales :
 
 | Commande | Description |
 |----------|-------------|
+| `make init` | Initialisation d'un poste neuf : prérequis, `NPM_TOKEN`, build, schéma, seed, HTTPS local |
 | `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
 | `make dev` / `make dev-down` / `make logs` | Cycle dev local |
 | `make dev-https` / `make dev-https-check` | HTTPS local : `/etc/hosts` + confiance CA Caddy (idempotent) |

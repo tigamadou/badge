@@ -31,15 +31,24 @@ Systeme generique de gestion de badges pour evenements. L'application gere l'ins
 
 ### Prerequis
 
-- [Docker](https://docs.docker.com/get-docker/) et Docker Compose
+- [Docker](https://docs.docker.com/get-docker/) et Docker Compose v2
+- `openssl`, `curl`, `nc` (presents par defaut sur macOS et la plupart des Linux)
+- Un jeton GitHub classic de portee `read:packages` (package prive `@tigamadou/pdf-engine`)
+
+### Initialiser un nouveau poste
+
+```bash
+make init
+```
+
+Une seule commande apres le `git clone` : verification des prerequis et des ports,
+ecriture de `NPM_TOKEN` dans `.env` (lu dans le shell ou demande en saisie masquee),
+build et demarrage de la stack, `db push`, seed, puis HTTPS local (`/etc/hosts` + CA
+Caddy, mot de passe admin demande). Detail : [installation v4](docs/v4/installation.md).
 
 ### Lancer en developpement
 
 ```bash
-# Cloner le projet et configurer l'environnement
-cp .env .env.local   # Editer avec vos valeurs
-
-# Demarrer les services
 make dev
 ```
 
@@ -118,6 +127,7 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 
 | Commande | Description |
 |----------|-------------|
+| `make init` | Initialiser un poste de developpement neuf |
 | `make dev` | Demarrer en developpement |
 | `make prod` | Demarrer en production |
 | `make deploy` | Deployer sur le serveur |

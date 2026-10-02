@@ -1,4 +1,5 @@
-.PHONY: dev dev-down dev-build dev-restart \
+.PHONY: init init-check init-env init-wait \
+        dev dev-down dev-build dev-restart \
         dev-https dev-https-hosts dev-https-trust dev-https-check dev-https-untrust \
         prod prod-down prod-build prod-logs \
         prod-db-reset  prod-db-push \
@@ -32,6 +33,92 @@ NET=badge_web
 net-create:
 	@docker network inspect $(NET) >/dev/null 2>&1 || docker network create $(NET)
 	@echo "Reseau $(NET) pret."
+
+# ============================================================
+#  Initialisation d'un poste de developpement neuf
+# ============================================================
+# Enchaine tout ce qu'il faut apres un `git clone` : prerequis, jeton du registre
+# dans `.env`, build + demarrage de la stack, schema, seed, puis HTTPS local
+# (mot de passe admin demande pour /etc/hosts et la CA Caddy). Les etapes sont
+# appelees en sequence via $(MAKE) pour rester correctes sous `make -j`.
+init:
+	@$(MAKE) --no-print-directory init-check
+	@$(MAKE) --no-print-directory init-env
+	@$(MAKE) --no-print-directory dev-build
+	@$(MAKE) --no-print-directory init-wait
+	@$(MAKE) --no-print-directory db-push
+	@$(MAKE) --no-print-directory db-seed
+	@$(MAKE) --no-print-directory dev-https
+	@$(MAKE) --no-print-directory dev-https-check
+	@echo ""
+	@echo "Poste de developpement pret."
+	@echo "  App        : https://badge.local (ou http://localhost:3785)"
+	@echo "  phpMyAdmin : https://pma.badge.local"
+	@echo "  Mailpit    : https://mail.badge.local"
+	@echo "  MinIO      : https://s3.badge.local (minioadmin / minioadmin)"
+	@echo "  Comptes    : admin@badge.local (SUPER_ADMIN), mot de passe 123456 (cf. prisma/seed.ts)"
+	@echo "Types Prisma dans l'IDE : lancer 'yarn install' sur l'hote puis 'make db-generate'."
+
+init-check:
+	@missing=""; \
+	for c in docker openssl curl nc; do command -v $$c >/dev/null 2>&1 || missing="$$missing $$c"; done; \
+	if [ -n "$$missing" ]; then echo "Erreur : outils manquants :$$missing"; exit 1; fi
+	@docker compose version >/dev/null 2>&1 || { echo "Erreur : Docker Compose v2 requis ('docker compose')."; exit 1; }
+	@docker info >/dev/null 2>&1 || { echo "Erreur : le daemon Docker ne repond pas (Docker Desktop demarre ?)."; exit 1; }
+	@# Ports lus dans le compose plutot qu'ecrits en dur. Controle saute si la stack
+	@# tourne deja : ses propres ports seraient alors signales a tort.
+	@if [ -z "$$(docker compose -f docker-compose.dev.yml ps -q 2>/dev/null)" ]; then \
+	  busy=""; \
+	  for p in $$(docker compose -f docker-compose.dev.yml config 2>/dev/null \
+	      | grep -oE 'published: "?[0-9]+' | grep -oE '[0-9]+' | sort -un); do \
+	    nc -z -w1 127.0.0.1 $$p 2>/dev/null && busy="$$busy $$p"; \
+	  done; \
+	  if [ -n "$$busy" ]; then \
+	    echo "Erreur : ports deja occupes sur l'hote :$$busy"; \
+	    echo "Arreter le service concerne (autre stack Docker ?) puis relancer 'make init'."; \
+	    exit 1; \
+	  fi; \
+	fi
+	@echo "Prerequis OK (docker, docker compose, openssl, curl, ports libres)."
+
+# Le package @tigamadou/pdf-engine est prive : sans NPM_TOKEN le build echoue en 401.
+# Ordre de recherche : `.env` existant, variable du shell, puis saisie masquee.
+init-env:
+	@if grep -qE '^NPM_TOKEN=.+' .env 2>/dev/null; then \
+	  echo ".env : NPM_TOKEN deja renseigne."; \
+	else \
+	  token="$${NPM_TOKEN:-}"; \
+	  if [ -z "$$token" ]; then \
+	    printf "Jeton GitHub classic (portee read:packages) : "; \
+	    stty -echo 2>/dev/null; read -r token; stty echo 2>/dev/null; echo ""; \
+	  fi; \
+	  if [ -z "$$token" ]; then \
+	    echo "Erreur : NPM_TOKEN requis (cf. docs/v4/installation.md, section Jeton du registre)."; \
+	    exit 1; \
+	  fi; \
+	  touch .env; \
+	  if grep -q '^NPM_TOKEN=' .env; then \
+	    sed -i.bak "s|^NPM_TOKEN=.*|NPM_TOKEN=$$token|" .env && rm -f .env.bak; \
+	  else \
+	    printf 'NPM_TOKEN=%s\n' "$$token" >> .env; \
+	  fi; \
+	  echo "NPM_TOKEN ecrit dans .env (gitignore)."; \
+	fi
+
+# Le CMD du conteneur app refait `yarn install` + `prisma generate` avant `next dev` :
+# attendre qu'il reponde evite de lancer `db push` pendant que node_modules bouge.
+init-wait:
+	@echo "Attente du demarrage de l'app (premier lancement : plusieurs minutes)..."
+	@i=0; \
+	until curl -s -m 60 -o /dev/null http://localhost:3785/; do \
+	  i=$$((i+1)); \
+	  if [ $$i -ge 150 ]; then \
+	    echo "Erreur : app injoignable sur localhost:3785. Voir 'make logs'."; \
+	    exit 1; \
+	  fi; \
+	  sleep 2; \
+	done
+	@echo "App joignable sur http://localhost:3785."
 
 # ============================================================
 #  Developpement
