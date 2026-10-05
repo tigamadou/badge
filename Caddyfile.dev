@@ -15,5 +15,7 @@ mail.badge.local {
 
 s3.badge.local {
 	tls internal
-	reverse_proxy minio:9001
+	# La console RustFS vit sous /rustfs/console/ ; la racine repond 403.
+	redir / /rustfs/console/
+	reverse_proxy rustfs:9001
 }

@@ -20,8 +20,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      minio:
-        condition: service_started
+      rustfs:
+        condition: service_healthy
 
   # Le studio de construction de templates vit desormais dans le projet dedie
   # pdfStudio (../pdfStudio, http://pdfstudio.localhost).
@@ -59,22 +59,25 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  minio:
-    # MinIO ne publie plus son image sur Docker Hub : `minio/minio` n'est plus
-    # telechargeable. Le registre officiel est quay.io.
-    image: quay.io/minio/minio:latest
-    command: server /data --console-address ":9001"
+  rustfs:
+    # Stockage S3-compatible du dev. MinIO n'est plus distribue (images retirees de
+    # Docker Hub puis de quay.io, binaires dl.min.io en 410) : RustFS (Apache-2.0)
+    # le remplace. Tag fige : le projet n'en est qu'aux preversions.
+    image: rustfs/rustfs:1.0.1-preview.16
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      # Console derriere Caddy dev (https://s3.badge.local, tls internal).
-      # L'acces direct http://localhost:9001 reste possible en parallele.
-      MINIO_BROWSER_REDIRECT_URL: https://s3.badge.local
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio_data_dev:/data
+      - rustfs_data_dev:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   caddy:
     image: caddy:2-alpine
@@ -94,7 +97,7 @@ volumes:
   mysql_data:
   caddy_data_dev:
   caddy_config_dev:
-  minio_data_dev:
+  rustfs_data_dev:
 
 secrets:
   # Jeton du registre GitHub Packages, lu dans l'environnement de l'hote (.env du
