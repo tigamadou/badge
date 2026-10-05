@@ -55,7 +55,7 @@ init:
 	@echo "  App        : https://badge.local (ou http://localhost:3785)"
 	@echo "  phpMyAdmin : https://pma.badge.local"
 	@echo "  Mailpit    : https://mail.badge.local"
-	@echo "  MinIO      : https://s3.badge.local (minioadmin / minioadmin)"
+	@echo "  RustFS     : https://s3.badge.local (rustfsadmin / rustfsadmin)"
 	@echo "  Comptes    : admin@badge.local (SUPER_ADMIN), mot de passe 123456 (cf. prisma/seed.ts)"
 	@echo "Types Prisma dans l'IDE : lancer 'yarn install' sur l'hote puis 'make db-generate'."
 

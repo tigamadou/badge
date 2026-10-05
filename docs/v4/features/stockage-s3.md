@@ -16,8 +16,10 @@
 
 ## Services et variables
 
-Service `minio` dans `docker-compose.dev.yml` (ports 9000 data / 9001 console) et
-`docker-compose.yml` (reseau interne, pas de port public). Variables lues par
+Service `rustfs` dans `docker-compose.dev.yml` (ports 9000 data / 9001 console) et
+dans la CI ; service `minio` dans `docker-compose.yml` / `docker-compose.preprod.yml`
+(reseau interne, pas de port public). MinIO n'etant plus distribue, le dev est passe
+sur RustFS (voir `docs/v4/installation.md`, « Stockage S3 en dev »). Variables lues par
 `storage.ts` : `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`,
 `S3_BUCKET` (`badge-dev` en dev).
 
@@ -31,5 +33,5 @@ Service `minio` dans `docker-compose.dev.yml` (ports 9000 data / 9001 console) e
 
 ## Tests
 
-`src/lib/__tests__/storage.test.ts` — driver S3 exerce contre MinIO (upload/read/
+`src/lib/__tests__/storage.test.ts` — driver S3 exerce contre RustFS en dev/CI (upload/read/
 delete/deletePrefix + validations MIME/taille). Skippe si `S3_ENDPOINT` absent.

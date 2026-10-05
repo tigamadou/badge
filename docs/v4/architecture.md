@@ -7,7 +7,7 @@
 
 Next.js 16 (App Router) · React 19 · TypeScript 5 · Prisma 6 · MySQL 8 ·
 NextAuth (Credentials/JWT) · Tailwind 4 · Vitest 4 · Playwright · Caddy ·
-`@aws-sdk/client-s3` + MinIO.
+`@aws-sdk/client-s3` + RustFS (dev/CI) / MinIO (prod).
 
 ## Les trois espaces (separation complete)
 
@@ -74,7 +74,7 @@ form dans la supervision). Le code mort v1 `UserForm` est supprime.
 `src/lib/storage.ts` bascule d'un stockage filesystem local vers un driver
 S3-compatible (`@aws-sdk/client-s3`, `forcePathStyle` pour MinIO). API publique
 inchangee (`uploadFile`/`getFile`/`deleteFile`) + `deletePrefix` pour l'archivage
-par prefixe. Service `minio` en dev (ports 9000/9001) et prod (reseau interne).
+par prefixe. Service `rustfs` en dev (ports 9000/9001), `minio` en prod (reseau interne).
 Variables `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` /
 `S3_BUCKET`. Voir la [spec S3](specs/2026-05-31-v4-stockage-s3-et-backups.md).
 

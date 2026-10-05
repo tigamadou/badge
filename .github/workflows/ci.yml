@@ -119,14 +119,18 @@ jobs:
         ports:
           - 1025:1025
           - 8025:8025
-      minio:
-        image: quay.io/minio/minio:latest
+      # Meme serveur S3 que le dev (docker-compose.dev.yml) : l'image MinIO n'existe plus.
+      # Le bucket est cree par storage.ts au premier upload.
+      rustfs:
+        image: rustfs/rustfs:1.0.1-preview.16
         env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-          MINIO_DEFAULT_BUCKETS: badge-dev
+          RUSTFS_ACCESS_KEY: rustfsadmin
+          RUSTFS_SECRET_KEY: rustfsadmin
         ports:
           - 9000:9000
+        options: >-
+          --health-cmd="curl -fsS http://127.0.0.1:9000/health"
+          --health-interval=5s --health-timeout=5s --health-retries=10
     env:
       DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge
       PLATFORM_SMTP_HOST: 127.0.0.1
@@ -135,8 +139,8 @@ jobs:
       PLATFORM_SMTP_SECURE: "false"
       S3_ENDPOINT: http://127.0.0.1:9000
       S3_REGION: us-east-1
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin
       S3_BUCKET: badge-dev
       PLAYWRIGHT_BASE_URL: http://localhost:3000
     steps:

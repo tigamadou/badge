@@ -41,7 +41,7 @@ sa CA interne (`tls internal`). Le HTTP est redirige vers HTTPS.
 | `mysql` | 33060 | -- | Base de donnees MySQL |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
-| `minio` | 9001 | `https://s3.badge.local` | Console MinIO (stockage S3) |
+| `rustfs` | 9001 | `https://s3.badge.local` | Console RustFS (stockage S3, `rustfsadmin` / `rustfsadmin`) |
 | `caddy` | 80 / 443 | -- | Reverse proxy dev HTTPS |
 
 Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`)
@@ -119,6 +119,23 @@ Dans le navigateur (apres confiance CA) : `https://badge.local` affiche le
 cadenas sans avertissement. Les liens captures dans Mailpit
 (`https://mail.badge.local`) commencent par `https://badge.local`.
 
+## Stockage S3 en dev : RustFS
+
+Le dev et la CI utilisent [RustFS](https://github.com/rustfs/rustfs) (Apache-2.0),
+image `rustfs/rustfs` au tag fige `1.0.1-preview.16`. MinIO n'est plus distribue : images
+retirees de Docker Hub puis de quay.io, binaires `dl.min.io` en 410, depot archive. La
+prod et la preprod tournent encore sur l'image MinIO presente sur le serveur ; leur
+migration fait l'objet d'une decision separee.
+
+`storage.ts` ne change pas : RustFS couvre les commandes S3 utilisees (Put/Get/Delete,
+ListObjectsV2, DeleteObjects, Head/CreateBucket, `forcePathStyle`). Le bucket `badge-dev`
+est cree au premier upload.
+
+> **Poste existant** : l'ancien volume `minio_data_dev` n'est pas repris. Les fichiers
+> uploades en dev avant la bascule sont perdus pour l'app (la base peut encore y faire
+> reference) : repartir d'une base propre avec `make db-seed`. Une fois rassure, le
+> volume orphelin se supprime avec `docker volume rm badge_minio_data_dev`.
+
 ## Tests
 
 Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
@@ -166,9 +183,9 @@ Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
 > recoive du trafic. La mecanique concrete de production est a arreter au moment de la
 > release. Detail : `docs/v4/features/templates-badges.md`, § « Ordre de release obligatoire ».
 
-**Pre-requis Playwright / MinIO** : le chromium systeme est installe dans le conteneur
+**Pre-requis Playwright / RustFS** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
-(MinIO) doit tourner (`make dev` le demarre) pour les tests d'upload.
+(RustFS) doit tourner (`make dev` le demarre) pour les tests d'upload.
 
 ## Jeton du registre
 
@@ -196,7 +213,7 @@ vers `development`. Quatre jobs paralleles bloquants :
 1. **lint** — `yarn lint` (ESLint, 0 erreur ; warnings au niveau baseline toleres).
 2. **typecheck** — `yarn tsc --noEmit`.
 3. **unit-integration** — service MySQL 8, `prisma db push`, `yarn vitest run --coverage` (les seuils 100% font gate).
-4. **e2e** — services MySQL + Mailpit + MinIO, `prisma db seed`, build Next + `yarn start`, `yarn playwright test` (rapport uploade en artefact si echec).
+4. **e2e** — services MySQL + Mailpit + RustFS, `prisma db seed`, build Next + `yarn start`, `yarn playwright test` (rapport uploade en artefact si echec).
 
 > Le job **e2e** reste rouge tant que la couverture E2E (Phase 3 du plan
 > `v4-02`) n'est pas verte. Ne l'ajouter aux checks **requis** qu'une fois la

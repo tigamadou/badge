@@ -132,7 +132,7 @@ Services disponibles :
 | `mysql` | 33060 | — | Base de données |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
-| `minio` | 9001 | `https://s3.badge.local` | Console MinIO |
+| `rustfs` | 9001 | `https://s3.badge.local` | Console RustFS (stockage S3) |
 | `caddy` | 80 / 443 | — | Reverse proxy dev (sous-domaines `*.badge.local`, `tls internal`) |
 
 > **Pré-requis pour les URL `*.badge.local`** : lancer `make dev-https` une fois (renseigne `/etc/hosts` et approuve la CA locale de Caddy — voir `docs/v4/installation.md`). Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
