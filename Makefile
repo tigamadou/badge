@@ -6,7 +6,7 @@
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
         preprod-db-reset \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
-        test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
+        test test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
@@ -397,6 +397,13 @@ test-coverage:
 # Les tests e2e seedent leurs propres fixtures (e2e/helpers/db.ts), non impactes par le vidage.
 test-all: lint typecheck test test-e2e
 	@echo "OK : lint + typecheck + vitest + e2e passes."
+
+# Memes jobs que .github/workflows/ci.yml, dans le container app : schema a jour,
+# lint, typecheck, vitest avec seuils de couverture (gate), e2e. Re-seed la base
+# dev a la fin, puisque vitest la vide.
+ci: db-push lint typecheck test-coverage test-e2e
+	$(MAKE) db-seed
+	@echo "OK : tous les checks de la CI passent."
 
 test-e2e:
 	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."

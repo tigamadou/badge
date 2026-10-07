@@ -156,6 +156,7 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 | `make test-e2e` | Playwright (chromium systeme) dans le conteneur, contre `http://localhost:3000`. |
 | `make test-e2e-ui` | Playwright mode UI depuis l'hote (fenetre Electron ; app sur `localhost:3785`). |
 | `make test-all` | `lint` + `typecheck` + `test` + `test-e2e`, s'arrete au premier echec. |
+| `make ci` | Memes checks que la CI GitHub : `db-push` + `lint` + `typecheck` + `test-coverage` (seuils 100 %) + `test-e2e`, puis `db-seed`. |
 
 > **Attention** : `make test` (et `test-coverage`/`test-all`) **vide la base de dev**
 > (`src/test-setup.ts` fait un `deleteMany` global en `beforeEach`). Relancer
