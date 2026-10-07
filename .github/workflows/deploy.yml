@@ -1,0 +1,45 @@
+name: Build & Deploy Badge
+
+on:
+  release:
+    types: [published] # Triggers for prerelease and final release
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Job to build and push docker image
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ... (build steps omitted for simplicity, focus on logic)
+
+  # Logic for environment separation
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Wait, the environment should be dynamic. 
+    # The action output can define environment.
+    
+    # Let's simplify and make one dynamic job using GitHub Actions logic inside job.
+    
+    steps:
+      - id: resolve_env
+        run: |
+            if [[ ${{ github.event.release.prerelease }} == 'true' ]]; then
+                echo "target=preprod" >> $GITHUB_OUTPUT
+            else
+                echo "target=prod" >> $GITHUB_OUTPUT
+            fi
+            
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.VPS_HOST }}
+            username: deploy
+            key: ${{ secrets.SSH_KEY }}
+            script: |
+              # Execute deploy.sh with the proper environment
+              ~/badge/deploy.sh ${{ steps.resolve_env.outputs.target }} ${{ github.ref_name }}

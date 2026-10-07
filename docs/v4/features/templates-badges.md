@@ -698,7 +698,7 @@ aussi les badges déjà émis. Avant chaque déploiement d'une nouvelle version 
    ou un template installé depuis la dernière référence, régénère son épreuve
    `proof-engine-<version>.pdf` à côté de `proof.pdf` : les comparer. Les épreuves sont
    écrites dans le S3 de l'environnement **même sans `--accept`**. Pour en ouvrir une :
-   `/api/files/<proofPath>` (la route sert les clés `badge-templates/`) ou la console MinIO.
+   `/api/files/<proofPath>` (la route sert les clés `badge-templates/`) ou la console RustFS.
 3. Même vérification sur les données réelles, sans redéployer l'application :
    `make verify-engine-preprod`, puis `make verify-engine-prod`.
 4. Si les changements sont acceptés : `--accept` est **par environnement** (chacun a sa
