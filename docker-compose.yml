@@ -23,11 +23,9 @@ services:
 
   app:
     container_name: badge-app
-    build:
-      context: .
-      dockerfile: Dockerfile
-      secrets:
-        - npm_token
+    # Image construite et publiee sur GHCR par GitHub Actions (.github/workflows/deploy.yml).
+    # BADGE_TAG est fixe par deploy.sh (sha du commit deploye) ; defaut : tag d'environnement.
+    image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}:${BADGE_TAG:-prod}
     expose:
       - "3000"
     env_file:
@@ -36,6 +34,8 @@ services:
       - uploads_data:/app/uploads
     depends_on:
       mysql:
+        condition: service_healthy
+      rustfs:
         condition: service_healthy
     restart: unless-stopped
 
@@ -71,25 +71,26 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # v4 Task 5.1 : stockage objet S3-compatible. Aucun port publie sur Internet ;
-  # joignable uniquement via le reseau Docker interne (depuis `app`). Console 9001
-  # accessible via tunnel SSH temporaire si besoin.
-  minio:
-    container_name: badge-minio
-    # MinIO ne publie plus son image sur Docker Hub : `minio/minio` n'est plus
-    # telechargeable. Le registre officiel est quay.io.
-    image: quay.io/minio/minio:latest
-    command: server /data --console-address ":9001"
+  # v4 Task 5.1 : stockage objet S3-compatible. Aucun port publie sur Internet :
+  # l'API S3 (9000) n'est joignable que via le reseau Docker interne (depuis
+  # `app`), la console (9001) est servie par Caddy sur s3.badge.bj.
+  rustfs:
+    container_name: badge-rustfs
+    # MinIO n'est plus distribue (images retirees de Docker Hub puis de quay.io) :
+    # RustFS (Apache-2.0) le remplace, comme en dev. Tag fige : le projet n'en est
+    # qu'aux preversions. Identifiants : RUSTFS_ACCESS_KEY / RUSTFS_SECRET_KEY.
+    image: rustfs/rustfs:1.0.1-preview.16
     env_file:
       - .env.production
     environment:
-      # Console derriere Caddy (HTTPS) : sans cette URL publique, MinIO redirige
-      # vers son adresse interne et le login echoue.
-      MINIO_BROWSER_REDIRECT_URL: https://s3.badge.bj
-      # MINIO_SERVER_URL n'est pas defini : l'API S3 (9000) n'est jamais exposee
-      # publiquement, `app` l'atteint en HTTP sur le reseau Docker interne.
+      RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio_data:/data
+      - rustfs_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   # Taches ponctuelles (seed, smoke tests, scripts). Utilise le stage `builder`
@@ -98,12 +99,8 @@ services:
   # tourne que sur `docker compose run --rm tools ...`.
   tools:
     profiles: ["tools"]
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-      secrets:
-        - npm_token
+    # Stage `builder` publie a part sur GHCR (meme commit que `app`).
+    image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}-tools:${BADGE_TAG:-prod}
     env_file:
       - .env.production
     volumes:
@@ -117,7 +114,7 @@ volumes:
   uploads_data:
   caddy_data:
   caddy_config:
-  minio_data:
+  rustfs_data:
 
 # Reseau partage avec la stack de preproduction : seul `caddy` y est attache
 # cote prod, ce qui lui permet de joindre les conteneurs preprod sans exposer
@@ -126,9 +123,3 @@ networks:
   web:
     external: true
     name: badge_web
-
-secrets:
-  # Jeton du registre GitHub Packages, lu dans l'environnement de l'hote (.env du
-  # dossier de deploiement). Sert uniquement au build (yarn install).
-  npm_token:
-    environment: NPM_TOKEN

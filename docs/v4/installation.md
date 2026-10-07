@@ -119,13 +119,21 @@ Dans le navigateur (apres confiance CA) : `https://badge.local` affiche le
 cadenas sans avertissement. Les liens captures dans Mailpit
 (`https://mail.badge.local`) commencent par `https://badge.local`.
 
-## Stockage S3 en dev : RustFS
+## Stockage S3 : RustFS
 
-Le dev et la CI utilisent [RustFS](https://github.com/rustfs/rustfs) (Apache-2.0),
-image `rustfs/rustfs` au tag fige `1.0.1-preview.16`. MinIO n'est plus distribue : images
-retirees de Docker Hub puis de quay.io, binaires `dl.min.io` en 410, depot archive. La
-prod et la preprod tournent encore sur l'image MinIO presente sur le serveur ; leur
-migration fait l'objet d'une decision separee.
+Le dev, la CI, la preprod et la prod utilisent [RustFS](https://github.com/rustfs/rustfs)
+(Apache-2.0), image `rustfs/rustfs` au tag fige `1.0.1-preview.16`. MinIO n'est plus
+distribue : images retirees de Docker Hub puis de quay.io, binaires `dl.min.io` en 410,
+depot archive.
+
+En prod/preprod, le service `rustfs` (conteneurs `badge-rustfs` / `badge-rustfs-preprod`,
+volumes `rustfs_data` / `rustfs_data_preprod`) lit `RUSTFS_ACCESS_KEY` /
+`RUSTFS_SECRET_KEY` dans `.env.production` / `.env.preprod` ; l'app y lit
+`S3_ENDPOINT=http://rustfs:9000` et `S3_ACCESS_KEY` / `S3_SECRET_KEY` (memes valeurs).
+Les anciennes variables `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` ne servent plus. La
+console est servie par Caddy sur `s3.badge.bj` / `preprod.s3.badge.bj`
+(`/rustfs/console/`). Les volumes MinIO n'etant pas repris, les anciens volumes
+`minio_data*` peuvent etre supprimes une fois la bascule validee.
 
 `storage.ts` ne change pas : RustFS couvre les commandes S3 utilisees (Put/Get/Delete,
 ListObjectsV2, DeleteObjects, Head/CreateBucket, `forcePathStyle`). Le bucket `badge-dev`
@@ -148,6 +156,7 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 | `make test-e2e` | Playwright (chromium systeme) dans le conteneur, contre `http://localhost:3000`. |
 | `make test-e2e-ui` | Playwright mode UI depuis l'hote (fenetre Electron ; app sur `localhost:3785`). |
 | `make test-all` | `lint` + `typecheck` + `test` + `test-e2e`, s'arrete au premier echec. |
+| `make ci` | Memes checks que la CI GitHub : `db-push` + `lint` + `typecheck` + `test-coverage` (seuils 100 %) + `test-e2e`, puis `db-seed`. |
 
 > **Attention** : `make test` (et `test-coverage`/`test-all`) **vide la base de dev**
 > (`src/test-setup.ts` fait un `deleteMany` global en `beforeEach`). Relancer

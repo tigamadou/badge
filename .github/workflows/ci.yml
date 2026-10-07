@@ -18,6 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # .npmrc reference ${NPM_TOKEN} : toute commande yarn echoue s'il n'est pas defini,
+  # y compris le `yarn cache dir` lance par setup-node (cache: yarn) avant nos etapes.
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   # Cles reCAPTCHA de test Google (passent toujours) + secrets factices : jamais de vrai secret en CI.
   NEXTAUTH_SECRET: ci-only-secret-not-for-prod
   NEXTAUTH_URL: http://localhost:3000
@@ -37,11 +40,7 @@ jobs:
       - run: corepack enable
       # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
       - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       # ESLint : 0 erreur = gate (les warnings au niveau baseline sont toleres).
       - run: yarn lint
@@ -57,11 +56,7 @@ jobs:
       - run: corepack enable
       # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
       - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       - run: yarn tsc --noEmit
 
@@ -89,11 +84,7 @@ jobs:
       - run: corepack enable
       # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
       - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       # Cree le schema sur la MySQL de service (les tests d'integration font leur propre seed
       # via deleteMany + create ; pas besoin de db-seed global).
@@ -152,11 +143,7 @@ jobs:
       - run: corepack enable
       # Jeton read:packages (secret du depot) pour installer @tigamadou/pdf-engine.
       - run: '[ -n "$NPM_TOKEN" ] || { echo "::error::secret NPM_TOKEN manquant (read:packages)"; exit 1; }'
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn install --frozen-lockfile
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: yarn prisma generate
       - run: yarn prisma db push --skip-generate
       - run: yarn prisma db seed

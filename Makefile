@@ -6,15 +6,18 @@
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
         preprod-db-reset \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
-        test test-unit test-coverage test-all test-e2e test-e2e-ui lint typecheck build logs \
+        test test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
-        upload deploy upload-prod deploy-prod upload-preprod deploy-preprod \
-        upload-prod-dry upload-preprod-dry net-create \
-        download-uploads download-db
+        net-create \
+        download-uploads download-db logs-prod
 
-SERVER=root@173.212.217.54
+# Meme compte et meme cle que le workflow GitHub Actions : les stacks vivent
+# dans /home/deploy/{prod,preprod}/badge.
+SERVER=deploy@161.97.115.135
+SSH_KEY?=~/.ssh/badge_deploy
+SSH=ssh -i $(SSH_KEY) -o IdentitiesOnly=yes
 BACKUP_DIR=backups
 TS=$(shell date +%Y%m%d-%H%M%S)
 
@@ -138,14 +141,13 @@ dev-restart:
 # ============================================================
 #  Production
 # ============================================================
-# `--build` systematique : l'image doit toujours refleter le code du dossier
-# (Dockerfile multi-stage -> `yarn build` + runner standalone `node server.js`).
-# Sans lui, `up -d` relance silencieusement l'image precedente.
+# Plus de build sur le serveur : l'image est construite par GitHub Actions et
+# publiee sur GHCR (cf. .github/workflows/deploy.yml). Ces cibles pull le tag
+# BADGE_TAG (defaut : `prod`, dernier build de `main`) puis relancent la stack.
 prod: net-create
-	docker compose up -d --build
+	docker compose pull && docker compose up -d
 
-prod-build: net-create
-	docker compose build && docker compose down && docker compose up -d
+prod-build: prod
 
 prod-down:
 	docker compose down
@@ -172,10 +174,9 @@ prod-db-reset:
 #  Preproduction (a executer dans ~/preprod/badge sur le serveur)
 # ============================================================
 preprod: net-create
-	$(PREPROD_COMPOSE) up -d --build
+	$(PREPROD_COMPOSE) pull && $(PREPROD_COMPOSE) up -d
 
-preprod-build: net-create
-	$(PREPROD_COMPOSE) build && $(PREPROD_COMPOSE) down && $(PREPROD_COMPOSE) up -d
+preprod-build: preprod
 
 preprod-down:
 	$(PREPROD_COMPOSE) down
@@ -217,8 +218,8 @@ caddy-reload:
 # Verifie que Caddy joint reellement chaque upstream (resolution DNS + port),
 # depuis l'interieur du conteneur. A lancer sur le serveur, stacks demarrees.
 caddy-check:
-	@for up in badge-app:3000 badge-pma:80 badge-minio:9001 \
-	           badge-app-preprod:3000 badge-pma-preprod:80 badge-minio-preprod:9001; do \
+	@for up in badge-app:3000 badge-pma:80 badge-rustfs:9001 \
+	           badge-app-preprod:3000 badge-pma-preprod:80 badge-rustfs-preprod:9001; do \
 	  if docker exec badge-caddy wget -q -T3 -O /dev/null "http://$$up" 2>/dev/null; then \
 	    echo "OK   $$up"; \
 	  else \
@@ -397,6 +398,13 @@ test-coverage:
 test-all: lint typecheck test test-e2e
 	@echo "OK : lint + typecheck + vitest + e2e passes."
 
+# Memes jobs que .github/workflows/ci.yml, dans le container app : schema a jour,
+# lint, typecheck, vitest avec seuils de couverture (gate), e2e. Re-seed la base
+# dev a la fin, puisque vitest la vide.
+ci: db-push lint typecheck test-coverage test-e2e
+	$(MAKE) db-seed
+	@echo "OK : tous les checks de la CI passent."
+
 test-e2e:
 	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."
 	@echo "Pre-requis : make dev demarre. Premiere fois : 'docker compose -f docker-compose.dev.yml exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
@@ -437,15 +445,17 @@ migrate-installed-templates:
 verify-engine:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)
 
-# Sur le serveur, AVANT de deployer : envoie le code (sans reconstruire l'application),
-# reconstruit l'outil et verifie contre les donnees de l'environnement. Les epreuves
-# sont ecrites dans le S3 de l'environnement (a ouvrir via /api/files/<proofPath>).
+# Sur le serveur, AVANT de deployer l'application : pull l'image `tools` du commit
+# a verifier (TAG=sha-<commit>, publiee par GitHub Actions ; defaut : tag de
+# l'environnement) et verifie contre les donnees de l'environnement, sans toucher
+# au conteneur `app`. Les epreuves sont ecrites dans le S3 de l'environnement
+# (a ouvrir via /api/files/<proofPath>).
 # ARGS=--accept : uniquement apres examen des epreuves de cet environnement.
-verify-engine-preprod: upload-preprod
-	ssh $(SERVER) "cd $(PREPROD_DIR) && $(PREPROD_COMPOSE) --profile tools build tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
+verify-engine-preprod:
+	$(SSH) $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
 
-verify-engine-prod: upload-prod
-	ssh $(SERVER) "cd $(PROD_DIR) && docker compose --profile tools build tools && docker compose --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
+verify-engine-prod:
+	$(SSH) $(SERVER) "cd $(PROD_DIR) && export BADGE_TAG=$(or $(TAG),prod) && docker compose --profile tools pull tools && docker compose --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
 
 # Exporte les templates installes vers un dossier a deposer dans le corpus de
 # pdfStudio (packages/engine/corpus/). OUT=dossier (defaut : backups/engine-corpus).
@@ -453,9 +463,9 @@ export-engine-corpus:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/export-engine-corpus.ts $(or $(OUT),backups/engine-corpus)
 
 export-engine-corpus-prod:
-	ssh $(SERVER) "rm -rf /tmp/engine-corpus && cd $(PROD_DIR) && docker compose --profile tools build tools && docker compose --profile tools run --rm -v /tmp/engine-corpus:/out tools yarn tsx scripts/export-engine-corpus.ts /out"
+	$(SSH) $(SERVER) "rm -rf /tmp/engine-corpus && cd $(PROD_DIR) && docker compose --profile tools pull tools && docker compose --profile tools run --rm -v /tmp/engine-corpus:/out tools yarn tsx scripts/export-engine-corpus.ts /out"
 	@mkdir -p backups/engine-corpus
-	rsync -avz $(SERVER):/tmp/engine-corpus/ ./backups/engine-corpus/
+	$(SSH) $(SERVER) "tar -C /tmp/engine-corpus -cf - ." | tar -C ./backups/engine-corpus -xf -
 
 # v4 (plan 12) : convertit les anciennes references texte ("default-v1") vers les cuid
 # des templates installes. Idempotent. Utile sur une base de dev anterieure au plan 12 ;
@@ -508,57 +518,21 @@ db-reset:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
 
 # ============================================================
-#  Deploiement
+#  Serveur (le deploiement passe uniquement par GitHub Actions :
+#  .github/workflows/deploy.yml, release -> prod, pre-release -> preprod)
 # ============================================================
-# `./` inclut les fichiers caches (.env.*, .yarnrc.yml, .pnp.cjs, .yarn/) :
-# tout le projet part, sauf ce qui est regenere par le build ou appartient au
-# serveur. --delete aligne exactement le dossier distant sur le projet local ;
-# les chemins exclus ci-dessous sont proteges par rsync et ne sont jamais
-# supprimes cote serveur (uploads et backups de production notamment).
-# `/.env` (racine uniquement) est l'environnement de dev local : Compose le lit
-# automatiquement pour l'interpolation et il n'a rien a faire sur le serveur.
-RSYNC_EXCLUDES=--exclude='node_modules' --exclude='.next' --exclude='uploads' \
-               --exclude='backups' --exclude='.git' --exclude='coverage' \
-               --exclude='*.zip' --exclude='/.env' --exclude='.DS_Store'
-
-RSYNC=rsync -avz --delete $(RSYNC_EXCLUDES)
-
-# Chaque stack recoit uniquement son propre fichier d'environnement : le
-# .env.production ne doit jamais atterrir dans ~/preprod/badge et inversement.
-upload-prod:
-	ssh $(SERVER) "mkdir -p $(PROD_DIR)"
-	$(RSYNC) --exclude='.env.preprod' ./ $(SERVER):$(PROD_DIR)/
-
-deploy-prod: upload-prod
-	ssh $(SERVER) "cd $(PROD_DIR) && make prod-build && make prod-db-push"
-
-upload-preprod:
-	ssh $(SERVER) "mkdir -p $(PREPROD_DIR)"
-	$(RSYNC) --exclude='.env.production' ./ $(SERVER):$(PREPROD_DIR)/
-
-deploy-preprod: upload-preprod
-	ssh $(SERVER) "cd $(PREPROD_DIR) && make preprod-build && make preprod-db-push"
-
-# Simulation : affiche ce qui serait transfere et supprime, sans rien modifier.
-# A lancer avant le premier deploiement sur un dossier existant.
-upload-prod-dry:
-	$(RSYNC) --dry-run --exclude='.env.preprod' ./ $(SERVER):$(PROD_DIR)/
-
-upload-preprod-dry:
-	$(RSYNC) --dry-run --exclude='.env.production' ./ $(SERVER):$(PREPROD_DIR)/
-
-# Alias historiques (cibles la production).
-upload: upload-prod
-deploy: deploy-prod
-
 download-uploads:
 	@mkdir -p uploads
-	ssh $(SERVER) "docker cp badge-app:/app/uploads /tmp/badge-uploads"
-	rsync -avz $(SERVER):/tmp/badge-uploads/ ./backups/uploads/
-	ssh $(SERVER) "rm -rf /tmp/badge-uploads"
+	$(SSH) $(SERVER) "docker cp badge-app:/app/uploads /tmp/badge-uploads"
+	@mkdir -p backups/uploads
+	$(SSH) $(SERVER) "tar -C /tmp/badge-uploads -cf - ." | tar -C ./backups/uploads -xf -
+	$(SSH) $(SERVER) "rm -rf /tmp/badge-uploads"
 	@echo "Uploads telecharges dans ./uploads/"
 
 download-db:
 	@mkdir -p backups/db
-	ssh $(SERVER) 'docker exec badge-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD badge"' > backups/db/badge-$(TS).sql
+	$(SSH) $(SERVER) 'docker exec badge-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD badge"' > backups/db/badge-$(TS).sql
 	@echo "Dump sauvegarde dans ./backups/"
+
+logs-prod:
+	$(SSH) $(SERVER) "docker logs -f --tail 200 badge-app"

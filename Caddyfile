@@ -4,7 +4,7 @@
 #
 # Les upstreams utilisent les `container_name`, pas les noms de service : sur le
 # reseau partage, les deux stacks exposent toutes deux les alias `app`,
-# `phpmyadmin` et `minio`, ce qui rendrait la resolution DNS ambigue.
+# `phpmyadmin` et `rustfs`, ce qui rendrait la resolution DNS ambigue.
 
 # ============================================================
 #  Production
@@ -17,17 +17,24 @@ pma.badge.bj {
 	reverse_proxy badge-pma:80
 }
 
-# Console d'administration MinIO. Seule la console (9001) est exposee ;
+# Console d'administration RustFS. Seule la console (9001) est exposee ;
 # l'API S3 (9000) reste interne au reseau Docker (accedee par `app`).
+# La console vit sous /rustfs/console/ ; la racine repond 403.
 s3.badge.bj {
-	reverse_proxy badge-minio:9001
+	# GET uniquement : la console poste son login (STS AssumeRole) sur `POST /`.
+	@consoleRoot {
+		method GET
+		path /
+	}
+	redir @consoleRoot /rustfs/console/
+	reverse_proxy badge-rustfs:9001
 }
 
 # ============================================================
 #  Preproduction
 # ============================================================
 preprod.badge.bj {
-	reverse_proxy badge-app-preprod:3500
+	reverse_proxy badge-app-preprod:3000
 }
 
 preprod.pma.badge.bj {
@@ -35,5 +42,11 @@ preprod.pma.badge.bj {
 }
 
 preprod.s3.badge.bj {
-	reverse_proxy badge-minio-preprod:9001
+	# GET uniquement : la console poste son login (STS AssumeRole) sur `POST /`.
+	@consoleRoot {
+		method GET
+		path /
+	}
+	redir @consoleRoot /rustfs/console/
+	reverse_proxy badge-rustfs-preprod:9001
 }
