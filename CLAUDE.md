@@ -157,5 +157,5 @@ Voir `docs/<version>/installation.md` pour la liste complète.
 - `make prod-db-reset`, `make db-reset`, toute commande avec `--force-reset`
 - Suppression de fichiers dans `uploads/`
 - Modification de `.env`, `.env.production`, `Caddyfile`, `docker-compose*.yml`, `Dockerfile*`
-- Déploiement : `make deploy`, `make upload`
+- Déploiement : publication d'une release ou pre-release GitHub (déclenche `.github/workflows/deploy.yml`)
 - Toute commande SSH sur le serveur de production

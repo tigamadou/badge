@@ -8,23 +8,20 @@ TAG=$2
 # Définition des répertoires et fichiers
 cd ~/"$ENV"/badge
 [ "$ENV" = "prod" ] && F="" || F="-f docker-compose.preprod.yml"
-export APP_TAG=$TAG
+export BADGE_TAG=$TAG
 
 echo "Déploiement de $TAG en $ENV..."
 
-# 1. Sauvegarde en prod avant changement
-[ "$ENV" = "prod" ] && make backup-prod
-
-# 2. Pull des nouvelles images
+# 1. Pull des nouvelles images
 docker compose $F pull app tools
 
-# 3. Application des migrations via tools
+# 2. Application des migrations via tools
 docker compose $F run --rm tools npx prisma db push --accept-data-loss # WARNING: using push, better migrate
 
-# 4. Relance de l'app sans coupure (no-deps, upattend que le healthcheck passe)
+# 3. Relance de l'app sans coupure (no-deps, upattend que le healthcheck passe)
 docker compose $F up -d --no-deps app
 
-# 5. Nettoyage
+# 4. Nettoyage
 docker image prune -f
 
 echo "Déploiement terminé."

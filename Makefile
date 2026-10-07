@@ -10,11 +10,14 @@
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
-        deploy push-config-prod deploy-prod push-config-preprod deploy-preprod \
         net-create \
-        download-uploads download-db
+        download-uploads download-db logs-prod
 
-SERVER=root@161.97.115.135
+# Meme compte et meme cle que le workflow GitHub Actions : les stacks vivent
+# dans /home/deploy/{prod,preprod}/badge.
+SERVER=deploy@161.97.115.135
+SSH_KEY?=~/.ssh/badge_deploy
+SSH=ssh -i $(SSH_KEY) -o IdentitiesOnly=yes
 BACKUP_DIR=backups
 TS=$(shell date +%Y%m%d-%H%M%S)
 
@@ -441,11 +444,11 @@ verify-engine:
 # au conteneur `app`. Les epreuves sont ecrites dans le S3 de l'environnement
 # (a ouvrir via /api/files/<proofPath>).
 # ARGS=--accept : uniquement apres examen des epreuves de cet environnement.
-verify-engine-preprod: push-config-preprod
-	ssh $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
+verify-engine-preprod:
+	$(SSH) $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
 
-verify-engine-prod: push-config-prod
-	ssh $(SERVER) "cd $(PROD_DIR) && export BADGE_TAG=$(or $(TAG),prod) && docker compose --profile tools pull tools && docker compose --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
+verify-engine-prod:
+	$(SSH) $(SERVER) "cd $(PROD_DIR) && export BADGE_TAG=$(or $(TAG),prod) && docker compose --profile tools pull tools && docker compose --profile tools run --rm tools yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)"
 
 # Exporte les templates installes vers un dossier a deposer dans le corpus de
 # pdfStudio (packages/engine/corpus/). OUT=dossier (defaut : backups/engine-corpus).
@@ -453,9 +456,9 @@ export-engine-corpus:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/export-engine-corpus.ts $(or $(OUT),backups/engine-corpus)
 
 export-engine-corpus-prod:
-	ssh $(SERVER) "rm -rf /tmp/engine-corpus && cd $(PROD_DIR) && docker compose --profile tools pull tools && docker compose --profile tools run --rm -v /tmp/engine-corpus:/out tools yarn tsx scripts/export-engine-corpus.ts /out"
+	$(SSH) $(SERVER) "rm -rf /tmp/engine-corpus && cd $(PROD_DIR) && docker compose --profile tools pull tools && docker compose --profile tools run --rm -v /tmp/engine-corpus:/out tools yarn tsx scripts/export-engine-corpus.ts /out"
 	@mkdir -p backups/engine-corpus
-	ssh $(SERVER) "tar -C /tmp/engine-corpus -cf - ." | tar -C ./backups/engine-corpus -xf -
+	$(SSH) $(SERVER) "tar -C /tmp/engine-corpus -cf - ." | tar -C ./backups/engine-corpus -xf -
 
 # v4 (plan 12) : convertit les anciennes references texte ("default-v1") vers les cuid
 # des templates installes. Idempotent. Utile sur une base de dev anterieure au plan 12 ;
@@ -508,66 +511,21 @@ db-reset:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
 
 # ============================================================
-#  Deploiement
+#  Serveur (le deploiement passe uniquement par GitHub Actions :
+#  .github/workflows/deploy.yml, release -> prod, pre-release -> preprod)
 # ============================================================
-# Le deploiement normal passe par GitHub Actions (push sur `main` -> prod,
-# `development` -> preprod) : build de l'image, publication sur GHCR, puis
-# `deploy.sh` sur le serveur. Les cibles ci-dessous font la meme chose a la main,
-# par SSH, sans rien construire : TAG=sha-<commit> pour un commit precis (ou
-# revenir a un tag precedent, cf. .deployed-tag.previous), sinon le dernier
-# build de la branche.
-#
-# Seuls les fichiers d'orchestration partent sur le serveur. Les .env.* n'en
-# font pas partie : ils restent sur le serveur, chaque stack avec le sien.
-# Prerequis serveur (une fois) : `docker login ghcr.io` avec un jeton read:packages.
-DEPLOY_FILES=docker-compose.yml docker-compose.preprod.yml Caddyfile deploy.sh
-
-push-config-prod:
-	ssh $(SERVER) "mkdir -p $(PROD_DIR)"
-	scp $(DEPLOY_FILES) $(SERVER):$(PROD_DIR)/
-
-deploy-prod: push-config-prod
-	ssh $(SERVER) "cd $(PROD_DIR) && sh deploy.sh prod $(TAG)"
-
-push-config-preprod:
-	ssh $(SERVER) "mkdir -p $(PREPROD_DIR)"
-	scp $(DEPLOY_FILES) $(SERVER):$(PREPROD_DIR)/
-
-deploy-preprod: push-config-preprod
-	ssh $(SERVER) "cd $(PREPROD_DIR) && sh deploy.sh preprod $(TAG)"
-
-# Alias historique (cible la production).
-deploy: deploy-prod
-
 download-uploads:
 	@mkdir -p uploads
-	ssh $(SERVER) "docker cp badge-app:/app/uploads /tmp/badge-uploads"
+	$(SSH) $(SERVER) "docker cp badge-app:/app/uploads /tmp/badge-uploads"
 	@mkdir -p backups/uploads
-	ssh $(SERVER) "tar -C /tmp/badge-uploads -cf - ." | tar -C ./backups/uploads -xf -
-	ssh $(SERVER) "rm -rf /tmp/badge-uploads"
+	$(SSH) $(SERVER) "tar -C /tmp/badge-uploads -cf - ." | tar -C ./backups/uploads -xf -
+	$(SSH) $(SERVER) "rm -rf /tmp/badge-uploads"
 	@echo "Uploads telecharges dans ./uploads/"
 
 download-db:
 	@mkdir -p backups/db
-	ssh $(SERVER) 'docker exec badge-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD badge"' > backups/db/badge-$(TS).sql
+	$(SSH) $(SERVER) 'docker exec badge-db sh -c "mysqldump -u root -p\$$MYSQL_ROOT_PASSWORD badge"' > backups/db/badge-$(TS).sql
 	@echo "Dump sauvegarde dans ./backups/"
 
-# ============================================================
-#  Nouvelles commandes de pilotage à distance (v2)
-# ============================================================
-DEPLOY_HOST=deploy@161.97.115.135
-PROD_DIR=~/prod/badge
-PREPROD_DIR=~/preprod/badge
-
-deploy-prod:     ; @test -n "$(TAG)" || (echo "TAG=vX.Y.Z requis"; exit 1)
-	ssh $(DEPLOY_HOST) "cd $(PROD_DIR) && make prod-release TAG=$(TAG)"
-
-deploy-preprod:  ; @test -n "$(TAG)" || (echo "TAG requis"; exit 1)
-	ssh $(DEPLOY_HOST) "cd $(PREPROD_DIR) && make preprod-release TAG=$(TAG)"
-
 logs-prod:
-	ssh $(DEPLOY_HOST) "docker logs -f --tail 200 badge-app"
-
-sync-config-prod:                       # compose + Caddyfile uniquement, puis rechargement de Caddy
-	scp docker-compose.yml Caddyfile $(DEPLOY_HOST):$(PROD_DIR)/
-	ssh $(DEPLOY_HOST) "docker exec badge-caddy caddy reload --config /etc/caddy/Caddyfile"
+	$(SSH) $(SERVER) "docker logs -f --tail 200 badge-app"

@@ -704,7 +704,8 @@ aussi les badges déjà émis. Avant chaque déploiement d'une nouvelle version 
 4. Si les changements sont acceptés : `--accept` est **par environnement** (chacun a sa
    propre référence dans son S3) : `make verify-engine-preprod ARGS=--accept` /
    `make verify-engine-prod ARGS=--accept`, seulement après examen des épreuves de cet
-   environnement. Puis `make deploy-preprod` / `make deploy-prod`.
+   environnement. Puis publier une pre-release (preprod) / une release (prod) sur GitHub :
+   le workflow `.github/workflows/deploy.yml` déploie.
 
 Après l'installation d'un nouveau template, lancer `make verify-engine-prod ARGS=--accept`
 pour qu'il entre dans la référence.

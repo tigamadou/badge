@@ -130,7 +130,6 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 | `make init` | Initialiser un poste de developpement neuf |
 | `make dev` | Demarrer en developpement |
 | `make prod` | Demarrer en production |
-| `make deploy` | Deployer sur le serveur |
 | `make db-push` | Appliquer le schema Prisma |
 | `make db-seed` | Seed minimal (4 staff + 1 participant historique) |
 | `make db-seed-demo` | Seed demonstration (10 orgs, 30 events, 200 participants) -- dev uniquement |
