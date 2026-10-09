@@ -155,13 +155,12 @@ prod-down:
 prod-logs:
 	docker compose logs -f
 
-# Pas de cible de seed en production : le seed est reserve au developpement
-# (`make db-seed`). Les donnees prod/preprod proviennent de l'usage reel ou
-# d'une restauration (`make rollback-prod`).
-
-# `prisma` est installe globalement dans l'image runner (cf. Dockerfile).
+# Pas de seed de donnees en production : `make db-seed` est reserve au
+# developpement. Le service compose `init` (lance a chaque `up`, donc par
+# deploy.sh) pousse le schema puis cree le SUPER_ADMIN initial
+# (SEED_SUPER_ADMIN_*) si la base n'en contient aucun.
 prod-db-push:
-	docker exec badge-app prisma db push
+	docker compose up init
 
 # Ancien reset v1 (conserve pour compatibilite, deconseille en v2)
 prod-db-reset:
@@ -185,7 +184,7 @@ preprod-logs:
 	$(PREPROD_COMPOSE) logs -f
 
 preprod-db-push:
-	docker exec badge-app-preprod prisma db push
+	$(PREPROD_COMPOSE) up init
 
 # Reset destructif limite a la preprod : n'affecte jamais les volumes de prod
 # (projet compose `badge-preprod`, volumes suffixes `_preprod`).

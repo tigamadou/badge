@@ -21,6 +21,21 @@ services:
       - phpmyadmin
     restart: unless-stopped
 
+  # Initialisation ponctuelle, relancee a chaque `up` : synchronise le schema
+  # Prisma puis cree le SUPER_ADMIN (SEED_SUPER_ADMIN_*) si la base n'en a aucun.
+  # Seul endroit du deploiement ou tourne `prisma db push`. `app` attend sa fin.
+  init:
+    container_name: badge-init
+    # Image `tools` (stage builder) : contient prisma, tsx et src/.
+    image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}-tools:${BADGE_TAG:-prod}
+    env_file:
+      - .env.production
+    command: ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx prisma/seed-super-admin.ts"]
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   app:
     container_name: badge-app
     # Image construite et publiee sur GHCR par GitHub Actions (.github/workflows/deploy.yml).
@@ -33,6 +48,8 @@ services:
     volumes:
       - uploads_data:/app/uploads
     depends_on:
+      init:
+        condition: service_completed_successfully
       mysql:
         condition: service_healthy
       rustfs:

@@ -649,15 +649,15 @@ Faits d'outillage à connaître avant de planifier la release :
   production.
 - L'image de production (`Dockerfile`, étape `runner` en mode standalone) ne contient ni
   `scripts/`, ni `src/`, ni `tsx` : le script **ne peut pas** tourner dedans.
-- `docker-entrypoint.sh` exécute `prisma db push` puis sert l'application **immédiatement** :
-  démarrer la nouvelle image pousse le schéma et ouvre le trafic d'un même geste, sans
+- Le service compose `init` exécute `prisma db push` et `app` démarre **dès qu'il a
+  terminé** : `deploy.sh` pousse le schéma et ouvre le trafic d'un même geste, sans
   laisser de place à l'étape 2.
 
 Le script doit donc être lancé depuis un environnement qui dispose des sources (le
 conteneur de dev, ou un conteneur d'outillage ponctuel) avec `DATABASE_URL` pointée sur la
 base cible, **avant** que la nouvelle image ne reçoive du trafic — par exemple : schéma
-poussé depuis cet environnement, migration, puis démarrage de la nouvelle image (son
-`db push` n'a alors plus rien à faire). La mécanique concrète de production (accès à la
+poussé depuis cet environnement, migration, puis démarrage de la nouvelle image (le
+`db push` d'`init` n'a alors plus rien à faire). La mécanique concrète de production (accès à la
 base, conteneur utilisé, coupure éventuelle) est **à arrêter au moment de la release** ;
 elle sort du périmètre de la spec 20.
 

@@ -1,9 +1,6 @@
 #!/bin/sh
 set -e
 
-echo "Running database migrations..."
-# WARNING: Removed --accept-data-loss to prevent accidental data deletion in production.
-prisma db push
-
+# Le schema est synchronise par le service compose `init` avant le demarrage.
 echo "Starting application..."
 exec node server.js

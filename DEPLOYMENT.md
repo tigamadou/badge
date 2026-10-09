@@ -74,3 +74,31 @@ Les anciennes variables `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` ne servent plu
 3. Recharger Caddy (stack prod) : `docker exec badge-caddy caddy reload --config /etc/caddy/Caddyfile`.
 4. Vérifier : `docker ps` montre `badge-rustfs` (healthy), la console répond sur `https://s3.badge.bj`, et un upload depuis l'app fonctionne.
 5. Une fois la bascule validée, supprimer les anciens volumes (action irréversible) : `docker volume rm badge_minio_data` (prod) et `docker volume rm badge-preprod_minio_data_preprod` (preprod).
+
+## Initialisation : service `init`
+
+Chaque stack (`docker-compose.yml`, `docker-compose.preprod.yml`) contient un service ponctuel `init`, basé sur l'image `tools`. À chaque `up`, il :
+
+1. pousse le schéma Prisma (`prisma db push --accept-data-loss`) — **seul endroit** où le schéma est synchronisé : ni `deploy.sh` ni `docker-entrypoint.sh` ne le font plus ;
+2. lance `prisma/seed-super-admin.ts`, qui crée le SUPER_ADMIN initial **si la base n'en contient aucun** (aucun SUPER_ADMIN non archivé).
+
+`app` dépend de `init` (`service_completed_successfully`) : si `init` échoue, l'app n'est pas relancée et `deploy.sh` s'arrête en erreur. `deploy.sh` nomme explicitement le service (`up -d --no-deps init app`), sinon `--no-deps` ne le démarrerait pas.
+
+Variables lues dans `.env.production` / `.env.preprod` :
+
+```dotenv
+SEED_SUPER_ADMIN_EMAIL=admin@badge.exemple.tld
+SEED_SUPER_ADMIN_PASSWORD=...   # 6 caractères minimum
+SEED_SUPER_ADMIN_NAME=          # optionnel, défaut « Super Admin »
+```
+
+- Un SUPER_ADMIN existe déjà (quel que soit son email) : rien n'est fait, les variables ne sont même pas lues.
+- Aucun SUPER_ADMIN : le compte est créé (email vérifié, mot de passe hashé, audit `USER_CREATED`).
+- Variable email ou mot de passe absente : création ignorée (avertissement), `init` réussit quand même.
+- Mot de passe trop court, ou email déjà pris par un compte non SUPER_ADMIN : `init` échoue, le déploiement s'arrête.
+
+Changer le mot de passe après le premier login ; `SEED_SUPER_ADMIN_PASSWORD` peut ensuite être retiré du fichier d'environnement.
+
+Pousser le schéma ou rejouer l'initialisation à la main : `make prod-db-push` / `make preprod-db-push` (équivalent à `docker compose up init`).
+
+Fichiers à recopier sur le serveur après ce changement : `deploy.sh`, `docker-compose.yml` (prod) et `docker-compose.preprod.yml` (preprod). L'entrypoint et le seeder sont dans les images.

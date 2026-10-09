@@ -15,13 +15,12 @@ echo "Déploiement de $TAG en $ENV..."
 # 1. Pull des nouvelles images
 docker compose $F pull app tools
 
-# 2. Application des migrations via tools
-docker compose $F run --rm tools npx prisma db push --accept-data-loss # WARNING: using push, better migrate
+# 2. Initialisation (db push + SUPER_ADMIN si absent) puis relance de l'app.
+# `init` doit etre nomme explicitement : --no-deps ne le demarrerait pas, et
+# `app` attend qu'il se termine avec succes (un echec bloque la relance).
+docker compose $F up -d --no-deps init app
 
-# 3. Relance de l'app sans coupure (no-deps, upattend que le healthcheck passe)
-docker compose $F up -d --no-deps app
-
-# 4. Nettoyage
+# 3. Nettoyage
 docker image prune -f
 
 echo "Déploiement terminé."
