@@ -186,7 +186,8 @@ Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
 > `validate-badge-templates`), 3) seulement ensuite ouvrir le trafic sur la nouvelle version.
 > La cible `make migrate-installed-templates` ne vise **que le conteneur de dev** ; l'image
 > de production (standalone) ne contient ni `scripts/`, ni `src/`, ni `tsx`, et
-> `docker-entrypoint.sh` fait `prisma db push` puis sert aussitot. Le script se lance donc
+> le schema est pousse par le service compose `init` juste avant le demarrage de `app`
+> (cf. `DEPLOYMENT.md`, « Initialisation : service `init` »). Le script se lance donc
 > depuis un environnement qui a les sources (conteneur de dev ou conteneur d'outillage
 > ponctuel, `DATABASE_URL` pointee sur la base cible) **avant** que la nouvelle image ne
 > recoive du trafic. La mecanique concrete de production est a arreter au moment de la
