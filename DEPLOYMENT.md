@@ -47,7 +47,8 @@ MinIO n'est plus distribué (images retirées de Docker Hub puis de quay.io) : l
 Variables à définir dans `.env.production` / `.env.preprod` (voir `.env.production.example`) :
 
 ```dotenv
-S3_ENDPOINT=http://rustfs:9000
+# container_name, pas l'alias `rustfs` : il est ambigu sur le réseau partagé `badge_web`
+S3_ENDPOINT=http://badge-rustfs:9000   # http://badge-rustfs-preprod:9000 en preprod
 S3_REGION=us-east-1
 S3_BUCKET=badge-prod            # badge-preprod en preprod
 S3_ACCESS_KEY=...

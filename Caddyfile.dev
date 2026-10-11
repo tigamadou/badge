@@ -16,10 +16,12 @@ mail.badge.local {
 s3.badge.local {
 	tls internal
 	# La console RustFS vit sous /rustfs/console/ ; la racine repond 403.
-	# GET uniquement : la console poste son login (STS AssumeRole) sur `POST /`.
+	# GET non signe uniquement : la console poste son login (STS AssumeRole) sur
+	# `POST /` et liste les buckets par un `GET /` signe (ListBuckets).
 	@consoleRoot {
 		method GET
 		path /
+		not header Authorization *
 	}
 	redir @consoleRoot /rustfs/console/
 	reverse_proxy rustfs:9001

@@ -21,10 +21,12 @@ pma.badge.bj {
 # l'API S3 (9000) reste interne au reseau Docker (accedee par `app`).
 # La console vit sous /rustfs/console/ ; la racine repond 403.
 s3.badge.bj {
-	# GET uniquement : la console poste son login (STS AssumeRole) sur `POST /`.
+	# GET non signe uniquement : la console poste son login (STS AssumeRole) sur
+	# `POST /` et liste les buckets par un `GET /` signe (ListBuckets).
 	@consoleRoot {
 		method GET
 		path /
+		not header Authorization *
 	}
 	redir @consoleRoot /rustfs/console/
 	reverse_proxy badge-rustfs:9001
@@ -42,10 +44,12 @@ preprod.pma.badge.bj {
 }
 
 preprod.s3.badge.bj {
-	# GET uniquement : la console poste son login (STS AssumeRole) sur `POST /`.
+	# GET non signe uniquement : la console poste son login (STS AssumeRole) sur
+	# `POST /` et liste les buckets par un `GET /` signe (ListBuckets).
 	@consoleRoot {
 		method GET
 		path /
+		not header Authorization *
 	}
 	redir @consoleRoot /rustfs/console/
 	reverse_proxy badge-rustfs-preprod:9001
