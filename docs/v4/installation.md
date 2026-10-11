@@ -129,7 +129,9 @@ depot archive.
 En prod/preprod, le service `rustfs` (conteneurs `badge-rustfs` / `badge-rustfs-preprod`,
 volumes `rustfs_data` / `rustfs_data_preprod`) lit `RUSTFS_ACCESS_KEY` /
 `RUSTFS_SECRET_KEY` dans `.env.production` / `.env.preprod` ; l'app y lit
-`S3_ENDPOINT=http://rustfs:9000` et `S3_ACCESS_KEY` / `S3_SECRET_KEY` (memes valeurs).
+`S3_ENDPOINT` et `S3_ACCESS_KEY` / `S3_SECRET_KEY` (memes valeurs). `S3_ENDPOINT` vise le
+`container_name` (`http://badge-rustfs:9000` / `http://badge-rustfs-preprod:9000`) : l'alias
+`rustfs` existe dans les deux stacks sur le reseau partage `badge_web` et serait ambigu.
 Les anciennes variables `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` ne servent plus. La
 console est servie par Caddy sur `s3.badge.bj` / `preprod.s3.badge.bj`
 (`/rustfs/console/`). Les volumes MinIO n'etant pas repris, les anciens volumes
