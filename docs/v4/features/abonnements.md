@@ -28,6 +28,12 @@ l'abonnement en derivent : `startDate = maintenant` et
 formulaire d'abonnement (la periode y est affichee en lecture seule, d'apres le
 plan) ; il choisit la periode a la **creation/edition du plan**. `endDate` reste
 la source de verite de `active`.
+
+Ecran staff (`/platform/organizations/[orgId]/subscription`) : sans abonnement,
+le formulaire s'affiche directement ; des qu'un abonnement existe, la page
+montre un **resume en lecture seule** (plan, statut, periode, fin, overrides) et
+le formulaire n'apparait qu'au clic sur « Modifier ». Il se referme apres
+enregistrement. Chaque enregistrement recalcule `startDate`/`endDate`.
 - Catalogue **+ overrides par org** : override != null gagne, sinon valeur du plan.
 
 ## Resolution + enforcement
@@ -48,8 +54,10 @@ echu ; l'existant reste consultable ; le staff garde un bypass audite
 Sans abonnement actif (`resolveOrgLimits(orgId).active === false`), le layout
 `src/app/org/[orgId]/layout.tsx` remplace le contenu par
 `SubscriptionBlockedNotice` (« Votre abonnement est inactif. Contactez le staff
-Badge pour le reactiver. ») pour **toutes** les pages du segment, **sauf**
-`/org/[orgId]/subscription` qui reste consultable en lecture seule. Le layout lit
+Badge pour le reactiver. », avec un bouton « Contacter le support » en
+`mailto:contact@badge.app`) pour **toutes** les pages du segment, **sauf**
+`/org/[orgId]/subscription` qui reste consultable en lecture seule (son alerte « abonnement non actif » renvoie aussi
+vers le support). Le layout lit
 le pathname via le header `x-pathname` pose par `src/middleware.ts` (les Server
 Components n'ont pas d'API native pour le pathname ; le middleware Edge n'a pas
 acces a Prisma, le check reste donc dans le layout).

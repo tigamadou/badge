@@ -32,6 +32,7 @@ export default async function OrgSubscriptionPage({
           sub.overrideMaxParticipantsPerEvent == null
             ? ""
             : String(sub.overrideMaxParticipantsPerEvent),
+        endDate: sub.endDate?.toISOString() ?? null,
       }
     : null;
 

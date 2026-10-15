@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Modal } from "@/components/ui/Modal";
 
 export type RejectionScope = "PROFILE" | "REGISTRATION" | "BOTH";
 export type RejectionReasonRow = {
@@ -28,6 +29,12 @@ export function RejectionReasonsManager({
   const [sortOrder, setSortOrder] = useState("0");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<RejectionReasonRow | null>(null);
+  const [editLabel, setEditLabel] = useState("");
+  const [editScope, setEditScope] = useState<RejectionScope>("PROFILE");
+  const [editSortOrder, setEditSortOrder] = useState("0");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState<RejectionReasonRow | null>(null);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -49,24 +56,49 @@ export function RejectionReasonsManager({
     router.refresh();
   }
 
-  async function rename(reason: RejectionReasonRow) {
-    const next = window.prompt("Nouveau libellé", reason.label);
-    if (!next || next.trim() === "" || next === reason.label) return;
+  function openEdit(reason: RejectionReasonRow) {
+    setEditing(reason);
+    setEditLabel(reason.label);
+    setEditScope(reason.scope);
+    setEditSortOrder(String(reason.sortOrder));
+    setEditError(null);
+  }
+
+  async function saveEdit() {
+    if (!editing || busy) return;
+    const label = editLabel.trim();
+    if (label === "") {
+      setEditError("Le libellé est obligatoire.");
+      return;
+    }
     setBusy(true);
-    await fetch(`/api/platform/rejection-reasons/${reason.id}`, {
+    const res = await fetch(`/api/platform/rejection-reasons/${editing.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ label: next.trim() }),
+      body: JSON.stringify({
+        label,
+        scope: editScope,
+        sortOrder: Number.parseInt(editSortOrder, 10) || 0,
+      }),
     });
     setBusy(false);
+    if (!res.ok) {
+      setEditError("Erreur de modification.");
+      return;
+    }
+    setEditing(null);
     router.refresh();
   }
 
-  async function archive(reason: RejectionReasonRow) {
-    if (!window.confirm(`Archiver le motif « ${reason.label} » ?`)) return;
+  async function confirmArchive() {
+    if (!archiving || busy) return;
     setBusy(true);
-    await fetch(`/api/platform/rejection-reasons/${reason.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/platform/rejection-reasons/${archiving.id}`, { method: "DELETE" });
     setBusy(false);
+    if (!res.ok) {
+      setError("Erreur d'archivage.");
+    }
+    setArchiving(null);
     router.refresh();
   }
 
@@ -138,14 +170,14 @@ export function RejectionReasonsManager({
                 <td className="py-2 text-right">
                   <span className="inline-flex gap-2">
                     <button
-                      onClick={() => rename(r)}
+                      onClick={() => openEdit(r)}
                       disabled={busy}
                       className="rounded-lg border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
                     >
-                      Renommer
+                      Modifier
                     </button>
                     <button
-                      onClick={() => archive(r)}
+                      onClick={() => setArchiving(r)}
                       disabled={busy}
                       className="rounded-lg border border-rose-300 px-3 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50"
                     >
@@ -165,6 +197,63 @@ export function RejectionReasonsManager({
           )}
         </tbody>
       </table>
+
+      <Modal
+        open={editing !== null}
+        title="Modifier le motif"
+        confirmLabel={busy ? "Enregistrement…" : "Enregistrer"}
+        onConfirm={saveEdit}
+        onCancel={() => setEditing(null)}
+      >
+        <div className="space-y-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-slate-600">Libellé</span>
+            <input
+              value={editLabel}
+              onChange={(e) => setEditLabel(e.target.value)}
+              maxLength={200}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            />
+          </label>
+          <div className="flex gap-3">
+            <label className="flex flex-1 flex-col gap-1">
+              <span className="text-slate-600">Portée</span>
+              <select
+                value={editScope}
+                onChange={(e) => setEditScope(e.target.value as RejectionScope)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              >
+                <option value="PROFILE">Profil</option>
+                <option value="REGISTRATION">Inscription</option>
+                <option value="BOTH">Les deux</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-slate-600">Ordre</span>
+              <input
+                type="number"
+                min={0}
+                value={editSortOrder}
+                onChange={(e) => setEditSortOrder(e.target.value)}
+                className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+              />
+            </label>
+          </div>
+          {editError && <p className="text-red-600">{editError}</p>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={archiving !== null}
+        title="Archiver le motif"
+        confirmLabel="Archiver"
+        confirmVariant="danger"
+        onConfirm={confirmArchive}
+        onCancel={() => setArchiving(null)}
+      >
+        Le motif « {archiving?.label} » ne sera plus proposé lors des refus. Les décisions déjà prises
+        conservent leur libellé.
+      </Modal>
     </div>
   );
 }

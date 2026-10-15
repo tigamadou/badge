@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { Icon } from "@/components/ui/Icon";
 
 type Props = {
   title: string;
@@ -14,8 +16,16 @@ type Props = {
 export function AuthCard({ title, subtitle, footer, children }: Props) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-5 py-10">
+      <div className="mb-4 w-full max-w-[400px]">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-900"
+        >
+          <Icon name="arrow-left" size={16} /> Retour à l&apos;accueil
+        </Link>
+      </div>
       <div className="w-full max-w-[400px] rounded-2xl border border-slate-200 bg-white p-8">
-        <div className="flex justify-center mb-6">
+        <Link href="/" className="flex justify-center mb-6" aria-label="Badge — accueil">
           <Image
             src="/logo.png"
             alt="Badge"
@@ -23,7 +33,7 @@ export function AuthCard({ title, subtitle, footer, children }: Props) {
             height={120}
             className="h-20 w-auto object-contain"
           />
-        </div>
+        </Link>
         <h1 className="text-[22px] font-semibold text-slate-900 text-center mb-2">
           {title}
         </h1>

@@ -216,7 +216,7 @@ export function EventSettingsForm({
                   onFiles={uploadLogo}
                   accept="image/jpeg,image/png,image/webp"
                   title={uploadingLogo ? "Envoi…" : "Déposer un logo ou cliquer"}
-                  subtitle="JPEG, PNG ou WebP — 5 Mo max"
+                  subtitle="Format carré, 512 × 512 px conseillé (PNG à fond transparent idéal) — JPEG, PNG ou WebP, 5 Mo max"
                 />
               )}
             </div>
@@ -239,7 +239,7 @@ export function EventSettingsForm({
                   onFiles={uploadBanner}
                   accept="image/jpeg,image/png,image/webp"
                   title={uploadingBanner ? "Envoi…" : "Déposer une bannière ou cliquer"}
-                  subtitle="JPEG, PNG ou WebP — 5 Mo max"
+                  subtitle="Format paysage 3:1, 1500 × 500 px conseillé — JPEG, PNG ou WebP, 5 Mo max"
                 />
               )}
             </div>

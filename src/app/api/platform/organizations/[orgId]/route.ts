@@ -151,9 +151,13 @@ export const DELETE = withStaffAuth<{ orgId: string }>(
       req,
     });
 
-    // Cascade delete via onDelete:Cascade sur tous les FK enfants
-    // (OrgMembership, Event -> EventMembership -> Category -> Registration...).
-    await prisma.organization.delete({ where: { id: orgId } });
+    // Le reste part en cascade (OrgMembership, Event -> EventMembership, Category...),
+    // sauf Registration.categoryId qui est en RESTRICT : supprimer d'abord les
+    // inscriptions, sinon la cascade Event -> Category echoue des qu'il y en a.
+    await prisma.$transaction([
+      prisma.registration.deleteMany({ where: { event: { orgId } } }),
+      prisma.organization.delete({ where: { id: orgId } }),
+    ]);
 
     return new NextResponse(null, { status: 204 });
   },
