@@ -29,7 +29,7 @@ export function PublicSiteHeader() {
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-[1160px] items-center gap-8 px-7">
         <Link href="/" className="flex items-center" aria-label="Badge — accueil">
-          <Image src="/logo.svg" alt="Badge" width={92} height={28} className="h-7 w-auto" priority />
+          <Image src="/logo.svg" alt="Badge" width={118} height={36} className="h-9 w-auto" priority />
         </Link>
         <nav aria-label="Navigation principale" className="hidden gap-7 md:flex">
           {NAV.map((n) => (

@@ -55,7 +55,7 @@ function LoginForm() {
       footer={
         <>
           Besoin d&apos;aide ?{" "}
-          <a href="#" className="text-green-600 hover:underline">
+          <a href="mailto:contact@badge.app" className="text-green-600 hover:underline">
             Contactez votre administrateur
           </a>
         </>

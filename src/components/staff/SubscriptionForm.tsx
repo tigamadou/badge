@@ -10,6 +10,7 @@ export type SubscriptionState = {
   status: "ACTIVE" | "EXPIRED" | "CANCELLED";
   overrideMaxEvents: string;
   overrideMaxParticipantsPerEvent: string;
+  endDate: string | null;
 } | null;
 
 function periodLabel(p: SubscriptionPeriodValue): string {
@@ -35,6 +36,8 @@ export function SubscriptionForm({
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Un abonnement existant s'affiche en resume ; le formulaire n'apparait que sur demande.
+  const [editing, setEditing] = useState(current == null);
 
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
 
@@ -66,7 +69,54 @@ export function SubscriptionForm({
       return;
     }
     setOk(true);
+    setEditing(false);
     router.refresh();
+  }
+
+  function cancel() {
+    setPlanId(current?.planId ?? plans[0]?.id ?? "");
+    setStatus(current?.status ?? "ACTIVE");
+    setOverrideMaxEvents(current?.overrideMaxEvents ?? "");
+    setOverrideMaxParticipants(current?.overrideMaxParticipantsPerEvent ?? "");
+    setError(null);
+    setEditing(false);
+  }
+
+  if (!editing && current) {
+    const plan = plans.find((p) => p.id === current.planId) ?? null;
+    const rows: [string, string][] = [
+      ["Plan", plan?.name ?? "—"],
+      ["Statut", current.status],
+      ["Période", plan ? periodLabel(plan.period) : "—"],
+      ["Fin", current.endDate ? new Date(current.endDate).toLocaleDateString("fr-FR") : "—"],
+      ["Override max events", current.overrideMaxEvents || "—"],
+      ["Override max participants/event", current.overrideMaxParticipantsPerEvent || "—"],
+    ];
+    return (
+      <div className="max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <dl className="space-y-2 text-sm">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex justify-between gap-4">
+              <dt className="text-slate-500">{label}</dt>
+              <dd className="font-medium text-slate-900">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setOk(false);
+              setEditing(true);
+            }}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Modifier
+          </button>
+          {ok && <span className="text-sm text-green-600">Abonnement enregistré.</span>}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -137,7 +187,16 @@ export function SubscriptionForm({
         >
           Enregistrer l&apos;abonnement
         </button>
-        {ok && <span className="text-sm text-green-600">Enregistré.</span>}
+        {current && (
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={busy}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Annuler
+          </button>
+        )}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </form>

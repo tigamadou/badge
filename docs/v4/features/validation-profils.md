@@ -45,7 +45,8 @@ l'historique complet est conservé.
 Le catalogue alimente le rejet de profil (portée `PROFILE`/`BOTH`) **et** le rejet
 d'inscription (portée `REGISTRATION`/`BOTH`). Le libellé est **figé** sur
 l'enregistrement au moment de la décision — archiver un motif ne réécrit pas
-l'historique.
+l'historique. Libellé, portée et ordre se modifient après coup dans une modale
+(« Modifier ») ; l'archivage passe par une modale de confirmation.
 
 ## Gate d'inscription et gel
 

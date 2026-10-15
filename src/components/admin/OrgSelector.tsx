@@ -27,8 +27,10 @@ export function OrgSelector({
   const current = orgs.find((o) => o.id === currentOrgId);
 
   function switchTo(orgId: string) {
-    const newPath = pathname.replace(/^\/admin\/[^/]+/, `/org/${orgId}`);
-    router.push(newPath || `/org/${orgId}`);
+    // On garde la section courante (events, members…) mais pas les identifiants
+    // qui appartiennent a l'ancienne organisation.
+    const section = pathname.match(/^\/org\/[^/]+\/([^/]+)/)?.[1];
+    router.push(section ? `/org/${orgId}/${section}` : `/org/${orgId}`);
     setOpen(false);
   }
 

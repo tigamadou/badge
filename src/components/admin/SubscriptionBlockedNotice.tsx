@@ -11,12 +11,20 @@ export function SubscriptionBlockedNotice({ orgId }: { orgId: string }) {
       title="Abonnement inactif"
       description="Votre abonnement est inactif. Contactez le staff Badge pour le réactiver."
       action={
-        <Link
-          href={`/org/${orgId}/subscription`}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          Voir mon abonnement
-        </Link>
+        <div className="flex flex-wrap justify-center gap-2">
+          <a
+            href="mailto:contact@badge.app"
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Contacter le support
+          </a>
+          <Link
+            href={`/org/${orgId}/subscription`}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Voir mon abonnement
+          </Link>
+        </div>
       }
     />
   );

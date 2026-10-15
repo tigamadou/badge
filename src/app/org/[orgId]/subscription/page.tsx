@@ -61,7 +61,11 @@ export default async function OrgSubscriptionPage({
       {!limits.active && (
         <Alert tone="warn">
           <Icon name="alert-triangle" size={16} /> Votre abonnement n&apos;est pas actif. La création
-          d&apos;événements et les inscriptions sont bloquées. Contactez le support.
+          d&apos;événements et les inscriptions sont bloquées.{" "}
+          <a href="mailto:contact@badge.app" className="font-medium underline">
+            Contactez le support
+          </a>
+          .
         </Alert>
       )}
 
