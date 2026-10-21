@@ -73,8 +73,26 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
           --health-interval=10s --health-timeout=5s --health-retries=10
+      # Les tests de stockage, d'upload et d'installation des templates de badge lisent et
+      # ecrivent de vrais objets : sans serveur S3, le client vise AWS (InvalidAccessKeyId).
+      # Meme service que le job e2e ; le bucket est cree par storage.ts au premier upload.
+      rustfs:
+        image: rustfs/rustfs:1.0.1-preview.16
+        env:
+          RUSTFS_ACCESS_KEY: rustfsadmin
+          RUSTFS_SECRET_KEY: rustfsadmin
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd="curl -fsS http://127.0.0.1:9000/health"
+          --health-interval=5s --health-timeout=5s --health-retries=10
     env:
       DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge
+      S3_ENDPOINT: http://127.0.0.1:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin
+      S3_BUCKET: badge-dev
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -128,6 +146,9 @@ jobs:
       PLATFORM_SMTP_PORT: "1025"
       PLATFORM_SMTP_FROM: noreply@badge.local
       PLATFORM_SMTP_SECURE: "false"
+      # Le helper e2e/helpers/mailpit.ts vise http://mailpit:8025 par defaut (reseau Docker de
+      # dev) ; sur GitHub, les services sont joignables sur 127.0.0.1.
+      MAILPIT_URL: http://127.0.0.1:8025
       S3_ENDPOINT: http://127.0.0.1:9000
       S3_REGION: us-east-1
       S3_ACCESS_KEY: rustfsadmin
