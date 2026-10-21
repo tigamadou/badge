@@ -6,6 +6,7 @@ import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
+import { templateExists } from "@/lib/badge-templates/resolve";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
@@ -45,6 +46,8 @@ const createSchema = z.object({
     .optional(),
   description: z.string().max(5000).nullable().optional(),
   logo: z.string().nullable().optional(),
+  // null ou absent : l'evenement herite du template de l'organisation puis de la plateforme.
+  badgeTemplateId: z.string().min(1).nullable().optional(),
   slug: z
     .string()
     .regex(/^[a-z0-9-]+$/)
@@ -112,6 +115,13 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     }
   }
 
+  if (data.badgeTemplateId && !(await templateExists(data.badgeTemplateId))) {
+    return NextResponse.json(
+      { error: "VALIDATION", issues: [{ path: ["badgeTemplateId"], message: "unknown template" }] },
+      { status: 400 },
+    );
+  }
+
   const slug = data.slug ?? (await uniqueEventSlug(data.title));
 
   let categoryInputs: CatInput[] = [];
@@ -154,6 +164,7 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
         endDate: data.endDate ? new Date(data.endDate) : null,
         description: data.description ?? null,
         logo: data.logo ?? null,
+        badgeTemplateId: data.badgeTemplateId ?? null,
         registrationOpen: false,
         categories: {
           create: categoryInputs.map((c) => ({
@@ -177,6 +188,7 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
         slug,
         categoriesCount: categoryInputs.length,
         templatesUsed: data.templateIds ?? [],
+        badgeTemplateId: data.badgeTemplateId ?? null,
       },
       req,
     });

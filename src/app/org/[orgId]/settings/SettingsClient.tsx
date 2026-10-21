@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Dropzone, FileBox } from "@/components/ui/FileBox";
+import { Icon } from "@/components/ui/Icon";
 
 type OrgForm = {
   name: string;
@@ -92,6 +94,12 @@ export function SettingsClient({
         <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;organisation</h1>
         <p className="mt-0.5 text-sm text-slate-400">Identité, adresse et contact public</p>
       </div>
+      <Link
+        href={`/org/${orgId}/settings/badge`}
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-green-500 hover:text-green-700"
+      >
+        <Icon name="id-card" size={16} /> Modèle de badge par défaut
+      </Link>
       {msg && <Alert tone={msg.ok ? "success" : "err"}>{msg.text}</Alert>}
 
       <Card>
