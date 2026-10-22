@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
+import { computeSubscriptionDates, DEFAULT_PLAN_NAME } from "@/lib/subscription";
 import { sendUserInvitation } from "@/lib/mail";
 
 export const GET = withStaffAuth(async (req) => {
@@ -166,7 +167,24 @@ export const POST = withStaffAuth(
         data: { userId: owner.id, orgId: org.id, role: "OWNER" },
       });
 
-      return { org, owner, userCreated };
+      // Sans abonnement, l'organisation est bloquee (NO_SUBSCRIPTION) : elle demarre donc
+      // sur le plan par defaut, que le staff pourra changer ensuite.
+      const defaultPlan = await tx.plan.findFirst({
+        where: { name: DEFAULT_PLAN_NAME, archived: false },
+        select: { id: true, period: true },
+      });
+      const subscription = defaultPlan
+        ? await tx.subscription.create({
+            data: {
+              orgId: org.id,
+              planId: defaultPlan.id,
+              status: "ACTIVE",
+              ...computeSubscriptionDates(defaultPlan.period),
+            },
+          })
+        : null;
+
+      return { org, owner, userCreated, subscription };
     });
 
     await logActivity({
@@ -176,6 +194,24 @@ export const POST = withStaffAuth(
       details: { name, slug: finalSlug },
       req,
     });
+    if (result.subscription) {
+      await logActivity({
+        type: "SUBSCRIPTION_CREATED",
+        userId: session.user.id,
+        orgId: result.org.id,
+        targetId: result.subscription.id,
+        details: {
+          planId: result.subscription.planId,
+          status: result.subscription.status,
+          auto: true,
+        },
+        req,
+      });
+    } else {
+      console.warn(
+        `[organizations] plan "${DEFAULT_PLAN_NAME}" introuvable ou archive : l'organisation ${result.org.id} est creee sans abonnement.`,
+      );
+    }
     if (result.userCreated) {
       await logActivity({
         type: "USER_CREATED",

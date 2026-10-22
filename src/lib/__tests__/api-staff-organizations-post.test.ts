@@ -349,4 +349,76 @@ describe("POST /api/platform/organizations", () => {
     expect(org?.contactEmail).toBe("contact@full.example");
     expect(org?.contactPhone).toBe("+33123456789");
   });
+
+  describe("abonnement gratuit par defaut", () => {
+    async function createOrg(name: string) {
+      const { POST } = await import("@/app/api/platform/organizations/route");
+      const res = await POST(
+        new NextRequest("http://localhost/api/platform/organizations", {
+          method: "POST",
+          body: JSON.stringify({ name, ownerEmail: `owner-${Date.now()}@free.test` }),
+          headers: { "content-type": "application/json" },
+        }),
+        { params: Promise.resolve({}) },
+      );
+      return { res, json: (await res.json()) as { org: { id: string } } };
+    }
+
+    it("rattache la nouvelle organisation au plan Gratuit, dates calculees sur la periode", async () => {
+      const staff = await makeStaff("STAFF_ADMIN");
+      const plan = await prisma.plan.upsert({
+        where: { name: "Gratuit" },
+        update: { archived: false, period: "MONTHLY" },
+        create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100 },
+      });
+
+      const { res, json } = await createOrg("Free Corp");
+      expect(res.status).toBe(201);
+
+      const sub = await prisma.subscription.findUnique({ where: { orgId: json.org.id } });
+      expect(sub?.planId).toBe(plan.id);
+      expect(sub?.status).toBe("ACTIVE");
+      expect(sub?.overrideMaxEvents).toBeNull();
+      expect(
+        Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000),
+      ).toBe(30);
+
+      const { resolveOrgLimits } = await import("@/lib/subscription");
+      expect((await resolveOrgLimits(json.org.id)).active).toBe(true);
+
+      const log = await prisma.activityLog.findFirst({
+        where: { orgId: json.org.id, type: "SUBSCRIPTION_CREATED" },
+      });
+      expect(log?.userId).toBe(staff.id);
+      expect(log?.targetId).toBe(sub?.id);
+      expect(log?.details).toMatchObject({ planId: plan.id, status: "ACTIVE", auto: true });
+    });
+
+    it("cree l'organisation sans abonnement quand le plan Gratuit n'existe pas", async () => {
+      await makeStaff("STAFF_ADMIN");
+      await prisma.plan.deleteMany({ where: { name: "Gratuit" } });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { res, json } = await createOrg("No Plan Corp");
+      expect(res.status).toBe(201);
+      expect(await prisma.subscription.findUnique({ where: { orgId: json.org.id } })).toBeNull();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("Gratuit"));
+      warn.mockRestore();
+    });
+
+    it("ignore un plan Gratuit archive", async () => {
+      await makeStaff("STAFF_ADMIN");
+      await prisma.plan.upsert({
+        where: { name: "Gratuit" },
+        update: { archived: true },
+        create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100, archived: true },
+      });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { res, json } = await createOrg("Archived Plan Corp");
+      expect(res.status).toBe(201);
+      expect(await prisma.subscription.findUnique({ where: { orgId: json.org.id } })).toBeNull();
+      warn.mockRestore();
+    });
+  });
 });

@@ -33,7 +33,7 @@ test.describe("Parcours abonnement org", () => {
     await expect(slugField).toHaveAttribute("readonly", "");
   });
 
-  test("parcours complet : creation org -> fiche detail -> attribution d'un plan", async ({
+  test("parcours complet : creation org -> abonnement Gratuit par defaut -> changement de plan", async ({
     page,
   }) => {
     const staff = await createTestStaff({ scope: "full-flow", role: "STAFF_ADMIN" });
@@ -56,11 +56,15 @@ test.describe("Parcours abonnement org", () => {
     const orgId = page.url().split("/").pop()!;
     await expect(page.getByText(orgName).first()).toBeVisible();
 
-    // A ce stade l'org n'a aucun abonnement.
-    expect(await getDb().subscription.findUnique({ where: { orgId } })).toBeNull();
+    // A ce stade l'org a deja l'abonnement du plan Gratuit (cree par le seed).
+    const freePlan = await getDb().plan.findUniqueOrThrow({ where: { name: "Gratuit" } });
+    const initial = await getDb().subscription.findUnique({ where: { orgId } });
+    expect(initial?.planId).toBe(freePlan.id);
+    expect(initial?.status).toBe("ACTIVE");
 
-    // 3. Attribution d'un plan depuis l'onglet Abonnement.
+    // 3. Changement de plan depuis l'onglet Abonnement : resume d'abord, formulaire via Modifier.
     await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByLabel("Statut").selectOption("ACTIVE");
     await page.getByRole("button", { name: /Enregistrer/ }).click();

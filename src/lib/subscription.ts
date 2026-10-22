@@ -7,6 +7,9 @@ export const PERIOD_DAYS: Record<SubscriptionPeriod, number> = {
   ANNUAL: 365,
 };
 
+// Plan attribue automatiquement a toute nouvelle organisation (cree par le seed).
+export const DEFAULT_PLAN_NAME = "Gratuit";
+
 // Calcule les bornes d'un abonnement a partir de sa periode. `startDate` par
 // defaut = maintenant ; `endDate` = startDate + duree de la periode.
 export function computeSubscriptionDates(
