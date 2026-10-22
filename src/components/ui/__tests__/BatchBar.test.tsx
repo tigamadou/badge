@@ -23,5 +23,7 @@ describe("BatchBar", () => {
     expect(html).toContain("3");
     expect(html).toContain("Approuver");
     expect(html).toContain("bg-brand-navy");
+    expect(html).toContain("sélectionnée(s)");
+    expect(html).toContain("flex-wrap");
   });
 });

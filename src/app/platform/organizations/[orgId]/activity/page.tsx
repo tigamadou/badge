@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { logKind } from "@/app/platform/activity/page";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 // v4 Bloc B : journal read-only filtre sur l'org, pour la supervision staff.
 export default async function OrgActivitySupervisionPage({
@@ -29,7 +30,7 @@ export default async function OrgActivitySupervisionPage({
       <h2 className="text-base font-semibold text-slate-800">
         Journal d&apos;activité (50 dernières entrées)
       </h2>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -68,7 +69,7 @@ export default async function OrgActivitySupervisionPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

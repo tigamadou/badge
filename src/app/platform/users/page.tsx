@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { RoleBadge, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -48,7 +49,7 @@ export default async function StaffUsersPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Utilisateurs</h1>
           <p className="mt-0.5 text-sm text-slate-400">Comptes staff et clients de la plateforme</p>
@@ -62,7 +63,7 @@ export default async function StaffUsersPage({
       </div>
 
       <form method="get" className="flex flex-wrap items-center gap-2.5">
-        <div className="relative min-w-[200px] flex-1">
+        <div className="relative min-w-0 basis-full flex-1 sm:basis-auto sm:min-w-[200px]">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon name="search" size={16} />
           </span>
@@ -94,14 +95,14 @@ export default async function StaffUsersPage({
         </button>
       </form>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Nom</th>
-              <th className="px-4 py-3">E-mail</th>
+              <th className="px-4 py-3 hidden md:table-cell">E-mail</th>
               <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Organisations</th>
+              <th className="px-4 py-3 hidden md:table-cell">Organisations</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -132,7 +133,7 @@ export default async function StaffUsersPage({
                     {u.archived && <Tag icon="archive">Archivé</Tag>}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-500">{u.email}</td>
+                <td className="px-4 py-3 text-[13px] text-slate-500 hidden md:table-cell">{u.email}</td>
                 <td className="px-4 py-3">
                   {u.isStaff ? (
                     <RoleBadge tone="navy">{u.staffRole}</RoleBadge>
@@ -140,7 +141,7 @@ export default async function StaffUsersPage({
                     <RoleBadge tone="slate">Client</RoleBadge>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{u._count.orgMemberships}</td>
+                <td className="px-4 py-3 text-sm tabular-nums text-slate-600 hidden md:table-cell">{u._count.orgMemberships}</td>
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/platform/users/${u.id}`}
@@ -154,7 +155,7 @@ export default async function StaffUsersPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

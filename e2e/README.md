@@ -55,6 +55,13 @@ Dans cet ordre :
    log de l'endpoint public de scan. Ces tests vivent dans
    `transverse/securite.spec.ts`, explicitement etiquetes hors « test UI ».
 
+## Tests transverses en viewport mobile
+
+`transverse/responsive.spec.ts` rejoue des parcours en 375x812 (`isMobile`,
+`hasTouch`) : tiroir de navigation, absence de debordement horizontal sur
+quelques pages de chaque espace, deconnexion depuis le tiroir (modale dans le
+viewport). Toute nouvelle page a fort contenu (tableau) peut y etre ajoutee.
+
 ## Definition of done d'une page-spec
 
 1. **Aucun `page.request`.**

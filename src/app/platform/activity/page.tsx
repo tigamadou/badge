@@ -4,6 +4,7 @@ import type { ActivityType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 const TYPES: ActivityType[] = [
   "REGISTRATION_CREATED",
@@ -198,14 +199,14 @@ export default async function StaffActivityPage({
         {total} entrée{total > 1 ? "s" : ""} · page {page} / {totalPages}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Auteur</th>
-              <th className="px-4 py-3">Contexte</th>
+              <th className="px-4 py-3 hidden md:table-cell">Auteur</th>
+              <th className="px-4 py-3 hidden md:table-cell">Contexte</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -225,8 +226,8 @@ export default async function StaffActivityPage({
                 <td className="px-4 py-3">
                   <LogType kind={logKind(a.type)}>{a.type}</LogType>
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{a.user?.email ?? "—"}</td>
-                <td className="px-4 py-3 text-xs text-slate-400">
+                <td className="px-4 py-3 text-[13px] text-slate-600 hidden md:table-cell">{a.user?.email ?? "—"}</td>
+                <td className="px-4 py-3 text-xs text-slate-400 hidden md:table-cell">
                   {a.orgId && <div>org : {a.orgId}</div>}
                   {a.eventId && <div>event : {a.eventId}</div>}
                   {a.targetId && <div>cible : {a.targetId}</div>}
@@ -245,7 +246,7 @@ export default async function StaffActivityPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-end gap-2">

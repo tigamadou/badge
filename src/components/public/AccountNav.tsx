@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
-  { href: "/account", label: "Mes inscriptions", exact: true },
-  { href: "/account/profile", label: "Profil", exact: false },
+  { href: "/account", label: "Mes inscriptions", shortLabel: "Inscriptions", exact: true },
+  { href: "/account/profile", label: "Profil", shortLabel: "Profil", exact: false },
 ];
 
 export function AccountNav() {
@@ -19,11 +19,12 @@ export function AccountNav() {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+            className={`whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors ${
               active ? "bg-green-500/15 text-green-700" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            {it.label}
+            <span className="sm:hidden">{it.shortLabel}</span>
+            <span className="hidden sm:inline">{it.label}</span>
           </Link>
         );
       })}

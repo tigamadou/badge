@@ -4,6 +4,7 @@ import { LogType } from "@/components/ui/JournalBlocks";
 import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { logKind } from "@/lib/activity-labels";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 export default async function ActivityPage({
   params,
@@ -27,13 +28,13 @@ export default async function ActivityPage({
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Auteur</th>
+              <th className="px-4 py-3 hidden md:table-cell">Auteur</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -56,7 +57,7 @@ export default async function ActivityPage({
                     {l.staffActor && <Tag icon="shield">staff</Tag>}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">{l.user?.email ?? "—"}</td>
+                <td className="px-4 py-3 text-[13px] text-slate-600 hidden md:table-cell">{l.user?.email ?? "—"}</td>
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/org/${orgId}/activity/${l.id}`}
@@ -70,7 +71,7 @@ export default async function ActivityPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

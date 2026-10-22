@@ -16,8 +16,10 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 
 ### Plans a implementer
 
-Aucun plan en attente. Les plans sont numerotes selon leur ordre d'execution
-(suffixe `-NN-` apres la date) et retires du depot une fois implementes.
+Les plans sont numerotes selon leur ordre d'execution (suffixe `-NN-` apres la date)
+et retires du depot une fois implementes.
+
+- [Spec 21 — Espaces utilisables sur mobile](specs/2026-10-22-21-v4-responsive-mobile.md) · [Plan](plans/2026-10-22-responsive-mobile.md) — audit a 375/768 px, tiroir de navigation sous 1024 px, gabarit commun `AppShell`, tableaux defilables. En attente de relecture.
 
 ### Chantiers livres
 
@@ -77,6 +79,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Apercu image et outillage (plan 14) | Livre — vignette image du paquet, PDF d'epreuve conserve, outillage local `make new-badge-template` et `make pack-badge-template` (le premier retire depuis la spec 20 : le studio pdfStudio cree desormais les templates) |
 | Propagation du profil aux inscriptions (plan 15) | Livre — les snapshot* sont figes a l'approbation et non plus a la creation ; audit `REGISTRATION_SNAPSHOT_REFRESHED` ; la piece d'identite disparait du detail cote organisation. **Recette visuelle a faire** |
 | Studio de construction de templates (plan 16) | Livre — service de dev separe (`make studio`, port 3786), edition du manifeste avec apercu PDF a la frappe et cinq jeux de donnees. **Recette visuelle a faire** ; `make dev-https-hosts` a lancer pour studio.badge.local |
+| Espaces utilisables sur mobile (plan 21) | Spec et plan rediges (2026-10-22), implementation non commencee |
 
 Pour un chantier livre, le detail task par task vit dans l'historique git du plan
 supprime ; le *pourquoi* reste dans la spec.

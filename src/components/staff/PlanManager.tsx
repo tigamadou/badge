@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 export type PlanPeriod = "MONTHLY" | "ANNUAL";
 export type PlanRow = {
@@ -81,56 +82,57 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
         onSubmit={createPlan}
         className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4"
       >
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-slate-600">Nom</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-auto"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-slate-600">Période</span>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as PlanPeriod)}
-            className="rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-auto"
           >
             <option value="MONTHLY">Mensuel (30 jours)</option>
             <option value="ANNUAL">Annuel (365 jours)</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-slate-600">Max events (vide = illimité)</span>
           <input
             type="number"
             min={0}
             value={maxEvents}
             onChange={(e) => setMaxEvents(e.target.value)}
-            className="w-44 rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-44"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-slate-600">Max participants/event</span>
           <input
             type="number"
             min={0}
             value={maxParticipants}
             onChange={(e) => setMaxParticipants(e.target.value)}
-            className="w-44 rounded-lg border border-slate-300 px-3 py-2"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-44"
           />
         </label>
         <button
           type="submit"
           disabled={busy}
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 sm:w-auto"
         >
           Créer le plan
         </button>
         {error && <p className="w-full text-sm text-red-600">{error}</p>}
       </form>
 
+      <TableFrame>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-slate-500">
@@ -170,6 +172,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
           )}
         </tbody>
       </table>
+      </TableFrame>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { BatchBar, BatchButton } from "@/components/ui/BatchBar";
 import { Checkbox } from "@/components/ui/FormControls";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 type Row = {
   id: string;
@@ -102,13 +103,13 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
         </BatchButton>
       </BatchBar>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="w-10 px-4 py-3" />
               <th className="px-4 py-3">Nom</th>
-              <th className="px-4 py-3">Catégorie</th>
+              <th className="px-4 py-3 hidden md:table-cell">Catégorie</th>
               <th className="px-4 py-3">Badge</th>
               <th className="px-4 py-3" />
             </tr>
@@ -133,7 +134,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
                 <td className="px-4 py-3 text-sm font-medium text-slate-900">
                   {r.firstName} {r.lastName}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 hidden md:table-cell">
                   <CatPill color={r.category.color} label={`#${r.category.number} ${r.category.name}`} />
                 </td>
                 <td className="px-4 py-3">
@@ -158,7 +159,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Feedback";
 import { RoleBadge } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -115,7 +116,7 @@ export function MembersClient({
       {/* Inviter est OWNER-only : on masque le formulaire pour les autres roles. */}
       {canManageRoles && <OrgMemberForm orgId={orgId} onAdded={refresh} />}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -179,7 +180,7 @@ export function MembersClient({
             })}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

@@ -7,6 +7,8 @@ describe("Toolbar", () => {
     const html = renderToStaticMarkup(<SearchInput value="abc" onChange={() => {}} placeholder="Rechercher" />);
     expect(html).toContain('placeholder="Rechercher"');
     expect(html).toContain('value="abc"');
+    expect(html).toContain("basis-full");
+    expect(html).toContain("sm:min-w-[200px]");
   });
 
   it("ChipFilter rend le label et les options", () => {

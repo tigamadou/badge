@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
 interface DialogProps {
@@ -30,8 +31,26 @@ export function Dialog({ open, title, onClose, children, footer }: DialogProps) 
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
-  if (!open) return null;
+  // Pas de document au rendu serveur ; le dialogue ne s'ouvre de toute façon qu'après une interaction.
+  if (!open || typeof document === "undefined") return null;
 
+  // Portail dans body : le calque échappe aux ancêtres transformés (ex. tiroir de navigation mobile).
+  return createPortal(
+    <DialogPanel title={title} onClose={onClose} footer={footer} closeRef={closeRef}>
+      {children}
+    </DialogPanel>,
+    document.body,
+  );
+}
+
+// Calque et boîte du dialogue (exporté pour les tests de rendu statique).
+export function DialogPanel({
+  title,
+  onClose,
+  children,
+  footer,
+  closeRef,
+}: Omit<DialogProps, "open"> & { closeRef?: RefObject<HTMLButtonElement | null> }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div
@@ -53,7 +72,7 @@ export function Dialog({ open, title, onClose, children, footer }: DialogProps) 
           </button>
         </div>
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5 text-sm text-slate-600">{children}</div>
-        {footer ? <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">{footer}</div> : null}
+        {footer ? <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 px-6 py-4">{footer}</div> : null}
       </div>
     </div>
   );

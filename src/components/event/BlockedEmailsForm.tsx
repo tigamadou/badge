@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Alert } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 type Row = { id: string; email: string; reason: string | null; createdAt: string };
 
@@ -85,7 +86,7 @@ export function BlockedEmailsForm({
         </CardBody>
       </Card>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -123,7 +124,7 @@ export function BlockedEmailsForm({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }
