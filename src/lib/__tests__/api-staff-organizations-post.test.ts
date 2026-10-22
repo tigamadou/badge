@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_PLAN_NAME } from "@/lib/subscription";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -364,12 +365,12 @@ describe("POST /api/platform/organizations", () => {
       return { res, json: (await res.json()) as { org: { id: string } } };
     }
 
-    it("rattache la nouvelle organisation au plan Gratuit, dates calculees sur la periode", async () => {
+    it("rattache la nouvelle organisation au plan par defaut, dates calculees sur la periode", async () => {
       const staff = await makeStaff("STAFF_ADMIN");
       const plan = await prisma.plan.upsert({
-        where: { name: "Gratuit" },
+        where: { name: DEFAULT_PLAN_NAME },
         update: { archived: false, period: "MONTHLY" },
-        create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100 },
+        create: { name: DEFAULT_PLAN_NAME, maxEvents: 1, maxParticipantsPerEvent: 100 },
       });
 
       const { res, json } = await createOrg("Free Corp");
@@ -394,24 +395,24 @@ describe("POST /api/platform/organizations", () => {
       expect(log?.details).toMatchObject({ planId: plan.id, status: "ACTIVE", auto: true });
     });
 
-    it("cree l'organisation sans abonnement quand le plan Gratuit n'existe pas", async () => {
+    it("cree l'organisation sans abonnement quand le plan par defaut n'existe pas", async () => {
       await makeStaff("STAFF_ADMIN");
-      await prisma.plan.deleteMany({ where: { name: "Gratuit" } });
+      await prisma.plan.deleteMany({ where: { name: DEFAULT_PLAN_NAME } });
       const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
       const { res, json } = await createOrg("No Plan Corp");
       expect(res.status).toBe(201);
       expect(await prisma.subscription.findUnique({ where: { orgId: json.org.id } })).toBeNull();
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("Gratuit"));
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(DEFAULT_PLAN_NAME));
       warn.mockRestore();
     });
 
-    it("ignore un plan Gratuit archive", async () => {
+    it("ignore un plan par defaut archive", async () => {
       await makeStaff("STAFF_ADMIN");
       await prisma.plan.upsert({
-        where: { name: "Gratuit" },
+        where: { name: DEFAULT_PLAN_NAME },
         update: { archived: true },
-        create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100, archived: true },
+        create: { name: DEFAULT_PLAN_NAME, maxEvents: 1, maxParticipantsPerEvent: 100, archived: true },
       });
       const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 

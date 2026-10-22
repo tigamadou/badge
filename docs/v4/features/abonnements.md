@@ -20,13 +20,13 @@ Remplacer les quotas ad-hoc de `Organization` (`quotaMaxEvents`,
 ## Abonnement par defaut a la creation
 
 Toute organisation creee par le staff (`POST /api/platform/organizations`) est rattachee, dans la
-meme transaction, au plan **Gratuit** (`DEFAULT_PLAN_NAME`, cree par le seed) : abonnement
+meme transaction, au plan **`free`** (`DEFAULT_PLAN_NAME`, cree par le seed ; ancien nom « Gratuit », renomme par le seed) : abonnement
 `ACTIVE` dont les dates derivent de la periode du plan (`computeSubscriptionDates`, 30 j pour
 un plan mensuel). Sans abonnement, l'espace de l'organisation serait bloque (`NO_SUBSCRIPTION`)
 jusqu'a ce que le staff en attribue un. Le staff peut ensuite changer de plan comme d'habitude.
 
 - La creation est journalisee `SUBSCRIPTION_CREATED` (`details.auto = true`).
-- Si le plan Gratuit n'existe pas ou est archive, l'organisation est creee **sans abonnement**
+- Si le plan `free` n'existe pas ou est archive, l'organisation est creee **sans abonnement**
   (comportement precedent) et un avertissement est ecrit dans les logs serveur.
 - Les organisations deja creees ne sont pas modifiees.
 - L'abonnement gratuit expire comme n'importe quel autre : une fois `endDate` passee,

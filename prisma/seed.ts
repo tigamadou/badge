@@ -7,6 +7,7 @@ import {
 import { hash } from "bcryptjs";
 import { generateId } from "../src/lib/generate-id";
 import { ensureReferenceTemplates, defaultTemplateId } from "../src/lib/badge-templates/install";
+import { DEFAULT_PLAN_NAME } from "../src/lib/subscription";
 
 const prisma = new PrismaClient();
 
@@ -244,9 +245,14 @@ async function main() {
   });
 
   // 1b. Plans d'abonnement par defaut (v4). Upsert par nom (unique).
+  // Le plan par defaut s'appelait « Gratuit » : on le renomme (abonnements conserves) plutot que
+  // d'en creer un second, sauf si le nouveau nom existe deja (nom unique).
+  if (!(await prisma.plan.findUnique({ where: { name: DEFAULT_PLAN_NAME } }))) {
+    await prisma.plan.updateMany({ where: { name: "Gratuit" }, data: { name: DEFAULT_PLAN_NAME } });
+  }
   await prisma.plan.upsert({
-    where: { name: "Gratuit" },
-    create: { name: "Gratuit", maxEvents: 1, maxParticipantsPerEvent: 100 },
+    where: { name: DEFAULT_PLAN_NAME },
+    create: { name: DEFAULT_PLAN_NAME, maxEvents: 1, maxParticipantsPerEvent: 100 },
     update: {},
   });
   await prisma.plan.upsert({
@@ -254,7 +260,7 @@ async function main() {
     create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000 },
     update: {},
   });
-  console.log("Plans par defaut (Gratuit, Standard) prets.");
+  console.log(`Plans par defaut (${DEFAULT_PLAN_NAME}, Standard) prets.`);
 
   // 1b. Catalogue de motifs de rejet (v4 plan 08). Idempotent via findFirst sur le libelle.
   const rejectionReasonSeeds: Array<{

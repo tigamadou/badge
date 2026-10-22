@@ -33,7 +33,7 @@ test.describe("Parcours abonnement org", () => {
     await expect(slugField).toHaveAttribute("readonly", "");
   });
 
-  test("parcours complet : creation org -> abonnement Gratuit par defaut -> changement de plan", async ({
+  test("parcours complet : creation org -> abonnement free par defaut -> changement de plan", async ({
     page,
   }) => {
     const staff = await createTestStaff({ scope: "full-flow", role: "STAFF_ADMIN" });
@@ -56,8 +56,8 @@ test.describe("Parcours abonnement org", () => {
     const orgId = page.url().split("/").pop()!;
     await expect(page.getByText(orgName).first()).toBeVisible();
 
-    // A ce stade l'org a deja l'abonnement du plan Gratuit (cree par le seed).
-    const freePlan = await getDb().plan.findUniqueOrThrow({ where: { name: "Gratuit" } });
+    // A ce stade l'org a deja l'abonnement du plan par defaut « free » (cree par le seed).
+    const freePlan = await getDb().plan.findUniqueOrThrow({ where: { name: "free" } });
     const initial = await getDb().subscription.findUnique({ where: { orgId } });
     expect(initial?.planId).toBe(freePlan.id);
     expect(initial?.status).toBe("ACTIVE");
