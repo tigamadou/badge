@@ -33,10 +33,10 @@ export default async function AccountLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-6">
-            <Link href="/account">
-              <Image src="/logo.png" alt="Badge" width={100} height={26} className="h-[26px] w-auto object-contain" />
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-6">
+            <Link href="/account" className="flex-none">
+              <Image src="/logo.png" alt="Badge" width={100} height={26} className="h-[26px] w-auto flex-none object-contain" />
             </Link>
             <AccountNav />
           </div>
@@ -47,12 +47,13 @@ export default async function AccountLayout({ children }: { children: React.Reac
             </span>
             <LogoutButton
               label="Se déconnecter"
+              labelClassName="hidden sm:inline"
               className="flex items-center gap-1.5 text-slate-500 hover:text-green-600"
             />
           </div>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
+      <main className="max-w-5xl mx-auto px-4 py-8 sm:px-6">{children}</main>
     </div>
   );
 }

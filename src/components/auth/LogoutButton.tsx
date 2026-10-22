@@ -9,18 +9,26 @@ import { Modal } from "@/components/ui/Modal";
 export function LogoutButton({
   className,
   label = "Déconnexion",
+  labelClassName,
 }: {
   className?: string;
   label?: string;
+  // Permet de masquer visuellement le libellé (ex. sous sm) tout en le gardant accessible.
+  labelClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
 
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className={className}
+        aria-label={labelClassName ? label : undefined}
+        onClick={() => setOpen(true)}
+      >
         <LogOut size={18} strokeWidth={1.5} className="shrink-0" />
-        {label}
+        {labelClassName ? <span className={labelClassName}>{label}</span> : label}
       </button>
       <Modal
         open={open}
