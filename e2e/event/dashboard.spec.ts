@@ -161,7 +161,8 @@ test.describe("Event — Tableau de bord", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByText(/inscriptions fermées/i)).toBeVisible();
+    // Le texte apparait aussi dans la description de la carte : on cible le badge de statut.
+    await expect(page.getByText("Inscriptions fermées", { exact: true })).toBeVisible();
   });
 
   // --- Etats --------------------------------------------------------------

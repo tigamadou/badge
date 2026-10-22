@@ -30,16 +30,43 @@ test.describe("Platform — Abonnement d'une organisation", () => {
 
   // --- Acces & rendu ------------------------------------------------------
 
-  test("STAFF_ADMIN voit le formulaire d'abonnement", async ({ page }) => {
+  test("STAFF_ADMIN voit le resume de l'abonnement, puis le formulaire via Modifier", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "psub-render" });
     await seedPlan("psub-render");
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-render-staff" });
 
+    // Un abonnement existe : resume en lecture seule, sans formulaire.
+    await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await expect(page.getByText("Période")).toBeVisible();
+    await expect(page.getByLabel("Plan")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Modifier" }).click();
+    await expect(page.getByLabel("Plan")).toBeVisible();
+    await expect(page.getByLabel("Statut")).toBeVisible();
+  });
+
+  test("Organisation sans abonnement : le formulaire est affiche d'emblee", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "psub-empty", activeSubscription: false });
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-empty-staff" });
+
     await page.goto(`/platform/organizations/${orgId}/subscription`);
     await expect(page.getByLabel("Plan")).toBeVisible();
-    // La periode n'est plus saisie : elle est portee par le plan et affichee en lecture seule.
-    await expect(page.getByText("Période")).toBeVisible();
-    await expect(page.getByLabel("Statut")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Modifier" })).toHaveCount(0);
+  });
+
+  test("Apres enregistrement, le formulaire se referme et laisse le resume", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "psub-close" });
+    const plan = await seedPlan("psub-close", "ANNUAL");
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-close-staff" });
+
+    await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
+    await page.getByLabel("Plan").selectOption(plan.id);
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+
+    await expect(page.getByText("Abonnement enregistré.")).toBeVisible();
+    await expect(page.getByLabel("Plan")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Modifier" })).toBeVisible();
   });
 
   test("Organisation introuvable -> 404", async ({ page }) => {
@@ -57,6 +84,7 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     const staff = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-assign-staff" });
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByLabel("Statut").selectOption("ACTIVE");
     await page.getByRole("button", { name: /enregistrer/i }).click();
@@ -79,6 +107,7 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-override-staff" });
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByLabel(/override max events/i).fill("42");
     await page.getByRole("button", { name: /enregistrer/i }).click();
@@ -95,6 +124,7 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-expire-staff" });
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByLabel("Statut").selectOption("EXPIRED");
     await page.getByRole("button", { name: /enregistrer/i }).click();

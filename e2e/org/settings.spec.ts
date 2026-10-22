@@ -21,6 +21,18 @@ test.describe("Org — Parametres", () => {
     await disconnectDb();
   });
 
+  // Les templates de reference sont installes en base par le seed : leur identifiant est
+  // genere, on le lit donc au lieu de le figer.
+  async function installedRectoVersoId(): Promise<string> {
+    const row = await getDb().installedBadgeTemplate.findFirst({
+      where: { family: "recto-verso", archived: false },
+      orderBy: { version: "desc" },
+      select: { id: true },
+    });
+    if (!row) throw new Error("Template recto-verso non installe : lancer le seed (prisma db seed).");
+    return row.id;
+  }
+
   // --- Acces & rendu ------------------------------------------------------
 
   test("OWNER voit le formulaire de parametres", async ({ page }) => {
@@ -79,31 +91,33 @@ test.describe("Org — Parametres", () => {
   });
 
   test("OWNER selectionne un template de badge via l'UI", async ({ page }) => {
+    const rectoVersoId = await installedRectoVersoId();
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "set-badge-pick" });
     await loginAs(page, owner);
 
     await page.goto(`/org/${orgId}/settings/badge`);
-    await page.getByTestId("select-recto-verso-v1").click();
+    await page.getByTestId(`select-${rectoVersoId}`).click();
     await expect(page.getByTestId("save-success")).toBeVisible();
     await expect(
-      page.locator('[data-testid="template-card-recto-verso-v1"][data-selected="true"]'),
+      page.locator(`[data-testid="template-card-${rectoVersoId}"][data-selected="true"]`),
     ).toBeVisible();
 
     const org = await getDb().organization.findUnique({
       where: { id: orgId },
       select: { badgeTemplateId: true },
     });
-    expect(org?.badgeTemplateId).toBe("recto-verso-v1");
+    expect(org?.badgeTemplateId).toBe(rectoVersoId);
 
     const log = await expectLastActivity({ type: "ORG_UPDATED", orgId, userId: owner.id });
     const details = log.details as { field?: string; value?: string } | null;
     expect(details?.field).toBe("badgeTemplateId");
-    expect(details?.value).toBe("recto-verso-v1");
+    expect(details?.value).toBe(rectoVersoId);
   });
 
   // --- Gardes & API -------------------------------------------------------
 
   test("OWNER revient au modele herite via le bouton dedie", async ({ page }) => {
+    const rectoVersoId = await installedRectoVersoId();
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "set-badge-reset" });
     await loginAndEnter(page, owner, { kind: "org", id: orgId });
 
@@ -111,12 +125,12 @@ test.describe("Org — Parametres", () => {
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/settings/badge`));
 
     // 1. Choisir un modele explicite.
-    await page.getByTestId("select-recto-verso-v1").click();
+    await page.getByTestId(`select-${rectoVersoId}`).click();
     await expect(page.getByTestId("save-success")).toBeVisible();
     expect(
       (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
         ?.badgeTemplateId,
-    ).toBe("recto-verso-v1");
+    ).toBe(rectoVersoId);
 
     // 2. Revenir a l'heritage : reponse attendue = succes affiche + valeur nulle.
     await page.getByRole("button", { name: /défaut hérité/i }).click();
@@ -144,6 +158,7 @@ test.describe("Org — Parametres", () => {
   });
 
   test("MANAGER choisit un modele de badge via l'UI (autorise)", async ({ page }) => {
+    const rectoVersoId = await installedRectoVersoId();
     const { orgId } = await createTestOrgWithOwner({ scope: "set-mgr-badge" });
     const manager = await createTestOrgMember({
       scope: "set-mgr-badge-user",
@@ -154,14 +169,14 @@ test.describe("Org — Parametres", () => {
 
     await page.goto(`/org/${orgId}/settings/badge`);
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/settings/badge`));
-    await page.getByTestId("select-recto-verso-v1").click();
+    await page.getByTestId(`select-${rectoVersoId}`).click();
 
     // Reponse attendue — SUCCES : le MANAGER est autorise sur le badge.
     await expect(page.getByTestId("save-success")).toBeVisible();
     expect(
       (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
         ?.badgeTemplateId,
-    ).toBe("recto-verso-v1");
+    ).toBe(rectoVersoId);
   });
 
   
