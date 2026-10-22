@@ -2,6 +2,7 @@ import type { OrgRole } from "@prisma/client";
 import { OrgSelector } from "./OrgSelector";
 import { SidebarNav, type NavEntry, type NavLink } from "./SidebarNav";
 import { orgRoleAtLeast } from "@/lib/auth-helpers";
+import { AppShell } from "@/components/layout/AppShell";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 
 type Org = { id: string; name: string; slug: string };
@@ -40,28 +41,33 @@ export function OrgShell({
     .map(({ minRole: _minRole, ...link }) => link);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="flex w-56 flex-none flex-col gap-1 bg-brand-navy px-3 py-4">
-        <div className="mb-1 px-2 text-base font-semibold text-white">Badge</div>
-        <div className="mb-3 px-2 text-sm font-medium text-white/80">{org.name}</div>
-        <SidebarNav items={nav} />
-        <div className="mt-auto flex flex-col gap-1 pt-2">
+    <AppShell
+      sidebarHeader={
+        <>
+          <div className="mb-1 px-2 text-base font-semibold text-white">Badge</div>
+          <div className="mb-3 px-2 text-sm font-medium text-white/80">{org.name}</div>
+        </>
+      }
+      sidebar={<SidebarNav items={nav} />}
+      sidebarFooter={
+        <>
           <LogoutButton className="flex w-full items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white" />
           <div className="px-2 text-xs text-slate-400 truncate">{user.email}</div>
-        </div>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 flex-none items-center gap-3 border-b border-slate-200 bg-white px-5">
-          <nav className="flex flex-1 items-center gap-2 text-sm">
-            <span className="font-medium text-slate-700">{org.name}</span>
+        </>
+      }
+      header={
+        <>
+          <nav className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+            <span className="truncate font-medium text-slate-700">{org.name}</span>
           </nav>
           <OrgSelector currentOrgId={org.id} orgs={orgs} isStaff={user.isStaff} />
           <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
             {initials(user.name)}
           </span>
-        </header>
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-6">{children}</main>
-      </div>
-    </div>
+        </>
+      }
+    >
+      {children}
+    </AppShell>
   );
 }
