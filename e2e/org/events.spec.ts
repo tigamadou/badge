@@ -34,7 +34,7 @@ test.describe("Org — Evenements", () => {
     });
   }
 
-  // Remplit le wizard (3 etapes, categories manuelles vides) et soumet.
+  // Remplit le wizard (4 etapes, template de badge herite, categories manuelles vides) et soumet.
   // NB : le slug est auto-suggere et unique -> le cas SLUG_TAKEN n'est pas
   // provocable par l'UI, il reste couvert en integration Vitest.
   async function submitWizard(
@@ -46,8 +46,9 @@ test.describe("Org — Evenements", () => {
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/events/new`));
     await page.getByLabel("Titre").fill(title);
     const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    await page.locator('input[type="date"]').fill(futureIso);
+    await page.getByLabel("Date", { exact: true }).fill(futureIso);
     await page.getByLabel("Lieu").fill("Abidjan");
+    await page.getByRole("button", { name: /^continuer$/i }).click();
     await page.getByRole("button", { name: /^continuer$/i }).click();
     await page.getByRole("button", { name: /^continuer$/i }).click();
     await page.getByRole("button", { name: /cr[ée]er l'?[ée]v[ée]nement/i }).click();
@@ -85,7 +86,7 @@ test.describe("Org — Evenements", () => {
 
   // --- Actions UI ---------------------------------------------------------
 
-  test("OWNER cree un evenement via le wizard 3 etapes (import de modeles)", async ({ page }) => {
+  test("OWNER cree un evenement via le wizard 4 etapes (import de modeles)", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "ev-create" });
     await createTestCategoryTemplate({ orgId, name: "VIP", color: "#ff0000", number: 10 });
     await createTestCategoryTemplate({ orgId, name: "Standard", color: "#00ff00", number: 11 });
@@ -95,26 +96,31 @@ test.describe("Org — Evenements", () => {
     await page.goto(`/org/${orgId}/events/new`);
     await page.getByLabel("Titre").fill("E2E Event Wizard");
     const futureIso = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    await page.locator('input[type="date"]').fill(futureIso);
+    await page.getByLabel("Date", { exact: true }).fill(futureIso);
     await page.getByLabel("Lieu").fill("Abidjan");
     await page.getByRole("button", { name: /^continuer$/i }).click();
 
-    // Etape 2 : import des 2 modeles (l'UI ne melange pas modeles et saisie manuelle).
+    // Etape 2 : template de badge. « Heriter par defaut » est preselectionne.
+    await expect(page.getByTestId("badge-tile-inherit")).toHaveAttribute("aria-checked", "true");
+    await page.getByRole("button", { name: /^continuer$/i }).click();
+
+    // Etape 3 : import des 2 modeles (l'UI ne melange pas modeles et saisie manuelle).
     await page.getByRole("button", { name: /depuis un mod[èe]le/i }).click();
     await page.locator(`label:has-text("VIP")`).locator('[role="checkbox"]').check();
     await page.locator(`label:has-text("Standard")`).locator('[role="checkbox"]').check();
     await page.getByRole("button", { name: /^continuer$/i }).click();
 
-    // Etape 3 : recap puis creation -> redirection vers les parametres de l'event.
+    // Etape 4 : recap puis creation -> redirection vers les parametres de l'event.
     await expect(page.getByText(/r[ée]cap/i)).toBeVisible();
     await page.getByRole("button", { name: /cr[ée]er l'?[ée]v[ée]nement/i }).click();
     await page.waitForURL(new RegExp(`/event/[^/]+/settings`), { timeout: 8000 });
 
     const event = await getDb().event.findFirst({
       where: { orgId, title: "E2E Event Wizard" },
-      select: { id: true, registrationOpen: true, categories: true },
+      select: { id: true, registrationOpen: true, categories: true, badgeTemplateId: true },
     });
     expect(event?.registrationOpen).toBe(false);
+    expect(event?.badgeTemplateId).toBeNull();
     expect(event?.categories.length).toBe(2);
 
     await expectLastActivity({

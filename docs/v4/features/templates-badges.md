@@ -110,6 +110,28 @@ et non une convention. **Une table de liaison ne s'édite pas après installatio
 plus : il n'existe aucune route pour ça — corriger une liaison suppose de réinstaller
 le paquet.
 
+### Choisir le template d'un événement
+
+Le template effectif d'un événement suit la cascade `Event → Organisation → Plateforme`
+(`resolveBadgeTemplateId`). Il se choisit à trois endroits :
+
+- **À la création** : l'assistant `/org/[orgId]/events/new` a une étape « Badge » (entre
+  « Informations » et « Catégories »). Les templates disponibles — dernière version non
+  archivée de chaque famille — s'y affichent en **tuiles avec aperçu**
+  (`BadgeTemplateTiles`), plus une tuile « Hériter par défaut » sélectionnée d'office, qui
+  annonce le modèle hérité. `POST /api/org/[orgId]/events` accepte `badgeTemplateId`
+  (optionnel, `null` = héritage) et répond `400 VALIDATION` (`path: ["badgeTemplateId"]`)
+  pour un identifiant qui ne désigne aucune installation ; la valeur est reprise dans le
+  journal `EVENT_CREATED`.
+- **Après coup, par événement** : `/event/[eventId]/settings/badge`, accessible depuis le
+  lien « Modèle de badge de l'événement » de la page Paramètres de l'événement.
+- **Par défaut d'organisation** : `/org/[orgId]/settings/badge`, accessible depuis le lien
+  « Modèle de badge par défaut » des paramètres de l'organisation.
+
+L'aperçu d'une tuile est l'image déclarée par le paquet (`manifest.preview`) ; un template
+qui n'en déclare pas — c'est le cas des deux templates livrés `default` et `recto-verso` —
+affiche « Aperçu indisponible ».
+
 ### Archivage
 
 Archiver retire le template du sélecteur **sans supprimer ni la ligne ni ses ressources**.

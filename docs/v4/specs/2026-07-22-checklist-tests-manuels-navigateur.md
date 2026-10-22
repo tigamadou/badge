@@ -156,7 +156,7 @@ Tester en OWNER, puis repasser les points marques (R) en MANAGER et AUDITOR.
 ### `/org/[orgId]/events` + `/events/new`
 
 - [ ] Liste des events avec statuts ; etat vide correct.
-- [ ] Wizard creation 3 etapes : infos -> categories (import templates + ajout manuel) -> confirmation.
+- [ ] Wizard creation 4 etapes : infos -> badge (tuiles avec apercu, heritage par defaut) -> categories (import templates + ajout manuel) -> confirmation.
 - [ ] Slug deja pris -> erreur claire a l'etape 1.
 - [ ] Limite events de l'abonnement atteinte -> creation bloquee avec message.
 - [ ] Archivage d'un event depuis la liste -> confirmation -> disparait des actifs ; restauration inverse.

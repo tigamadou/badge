@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/FormControls";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
+import { BadgeTemplateTiles } from "@/components/admin/BadgeTemplateTiles";
+import type { TemplateSummary } from "@/components/admin/BadgeTemplatePicker";
 
 type Template = { id: string; name: string; color: string; number: number };
 type ManualCategory = {
@@ -28,21 +30,27 @@ type CreatePayload = {
   description?: string | null;
   location: string;
   slug?: string;
+  badgeTemplateId?: string;
   templateIds?: string[];
   manualCategories?: ManualCategory[];
 };
 
-const STEPS = ["Informations", "Catégories", "Récapitulatif"];
+const STEPS = ["Informations", "Badge", "Catégories", "Récapitulatif"];
 
 export function EventCreationWizard({
   orgId,
   templates,
+  badgeTemplates,
+  inheritedBadgeLabel,
 }: {
   orgId: string;
   templates: Template[];
+  badgeTemplates: TemplateSummary[];
+  inheritedBadgeLabel: string;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [badgeTemplateId, setBadgeTemplateId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -84,6 +92,7 @@ export function EventCreationWizard({
     if (endDate) body.endDate = endDate;
     if (description.trim()) body.description = description;
     if (slug && slugTouched) body.slug = slug;
+    if (badgeTemplateId) body.badgeTemplateId = badgeTemplateId;
     if (mode === "template") body.templateIds = selectedTemplates;
     if (mode === "manual") body.manualCategories = manualCats;
 
@@ -190,6 +199,29 @@ export function EventCreationWizard({
       {step === 2 && (
         <Card>
           <CardBody className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Choisissez le modèle imprimé sur les badges de cet événement. Vous pourrez le changer plus tard dans les
+              paramètres de l&apos;événement.
+            </p>
+            <BadgeTemplateTiles
+              templates={badgeTemplates}
+              value={badgeTemplateId}
+              onChange={setBadgeTemplateId}
+              inheritedLabel={inheritedBadgeLabel}
+            />
+            <div className="flex justify-between">
+              <Button variant="secondary" onClick={() => setStep(1)}>
+                Précédent
+              </Button>
+              <Button onClick={() => setStep(3)}>Continuer</Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {step === 3 && (
+        <Card>
+          <CardBody className="space-y-4">
             <Segmented
               value={mode}
               onChange={(v) => setMode(v as "template" | "manual")}
@@ -270,16 +302,16 @@ export function EventCreationWizard({
             )}
 
             <div className="flex justify-between">
-              <Button variant="secondary" onClick={() => setStep(1)}>
+              <Button variant="secondary" onClick={() => setStep(2)}>
                 Précédent
               </Button>
-              <Button onClick={() => setStep(3)}>Continuer</Button>
+              <Button onClick={() => setStep(4)}>Continuer</Button>
             </div>
           </CardBody>
         </Card>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <Card>
           <CardBody className="space-y-4">
             <KeyValue
@@ -288,6 +320,12 @@ export function EventCreationWizard({
                 { label: "Date", value: date },
                 { label: "Lieu", value: location },
                 { label: "Slug", value: slug || "(auto)" },
+                {
+                  label: "Modèle de badge",
+                  value:
+                    badgeTemplates.find((t) => t.id === badgeTemplateId)?.label ??
+                    `Hérité (${inheritedBadgeLabel})`,
+                },
                 {
                   label: "Catégories",
                   value:
@@ -302,7 +340,7 @@ export function EventCreationWizard({
               de configuration.
             </p>
             <div className="flex justify-between">
-              <Button variant="secondary" onClick={() => setStep(2)}>
+              <Button variant="secondary" onClick={() => setStep(3)}>
                 Précédent
               </Button>
               <Button onClick={submit} className="flex items-center justify-center gap-2" disabled={submitting}>

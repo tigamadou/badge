@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { Icon } from "@/components/ui/Icon";
 import { resolvePublicSettings } from "@/lib/settings";
 import { EventSettingsForm } from "@/components/event/EventSettingsForm";
 import { getEventOrgId } from "@/lib/event-org";
@@ -43,35 +45,43 @@ export default async function EventSettingsPage({
     variables.map((variable) => [variable.name, effectiveOption(variable, stored) ?? null]),
   );
   return (
-    <EventSettingsForm
-      orgId={orgId}
-      eventId={eventId}
-      initial={{
-        event: {
-          id: event.id,
-          title: event.title,
-          location: event.location,
-          description: event.description,
-          slug: event.slug,
-          logo: event.logo,
-          banner: event.banner,
-          registrationOpen: event.registrationOpen,
-          securityInstructions: readSecurityInstructions(event.securityInstructions),
-          date: event.date.toISOString(),
-          endDate: event.endDate ? event.endDate.toISOString() : null,
-        },
-        settings: {
-          contactEmail: settings?.contactEmail ?? null,
-          contactPhone: settings?.contactPhone ?? null,
-        },
-        resolved: {
-          contactEmail: resolved.contactEmail,
-          contactPhone: resolved.contactPhone,
-        },
-        options,
-        optionValues,
-        storedOptions: stored,
-      }}
-    />
+    <div className="space-y-4">
+      <Link
+        href={`/event/${eventId}/settings/badge`}
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-green-500 hover:text-green-700"
+      >
+        <Icon name="id-card" size={16} /> Modèle de badge de l&apos;événement
+      </Link>
+      <EventSettingsForm
+        orgId={orgId}
+        eventId={eventId}
+        initial={{
+          event: {
+            id: event.id,
+            title: event.title,
+            location: event.location,
+            description: event.description,
+            slug: event.slug,
+            logo: event.logo,
+            banner: event.banner,
+            registrationOpen: event.registrationOpen,
+            securityInstructions: readSecurityInstructions(event.securityInstructions),
+            date: event.date.toISOString(),
+            endDate: event.endDate ? event.endDate.toISOString() : null,
+          },
+          settings: {
+            contactEmail: settings?.contactEmail ?? null,
+            contactPhone: settings?.contactPhone ?? null,
+          },
+          resolved: {
+            contactEmail: resolved.contactEmail,
+            contactPhone: resolved.contactPhone,
+          },
+          options,
+          optionValues,
+          storedOptions: stored,
+        }}
+      />
+    </div>
   );
 }
