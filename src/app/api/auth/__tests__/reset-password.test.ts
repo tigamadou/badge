@@ -1,9 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { generateToken, hashToken } from "@/lib/auth-tokens";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
+import { seedRecaptchaPlatform, clearRecaptchaPlatform } from "@/lib/__tests__/recaptcha-platform";
+
+vi.mock("@/lib/recaptcha", () => ({
+  verifyRecaptcha: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { verifyRecaptcha } from "@/lib/recaptcha";
 
 function makeReq(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/auth/reset-password", {
@@ -22,8 +29,81 @@ function makeRawReq(rawBody: string): NextRequest {
 }
 
 describe("POST /api/auth/reset-password", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetRateLimitForTests();
+    await seedRecaptchaPlatform();
+    vi.mocked(verifyRecaptcha).mockClear();
+  });
+
+  afterAll(clearRecaptchaPlatform);
+
+  describe("reCAPTCHA", () => {
+    async function seedResetUser(label: string) {
+      const plain = generateToken();
+      const user = await prisma.user.create({
+        data: {
+          email: `${label}@v2-11-reset.test`,
+          password: "old-hash",
+          name: "Reset",
+          emailVerifiedAt: new Date(),
+          passwordResetToken: hashToken(plain),
+          passwordResetExpiry: new Date(Date.now() + 60_000),
+        },
+      });
+      return { plain, user };
+    }
+
+    it("transmet le jeton, la cle secrete et l'IP du client a la verification", async () => {
+      const { plain } = await seedResetUser("captcha-ok");
+      const { POST } = await import("@/app/api/auth/reset-password/route");
+      const res = await POST(
+        new NextRequest("http://localhost/api/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify({ token: plain, password: "newPassword123", recaptchaToken: "jeton-google" }),
+          headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.7" },
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(verifyRecaptcha).toHaveBeenCalledWith({
+        enabled: true,
+        secretKey: "secret-key",
+        token: "jeton-google",
+        remoteIp: "203.0.113.7",
+      });
+    });
+
+    it("refuse en 400 RECAPTCHA_* et laisse le compte intact quand la verification echoue", async () => {
+      const { plain, user } = await seedResetUser("captcha-ko");
+      vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "MISSING_TOKEN" });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { POST } = await import("@/app/api/auth/reset-password/route");
+      const res = await POST(makeReq({ token: plain, password: "newPassword123" }));
+
+      expect(res.status).toBe(400);
+      expect((await res.json()).code).toBe("RECAPTCHA_MISSING_TOKEN");
+      expect(warn).toHaveBeenCalledWith(
+        "[recaptcha] verification refusee",
+        expect.objectContaining({ route: "reset-password", code: "MISSING_TOKEN" }),
+      );
+      warn.mockRestore();
+
+      const reloaded = await prisma.user.findUnique({ where: { id: user.id } });
+      expect(reloaded?.password).toBe("old-hash");
+      expect(reloaded?.passwordResetToken).toBe(hashToken(plain));
+    });
+
+    it("verifie le jeton avant de consulter le lien (pas d'indication sur sa validite)", async () => {
+      vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "LOW_SCORE" });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { POST } = await import("@/app/api/auth/reset-password/route");
+      const res = await POST(makeReq({ token: "lien-inexistant", password: "newPassword123" }));
+
+      expect((await res.json()).code).toBe("RECAPTCHA_LOW_SCORE");
+      warn.mockRestore();
+    });
   });
 
   it("valid token updates password and clears tokens + logs", async () => {

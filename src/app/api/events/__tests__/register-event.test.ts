@@ -1,8 +1,14 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
+import { seedRecaptchaPlatform, clearRecaptchaPlatform } from "@/lib/__tests__/recaptcha-platform";
+
+vi.mock("@/lib/recaptcha", () => ({
+  verifyRecaptcha: vi.fn().mockResolvedValue({ ok: true }),
+}));
+import { verifyRecaptcha } from "@/lib/recaptcha";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -111,10 +117,62 @@ function makeReq(slug: string, body: unknown): NextRequest {
 }
 
 describe("POST /api/events/[slug]/register", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetRateLimitForTests();
     vi.mocked(getServerSession).mockReset();
     vi.mocked(sendRegistrationConfirmation).mockClear();
+    await seedRecaptchaPlatform();
+    vi.mocked(verifyRecaptcha).mockClear();
+  });
+
+  afterAll(clearRecaptchaPlatform);
+
+  describe("reCAPTCHA", () => {
+    it("transmet le jeton, la cle secrete et l'IP du client a la verification", async () => {
+      const u = await createCompleteUser("captcha-ok@v2-11-evtreg.test");
+      const { event, category } = await seedEvent("re-captcha-ok");
+      await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+      const { POST } = await import("@/app/api/events/[slug]/register/route");
+      const res = await POST(
+        new NextRequest(`http://localhost/api/events/${event.slug}/register`, {
+          method: "POST",
+          body: JSON.stringify({ categoryId: category.id, recaptchaToken: "jeton-google" }),
+          headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.8" },
+        }),
+        { params: Promise.resolve({ slug: event.slug }) },
+      );
+
+      expect(res.status).toBe(201);
+      expect(verifyRecaptcha).toHaveBeenCalledWith({
+        enabled: true,
+        secretKey: "secret-key",
+        token: "jeton-google",
+        remoteIp: "203.0.113.8",
+      });
+    });
+
+    it("refuse en 400 RECAPTCHA_* sans creer d'inscription quand la verification echoue", async () => {
+      const u = await createCompleteUser("captcha-ko@v2-11-evtreg.test");
+      const { event, category } = await seedEvent("re-captcha-ko");
+      await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+      vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "MISSING_TOKEN" });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { POST } = await import("@/app/api/events/[slug]/register/route");
+      const res = await POST(makeReq(event.slug, { categoryId: category.id }), {
+        params: Promise.resolve({ slug: event.slug }),
+      });
+
+      expect(res.status).toBe(400);
+      expect((await res.json()).code).toBe("RECAPTCHA_MISSING_TOKEN");
+      expect(warn).toHaveBeenCalledWith(
+        "[recaptcha] verification refusee",
+        expect.objectContaining({ route: "event-register", code: "MISSING_TOKEN" }),
+      );
+      warn.mockRestore();
+      expect(await prisma.registration.count({ where: { eventId: event.id } })).toBe(0);
+    });
   });
 
   it("returns 401 without session", async () => {

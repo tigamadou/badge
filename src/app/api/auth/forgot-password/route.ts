@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
     remoteIp: ip,
   });
   if (!captcha.ok) {
+    // La reponse ne porte que le code ; la raison donnee par Google (cle invalide, domaine non
+    // autorise...) n'est lisible que dans les logs serveur.
+    console.warn("[recaptcha] verification refusee", { route: "forgot-password", code: captcha.code, details: captcha.details });
     return NextResponse.json(
       { code: `RECAPTCHA_${captcha.code}`, error: "Vérification reCAPTCHA refusée." },
       { status: 400 },

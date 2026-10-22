@@ -11,11 +11,14 @@ import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationConfirmation } from "@/lib/mail";
 import { generateId } from "@/lib/generate-id";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
+import { getPlatformRecaptcha } from "@/lib/settings";
+import { verifyRecaptcha } from "@/lib/recaptcha";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
   categoryId: z.string().min(1),
+  recaptchaToken: z.string().optional(),
 });
 
 export async function POST(
@@ -51,6 +54,27 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json(
         { code: "INVALID_BODY", error: "Données invalides." },
+        { status: 400 },
+      );
+    }
+
+    // Avant les controles de profil et d'inscription.
+    const recaptcha = await getPlatformRecaptcha();
+    const captcha = await verifyRecaptcha({
+      enabled: recaptcha.recaptchaEnabled,
+      secretKey: recaptcha.recaptchaSecretKey,
+      token: parsed.data.recaptchaToken ?? "",
+      remoteIp: ip,
+    });
+    if (!captcha.ok) {
+      // La raison donnee par Google n'est lisible que dans les logs serveur.
+      console.warn("[recaptcha] verification refusee", {
+        route: "event-register",
+        code: captcha.code,
+        details: captcha.details,
+      });
+      return NextResponse.json(
+        { code: `RECAPTCHA_${captcha.code}`, error: "Vérification reCAPTCHA refusée." },
         { status: 400 },
       );
     }

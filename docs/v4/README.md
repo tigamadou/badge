@@ -46,6 +46,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 
 ### References
 
+- [reCAPTCHA v3](features/recaptcha.md) — protection anti-spam de l'inscription et du mot de passe oublié : configuration, jeton côté navigateur, diagnostic.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
