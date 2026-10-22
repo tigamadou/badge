@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { RadioCards } from "@/components/ui/RadioCards";
 import { Checkbox, FormSection } from "@/components/ui/FormControls";
 import { Alert, Spinner } from "@/components/ui/Feedback";
+import { useRecaptcha } from "@/components/auth/Recaptcha";
 
 type Category = {
   id: string;
@@ -22,6 +23,7 @@ export default function RegisterEventForm({
   categories: Category[];
 }) {
   const router = useRouter();
+  const recaptcha = useRecaptcha();
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +38,16 @@ export default function RegisterEventForm({
     }
     setLoading(true);
     try {
+      const recaptchaToken = await recaptcha.execute("event_register");
+      if (recaptcha.enabled && !recaptchaToken) {
+        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
+        return;
+      }
       const res = await fetch(`/api/events/${slug}/register`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ categoryId }),
+        // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
+        body: JSON.stringify({ categoryId, recaptchaToken: recaptchaToken ?? undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

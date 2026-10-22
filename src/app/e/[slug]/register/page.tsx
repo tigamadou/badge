@@ -9,6 +9,7 @@ import { isParticipantProfileComplete } from "@/lib/participant-profile";
 import { canRegisterToEvent } from "@/lib/profile-review";
 import { ClosedView } from "../closed";
 import RegisterEventForm from "./RegisterEventForm";
+import { RecaptchaScope } from "@/components/auth/RecaptchaScope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,7 +98,9 @@ export default async function EventRegisterPage({
             </Link>
           </div>
         ) : (
-          <RegisterEventForm slug={slug} categories={categories} />
+          <RecaptchaScope>
+            <RegisterEventForm slug={slug} categories={categories} />
+          </RecaptchaScope>
         )}
       </div>
     </PublicEventLayout>

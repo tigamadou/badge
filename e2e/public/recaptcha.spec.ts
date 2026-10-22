@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { cleanupE2ETestData, createTestUser, getDb, disconnectDb } from "../helpers/db";
+import { cleanupE2ETestData, createTestEvent, createTestUser, getDb, disconnectDb } from "../helpers/db";
+import { loginAs } from "../helpers/auth";
 
 // reCAPTCHA v3 sur l'inscription et le mot de passe oublie. Google est simule : le script est
 // remplace par un stub qui renvoie un jeton reconnaissable, et le test verifie ce que le
@@ -102,6 +103,40 @@ test.describe("Public — reCAPTCHA v3", () => {
     // Refuse : le compte n'a pas change et l'invitation reste utilisable.
     const reloaded = await getDb().user.findUniqueOrThrow({ where: { id: user.id } });
     expect(reloaded.inviteToken).toBe(invite);
+  });
+
+  test("reinitialisation du mot de passe : le jeton de l'action est envoye au serveur", async ({ page }) => {
+    await page.route(SCRIPT_URL, (route) => route.fulfill({ contentType: "application/javascript", body: STUB }));
+
+    // Le lien n'a pas besoin d'etre valide : la verification precede la consultation du lien.
+    await page.goto("/reset-password/e2e-lien-reset");
+    await page.getByLabel("Nouveau mot de passe").fill("NewPass1234!");
+    await page.getByLabel("Confirmer le mot de passe").fill("NewPass1234!");
+    const [request] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes("/api/auth/reset-password") && r.method() === "POST"),
+      page.getByRole("button", { name: /mettre à jour/i }).click(),
+    ]);
+
+    expect(request.postDataJSON().recaptchaToken).toBe("e2e-token:e2e-site-key:reset_password");
+    await expect(page.getByText(REFUSED)).toBeVisible();
+  });
+
+  test("inscription a un evenement : le jeton de l'action est envoye au serveur", async ({ page }) => {
+    await page.route(SCRIPT_URL, (route) => route.fulfill({ contentType: "application/javascript", body: STUB }));
+    const user = await createTestUser({ scope: "recaptcha-evt", verified: true, profile: true });
+    const { eventSlug } = await createTestEvent({ scope: "recaptcha-evt" });
+    await loginAs(page, user);
+
+    await page.goto(`/e/${eventSlug}/register`);
+    await page.getByRole("radio", { name: /visiteur/i }).check();
+    await page.getByRole("checkbox").last().check();
+    const [request] = await Promise.all([
+      page.waitForRequest((r) => r.url().includes(`/api/events/${eventSlug}/register`) && r.method() === "POST"),
+      page.getByRole("button", { name: /s'inscrire/i }).click(),
+    ]);
+
+    expect(request.postDataJSON().recaptchaToken).toBe("e2e-token:e2e-site-key:event_register");
+    await expect(page.getByText(REFUSED)).toBeVisible();
   });
 
   test("script Google bloque : message clair et aucune requete envoyee au serveur", async ({ page }) => {

@@ -9,26 +9,7 @@ vi.mock("@/lib/recaptcha", () => ({
 }));
 
 import { verifyRecaptcha } from "@/lib/recaptcha";
-
-// La route lit la configuration reCAPTCHA de la plateforme.
-async function seedPlatform() {
-  await prisma.platformSettings.upsert({
-    where: { id: "singleton" },
-    create: {
-      id: "singleton",
-      smtpHost: "localhost",
-      smtpPort: 587,
-      smtpFrom: "noreply@setup-password.test",
-      smtpUser: "",
-      smtpPassword: "",
-      smtpSecure: false,
-      recaptchaEnabled: true,
-      recaptchaSiteKey: "site-key",
-      recaptchaSecretKey: "secret-key",
-    },
-    update: { recaptchaEnabled: true, recaptchaSiteKey: "site-key", recaptchaSecretKey: "secret-key" },
-  });
-}
+import { seedRecaptchaPlatform, clearRecaptchaPlatform } from "./recaptcha-platform";
 
 async function cleanDb() {
   await prisma.activityLog.deleteMany();
@@ -58,16 +39,11 @@ function makeRawReq(rawBody: string) {
 describe("POST /api/auth/setup-password", () => {
   beforeEach(async () => {
     await cleanDb();
-    await seedPlatform();
+    await seedRecaptchaPlatform();
     vi.mocked(verifyRecaptcha).mockClear();
   });
 
-  // La base est partagee avec les tests suivants et les e2e locaux : on rend reCAPTCHA inactif.
-  afterAll(async () => {
-    await prisma.platformSettings.updateMany({
-      data: { recaptchaEnabled: false, recaptchaSiteKey: "", recaptchaSecretKey: "" },
-    });
-  });
+  afterAll(clearRecaptchaPlatform);
 
   it("returns 400 when body is invalid (missing token)", async () => {
     const { POST } = await import("@/app/api/auth/setup-password/route");

@@ -8,6 +8,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";
 import { Icon } from "@/components/ui/Icon";
+import { useRecaptcha } from "@/components/auth/Recaptcha";
 
 function pwScore(v: string): 0 | 1 | 2 | 3 | 4 {
   let s = 0;
@@ -25,6 +26,7 @@ export default function ResetPasswordPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = use(params);
+  const recaptcha = useRecaptcha();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,10 +46,16 @@ export default function ResetPasswordPage({
     }
     setLoading(true);
     try {
+      const recaptchaToken = await recaptcha.execute("reset_password");
+      if (recaptcha.enabled && !recaptchaToken) {
+        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
+        return;
+      }
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
+        body: JSON.stringify({ token, password, recaptchaToken: recaptchaToken ?? undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

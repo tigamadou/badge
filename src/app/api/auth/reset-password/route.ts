@@ -6,10 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { hashToken, isExpired } from "@/lib/auth-tokens";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
+import { getPlatformRecaptcha } from "@/lib/settings";
+import { verifyRecaptcha } from "@/lib/recaptcha";
 
 const bodySchema = z.object({
   token: z.string().min(1),
   password: z.string().min(6).max(200),
+  recaptchaToken: z.string().optional(),
 });
 
 const INVALID_OR_EXPIRED = {
@@ -32,6 +35,27 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { code: "INVALID_BODY", error: "Données invalides." },
+      { status: 400 },
+    );
+  }
+
+  // Avant de consulter le lien : un refus ne renseigne pas sur sa validite.
+  const recaptcha = await getPlatformRecaptcha();
+  const captcha = await verifyRecaptcha({
+    enabled: recaptcha.recaptchaEnabled,
+    secretKey: recaptcha.recaptchaSecretKey,
+    token: parsed.data.recaptchaToken ?? "",
+    remoteIp: ip,
+  });
+  if (!captcha.ok) {
+    // La raison donnee par Google n'est lisible que dans les logs serveur.
+    console.warn("[recaptcha] verification refusee", {
+      route: "reset-password",
+      code: captcha.code,
+      details: captcha.details,
+    });
+    return NextResponse.json(
+      { code: `RECAPTCHA_${captcha.code}`, error: "Vérification reCAPTCHA refusée." },
       { status: 400 },
     );
   }
