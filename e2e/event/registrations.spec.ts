@@ -57,7 +57,8 @@ test.describe("Event — Inscriptions (liste)", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
-    await expect(page.getByText(participant.email)).toBeVisible();
+    // L'e-mail existe deux fois dans le DOM (colonne desktop + ligne mobile sous le nom) : un seul est visible.
+    await expect(page.getByText(participant.email).filter({ visible: true })).toBeVisible();
   });
 
   test("Etat vide : aucune inscription", async ({ page }) => {
