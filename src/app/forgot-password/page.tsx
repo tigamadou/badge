@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { useRecaptcha } from "@/components/auth/Recaptcha";
 import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 
 export default function ForgotPasswordPage() {
+  const recaptcha = useRecaptcha();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,10 +21,16 @@ export default function ForgotPasswordPage() {
     setError(null);
     setLoading(true);
     try {
+      const recaptchaToken = await recaptcha.execute("forgot_password");
+      if (recaptcha.enabled && !recaptchaToken) {
+        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
+        return;
+      }
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email }),
+        // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
+        body: JSON.stringify({ email, recaptchaToken: recaptchaToken ?? undefined }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

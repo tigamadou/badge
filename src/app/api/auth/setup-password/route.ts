@@ -4,11 +4,15 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import { getPlatformRecaptcha } from "@/lib/settings";
+import { verifyRecaptcha } from "@/lib/recaptcha";
+import { extractClientIp } from "@/lib/rate-limit";
 
 // Schema Zod : token + password (min 6 caracteres, regle metier projet)
 const bodySchema = z.object({
   token: z.string().min(1),
   password: z.string().min(6),
+  recaptchaToken: z.string().optional(),
 });
 
 // Reponse uniforme pour token invalide / expire / user archive : evite l'enumeration.
@@ -27,7 +31,28 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { token, password } = parsed.data;
+  const { token, password, recaptchaToken } = parsed.data;
+
+  // Avant de consulter l'invitation : un refus ne dit rien sur la validite du lien.
+  const recaptcha = await getPlatformRecaptcha();
+  const captcha = await verifyRecaptcha({
+    enabled: recaptcha.recaptchaEnabled,
+    secretKey: recaptcha.recaptchaSecretKey,
+    token: recaptchaToken ?? "",
+    remoteIp: extractClientIp(req.headers),
+  });
+  if (!captcha.ok) {
+    // La raison donnee par Google n'est lisible que dans les logs serveur.
+    console.warn("[recaptcha] verification refusee", {
+      route: "setup-password",
+      code: captcha.code,
+      details: captcha.details,
+    });
+    return NextResponse.json(
+      { code: `RECAPTCHA_${captcha.code}`, error: "Vérification reCAPTCHA refusée." },
+      { status: 400 },
+    );
+  }
 
   const user = await prisma.user.findUnique({ where: { inviteToken: token } });
   if (

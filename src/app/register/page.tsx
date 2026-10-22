@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
+import { useRecaptcha } from "@/components/auth/Recaptcha";
 import { safeInternalPath } from "@/lib/safe-path";
 
 export default function RegisterPage() {
@@ -20,6 +21,7 @@ function RegisterForm() {
   // v4 (plan 09) : la page publique d'un evenement passe `next`. On le porte jusqu'a
   // l'API, qui l'inscrit dans le lien de verification.
   const next = safeInternalPath(useSearchParams().get("next"));
+  const recaptcha = useRecaptcha();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -41,10 +43,16 @@ function RegisterForm() {
     }
     setLoading(true);
     try {
+      const recaptchaToken = await recaptcha.execute("register");
+      if (recaptcha.enabled && !recaptchaToken) {
+        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
+        return;
+      }
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password, name, next }),
+        // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
+        body: JSON.stringify({ email, password, name, next, recaptchaToken: recaptchaToken ?? undefined }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

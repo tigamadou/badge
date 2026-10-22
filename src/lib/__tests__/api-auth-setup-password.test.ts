@@ -1,8 +1,34 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
+
+vi.mock("@/lib/recaptcha", () => ({
+  verifyRecaptcha: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+import { verifyRecaptcha } from "@/lib/recaptcha";
+
+// La route lit la configuration reCAPTCHA de la plateforme.
+async function seedPlatform() {
+  await prisma.platformSettings.upsert({
+    where: { id: "singleton" },
+    create: {
+      id: "singleton",
+      smtpHost: "localhost",
+      smtpPort: 587,
+      smtpFrom: "noreply@setup-password.test",
+      smtpUser: "",
+      smtpPassword: "",
+      smtpSecure: false,
+      recaptchaEnabled: true,
+      recaptchaSiteKey: "site-key",
+      recaptchaSecretKey: "secret-key",
+    },
+    update: { recaptchaEnabled: true, recaptchaSiteKey: "site-key", recaptchaSecretKey: "secret-key" },
+  });
+}
 
 async function cleanDb() {
   await prisma.activityLog.deleteMany();
@@ -32,6 +58,15 @@ function makeRawReq(rawBody: string) {
 describe("POST /api/auth/setup-password", () => {
   beforeEach(async () => {
     await cleanDb();
+    await seedPlatform();
+    vi.mocked(verifyRecaptcha).mockClear();
+  });
+
+  // La base est partagee avec les tests suivants et les e2e locaux : on rend reCAPTCHA inactif.
+  afterAll(async () => {
+    await prisma.platformSettings.updateMany({
+      data: { recaptchaEnabled: false, recaptchaSiteKey: "", recaptchaSecretKey: "" },
+    });
   });
 
   it("returns 400 when body is invalid (missing token)", async () => {
@@ -138,5 +173,71 @@ describe("POST /api/auth/setup-password", () => {
     expect(details?.setupViaInvite).toBe(true);
     // Le password ne doit JAMAIS apparaitre dans les details
     expect(JSON.stringify(log?.details ?? {})).not.toContain("secret123");
+  });
+
+  describe("reCAPTCHA", () => {
+    async function seedInvitedUser(token: string) {
+      return prisma.user.create({
+        data: {
+          email: `${token}@x.local`,
+          password: "",
+          name: "Invite",
+          inviteToken: token,
+          inviteTokenExpiry: new Date(Date.now() + 24 * 3600 * 1000),
+        },
+      });
+    }
+
+    it("transmet le jeton, la cle secrete et l'IP du client a la verification", async () => {
+      await seedInvitedUser("tok-captcha-ok");
+      const { POST } = await import("@/app/api/auth/setup-password/route");
+      const req = new NextRequest("http://localhost/api/auth/setup-password", {
+        method: "POST",
+        body: JSON.stringify({ token: "tok-captcha-ok", password: "secret123", recaptchaToken: "jeton-google" }),
+        headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.9" },
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+      expect(verifyRecaptcha).toHaveBeenCalledWith({
+        enabled: true,
+        secretKey: "secret-key",
+        token: "jeton-google",
+        remoteIp: "203.0.113.9",
+      });
+    });
+
+    it("refuse en 400 RECAPTCHA_* et laisse le compte intact quand la verification echoue", async () => {
+      const u = await seedInvitedUser("tok-captcha-ko");
+      vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "MISSING_TOKEN" });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { POST } = await import("@/app/api/auth/setup-password/route");
+      const res = await POST(makeReq({ token: "tok-captcha-ko", password: "secret123" }));
+
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.code).toBe("RECAPTCHA_MISSING_TOKEN");
+      expect(warn).toHaveBeenCalledWith(
+        "[recaptcha] verification refusee",
+        expect.objectContaining({ route: "setup-password", code: "MISSING_TOKEN" }),
+      );
+      warn.mockRestore();
+
+      const reloaded = await prisma.user.findUnique({ where: { id: u.id } });
+      expect(reloaded?.password).toBe("");
+      expect(reloaded?.inviteToken).toBe("tok-captcha-ko");
+    });
+
+    it("verifie le jeton avant de consulter l'invitation (pas d'indication sur la validite du lien)", async () => {
+      vi.mocked(verifyRecaptcha).mockResolvedValueOnce({ ok: false, code: "LOW_SCORE" });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const { POST } = await import("@/app/api/auth/setup-password/route");
+      const res = await POST(makeReq({ token: "lien-inexistant", password: "secret123" }));
+
+      expect((await res.json()).code).toBe("RECAPTCHA_LOW_SCORE");
+      warn.mockRestore();
+    });
   });
 });
