@@ -84,7 +84,9 @@ test.describe("Parcours abonnement org", () => {
     });
     await loginAs(page, staff);
 
+    // L'org de test a deja un abonnement : resume d'abord, formulaire via Modifier.
     await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByLabel("Statut").selectOption("ACTIVE");
     await page.getByRole("button", { name: /Enregistrer/ }).click();
@@ -141,6 +143,7 @@ test.describe("Parcours abonnement org", () => {
     await loginAs(page, staff);
 
     await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await page.getByRole("button", { name: "Modifier" }).click();
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByRole("button", { name: /Enregistrer/ }).click();
 

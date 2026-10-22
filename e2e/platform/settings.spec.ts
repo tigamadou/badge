@@ -118,17 +118,44 @@ test.describe("Platform — Parametres", () => {
       expect(stored).not.toBeNull();
     }).toPass();
 
-    // Archivage : la ligne disparait mais la ligne existe toujours en base.
-    page.once("dialog", (d) => d.accept());
+    // Archivage : confirmation dans une modale, puis la ligne disparait mais existe toujours en base.
     await page
       .getByRole("row", { name: new RegExp(label) })
       .getByRole("button", { name: /archiver/i })
       .click();
+    await expect(page.getByRole("heading", { name: "Archiver le motif" })).toBeVisible();
+    // La modale est rendue apres le tableau : son bouton est le dernier « Archiver ».
+    await page.getByRole("button", { name: "Archiver", exact: true }).last().click();
     await expect(page.getByRole("cell", { name: label })).toHaveCount(0);
     await expect(async () => {
       const stored = await getDb().rejectionReason.findFirst({ where: { label } });
       expect(stored?.archived).toBe(true);
     }).toPass();
+  });
+
+  test("STAFF_ADMIN modifie la portee d'un motif sans le recreer", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-reasons-edit" });
+    const label = `E2E motif edit ${Date.now()}`;
+
+    await page.goto("/platform/settings");
+    await page.getByLabel("Libellé").fill(label);
+    await page.getByRole("button", { name: /^ajouter$/i }).click();
+    await expect(page.getByRole("cell", { name: label })).toBeVisible();
+
+    await page
+      .getByRole("row", { name: new RegExp(label) })
+      .getByRole("button", { name: "Modifier" })
+      .click();
+    await expect(page.getByRole("heading", { name: "Modifier le motif" })).toBeVisible();
+    // Deux listes « Portée » (creation et modale) : la modale est rendue en dernier.
+    await page.getByRole("combobox", { name: "Portée" }).last().selectOption("BOTH");
+    await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+
+    await expect(async () => {
+      const stored = await getDb().rejectionReason.findFirst({ where: { label } });
+      expect(stored?.scope).toBe("BOTH");
+    }).toPass();
+    await expect(page.getByRole("row", { name: new RegExp(label) })).toContainText("Les deux");
   });
 
   test("STAFF_SUPPORT ne voit pas le formulaire de motifs", async ({ page }) => {
