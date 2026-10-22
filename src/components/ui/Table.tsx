@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { TableFrame } from "./TableFrame";
 
 interface Column<T> {
   key: string;
@@ -14,7 +15,7 @@ interface TableProps<T> {
 
 export function Table<T>({ columns, data, keyExtractor }: TableProps<T>) {
   return (
-    <div className="overflow-x-auto">
+    <TableFrame>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50">
@@ -37,6 +38,6 @@ export function Table<T>({ columns, data, keyExtractor }: TableProps<T>) {
           ))}
         </tbody>
       </table>
-    </div>
+    </TableFrame>
   );
 }

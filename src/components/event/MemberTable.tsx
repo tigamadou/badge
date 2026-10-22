@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 import { MemberInviteForm } from "./MemberInviteForm";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -70,7 +71,7 @@ export function MemberTable({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -129,7 +130,7 @@ export function MemberTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
 
       {inviting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

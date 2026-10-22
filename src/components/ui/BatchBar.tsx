@@ -4,9 +4,9 @@ import { Icon, type IconName } from "./Icon";
 export function BatchBar({ count, children }: { count: number; children: ReactNode }) {
   if (count === 0) return null;
   return (
-    <div className="mb-3 flex items-center gap-3 rounded-lg bg-brand-navy px-4 py-2.5 text-sm text-white">
-      <span className="font-semibold tabular-nums">{count} selectionnee(s)</span>
-      <span className="flex-1" />
+    <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg bg-brand-navy px-4 py-2.5 text-sm text-white">
+      <span className="w-full font-semibold tabular-nums sm:w-auto">{count} sélectionnée(s)</span>
+      <span className="hidden flex-1 sm:block" />
       {children}
     </div>
   );

@@ -11,6 +11,7 @@ import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { logKind } from "@/lib/activity-labels";
 import { getEventOrgId } from "@/lib/event-org";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 export default async function ActivityPage({
   params,
@@ -64,13 +65,13 @@ export default async function ActivityPage({
         <p className="mt-0.5 text-sm text-slate-400">Les actions réalisées sur cet événement</p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Auteur</th>
+              <th className="px-4 py-3 hidden md:table-cell">Auteur</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -93,7 +94,7 @@ export default async function ActivityPage({
                     {l.staffActor && <Tag icon="shield">staff</Tag>}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-[13px] text-slate-600">
+                <td className="px-4 py-3 text-[13px] text-slate-600 hidden md:table-cell">
                   {l.user ? l.user.email : "Système"}
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -109,7 +110,7 @@ export default async function ActivityPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

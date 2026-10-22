@@ -11,7 +11,7 @@ export function Tabs({
   onChange: (v: string) => void;
 }) {
   return (
-    <div role="tablist" className="mb-6 flex gap-1 border-b border-slate-200">
+    <div role="tablist" className="mb-6 flex gap-1 overflow-x-auto whitespace-nowrap border-b border-slate-200">
       {tabs.map((t) => {
         const on = t.value === value;
         return (
@@ -20,7 +20,7 @@ export function Tabs({
             role="tab"
             aria-selected={on}
             onClick={() => onChange(t.value)}
-            className={`-mb-px border-b-2 px-3.5 py-2.5 text-sm font-medium ${
+            className={`-mb-px shrink-0 border-b-2 px-3.5 py-2.5 text-sm font-medium ${
               on ? "border-green-600 text-green-600" : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >

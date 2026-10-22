@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
 import { formatEventPeriod } from "@/lib/format-date";
 import { EventArchiveActions } from "./EventArchiveActions";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 export default async function EventsListPage({
   params,
@@ -36,7 +37,7 @@ export default async function EventsListPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Événements</h1>
           <p className="mt-0.5 text-sm text-slate-400">Les événements de votre organisation</p>
@@ -49,7 +50,7 @@ export default async function EventsListPage({
         </Link>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -120,7 +121,7 @@ export default async function EventsListPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

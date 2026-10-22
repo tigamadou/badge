@@ -35,7 +35,7 @@ export default async function StaffOrganizationsPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Organisations</h1>
           <p className="mt-0.5 text-sm text-slate-400">Gérer les organisations de la plateforme</p>
@@ -49,7 +49,7 @@ export default async function StaffOrganizationsPage({
       </div>
 
       <form method="get" className="flex flex-wrap items-center gap-2.5">
-        <div className="relative min-w-[200px] flex-1">
+        <div className="relative min-w-0 basis-full flex-1 sm:basis-auto sm:min-w-[200px]">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon name="search" size={16} />
           </span>

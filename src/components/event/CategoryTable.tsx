@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 import { CategoryForm } from "./CategoryForm";
 import { CategoryReassignModal } from "./CategoryReassignModal";
 import { CategoryImportTemplatesModal } from "./CategoryImportTemplatesModal";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 type Cat = {
   id: string;
@@ -98,7 +99,7 @@ export function CategoryTable({
         />
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -153,7 +154,7 @@ export function CategoryTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

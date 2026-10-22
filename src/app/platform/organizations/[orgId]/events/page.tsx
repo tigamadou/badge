@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { countCountableRegistrations } from "@/lib/subscription";
 import { Tag } from "@/components/ui/Labels";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 // v4 Bloc B : liste read-only des evenements d'une org, pour la supervision staff.
 // Aucun lien vers l'espace org : le staff agit via l'API (pouvoir staff), pas via /org.
@@ -26,7 +27,7 @@ export default async function OrgEventsSupervisionPage({
   return (
     <div className="space-y-4">
       <h2 className="text-base font-semibold text-slate-800">Événements ({events.length})</h2>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -63,7 +64,7 @@ export default async function OrgEventsSupervisionPage({
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
     </div>
   );
 }

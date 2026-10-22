@@ -2,6 +2,7 @@ import Link from "next/link";
 import { OrgLogo } from "@/components/ui/PickCard";
 import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 type OrgRow = {
   id: string;
@@ -13,14 +14,14 @@ type OrgRow = {
 
 export function OrganizationsTable({ organizations }: { organizations: OrgRow[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <TableFrame>
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             <th className="px-4 py-3">Organisation</th>
-            <th className="px-4 py-3">Slug</th>
-            <th className="px-4 py-3">Membres</th>
-            <th className="px-4 py-3">Événements</th>
+            <th className="px-4 py-3 hidden md:table-cell">Slug</th>
+            <th className="px-4 py-3 hidden md:table-cell">Membres</th>
+            <th className="px-4 py-3 hidden md:table-cell">Événements</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
@@ -49,9 +50,9 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
                   {o.archived && <Tag icon="archive">Archivée</Tag>}
                 </div>
               </td>
-              <td className="px-4 py-3 font-mono text-[13px] text-slate-400">{o.slug}</td>
-              <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{o._count.memberships}</td>
-              <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{o._count.events}</td>
+              <td className="px-4 py-3 font-mono text-[13px] text-slate-400 hidden md:table-cell">{o.slug}</td>
+              <td className="px-4 py-3 text-sm tabular-nums text-slate-600 hidden md:table-cell">{o._count.memberships}</td>
+              <td className="px-4 py-3 text-sm tabular-nums text-slate-600 hidden md:table-cell">{o._count.events}</td>
               <td className="px-4 py-3 text-right">
                 <Link
                   href={`/platform/organizations/${o.id}`}
@@ -65,6 +66,6 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
           ))}
         </tbody>
       </table>
-    </div>
+    </TableFrame>
   );
 }

@@ -7,6 +7,7 @@ import { CatPill } from "@/components/ui/Labels";
 import { Tag } from "@/components/ui/Labels";
 import { EmptyState } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 type Tpl = {
   id: string;
@@ -43,7 +44,7 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Modèles de catégories</h1>
           <p className="mt-0.5 text-sm text-slate-400">Catégories réutilisables lors de la création d&apos;événements</p>
@@ -55,7 +56,7 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -108,7 +109,7 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
             ))}
           </tbody>
         </table>
-      </div>
+      </TableFrame>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

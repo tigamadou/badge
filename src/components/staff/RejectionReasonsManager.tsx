@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { TableFrame } from "@/components/ui/TableFrame";
 
 export type RejectionScope = "PROFILE" | "REGISTRATION" | "BOTH";
 export type RejectionReasonRow = {
@@ -151,6 +152,7 @@ export function RejectionReasonsManager({
         </form>
       )}
 
+      <TableFrame>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-slate-500">
@@ -197,6 +199,7 @@ export function RejectionReasonsManager({
           )}
         </tbody>
       </table>
+      </TableFrame>
 
       <Modal
         open={editing !== null}

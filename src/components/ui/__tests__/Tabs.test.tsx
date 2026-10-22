@@ -14,6 +14,8 @@ describe("Tabs / Segmented", () => {
     expect(html).toContain("Documents");
     expect(html).toContain('aria-selected="true"');
     expect(html).toContain("border-green-600");
+    expect(html).toContain("overflow-x-auto");
+    expect(html).toContain("shrink-0");
   });
 
   it("Segmented rend l'option active en blanc", () => {
