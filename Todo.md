@@ -1,1 +1,5 @@
-- 
+- Intégrer un systhem de notifications internes et email pour les membres du staff de la plateforme, le staff d'une organisation, les participants à un évènement. On s'assurer déjà que les différents acteurs soient notifié à chaque évènement majeur, pour qu'ils puissent prendre les actions nécessaire. Donc dans les différents comptes, on doit avoir une cloche, avec un badge et le nombre de notification non lue. Lors qu'on qu'on clique sur la cloche, voir les dernières notifications sans quitter la page acutelle, et quand on clique sur la notif, être rediriger sur la page des notifications... chaque notification avec des liens vers les éléments pertinents et concernés
+- Pouvoir modifier la catégorie d'une inscription qui a été rejetée. En effet, on peut rejeter une inscription si le participant a choisis la mauvais catégorie. doit il doit pouvoir modifier celle ci.
+- Sur la page d'un évènement, afficher la cover si elle existe. Que ce soit dans l'admin, ou le compte participant.
+- je propose que une fois le profil utilisateur validé, la photo qu’il a ajouté à son compte devient sa photo de profile
+- ajouter un loader, et un feedback sur toutes les actions. Le feadback peut être un toast. Et le loader, peut être à l'intérieur du bouton, et par exemple désactiver le bouton pendant le loading.
