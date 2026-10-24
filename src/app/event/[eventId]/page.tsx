@@ -13,6 +13,7 @@ import { Alert, EmptyState } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 import { PublicLinkCard } from "@/components/event/PublicLinkCard";
 import { EventInfoCard } from "@/components/event/EventInfoCard";
+import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
 import { buildBaseUrl } from "@/lib/mail-helpers";
 import { getEventOrgId } from "@/lib/event-org";
 
@@ -40,9 +41,12 @@ export default async function EventDashboardPage({
       location: true,
       description: true,
       registrationOpen: true,
+      banner: true,
     },
   });
   if (!event || event.orgId !== orgId) redirect("/select");
+
+  const coverUrl = eventCoverUrl(event.banner);
 
   const role = effectiveEventRole(ctx, event.id, event.orgId);
 
@@ -52,6 +56,7 @@ export default async function EventDashboardPage({
     });
     return (
       <div className="max-w-xl space-y-6">
+        <EventCover bannerUrl={coverUrl} title={event.title} variant="hero" />
         <h1 className="text-xl font-semibold text-slate-900">Tableau de bord opérateur</h1>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatCard label="Mes scans" value={myScans} icon="scan-line" />
@@ -108,6 +113,7 @@ export default async function EventDashboardPage({
 
   return (
     <div className="space-y-6">
+      <EventCover bannerUrl={coverUrl} title={event.title} variant="hero" />
       <div>
         <h1 className="text-xl font-semibold text-slate-900">{event.title}</h1>
         <p className="mt-0.5 text-sm text-slate-400">Tableau de bord de l&apos;événement</p>

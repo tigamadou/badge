@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity-log";
 import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 import { templateExists } from "@/lib/badge-templates/resolve";
+import { notifyQuotaExceeded } from "@/lib/notifications/triggers";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
@@ -95,11 +96,13 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     );
   }
 
+  let quotaBypassed = false;
   try {
     await assertCanCreateEvent(orgId);
   } catch (e) {
     if (e instanceof SubscriptionError) {
       if (session.user.isStaff) {
+        quotaBypassed = true;
         await logActivity({
           type: "QUOTA_BYPASS",
           userId: session.user.id,
@@ -192,6 +195,8 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
       },
       req,
     });
+
+    if (quotaBypassed) await notifyQuotaExceeded(orgId, event.id, session.user.id);
 
     return NextResponse.json({ event: { id: event.id, slug: event.slug } }, { status: 201 });
   } catch (err) {

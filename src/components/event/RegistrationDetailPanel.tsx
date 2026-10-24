@@ -137,6 +137,7 @@ export function RegistrationDetailPanel({
             eventId={eventId}
             registrationId={r.id}
             status={r.status}
+            badgePrinted={r.badgePrinted}
             profileApproved={r.profileStatus === "APPROVED"}
             reasons={rejectionReasons}
             onChanged={() => router.refresh()}

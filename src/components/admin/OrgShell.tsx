@@ -4,24 +4,24 @@ import { SidebarNav, type NavEntry, type NavLink } from "./SidebarNav";
 import { orgRoleAtLeast } from "@/lib/auth-helpers";
 import { AppShell } from "@/components/layout/AppShell";
 import { LogoutButton } from "@/components/auth/LogoutButton";
+import { UserAvatar } from "@/components/layout/UserAvatar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 type Org = { id: string; name: string; slug: string };
-
-function initials(name: string) {
-  return (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-}
 
 export function OrgShell({
   org,
   user,
   orgs,
   orgRole,
+  photoUrl,
   children,
 }: {
   org: Org;
   user: { name: string; email: string; isStaff: boolean };
   orgs: Org[];
   orgRole: OrgRole;
+  photoUrl?: string | null;
   children: React.ReactNode;
 }) {
   // v4 Bloc C : nav filtree par role effectif. AUDITOR (lecture seule) ne voit pas les
@@ -29,6 +29,7 @@ export function OrgShell({
   // OWNER voit tout. L'enforcement reel reste route par route.
   const navByRole: Array<NavLink & { minRole: OrgRole }> = [
     { href: `/org/${org.id}`, label: "Tableau de bord", icon: "layout-dashboard", exact: true, minRole: "AUDITOR" },
+    { href: `/org/${org.id}/notifications`, label: "Notifications", icon: "bell", minRole: "AUDITOR" },
     { href: `/org/${org.id}/events`, label: "Événements", icon: "calendar", minRole: "AUDITOR" },
     { href: `/org/${org.id}/members`, label: "Membres", icon: "users", minRole: "MANAGER" },
     { href: `/org/${org.id}/templates`, label: "Modèles catégories", icon: "tags", minRole: "MANAGER" },
@@ -61,9 +62,8 @@ export function OrgShell({
             <span className="truncate font-medium text-slate-700">{org.name}</span>
           </nav>
           <OrgSelector currentOrgId={org.id} orgs={orgs} isStaff={user.isStaff} />
-          <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
-            {initials(user.name)}
-          </span>
+          <NotificationBell scope={{ kind: "org", orgId: org.id }} />
+          <UserAvatar name={user.name} photoUrl={photoUrl ?? null} size={30} />
         </>
       }
     >

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
+import { getApprovedPhotoUrl } from "@/lib/approved-photo";
 import { effectiveEventRole, hasOrgRole } from "@/lib/auth-helpers";
 import { EventShell } from "@/components/event/EventShell";
 import { EventOperatorShell } from "@/components/event/EventOperatorShell";
@@ -47,6 +48,7 @@ export default async function EventLayout({
   if (!role) {
     redirect("/select");
   }
+  const photoUrl = await getApprovedPhotoUrl(ctx.user.id);
 
   const isStaffMode =
     ctx.isStaff &&
@@ -59,6 +61,7 @@ export default async function EventLayout({
         org={{ id: event.organization.id, name: event.organization.name }}
         event={{ id: event.id, title: event.title }}
         user={{ name: ctx.user.name, email: ctx.user.email }}
+        photoUrl={photoUrl}
       >
         {children}
       </EventOperatorShell>
@@ -72,6 +75,7 @@ export default async function EventLayout({
         org={{ id: event.organization.id, name: event.organization.name }}
         event={{ id: event.id, title: event.title }}
         user={{ name: ctx.user.name, email: ctx.user.email }}
+        photoUrl={photoUrl}
       >
         {children}
       </EventPrinterShell>
@@ -84,6 +88,7 @@ export default async function EventLayout({
         org={{ id: event.organization.id, name: event.organization.name }}
         event={{ id: event.id, title: event.title }}
         user={{ name: ctx.user.name, email: ctx.user.email }}
+        photoUrl={photoUrl}
       >
         {children}
       </EventViewerShell>
@@ -97,6 +102,7 @@ export default async function EventLayout({
       effectiveRole={role}
       isStaffMode={isStaffMode}
       user={{ name: ctx.user.name, email: ctx.user.email }}
+      photoUrl={photoUrl}
     >
       {children}
     </EventShell>

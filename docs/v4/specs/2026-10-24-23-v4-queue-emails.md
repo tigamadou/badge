@@ -69,7 +69,7 @@ model Job {
   type        JobType
   status      JobStatus @default(PENDING)
   priority    Int       @default(0)     // plus grand = plus prioritaire
-  // EMAIL : { to, subject, html, kind, ctx? }. Purgé (html vidé) après succès.
+  // EMAIL : { to, subject, html, kind, ctx?, replyTo? }. Purgé (html vidé) après succès.
   payload     Json
   // Champs dénormalisés pour l'écran d'admin (filtres, recherche) sans lire le payload.
   kind        String                    // ex. "registration.approved"

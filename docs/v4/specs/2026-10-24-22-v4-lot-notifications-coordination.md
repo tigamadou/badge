@@ -74,6 +74,7 @@ export interface EmailMessage {
   // filtres de l'écran d'admin et à masquer le contenu des emails sensibles.
   kind: string;
   priority?: EmailPriority;        // défaut "normal"
+  replyTo?: string;                // formulaire de contact (route contact)
   // Contexte de transport/branding déjà utilisé par mail.ts (from, logo...).
   ctx?: TransportContext;
 }

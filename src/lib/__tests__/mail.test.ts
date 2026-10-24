@@ -7,6 +7,8 @@ import {
   type ResolvedTransport,
 } from "@/lib/mail";
 import * as mailModule from "@/lib/mail";
+import { drainEmailQueue } from "@/lib/jobs/__tests__/helpers";
+import { isSensitiveEmailKind } from "@/lib/jobs/email-kinds";
 
 type SentMail = { from: string; to: string; subject: string; html: string };
 
@@ -306,6 +308,7 @@ describe("sendRegistrationConfirmation", () => {
     });
 
     await mailModule.sendRegistrationConfirmation(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("amadou@example.com");
@@ -351,6 +354,7 @@ describe("sendRegistrationConfirmation", () => {
     });
 
     await mailModule.sendRegistrationConfirmation(reg.id);
+    await drainEmailQueue();
 
     expect(sent[0].html).not.toContain("<script>alert(1)</script>");
     expect(sent[0].html).toContain("&lt;script&gt;");
@@ -359,6 +363,7 @@ describe("sendRegistrationConfirmation", () => {
   it("does nothing when registration not found (logs only)", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendRegistrationConfirmation("missing-id");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
@@ -423,6 +428,7 @@ describe("sendStatusNotification", () => {
     });
 
     await mailModule.sendStatusNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("approuvée");
@@ -432,6 +438,7 @@ describe("sendStatusNotification", () => {
   it("does nothing when registration not found (logs only)", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendStatusNotification("missing-id");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
@@ -454,6 +461,7 @@ describe("sendStatusNotification", () => {
     });
 
     await mailModule.sendStatusNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("rejetée");
@@ -477,6 +485,7 @@ describe("sendStatusNotification", () => {
     });
 
     await mailModule.sendStatusNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("rejetée");
@@ -489,6 +498,7 @@ describe("sendStatusNotification", () => {
     await prisma.registration.update({ where: { id: reg.id }, data: { status: "PENDING" } });
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendStatusNotification(reg.id);
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -511,6 +521,7 @@ describe("sendStatusNotification", () => {
     });
 
     await mailModule.sendStatusNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent[0].html).not.toContain("<img src=x");
     expect(sent[0].html).toContain("&lt;img");
@@ -571,6 +582,7 @@ describe("sendBadgePrintedNotification", () => {
     });
 
     await mailModule.sendBadgePrintedNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("Badge");
@@ -609,6 +621,7 @@ describe("sendBadgePrintedNotification", () => {
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendBadgePrintedNotification(reg.id);
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -646,6 +659,7 @@ describe("sendUserInvitation", () => {
 
     const before = Date.now();
     await mailModule.sendUserInvitation(user.id);
+    await drainEmailQueue();
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.inviteToken).toMatch(/^[a-f0-9]{64}$/);
@@ -678,6 +692,7 @@ describe("sendUserInvitation", () => {
     });
 
     await mailModule.sendUserInvitation(user.id, { orgId: org.id });
+    await drainEmailQueue();
 
     expect(sent[0].html).toContain("Acme");
   });
@@ -695,6 +710,7 @@ describe("sendUserInvitation", () => {
       settings: {} as never,
     });
     await mailModule.sendUserInvitation(user.id);
+    await drainEmailQueue();
     expect(sent[0].html).not.toContain("<script>x</script>");
     expect(sent[0].html).toContain("&lt;script&gt;");
   });
@@ -723,6 +739,7 @@ describe("sendPasswordResetEmail", () => {
     });
 
     await mailModule.sendPasswordResetEmail(user.id);
+    await drainEmailQueue();
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
     expect(updated?.inviteToken).toMatch(/^[a-f0-9]{64}$/);
@@ -735,6 +752,7 @@ describe("sendPasswordResetEmail", () => {
   it("returns when user not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendPasswordResetEmail("missing-user");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -760,6 +778,7 @@ describe("sendSmtpTest", () => {
     });
 
     await mailModule.sendSmtpTest({ to: "tester@x.com" });
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("tester@x.com");
@@ -782,6 +801,7 @@ describe("sendSmtpTest", () => {
     });
 
     await mailModule.sendSmtpTest({ to: "x@y.com", orgId: org.id });
+    await drainEmailQueue();
 
     expect(sent[0].from).toBe('"OrgT" <noreply@badge.local>');
     expect(sent[0].html).toContain("OrgT");
@@ -799,6 +819,7 @@ describe("sendSmtpTest", () => {
     });
 
     await mailModule.sendSmtpTest({ to: "x@y.com", eventId: "evt-1" });
+    await drainEmailQueue();
 
     expect(sent[0].html).toContain("événement");
     expect(sent[0].html).toContain("Salon");
@@ -806,6 +827,7 @@ describe("sendSmtpTest", () => {
 
   it("rejects invalid email", async () => {
     await expect(mailModule.sendSmtpTest({ to: "not-an-email" })).rejects.toThrow(/email/i);
+    await drainEmailQueue();
   });
 });
 
@@ -880,7 +902,7 @@ describe("resolveTransporter branding branches", () => {
   });
 });
 
-describe("safeSend error handling", () => {
+describe("send error handling (queue)", () => {
   beforeEach(async () => {
     await prisma.registration.deleteMany();
     await prisma.category.deleteMany();
@@ -888,7 +910,7 @@ describe("safeSend error handling", () => {
     await resetSettings();
   });
 
-  it("swallows transporter errors and logs instead of throwing", async () => {
+  it("keeps the job for retry instead of throwing on a transporter error", async () => {
     const org = await prisma.organization.create({ data: { name: "O", slug: "safesend" } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "Salon", slug: "safesend-evt", location: "L", date: new Date() },
@@ -928,16 +950,13 @@ describe("safeSend error handling", () => {
       settings: {} as never,
     });
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(mailModule.sendRegistrationConfirmation(reg.id)).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[mail] sendMail failed"),
-      expect.anything(),
-    );
-    consoleSpy.mockRestore();
+    await drainEmailQueue();
+    const job = await prisma.job.findFirstOrThrow();
+    expect(job).toMatchObject({ status: "PENDING", attempts: 1, lastError: "SMTP down" });
   });
 
-  it("logs the String(err) branch when a non-Error is thrown", async () => {
+  it("stores String(err) as lastError when a non-Error is thrown", async () => {
     const org = await prisma.organization.create({ data: { name: "O", slug: "safesend2" } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "Salon", slug: "safesend2-evt", location: "L", date: new Date() },
@@ -978,10 +997,10 @@ describe("safeSend error handling", () => {
       settings: {} as never,
     });
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(mailModule.sendRegistrationConfirmation(reg.id)).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    await drainEmailQueue();
+    const job = await prisma.job.findFirstOrThrow();
+    expect(job).toMatchObject({ status: "PENDING", attempts: 1, lastError: "boom-string" });
   });
 });
 
@@ -1035,6 +1054,7 @@ describe("sendBadgePrintedNotification branches", () => {
     });
 
     await mailModule.sendBadgePrintedNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].html).not.toContain("Pour toute question concernant le retrait");
@@ -1055,6 +1075,7 @@ describe("sendBadgePrintedNotification branches", () => {
     });
 
     await mailModule.sendBadgePrintedNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent[0].html).toContain("Pour toute question concernant le retrait");
     expect(sent[0].html).toContain("contact@org.com");
@@ -1074,6 +1095,7 @@ describe("sendBadgePrintedNotification branches", () => {
     });
 
     await mailModule.sendBadgePrintedNotification(reg.id);
+    await drainEmailQueue();
 
     expect(sent[0].html).toContain("Pour toute question concernant le retrait");
     expect(sent[0].html).toContain("+225 0909");
@@ -1083,6 +1105,7 @@ describe("sendBadgePrintedNotification branches", () => {
   it("returns when registration not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendBadgePrintedNotification("missing");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -1111,6 +1134,7 @@ describe("sendAccountVerifyEmail", () => {
     });
 
     await mailModule.sendAccountVerifyEmail(user.id, "plain-token-abc");
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("verify@x.com");
@@ -1137,6 +1161,7 @@ describe("sendAccountVerifyEmail", () => {
     });
 
     await mailModule.sendAccountVerifyEmail(user.id, "tok-next", "/e/salon-2027/register");
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].html).toContain(
@@ -1159,6 +1184,7 @@ describe("sendAccountVerifyEmail", () => {
     });
 
     await mailModule.sendAccountVerifyEmail(user.id, "tok");
+    await drainEmailQueue();
     expect(sent[0].html).not.toContain("<script>x</script>");
     expect(sent[0].html).toContain("&lt;script&gt;");
   });
@@ -1166,6 +1192,7 @@ describe("sendAccountVerifyEmail", () => {
   it("returns when user not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendAccountVerifyEmail("missing", "tok");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -1194,6 +1221,7 @@ describe("sendAccountPasswordReset", () => {
     });
 
     await mailModule.sendAccountPasswordReset(user.id, "reset-plain-tok");
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("sspr@x.com");
@@ -1206,6 +1234,7 @@ describe("sendAccountPasswordReset", () => {
   it("returns when user not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendAccountPasswordReset("missing", "tok");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -1259,17 +1288,84 @@ describe("sendRegistrationResubmitted", () => {
     });
 
     await mailModule.sendRegistrationResubmitted(reg.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("rsub@x.com");
     expect(sent[0].subject).toContain("resoumise");
     expect(sent[0].html).toContain("Amadou");
     expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
+    expect(sent[0].html).not.toContain("transférée");
+  });
+
+  describe("category change", () => {
+    async function seedResubmitted(id: string, categoryName: string) {
+      const org = await prisma.organization.create({ data: { name: "O", slug: `rsubc-${id}` } });
+      const event = await prisma.event.create({
+        data: { orgId: org.id, title: "Salon", slug: `rsubc-evt-${id}`, location: "Abidjan", date: new Date() },
+      });
+      const cat = await prisma.category.create({
+        data: { eventId: event.id, name: categoryName, color: "#000", number: 1 },
+      });
+      const participant = await mkParticipantUser(`rsubc-${id}`);
+      const reg = await prisma.registration.create({
+        data: {
+          id,
+          eventId: event.id,
+          categoryId: cat.id,
+          userId: participant.id,
+          snapshotEmail: `${id}@x.com`,
+          snapshotLastName: "Diallo",
+          snapshotFirstName: "Amadou",
+          snapshotStructure: "S",
+          snapshotPhoto: "uploads/test/photo.jpg",
+          snapshotIdDocumentType: "CNI",
+          snapshotIdDocumentNumber: "X",
+          snapshotIdDocument: "uploads/test/doc.pdf",
+        },
+      });
+      const { transporter, sent } = mockTransport();
+      mockResolveTransporter({
+        transporter: transporter as never,
+        from: "x@y",
+        contactEmail: "",
+        contactPhone: "",
+        eventTitle: "Salon",
+        settings: {} as never,
+      });
+      return { reg, sent };
+    }
+
+    it("mentions the previous and new category when the category changed", async () => {
+      const { reg, sent } = await seedResubmitted("REG-CHG-1", "Exposant");
+      await mailModule.sendRegistrationResubmitted(reg.id, { previousCategoryName: "Presse" });
+      await drainEmailQueue();
+      expect(sent).toHaveLength(1);
+      expect(sent[0].html).toContain("Presse");
+      expect(sent[0].html).toContain("Exposant");
+      expect(sent[0].html).toContain("transférée de la catégorie");
+    });
+
+    it("escapes category names", async () => {
+      const { reg, sent } = await seedResubmitted("REG-CHG-2", "Exposant");
+      await mailModule.sendRegistrationResubmitted(reg.id, { previousCategoryName: "<b>x</b>" });
+      await drainEmailQueue();
+      expect(sent[0].html).toContain("&lt;b&gt;x&lt;/b&gt;");
+      expect(sent[0].html).not.toContain("<b>x</b>");
+    });
+
+    it("links to the registration id it receives", async () => {
+      const { reg, sent } = await seedResubmitted("NEW-ID-1", "Exposant");
+      await mailModule.sendRegistrationResubmitted(reg.id, { previousCategoryName: "Presse" });
+      await drainEmailQueue();
+      expect(sent[0].html).toContain("/account/registrations/NEW-ID-1");
+    });
   });
 
   it("returns when registration not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendRegistrationResubmitted("missing");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -1302,6 +1398,7 @@ describe("sendUserInvitation role labels", () => {
     });
 
     await mailModule.sendUserInvitation(user.id, { role: "OWNER" });
+    await drainEmailQueue();
 
     expect(sent[0].html).toContain("Role attribue");
     expect(sent[0].html).toContain("Proprietaire");
@@ -1321,6 +1418,7 @@ describe("sendUserInvitation role labels", () => {
     });
 
     await mailModule.sendUserInvitation(user.id, { role: "NOT_A_ROLE" });
+    await drainEmailQueue();
 
     expect(sent[0].html).not.toContain("Role attribue");
   });
@@ -1328,6 +1426,7 @@ describe("sendUserInvitation role labels", () => {
   it("returns when user not found", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await mailModule.sendUserInvitation("missing");
+    await drainEmailQueue();
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringContaining("[mail]"),
       expect.anything(),
@@ -1365,6 +1464,7 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     platformTransport(sent);
 
     await mailModule.sendProfileApproved(user.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("approved@profmail.test");
@@ -1392,6 +1492,7 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     platformTransport(sent);
 
     await mailModule.sendProfileRejected(user.id);
+    await drainEmailQueue();
 
     expect(sent).toHaveLength(1);
     expect(sent[0].html).toContain("Piece illisible");
@@ -1406,6 +1507,7 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     const sent: SentMail[] = [];
     platformTransport(sent);
     await mailModule.sendProfileApproved(user.id);
+    await drainEmailQueue();
     expect(sent[0].html).toContain("Compte Sans Prenom");
   });
 
@@ -1416,6 +1518,7 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     const sent: SentMail[] = [];
     platformTransport(sent);
     await mailModule.sendProfileRejected(user.id);
+    await drainEmailQueue();
     expect(sent[0].html).toContain("Compte Rejete");
   });
 
@@ -1423,6 +1526,7 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     const sent: SentMail[] = [];
     platformTransport(sent);
     await mailModule.sendProfileApproved("missing-user");
+    await drainEmailQueue();
     expect(sent).toHaveLength(0);
   });
 
@@ -1430,6 +1534,7 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     const sent: SentMail[] = [];
     platformTransport(sent);
     await mailModule.sendProfileRejected("missing-user");
+    await drainEmailQueue();
     expect(sent).toHaveLength(0);
   });
 
@@ -1440,7 +1545,29 @@ describe("sendProfileApproved / sendProfileRejected", () => {
     const sent: SentMail[] = [];
     platformTransport(sent);
     await mailModule.sendProfileRejected(user.id);
+    await drainEmailQueue();
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("rejected-nosub@profmail.test");
+  });
+});
+
+describe("security emails are queued as sensitive high priority", () => {
+  beforeEach(async () => {
+    await resetSettings();
+  });
+
+  it("flags the four token-bearing emails as sensitive with priority 10", async () => {
+    const user = await mkParticipantUser("sec");
+    await mailModule.sendAccountVerifyEmail(user.id, "tok-verify");
+    await mailModule.sendAccountPasswordReset(user.id, "tok-reset");
+    await mailModule.sendPasswordResetEmail(user.id);
+    await mailModule.sendUserInvitation(user.id);
+
+    const jobs = await prisma.job.findMany();
+    expect(jobs).toHaveLength(4);
+    for (const job of jobs) {
+      expect(isSensitiveEmailKind(job.kind)).toBe(true);
+      expect(job.priority).toBe(10);
+    }
   });
 });

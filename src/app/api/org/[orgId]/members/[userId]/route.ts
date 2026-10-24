@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireOrgRole, assertNotLastOwner, AuthError } from "@/lib/auth-guards";
 import { logActivity } from "@/lib/activity-log";
+import { notifyMembershipRoleChanged } from "@/lib/notifications/triggers";
 
 type Params = { params: Promise<{ orgId: string; userId: string }> };
 
@@ -71,6 +72,14 @@ export async function PATCH(req: NextRequest, { params }: Params): Promise<Respo
     targetId: userId,
     details: { from: existing.role, to: nextRole, scope: "org" },
     req,
+  });
+
+  await notifyMembershipRoleChanged({
+    userId,
+    orgId,
+    from: existing.role,
+    to: nextRole,
+    actorId: session.user.id,
   });
 
   return NextResponse.json({ membership: updated });

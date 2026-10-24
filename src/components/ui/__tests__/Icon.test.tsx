@@ -10,6 +10,10 @@ describe("Icon", () => {
     expect(html).toContain("<svg");
   });
 
+  it("rend la cloche", () => {
+    expect(renderToStaticMarkup(<Icon name="bell" />)).toContain("<svg");
+  });
+
   it("ne rend rien pour un nom inconnu", () => {
     // @ts-expect-error nom hors registre : verifie le garde-fou runtime
     const html = renderToStaticMarkup(<Icon name="ce-nom-nexiste-pas" size={18} />);

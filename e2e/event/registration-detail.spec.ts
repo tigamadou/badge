@@ -78,6 +78,19 @@ test.describe("Event — Detail d'inscription", () => {
     });
   });
 
+  test("le rejet n'est pas propose pour un badge imprime", async ({ page }) => {
+    const { eventId, reg, admin } = await seedReg("det-printed", "APPROVED");
+    await getDb().registration.update({
+      where: { id: reg.id },
+      data: { badgePrinted: true, badgePrintedAt: new Date() },
+    });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.goto(`/event/${eventId}/registrations/${reg.id}`);
+    await expect(page.getByText(/badge imprimé : cette inscription ne peut plus être rejetée/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /rejeter/i })).toHaveCount(0);
+  });
+
   test("ADMIN rejette via la modale (motif du catalogue)", async ({ page }) => {
     const { eventId, reg, admin } = await seedReg("det-reject");
     const reason = await createTestRejectionReason({ scope: "REGISTRATION", label: `E2E motif inscription ${Date.now()}` });

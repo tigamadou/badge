@@ -4,6 +4,7 @@ type Variant = "primary" | "secondary" | "danger";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
+  loading?: boolean;
 }
 
 const variantClasses: Record<Variant, string> = {
@@ -12,11 +13,36 @@ const variantClasses: Record<Variant, string> = {
   danger: "bg-rose-600 text-white hover:bg-rose-700",
 };
 
-export function Button({ variant = "primary", className = "", ...props }: ButtonProps) {
+export function Button({
+  variant = "primary",
+  loading = false,
+  className = "",
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
   return (
     <button
-      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 ${variantClasses[variant]} ${className}`}
+      className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 ${variantClasses[variant]} ${className}`}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      {loading ? (
+        <>
+          {/* opacity-0 (et non invisible) : la largeur reste stable et le nom accessible est lu */}
+          <span className="opacity-0">{children}</span>
+          <span
+            aria-hidden="true"
+            data-testid="button-spinner"
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          </span>
+        </>
+      ) : (
+        children
+      )}
+    </button>
   );
 }

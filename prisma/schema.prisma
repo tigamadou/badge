@@ -60,6 +60,7 @@ model User {
   activityLogs       ActivityLog[]
   registrations      Registration[]
   profileSubmissions ProfileSubmission[]
+  notifications      Notification[]
 }
 
 enum StaffRole {
@@ -577,6 +578,10 @@ enum ActivityType {
   // v4 (plan 11) : catalogue des templates de badge installes
   BADGE_TEMPLATE_INSTALLED
   BADGE_TEMPLATE_ARCHIVED
+
+  // v4 spec 23 : queue d'emails
+  JOB_RETRIED
+  JOB_CANCELLED
 }
 
 // =====================================================
@@ -623,4 +628,92 @@ model Subscription {
   updatedAt DateTime           @updatedAt
 
   @@index([planId])
+}
+
+enum JobType {
+  EMAIL
+}
+
+enum JobStatus {
+  PENDING // en attente (y compris en attente d'un nouvel essai)
+  RUNNING // pris par un worker
+  SUCCEEDED
+  FAILED // echec definitif (tentatives epuisees)
+  CANCELLED // annule par le staff
+}
+
+model Job {
+  id        String    @id @default(cuid())
+  type      JobType
+  status    JobStatus @default(PENDING)
+  priority  Int       @default(0) // plus grand = plus prioritaire
+  // EMAIL : { to, subject, html, kind, ctx?, replyTo? }. Purge (html vide) apres succes.
+  payload   Json
+  // Champs denormalises pour l'ecran d'admin (filtres, recherche) sans lire le payload.
+  kind      String // ex. "registration.approved"
+  recipient String?
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  runAt       DateTime @default(now()) // prochain essai
+  lockedAt    DateTime?
+  lockedBy    String?
+  lastError   String?   @db.Text
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAt, priority])
+  @@index([type, createdAt])
+}
+
+// =====================================================
+//  Notifications internes (v4, spec 24)
+// =====================================================
+
+enum NotificationType {
+  REGISTRATION_CREATED
+  REGISTRATION_RESUBMITTED
+  REGISTRATION_APPROVED
+  REGISTRATION_REJECTED
+  BADGE_PRINTED
+  PROFILE_SUBMITTED
+  PROFILE_APPROVED
+  PROFILE_REJECTED
+  ORG_MEMBERSHIP_ADDED
+  EVENT_MEMBERSHIP_ADDED
+  MEMBERSHIP_ROLE_CHANGED
+  EVENT_REGISTRATION_OPENED
+  EVENT_REGISTRATION_CLOSED
+  ORG_CREATED
+  SUBSCRIPTION_CHANGED
+  QUOTA_EXCEEDED
+  EMAIL_FAILED
+}
+
+enum NotificationScope {
+  PLATFORM // destinee au staff plateforme
+  ORG
+  EVENT
+  PARTICIPANT
+}
+
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  scope     NotificationScope
+  orgId     String?
+  eventId   String?
+  title     String
+  body      String            @db.Text
+  // Lien principal, relatif a l'app (ex. "/event/abc/registrations/xyz").
+  href      String?
+  // Liens : [{ label, href }], le lien principal en tete puis les liens secondaires.
+  links     Json?
+  readAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, readAt, createdAt])
+  @@index([userId, scope, createdAt])
 }

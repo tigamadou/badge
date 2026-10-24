@@ -1,16 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
 
-// Mock partiel (fallback sur l'implementation reelle) : permet de simuler un
-// envoi mail reussi sans dependre d'un vrai serveur SMTP joignable depuis
-// l'environnement de test, tout en laissant le test "SMTP injoignable" passer
-// par la vraie implementation (echec reseau reel attendu -- cf. rapport agent).
-vi.mock("@/lib/mail", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/lib/mail")>();
-  return { ...actual, resolveTransporter: vi.fn(actual.resolveTransporter) };
+// Passe-plat : observe l'appel à enqueueEmail tout en gardant l'envoi réel (transport simulé).
+vi.mock("@/lib/jobs/enqueue-email", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/jobs/enqueue-email")>();
+  return { ...actual, enqueueEmail: vi.fn(actual.enqueueEmail) };
 });
-import { resolveTransporter } from "@/lib/mail";
+import { __mailTesting, type ResolvedTransport } from "@/lib/mail";
+import { enqueueEmail } from "@/lib/jobs/enqueue-email";
 import { POST } from "@/app/api/contact/route";
+import { prisma } from "@/lib/prisma";
+import { drainEmailQueue } from "@/lib/jobs/__tests__/helpers";
+
+function useTransport(transport: Record<string, unknown>) {
+  __mailTesting.setResolveTransporter(async () => transport as unknown as ResolvedTransport);
+}
 
 const VALID_BODY = {
   firstName: "Alice",
@@ -33,6 +37,12 @@ function makeReq(body?: unknown, rawBody?: string): Request {
 describe("POST /api/contact", () => {
   beforeEach(() => {
     resetRateLimitForTests();
+    vi.mocked(enqueueEmail).mockClear();
+  });
+
+  afterEach(() => {
+    __mailTesting.reset();
+    vi.restoreAllMocks();
   });
 
   it("returns 400 when the request body is not valid JSON", async () => {
@@ -84,19 +94,21 @@ describe("POST /api/contact", () => {
 
   it("sends the email and returns 200 ok on a valid submission", async () => {
     const sendMail = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(resolveTransporter).mockResolvedValueOnce({
+    useTransport({
       transporter: { sendMail } as never,
       from: "noreply@badge.test",
       contactEmail: "",
       contactPhone: "",
       settings: { contactEmail: "", contactPhone: "" },
-    } as never);
+    });
 
     const res = await POST(makeReq(VALID_BODY));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
 
+    // L'envoi se fait dans le worker : on le simule en vidant la queue.
+    await drainEmailQueue();
     expect(sendMail).toHaveBeenCalledTimes(1);
     const args = sendMail.mock.calls[0][0];
     expect(args.from).toBe("noreply@badge.test");
@@ -110,36 +122,61 @@ describe("POST /api/contact", () => {
 
   it("returns 200 ok and defaults name/organization/message placeholders when omitted", async () => {
     const sendMail = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(resolveTransporter).mockResolvedValueOnce({
+    useTransport({
       transporter: { sendMail } as never,
       from: "noreply@badge.test",
       contactEmail: "",
       contactPhone: "",
       settings: { contactEmail: "", contactPhone: "" },
-    } as never);
+    });
 
     const res = await POST(makeReq({ email: "min@x.test", subject: "Support technique", consent: true }));
     expect(res.status).toBe(200);
+    await drainEmailQueue();
     const args = sendMail.mock.calls[0][0];
     expect(args.html).toContain(">—<");
   });
 
-  it("returns 502 when sending the email fails", async () => {
-    // sendMail rejette (echec SMTP) : la route doit renvoyer 502. On mocke le
-    // transporter plutot que de dependre d'un vrai SMTP injoignable (qui pend
-    // sur le timeout de connexion au lieu d'echouer vite).
-    const sendMail = vi.fn().mockRejectedValue(new Error("SMTP down"));
-    vi.mocked(resolveTransporter).mockResolvedValueOnce({
+  it("met le message en file avec replyTo et le kind contact.message", async () => {
+    const sendMail = vi.fn().mockResolvedValue(undefined);
+    useTransport({
       transporter: { sendMail } as never,
       from: "noreply@badge.test",
       contactEmail: "",
       contactPhone: "",
       settings: { contactEmail: "", contactPhone: "" },
-    } as never);
+    });
+
+    await POST(makeReq(VALID_BODY));
+    expect(enqueueEmail).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(enqueueEmail).mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        to: "noreply@badge.test",
+        replyTo: VALID_BODY.email,
+        kind: "contact.message",
+      }),
+    );
+  });
+
+  it("returns 200 ok even when sending the email fails (retry par le worker)", async () => {
+    const sendMail = vi.fn().mockRejectedValue(new Error("SMTP down"));
+    useTransport({
+      transporter: { sendMail } as never,
+      from: "noreply@badge.test",
+      contactEmail: "",
+      contactPhone: "",
+      settings: { contactEmail: "", contactPhone: "" },
+    });
 
     const res = await POST(makeReq(VALID_BODY));
-    expect(res.status).toBe(502);
-    const json = await res.json();
-    expect(json.error).toBeTruthy();
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    await drainEmailQueue();
+    expect(sendMail).toHaveBeenCalledTimes(1);
+    expect(await prisma.job.findFirstOrThrow()).toMatchObject({
+      status: "PENDING",
+      attempts: 1,
+      lastError: "SMTP down",
+    });
   });
 });

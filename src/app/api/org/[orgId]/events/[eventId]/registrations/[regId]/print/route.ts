@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendBadgePrintedNotification } from "@/lib/mail";
+import { notifyBadgePrinted } from "@/lib/notifications/triggers";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
@@ -39,6 +40,8 @@ export const POST = withEventAuth({ minRole: "PRINTER" }, async (req, { orgId, e
     targetId: regId,
     req,
   });
+
+  await notifyBadgePrinted([regId], session.user.id);
 
   try {
     await sendBadgePrintedNotification(regId);

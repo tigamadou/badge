@@ -18,7 +18,7 @@ docker compose $F pull app tools
 # 2. Initialisation (db push + SUPER_ADMIN si absent) puis relance de l'app.
 # `init` doit etre nomme explicitement : --no-deps ne le demarrerait pas, et
 # `app` attend qu'il se termine avec succes (un echec bloque la relance).
-docker compose $F up -d --no-deps init app
+docker compose $F up -d --no-deps init app worker
 
 # 3. Nettoyage
 docker image prune -f

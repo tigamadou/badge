@@ -30,11 +30,11 @@ Tailwind CSS 4, Prisma 6 / MySQL 8, Vitest 4 (environnement `node`, rendu
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | `UserAvatar` affiche la photo, repli sur les initiales | [ ] | | |
-| 2 | Helper `getApprovedPhotoUrl` (`src/lib/approved-photo.ts`) | [ ] | | |
-| 3 | Brancher `photoUrl` dans les quatre layouts (e2e d'abord) | [ ] | | |
-| 4 | Documentation | [ ] | | |
-| — | Vérification finale | [ ] | | |
+| 1 | `UserAvatar` affiche la photo, repli sur les initiales | [x] | 2026-10-24 | `UserAvatarView` + `failedUrl`/`imgRef` ; 7 tests verts |
+| 2 | Helper `getApprovedPhotoUrl` (`src/lib/approved-photo.ts`) | [x] | 2026-10-24 | 7 tests verts, 100 % sur le fichier |
+| 3 | Brancher `photoUrl` dans les quatre layouts (e2e d'abord) | [x] | 2026-10-24 | `avatar.spec.ts` 4/4 ; e2e responsive/logout verts |
+| 4 | Documentation | [x] | 2026-10-24 | validation-profils.md + README |
+| — | Vérification finale | [~] | 2026-10-24 | commandes vertes ; reste la vérification navigateur (lead) |
 
 ## Contraintes globales
 

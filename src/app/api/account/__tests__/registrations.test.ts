@@ -21,6 +21,13 @@ vi.mock("@/lib/mail", async (importOriginal) => {
 
 import { sendRegistrationResubmitted } from "@/lib/mail";
 
+vi.mock("@/lib/generate-id", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/generate-id")>();
+  return { ...actual, generateId: vi.fn(actual.generateId) };
+});
+import { generateId } from "@/lib/generate-id";
+import { extractDiff } from "@/lib/activity-labels";
+
 async function withSession(user: {
   id: string;
   email: string;
@@ -411,9 +418,7 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
         email: me.email,
       });
       await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
-      vi.spyOn(prisma.registration, "update").mockRejectedValueOnce(
-        new Error("boom-resubmit"),
-      );
+      vi.spyOn(prisma, "$transaction").mockRejectedValueOnce(new Error("boom-resubmit"));
 
       const { POST } = await import(
         "@/app/api/account/registrations/[id]/resubmit/route"
@@ -518,6 +523,7 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
       { params: Promise.resolve({ id: reg.id }) },
     );
     expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe(reg.id);
 
     const updated = await prisma.registration.findUnique({ where: { id: reg.id } });
     expect(updated?.status).toBe("PENDING");
@@ -533,5 +539,326 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
       where: { type: "REGISTRATION_RESUBMITTED", targetId: reg.id },
     });
     expect(log).not.toBeNull();
+  });
+});
+
+
+describe("POST /api/account/registrations/[id]/resubmit - changement de categorie", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+    vi.mocked(sendRegistrationResubmitted).mockClear();
+  });
+
+  afterEach(() => {
+    vi.mocked(generateId).mockReset();
+  });
+
+  async function loadRoute() {
+    return import("@/app/api/account/registrations/[id]/resubmit/route");
+  }
+
+  function post(id: string, body?: string) {
+    return new NextRequest(`http://localhost/api/account/registrations/${id}/resubmit`, {
+      method: "POST",
+      ...(body === undefined
+        ? {}
+        : { body, headers: { "content-type": "application/json" } }),
+    });
+  }
+
+  async function seedRejected(slug: string) {
+    const me = await createCompleteUser(`me@${slug}.test`);
+    const { event, category: presse } = await seedEventBundle(slug);
+    await prisma.category.update({ where: { id: presse.id }, data: { name: "Presse" } });
+    const exposant = await prisma.category.create({
+      data: { eventId: event.id, name: "Exposant", color: "#ff0000", number: 2 },
+    });
+    const reg = await createRegistration({
+      id: `REG-${slug}`,
+      userId: me.id,
+      eventId: event.id,
+      categoryId: presse.id,
+      status: "REJECTED",
+      email: me.email,
+    });
+    await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+    return { me, event, presse, exposant, reg };
+  }
+
+  it("returns 400 INVALID_CATEGORY for a category of another event, without changes", async () => {
+    const { reg, presse } = await seedRejected("catchg-other");
+    const other = await seedEventBundle("catchg-other-evt");
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: other.category.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("INVALID_CATEGORY");
+
+    const untouched = await prisma.registration.findUnique({ where: { id: reg.id } });
+    expect(untouched?.categoryId).toBe(presse.id);
+    expect(untouched?.status).toBe("REJECTED");
+    expect(vi.mocked(sendRegistrationResubmitted)).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 INVALID_CATEGORY when the target category was deleted", async () => {
+    const { reg, event, presse } = await seedRejected("catchg-deleted");
+    const gone = await prisma.category.create({
+      data: { eventId: event.id, name: "Gone", color: "#00ff00", number: 3 },
+    });
+    await prisma.category.delete({ where: { id: gone.id } });
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: gone.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("INVALID_CATEGORY");
+
+    const untouched = await prisma.registration.findUnique({ where: { id: reg.id } });
+    expect(untouched?.categoryId).toBe(presse.id);
+    expect(untouched?.status).toBe("REJECTED");
+  });
+
+  it("returns 400 INVALID_BODY on malformed JSON", async () => {
+    const { reg } = await seedRejected("catchg-badjson");
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, "{"), { params: Promise.resolve({ id: reg.id }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("INVALID_BODY");
+    expect((await prisma.registration.findUnique({ where: { id: reg.id } }))?.status).toBe("REJECTED");
+  });
+
+  it("returns 400 INVALID_BODY when categoryId is not a non-empty string", async () => {
+    const { reg } = await seedRejected("catchg-badtype");
+    const { POST } = await loadRoute();
+    for (const body of [{ categoryId: 42 }, { categoryId: "" }]) {
+      const res = await POST(post(reg.id, JSON.stringify(body)), {
+        params: Promise.resolve({ id: reg.id }),
+      });
+      expect(res.status).toBe(400);
+      expect((await res.json()).code).toBe("INVALID_BODY");
+    }
+  });
+
+  it("accepts an empty body and an empty object", async () => {
+    const { reg, presse, event } = await seedRejected("catchg-empty");
+    const { POST } = await loadRoute();
+    const res1 = await POST(post(reg.id, ""), { params: Promise.resolve({ id: reg.id }) });
+    expect(res1.status).toBe(200);
+
+    // Une inscription par (participant, evenement) : la seconde passe par un autre participant.
+    const second = await createCompleteUser("second@catchg-empty.test");
+    const reg2 = await createRegistration({
+      id: "REG-catchg-empty-2",
+      userId: second.id,
+      eventId: event.id,
+      categoryId: presse.id,
+      status: "REJECTED",
+      email: second.email,
+    });
+    await withSession({ id: second.id, email: second.email, name: second.name, isStaff: false });
+    const res2 = await POST(post(reg2.id, "{}"), { params: Promise.resolve({ id: reg2.id }) });
+    expect(res2.status).toBe(200);
+    expect((await res2.json()).id).toBe(reg2.id);
+    expect((await prisma.registration.findUnique({ where: { id: reg2.id } }))?.categoryId).toBe(presse.id);
+  });
+
+  it("returns 409 INVALID_STATE for a PENDING registration even with a categoryId", async () => {
+    const { reg, exposant, presse } = await seedRejected("catchg-pending");
+    await prisma.registration.update({ where: { id: reg.id }, data: { status: "PENDING" } });
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("INVALID_STATE");
+    expect((await prisma.registration.findUnique({ where: { id: reg.id } }))?.categoryId).toBe(presse.id);
+  });
+
+  it("changes the category, regenerates the id and sets PENDING in the new category", async () => {
+    const { reg, exposant, me } = await seedRejected("catchg-ok");
+    await prisma.registration.update({
+      where: { id: reg.id },
+      data: { snapshotFirstName: "Old", rejectionReason: "r", rejectionDetails: "d" },
+    });
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.id).not.toBe(reg.id);
+    expect(json.id[0]).toBe("2");
+    expect(json.id[9]).toBe("2");
+
+    expect(await prisma.registration.findUnique({ where: { id: reg.id } })).toBeNull();
+    const moved = await prisma.registration.findUnique({ where: { id: json.id } });
+    expect(moved?.status).toBe("PENDING");
+    expect(moved?.categoryId).toBe(exposant.id);
+    expect(moved?.rejectionReason).toBeNull();
+    expect(moved?.snapshotFirstName).toBe(me.firstName);
+  });
+
+  it("logs old and new category and ids in details", async () => {
+    const { reg, exposant, presse } = await seedRejected("catchg-log");
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    const json = await res.json();
+
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "REGISTRATION_RESUBMITTED", targetId: json.id },
+    });
+    expect(log).not.toBeNull();
+    const details = log?.details as Record<string, unknown>;
+    expect(details.categoryChanged).toEqual({
+      from: { id: presse.id, name: "Presse" },
+      to: { id: exposant.id, name: "Exposant" },
+    });
+    expect(details.idChanged).toEqual({ from: reg.id, to: json.id });
+    expect(extractDiff(details)).toContainEqual({ field: "Catégorie", from: "Presse", to: "Exposant" });
+  });
+
+  it("sends the resubmitted mail with the new id and the previous category", async () => {
+    const { reg, exposant } = await seedRejected("catchg-mail");
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    const json = await res.json();
+    expect(vi.mocked(sendRegistrationResubmitted)).toHaveBeenCalledWith(json.id, {
+      previousCategoryName: "Presse",
+    });
+  });
+
+  it("keeps the id and logs no details when categoryId equals the current category", async () => {
+    const { reg, presse } = await seedRejected("catchg-same");
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: presse.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe(reg.id);
+    expect(vi.mocked(sendRegistrationResubmitted)).toHaveBeenCalledWith(reg.id);
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "REGISTRATION_RESUBMITTED", targetId: reg.id },
+    });
+    expect(log).not.toBeNull();
+    expect(log?.details).toBeNull();
+  });
+
+  it("concurrent resubmissions: one succeeds, the other gets 409", async () => {
+    const { reg, exposant, me, event } = await seedRejected("catchg-race");
+    const { POST } = await loadRoute();
+    const call = () =>
+      POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+        params: Promise.resolve({ id: reg.id }),
+      });
+    const results = await Promise.all([call(), call()]);
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(await prisma.registration.count({ where: { userId: me.id, eventId: event.id } })).toBe(1);
+    expect(
+      await prisma.activityLog.count({ where: { type: "REGISTRATION_RESUBMITTED", eventId: event.id } }),
+    ).toBe(1);
+    expect(vi.mocked(sendRegistrationResubmitted)).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolls back and rethrows when every generated id collides", async () => {
+    const { reg, exposant, presse, event } = await seedRejected("catchg-collide");
+    const other = await createCompleteUser("other@catchg-collide.test");
+    await createRegistration({
+      id: "TAKEN-ID",
+      userId: other.id,
+      eventId: event.id,
+      categoryId: exposant.id,
+      email: other.email,
+    });
+    vi.mocked(generateId).mockReturnValue("TAKEN-ID");
+    await prisma.registration.update({ where: { id: reg.id }, data: { snapshotFirstName: "Old" } });
+
+    const { POST } = await loadRoute();
+    await expect(
+      POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+        params: Promise.resolve({ id: reg.id }),
+      }),
+    ).rejects.toMatchObject({ code: "P2002" });
+
+    const untouched = await prisma.registration.findUnique({ where: { id: reg.id } });
+    expect(untouched?.status).toBe("REJECTED");
+    expect(untouched?.categoryId).toBe(presse.id);
+    expect(untouched?.snapshotFirstName).toBe("Old");
+    expect(vi.mocked(sendRegistrationResubmitted)).not.toHaveBeenCalled();
+    expect(await prisma.activityLog.count({ where: { type: "REGISTRATION_RESUBMITTED" } })).toBe(0);
+  });
+
+  async function seedTeamAdmin(eventId: string) {
+    const admin = await prisma.user.create({
+      data: { email: `admin-${eventId}@x.test`, password: "x", name: "Admin" },
+    });
+    await prisma.eventMembership.create({ data: { userId: admin.id, eventId, role: "ADMIN" } });
+    return admin;
+  }
+
+  it("un changement de catégorie réécrit les liens des notifications existantes vers le nouvel ID", async () => {
+    const { reg, exposant, event } = await seedRejected("catchg-notif-links");
+    const admin = await seedTeamAdmin(event.id);
+    const href = `/event/${event.id}/registrations/${reg.id}`;
+    const old = await prisma.notification.create({
+      data: {
+        userId: admin.id, type: "REGISTRATION_CREATED", scope: "EVENT", eventId: event.id,
+        title: "Nouvelle inscription", body: "b", href,
+        links: [{ label: "Voir l'inscription", href }, { label: "Voir l'évènement", href: `/event/${event.id}` }],
+      },
+    });
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    expect(res.status).toBe(200);
+    const { id: newId } = await res.json();
+    expect(newId).not.toBe(reg.id);
+
+    const rewritten = await prisma.notification.findUniqueOrThrow({ where: { id: old.id } });
+    expect(rewritten.href).toBe(`/event/${event.id}/registrations/${newId}`);
+    expect((rewritten.links as { href: string }[])[0].href).toBe(`/event/${event.id}/registrations/${newId}`);
+  });
+
+  it("la notification de resoumission mentionne le changement de catégorie et pointe vers le nouvel ID", async () => {
+    const { reg, exposant, event } = await seedRejected("catchg-notif-body");
+    const admin = await seedTeamAdmin(event.id);
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id, JSON.stringify({ categoryId: exposant.id })), {
+      params: Promise.resolve({ id: reg.id }),
+    });
+    const { id: newId } = await res.json();
+
+    const row = await prisma.notification.findFirstOrThrow({
+      where: { userId: admin.id, type: "REGISTRATION_RESUBMITTED" },
+    });
+    expect(row.body).toContain("Presse");
+    expect(row.body).toContain("Exposant");
+    expect(row.href).toBe(`/event/${event.id}/registrations/${newId}`);
+  });
+
+  it("sans changement de catégorie, la notification de resoumission ne mentionne pas de catégorie", async () => {
+    const { reg, event } = await seedRejected("catchg-notif-same");
+    const admin = await seedTeamAdmin(event.id);
+
+    const { POST } = await loadRoute();
+    const res = await POST(post(reg.id), { params: Promise.resolve({ id: reg.id }) });
+    expect(res.status).toBe(200);
+
+    const row = await prisma.notification.findFirstOrThrow({
+      where: { userId: admin.id, type: "REGISTRATION_RESUBMITTED" },
+    });
+    expect(row.body).not.toContain("catégorie");
+    expect(row.href).toBe(`/event/${event.id}/registrations/${reg.id}`);
   });
 });

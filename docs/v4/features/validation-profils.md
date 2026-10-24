@@ -92,3 +92,20 @@ Toutes les décisions sont journalisées (`PROFILE_APPROVED`, `PROFILE_REJECTED`
 - **Organisation** : détail d'inscription (photo, ligne « Identité » portant l'état de
   vérification plateforme, bouton Approuver désactivé si profil non validé, rejet via le
   catalogue). La pièce d'identité elle-même n'est jamais affichée à l'organisation.
+
+## Photo validée comme avatar
+
+La photo de la **dernière soumission `APPROVED`** (et non `User.photo`) remplace les
+initiales dans l'en-tête des espaces `/account`, `/platform`, `/org/[orgId]` et
+`/event/[eventId]` (gabarits opérateur, imprimeur et lecteur compris). Une nouvelle
+soumission en attente ou rejetée ne change pas l'avatar : l'ancienne photo approuvée reste
+affichée.
+
+- Helper serveur `getApprovedPhotoUrl(userId)` (`src/lib/approved-photo.ts`) : renvoie
+  `/api/files/<clé>` ou `null`. Appelé une fois par `layout.tsx` d'espace, après les
+  contrôles d'accès, et passé à la prop `photoUrl` des gabarits.
+- Composant client `UserAvatar` : affiche la photo en cercle (`object-cover`) et revient
+  aux initiales s'il n'y a pas de soumission approuvée ou si l'image échoue (`onError`,
+  ou échec détecté avant l'hydratation).
+- Les photos de profil restent servies publiquement par `/api/files` ; voir la
+  [spec 27](../specs/2026-10-24-27-v4-avatar-photo-validee.md) pour ce choix.

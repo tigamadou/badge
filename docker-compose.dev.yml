@@ -23,6 +23,32 @@ services:
       rustfs:
         condition: service_healthy
 
+  # Worker de la queue d'emails (spec 23) : meme image que app, polling court en dev
+  # car expectMail (e2e/helpers/mailpit.ts) n'attend que 5 s.
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      secrets:
+        - npm_token
+    command: ["sh", "-c", "yarn install && yarn prisma generate && exec yarn tsx watch --clear-screen=false src/worker/index.ts"]
+    restart: unless-stopped
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - docker/compose.dev.env
+      - path: .env
+        required: false
+    environment:
+      NPM_TOKEN: ${NPM_TOKEN}
+      JOB_POLL_INTERVAL_MS: "500"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
   # Le studio de construction de templates vit desormais dans le projet dedie
   # pdfStudio (../pdfStudio, http://pdfstudio.localhost).
 

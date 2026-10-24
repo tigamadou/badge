@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
+import { notifyOrgMembershipAdded } from "@/lib/notifications/triggers";
 
 // ADR 2026-06-01 (v2-14 Task 2) : lecture liste membres autorisee a tous les roles org
 // (OWNER, MANAGER, AUDITOR). La mutation (POST) reste OWNER-only.
@@ -107,6 +108,14 @@ export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
     targetId: user.id,
     details: { role, isNewUser },
     req,
+  });
+
+  await notifyOrgMembershipAdded({
+    userId: user.id,
+    orgId,
+    role,
+    actorId: session.user.id,
+    invitationSent: isNewUser,
   });
 
   // Plan 6 : sendUserInvitation regenere un inviteToken. On ne l'appelle que pour

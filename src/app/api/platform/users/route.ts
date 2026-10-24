@@ -10,6 +10,7 @@ import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { loadUserContext } from "@/lib/user-context";
+import { notifyOrgMembershipAdded } from "@/lib/notifications/triggers";
 
 // =====================================================
 //  GET /api/platform/users : liste paginee, filtres q/type/archived
@@ -198,6 +199,13 @@ export const POST = withStaffAuth(async (req, { session }) => {
       orgId: m.orgId,
       details: { role: m.role },
       req,
+    });
+    await notifyOrgMembershipAdded({
+      userId: created.id,
+      orgId: m.orgId,
+      role: m.role,
+      actorId: session.user.id,
+      invitationSent: true,
     });
   }
 

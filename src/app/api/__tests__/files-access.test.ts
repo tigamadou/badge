@@ -26,6 +26,15 @@ describe("GET /api/files — controle d'acces aux documents", () => {
     expect(res.status).toBe(200);
   });
 
+  it("sert une bannière d'évènement sans session", async () => {
+    const key = "orgs/pub-org/images/cover.png";
+    await uploadFile(key, Buffer.from("img"), "image/png");
+    vi.mocked(getServerSession).mockResolvedValue(null);
+    const res = await GET(req(), ctx(key));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+  });
+
   it("refuse (403) un document de profil sans session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
     const res = await GET(req(), ctx("profile/u1/documents/d.pdf"));

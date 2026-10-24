@@ -44,6 +44,8 @@ const ALL_ACTIVITY_TYPES = [
   "MEMBERSHIP_ROLE_CHANGED",
   "PLATFORM_SETTINGS_UPDATED",
   "EVENT_SETTINGS_UPDATED",
+  "JOB_RETRIED",
+  "JOB_CANCELLED",
   "USER_REGISTERED",
   "USER_EMAIL_VERIFIED",
   "USER_PASSWORD_RESET_REQUESTED",
@@ -139,6 +141,8 @@ describe("describeActivity", () => {
     BADGE_SCANNED: "Badge scanné",
     ORG_CREATED: "Organisation créée",
     EVENT_SETTINGS_UPDATED: "Paramètres d'événement modifiés",
+    JOB_RETRIED: "Email relancé",
+    JOB_CANCELLED: "Email annulé",
   };
 
   it("returns the French label for mapped types", () => {

@@ -380,16 +380,27 @@ rollback-prod:
 # ============================================================
 #  Commandes dans le conteneur dev
 # ============================================================
+# FILE=<chemin> limite l'execution a un fichier. Vitest et le worker partagent la BDD de dev :
+# le worker est arrete pendant les tests (il volerait les jobs crees par les tests) puis
+# relance, meme en cas d'echec.
+FILE ?=
+
 test:
-	docker compose -f docker-compose.dev.yml exec app yarn vitest run
+	docker compose -f docker-compose.dev.yml stop worker
+	docker compose -f docker-compose.dev.yml exec app yarn vitest run $(FILE); status=$$?; \
+	docker compose -f docker-compose.dev.yml start worker; exit $$status
 
 # Tests unitaires cibles sur la logique metier de src/lib (sous-ensemble de `test`).
 test-unit:
-	docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib
+	docker compose -f docker-compose.dev.yml stop worker
+	docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib; status=$$?; \
+	docker compose -f docker-compose.dev.yml start worker; exit $$status
 
 # Suite Vitest complete avec rapport de couverture V8 (seuils 100% = gate, cf. vitest.config.ts).
 test-coverage:
-	docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage
+	docker compose -f docker-compose.dev.yml stop worker
+	docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage; status=$$?; \
+	docker compose -f docker-compose.dev.yml start worker; exit $$status
 
 # Chaine de verification complete : s'arrete au premier echec (ordre des prerequis).
 # NB : `test` vide la base dev -> relancer `make db-seed` ensuite pour l'app manuelle.
@@ -407,7 +418,7 @@ ci: db-push lint typecheck test-coverage test-e2e
 test-e2e:
 	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."
 	@echo "Pre-requis : make dev demarre. Premiere fois : 'docker compose -f docker-compose.dev.yml exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
-	docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test
+	docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test $(FILE)
 
 # Mode UI Playwright (debug visuel, fenetre Electron native). S'execute sur
 # l'hote macOS, pas dans le container : il faut un display. Pre-requis :
@@ -494,6 +505,8 @@ logs:
 # si les node_modules de l'hote sont absents (installation 100% conteneur).
 db-push:
 	docker compose -f docker-compose.dev.yml exec app npx prisma db push
+	@# Le worker a son propre node_modules, donc son propre client Prisma.
+	@docker compose -f docker-compose.dev.yml restart worker >/dev/null 2>&1 || true
 	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
 
 db-seed:

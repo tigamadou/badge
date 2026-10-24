@@ -56,6 +56,8 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   MEMBERSHIP_ROLE_CHANGED: "Rôle de membre modifié",
   PLATFORM_SETTINGS_UPDATED: "Paramètres plateforme modifiés",
   EVENT_SETTINGS_UPDATED: "Paramètres d'événement modifiés",
+  JOB_RETRIED: "Email relancé",
+  JOB_CANCELLED: "Email annulé",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
+import { AppToaster } from "@/components/ui/AppToaster";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -34,7 +35,10 @@ export default function RootLayout({
       className={`${inter.variable} ${montserrat.variable}`}
       suppressHydrationWarning
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        <AppToaster />
+      </body>
     </html>
   );
 }

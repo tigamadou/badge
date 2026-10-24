@@ -3,9 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const ITEMS = [
+type Item = {
+  href: string;
+  label: string;
+  shortLabel?: string;
+  hideBelowSm?: boolean;
+  exact: boolean;
+};
+
+const ITEMS: Item[] = [
   { href: "/account", label: "Mes inscriptions", shortLabel: "Inscriptions", exact: true },
   { href: "/account/profile", label: "Profil", shortLabel: "Profil", exact: false },
+  // Sous sm, la cloche donne déjà accès à la page : un libellé de plus ferait déborder l'en-tête.
+  { href: "/account/notifications", label: "Notifications", hideBelowSm: true, exact: false },
 ];
 
 export function AccountNav() {
@@ -19,12 +29,12 @@ export function AccountNav() {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={`whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors ${
+            className={`${it.hideBelowSm ? "hidden sm:inline-flex " : ""}whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors ${
               active ? "bg-green-500/15 text-green-700" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <span className="sm:hidden">{it.shortLabel}</span>
-            <span className="hidden sm:inline">{it.label}</span>
+            {it.shortLabel && <span className="sm:hidden">{it.shortLabel}</span>}
+            <span className={it.shortLabel ? "hidden sm:inline" : undefined}>{it.label}</span>
           </Link>
         );
       })}

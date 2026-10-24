@@ -34,20 +34,20 @@ branche avec ce plan.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | C1 — `enqueueEmail()` avec envoi immédiat | [ ] |  |  |
-| 2 | C1 — rebranchement des `send*` de `mail.ts` (`kind`, `priority`) | [ ] |  |  |
-| 3 | C3 — composant `UserAvatar` (initiales) | [ ] |  |  |
-| 4 | C2 — `NotificationBell` (rend `null`) et icône `bell` | [ ] |  |  |
-| 5 | Gabarits `StaffShell`, `OrgShell`, `EventShell` : avatar, cloche, menus | [ ] |  |  |
-| 6 | Gabarits `EventOperatorShell`, `EventPrinterShell`, `EventViewerShell` | [ ] |  |  |
-| 7 | Espace `/account` : layout et `AccountNav` | [ ] |  |  |
-| 8 | Pages d'attente (4 × notifications + `/platform/jobs`) et E2E de navigation | [ ] |  |  |
-| 9 | C4 — `sonner`, `<Toaster />` et `src/lib/toast.ts` | [ ] |  |  |
-| 10 | C4 — `Button` avec `loading` | [ ] |  |  |
-| 11 | C4 — hook `useAsyncAction` | [ ] |  |  |
-| 12 | C4 — bouton témoin `ResubmitButton` | [ ] |  |  |
-| 13 | Documentation (`docs/v4/features/`, `docs/v4/README.md`) | [ ] |  |  |
-| — | Vérification finale (lint, typecheck, test, couverture, e2e, navigateur 375 / 1280 px) | [ ] |  |  |
+| 1 | C1 — `enqueueEmail()` avec envoi immédiat | [x] | 2026-10-24 | 6 tests verts |
+| 2 | C1 — rebranchement des `send*` de `mail.ts` (`kind`, `priority`) | [x] | 2026-10-24 | `mail.ts` rebranché ; route contact via `enqueueEmail` avec `replyTo` ajouté à `EmailMessage` et `kind` `contact.message` (le 502 disparaît, décision lead) |
+| 3 | C3 — composant `UserAvatar` (initiales) | [x] | 2026-10-24 | 4 tests verts |
+| 4 | C2 — `NotificationBell` (rend `null`) et icône `bell` | [x] | 2026-10-24 | 11 tests verts (avec avatar, icône) |
+| 5 | Gabarits `StaffShell`, `OrgShell`, `EventShell` : avatar, cloche, menus | [x] | 2026-10-24 | space-shells : 16 tests verts, typecheck OK |
+| 6 | Gabarits `EventOperatorShell`, `EventPrinterShell`, `EventViewerShell` | [x] | 2026-10-24 | couvert par space-shells.test.tsx |
+| 7 | Espace `/account` : layout et `AccountNav` | [x] | 2026-10-24 | AccountNav 3 tests verts ; `MemberTable` garde son `initials()` (hors périmètre) |
+| 8 | Pages d'attente (4 × notifications + `/platform/jobs`) et E2E de navigation | [x] | 2026-10-24 | 14 e2e verts (pages créées avant le run rouge des e2e) |
+| 9 | C4 — `sonner`, `<Toaster />` et `src/lib/toast.ts` | [x] | 2026-10-24 | toast 5 + AppToaster 1 tests verts, `sonner@2.0.7` |
+| 10 | C4 — `Button` avec `loading` | [x] | 2026-10-24 | Button 4 tests verts (test « sans disabled » ajusté : les classes contiennent `disabled:opacity-50`) |
+| 11 | C4 — hook `useAsyncAction` | [x] | 2026-10-24 | 6+1 tests verts |
+| 12 | C4 — bouton témoin `ResubmitButton` | [x] | 2026-10-24 | 7 e2e verts (dont 2 nouveaux) |
+| 13 | Documentation (`docs/v4/features/`, `docs/v4/README.md`) | [x] | 2026-10-24 | fiche + README |
+| — | Vérification finale (lint, typecheck, test, couverture, e2e, navigateur 375 / 1280 px) | [~] | 2026-10-24 | lint 0 erreur, typecheck OK, 167 fichiers / 1780 tests verts, couverture 100 %. Restent : `make test-e2e` complet et navigateur (lead) ; route contact en attente |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne après chaque task validée (tests verts et critères d'acceptation remplis). En cas

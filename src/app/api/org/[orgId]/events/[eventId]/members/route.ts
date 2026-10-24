@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
+import { notifyEventMembershipAdded } from "@/lib/notifications/triggers";
 
 export const GET = withEventAuth({ minRole: "ADMIN", allowArchived: true }, async (_req, { eventId }) => {
   const members = await prisma.eventMembership.findMany({
@@ -72,6 +73,14 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eve
       targetId: user.id,
       details: { membershipId: membership.id, role: parsed.data.role, scope: "event" },
       req,
+    });
+
+    await notifyEventMembershipAdded({
+      userId: user.id,
+      eventId,
+      role: parsed.data.role,
+      actorId: session.user.id,
+      invitationSent: wasNew,
     });
 
     if (wasNew) {

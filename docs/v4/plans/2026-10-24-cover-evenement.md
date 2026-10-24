@@ -26,12 +26,12 @@ sélectionner `banner` et d'insérer le bloc.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Composant `EventCover` + helper `eventCoverUrl` (+ service public de la clé) | [ ] | | |
-| 2 | Cover sur les pages publiques (`PublicEventLayout`) | [ ] | | |
-| 3 | Cover sur le tableau de bord `/event/[eventId]` (toutes variantes de rôle) | [ ] | | |
-| 4 | Cover dans le compte participant (liste + détail d'inscription) | [ ] | | |
-| 5 | Documentation | [ ] | | |
-| — | Vérification finale (lint, typecheck, test, navigateur 375 / 1280 px, avec et sans bannière) | [ ] | | |
+| 1 | Composant `EventCover` + helper `eventCoverUrl` (+ service public de la clé) | [x] | 2026-10-24 | EventCover + eventCoverUrl, tests unitaires et route fichiers verts |
+| 2 | Cover sur les pages publiques (`PublicEventLayout`) | [x] | 2026-10-24 | cover dans PublicEventLayout, tests verts |
+| 3 | Cover sur le tableau de bord `/event/[eventId]` (toutes variantes de rôle) | [x] | 2026-10-24 | cover sur les deux branches de /event/[eventId] ; navigateur à faire (lead) |
+| 4 | Cover dans le compte participant (liste + détail d'inscription) | [x] | 2026-10-24 | vignette liste (>= sm) + hero détail ; navigateur à faire (lead) |
+| 5 | Documentation | [x] | 2026-10-24 | fiche feature + README v4 |
+| — | Vérification finale (lint, typecheck, test, navigateur 375 / 1280 px, avec et sans bannière) | [~] | 2026-10-24 | lint 0 erreur, typecheck OK, make test 1927/1927, test-coverage OK, e2e 38/38 ; navigateur 375/1280 px restant (lead) ; V2 couvert par test unitaire seulement |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne après chaque task validée (tests verts et critères d'acceptation remplis). En cas

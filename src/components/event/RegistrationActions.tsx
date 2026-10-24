@@ -11,6 +11,7 @@ export function RegistrationActions({
   eventId,
   registrationId,
   status,
+  badgePrinted,
   profileApproved,
   reasons,
   onChanged,
@@ -19,6 +20,7 @@ export function RegistrationActions({
   eventId: string;
   registrationId: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  badgePrinted: boolean;
   profileApproved: boolean;
   reasons: Reason[];
   onChanged: () => void;
@@ -89,6 +91,9 @@ export function RegistrationActions({
             <Icon name="x" size={16} /> Rejeter / Bloquer
           </Button>
         </>
+      )}
+      {status === "APPROVED" && badgePrinted && (
+        <span className="text-xs text-slate-500">Badge imprimé : cette inscription ne peut plus être rejetée.</span>
       )}
       {status === "APPROVED" && (
         <Button onClick={print} disabled={busy} className="flex items-center gap-1.5">

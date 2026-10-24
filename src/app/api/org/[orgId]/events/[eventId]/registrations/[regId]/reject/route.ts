@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendStatusNotification } from "@/lib/mail";
+import { notifyRegistrationDecision } from "@/lib/notifications/triggers";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
@@ -26,6 +27,10 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
   const existing = await prisma.registration.findUnique({ where: { id: regId } });
   if (!existing || existing.eventId !== eventId) {
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+  }
+  // Un badge imprime est physiquement distribue : le rejet n'a plus de sens.
+  if (existing.badgePrinted) {
+    return NextResponse.json({ error: "BADGE_ALREADY_PRINTED" }, { status: 409 });
   }
 
   const reason = await prisma.rejectionReason.findFirst({
@@ -59,6 +64,8 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     details: { reason: reason.label, hasDetails: !!parsed.data.details },
     req,
   });
+
+  await notifyRegistrationDecision(regId, session.user.id, "REJECTED");
 
   try {
     await sendStatusNotification(regId);

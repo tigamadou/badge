@@ -107,7 +107,7 @@ test.describe("Responsive mobile (transverse)", () => {
     await createTestRegistration({ eventId, userId: user.id, categoryId });
     await loginAs(page, user);
 
-    for (const path of ["/account", "/account/profile"]) {
+    for (const path of ["/account", "/account/profile", "/account/notifications"]) {
       await expectNoHorizontalOverflow(page, path);
     }
   });

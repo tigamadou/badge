@@ -29,21 +29,21 @@ réelle, pas de mock Prisma), Playwright (Mailpit).
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Modèle `Job`, enums, `ActivityType`, reset des tests | [ ] | | |
-| 2 | Constantes, backoff, configuration du worker, `kind` sensibles | [ ] | | |
-| 3 | Lecture du payload et envoi d'un email de job | [ ] | | |
-| 4 | Réservation `SKIP LOCKED` et `processBatch()` | [ ] | | |
-| 5 | Récupération des orphelins et rétention | [ ] | | |
-| 6 | Boucle du worker et point d'entrée `src/worker/index.ts` | [ ] | | |
-| 7 | Service `worker` en dev, script `build:worker`, cibles `make` | [ ] | | |
-| 8 | `enqueueEmail()` insère en table ; migration des tests d'envoi | [ ] | | |
-| 9 | Worker en prod/preprod : `Dockerfile`, compose, (deploy.sh, CI) | [ ] | | |
-| 10 | Requêtes et actions d'admin (`src/lib/jobs/admin.ts`) | [ ] | | |
-| 11 | Routes API `/api/platform/jobs/**` | [ ] | | |
-| 12 | Écran liste `/platform/jobs` | [ ] | | |
-| 13 | Écran détail `/platform/jobs/[jobId]`, actions, E2E | [ ] | | |
-| 14 | Documentation | [ ] | | |
-| — | Vérification finale (lint, typecheck, test, e2e, navigateur 375 / 1280 px) | [ ] | | |
+| 1 | Modèle `Job`, enums, `ActivityType`, reset des tests | [x] | 2026-10-24 | Modèle Job + enums + ActivityType ; table créée par db-push. |
+| 2 | Constantes, backoff, configuration du worker, `kind` sensibles | [x] | 2026-10-24 | constants, config, email-kinds (4 kinds sensibles = 4 envois high). |
+| 3 | Lecture du payload et envoi d'un email de job | [x] | 2026-10-24 | payload (replyTo persisté) + sendEmailPayload (timeout 2 min). |
+| 4 | Réservation `SKIP LOCKED` et `processBatch()` | [x] | 2026-10-24 | SKIP LOCKED ; test de concurrence en tours successifs (filesort verrouille toutes les lignes dues). |
+| 5 | Récupération des orphelins et rétention | [x] | 2026-10-24 | recoverStaleJobs, purgeOldJobs. |
+| 6 | Boucle du worker et point d'entrée `src/worker/index.ts` | [x] | 2026-10-24 | worker-loop + src/worker/index.ts (--once vérifié). |
+| 7 | Service `worker` en dev, script `build:worker`, cibles `make` | [x] | 2026-10-24 | Service worker dev, build:worker, make FILE=/arrêt worker. .dockerignore : .pnp.cjs périmé exclu. |
+| 8 | `enqueueEmail()` insère en table ; migration des tests d'envoi | [x] | 2026-10-24 | enqueueEmail insère en table ; mail.test.ts et contact migrés (drainEmailQueue) ; e2e Mailpit verts. |
+| 9 | Worker en prod/preprod : `Dockerfile`, compose, (deploy.sh, CI) | [x] | 2026-10-24 | Dockerfile, 3 compose, deploy.sh, ci.yml ; image runner construite et worker.cjs --once OK (image supprimée). |
+| 10 | Requêtes et actions d'admin (`src/lib/jobs/admin.ts`) | [x] | 2026-10-24 | admin.ts (mises à jour conditionnelles). |
+| 11 | Routes API `/api/platform/jobs/**` | [x] | 2026-10-24 | 4 routes + jobs-api.test.ts ; couverture 100 %. |
+| 12 | Écran liste `/platform/jobs` | [x] | 2026-10-24 | Page liste ; vérification navigateur 375/1280 px à faire par le lead. |
+| 13 | Écran détail `/platform/jobs/[jobId]`, actions, E2E | [x] | 2026-10-24 | Détail + JobActions + e2e (5 verts) ; recette SMTP coupé OK ; navigateur à faire par le lead. |
+| 14 | Documentation | [x] | 2026-10-24 | queue-emails.md, installation.md, DEPLOYMENT.md, README, socle. |
+| — | Vérification finale (lint, typecheck, test, e2e, navigateur 375 / 1280 px) | [~] | 2026-10-24 | lint 0 erreur, typecheck, 1892 tests, couverture 100 %, e2e vert (3 segments), recette SMTP coupé OK ; reste la vérification navigateur. |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne après chaque task validée (tests verts et critères d'acceptation remplis). En cas

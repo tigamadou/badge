@@ -32,25 +32,25 @@ Playwright (projet `chromium`), `Intl.RelativeTimeFormat` (aucune dépendance aj
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Schéma Prisma : `Notification`, `NotificationType`, `NotificationScope` | [ ] | | |
-| 2 | Portées pures (`scope.ts`) et type `NotificationScopeRef` | [ ] | | |
-| 3 | Constructeurs de textes et liens (`messages.ts`) | [ ] | | |
-| 4 | Résolveur de destinataires (`recipients.ts`) | [ ] | | |
-| 5 | Service `notify()` / `notifyAll()` + email par la queue | [ ] | | |
-| 6 | Déclencheurs inscriptions et badges + branchement des routes | [ ] | | |
-| 7 | Déclencheurs profils + branchement des routes | [ ] | | |
-| 8 | Déclencheurs membres et rôles + branchement des routes | [ ] | | |
-| 9 | Déclencheurs évènement, organisation, abonnement, quota | [ ] | | |
-| 10 | Requêtes de lecture (`queries.ts`) | [ ] | | |
-| 11 | Routes API `api/notifications/**` | [ ] | | |
-| 12 | `rewriteNotificationLinks`, purge à 90 jours, déclencheur `EMAIL_FAILED` | [ ] | | |
-| 13 | Date relative, compteur « 9+ » et contrôleur de polling | [ ] | | |
-| 14 | `NotificationBell` et panneau déroulant | [ ] | | |
-| 15 | Pages des notifications des quatre espaces | [ ] | | |
-| 16 | E2E : inscription → pastille → panneau → page → lien | [ ] | | |
-| 17 | Après rebase sur 23 et 25 : worker (`EMAIL_FAILED`, purge) et route `resubmit` | [ ] | | |
-| 18 | Documentation | [ ] | | |
-| — | Vérification finale (lint, typecheck, test, couverture, e2e, navigateur 375 / 1280) | [ ] | | |
+| 1 | Schéma Prisma : `Notification`, `NotificationType`, `NotificationScope` | [x] | 2026-10-24 | schema.test 2/2; db-push dev |
+| 2 | Portées pures (`scope.ts`) et type `NotificationScopeRef` | [x] | 2026-10-24 | scope.test 4/4 |
+| 3 | Constructeurs de textes et liens (`messages.ts`) | [x] | 2026-10-24 | messages.test 20/20 |
+| 4 | Résolveur de destinataires (`recipients.ts`) | [x] | 2026-10-24 | recipients.test 10/10 |
+| 5 | Service `notify()` / `notifyAll()` + email par la queue | [x] | 2026-10-24 | notify.test 12/12 |
+| 6 | Déclencheurs inscriptions et badges + branchement des routes | [x] | 2026-10-24 | triggers-registrations 10/10; routes existantes vertes |
+| 7 | Déclencheurs profils + branchement des routes | [x] | 2026-10-24 | triggers-profiles 6/6 (route profil = PUT, pas PATCH) |
+| 8 | Déclencheurs membres et rôles + branchement des routes | [x] | 2026-10-24 | triggers-memberships 13/13 |
+| 9 | Déclencheurs évènement, organisation, abonnement, quota | [x] | 2026-10-24 | triggers-org-event 8/8 |
+| 10 | Requêtes de lecture (`queries.ts`) | [x] | 2026-10-24 | queries.test 12/12 |
+| 11 | Routes API `api/notifications/**` | [x] | 2026-10-24 | routes.test 9/9 |
+| 12 | `rewriteNotificationLinks`, purge à 90 jours, déclencheur `EMAIL_FAILED` | [x] | 2026-10-24 | rewrite-links 5, retention 2, email-failed 1 |
+| 13 | Date relative, compteur « 9+ » et contrôleur de polling | [x] | 2026-10-24 | format-relative-time 4, unread-poller 7 |
+| 14 | `NotificationBell` et panneau déroulant | [x] | 2026-10-24 | NotificationBell.test 6/6; lint ok; verif navigateur laissee au lead |
+| 15 | Pages des notifications des quatre espaces | [x] | 2026-10-24 | NotificationsView.test 4/4; typecheck ok; 4 specs e2e socle adaptees (Aucune notification); verif navigateur laissee au lead |
+| 16 | E2E : inscription → pastille → panneau → page → lien | [x] | 2026-10-24 | notifications.spec 3/3 verts (1re version rouge : client Prisma perime du serveur Next, redemarrage app+worker) |
+| 17 | Après rebase sur 23 et 25 : worker (`EMAIL_FAILED`, purge) et route `resubmit` | [x] | 2026-10-24 | worker (EMAIL_FAILED dans failJob + purge dans worker-loop) et resubmit (rewrite + categoryChanged) cables ; tests process-batch/worker-loop/registrations verts |
+| 18 | Documentation | [x] | 2026-10-24 | features/notifications.md + README v4 |
+| — | Vérification finale (lint, typecheck, test, couverture, e2e, navigateur 375 / 1280) | [~] | 2026-10-24 | lint 0 erreur, typecheck ok, test-coverage 2075/2075 et 100 %, e2e 139 verts ; reste la vérification navigateur 375 / 1280 et onglet caché > 30 s (lead) |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne (statut, date, notes) après chaque task validée ; en cas d'interruption, `[~]` avec

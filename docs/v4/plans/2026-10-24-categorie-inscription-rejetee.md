@@ -29,16 +29,16 @@ Zod, Vitest 4 (environnement `node`, BDD de dev réelle, rendu statique
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Helper `allocateRegistrationId` (`src/lib/registration-id.ts`) | [ ] |  |  |
-| 2 | `register/route.ts` délègue la génération d'ID au helper | [ ] |  |  |
-| 3 | `sendRegistrationResubmitted` mentionne la nouvelle catégorie | [ ] |  |  |
-| 4 | `resubmit` : corps optionnel et validation de la catégorie | [ ] |  |  |
-| 5 | `resubmit` : changement de catégorie et d'ID en transaction | [ ] |  |  |
-| 6 | Sélecteur de catégorie et redirection sur `/account/registrations/[id]` | [ ] |  |  |
-| 7 | E2E rejet → changement de catégorie → resoumission | [ ] |  |  |
-| 8 | Rejet refusé quand le badge est imprimé (route + bouton) | [ ] |  |  |
-| 9 | Documentation (`docs/v4/features/`, `docs/v4/README.md`) | [ ] |  |  |
-| — | Vérification finale (lint, typecheck, test, couverture, e2e, navigateur 375 / 1280) | [ ] |  |  |
+| 1 | Helper `allocateRegistrationId` (`src/lib/registration-id.ts`) | [x] | 2026-10-24 | 5 tests verts |
+| 2 | `register/route.ts` délègue la génération d'ID au helper | [x] | 2026-10-24 | register-event.test.ts vert sans modification |
+| 3 | `sendRegistrationResubmitted` mentionne la nouvelle catégorie | [x] | 2026-10-24 | 65 tests mail verts |
+| 4 | `resubmit` : corps optionnel et validation de la catégorie | [x] | 2026-10-24 | corps optionnel, INVALID_BODY / INVALID_CATEGORY |
+| 5 | `resubmit` : changement de catégorie et d'ID en transaction | [x] | 2026-10-24 | 29 tests registrations verts (concurrence, rollback) |
+| 6 | Sélecteur de catégorie et redirection sur `/account/registrations/[id]` | [x] | 2026-10-24 | 3 tests de rendu ; verif navigateur laissee au lead |
+| 7 | E2E rejet → changement de catégorie → resoumission | [x] | 2026-10-24 | e2e account-registration 8/8 |
+| 8 | Rejet refusé quand le badge est imprimé (route + bouton) | [x] | 2026-10-24 | garde 409 + texte d'aide + e2e registration-detail 13/13 |
+| 9 | Documentation (`docs/v4/features/`, `docs/v4/README.md`) | [x] | 2026-10-24 | fiche + README |
+| — | Vérification finale (lint, typecheck, test, couverture, e2e, navigateur 375 / 1280) | [~] | 2026-10-24 | lint 0 erreur ; typecheck OK ; make test 1917/1917 (181 fichiers) ; couverture 100 % ; e2e 21/21 (account-registration + registration-detail) ; db-seed refait ; navigateur 375 / 1280 : reste à faire (lead) |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne après chaque task validée (tests verts et critères d'acceptation remplis). En cas

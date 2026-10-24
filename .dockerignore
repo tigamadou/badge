@@ -7,3 +7,6 @@ npm-debug.log*
 .env*.local
 *.md
 specs/
+.pnp.cjs
+.pnp.loader.mjs
+.yarn
