@@ -2,8 +2,15 @@ import type { InstalledBadgeTemplate } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFile } from "@/lib/storage";
 import type { BadgeTemplate } from "./types";
-import { buildDeclarativeTemplate, type AssetResolver, type Block, type TemplateManifest } from "@tigamadou/pdf-engine";
+import {
+  migrateManifest as migrateToV3,
+  type AssetResolver,
+  type Block,
+  type TemplateManifest,
+} from "@tigamadou/pdf-engine";
 import { validateBindings, type Bindings } from "./bindings";
+
+export const CURRENT_FORMAT = 3;
 
 export type TemplateSummary = {
   id: string;
@@ -18,11 +25,24 @@ export type TemplateSummary = {
 // un identifiant ne designe plus rien.
 export const DEFAULT_FAMILY = "default";
 
-// L'apercu d'un template installe est un PDF stocke. Il est servi par
+// L'apercu d'un template installe est une image stockee. Elle est servie par
 // /api/files/[...path], qui traite les cles `badge-templates/` comme non sensibles.
 // Le chemin nu de stockage n'est pas affichable tel quel cote client.
 export function previewUrl(previewPath: string | null): string {
   return previewPath ? `/api/files/${previewPath}` : "";
+}
+
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp)$/i;
+
+// Premiere source affichable comme image, dans l'ordre demande ; "" si aucune. Une
+// epreuve .pdf d'avant la migration vers le format 3 n'est pas une image.
+export function templateImageUrl(
+  row: { previewPath: string | null; proofPath: string | null },
+  prefer: "preview" | "proof",
+): string {
+  const ordered = prefer === "preview" ? [row.previewPath, row.proofPath] : [row.proofPath, row.previewPath];
+  const path = ordered.find((p): p is string => p !== null && IMAGE_EXTENSIONS.test(p));
+  return path ? previewUrl(path) : "";
 }
 
 // Ressources des blocs d'un arbre : fonds image des formes et images des puces de
@@ -35,7 +55,8 @@ function blockAssets(blocks: Block[]): string[] {
     if (b.type === "list") {
       return b.bullet.type === "image" && b.bullet.asset ? [b.bullet.asset] : [];
     }
-    return b.image?.asset ? [b.image.asset] : [];
+    // Seules les formes pleines (rect, square, circle, ellipse) portent une image.
+    return "image" in b && b.image?.asset ? [b.image.asset] : [];
   });
 }
 
@@ -47,8 +68,23 @@ export function referencedAssets(manifest: TemplateManifest): string[] {
   return [...new Set([...fromBlocks, ...fromFonts])];
 }
 
-async function loadAssetResolver(row: InstalledBadgeTemplate): Promise<AssetResolver> {
-  const manifest = row.layout as unknown as TemplateManifest;
+// Format 3 : tel quel. Format 2 : renumerote en memoire (le layout a ete valide a
+// l'installation), ce qui laisse les badges s'imprimer entre le deploiement et la
+// migration des lignes. Tout autre format est refuse.
+export function readLayout(
+  row: Pick<InstalledBadgeTemplate, "id" | "formatVersion" | "layout">,
+): TemplateManifest {
+  if (row.formatVersion === CURRENT_FORMAT) return row.layout as unknown as TemplateManifest;
+  if (row.formatVersion === 2) return migrateToV3(row.layout) as TemplateManifest;
+  throw new Error(
+    `resolveTemplate : le template "${row.id}" est encore au format v${row.formatVersion}. Migrer les templates installés (make migrate-installed-templates).`,
+  );
+}
+
+async function loadAssetResolver(
+  row: InstalledBadgeTemplate,
+  manifest: TemplateManifest,
+): Promise<AssetResolver> {
   const names = referencedAssets(manifest);
   const entries = await Promise.all(
     names.map(async (name) => {
@@ -76,17 +112,9 @@ function readBindings(value: unknown): Bindings {
 }
 
 async function buildFromRow(row: InstalledBadgeTemplate): Promise<BadgeTemplate> {
-  // Le moteur v2 ne sait pas rendre un layout v1 : sans ce garde, la construction
-  // echoue plus loin sur une TypeError sans rapport avec la vraie cause.
-  if (row.formatVersion !== 2) {
-    throw new Error(
-      `resolveTemplate : le template "${row.id}" est encore au format v${row.formatVersion}. Migrer les templates installés (make migrate-installed-templates).`,
-    );
-  }
-  const manifest = row.layout as unknown as TemplateManifest;
+  const manifest = readLayout(row);
   const bindings = readBindings(row.bindings);
-  const assets = await loadAssetResolver(row);
-  const template = buildDeclarativeTemplate(manifest, assets, row.id);
+  const assets = await loadAssetResolver(row, manifest);
 
   // Une table imparfaite ne doit JAMAIS empecher un badge de s'imprimer : l'ecran
   // d'installation et le script de migration garantissent la completude en amont,
@@ -97,10 +125,19 @@ async function buildFromRow(row: InstalledBadgeTemplate): Promise<BadgeTemplate>
   }
 
   return {
-    ...template,
+    meta: {
+      id: row.id,
+      version: row.version,
+      label: row.label,
+      description: row.description,
+      pages: row.pages,
+      pageSize: { width: `${row.pageWidthPx}px`, height: `${row.pageHeightPx}px` },
+      previewSrc: templateImageUrl(row, "preview"),
+    },
+    manifest,
     variables: manifest.variables,
     bindings,
-    meta: { ...template.meta, previewSrc: previewUrl(row.previewPath) },
+    assets,
   };
 }
 
@@ -156,6 +193,6 @@ export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
     description: row.description,
     pages: row.pages,
     pageSize: { width: `${row.pageWidthPx}px`, height: `${row.pageHeightPx}px` },
-    previewSrc: previewUrl(row.previewPath),
+    previewSrc: templateImageUrl(row, "preview"),
   }));
 }

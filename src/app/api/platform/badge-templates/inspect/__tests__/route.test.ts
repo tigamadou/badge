@@ -33,7 +33,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
 
 function manifestOf(overrides: Record<string, unknown> = {}) {
   return {
-    formatVersion: 2,
+    formatVersion: 3,
     family: "salon-2027",
     label: "Badge Salon",
     description: "Un badge de test.",
@@ -139,7 +139,7 @@ describe("POST /api/platform/badge-templates/inspect", () => {
         pageHeightPx: 638,
         layout: {},
         assetPrefix: "x/",
-        formatVersion: 2,
+        formatVersion: 3,
         installedById: staff.id,
       },
     });

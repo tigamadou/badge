@@ -29,7 +29,7 @@ async function makeStaff(staffRole: StaffRoleStr) {
 }
 
 const LAYOUT = {
-  formatVersion: 2,
+  formatVersion: 3,
   family: "salon",
   label: "Salon",
   description: "",
@@ -53,7 +53,7 @@ async function install(installedById: string) {
       layout: LAYOUT,
       bindings: { "badge.qrCodeDataUrl": "badge.qrCodeDataUrl" },
       assetPrefix: "badge-templates/x/",
-      formatVersion: 2,
+      formatVersion: 3,
       installedById,
     },
   });
