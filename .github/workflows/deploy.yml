@@ -78,6 +78,27 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.resolve.outputs.target }}
     steps:
+      # Les fichiers de deploiement vivent sur le VPS : on les renvoie a chaque deploiement
+      # depuis le tag de la release, pour qu'ils correspondent toujours a l'image deployee.
+      # Le Caddyfile (proxy partage prod/preprod) n'est volontairement pas copie.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            deploy.sh
+            docker-compose.yml
+            docker-compose.preprod.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Copie des fichiers de deploiement
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.SSH_KEY }}
+          fingerprint: ${{ secrets.VPS_FINGERPRINT }}
+          source: deploy.sh,docker-compose.yml,docker-compose.preprod.yml
+          target: ${{ needs.resolve.outputs.target }}/badge
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         with:

@@ -2,9 +2,13 @@
 
 Pour mettre en place la nouvelle architecture, vous devez copier manuellement quelques fichiers de configuration sur le serveur. Plus besoin d'envoyer tout le code source !
 
+## Copie automatique au déploiement
+
+Le workflow `.github/workflows/deploy.yml` copie `deploy.sh`, `docker-compose.yml` et `docker-compose.preprod.yml` depuis le tag de la release vers `~/<cible>/badge/` avant de lancer `deploy.sh` (étape `appleboy/scp-action`). Toute modification faite à la main sur ces trois fichiers du serveur est donc écrasée au déploiement suivant. Le `Caddyfile` n'est **pas** copié : il est partagé entre prod et préproduction et Caddy n'est pas rechargé par le déploiement ; il reste à copier à la main (voir ci-dessous).
+
 ## Fichiers à copier
 
-Copiez les fichiers suivants depuis votre machine locale vers le dossier de l'environnement sur le serveur (`~/prod/badge` ou `~/preprod/badge`) :
+Copie manuelle, nécessaire pour le `Caddyfile` et pour un déploiement hors workflow. Copiez les fichiers suivants depuis votre machine locale vers le dossier de l'environnement sur le serveur (`~/prod/badge` ou `~/preprod/badge`) :
 
 - `deploy.sh` (à la racine)
 - `docker-compose.yml` (à la racine)
