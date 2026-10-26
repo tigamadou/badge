@@ -210,7 +210,7 @@ Dans `docker-compose.dev.yml` :
 Run: `docker login ghcr.io` (si besoin, jeton `read:packages`) puis `docker compose -f docker-compose.dev.yml up -d renderer app && docker compose -f docker-compose.dev.yml exec app node -e "fetch(process.env.RENDERER_URL+'/health').then(r=>console.log(r.status))"`
 Expected: `200`. Sans `platform: linux/amd64`, le pull échoue sur un Mac Apple Silicon (`no matching manifest for linux/arm64`). Sous émulation, le premier rendu est plus lent : `RENDERER_TIMEOUT_MS = 30_000` reste suffisant.
 
-- [ ] **Step 9: Progression, cocher, commiter (sur demande)**
+- [x] **Step 9: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add package.json yarn.lock next.config.ts docker-compose.dev.yml src/lib/renderer.ts src/lib/__tests__/renderer.test.ts src/lib/__tests__/helpers/fake-exporter.ts src/test-setup.ts
@@ -280,7 +280,7 @@ Expected: FAIL (`readLayout` absent, `buildDeclarativeTemplate` introuvable dans
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/resolve.test.ts src/lib/badge-templates/__tests__/reference-packages.test.ts src/lib/badge-templates/__tests__/event-template-variables.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Progression, cocher, commiter (sur demande)**
+- [x] **Step 6: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add prisma/badge-templates src/lib/badge-templates/resolve.ts src/lib/badge-templates/types.ts src/lib/badge-templates/__tests__ src/app/api/platform/badge-templates
@@ -334,7 +334,7 @@ Même construction du contexte qu'aujourd'hui, puis `renderHtml(template.manifes
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/render-badge.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Progression, cocher, commiter (sur demande)**
+- [x] **Step 5: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add src/lib/badge-templates/render-badge.ts src/lib/badge-templates/render-badge.tsx src/lib/badge-templates/__tests__/render-badge.test.ts
@@ -377,7 +377,7 @@ Expected: FAIL.
 
 Même commande. Expected: PASS.
 
-- [ ] **Step 5: Progression, cocher, commiter (sur demande)**
+- [x] **Step 5: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add src/lib/badge-templates/install.ts src/lib/badge-templates/__tests__/install.test.ts src/app/api/platform/badge-templates
@@ -439,7 +439,7 @@ Le ZIP rend les PDF par `mapWithConcurrency(registrations, BATCH_RENDER_CONCURRE
 Run: la commande du Step 2, puis `docker compose -f docker-compose.dev.yml exec app yarn prisma db seed`
 Expected: PASS ; le seed installe `default` et `recto-verso` avec `proof.png` par le vrai service.
 
-- [ ] **Step 5: Progression, cocher, commiter (sur demande)**
+- [x] **Step 5: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add src/app/api/org src/lib/badge-batch.ts src/lib/__tests__/badge-batch.test.ts
@@ -488,7 +488,7 @@ Expected: FAIL.
 Run: même commande, puis `docker compose -f docker-compose.dev.yml exec app yarn prisma db seed && make verify-engine && make validate-badge-templates`
 Expected: PASS ; `verify-engine` liste les deux templates livrés, épreuves `.png` dans RustFS ; `validate-badge-templates` répond `OK`.
 
-- [ ] **Step 5: Progression, cocher, commiter (sur demande)**
+- [x] **Step 5: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add src/lib/badge-templates scripts/validate-badge-templates.ts scripts/verify-engine-upgrade.ts Makefile
@@ -557,7 +557,7 @@ Ajouter de même `validate-badge-templates-preprod` et `validate-badge-templates
 Run: le test ci-dessus ; `grep -rln "react-pdf\|extractPdfText\|renderToJson\|formatVersion: 2" src scripts` ne doit plus lister que les tests qui exercent volontairement le format 2 ; puis `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage && make lint && make typecheck`, puis `… exec app yarn prisma db seed && make migrate-installed-templates` (dry-run sur la base seedée).
 Expected: PASS, couverture 100 % ; « DRY-RUN … migres : 0 », sortie 0.
 
-- [ ] **Step 5: Progression, cocher, commiter (sur demande)**
+- [x] **Step 5: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add scripts Makefile prisma/schema.prisma
@@ -605,7 +605,7 @@ et `RENDERER_URL: http://127.0.0.1:3100` dans l'`env` du job (le seed et l'appli
 Run: le test ci-dessus, puis `docker compose -f docker-compose.yml config -q && docker compose -f docker-compose.preprod.yml config -q && sh -n deploy.sh`
 Expected: PASS, aucune sortie d'erreur.
 
-- [ ] **Step 5: Progression (accord utilisateur noté), cocher, commiter (sur demande)**
+- [x] **Step 5: Progression (accord utilisateur noté), cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add docker-compose.yml docker-compose.preprod.yml deploy.sh .env.production.example .github/workflows/ci.yml src/lib/__tests__/renderer-version.test.ts
@@ -675,7 +675,7 @@ Expected: PASS ; aucun `any` ni `@ts-expect-error` pour `page-view`.
 
 `https://badge.local` → page d'un badge : l'aperçu s'affiche, le pincement et Ctrl + molette zooment, « Imprimer » ouvre le PDF dans un nouvel onglet ; `docker compose -f docker-compose.dev.yml stop renderer` → « Aperçu indisponible, réessayer » ; `start renderer`, clic → l'aperçu revient. Noter le résultat dans les notes de la tâche 9.
 
-- [ ] **Step 6: Progression, cocher, commiter (sur demande)**
+- [x] **Step 6: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add src/types/page-view.d.ts src/lib/badge-document-client.ts src/lib/__tests__/badge-document-client.test.ts src/components/badge src/components/event
@@ -717,7 +717,7 @@ Expected: FAIL.
 
 Même commande, puis `make typecheck`. Expected: PASS.
 
-- [ ] **Step 5: Progression, cocher, commiter (sur demande)**
+- [x] **Step 5: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add src/components/ui src/lib/badge-templates src/app/platform/badge-templates
@@ -747,7 +747,7 @@ Expected: aucune ligne.
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage && make lint && make typecheck && make build`, puis `… exec app yarn prisma db seed`
 Expected: PASS, 100 %, build sans erreur.
 
-- [ ] **Step 4: Progression, cocher, commiter (sur demande)**
+- [x] **Step 4: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add -A src package.json yarn.lock vitest.config.ts
@@ -775,7 +775,7 @@ Règles du dépôt (`e2e/README.md`) : aucun `page.request.*` nouveau (les deux 
 Run: `make test-e2e` (stack de dev démarrée, service `renderer` sain), puis `… exec app yarn prisma db seed`
 Expected: toute la suite Playwright PASS.
 
-- [ ] **Step 3: Progression, cocher, commiter (sur demande)**
+- [x] **Step 3: Progression, cocher, commiter (sur demande)**
 
 ```bash
 /usr/bin/git add e2e
@@ -805,7 +805,7 @@ Run, dans cet ordre :
 `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage` ; `make lint` ; `make typecheck` ; `make build` ; `docker compose -f docker-compose.dev.yml exec app sh -c "ls .next/standalone/node_modules/@tigamadou/pdf-engine/fonts/*.ttf"` ; `docker compose -f docker-compose.dev.yml exec app yarn prisma db seed` ; `make test-e2e` ; `docker build --target runner -t badge-verif:local --secret id=npm_token,env=NPM_TOKEN .`
 Expected: tout PASS, couverture 100 %, au moins un fichier `.ttf` listé, image `badge-verif:local` construite (jamais `ghcr.io/tigamadou/badge:*`).
 
-- [ ] **Step 3: Progression finale, cocher, commiter, ouvrir la PR (sur demande)**
+- [x] **Step 3: Progression finale, cocher, commiter, ouvrir la PR (sur demande)**
 
 `## Progression` : toutes les lignes à `[x]`, versions exactes (moteur, image) et résultat de chaque commande ci-dessus dans les notes de la tâche 13. Le `push` et `gh pr create` ne se font que sur demande explicite.
 
@@ -818,6 +818,6 @@ gh pr create --base development --title "Moteur HTML 2.0.0 et service de rendu" 
 
 ## Fin du plan
 
-- [ ] Suite Vitest à 100 %, lint, typecheck, build, E2E (dont 375 px) au vert sur `feat/moteur-html`.
-- [ ] PR ouverte vers `development` ; aucun commit sur `development`.
-- [ ] `## Progression` complète ; prévenir que la procédure de `DEPLOYMENT.md` est prête pour la préproduction, et rappeler que le template ex-305v est à réinstaller depuis le studio (textes de repli d'A7, publiés dans la 2.0.0).
+- [x] Suite Vitest à 100 %, lint, typecheck, build, E2E (dont 375 px) au vert sur `feat/moteur-html`.
+- [x] PR ouverte vers `development` ; aucun commit sur `development`.
+- [x] `## Progression` complète ; prévenir que la procédure de `DEPLOYMENT.md` est prête pour la préproduction, et rappeler que le template ex-305v est à réinstaller depuis le studio (textes de repli d'A7, publiés dans la 2.0.0).
