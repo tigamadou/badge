@@ -140,8 +140,19 @@ jobs:
         options: >-
           --health-cmd="curl -fsS http://127.0.0.1:9000/health"
           --health-interval=5s --health-timeout=5s --health-retries=10
+      # Service de rendu des badges : meme version que le moteur (package.json). Le seed
+      # et l'application en ont besoin pour l'epreuve PNG, le PDF et le document fige.
+      renderer:
+        image: ghcr.io/tigamadou/pdf-engine-renderer:2.0.0
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.NPM_TOKEN }}
+        ports:
+          - 3100:3000
+        options: --init
     env:
       DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge
+      RENDERER_URL: http://127.0.0.1:3100
       PLATFORM_SMTP_HOST: 127.0.0.1
       PLATFORM_SMTP_PORT: "1025"
       PLATFORM_SMTP_FROM: noreply@badge.local

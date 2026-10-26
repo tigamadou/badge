@@ -13,12 +13,12 @@ export BADGE_TAG=$TAG
 echo "Déploiement de $TAG en $ENV..."
 
 # 1. Pull des nouvelles images
-docker compose $F pull app tools
+docker compose $F pull renderer app tools
 
-# 2. Initialisation (db push + SUPER_ADMIN si absent) puis relance de l'app.
-# `init` doit etre nomme explicitement : --no-deps ne le demarrerait pas, et
-# `app` attend qu'il se termine avec succes (un echec bloque la relance).
-docker compose $F up -d --no-deps init app worker
+# 2. Service de rendu, initialisation (db push + SUPER_ADMIN si absent) puis relance
+# de l'app. `renderer` et `init` doivent etre nommes explicitement : --no-deps ne les
+# demarrerait pas, et `app` attend leur etat (sain / termine avec succes).
+docker compose $F up -d --no-deps renderer init app worker
 
 # 3. Nettoyage
 docker image prune -f
