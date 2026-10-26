@@ -5,9 +5,21 @@ import { deletePrefix, uploadFile } from "@/lib/storage";
 import { parseManifest, type TemplateManifest } from "@tigamadou/pdf-engine";
 import type { PackageAsset } from "@tigamadou/pdf-engine/package";
 import { renderProof } from "@tigamadou/pdf-engine/proof";
+import { getExporter } from "@/lib/renderer";
 import { validateBindings, type Bindings } from "./bindings";
 
 export const REFERENCE_DIR = "prisma/badge-templates";
+
+export const PROOF_FILE = "proof.png";
+
+// Fichiers produits par l'application (et non par le paquet), a la racine du prefixe :
+// epreuve d'installation et epreuves de verify-engine, y compris les anciennes en PDF.
+const GENERATED_PROOF = /^proof(-engine-[^/]+)?\.(pdf|png)$/;
+
+export function isGeneratedProofKey(key: string): boolean {
+  const match = /^badge-templates\/[^/]+\/(.+)$/.exec(key);
+  return match !== null && GENERATED_PROOF.test(match[1]);
+}
 
 export type InstallResult = { id: string; family: string; version: number };
 
@@ -41,9 +53,9 @@ export async function installTemplate(args: {
   const id = crypto.randomUUID();
   const assetPrefix = `badge-templates/${id}/`;
 
-  let preview: Buffer;
+  let proof: Uint8Array;
   try {
-    preview = await renderProof(manifest, assets, id);
+    ({ png: proof } = await renderProof(manifest, assets, id, getExporter()));
   } catch (err) {
     /* v8 ignore next -- rien n'a encore ete ecrit sous ce prefixe a ce stade */
     await deletePrefix(assetPrefix).catch(() => undefined);
@@ -53,10 +65,9 @@ export async function installTemplate(args: {
   for (const asset of assets) {
     await uploadFile(`${assetPrefix}${asset.path}`, asset.body, asset.contentType);
   }
-  const proofPath = `${assetPrefix}proof.pdf`;
-  await uploadFile(proofPath, preview, "application/pdf");
-  // L'apercu affiche est l'image fournie par le paquet ; le PDF ne sert plus que de
-  // preuve d'impression, telechargeable depuis la page de detail.
+  const proofPath = `${assetPrefix}${PROOF_FILE}`;
+  await uploadFile(proofPath, Buffer.from(proof), "image/png");
+  // L'apercu affiche est l'image fournie par le paquet, a defaut l'epreuve PNG.
   const previewPath = manifest.preview ? `${assetPrefix}${manifest.preview}` : null;
 
   const created = await prisma.installedBadgeTemplate.create({

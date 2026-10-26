@@ -3,6 +3,8 @@ import { NextRequest } from "next/server";
 import JSZip from "jszip";
 import { prisma } from "@/lib/prisma";
 import { ensureReferenceTemplates } from "@/lib/badge-templates/install";
+import { RENDERER_UNAVAILABLE_MESSAGE } from "@/lib/renderer";
+import { fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -34,7 +36,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
 
 function manifestOf(overrides: Record<string, unknown> = {}) {
   return {
-    formatVersion: 2,
+    formatVersion: 3,
     family: "salon-2027",
     label: "Badge Salon",
     description: "Un badge de test.",
@@ -97,13 +99,36 @@ describe("POST /api/platform/badge-templates", () => {
     expect(body).toMatchObject({ family: "salon-2027", version: 1 });
 
     const row = await prisma.installedBadgeTemplate.findUnique({ where: { id: body.id } });
-    // Ce paquet ne declare pas d'image : pas d'apercu, mais un PDF d'epreuve.
+    // Ce paquet ne declare pas d'image : pas d'apercu, mais une epreuve PNG.
     expect(row?.previewPath).toBeNull();
-    expect(row?.proofPath).toBe(`badge-templates/${body.id}/proof.pdf`);
+    expect(row?.proofPath).toBe(`badge-templates/${body.id}/proof.png`);
     expect(row?.installedById).toBe(staff.id);
 
     const log = await prisma.activityLog.findFirst({ where: { type: "BADGE_TEMPLATE_INSTALLED" } });
     expect(log?.targetId).toBe(body.id);
+  });
+
+  it("repond 503 sans rien installer quand le service de rendu est indisponible", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+    fakeExporter.failNext("UNAVAILABLE");
+
+    const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "RENDERER_UNAVAILABLE", message: RENDERER_UNAVAILABLE_MESSAGE });
+    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
+    expect(await prisma.activityLog.count({ where: { type: "BADGE_TEMPLATE_INSTALLED" } })).toBe(0);
+  });
+
+  it("repond 400 INVALID_PACKAGE quand le rendu echoue (RENDER_FAILED)", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
+    fakeExporter.failNext("RENDER_FAILED");
+
+    const res = await post(await archiveOf({ "manifest.json": JSON.stringify(manifestOf()) }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("INVALID_PACKAGE");
+    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
   });
 
   it("refuse sans session (401)", async () => {
@@ -301,38 +326,6 @@ describe("POST /api/platform/badge-templates", () => {
     expect(await prisma.installedBadgeTemplate.count()).toBe(0);
   });
 
-  it("ne cree aucune ligne si le rendu d'epreuve echoue", async () => {
-    const staff = await makeStaff("STAFF_ADMIN");
-    withSession({ id: staff.id, email: staff.email, name: staff.name, isStaff: true });
-
-    // Une police declaree et fournie, mais dont les octets ne forment pas une fonte
-    // exploitable : la validation d'archive passe, le rendu echoue.
-    const manifest = manifestOf({
-      fonts: [{ alias: "titre", file: "fonts/A.ttf" }],
-      blocks: [
-        {
-          type: "text",
-          page: 1,
-          x: 4,
-          y: 4,
-          w: 40,
-          h: 8,
-          text: "{participant.firstName}",
-          style: { font: "titre", sizePx: 50, color: "#0f172a", overflow: "clip" },
-        },
-      ],
-    });
-    const res = await post(
-      await archiveOf({
-        "manifest.json": JSON.stringify(manifest),
-        "fonts/A.ttf": Buffer.from([0x00, 0x01, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04]),
-      }),
-    );
-
-    expect(res.status).toBe(400);
-    expect((await res.json()).errors.join()).toMatch(/rendu d'epreuve/i);
-    expect(await prisma.installedBadgeTemplate.count()).toBe(0);
-  });
 });
 
 describe("GET /api/platform/badge-templates", () => {
@@ -355,7 +348,7 @@ describe("GET /api/platform/badge-templates", () => {
         pageHeightPx: 638,
         layout: {},
         assetPrefix: "x/",
-        formatVersion: 2,
+        formatVersion: 3,
         installedById: staff.id,
       },
     });
