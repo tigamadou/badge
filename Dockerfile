@@ -18,6 +18,8 @@ COPY . .
 ENV NPM_TOKEN=
 RUN yarn prisma generate --schema=./prisma/schema.prisma
 RUN yarn build
+# Worker d'emails (spec 23) : bundle unique lance par `node worker.cjs` dans l'image runner.
+RUN yarn build:worker
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -35,6 +37,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/build/worker.cjs ./worker.cjs
 
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

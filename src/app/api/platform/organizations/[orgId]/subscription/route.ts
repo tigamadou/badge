@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { computeSubscriptionDates } from "@/lib/subscription";
+import { notifySubscriptionChanged } from "@/lib/notifications/triggers";
 
 // La periode est portee par le PLAN : elle pilote les dates de l'abonnement
 // (startDate = maintenant, endDate = +30j / +365j selon plan.period). Le staff
@@ -66,6 +67,7 @@ export const PUT = withStaffAuth<{ orgId: string }>(
       details: { planId: subscription.planId, status: subscription.status },
       req,
     });
+    await notifySubscriptionChanged(orgId, session.user.id);
 
     return NextResponse.json({ subscription });
   },

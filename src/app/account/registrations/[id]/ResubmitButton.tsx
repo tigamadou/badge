@@ -2,42 +2,71 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { RadioCards } from "@/components/ui/RadioCards";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
-export default function ResubmitButton({ registrationId }: { registrationId: string }) {
+export type ResubmitCategory = { id: string; name: string; color: string };
+
+export default function ResubmitButton({
+  registrationId,
+  currentCategoryId,
+  categories,
+}: {
+  registrationId: string;
+  currentCategoryId: string;
+  categories: ResubmitCategory[];
+}) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState(currentCategoryId);
+  const changed = selected !== currentCategoryId;
+  const selectedName = categories.find((c) => c.id === selected)?.name;
 
-  async function handleClick() {
-    setError(null);
-    setLoading(true);
-    try {
+  const { run, pending } = useAsyncAction(
+    async () => {
       const res = await fetch(`/api/account/registrations/${registrationId}/resubmit`, {
         method: "POST",
+        // Corps uniquement si la categorie change : sinon comportement historique.
+        ...(changed
+          ? {
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ categoryId: selected }),
+            }
+          : {}),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error ?? "Resoumission impossible.");
-        return;
-      }
-      router.refresh();
-    } catch {
-      setError("Erreur réseau, réessayez.");
-    } finally {
-      setLoading(false);
-    }
-  }
+      if (!res.ok) throw res;
+      return (await res.json()).id as string;
+    },
+    {
+      success: "Inscription resoumise.",
+      error: "Resoumission impossible.",
+      // L'ID change avec la categorie : l'ancienne URL renverrait une 404.
+      onSuccess: (id) =>
+        id !== registrationId
+          ? router.replace(`/account/registrations/${encodeURIComponent(id)}`)
+          : router.refresh(),
+    },
+  );
 
   return (
-    <div className="space-y-2">
-      <button
-        onClick={handleClick}
-        disabled={loading}
-        className="inline-flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold disabled:opacity-50"
-      >
-        {loading ? "Resoumission..." : "Resoumettre mon inscription"}
-      </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+    <div className="w-full space-y-3">
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-slate-900">Catégorie</p>
+        <RadioCards
+          name="Catégorie"
+          options={categories.map((c) => ({ value: c.id, title: c.name, color: c.color }))}
+          value={selected}
+          onChange={setSelected}
+        />
+        {changed && (
+          <p className="text-sm text-slate-600">
+            Votre inscription sera resoumise dans la catégorie <em>{selectedName}</em>.
+          </p>
+        )}
+      </div>
+      <Button onClick={run} loading={pending}>
+        Resoumettre mon inscription
+      </Button>
     </div>
   );
 }

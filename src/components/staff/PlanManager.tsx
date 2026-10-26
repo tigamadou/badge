@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { Button } from "@/components/ui/Button";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export type PlanPeriod = "MONTHLY" | "ANNUAL";
 export type PlanRow = {
@@ -29,8 +33,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
   const [period, setPeriod] = useState<PlanPeriod>("MONTHLY");
   const [maxEvents, setMaxEvents] = useState("");
   const [maxParticipants, setMaxParticipants] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   function parseLimit(v: string): number | null {
     const t = v.trim();
@@ -38,48 +41,60 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
     return Number.parseInt(t, 10);
   }
 
-  async function createPlan(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
-    const res = await fetch("/api/platform/plans", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name,
-        period,
-        maxEvents: parseLimit(maxEvents),
-        maxParticipantsPerEvent: parseLimit(maxParticipants),
-      }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error === "NAME_TAKEN" ? "Ce nom de plan existe déjà." : "Erreur de création.");
-      return;
-    }
-    setName("");
-    setPeriod("MONTHLY");
-    setMaxEvents("");
-    setMaxParticipants("");
-    router.refresh();
-  }
+  // Motif C : NAME_TAKEN est rattaché au champ « Nom » ; le reste lève une exception (toast).
+  const createPlan = useAsyncAction(
+    async (): Promise<{ nameError?: string }> => {
+      const res = await fetch("/api/platform/plans", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name,
+          period,
+          maxEvents: parseLimit(maxEvents),
+          maxParticipantsPerEvent: parseLimit(maxParticipants),
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.clone().json().catch(() => ({}));
+        if (j.error === "NAME_TAKEN") return { nameError: "Ce nom de plan existe déjà." };
+        throw res;
+      }
+      return {};
+    },
+    {
+      error: "Erreur de création.",
+      onSuccess: (result) => {
+        if (result.nameError) {
+          setNameError(result.nameError);
+          return;
+        }
+        setName("");
+        setPeriod("MONTHLY");
+        setMaxEvents("");
+        setMaxParticipants("");
+        toastSuccess("Plan créé.");
+        router.refresh();
+      },
+    },
+  );
 
   async function toggleArchive(plan: PlanRow) {
-    setBusy(true);
-    await fetch(`/api/platform/plans/${plan.id}`, {
+    const res = await fetch(`/api/platform/plans/${plan.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ archived: !plan.archived }),
     });
-    setBusy(false);
-    router.refresh();
+    if (!res.ok) throw res;
   }
 
   return (
     <div className="space-y-6">
       <form
-        onSubmit={createPlan}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setNameError(null);
+          void createPlan.run();
+        }}
         className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4"
       >
         <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
@@ -90,6 +105,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
             required
             className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-auto"
           />
+          {nameError && <span className="text-sm text-rose-600">{nameError}</span>}
         </label>
         <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-slate-600">Période</span>
@@ -122,14 +138,9 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
             className="w-full rounded-lg border border-slate-300 px-3 py-2 sm:w-44"
           />
         </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 sm:w-auto"
-        >
+        <Button type="submit" loading={createPlan.pending} className="w-full sm:w-auto">
           Créer le plan
-        </button>
-        {error && <p className="w-full text-sm text-red-600">{error}</p>}
+        </Button>
       </form>
 
       <TableFrame>
@@ -153,13 +164,16 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
               <td className="py-2">{fmtLimit(p.maxParticipantsPerEvent)}</td>
               <td className="py-2">{p.subscriptionsCount}</td>
               <td className="py-2 text-right">
-                <button
-                  onClick={() => toggleArchive(p)}
-                  disabled={busy}
-                  className="rounded-lg border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                <ActionButton
+                  variant="link"
+                  className="text-slate-700"
+                  action={() => toggleArchive(p)}
+                  success={p.archived ? "Plan restauré." : "Plan archivé."}
+                  error={p.archived ? "Échec de la restauration." : "Échec de l'archivage."}
+                  onSuccess={() => router.refresh()}
                 >
                   {p.archived ? "Restaurer" : "Archiver"}
-                </button>
+                </ActionButton>
               </td>
             </tr>
           ))}

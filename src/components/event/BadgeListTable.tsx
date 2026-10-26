@@ -7,6 +7,8 @@ import { Checkbox } from "@/components/ui/FormControls";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Row = {
   id: string;
@@ -62,16 +64,26 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
     setSelected(next);
   }
 
-  async function batchPrint() {
-    if (selected.size === 0) return;
-    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/print`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ids: Array.from(selected) }),
-    });
-    setSelected(new Set());
-    load();
-  }
+  const batchPrint = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations/print`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      if (!res.ok) throw res;
+      const json = await res.json().catch(() => ({}));
+      return typeof json.printed === "number" ? (json.printed as number) : selected.size;
+    },
+    {
+      error: "Le marquage a échoué.",
+      onSuccess: (count) => {
+        toastSuccess(`${count} badge(s) marqué(s) imprimé(s).`);
+        setSelected(new Set());
+        void load();
+      },
+    },
+  );
 
   function openBatchPdf() {
     if (selected.size === 0) return;
@@ -98,7 +110,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
         <BatchButton icon="eye" onClick={openBatchPdf}>
           Aperçu PDF
         </BatchButton>
-        <BatchButton icon="printer" onClick={batchPrint}>
+        <BatchButton icon="printer" onClick={() => void batchPrint.run()} loading={batchPrint.pending}>
           Marquer imprimés
         </BatchButton>
       </BatchBar>

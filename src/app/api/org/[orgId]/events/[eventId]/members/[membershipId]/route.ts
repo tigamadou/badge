@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
+import { notifyMembershipRoleChanged } from "@/lib/notifications/triggers";
 
 const patchSchema = z.object({ role: z.enum(["ADMIN", "OPERATOR", "PRINTER", "VIEWER"]) });
 
@@ -31,6 +32,13 @@ export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, ev
     targetId: updated.userId,
     details: { from: existing.role, to: parsed.data.role, scope: "event" },
     req,
+  });
+  await notifyMembershipRoleChanged({
+    userId: updated.userId,
+    eventId,
+    from: existing.role,
+    to: parsed.data.role,
+    actorId: session.user.id,
   });
   return NextResponse.json({ membership: updated });
 });

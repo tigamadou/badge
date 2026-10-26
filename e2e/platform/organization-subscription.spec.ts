@@ -7,6 +7,7 @@ import {
 } from "../helpers/db";
 import { loginAsStaff } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 
 // Page Abonnement d'une org — /platform/organizations/[orgId]/subscription
 // Rôle : STAFF_ADMIN. Le formulaire pilote plan + statut + PERIODE + overrides ;
@@ -64,7 +65,7 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await page.getByLabel("Plan").selectOption(plan.id);
     await page.getByRole("button", { name: /enregistrer/i }).click();
 
-    await expect(page.getByText("Abonnement enregistré.")).toBeVisible();
+    await expect(toast(page, "Abonnement enregistré.")).toBeVisible();
     await expect(page.getByLabel("Plan")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Modifier" })).toBeVisible();
   });

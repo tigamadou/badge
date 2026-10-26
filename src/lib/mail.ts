@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveSettings, getPlatformSmtp, type ResolvedSettings } from "@/lib/settings";
 import { buildBaseUrl, formatFromAddress } from "@/lib/mail-helpers";
 import { formatEventPeriod } from "@/lib/format-date";
+import { enqueueEmail, EMAIL_KIND } from "@/lib/jobs/enqueue-email";
 
 export type TransportContext = {
   eventId?: string;
@@ -236,28 +237,6 @@ function escapeAttr(s: string): string {
   return escapeText(s);
 }
 
-async function safeSend(args: {
-  to: string;
-  subject: string;
-  html: string;
-  ctx: ResolvedTransport;
-}): Promise<void> {
-  try {
-    await args.ctx.transporter.sendMail({
-      from: args.ctx.from,
-      to: args.to,
-      subject: args.subject,
-      html: args.html,
-    });
-  } catch (err) {
-    console.error("[mail] sendMail failed", {
-      to: args.to,
-      subject: args.subject,
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-}
-
 export async function sendRegistrationConfirmation(registrationId: string): Promise<void> {
   const reg = await prisma.registration.findUnique({
     where: { id: registrationId },
@@ -276,7 +255,8 @@ export async function sendRegistrationConfirmation(registrationId: string): Prom
     return;
   }
 
-  const ctx = await resolveTransporter({ eventId: reg.eventId });
+  const transportCtx: TransportContext = { eventId: reg.eventId };
+  const ctx = await resolveTransporter(transportCtx);
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
   const eventTitle = escapeText(reg.event.title);
   const eventDate = formatEventPeriod(reg.event.date, reg.event.endDate);
@@ -288,11 +268,12 @@ export async function sendRegistrationConfirmation(registrationId: string): Prom
     <p style="margin:0;">Vous recevrez un email dès que votre inscription sera traitée.</p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: reg.snapshotEmail,
     subject: `Confirmation d'inscription — ${reg.event.title}`,
     html: buildEmail({ title: `Confirmation d'inscription`, body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.REGISTRATION_RECEIVED,
+    ctx: transportCtx,
   });
 }
 
@@ -325,7 +306,8 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
     return;
   }
 
-  const ctx = await resolveTransporter({ eventId: reg.eventId });
+  const transportCtx: TransportContext = { eventId: reg.eventId };
+  const ctx = await resolveTransporter(transportCtx);
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
   const eventTitle = escapeText(reg.event.title);
 
@@ -335,11 +317,12 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
       <p style="margin:0 0 16px;">Votre inscription à <strong>${eventTitle}</strong> a été <span style="color:#059669;font-weight:600;">approuvée</span>.</p>
       <p style="margin:0;">Votre badge sera disponible le jour de l'événement.</p>
     `;
-    await safeSend({
+    await enqueueEmail({
       to: reg.snapshotEmail,
       subject: `Votre inscription à ${reg.event.title} est approuvée`,
       html: buildEmail({ title: "Inscription approuvée", body, ctx }),
-      ctx,
+      kind: EMAIL_KIND.REGISTRATION_APPROVED,
+      ctx: transportCtx,
     });
     return;
   }
@@ -370,11 +353,12 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
     <p style="margin:0;">Pour plus d'informations, veuillez contacter l'organisation.</p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: reg.snapshotEmail,
     subject: `Inscription rejetée — ${reg.event.title}`,
     html: buildEmail({ title: "Inscription rejetée", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.REGISTRATION_REJECTED,
+    ctx: transportCtx,
   });
 }
 
@@ -404,7 +388,8 @@ export async function sendBadgePrintedNotification(registrationId: string): Prom
     return;
   }
 
-  const ctx = await resolveTransporter({ eventId: reg.eventId });
+  const transportCtx: TransportContext = { eventId: reg.eventId };
+  const ctx = await resolveTransporter(transportCtx);
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
 
   const contactBlock =
@@ -425,11 +410,12 @@ export async function sendBadgePrintedNotification(registrationId: string): Prom
     ${contactBlock}
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: reg.snapshotEmail,
     subject: `Badge prêt — ${reg.event.title}`,
     html: buildEmail({ title: "Votre badge est prêt", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.BADGE_PRINTED,
+    ctx: transportCtx,
   });
 }
 
@@ -449,7 +435,8 @@ export async function sendAccountVerifyEmail(
     return;
   }
 
-  const ctx = await resolveTransporter({});
+  const transportCtx: TransportContext = {};
+  const ctx = await resolveTransporter(transportCtx);
   const baseUrl = buildBaseUrl({
     BASE_URL: process.env.BASE_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -472,11 +459,13 @@ export async function sendAccountVerifyEmail(
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message.</p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: user.email,
     subject: "Confirmez votre adresse email — Badge",
     html: buildEmail({ title: "Confirmez votre email", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.ACCOUNT_VERIFY_EMAIL,
+    priority: "high",
+    ctx: transportCtx,
   });
 }
 
@@ -492,7 +481,8 @@ export async function sendAccountPasswordReset(userId: string, plainToken: strin
     return;
   }
 
-  const ctx = await resolveTransporter({});
+  const transportCtx: TransportContext = {};
+  const ctx = await resolveTransporter(transportCtx);
   const baseUrl = buildBaseUrl({
     BASE_URL: process.env.BASE_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -509,17 +499,22 @@ export async function sendAccountPasswordReset(userId: string, plainToken: strin
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: user.email,
     subject: "Réinitialisation de votre mot de passe — Badge",
     html: buildEmail({ title: "Réinitialisation du mot de passe", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.ACCOUNT_PASSWORD_RESET,
+    priority: "high",
+    ctx: transportCtx,
   });
 }
 
 // v2-11 : nouveau template -- confirme une resoumission d'inscription apres
 // rejet (route POST /api/account/registrations/[id]/resubmit).
-export async function sendRegistrationResubmitted(registrationId: string): Promise<void> {
+export async function sendRegistrationResubmitted(
+  registrationId: string,
+  options?: { previousCategoryName?: string },
+): Promise<void> {
   const reg = await prisma.registration.findUnique({
     where: { id: registrationId },
     select: {
@@ -528,6 +523,7 @@ export async function sendRegistrationResubmitted(registrationId: string): Promi
       snapshotFirstName: true,
       snapshotLastName: true,
       eventId: true,
+      category: { select: { name: true } },
       event: { select: { title: true } },
     },
   });
@@ -538,7 +534,8 @@ export async function sendRegistrationResubmitted(registrationId: string): Promi
     return;
   }
 
-  const ctx = await resolveTransporter({ eventId: reg.eventId });
+  const transportCtx: TransportContext = { eventId: reg.eventId };
+  const ctx = await resolveTransporter(transportCtx);
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
   const eventTitle = escapeText(reg.event.title);
   const baseUrl = buildBaseUrl({
@@ -546,20 +543,26 @@ export async function sendRegistrationResubmitted(registrationId: string): Promi
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
   });
 
+  const categoryChange = options?.previousCategoryName
+    ? `<p style="margin:0 0 16px;">Votre inscription a été transférée de la catégorie <strong>${escapeText(options.previousCategoryName)}</strong> vers la catégorie <strong>${escapeText(reg.category.name)}</strong>.</p>
+    `
+    : "";
+
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
     <p style="margin:0 0 16px;">Votre inscription à <strong>${eventTitle}</strong> a bien été resoumise et est de nouveau en attente de validation.</p>
-    <p style="margin:0 0 16px;">Vous recevrez un email dès que votre inscription sera traitée.</p>
+    ${categoryChange}    <p style="margin:0 0 16px;">Vous recevrez un email dès que votre inscription sera traitée.</p>
     <p style="margin:0;text-align:center;">
       <a href="${baseUrl}/account/registrations/${encodeURIComponent(reg.id)}" style="color:#4f46e5;text-decoration:none;font-size:14px;">Voir le détail de mon inscription</a>
     </p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: reg.snapshotEmail,
     subject: `Inscription resoumise — ${reg.event.title}`,
     html: buildEmail({ title: "Inscription resoumise", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.REGISTRATION_RESUBMITTED,
+    ctx: transportCtx,
   });
 }
 
@@ -600,10 +603,11 @@ export async function sendUserInvitation(
     data: { inviteToken, inviteTokenExpiry },
   });
 
-  const ctx = await resolveTransporter({
+  const transportCtx: TransportContext = {
     eventId: options?.eventId,
     orgId: options?.orgId,
-  });
+  };
+  const ctx = await resolveTransporter(transportCtx);
   const baseUrl = buildBaseUrl({
     BASE_URL: process.env.BASE_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -631,11 +635,13 @@ export async function sendUserInvitation(
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures.</p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: user.email,
     subject: "Bienvenue sur Badge",
     html: buildEmail({ title: "Bienvenue sur Badge", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.USER_INVITATION,
+    priority: "high",
+    ctx: transportCtx,
   });
 }
 
@@ -657,7 +663,8 @@ export async function sendPasswordResetEmail(userId: string): Promise<void> {
     data: { inviteToken, inviteTokenExpiry },
   });
 
-  const ctx = await resolveTransporter({});
+  const transportCtx: TransportContext = {};
+  const ctx = await resolveTransporter(transportCtx);
   const baseUrl = buildBaseUrl({
     BASE_URL: process.env.BASE_URL,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
@@ -674,11 +681,13 @@ export async function sendPasswordResetEmail(userId: string): Promise<void> {
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
   `;
 
-  await safeSend({
+  await enqueueEmail({
     to: user.email,
     subject: "Réinitialisation de votre mot de passe",
     html: buildEmail({ title: "Réinitialisation du mot de passe", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.USER_PASSWORD_RESET,
+    priority: "high",
+    ctx: transportCtx,
   });
 }
 
@@ -732,7 +741,8 @@ export async function sendProfileApproved(userId: string): Promise<void> {
     console.error("[mail] sendProfileApproved: user not found", { userId });
     return;
   }
-  const ctx = await resolveTransporter({});
+  const transportCtx: TransportContext = {};
+  const ctx = await resolveTransporter(transportCtx);
   const fullName = escapeText(`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name);
   const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
   const body = `
@@ -740,11 +750,12 @@ export async function sendProfileApproved(userId: string): Promise<void> {
     <p style="margin:0 0 16px;">Votre profil a été <span style="color:#059669;font-weight:600;">validé</span> par la plateforme. Vous pouvez désormais vous inscrire aux événements.</p>
     <p style="margin:0;"><a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a></p>
   `;
-  await safeSend({
+  await enqueueEmail({
     to: user.email,
     subject: "Profil validé — Badge",
     html: buildEmail({ title: "Profil validé", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.PROFILE_APPROVED,
+    ctx: transportCtx,
   });
 }
 
@@ -759,7 +770,8 @@ export async function sendProfileRejected(userId: string): Promise<void> {
     orderBy: { createdAt: "desc" },
     select: { rejectionReasonLabel: true, rejectionDetails: true },
   });
-  const ctx = await resolveTransporter({});
+  const transportCtx: TransportContext = {};
+  const ctx = await resolveTransporter(transportCtx);
   const fullName = escapeText(`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.name);
   const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
   const reasonBlock = submission?.rejectionReasonLabel
@@ -775,10 +787,11 @@ export async function sendProfileRejected(userId: string): Promise<void> {
     ${detailsBlock}
     <p style="margin:0;">Corrigez vos documents puis enregistrez à nouveau votre profil : <a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a>.</p>
   `;
-  await safeSend({
+  await enqueueEmail({
     to: user.email,
     subject: "Documents refusés — Badge",
     html: buildEmail({ title: "Documents refusés", body, ctx }),
-    ctx,
+    kind: EMAIL_KIND.PROFILE_REJECTED,
+    ctx: transportCtx,
   });
 }

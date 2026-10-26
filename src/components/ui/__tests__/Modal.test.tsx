@@ -36,4 +36,14 @@ describe("Modal", () => {
     expect(html).toContain("flex-wrap");
     expect(html).toContain("max-h-[70vh]");
   });
+
+  it("confirmLoading désactive le bouton de confirmation et pose aria-busy", () => {
+    const html = renderToStaticMarkup(
+      <ModalPanel title="T" onConfirm={() => {}} onCancel={() => {}} confirmLabel="Oui" confirmLoading>
+        Corps
+      </ModalPanel>,
+    );
+    expect(html).toContain('aria-busy="true"');
+    expect(html.match(/disabled=""/g)).toHaveLength(1);
+  });
 });

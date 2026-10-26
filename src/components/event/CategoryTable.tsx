@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { EmptyState } from "@/components/ui/Feedback";
@@ -9,6 +10,7 @@ import { CategoryForm } from "./CategoryForm";
 import { CategoryReassignModal } from "./CategoryReassignModal";
 import { CategoryImportTemplatesModal } from "./CategoryImportTemplatesModal";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { toastSuccess } from "@/lib/toast";
 
 type Cat = {
   id: string;
@@ -45,23 +47,22 @@ export function CategoryTable({
     setReassign(null);
   }
 
-  async function remove(c: Cat) {
+  // Renvoie true si la catégorie est supprimée ; sinon la modale de réaffectation s'ouvre (pas de toast).
+  async function remove(c: Cat): Promise<boolean> {
     if (c._count.registrations > 0) {
       setReassign(c);
-      return;
+      return false;
     }
-    if (!confirm(`Supprimer la catégorie « ${c.name} » ?`)) return;
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/${c.id}`, { method: "DELETE" });
     if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
+      const json = await res.clone().json().catch(() => ({}));
       if (json.code === "CATEGORY_HAS_REGISTRATIONS") {
         setReassign(c);
-        return;
+        return false;
       }
-      alert("Échec de la suppression.");
-      return;
+      throw res;
     }
-    refresh();
+    return true;
   }
 
   const modalOpen = adding || editing !== null;
@@ -141,13 +142,21 @@ export function CategoryTable({
                     >
                       <Icon name="pencil" size={15} />
                     </button>
-                    <button
-                      onClick={() => remove(c)}
+                    <ActionButton
+                      variant="link"
+                      confirm={c._count.registrations > 0 ? undefined : `Supprimer la catégorie « ${c.name} » ?`}
+                      action={() => remove(c)}
+                      error="Échec de la suppression."
+                      onSuccess={(deleted) => {
+                        if (!deleted) return;
+                        toastSuccess("Catégorie supprimée.");
+                        void refresh();
+                      }}
                       aria-label="Supprimer"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:no-underline"
                     >
                       <Icon name="trash-2" size={15} />
-                    </button>
+                    </ActionButton>
                   </div>
                 </td>
               </tr>

@@ -3,6 +3,7 @@ import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { approveProfile, ProfileReviewError } from "@/lib/profile-review";
 import { sendProfileApproved } from "@/lib/mail";
+import { notifyProfileDecision } from "@/lib/notifications/triggers";
 
 type Params = { userId: string };
 
@@ -18,6 +19,7 @@ export const POST = withStaffAuth<Params>(
         details: { submissionId: submission.id },
         req,
       });
+      await notifyProfileDecision(userId, session.user.id, "APPROVED");
       sendProfileApproved(userId).catch((err) =>
         console.error("[mail] sendProfileApproved failed", err),
       );

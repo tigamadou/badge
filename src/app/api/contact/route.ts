@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 import { resolveTransporter, buildEmail } from "@/lib/mail";
+import { enqueueEmail, EMAIL_KIND } from "@/lib/jobs/enqueue-email";
 
 export const runtime = "nodejs";
 
@@ -61,21 +62,16 @@ export async function POST(req: Request) {
     <p style="margin:0;white-space:pre-wrap;">${escape(d.message ?? "—")}</p>
   `;
 
-  try {
-    const ctx = await resolveTransporter({});
-    await ctx.transporter.sendMail({
-      from: ctx.from,
-      to: ctx.from,
-      replyTo: d.email,
-      subject: `Contact — ${d.subject}`,
-      html: buildEmail({ title: "Demande de contact", body, ctx }),
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "L'envoi a échoué. Réessayez plus tard." },
-      { status: 502 },
-    );
-  }
+  // Résolu pour le branding et le destinataire (l'expéditeur plateforme) ; l'envoi passe par la file.
+  const ctx = await resolveTransporter({});
+  await enqueueEmail({
+    to: ctx.from,
+    replyTo: d.email,
+    subject: `Contact — ${d.subject}`,
+    html: buildEmail({ title: "Demande de contact", body, ctx }),
+    kind: EMAIL_KIND.CONTACT_MESSAGE,
+    ctx: {},
+  });
 
   return NextResponse.json({ ok: true });
 }

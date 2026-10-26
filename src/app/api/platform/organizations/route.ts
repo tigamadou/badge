@@ -7,6 +7,7 @@ import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { computeSubscriptionDates, DEFAULT_PLAN_NAME } from "@/lib/subscription";
 import { sendUserInvitation } from "@/lib/mail";
+import { notifyOrgCreated, notifyOrgMembershipAdded } from "@/lib/notifications/triggers";
 
 export const GET = withStaffAuth(async (req) => {
   const { searchParams } = new URL(req.url);
@@ -194,6 +195,7 @@ export const POST = withStaffAuth(
       details: { name, slug: finalSlug },
       req,
     });
+    await notifyOrgCreated(result.org.id, session.user.id);
     if (result.subscription) {
       await logActivity({
         type: "SUBSCRIPTION_CREATED",
@@ -229,6 +231,13 @@ export const POST = withStaffAuth(
       targetId: result.owner.id,
       details: { role: "OWNER" },
       req,
+    });
+    await notifyOrgMembershipAdded({
+      userId: result.owner.id,
+      orgId: result.org.id,
+      role: "OWNER",
+      actorId: session.user.id,
+      invitationSent: result.userCreated,
     });
 
     if (result.userCreated) {

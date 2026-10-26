@@ -103,3 +103,13 @@ Changer le mot de passe après le premier login ; `SEED_SUPER_ADMIN_PASSWORD` pe
 Pousser le schéma ou rejouer l'initialisation à la main : `make prod-db-push` / `make preprod-db-push` (équivalent à `docker compose up init`).
 
 Fichiers à recopier sur le serveur après ce changement : `deploy.sh`, `docker-compose.yml` (prod) et `docker-compose.preprod.yml` (preprod). L'entrypoint et le seeder sont dans les images.
+
+## Worker d'emails : service `worker`
+
+Les emails applicatifs passent par une queue MySQL (table `Job`, voir `docs/v4/features/queue-emails.md`). Chaque stack contient un service `worker` qui utilise **la même image que `app`** avec `entrypoint: ["node", "worker.cjs"]` (bundle esbuild copié dans l'image runner par le `Dockerfile`). Il lit `.env.production` / `.env.preprod` et attend `init` et `mysql`.
+
+- `stop_grace_period: 150s` : à l'arrêt (`SIGTERM`), le worker termine les envois en cours.
+- Variables optionnelles : `JOB_POLL_INTERVAL_MS` (défaut 2000), `JOB_EMAIL_CONCURRENCY` (défaut 5).
+- `deploy.sh` démarre le service (`up -d --no-deps init app worker`) ; `.github/workflows/ci.yml` lance le worker avant les e2e.
+- Fichiers à recopier sur le serveur : `deploy.sh`, `docker-compose.yml` (prod) et `docker-compose.preprod.yml` (preprod).
+- Rien n'est déployé par ce changement : le worker sera créé à la prochaine release. Sans lui, les emails restent `PENDING` en base.

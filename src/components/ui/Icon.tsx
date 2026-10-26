@@ -51,6 +51,7 @@ import {
   ChevronDown,
   SlidersHorizontal,
   Minus,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -112,6 +113,7 @@ const ICONS = {
   "chevron-down": ChevronDown,
   sliders: SlidersHorizontal,
   minus: Minus,
+  bell: Bell,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

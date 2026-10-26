@@ -173,6 +173,8 @@ jobs:
       - run: yarn build
       # Demarre le serveur Next en arriere-plan puis attend qu'il reponde.
       - run: yarn start &
+      # Worker d'emails : sans lui, les e2e qui lisent Mailpit n'obtiennent jamais leur email.
+      - run: yarn build:worker && (JOB_POLL_INTERVAL_MS=500 node build/worker.cjs &)
       - run: npx wait-on http://localhost:3000 --timeout 120000
       - run: yarn playwright test
       - uses: actions/upload-artifact@v4

@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
-import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Dropzone, FileBox } from "@/components/ui/FileBox";
 import { Icon } from "@/components/ui/Icon";
+import { toastApiError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type OrgForm = {
   name: string;
@@ -34,9 +35,7 @@ export function SettingsClient({
   initialOrg: OrgForm;
 }) {
   const [org, setOrg] = useState<OrgForm>(initialOrg);
-  const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   function set<K extends keyof OrgForm>(key: K, value: OrgForm[K]) {
     setOrg((o) => ({ ...o, [key]: value }));
@@ -46,47 +45,45 @@ export function SettingsClient({
     const file = files[0];
     if (!file) return;
     setUploadingLogo(true);
-    setMsg(null);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
-    setUploadingLogo(false);
-    if (!res.ok) {
-      setMsg({ ok: false, text: "Échec de l'envoi du logo." });
-      return;
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+      if (!res.ok) throw res;
+      const { storageKey } = await res.json();
+      set("logo", storageKey);
+    } catch (err) {
+      // L'indicateur « Envoi… » sert de loader ; la FileBox affiche le succès.
+      await toastApiError(err, "Échec de l'envoi du logo.");
+    } finally {
+      setUploadingLogo(false);
     }
-    const { storageKey } = await res.json();
-    set("logo", storageKey);
   }
 
-  async function save() {
-    setSaving(true);
-    setMsg(null);
-    const res = await fetch(`/api/org/${orgId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        name: org.name,
-        legalName: org.legalName,
-        addressLine1: org.addressLine1,
-        addressLine2: org.addressLine2,
-        postalCode: org.postalCode,
-        city: org.city,
-        country: org.country,
-        taxId: org.taxId,
-        website: org.website,
-        logo: org.logo,
-        contactEmail: org.contactEmail,
-        contactPhone: org.contactPhone,
-      }),
-    });
-    setSaving(false);
-    if (res.ok) {
-      setMsg({ ok: true, text: "Paramètres enregistrés." });
-    } else {
-      setMsg({ ok: false, text: "Erreur lors de l'enregistrement." });
-    }
-  }
+  const save = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/org/${orgId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: org.name,
+          legalName: org.legalName,
+          addressLine1: org.addressLine1,
+          addressLine2: org.addressLine2,
+          postalCode: org.postalCode,
+          city: org.city,
+          country: org.country,
+          taxId: org.taxId,
+          website: org.website,
+          logo: org.logo,
+          contactEmail: org.contactEmail,
+          contactPhone: org.contactPhone,
+        }),
+      });
+      if (!res.ok) throw res;
+    },
+    { success: "Paramètres enregistrés.", error: "Erreur lors de l'enregistrement." },
+  );
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -100,7 +97,6 @@ export function SettingsClient({
       >
         <Icon name="id-card" size={16} /> Modèle de badge par défaut
       </Link>
-      {msg && <Alert tone={msg.ok ? "success" : "err"}>{msg.text}</Alert>}
 
       <Card>
         <div className="px-6">
@@ -205,14 +201,8 @@ export function SettingsClient({
         <Button type="button" variant="secondary" onClick={() => setOrg(initialOrg)}>
           Annuler
         </Button>
-        <Button onClick={save} className="flex items-center justify-center gap-2" disabled={saving}>
-          {saving ? (
-            <>
-              <Spinner size={16} /> Enregistrement…
-            </>
-          ) : (
-            "Enregistrer"
-          )}
+        <Button onClick={save.run} loading={save.pending}>
+          Enregistrer
         </Button>
       </div>
     </div>

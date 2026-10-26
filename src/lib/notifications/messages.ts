@@ -1,0 +1,264 @@
+import type { EventRole, OrgRole, SubscriptionStatus } from "@prisma/client";
+import type { NotificationContent } from "./types";
+
+export const ROLE_LABELS: Record<OrgRole | EventRole, string> = {
+  OWNER: "Propriétaire",
+  MANAGER: "Gérant",
+  AUDITOR: "Auditeur",
+  ADMIN: "Administrateur",
+  OPERATOR: "Opérateur",
+  PRINTER: "Impression",
+  VIEWER: "Lecteur",
+};
+
+const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+  ACTIVE: "actif",
+  EXPIRED: "expiré",
+  CANCELLED: "annulé",
+};
+
+const enc = encodeURIComponent;
+
+function withReason(sentence: string, reason: string | null): string {
+  return reason ? `${sentence} Motif : ${reason}` : sentence;
+}
+
+export function registrationCreatedMessage(a: {
+  eventId: string;
+  eventTitle: string;
+  registrationId: string;
+  participantName: string;
+  categoryName: string;
+}): NotificationContent {
+  return {
+    title: "Nouvelle inscription",
+    body: `${a.participantName} s'est inscrit(e) à ${a.eventTitle} (catégorie ${a.categoryName}).`,
+    href: `/event/${enc(a.eventId)}/registrations/${enc(a.registrationId)}`,
+    primaryLabel: "Voir l'inscription",
+    links: [{ label: "Voir l'évènement", href: `/event/${enc(a.eventId)}` }],
+  };
+}
+
+export function registrationResubmittedMessage(a: {
+  eventId: string;
+  eventTitle: string;
+  registrationId: string;
+  participantName: string;
+  categoryChanged?: { from: string; to: string };
+}): NotificationContent {
+  const change = a.categoryChanged
+    ? ` Changement de catégorie : ${a.categoryChanged.from} vers ${a.categoryChanged.to}.`
+    : "";
+  return {
+    title: "Inscription resoumise",
+    body: `${a.participantName} a resoumis son inscription à ${a.eventTitle}.${change}`,
+    href: `/event/${enc(a.eventId)}/registrations/${enc(a.registrationId)}`,
+    primaryLabel: "Voir l'inscription",
+    links: [{ label: "Voir l'évènement", href: `/event/${enc(a.eventId)}` }],
+  };
+}
+
+function myRegistration(registrationId: string) {
+  return {
+    href: `/account/registrations/${enc(registrationId)}`,
+    primaryLabel: "Voir mon inscription",
+    links: [],
+  };
+}
+
+export function registrationApprovedMessage(a: {
+  eventTitle: string;
+  registrationId: string;
+}): NotificationContent {
+  return {
+    title: "Inscription approuvée",
+    body: `Votre inscription à ${a.eventTitle} a été approuvée.`,
+    ...myRegistration(a.registrationId),
+  };
+}
+
+export function registrationRejectedMessage(a: {
+  eventTitle: string;
+  registrationId: string;
+  reason: string | null;
+}): NotificationContent {
+  return {
+    title: "Inscription rejetée",
+    body: withReason(`Votre inscription à ${a.eventTitle} a été rejetée.`, a.reason),
+    ...myRegistration(a.registrationId),
+  };
+}
+
+export function badgePrintedMessage(a: {
+  eventTitle: string;
+  registrationId: string;
+}): NotificationContent {
+  return {
+    title: "Badge imprimé",
+    body: `Votre badge pour ${a.eventTitle} a été imprimé.`,
+    ...myRegistration(a.registrationId),
+  };
+}
+
+export function profileSubmittedMessage(a: {
+  userId: string;
+  userName: string;
+}): NotificationContent {
+  return {
+    title: "Profil à valider",
+    body: `${a.userName} a déposé un profil en attente de validation.`,
+    href: `/platform/profiles/${enc(a.userId)}`,
+    primaryLabel: "Voir le profil",
+    links: [],
+  };
+}
+
+export function profileApprovedMessage(): NotificationContent {
+  return {
+    title: "Profil validé",
+    body: "Votre profil a été validé.",
+    href: "/account/profile",
+    primaryLabel: "Voir mon profil",
+    links: [],
+  };
+}
+
+export function profileRejectedMessage(a: { reason: string | null }): NotificationContent {
+  return {
+    title: "Documents refusés",
+    body: withReason("Les documents de votre profil ont été refusés.", a.reason),
+    href: "/account/profile",
+    primaryLabel: "Voir mon profil",
+    links: [],
+  };
+}
+
+export function orgMembershipAddedMessage(a: {
+  orgId: string;
+  orgName: string;
+  role: OrgRole;
+}): NotificationContent {
+  return {
+    title: "Ajout à une organisation",
+    body: `Vous avez été ajouté(e) à l'organisation ${a.orgName} avec le rôle ${ROLE_LABELS[a.role]}.`,
+    href: `/org/${enc(a.orgId)}`,
+    primaryLabel: "Ouvrir l'organisation",
+    links: [],
+  };
+}
+
+export function eventMembershipAddedMessage(a: {
+  eventId: string;
+  eventTitle: string;
+  role: EventRole;
+}): NotificationContent {
+  return {
+    title: "Ajout à un évènement",
+    body: `Vous avez été ajouté(e) à l'évènement ${a.eventTitle} avec le rôle ${ROLE_LABELS[a.role]}.`,
+    href: `/event/${enc(a.eventId)}`,
+    primaryLabel: "Ouvrir l'évènement",
+    links: [],
+  };
+}
+
+export function membershipRoleChangedMessage(a: {
+  target:
+    | { kind: "org"; orgId: string; name: string }
+    | { kind: "event"; eventId: string; name: string };
+  from: OrgRole | EventRole;
+  to: OrgRole | EventRole;
+}): NotificationContent {
+  const isOrg = a.target.kind === "org";
+  const where = isOrg ? `l'organisation ${a.target.name}` : `l'évènement ${a.target.name}`;
+  return {
+    title: "Rôle modifié",
+    body: `Votre rôle dans ${where} est passé de ${ROLE_LABELS[a.from]} à ${ROLE_LABELS[a.to]}.`,
+    href: a.target.kind === "org" ? `/org/${enc(a.target.orgId)}` : `/event/${enc(a.target.eventId)}`,
+    primaryLabel: isOrg ? "Ouvrir l'organisation" : "Ouvrir l'évènement",
+    links: [],
+  };
+}
+
+export function eventRegistrationToggledMessage(a: {
+  eventId: string;
+  eventTitle: string;
+  eventSlug: string;
+  open: boolean;
+}): NotificationContent {
+  return {
+    title: a.open ? "Inscriptions ouvertes" : "Inscriptions fermées",
+    body: a.open
+      ? `Les inscriptions à ${a.eventTitle} sont ouvertes.`
+      : `Les inscriptions à ${a.eventTitle} sont fermées.`,
+    href: `/event/${enc(a.eventId)}`,
+    primaryLabel: "Ouvrir l'évènement",
+    links: [{ label: "Page publique", href: `/e/${enc(a.eventSlug)}` }],
+  };
+}
+
+export function orgCreatedMessage(a: { orgId: string; orgName: string }): NotificationContent {
+  return {
+    title: "Nouvelle organisation",
+    body: `L'organisation ${a.orgName} vient d'être créée.`,
+    href: `/platform/organizations/${enc(a.orgId)}`,
+    primaryLabel: "Voir l'organisation",
+    links: [],
+  };
+}
+
+function subscriptionHref(orgId: string, audience: "org" | "platform"): string {
+  return audience === "org"
+    ? `/org/${enc(orgId)}/subscription`
+    : `/platform/organizations/${enc(orgId)}/subscription`;
+}
+
+export function subscriptionChangedMessage(a: {
+  orgId: string;
+  orgName: string;
+  planName: string;
+  status: SubscriptionStatus;
+  audience: "org" | "platform";
+}): NotificationContent {
+  return {
+    title: "Abonnement modifié",
+    body: `L'abonnement de ${a.orgName} est maintenant le plan ${a.planName} (${SUBSCRIPTION_STATUS_LABELS[a.status]}).`,
+    href: subscriptionHref(a.orgId, a.audience),
+    primaryLabel: "Voir l'abonnement",
+    links: [],
+  };
+}
+
+export function quotaExceededMessage(a: {
+  orgId: string;
+  orgName: string;
+  eventId: string;
+  audience: "org" | "platform";
+}): NotificationContent {
+  return {
+    title: "Quota dépassé",
+    body: `Un évènement a été créé pour ${a.orgName} au-delà du quota de son abonnement.`,
+    href: subscriptionHref(a.orgId, a.audience),
+    primaryLabel: "Voir l'abonnement",
+    links: [
+      a.audience === "org"
+        ? { label: "Voir l'évènement", href: `/event/${enc(a.eventId)}` }
+        : { label: "Voir l'évènement", href: `/platform/organizations/${enc(a.orgId)}/events` },
+    ],
+  };
+}
+
+export function emailFailedMessage(a: {
+  jobId: string;
+  kind: string;
+  recipient: string | null;
+  attempts: number;
+}): NotificationContent {
+  const to = a.recipient ? ` à ${a.recipient}` : "";
+  return {
+    title: "Email en échec",
+    body: `L'envoi de l'email ${a.kind}${to} a échoué après ${a.attempts} tentative(s).`,
+    href: `/platform/jobs/${enc(a.jobId)}`,
+    primaryLabel: "Voir l'envoi",
+    links: [],
+  };
+}

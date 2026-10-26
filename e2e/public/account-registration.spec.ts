@@ -4,7 +4,10 @@ import {
   createTestUser,
   createTestEvent,
   createTestRegistration,
+  createTestCategory,
+  getLatestRegistrationForUser,
   rejectRegistration,
+  setRegistrationStatus,
   getDb,
   disconnectDb,
 } from "../helpers/db";
@@ -37,6 +40,7 @@ test.describe("Account resubmit after rejection", () => {
     await expect(page.getByText(/photo illisible/i)).toBeVisible();
 
     await page.getByRole("button", { name: /resoumettre mon inscription/i }).click();
+    await expect(page.getByText("Inscription resoumise.")).toBeVisible();
 
     // Apres resubmit le client appelle router.refresh ; on lit la BDD apres
     // un court delai.
@@ -47,6 +51,126 @@ test.describe("Account resubmit after rejection", () => {
     });
     expect(updated?.status).toBe("PENDING");
     expect(updated?.rejectionReason).toBeNull();
+  });
+
+  test("le participant change de catégorie en resoumettant une inscription rejetée", async ({
+    page,
+  }) => {
+    const user = await createTestUser({ scope: "resubmit-cat", verified: true, profile: true });
+    const { eventId, categoryId } = await createTestEvent({ scope: "resubmit-cat" });
+    const exposantName = `Exposant-${Date.now()}`;
+    await createTestCategory({ eventId, name: exposantName, number: 2 });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+    await rejectRegistration(regId, "Mauvaise catégorie");
+    await mailpit.clear();
+
+    await loginAs(page, user);
+    await page.goto(`/account/registrations/${regId}`);
+    await expect(page.getByText(/mauvaise catégorie/i)).toBeVisible();
+    await expect(page.getByRole("radio", { name: /Visiteur/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+
+    await page.getByRole("radio", { name: /Exposant/ }).click();
+    await expect(page.getByText(/sera resoumise dans la catégorie/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /resoumettre mon inscription/i }).click();
+    await page.waitForURL(
+      (u) => u.pathname.startsWith("/account/registrations/") && !u.pathname.endsWith(regId),
+    );
+
+    const latest = await getLatestRegistrationForUser(user.id);
+    const newId = latest!.id;
+    expect(latest?.status).toBe("PENDING");
+    expect(newId).not.toBe(regId);
+    expect(newId[0]).toBe("2");
+    expect(await getDb().registration.findUnique({ where: { id: regId } })).toBeNull();
+    const moved = await getDb().registration.findUnique({
+      where: { id: newId },
+      select: { category: { select: { name: true } } },
+    });
+    expect(moved?.category.name).toBe(exposantName);
+
+    await expect(page.getByText(exposantName).first()).toBeVisible();
+
+    // L'ancienne URL n'existe plus (le projet n'a pas de not-found.tsx : 404 Next par defaut).
+    const resp = await page.goto(`/account/registrations/${regId}`);
+    expect(resp?.status()).toBe(404);
+
+    await expectLastActivity({
+      type: "REGISTRATION_RESUBMITTED",
+      userId: user.id,
+      eventId,
+      targetId: newId,
+    });
+    // Suppose que le worker de la queue d'emails tourne en dev.
+    await mailpit.expectMail({
+      to: user.email,
+      subjectPattern: /resoumise/i,
+      bodyPattern: /Exposant-/,
+      timeoutMs: 8000,
+    });
+  });
+
+  test("affiche l'erreur de l'API dans un toast quand l'inscription n'est plus rejetée", async ({
+    page,
+  }) => {
+    const user = await createTestUser({ scope: "resubmit-409", verified: true, profile: true });
+    const { eventId, categoryId } = await createTestEvent({ scope: "resubmit-409" });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+    await rejectRegistration(regId, "Photo illisible");
+
+    await loginAs(page, user);
+    await page.goto(`/account/registrations/${regId}`);
+    const button = page.getByRole("button", { name: /resoumettre mon inscription/i });
+    await expect(button).toBeVisible();
+
+    // La page affiche encore le bouton alors que l'inscription n'est plus rejetée.
+    await setRegistrationStatus(regId, "PENDING");
+    await button.click();
+
+    await expect(
+      page.getByText("Seules les inscriptions rejetées peuvent être resoumises."),
+    ).toBeVisible();
+    const reg = await getDb().registration.findUnique({
+      where: { id: regId },
+      select: { status: true },
+    });
+    expect(reg?.status).toBe("PENDING");
+  });
+
+  test("un double clic n'envoie qu'une requête", async ({ page }) => {
+    const user = await createTestUser({ scope: "resubmit-dbl", verified: true, profile: true });
+    const { eventId, categoryId } = await createTestEvent({ scope: "resubmit-dbl" });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+    await rejectRegistration(regId, "Photo illisible");
+
+    await loginAs(page, user);
+    await page.goto(`/account/registrations/${regId}`);
+    let posts = 0;
+    page.on("request", (req) => {
+      if (req.method() === "POST" && req.url().includes("/resubmit")) posts += 1;
+    });
+
+    await page.getByRole("button", { name: /resoumettre mon inscription/i }).dblclick();
+    await expect(page.getByText("Inscription resoumise.")).toBeVisible();
+    expect(posts).toBe(1);
   });
 
   test("le detail affiche le bloc Pieces fournies avec les apercus", async ({ page }) => {

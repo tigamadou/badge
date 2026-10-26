@@ -11,6 +11,7 @@ import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import ResubmitButton from "./ResubmitButton";
+import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
 
 function formatDate(d: Date): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -36,6 +37,7 @@ export default async function RegistrationDetailPage({
       userId: true,
       user: { select: { profileStatus: true } },
       status: true,
+      categoryId: true,
       badgePrinted: true,
       badgePrintedAt: true,
       rejectionReason: true,
@@ -50,7 +52,15 @@ export default async function RegistrationDetailPage({
       snapshotIdDocument: true,
       snapshotIdDocumentType: true,
       snapshotIdDocumentNumber: true,
-      event: { select: { title: true, date: true, location: true } },
+      event: {
+        select: {
+          title: true,
+          date: true,
+          location: true,
+          banner: true,
+          categories: { select: { id: true, name: true, color: true }, orderBy: { number: "asc" } },
+        },
+      },
       category: { select: { name: true, color: true } },
     },
   });
@@ -62,6 +72,11 @@ export default async function RegistrationDetailPage({
 
   return (
     <div className="space-y-6">
+      <EventCover
+        bannerUrl={eventCoverUrl(registration.event.banner)}
+        title={registration.event.title}
+        variant="hero"
+      />
       <div>
         <Link href="/account" className="inline-flex items-center gap-1 text-sm text-green-600 hover:underline">
           <Icon name="arrow-left" size={14} /> Retour
@@ -111,15 +126,17 @@ export default async function RegistrationDetailPage({
               </div>
             </Alert>
             <p className="text-sm text-slate-600">
-              Vous pouvez corriger les informations de votre profil puis resoumettre votre inscription. Le snapshot
-              soumis sera réécrit avec les valeurs actuelles de votre profil.
+              Vous pouvez corriger les informations de votre profil ou choisir une autre catégorie, puis resoumettre
+              votre inscription. Le snapshot soumis sera réécrit avec les valeurs actuelles de votre profil.
             </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/account/profile" className="text-sm text-green-600 hover:underline">
-                Modifier mon profil
-              </Link>
-              <ResubmitButton registrationId={registration.id} />
-            </div>
+            <Link href="/account/profile" className="inline-block text-sm text-green-600 hover:underline">
+              Modifier mon profil
+            </Link>
+            <ResubmitButton
+              registrationId={registration.id}
+              currentCategoryId={registration.categoryId}
+              categories={registration.event.categories}
+            />
           </CardBody>
         </Card>
       )}

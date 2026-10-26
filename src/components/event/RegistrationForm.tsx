@@ -8,10 +8,14 @@ import { Dropzone, FileBox } from "@/components/ui/FileBox";
 import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { RadioCards } from "@/components/ui/RadioCards";
-import { Alert, Spinner } from "@/components/ui/Feedback";
-import { Icon } from "@/components/ui/Icon";
+import { ActionError, toastApiError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Category = { id: string; name: string; number: number };
+
+type FieldName = "firstName" | "lastName" | "email" | "structure" | "idDocumentNumber";
+type FieldErrors = Partial<Record<FieldName, string>>;
+const FIELD_NAMES: readonly string[] = ["firstName", "lastName", "email", "structure", "idDocumentNumber"];
 
 const SELECT_CLASS =
   "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500";
@@ -48,8 +52,8 @@ export function RegistrationForm({
   const [idDocumentNumber, setIdDocumentNumber] = useState(initial?.idDocumentNumber ?? "");
   const [photo, setPhoto] = useState<string | null>(initial?.photo ?? null);
   const [idDocument, setIdDocument] = useState<string | null>(initial?.idDocument ?? null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [navigating, setNavigating] = useState(false);
   const [uploading, setUploading] = useState<"photo" | "document" | null>(null);
 
   async function uploadReg(
@@ -60,73 +64,109 @@ export function RegistrationForm({
     const file = files[0];
     if (!file) return;
     setUploading(kind);
-    setErr(null);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/upload?kind=${kind}`, {
-      method: "POST",
-      body: fd,
-    });
-    setUploading(null);
-    if (!res.ok) {
-      setErr("Échec de l'envoi du fichier.");
-      return;
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/upload?kind=${kind}`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) throw res;
+      const { storageKey } = await res.json();
+      setter(storageKey);
+    } catch (err) {
+      // L'indicateur « Envoi… » sert de loader ; la FileBox affiche le succès.
+      await toastApiError(err, "Échec de l'envoi du fichier.");
+    } finally {
+      setUploading(null);
     }
-    const { storageKey } = await res.json();
-    setter(storageKey);
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    const url = initial
-      ? `/api/org/${orgId}/events/${eventId}/registrations/${initial.id}`
-      : `/api/org/${orgId}/events/${eventId}/registrations`;
-    const res = await fetch(url, {
-      method: initial ? "PATCH" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        firstName,
-        lastName,
-        email,
-        structure,
-        categoryId,
-        idDocumentType,
-        idDocumentNumber,
-        photo,
-        idDocument,
-      }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setErr(j.error ?? "Échec de l'enregistrement.");
-      setBusy(false);
-      return;
-    }
-    const json = await res.json();
-    router.push(`/event/${eventId}/registrations/${initial?.id ?? json.registration.id}`);
-  }
+  // Motif C + D : les `issues` rattachées à un champ s'affichent sous ce champ, le reste en toast.
+  // Pas de toast de succès : la fiche de l'inscription s'affiche.
+  const save = useAsyncAction(
+    async (): Promise<{ id?: string; fieldErrors?: FieldErrors }> => {
+      const url = initial
+        ? `/api/org/${orgId}/events/${eventId}/registrations/${initial.id}`
+        : `/api/org/${orgId}/events/${eventId}/registrations`;
+      const res = await fetch(url, {
+        method: initial ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          structure,
+          categoryId,
+          idDocumentType,
+          idDocumentNumber,
+          photo,
+          idDocument,
+        }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          issues?: { path?: (string | number)[] }[];
+        };
+        if (j.error === "ALREADY_REGISTERED") {
+          throw new ActionError("Cette personne est déjà inscrite à cet événement.");
+        }
+        const errors: FieldErrors = {};
+        for (const issue of j.issues ?? []) {
+          const field = issue.path?.[0];
+          if (typeof field === "string" && FIELD_NAMES.includes(field)) {
+            errors[field as FieldName] = "Valeur invalide.";
+          }
+        }
+        if (Object.keys(errors).length > 0) return { fieldErrors: errors };
+        throw new ActionError("Échec de l'enregistrement.");
+      }
+      const json = await res.json();
+      return { id: initial?.id ?? json.registration.id };
+    },
+    {
+      onSuccess: (result) => {
+        if (result.fieldErrors) {
+          setFieldErrors(result.fieldErrors);
+          return;
+        }
+        setNavigating(true);
+        router.push(`/event/${eventId}/registrations/${result.id}`);
+      },
+    },
+  );
+  const busy = save.pending || navigating;
 
   return (
-    <form onSubmit={submit} className="max-w-2xl space-y-4">
-      {err && (
-        <Alert tone="err">
-          <Icon name="alert-triangle" size={16} /> {err}
-        </Alert>
-      )}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setFieldErrors({});
+        void save.run();
+      }}
+      className="max-w-2xl space-y-4"
+    >
       <Card>
         <div className="px-6">
           <FormSection title="Identité">
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input label="Prénom" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-                <Input label="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+                <Input label="Prénom" value={firstName} error={fieldErrors.firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                <Input label="Nom" value={lastName} error={fieldErrors.lastName} onChange={(e) => setLastName(e.target.value)} required />
               </div>
-              <Input label="Adresse e-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                label="Adresse e-mail"
+                type="email"
+                value={email}
+                error={fieldErrors.email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
               <Input
                 label="Structure / organisation"
                 value={structure}
+                error={fieldErrors.structure}
                 onChange={(e) => setStructure(e.target.value)}
                 required
               />
@@ -157,6 +197,7 @@ export function RegistrationForm({
                 <Input
                   label="Numéro de pièce"
                   value={idDocumentNumber}
+                  error={fieldErrors.idDocumentNumber}
                   onChange={(e) => setIdDocumentNumber(e.target.value)}
                   required
                 />
@@ -183,16 +224,8 @@ export function RegistrationForm({
       </Card>
 
       <div className="flex justify-end">
-        <Button type="submit" className="flex items-center justify-center gap-2" disabled={busy}>
-          {busy ? (
-            <>
-              <Spinner size={16} /> Enregistrement…
-            </>
-          ) : initial ? (
-            "Mettre à jour"
-          ) : (
-            "Créer l'inscription"
-          )}
+        <Button type="submit" loading={busy}>
+          {initial ? "Mettre à jour" : "Créer l'inscription"}
         </Button>
       </div>
     </form>

@@ -40,6 +40,7 @@ sa CA interne (`tls internal`). Le HTTP est redirige vers HTTPS.
 | `app` | 3785 | `https://badge.local` | Next.js avec hot reload |
 | `mysql` | 33060 | -- | Base de donnees MySQL |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
+| `worker` | -- | -- | Worker de la queue d'emails (`tsx watch`, polling 500 ms) |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
 | `rustfs` | 9001 | `https://s3.badge.local` | Console RustFS (stockage S3, `rustfsadmin` / `rustfsadmin`) |
 | `caddy` | 80 / 443 | -- | Reverse proxy dev HTTPS |
@@ -152,13 +153,19 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 
 | Commande | Description |
 |----------|-------------|
-| `make test` | Suite Vitest complete (unitaire lib + integration API). |
+| `make test [FILE=chemin]` | Suite Vitest complete (unitaire lib + integration API), ou un seul fichier. Arrete le worker pendant l'execution puis le relance. |
 | `make test-unit` | Sous-ensemble unitaire cible sur `src/lib`. |
 | `make test-coverage` | Vitest + rapport de couverture V8. **Seuils 100%** (lignes/branches/fonctions/statements) sur `src/lib/**` et `src/app/api/**` = gate (`vitest.config.ts`). |
-| `make test-e2e` | Playwright (chromium systeme) dans le conteneur, contre `http://localhost:3000`. |
+| `make test-e2e [FILE=chemin]` | Playwright (chromium systeme) dans le conteneur, contre `http://localhost:3000`. Le worker doit tourner (les specs qui lisent Mailpit en dependent). |
 | `make test-e2e-ui` | Playwright mode UI depuis l'hote (fenetre Electron ; app sur `localhost:3785`). |
 | `make test-all` | `lint` + `typecheck` + `test` + `test-e2e`, s'arrete au premier echec. |
 | `make ci` | Memes checks que la CI GitHub : `db-push` + `lint` + `typecheck` + `test-coverage` (seuils 100 %) + `test-e2e`, puis `db-seed`. |
+
+> **Worker d'emails** (spec 23) : les emails passent par une queue MySQL traitee par le service
+> `worker`. Variables `JOB_POLL_INTERVAL_MS` (defaut 2000, 500 en dev) et
+> `JOB_EMAIL_CONCURRENCY` (defaut 5). Diagnostic :
+> `docker compose -f docker-compose.dev.yml logs -f worker`. `make db-push` relance le
+> worker (il a son propre client Prisma). Voir `docs/v4/features/queue-emails.md`.
 
 > **Attention** : `make test` (et `test-coverage`/`test-all`) **vide la base de dev**
 > (`src/test-setup.ts` fait un `deleteMany` global en `beforeEach`). Relancer

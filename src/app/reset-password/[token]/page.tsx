@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
+import { SuccessRing } from "@/components/ui/Feedback";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";
 import { Icon } from "@/components/ui/Icon";
 import { useRecaptcha } from "@/components/auth/Recaptcha";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 function pwScore(v: string): 0 | 1 | 2 | 3 | 4 {
   let s = 0;
@@ -29,27 +31,14 @@ export default function ResetPasswordPage({
   const recaptcha = useRecaptcha();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ password?: string; confirm?: string }>({});
   const [done, setDone] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (password.length < 6) {
-      setError("Le mot de passe doit faire au moins 6 caractères.");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Les mots de passe ne correspondent pas.");
-      return;
-    }
-    setLoading(true);
-    try {
+  const reset = useAsyncAction(
+    async () => {
       const recaptchaToken = await recaptcha.execute("reset_password");
       if (recaptcha.enabled && !recaptchaToken) {
-        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
-        return;
+        throw new ActionError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
       }
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
@@ -57,17 +46,25 @@ export default function ResetPasswordPage({
         // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
         body: JSON.stringify({ token, password, recaptchaToken: recaptchaToken ?? undefined }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error ?? "Lien invalide ou expiré.");
-        return;
-      }
-      setDone(true);
-    } catch {
-      setError("Erreur réseau, réessayez.");
-    } finally {
-      setLoading(false);
+      if (!res.ok) throw res;
+    },
+    { error: "Lien invalide ou expiré.", onSuccess: () => setDone(true) },
+  );
+  const loading = reset.pending;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    // Erreurs de champ : sous les champs, sans requête.
+    if (password.length < 6) {
+      setFieldErrors({ password: "Le mot de passe doit faire au moins 6 caractères." });
+      return;
     }
+    if (password !== confirm) {
+      setFieldErrors({ confirm: "Les mots de passe ne correspondent pas." });
+      return;
+    }
+    setFieldErrors({});
+    void reset.run();
   }
 
   return (
@@ -92,16 +89,12 @@ export default function ResetPasswordPage({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert tone="err">
-              <Icon name="alert-triangle" size={16} /> {error}
-            </Alert>
-          )}
           <div>
             <Input
               label="Nouveau mot de passe"
               type="password"
               value={password}
+              error={fieldErrors.password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="new-password"
@@ -119,19 +112,14 @@ export default function ResetPasswordPage({
             label="Confirmer le mot de passe"
             type="password"
             value={confirm}
+            error={fieldErrors.confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
             autoComplete="new-password"
             disabled={loading}
           />
-          <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
-            {loading ? (
-              <>
-                <Spinner size={16} /> Mise à jour…
-              </>
-            ) : (
-              "Mettre à jour"
-            )}
+          <Button type="submit" className="w-full" loading={loading}>
+            Mettre à jour
           </Button>
         </form>
       )}

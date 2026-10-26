@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { formatEventPeriod } from "@/lib/format-date";
+import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
 
 type Props = {
   // ADR 2026-06-01 (v2-14 Task 12) : `organization` ajoute pour cascade logo
@@ -10,6 +11,7 @@ type Props = {
     endDate?: Date | string | null;
     location: string;
     logo?: string | null;
+    banner?: string | null;
   };
   organization?: { logo?: string | null; website?: string | null };
   contact?: { email?: string; phone?: string };
@@ -18,6 +20,7 @@ type Props = {
 
 export function PublicEventLayout({ event, organization, contact, children }: Props) {
   const logoKey = event.logo ?? organization?.logo ?? null;
+  const coverUrl = eventCoverUrl(event.banner);
 
   // Initiales de l'événement pour le placeholder quand il n'y a pas de logo.
   const initials = event.title
@@ -54,7 +57,14 @@ export function PublicEventLayout({ event, organization, contact, children }: Pr
         </div>
       </header>
 
-      <main className="mx-auto max-w-[720px] px-5 py-8">{children}</main>
+      <main className="mx-auto max-w-[720px] px-5 py-8">
+        {coverUrl && (
+          <div className="mb-6">
+            <EventCover bannerUrl={coverUrl} title={event.title} variant="hero" />
+          </div>
+        )}
+        {children}
+      </main>
 
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-[720px] px-5 py-4 text-center text-xs text-neutral-500">

@@ -7,8 +7,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
-import { Alert, Spinner } from "@/components/ui/Feedback";
-import { Icon } from "@/components/ui/Icon";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { safeInternalPath } from "@/lib/safe-path";
 
 export default function LoginPage() {
@@ -27,26 +26,28 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (res?.error) {
-      setError("Email ou mot de passe incorrect");
-      setLoading(false);
-    } else {
-      router.push(callbackUrl ?? "/select");
-    }
-  }
+  // « Identifiants incorrects » reste inline : l'erreur concerne les deux champs, qui gardent leur bordure rouge.
+  const login = useAsyncAction(
+    async () => {
+      const res = await signIn("credentials", { email, password, redirect: false });
+      return !res?.error;
+    },
+    {
+      error: "Connexion impossible. Réessayez.",
+      // pending repasse à false avant la fin de la navigation : navigating garde le formulaire bloqué.
+      onSuccess: (ok) => {
+        if (!ok) {
+          setError("Email ou mot de passe incorrect");
+          return;
+        }
+        setNavigating(true);
+        router.push(callbackUrl ?? "/select");
+      },
+    },
+  );
+  const loading = login.pending || navigating;
 
   return (
     <AuthCard
@@ -61,13 +62,14 @@ function LoginForm() {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <Alert tone="err">
-            <Icon name="alert-triangle" size={16} /> {error}
-          </Alert>
-        )}
-        <Input
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError("");
+          void login.run();
+        }}
+        className="space-y-4"
+      >        <Input
           label="Adresse e-mail"
           type="email"
           value={email}
@@ -82,7 +84,7 @@ function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          error={error ? " " : undefined}
+          error={error || undefined}
           placeholder="••••••••"
           required
           disabled={loading}
@@ -92,14 +94,8 @@ function LoginForm() {
             Mot de passe oublié ?
           </Link>
         </div>
-        <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
-          {loading ? (
-            <>
-              <Spinner size={16} /> Connexion…
-            </>
-          ) : (
-            "Se connecter"
-          )}
+        <Button type="submit" className="w-full" loading={loading}>
+          Se connecter
         </Button>
       </form>
     </AuthCard>

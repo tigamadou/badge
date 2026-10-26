@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 import { MemberInviteForm } from "./MemberInviteForm";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -15,6 +17,8 @@ function initials(name: string | null): string {
     .join("")
     .toUpperCase();
 }
+
+type MemberRole = "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER";
 
 type Member = {
   id: string;
@@ -42,19 +46,18 @@ export function MemberTable({
     setInviting(false);
   }
 
-  async function setRole(m: Member, role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER") {
-    await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, {
+  async function setRole(m: Member, role: MemberRole) {
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role }),
     });
-    refresh();
+    if (!res.ok) throw res;
   }
 
   async function remove(m: Member) {
-    if (!confirm(`Retirer ${m.user.email} ?`)) return;
-    await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, { method: "DELETE" });
-    refresh();
+    const res = await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, { method: "DELETE" });
+    if (!res.ok) throw res;
   }
 
   return (
@@ -90,43 +93,7 @@ export function MemberTable({
               </tr>
             )}
             {members.map((m) => (
-              <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
-                      {initials(m.user.name)}
-                    </span>
-                    <div>
-                      <div className="text-sm font-medium text-slate-900">{m.user.name}</div>
-                      <div className="text-xs text-slate-400">{m.user.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <select
-                    value={m.role}
-                    onChange={(e) => setRole(m, e.target.value as "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER")}
-                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[13px] font-medium text-slate-700"
-                  >
-                    <option value="ADMIN">Administrateur</option>
-                    <option value="OPERATOR">Opérateur</option>
-                    <option value="PRINTER">Imprimeur</option>
-                    <option value="VIEWER">Observateur</option>
-                  </select>
-                </td>
-                <td className="px-4 py-3 text-xs tabular-nums text-slate-400">
-                  {new Date(m.createdAt).toLocaleDateString("fr-FR")}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => remove(m)}
-                    aria-label="Retirer"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                  >
-                    <Icon name="trash-2" size={15} />
-                  </button>
-                </td>
-              </tr>
+              <MemberRow key={m.id} member={m} setRole={setRole} remove={remove} refresh={refresh} />
             ))}
           </tbody>
         </table>
@@ -145,5 +112,76 @@ export function MemberTable({
         </div>
       )}
     </div>
+  );
+}
+
+function MemberRow({
+  member: m,
+  setRole,
+  remove,
+  refresh,
+}: {
+  member: Member;
+  setRole: (m: Member, role: MemberRole) => Promise<void>;
+  remove: (m: Member) => Promise<void>;
+  refresh: () => Promise<void>;
+}) {
+  // La liste est rechargée aussi en cas d'échec : le select retrouve la valeur serveur.
+  const role = useAsyncAction(
+    async (value: MemberRole) => {
+      try {
+        await setRole(m, value);
+      } catch (err) {
+        await refresh();
+        throw err;
+      }
+    },
+    { success: "Rôle mis à jour.", error: "Échec du changement de rôle.", onSuccess: () => void refresh() },
+  );
+
+  return (
+    <tr className="border-t border-slate-100 hover:bg-slate-50">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+            {initials(m.user.name)}
+          </span>
+          <div>
+            <div className="text-sm font-medium text-slate-900">{m.user.name}</div>
+            <div className="text-xs text-slate-400">{m.user.email}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <select
+          value={m.role}
+          disabled={role.pending}
+          onChange={(e) => role.run(e.target.value as MemberRole)}
+          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[13px] font-medium text-slate-700 disabled:opacity-50"
+        >
+          <option value="ADMIN">Administrateur</option>
+          <option value="OPERATOR">Opérateur</option>
+          <option value="PRINTER">Imprimeur</option>
+          <option value="VIEWER">Observateur</option>
+        </select>
+      </td>
+      <td className="px-4 py-3 text-xs tabular-nums text-slate-400">
+        {new Date(m.createdAt).toLocaleDateString("fr-FR")}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <ActionButton
+          variant="link"
+          confirm={`Retirer ${m.user.email} ?`}
+          action={() => remove(m)}
+          success="Membre retiré."
+          error="Échec du retrait du membre."
+          onSuccess={() => void refresh()}
+          aria-label="Retirer"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:no-underline"
+        >
+          <Icon name="trash-2" size={15} />
+        </ActionButton>
+      </td>
+    </tr>
   );
 }

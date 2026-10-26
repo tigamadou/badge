@@ -4,6 +4,7 @@ import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { rejectProfile, ProfileReviewError } from "@/lib/profile-review";
 import { sendProfileRejected } from "@/lib/mail";
+import { notifyProfileDecision } from "@/lib/notifications/triggers";
 
 type Params = { userId: string };
 
@@ -33,6 +34,7 @@ export const POST = withStaffAuth<Params>(
         details: { reason: submission.rejectionReasonLabel, submissionId: submission.id },
         req,
       });
+      await notifyProfileDecision(userId, session.user.id, "REJECTED", submission.rejectionReasonLabel);
       sendProfileRejected(userId).catch((err) =>
         console.error("[mail] sendProfileRejected failed", err),
       );

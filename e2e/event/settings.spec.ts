@@ -10,6 +10,7 @@ import {
 import { loginAndEnter } from "../helpers/nav";
 import { ensureFixtures } from "../fixtures";
 import { expectLastActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 
 // Page Parametres evenement — /event/[eventId]/settings et /settings/badge
 // Rôle : ADMIN (la page badge exige la permission event.settings.update).
@@ -182,7 +183,7 @@ test.describe("Event — Parametres", () => {
 
     await page.goto(`/event/${eventId}/settings/badge`);
     await page.getByTestId(`select-${installed.id}`).click();
-    await expect(page.getByTestId("save-success")).toBeVisible();
+    await expect(toast(page, "Template enregistré.")).toBeVisible();
 
     const after = await getDb().event.findUnique({
       where: { id: eventId },

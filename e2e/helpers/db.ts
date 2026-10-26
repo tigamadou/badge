@@ -161,12 +161,14 @@ export async function createTestProfileSubmission(opts: {
   status?: "PENDING" | "APPROVED" | "REJECTED";
   rejectionReasonLabel?: string;
   rejectionDetails?: string;
+  photo?: string;
+  createdAt?: Date;
 }): Promise<{ id: string }> {
   const prisma = db();
   const s = await prisma.profileSubmission.create({
     data: {
       userId: opts.userId,
-      photo: "profile/e2e/photos/p.png",
+      photo: opts.photo ?? "profile/e2e/photos/p.png",
       idDocumentType: "CNI",
       idDocumentNumber: "E2E-DOC-1",
       idDocument: "profile/e2e/documents/d.pdf",
@@ -174,6 +176,7 @@ export async function createTestProfileSubmission(opts: {
       rejectionReasonLabel: opts.rejectionReasonLabel ?? null,
       rejectionDetails: opts.rejectionDetails ?? null,
       reviewedAt: opts.status && opts.status !== "PENDING" ? new Date() : null,
+      ...(opts.createdAt ? { createdAt: opts.createdAt } : {}),
     },
     select: { id: true },
   });

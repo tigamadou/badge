@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/FormControls";
-import { Alert } from "@/components/ui/Feedback";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Template = {
   id: string;
@@ -31,29 +31,31 @@ export function CategoryTemplateForm({
   const [number, setNumber] = useState(initial?.number ?? 0);
   const [neutralBadge, setNeutralBadge] = useState(initial?.neutralBadge ?? false);
   const [anonymous, setAnonymous] = useState(initial?.anonymous ?? false);
-  const [err, setErr] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    const url = initial
-      ? `/api/org/${orgId}/templates/${initial.id}`
-      : `/api/org/${orgId}/templates`;
-    const res = await fetch(url, {
-      method: initial ? "PATCH" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, color, number, neutralBadge, anonymous }),
-    });
-    if (!res.ok) {
-      setErr("Échec.");
-      return;
-    }
-    onSaved();
-  }
+  const save = useAsyncAction(
+    async () => {
+      const url = initial
+        ? `/api/org/${orgId}/templates/${initial.id}`
+        : `/api/org/${orgId}/templates`;
+      const res = await fetch(url, {
+        method: initial ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, color, number, neutralBadge, anonymous }),
+      });
+      if (!res.ok) throw res;
+    },
+    // Le toast est global : il s'affiche même si onSaved ferme la modale qui porte ce formulaire.
+    { success: "Modèle enregistré.", error: "Échec de l'enregistrement du modèle.", onSuccess: onSaved },
+  );
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      {err && <Alert tone="err">{err}</Alert>}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save.run();
+      }}
+      className="space-y-4"
+    >
       <Input label="Nom" placeholder="Nom" value={name} onChange={(e) => setName(e.target.value)} required />
       <div className="grid grid-cols-[auto_1fr] items-end gap-3">
         <label className="block">
@@ -84,7 +86,9 @@ export function CategoryTemplateForm({
             Annuler
           </Button>
         )}
-        <Button type="submit">{initial ? "Enregistrer" : "Créer"}</Button>
+        <Button type="submit" loading={save.pending}>
+          {initial ? "Enregistrer" : "Créer"}
+        </Button>
       </div>
     </form>
   );

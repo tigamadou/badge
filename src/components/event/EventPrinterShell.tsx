@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { UserAvatar } from "@/components/layout/UserAvatar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 type Event = { id: string; title: string };
 type Org = { id: string; name: string };
@@ -10,11 +12,13 @@ export function EventPrinterShell({
   org,
   event,
   user,
+  photoUrl,
   children,
 }: {
   org: Org;
   event: Event;
   user: { name: string; email: string };
+  photoUrl?: string | null;
   children: React.ReactNode;
 }) {
   const base = `/event/${event.id}`;
@@ -32,6 +36,9 @@ export function EventPrinterShell({
             <Link href={`${base}/badges`} className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
               Badges
             </Link>
+            <Link href={`${base}/notifications`} className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
+              Notifications
+            </Link>
             <Link href="/profile" className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
               Profil
             </Link>
@@ -47,6 +54,8 @@ export function EventPrinterShell({
           <Link href="/profile" className="hidden flex-none text-sm text-slate-700 hover:underline sm:inline">
             {user.email}
           </Link>
+          <NotificationBell scope={{ kind: "event", eventId: event.id }} />
+          <UserAvatar name={user.name} photoUrl={photoUrl ?? null} size={30} />
         </>
       }
     >

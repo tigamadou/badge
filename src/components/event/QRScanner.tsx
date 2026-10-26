@@ -7,6 +7,7 @@ import { ScanResult as ScanResultPanel } from "./ScannerFrame";
 import { CatPill } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type ScanResult = {
   authorized: boolean;
@@ -31,27 +32,30 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
   const [last, setLast] = useState<ScanResult | null>(null);
   const [manualMode, setManualMode] = useState(false);
   const [manualPayload, setManualPayload] = useState("");
-  const [busy, setBusy] = useState(false);
 
-  async function verifyPayload(payload: string) {
-    setBusy(true);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/scan/verify`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ payload }),
-    });
-    const json = await res.json();
-    const result: ScanResult = {
-      authorized: json.authorized ?? false,
-      registration: json.registration,
-      error: json.error,
-      message: json.message,
-      scannedAt: new Date(),
-    };
-    setLast(result);
-    setHistory((h) => [result, ...h].slice(0, 10));
-    setBusy(false);
-  }
+  // La carte de résultat est l'unique retour de succès (pas de toast). Une erreur réseau ou une
+  // réponse non JSON lève : toast de repli, et le hook libère le verrou (garde anti double scan).
+  const { run: verifyPayload, pending: busy } = useAsyncAction(
+    async (payload: string) => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/scan/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ payload }),
+      });
+      const json = await res.json();
+      const result: ScanResult = {
+        authorized: json.authorized ?? false,
+        registration: json.registration,
+        error: json.error,
+        message: json.message,
+        scannedAt: new Date(),
+      };
+      setLast(result);
+      setHistory((h) => [result, ...h].slice(0, 10));
+      setManualPayload("");
+    },
+    { error: "Vérification impossible. Réessayez." },
+  );
 
   useEffect(() => {
     if (manualMode) return;
@@ -89,7 +93,6 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
     e.preventDefault();
     if (!manualPayload) return;
     await verifyPayload(manualPayload);
-    setManualPayload("");
   }
 
   return (
@@ -113,7 +116,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
                 placeholder="ID de badge ou contenu QR"
               />
             </div>
-            <Button type="submit" disabled={busy || !manualPayload}>
+            <Button type="submit" loading={busy} disabled={!manualPayload}>
               Vérifier
             </Button>
           </form>

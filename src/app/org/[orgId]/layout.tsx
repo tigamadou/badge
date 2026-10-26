@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
+import { getApprovedPhotoUrl } from "@/lib/approved-photo";
 import { hasOrgRole } from "@/lib/auth-helpers";
 import { resolveOrgLimits } from "@/lib/subscription";
 import { OrgShell } from "@/components/admin/OrgShell";
@@ -38,6 +39,8 @@ export default async function OrgLayout({
     redirect("/select");
   }
 
+  const photoUrl = await getApprovedPhotoUrl(ctx.user.id);
+
   const orgs = await prisma.organization.findMany({
     where: ctx.isStaff
       ? {}
@@ -69,6 +72,7 @@ export default async function OrgLayout({
       user={{ name: ctx.user.name, email: ctx.user.email, isStaff: ctx.isStaff }}
       orgs={orgs}
       orgRole={orgRole}
+      photoUrl={photoUrl}
     >
       {content}
     </OrgShell>

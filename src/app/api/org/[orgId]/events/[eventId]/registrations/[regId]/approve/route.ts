@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendStatusNotification } from "@/lib/mail";
+import { notifyRegistrationDecision } from "@/lib/notifications/triggers";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
@@ -45,6 +46,8 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     targetId: regId,
     req,
   });
+
+  await notifyRegistrationDecision(regId, session.user.id, "APPROVED");
 
   try {
     await sendStatusNotification(regId);

@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
-import { Alert, Spinner } from "@/components/ui/Feedback";
-import { Icon } from "@/components/ui/Icon";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { slugify } from "@/lib/slugify";
 
 type FormState = {
@@ -25,8 +24,7 @@ const INITIAL_FORM: FormState = {
 export function OrgCreationForm() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
   function set<K extends keyof FormState>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -37,43 +35,45 @@ export function OrgCreationForm() {
   // preview du slug de base, pas une garantie.
   const derivedSlug = slugify(form.name.trim());
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
+  const create = useAsyncAction(
+    async () => {
+      const payload: Record<string, unknown> = {
+        name: form.name.trim(),
+        ownerEmail: form.ownerEmail.trim(),
+      };
+      if (form.ownerName.trim()) payload.ownerName = form.ownerName.trim();
+      if (derivedSlug) payload.slug = derivedSlug;
 
-    const payload: Record<string, unknown> = {
-      name: form.name.trim(),
-      ownerEmail: form.ownerEmail.trim(),
-    };
-    if (form.ownerName.trim()) payload.ownerName = form.ownerName.trim();
-    if (derivedSlug) payload.slug = derivedSlug;
-
-    const res = await fetch("/api/platform/organizations", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    setSubmitting(false);
-    if (res.ok) {
+      const res = await fetch("/api/platform/organizations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw res;
       const json = await res.json();
-      router.push(`/platform/organizations/${json.org.id}`);
-    } else {
-      const json = await res.json().catch(() => ({}));
-      setError(json.error ?? "Erreur à la création.");
-    }
-  }
+      return json.org.id as string;
+    },
+    {
+      error: "Erreur à la création.",
+      // pending repasse à false avant la fin de la navigation : navigating garde le bouton bloqué.
+      onSuccess: (id) => {
+        setNavigating(true);
+        router.push(`/platform/organizations/${id}`);
+      },
+    },
+  );
 
-  const canSubmit = form.name.trim() && form.ownerEmail.trim() && !submitting;
+  const submitting = create.pending || navigating;
+  const canSubmit = form.name.trim() && form.ownerEmail.trim();
 
   return (
-    <form onSubmit={submit} className="max-w-2xl space-y-4">
-      {error && (
-        <Alert tone="err">
-          <Icon name="alert-triangle" size={16} /> {error}
-        </Alert>
-      )}
-
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void create.run();
+      }}
+      className="max-w-2xl space-y-4"
+    >
       <Card>
         <div className="px-6">
           <FormSection
@@ -119,14 +119,8 @@ export function OrgCreationForm() {
         <Button type="button" variant="secondary" onClick={() => router.push("/platform/organizations")}>
           Annuler
         </Button>
-        <Button type="submit" className="flex items-center justify-center gap-2" disabled={!canSubmit}>
-          {submitting ? (
-            <>
-              <Spinner size={16} /> Création…
-            </>
-          ) : (
-            "Créer l'organisation"
-          )}
+        <Button type="submit" loading={submitting} disabled={!canSubmit}>
+          Créer l&apos;organisation
         </Button>
       </div>
     </form>

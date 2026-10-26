@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { RadioCards } from "@/components/ui/RadioCards";
-import { Alert, Spinner } from "@/components/ui/Feedback";
-import { Icon } from "@/components/ui/Icon";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type OrgLite = { id: string; name: string };
 
@@ -35,40 +34,45 @@ export function UserCreationForm({
     orgId: "",
     orgRole: "OWNER" as "OWNER" | "MANAGER" | "AUDITOR",
   });
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setMsg(null);
-    const payload: Record<string, unknown> = {
-      email: form.email.trim(),
-      name: form.name.trim(),
-      type: form.type,
-    };
-    if (form.type === "staff") payload.staffRole = form.staffRole;
-    if (form.type === "client" && form.orgId) {
-      payload.orgId = form.orgId;
-      payload.orgRole = form.orgRole;
-    }
+  const create = useAsyncAction(
+    async (): Promise<{ id?: string; emailError?: string }> => {
+      const payload: Record<string, unknown> = {
+        email: form.email.trim(),
+        name: form.name.trim(),
+        type: form.type,
+      };
+      if (form.type === "staff") payload.staffRole = form.staffRole;
+      if (form.type === "client" && form.orgId) {
+        payload.orgId = form.orgId;
+        payload.orgRole = form.orgRole;
+      }
 
-    const res = await fetch("/api/platform/users", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    setBusy(false);
-    if (res.ok) {
+      const res = await fetch("/api/platform/users", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 409) return { emailError: "E-mail déjà utilisé." };
+      if (!res.ok) throw res;
       const json = await res.json();
-      router.push(`/platform/users/${json.user.id}`);
-    } else if (res.status === 409) {
-      setMsg("E-mail déjà utilisé.");
-    } else {
-      const json = await res.json().catch(() => ({}));
-      setMsg(json.error ?? "Erreur à la création.");
-    }
-  }
+      return { id: json.user.id as string };
+    },
+    {
+      error: "Erreur à la création.",
+      onSuccess: (result) => {
+        if (result.emailError) {
+          setEmailError(result.emailError);
+          return;
+        }
+        setNavigating(true);
+        router.push(`/platform/users/${result.id}`);
+      },
+    },
+  );
+  const busy = create.pending || navigating;
 
   const typeOptions = [
     { value: "client", title: "Client", description: "Rattaché à une organisation.", color: "#16a34a" },
@@ -78,13 +82,14 @@ export function UserCreationForm({
   ];
 
   return (
-    <form onSubmit={submit} className="max-w-2xl space-y-4">
-      {msg && (
-        <Alert tone="err">
-          <Icon name="alert-triangle" size={16} /> {msg}
-        </Alert>
-      )}
-
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setEmailError(null);
+        void create.run();
+      }}
+      className="max-w-2xl space-y-4"
+    >
       <Card>
         <div className="px-6">
           <FormSection title="Compte">
@@ -94,6 +99,7 @@ export function UserCreationForm({
                 type="email"
                 required
                 value={form.email}
+                error={emailError ?? undefined}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               />
               <Input
@@ -177,18 +183,8 @@ export function UserCreationForm({
         <Button type="button" variant="secondary" onClick={() => router.push("/platform/users")}>
           Annuler
         </Button>
-        <Button
-          type="submit"
-          className="flex items-center justify-center gap-2"
-          disabled={busy || !form.email.trim() || !form.name.trim()}
-        >
-          {busy ? (
-            <>
-              <Spinner size={16} /> Création…
-            </>
-          ) : (
-            "Créer et inviter"
-          )}
+        <Button type="submit" loading={busy} disabled={!form.email.trim() || !form.name.trim()}>
+          Créer et inviter
         </Button>
       </div>
     </form>

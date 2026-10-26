@@ -11,6 +11,7 @@ import {
 } from "../helpers/db";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 
 // Notes : le parcours badges (liste, PDF, marquage imprime) est garde par la
 // permission `badge.print` (ADMIN, OPERATOR, PRINTER) et non par la hierarchie
@@ -191,7 +192,7 @@ test.describe("Event — Badges", () => {
     expect(zip.headers()["content-type"]).toBe("application/zip");
 
     await page.getByRole("button", { name: "Marquer imprimés" }).click();
-    await expect(page.getByText("1 badge(s) marqué(s) imprimé(s).")).toBeVisible();
+    await expect(toast(page, "1 badge(s) marqué(s) imprimé(s).")).toBeVisible();
     await expectLastActivity({ type: "BADGE_BATCH_PRINTED", userId: admin.id, eventId });
   });
 

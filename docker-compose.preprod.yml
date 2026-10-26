@@ -53,6 +53,24 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Worker de la queue d'emails (spec 23) : meme image que app, autre commande.
+  worker:
+    container_name: badge-worker-preprod
+    image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}:${BADGE_TAG:-preprod}
+    entrypoint: ["node", "worker.cjs"]
+    env_file:
+      - .env.preprod
+    networks:
+      - default
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+    # Laisse le temps de finir les envois en cours (SEND_TIMEOUT_MS = 2 min au pire).
+    stop_grace_period: 150s
+    restart: unless-stopped
+
   phpmyadmin:
     container_name: badge-pma-preprod
     image: phpmyadmin:5

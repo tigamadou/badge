@@ -88,6 +88,8 @@ Reutiliser avant d'en creer (`e2e/helpers/`) :
   `activeSubscription: false` pour une org bloquee), `cleanupE2ETestData`.
 - `audit.ts` — `expectLastActivity` / `expectNoActivity`.
 - `mailpit.ts` — `mailpit.expectMail`. `pdf.ts` — `expectPdfResponse`.
+- `feedback.ts` — `toast`, `countRequests`, `failWith500Html`, `abortNetwork`
+  (toasts sonner, double clic, erreurs simulées).
 - `fixtures/` — `ensureFixtures()` (jpeg, pdf, txt, fichier > 5 Mo).
 
 ## Conventions d'execution

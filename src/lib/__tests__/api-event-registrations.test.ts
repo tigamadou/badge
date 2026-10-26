@@ -621,6 +621,55 @@ describe("POST /registrations/[regId]/reject", () => {
     expect(vi.mocked(sendStatusNotification)).toHaveBeenCalledWith(r.id);
   });
 
+  it("refuse de rejeter une inscription dont le badge est imprime", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    await prisma.registration.update({
+      where: { id: r.id },
+      data: { badgePrinted: true, badgePrintedAt: new Date() },
+    });
+    const reason = await seedRegReason("REGISTRATION");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    vi.mocked(sendStatusNotification).mockClear();
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reasonId: reason.id }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("BADGE_ALREADY_PRINTED");
+
+    const after = await prisma.registration.findUnique({ where: { id: r.id } });
+    expect(after?.status).toBe("APPROVED");
+    expect(after?.rejectionReason).toBeNull();
+    expect(await prisma.activityLog.count({ where: { type: "REGISTRATION_REJECTED", targetId: r.id } })).toBe(0);
+    expect(vi.mocked(sendStatusNotification)).not.toHaveBeenCalled();
+  });
+
+  it("rejette toujours une inscription approuvee non imprimee", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id, { status: "APPROVED" });
+    const reason = await seedRegReason("REGISTRATION");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/reject/route");
+    const res = await POST(
+      new NextRequest("http://localhost/x", {
+        method: "POST",
+        body: JSON.stringify({ reasonId: reason.id }),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+    );
+    expect(res.status).toBe(200);
+    expect((await prisma.registration.findUnique({ where: { id: r.id } }))?.status).toBe("REJECTED");
+  });
+
   it("accepte un motif de portee BOTH", async () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id, { status: "PENDING" });

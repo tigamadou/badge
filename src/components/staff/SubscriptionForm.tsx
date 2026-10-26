@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export type SubscriptionPeriodValue = "MONTHLY" | "ANNUAL";
 export type PlanOption = { id: string; name: string; period: SubscriptionPeriodValue };
@@ -33,9 +35,6 @@ export function SubscriptionForm({
   const [overrideMaxParticipants, setOverrideMaxParticipants] = useState(
     current?.overrideMaxParticipantsPerEvent ?? "",
   );
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
-  const [busy, setBusy] = useState(false);
   // Un abonnement existant s'affiche en resume ; le formulaire n'apparait que sur demande.
   const [editing, setEditing] = useState(current == null);
 
@@ -47,38 +46,36 @@ export function SubscriptionForm({
     return Number.parseInt(t, 10);
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setOk(false);
-    setBusy(true);
-    const res = await fetch(`/api/platform/organizations/${orgId}/subscription`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        planId,
-        status,
-        overrideMaxEvents: parseLimit(overrideMaxEvents),
-        overrideMaxParticipantsPerEvent: parseLimit(overrideMaxParticipants),
-      }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j.error ?? "Erreur.");
-      return;
-    }
-    setOk(true);
-    setEditing(false);
-    router.refresh();
-  }
+  const save = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/organizations/${orgId}/subscription`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          status,
+          overrideMaxEvents: parseLimit(overrideMaxEvents),
+          overrideMaxParticipantsPerEvent: parseLimit(overrideMaxParticipants),
+        }),
+      });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Abonnement enregistré.",
+      error: "Erreur à l'enregistrement de l'abonnement.",
+      onSuccess: () => {
+        setEditing(false);
+        router.refresh();
+      },
+    },
+  );
+  const busy = save.pending;
 
   function cancel() {
     setPlanId(current?.planId ?? plans[0]?.id ?? "");
     setStatus(current?.status ?? "ACTIVE");
     setOverrideMaxEvents(current?.overrideMaxEvents ?? "");
     setOverrideMaxParticipants(current?.overrideMaxParticipantsPerEvent ?? "");
-    setError(null);
     setEditing(false);
   }
 
@@ -105,22 +102,24 @@ export function SubscriptionForm({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              setOk(false);
-              setEditing(true);
-            }}
+            onClick={() => setEditing(true)}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             Modifier
           </button>
-          {ok && <span className="text-sm text-green-600">Abonnement enregistré.</span>}
         </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save.run();
+      }}
+      className="max-w-lg space-y-4 rounded-lg border border-slate-200 bg-white p-4"
+    >
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-slate-600">Plan</span>
         <select
@@ -180,13 +179,9 @@ export function SubscriptionForm({
         </label>
       </div>
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={busy || !planId}
-          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-        >
+        <Button type="submit" loading={busy} disabled={!planId}>
           Enregistrer l&apos;abonnement
-        </button>
+        </Button>
         {current && (
           <button
             type="button"
@@ -197,7 +192,6 @@ export function SubscriptionForm({
             Annuler
           </button>
         )}
-        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </form>
   );

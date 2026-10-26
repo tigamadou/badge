@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { formatEventDate } from "@/lib/format-date";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 // Apercu du PDF serveur (template de l'evenement), telechargement et marquage
 // "imprime" explicite d'un badge. Un apercu ou un telechargement ne marque rien.
@@ -24,8 +26,6 @@ export function BadgePrintActions({
 }) {
   const [printed, setPrinted] = useState(initialPrinted);
   const [printedAt, setPrintedAt] = useState(initialPrintedAt);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const pdfUrl = `/api/org/${orgId}/events/${eventId}/badges/${registrationId}`;
   const blocked = archived
@@ -34,26 +34,23 @@ export function BadgePrintActions({
       ? "Seules les inscriptions approuvées peuvent être marquées imprimées."
       : null;
 
-  async function markPrinted() {
-    setBusy(true);
-    setError(null);
-    try {
+  // Le message de l'API (409 « Seules les inscriptions approuvées… ») passe par toastApiError.
+  const markPrinted = useAsyncAction(
+    async () => {
       const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${registrationId}/print`, {
         method: "POST",
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        setError(json?.message ?? "Le marquage a échoué.");
-        return;
-      }
-      setPrinted(true);
-      setPrintedAt(new Date().toISOString());
-    } catch {
-      setError("Le marquage a échoué.");
-    } finally {
-      setBusy(false);
-    }
-  }
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Badge marqué imprimé.",
+      error: "Le marquage a échoué.",
+      onSuccess: () => {
+        setPrinted(true);
+        setPrintedAt(new Date().toISOString());
+      },
+    },
+  );
 
   return (
     <div className="space-y-4">
@@ -69,20 +66,19 @@ export function BadgePrintActions({
         >
           Télécharger
         </a>
-        <button
+        <Button
           type="button"
-          onClick={markPrinted}
-          disabled={blocked !== null || busy}
-          className="inline-flex items-center rounded-lg bg-green-600 px-3 py-2 text-[13px] font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => void markPrinted.run()}
+          loading={markPrinted.pending}
+          disabled={blocked !== null}
         >
           Marquer imprimé
-        </button>
+        </Button>
         <span className="text-[13px] text-slate-500">
           {printed ? (printedAt ? `Imprimé le ${formatEventDate(printedAt)}` : "Imprimé") : "Non imprimé"}
         </span>
       </div>
       {blocked && <p className="text-[13px] text-slate-500">{blocked}</p>}
-      {error && <p className="text-[13px] text-red-600">{error}</p>}
     </div>
   );
 }

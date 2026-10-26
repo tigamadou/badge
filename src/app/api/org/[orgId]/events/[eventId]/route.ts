@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
+import { notifyEventRegistrationToggled } from "@/lib/notifications/triggers";
 import {
   MAX_SECURITY_INSTRUCTIONS,
   MAX_SECURITY_INSTRUCTION_CHARS,
@@ -148,6 +149,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
         eventId,
         req,
       });
+      await notifyEventRegistrationToggled(eventId, parsed.data.registrationOpen, session.user.id);
     }
 
     return NextResponse.json({

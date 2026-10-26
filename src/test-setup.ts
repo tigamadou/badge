@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 // Cet hook tourne AVANT le beforeEach de chaque fichier de tests (qui peut
 // rester en place pour delete des entites supplementaires ou reset des mocks).
 beforeEach(async () => {
+  await prisma.notification.deleteMany();
+  await prisma.job.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.subscription.deleteMany();
   await prisma.plan.deleteMany();

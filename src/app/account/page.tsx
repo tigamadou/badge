@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Alert, EmptyState } from "@/components/ui/Feedback";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
+import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
 
 function fmtDay(d: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric" }).format(d);
@@ -32,7 +33,7 @@ export default async function AccountHomePage() {
         status: true,
         rejectionReason: true,
         createdAt: true,
-        event: { select: { title: true, date: true, location: true, slug: true } },
+        event: { select: { title: true, date: true, location: true, slug: true, banner: true } },
         category: { select: { name: true, color: true } },
       },
     }),
@@ -82,6 +83,11 @@ export default async function AccountHomePage() {
                 href={`/account/registrations/${r.id}`}
                 className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300"
               >
+                {r.event.banner && (
+                  <div className="hidden w-28 flex-none sm:block">
+                    <EventCover bannerUrl={eventCoverUrl(r.event.banner)} title={r.event.title} variant="thumb" />
+                  </div>
+                )}
                 <div className="w-14 flex-none rounded-lg border border-slate-200 bg-slate-50 py-2 text-center">
                   <div className="text-xl font-bold leading-none tabular-nums text-slate-900">{fmtDay(r.event.date)}</div>
                   <div className="mt-0.5 text-[11px] uppercase text-slate-400">{fmtMonth(r.event.date)}</div>

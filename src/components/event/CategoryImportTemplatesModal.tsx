@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Tpl = { id: string; name: string; color: string; number: number };
 
@@ -18,7 +20,6 @@ export function CategoryImportTemplatesModal({
 }) {
   const [templates, setTemplates] = useState<Tpl[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,22 +33,26 @@ export function CategoryImportTemplatesModal({
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
 
-  async function submit() {
-    if (selected.length === 0) return;
-    setBusy(true);
-    setErr(null);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/import-templates`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ templateIds: selected }),
-    });
-    if (!res.ok) {
-      setErr("Échec de l'import.");
-      setBusy(false);
-      return;
-    }
-    onDone();
-  }
+  // Le chargement initial (GET) n'est pas une action : son erreur reste inline dans la modale.
+  const { run: submit, pending: busy } = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories/import-templates`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ templateIds: selected }),
+      });
+      if (!res.ok) throw res;
+      return selected.length;
+    },
+    // Le toast est global : il survit à la fermeture de la modale par onDone.
+    {
+      error: "Échec de l'import.",
+      onSuccess: (count) => {
+        toastSuccess(`${count} modèle(s) importé(s).`);
+        onDone();
+      },
+    },
+  );
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-20">
@@ -72,8 +77,8 @@ export function CategoryImportTemplatesModal({
           <Button variant="secondary" onClick={onCancel} disabled={busy}>
             Annuler
           </Button>
-          <Button onClick={submit} disabled={busy || selected.length === 0}>
-            {busy ? "..." : `Importer (${selected.length})`}
+          <Button onClick={() => submit()} loading={busy} disabled={selected.length === 0}>
+            {`Importer (${selected.length})`}
           </Button>
         </div>
       </div>

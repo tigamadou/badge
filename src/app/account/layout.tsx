@@ -4,17 +4,11 @@ import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getApprovedPhotoUrl } from "@/lib/approved-photo";
 import { AccountNav } from "@/components/public/AccountNav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
-
-function initials(name: string | null): string {
-  return (name || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
+import { UserAvatar } from "@/components/layout/UserAvatar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -30,6 +24,8 @@ export default async function AccountLayout({ children }: { children: React.Reac
     redirect("/login?callbackUrl=/account");
   }
 
+  const photoUrl = await getApprovedPhotoUrl(session.user.id as string);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
@@ -42,9 +38,8 @@ export default async function AccountLayout({ children }: { children: React.Reac
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-slate-600 sm:inline">{user.name}</span>
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-brand-navy">
-              {initials(user.name)}
-            </span>
+            <NotificationBell scope={{ kind: "participant" }} />
+            <UserAvatar name={user.name} photoUrl={photoUrl} />
             <LogoutButton
               label="Se déconnecter"
               labelClassName="hidden sm:inline"

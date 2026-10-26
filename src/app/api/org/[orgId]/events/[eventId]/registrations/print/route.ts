@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendBadgePrintedNotification } from "@/lib/mail";
+import { notifyBadgePrinted } from "@/lib/notifications/triggers";
 
 const schema = z.object({ ids: z.array(z.string()).min(1).max(500) });
 
@@ -32,6 +33,7 @@ export const POST = withEventAuth({ permission: "badge.print" }, async (req, { o
     details: { count: ids.length },
     req,
   });
+  await notifyBadgePrinted(ids, session.user.id);
   for (const id of ids) {
     try {
       await sendBadgePrintedNotification(id);

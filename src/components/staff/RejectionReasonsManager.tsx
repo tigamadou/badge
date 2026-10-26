@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export type RejectionScope = "PROFILE" | "REGISTRATION" | "BOTH";
 export type RejectionReasonRow = {
@@ -28,8 +30,6 @@ export function RejectionReasonsManager({
   const [label, setLabel] = useState("");
   const [scope, setScope] = useState<RejectionScope>("PROFILE");
   const [sortOrder, setSortOrder] = useState("0");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<RejectionReasonRow | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editScope, setEditScope] = useState<RejectionScope>("PROFILE");
@@ -37,25 +37,26 @@ export function RejectionReasonsManager({
   const [editError, setEditError] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<RejectionReasonRow | null>(null);
 
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
-    const res = await fetch("/api/platform/rejection-reasons", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ label, scope, sortOrder: Number.parseInt(sortOrder, 10) || 0 }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setError("Erreur de création.");
-      return;
-    }
-    setLabel("");
-    setScope("PROFILE");
-    setSortOrder("0");
-    router.refresh();
-  }
+  const create = useAsyncAction(
+    async () => {
+      const res = await fetch("/api/platform/rejection-reasons", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ label, scope, sortOrder: Number.parseInt(sortOrder, 10) || 0 }),
+      });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Motif créé.",
+      error: "Erreur de création.",
+      onSuccess: () => {
+        setLabel("");
+        setScope("PROFILE");
+        setSortOrder("0");
+        router.refresh();
+      },
+    },
+  );
 
   function openEdit(reason: RejectionReasonRow) {
     setEditing(reason);
@@ -65,49 +66,65 @@ export function RejectionReasonsManager({
     setEditError(null);
   }
 
-  async function saveEdit() {
-    if (!editing || busy) return;
-    const label = editLabel.trim();
-    if (label === "") {
+  const saveEdit = useAsyncAction(
+    async () => {
+      if (!editing) return;
+      const res = await fetch(`/api/platform/rejection-reasons/${editing.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          label: editLabel.trim(),
+          scope: editScope,
+          sortOrder: Number.parseInt(editSortOrder, 10) || 0,
+        }),
+      });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Motif modifié.",
+      error: "Erreur de modification.",
+      onSuccess: () => {
+        setEditing(null);
+        router.refresh();
+      },
+    },
+  );
+
+  function submitEdit() {
+    // Erreur de champ : affichée sous le libellé, sans requête.
+    if (editLabel.trim() === "") {
       setEditError("Le libellé est obligatoire.");
       return;
     }
-    setBusy(true);
-    const res = await fetch(`/api/platform/rejection-reasons/${editing.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        label,
-        scope: editScope,
-        sortOrder: Number.parseInt(editSortOrder, 10) || 0,
-      }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setEditError("Erreur de modification.");
-      return;
-    }
-    setEditing(null);
-    router.refresh();
+    setEditError(null);
+    void saveEdit.run();
   }
 
-  async function confirmArchive() {
-    if (!archiving || busy) return;
-    setBusy(true);
-    const res = await fetch(`/api/platform/rejection-reasons/${archiving.id}`, { method: "DELETE" });
-    setBusy(false);
-    if (!res.ok) {
-      setError("Erreur d'archivage.");
-    }
-    setArchiving(null);
-    router.refresh();
-  }
+  const archive = useAsyncAction(
+    async () => {
+      if (!archiving) return;
+      const res = await fetch(`/api/platform/rejection-reasons/${archiving.id}`, { method: "DELETE" });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Motif archivé.",
+      error: "Erreur d'archivage.",
+      onSuccess: () => {
+        setArchiving(null);
+        router.refresh();
+      },
+    },
+  );
+  const busy = create.pending || saveEdit.pending || archive.pending;
 
   return (
     <div className="space-y-6">
       {canManage && (
         <form
-          onSubmit={create}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void create.run();
+          }}
           className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4"
         >
           <label className="flex flex-1 flex-col gap-1 text-sm">
@@ -141,14 +158,9 @@ export function RejectionReasonsManager({
               className="w-24 rounded-lg border border-slate-300 px-3 py-2"
             />
           </label>
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-          >
+          <Button type="submit" loading={create.pending} disabled={busy}>
             Ajouter
-          </button>
-          {error && <p className="w-full text-sm text-red-600">{error}</p>}
+          </Button>
         </form>
       )}
 
@@ -204,8 +216,9 @@ export function RejectionReasonsManager({
       <Modal
         open={editing !== null}
         title="Modifier le motif"
-        confirmLabel={busy ? "Enregistrement…" : "Enregistrer"}
-        onConfirm={saveEdit}
+        confirmLabel="Enregistrer"
+        confirmLoading={saveEdit.pending}
+        onConfirm={submitEdit}
         onCancel={() => setEditing(null)}
       >
         <div className="space-y-3">
@@ -251,7 +264,8 @@ export function RejectionReasonsManager({
         title="Archiver le motif"
         confirmLabel="Archiver"
         confirmVariant="danger"
-        onConfirm={confirmArchive}
+        confirmLoading={archive.pending}
+        onConfirm={archive.run}
         onCancel={() => setArchiving(null)}
       >
         Le motif « {archiving?.label} » ne sera plus proposé lors des refus. Les décisions déjà prises

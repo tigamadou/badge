@@ -2,14 +2,18 @@ import type { StaffRole } from "@prisma/client";
 import { SidebarNav, type NavEntry } from "@/components/admin/SidebarNav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { AppShell } from "@/components/layout/AppShell";
+import { UserAvatar } from "@/components/layout/UserAvatar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 const NAV: NavEntry[] = [
   { href: "/platform", label: "Tableau de bord", icon: "layout-dashboard", exact: true },
+  { href: "/platform/notifications", label: "Notifications", icon: "bell" },
   { href: "/platform/organizations", label: "Organisations", icon: "building-2" },
   { href: "/platform/profiles", label: "Profils", icon: "user-check" },
   { href: "/platform/plans", label: "Plans", icon: "credit-card" },
   { href: "/platform/users", label: "Utilisateurs", icon: "users" },
   { href: "/platform/badge-templates", label: "Templates de badge", icon: "id-card" },
+  { href: "/platform/jobs", label: "Emails", icon: "mail" },
   { href: "/platform/settings", label: "Paramètres", icon: "settings" },
   { href: "/platform/activity", label: "Journal", icon: "scroll-text" },
 ];
@@ -21,20 +25,13 @@ const ROLE_LABEL: Record<StaffRole, string> = {
   STAFF_OBSERVER: "Observateur",
 };
 
-function initials(name: string) {
-  return (name || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
 export function StaffShell({
   user,
+  photoUrl,
   children,
 }: {
   user: { name: string; email: string; staffRole: StaffRole };
+  photoUrl?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -60,11 +57,10 @@ export function StaffShell({
           <span className="hidden items-center gap-1.5 rounded-full bg-brand-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-navy sm:inline-flex">
             {ROLE_LABEL[user.staffRole]}
           </span>
+          <NotificationBell scope={{ kind: "platform" }} />
           <div className="flex items-center gap-2">
             <span className="hidden text-sm text-slate-600 sm:inline">{user.name}</span>
-            <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
-              {initials(user.name)}
-            </span>
+            <UserAvatar name={user.name} photoUrl={photoUrl ?? null} size={30} />
           </div>
         </>
       }

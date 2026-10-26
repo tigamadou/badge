@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FormSection } from "@/components/ui/FormControls";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
-import { Alert, Spinner } from "@/components/ui/Feedback";
-import { Icon } from "@/components/ui/Icon";
+import { toastApiError, toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Props = {
   initial: {
@@ -33,27 +33,29 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
   const [idDocumentType, setIdDocumentType] = useState(initial.idDocumentType ?? "CNI");
   const [idDocumentNumber, setIdDocumentNumber] = useState(initial.idDocumentNumber ?? "");
   const [idDocument, setIdDocument] = useState(initial.idDocument ?? "");
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
 
+  // Motif F : « Envoi en cours… » sert de loader, la prévisualisation affiche le succès ;
+  // seule l'erreur donne un toast.
   async function uploadFile(file: File, kind: "photo" | "document"): Promise<string | null> {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`/api/account/upload?kind=${kind}`, { method: "POST", body: fd });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data?.error ?? "Erreur d'upload.");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/account/upload?kind=${kind}`, { method: "POST", body: fd });
+      if (!res.ok) throw res;
+      const data = await res.json();
+      return data.storageKey as string;
+    } catch (err) {
+      await toastApiError(err, "Erreur d'upload.");
       return null;
     }
-    return data.storageKey as string;
   }
 
   async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setError(null);
     setUploadingPhoto(true);
     const key = await uploadFile(f, "photo");
     setUploadingPhoto(false);
@@ -63,18 +65,14 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
   async function handleDoc(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (!f) return;
-    setError(null);
     setUploadingDoc(true);
     const key = await uploadFile(f, "document");
     setUploadingDoc(false);
     if (key) setIdDocument(key);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSaving(true);
-    try {
+  const save = useAsyncAction(
+    async () => {
       // On omet les chaines vides : le Zod schema cote API exige min(1) et
       // refuserait sinon. Cela permet une sauvegarde partielle (ex : avant
       // d'avoir upload la photo).
@@ -92,30 +90,32 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error ?? "Erreur de mise à jour.");
-        return;
-      }
-      if (redirectTo) router.push(redirectTo);
-      else router.refresh();
-    } catch {
-      setError("Erreur réseau, réessayez.");
-    } finally {
-      setSaving(false);
-    }
-  }
+      if (!res.ok) throw res;
+    },
+    {
+      error: "Erreur de mise à jour.",
+      // Avec redirectTo, la page d'arrivée montre le résultat : pas de toast.
+      onSuccess: () => {
+        if (redirectTo) {
+          setNavigating(true);
+          router.push(redirectTo);
+        } else {
+          toastSuccess("Profil enregistré.");
+          router.refresh();
+        }
+      },
+    },
+  );
+  const saving = save.pending || navigating;
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 bg-white px-6">
-      {error && (
-        <div className="pt-6">
-          <Alert tone="err">
-            <Icon name="alert-triangle" size={16} /> {error}
-          </Alert>
-        </div>
-      )}
-
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void save.run();
+      }}
+      className="rounded-xl border border-slate-200 bg-white px-6"
+    >
       <FormSection title="Identité" description="Ces informations figureront sur votre badge.">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input label="Prénom" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
@@ -193,18 +193,8 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
       </FormSection>
 
       <div className="flex justify-end py-6">
-        <Button
-          type="submit"
-          className="flex items-center justify-center gap-2"
-          disabled={saving || uploadingPhoto || uploadingDoc}
-        >
-          {saving ? (
-            <>
-              <Spinner size={16} /> Enregistrement…
-            </>
-          ) : (
-            "Enregistrer"
-          )}
+        <Button type="submit" loading={saving} disabled={uploadingPhoto || uploadingDoc}>
+          Enregistrer
         </Button>
       </div>
     </form>

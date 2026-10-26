@@ -7,6 +7,7 @@ import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { computeParticipantProfileCompletedAt } from "@/lib/participant-profile";
 import { submitProfile, getCurrentSubmission } from "@/lib/profile-review";
 import { refreshPendingRegistrationSnapshots } from "@/lib/registration-snapshot-sync";
+import { notifyProfileSubmitted } from "@/lib/notifications/triggers";
 
 const ID_DOC_TYPES = ["CNI", "Passeport", "Permis", "Autre"] as const;
 
@@ -158,7 +159,13 @@ export async function PUT(req: NextRequest) {
     // v4 (plan 08) : toute modification des pieces cree une nouvelle soumission et
     // repasse le profil en attente de validation. Les champs non lies a l'identite
     // (nom, prenom, structure) ne declenchent rien : submitProfile compare les pieces.
-    await submitProfile(session.id);
+    const submissionBefore = await getCurrentSubmission(session.id);
+    const submitted = await submitProfile(session.id);
+    // submitProfile renvoie la soumission courante si rien n'a change : on ne notifie
+    // le staff que pour une nouvelle soumission.
+    if (submitted && submitted.id !== submissionBefore?.id) {
+      await notifyProfileSubmitted(session.id);
+    }
 
     // v4 (plan 15) : les inscriptions encore en attente suivent le profil. Une
     // inscription validee reste figee. Pas de catch : masquer un echec ici ne se

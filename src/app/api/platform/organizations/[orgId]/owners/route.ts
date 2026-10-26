@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
+import { notifyMembershipRoleChanged, notifyOrgMembershipAdded } from "@/lib/notifications/triggers";
 
 // ADR 2026-06-01 (v2-14 Task 5) : endpoints staff pour gerer les OWNERs d'une org.
 // Permet d'inviter / lister sans devoir entrer dans l'espace org.
@@ -126,6 +127,13 @@ export const POST = withStaffAuth(
         details: { from: existing.role, to: role, scope: "org" },
         req,
       });
+      await notifyMembershipRoleChanged({
+        userId: user.id,
+        orgId,
+        from: existing.role,
+        to: role,
+        actorId: session.user.id,
+      });
       return NextResponse.json({ ok: true, upgraded: true });
     }
 
@@ -137,6 +145,13 @@ export const POST = withStaffAuth(
       targetId: user.id,
       details: { role, isNewUser, viaStaff: true },
       req,
+    });
+    await notifyOrgMembershipAdded({
+      userId: user.id,
+      orgId,
+      role,
+      actorId: session.user.id,
+      invitationSent: isNewUser,
     });
 
     if (isNewUser) {

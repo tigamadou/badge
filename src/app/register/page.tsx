@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { useRecaptcha } from "@/components/auth/Recaptcha";
 import { safeInternalPath } from "@/lib/safe-path";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export default function RegisterPage() {
   return (
@@ -26,27 +28,14 @@ function RegisterForm() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ password?: string; confirm?: string }>({});
   const [done, setDone] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (password.length < 6) {
-      setError("Le mot de passe doit faire au moins 6 caractères.");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Les mots de passe ne correspondent pas.");
-      return;
-    }
-    setLoading(true);
-    try {
+  const register = useAsyncAction(
+    async () => {
       const recaptchaToken = await recaptcha.execute("register");
       if (recaptcha.enabled && !recaptchaToken) {
-        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
-        return;
+        throw new ActionError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
       }
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -54,17 +43,26 @@ function RegisterForm() {
         // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
         body: JSON.stringify({ email, password, name, next, recaptchaToken: recaptchaToken ?? undefined }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.error ?? "Inscription impossible.");
-        return;
-      }
-      setDone(true);
-    } catch {
-      setError("Erreur réseau, réessayez.");
-    } finally {
-      setLoading(false);
+      if (!res.ok) throw res;
+    },
+    // Succès : l'écran « Compte créé » tient lieu de retour.
+    { error: "Inscription impossible.", onSuccess: () => setDone(true) },
+  );
+  const loading = register.pending;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    // Erreurs de champ : sous les champs, sans requête.
+    if (password.length < 6) {
+      setFieldErrors({ password: "Le mot de passe doit faire au moins 6 caractères." });
+      return;
     }
+    if (password !== confirm) {
+      setFieldErrors({ confirm: "Les mots de passe ne correspondent pas." });
+      return;
+    }
+    setFieldErrors({});
+    void register.run();
   }
 
   return (
@@ -106,6 +104,7 @@ function RegisterForm() {
             label="Mot de passe (min. 6 caractères)"
             type="password"
             value={password}
+            error={fieldErrors.password}
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="new-password"
@@ -114,13 +113,13 @@ function RegisterForm() {
             label="Confirmer le mot de passe"
             type="password"
             value={confirm}
+            error={fieldErrors.confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
             autoComplete="new-password"
           />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Création..." : "Créer mon compte"}
+          <Button type="submit" className="w-full" loading={loading}>
+            Créer mon compte
           </Button>
           <p className="text-sm text-center text-slate-600">
             Déjà inscrit ?{" "}
