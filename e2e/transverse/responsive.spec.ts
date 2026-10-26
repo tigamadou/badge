@@ -101,6 +101,27 @@ test.describe("Responsive mobile (transverse)", () => {
     }
   });
 
+  test("Event : la page d'un badge s'affiche sans débordement", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "resp-badge" });
+    const admin = await makeEventAdminUser({ scope: "resp-badge-a", eventId, orgId });
+    const participant = await createTestUser({ scope: "resp-badge-p", verified: true, profile: true });
+    const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await expectNoHorizontalOverflow(page, `/event/${eventId}/badges/${reg.id}`);
+    await expect(page.locator('[data-testid="badge-document"]')).toHaveAttribute("data-state", "ready");
+
+    const box = await page.locator("page-view").boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThan(0);
+    expect(box?.width ?? 0).toBeLessThanOrEqual(VIEWPORT.width);
+
+    for (const name of ["Télécharger", "Imprimer"]) {
+      const link = page.getByRole("link", { name });
+      await expect(link).toBeVisible();
+      await expect(link).toBeInViewport();
+    }
+  });
+
   test("Compte : aucune page ne déborde horizontalement", async ({ page }) => {
     const { eventId, categoryId } = await createTestEvent({ scope: "resp-account" });
     const user = await createTestUser({ scope: "resp-account-u", verified: true, profile: true });

@@ -13,7 +13,7 @@ import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
 
-// Notes : le parcours badges (liste, PDF, marquage imprime) est garde par la
+// Notes : le parcours badges (liste, apercu HTML, PDF, marquage imprime) est garde par la
 // permission `badge.print` (ADMIN, OPERATOR, PRINTER) et non par la hierarchie
 // minRole, qui ne satisfait jamais un PRINTER pur. La liste passe par l'endpoint
 // dedie GET /badges (DTO minimal, sans email ni structure).
@@ -126,7 +126,7 @@ test.describe("Event — Badges", () => {
 
   // --- Actions UI ---------------------------------------------------------
 
-  test("La page d'un badge montre le PDF serveur et marque imprime", async ({ page }) => {
+  test("La page d'un badge montre l'aperçu HTML et marque imprimé", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-detail" });
     const admin = await makeEventAdminUser({ scope: "bdg-detail", eventId, orgId });
     const participant = await createTestUser({
@@ -142,18 +142,33 @@ test.describe("Event — Badges", () => {
     });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    await page.goto(`/event/${eventId}/badges/${reg.id}`);
+    await page.getByRole("link", { name: /badges/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
+    await page.locator(`a[href="/event/${eventId}/badges/${reg.id}"]`).click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/${reg.id}`));
     await expect(page.getByRole("link", { name: /voir l'inscription/i })).toBeVisible();
-    await expect(page.locator('iframe[title="Aperçu du badge"]')).toBeVisible();
-    await expect(page.getByRole("link", { name: "Télécharger" })).toHaveAttribute(
+
+    // Aperçu : le document figé est affiché par <page-view>, dans son iframe.
+    await expect(page.locator('[data-testid="badge-document"]')).toHaveAttribute("data-state", "ready");
+    await expect(page.frameLocator("page-view iframe").getByText("Awa").first()).toBeVisible();
+
+    // Télécharger : le PDF du service, en pièce jointe.
+    const downloadLink = page.getByRole("link", { name: "Télécharger" });
+    await expect(downloadLink).toHaveAttribute(
       "href",
       `/api/org/${orgId}/events/${eventId}/badges/${reg.id}?download=1`,
     );
+    const [download] = await Promise.all([page.waitForEvent("download"), downloadLink.click()]);
+    expect(download.suggestedFilename()).toMatch(/\.pdf$/);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/${reg.id}`));
 
-    // Le PDF servi est celui du moteur.
-    const pdf = await page.request.get(`/api/org/${orgId}/events/${eventId}/badges/${reg.id}`);
-    expect(pdf.status()).toBe(200);
-    expect(pdf.headers()["content-type"]).toBe("application/pdf");
+    // Imprimer : le PDF s'ouvre dans un nouvel onglet.
+    const [popup] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: "Imprimer" }).click(),
+    ]);
+    await popup.waitForURL(new RegExp(`/badges/${reg.id}$`));
+    await popup.close();
 
     // Marquage explicite.
     await page.getByRole("button", { name: "Marquer imprimé" }).click();
@@ -163,11 +178,45 @@ test.describe("Event — Badges", () => {
     await expectLastActivity({ type: "BADGE_PRINTED", userId: admin.id, eventId });
   });
 
-  test("La page de lot montre le PDF serveur et livre un ZIP", async ({ page }) => {
+  test("Aperçu indisponible puis réessai", async ({ page }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-retry" });
+    const admin = await makeEventAdminUser({ scope: "bdg-retry", eventId, orgId });
+    const participant = await createTestUser({ scope: "bdg-retry-p", verified: true, profile: true });
+    const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    const htmlRoute = /\/badges\/[^/]+\?format=html/;
+    await page.route(htmlRoute, (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: "RENDERER_UNAVAILABLE",
+          message: "Le service de rendu des badges est indisponible. Réessayez dans un instant.",
+        }),
+      }),
+    );
+    await page.getByRole("link", { name: /badges/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
+    await page.locator(`a[href="/event/${eventId}/badges/${reg.id}"]`).click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/${reg.id}`));
+
+    const view = page.locator('[data-testid="badge-document"]');
+    await expect(view).toHaveAttribute("data-state", "error");
+    await expect(page.getByText("Le service de rendu des badges est indisponible. Réessayez dans un instant.")).toBeVisible();
+
+    await page.unroute(htmlRoute);
+    await page.getByRole("button", { name: "Aperçu indisponible, réessayer" }).click();
+    await expect(view).toHaveAttribute("data-state", "ready");
+  });
+
+  test("La page de lot montre l'aperçu, ignore une réponse périmée et livre un ZIP", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-batch" });
     const admin = await makeEventAdminUser({ scope: "bdg-batch", eventId, orgId });
     const participant = await createTestUser({ scope: "bdg-batch-p", verified: true, profile: true });
     const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
+    const second = await createTestUser({ scope: "bdg-batch-r", verified: true, profile: true });
+    const reg2 = await createTestRegistration({ eventId, userId: second.id, categoryId, status: "APPROVED" });
     const pendingUser = await createTestUser({ scope: "bdg-batch-q", verified: true, profile: true });
     const pending = await createTestRegistration({
       eventId,
@@ -177,22 +226,34 @@ test.describe("Event — Badges", () => {
     });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id},${pending.id},inconnu`);
+    const urlOf = (id: string) => `/api/org/${orgId}/events/${eventId}/badges/${id}?format=html`;
+    const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id},${reg2.id},${pending.id},inconnu`);
     expect(res?.status()).toBe(200);
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/print`));
     await expect(page.getByText("2 identifiant(s) ignoré(s) : introuvables ou non approuvés.")).toBeVisible();
-    await expect(page.locator('iframe[title="Aperçu du badge"]')).toHaveAttribute(
-      "src",
-      `/api/org/${orgId}/events/${eventId}/badges/${reg.id}`,
-    );
 
-    const zipLink = page.getByRole("link", { name: "Télécharger le lot (.zip)" });
-    const href = await zipLink.getAttribute("href");
-    const zip = await page.request.get(href!);
-    expect(zip.status()).toBe(200);
-    expect(zip.headers()["content-type"]).toBe("application/zip");
+    const view = page.locator('[data-testid="badge-document"]');
+    await expect(view).toHaveAttribute("data-requested-src", urlOf(reg.id));
+    await expect(view).toHaveAttribute("data-src", urlOf(reg.id));
+    await expect(view).toHaveAttribute("data-state", "ready");
+
+    // Changements rapides de badge : l'aperçu final est celui du dernier badge choisi.
+    const item = (id: string) => page.getByRole("button", { name: new RegExp(`N° ${id}`) });
+    await item(reg2.id).click();
+    await item(reg.id).click();
+    await item(reg2.id).click();
+    await expect(view).toHaveAttribute("data-requested-src", urlOf(reg2.id));
+    await expect(view).toHaveAttribute("data-src", urlOf(reg2.id));
+    await expect(view).toHaveAttribute("data-state", "ready");
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("link", { name: "Télécharger le lot (.zip)" }).click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/\.zip$/);
 
     await page.getByRole("button", { name: "Marquer imprimés" }).click();
-    await expect(toast(page, "1 badge(s) marqué(s) imprimé(s).")).toBeVisible();
+    await expect(toast(page, "2 badge(s) marqué(s) imprimé(s).")).toBeVisible();
     await expectLastActivity({ type: "BADGE_BATCH_PRINTED", userId: admin.id, eventId });
   });
 

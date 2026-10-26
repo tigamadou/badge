@@ -20,7 +20,7 @@ async function writeArchive(name: string, files: Record<string, Buffer | string>
 
 function manifestOf(family: string) {
   return JSON.stringify({
-    formatVersion: 2,
+    formatVersion: 3,
     family,
     label: "Badge E2E",
     description: "Template installe par un test e2e.",
@@ -95,10 +95,10 @@ test.describe("Platform — Templates de badge", () => {
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
     expect(installed).not.toBeNull();
     expect(installed?.version).toBe(1);
-    // Ce paquet ne declare pas d'image : le catalogue montrera le placeholder. Le PDF
-    // d'epreuve, lui, est toujours produit — c'est la preuve que le paquet s'imprime.
+    // Ce paquet ne declare pas d'image : la vignette du catalogue est l'epreuve PNG,
+    // toujours produite — c'est la preuve que le paquet s'imprime.
     expect(installed?.previewPath).toBeNull();
-    expect(installed?.proofPath).toBeTruthy();
+    expect(installed?.proofPath).toBe(`badge-templates/${installed!.id}/proof.png`);
 
     // Un membre d'organisation peut le selectionner pour son evenement.
     const { orgId, eventId } = await createTestEvent({ scope: "bt-use" });
@@ -203,15 +203,16 @@ test.describe("Platform — Templates de badge", () => {
 
     const prisma = getDb();
     const installed = await prisma.installedBadgeTemplate.findFirst({ where: { family } });
-    // L'image devient l'apercu ; le PDF reste produit comme preuve d'impression.
+    // L'image devient l'apercu du catalogue ; l'epreuve PNG reste produite.
     expect(installed?.previewPath).toBe(`badge-templates/${installed!.id}/assets/apercu.png`);
-    expect(installed?.proofPath).toBe(`badge-templates/${installed!.id}/proof.pdf`);
+    expect(installed?.proofPath).toBe(`badge-templates/${installed!.id}/proof.png`);
 
     await page.goto(`/platform/badge-templates/${installed!.id}`);
     await expect(page).toHaveURL(new RegExp(`/platform/badge-templates/${installed!.id}`));
-    // Sur le detail, l'apercu est le PDF d'epreuve : le rendu reel, affiche
-    // directement. L'image fournie sert de vignette au catalogue.
-    await expect(page.locator(`object[data="/api/files/${installed!.proofPath}"]`)).toHaveCount(1);
+    // Sur le detail, l'apercu est l'epreuve PNG : le rendu reel. L'image fournie sert de
+    // vignette au catalogue.
+    await expect(page.locator('img[alt="Aperçu Badge E2E"]')).toHaveCount(1);
+    await expect(page.locator("object")).toHaveCount(0);
   });
 
   test("une archive invalide est refusee avec ses erreurs, sans rien installer", async ({ page }) => {
