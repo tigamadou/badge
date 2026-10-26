@@ -15,10 +15,14 @@ const props = {
 describe("BadgePrintActions", () => {
   it("affiche l'apercu, le telechargement et le marquage actif", () => {
     const html = renderToStaticMarkup(<BadgePrintActions {...props} />);
-    expect(html).toContain('title="Aperçu du badge"');
-    expect(html).toContain('src="/api/org/o1/events/e1/badges/1261001471042"');
+    expect(html).not.toContain("<iframe");
+    expect(html).toContain("<page-view");
+    expect(html).toContain('data-requested-src="/api/org/o1/events/e1/badges/1261001471042?format=html"');
     expect(html).toContain('href="/api/org/o1/events/e1/badges/1261001471042?download=1"');
     expect(html).toContain("Télécharger");
+    expect(html).toMatch(
+      /<a href="\/api\/org\/o1\/events\/e1\/badges\/1261001471042" target="_blank" rel="noopener noreferrer"[^>]*>Imprimer<\/a>/,
+    );
     expect(html).toContain("Marquer imprimé");
     expect(html).toContain("Non imprimé");
     expect(html).not.toContain('disabled=""');
