@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | 1 | Branche, montée à 2.0.0, module de l'exporteur et service `renderer` de dev | [x] | 2026-10-26 | Accords utilisateur 2026-10-26 (suite non verte T1-T6, compose dev/prod/preprod, deploy.sh, .env.production.example). Branche deja creee. Moteur 2.0.0 exact ; renderer.test.ts 7 tests, 100 % sur renderer.ts ; renderer dev healthy, /health 200 depuis app. Pas de commit (l'utilisateur commite). |
 | 2 | Lecture des layouts au format 3 et résolution sans `@react-pdf` | [x] | 2026-10-26 | resolve.test.ts (35 tests) + reference-packages + event-template-variables verts, resolve.ts 100 %. Tests dependant du seed verts apres T4. Manifestes livres migres (formatVersion seul change). Pas de commit. |
-| 3 | Rendu d'un badge en HTML, document figé et PDF | [ ] |  |  |
+| 3 | Rendu d'un badge en HTML, document figé et PDF | [x] | 2026-10-26 | render-badge.test.ts 11 tests verts ; render-badge.ts 100 % (lignes d'options image couvertes par les tests de route, a confirmer au run complet). Photo trop lourde simulee via __TEST__.readFileAsDataUrl (21 Mo). Pas de commit. |
 | 4 | Épreuve `proof.png` à l'installation | [ ] |  |  |
 | 5 | Routes du badge (`PDF`, `?format=html`) et du ZIP | [ ] |  |  |
 | 6 | `verify-engine`, export du corpus et validation au format 3 | [ ] |  |  |
