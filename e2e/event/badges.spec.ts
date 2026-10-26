@@ -162,12 +162,16 @@ test.describe("Event — Badges", () => {
     expect(download.suggestedFilename()).toMatch(/\.pdf$/);
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/${reg.id}`));
 
-    // Imprimer : le PDF s'ouvre dans un nouvel onglet.
-    const [popup] = await Promise.all([
-      page.waitForEvent("popup"),
-      page.getByRole("link", { name: "Imprimer" }).click(),
-    ]);
-    await popup.waitForURL(new RegExp(`/badges/${reg.id}$`));
+    // Imprimer : le PDF s'ouvre dans un nouvel onglet. Le Chromium headless de la CI n'affiche
+    // pas les PDF (l'onglet n'atteint jamais « load ») : on vérifie le lien et le PDF servi.
+    const printLink = page.getByRole("link", { name: "Imprimer" });
+    await expect(printLink).toHaveAttribute("target", "_blank");
+    const printHref = await printLink.getAttribute("href");
+    expect(printHref).toMatch(new RegExp(`/badges/${reg.id}$`));
+    const pdfResponse = await page.request.get(printHref!);
+    expect(pdfResponse.status()).toBe(200);
+    expect(pdfResponse.headers()["content-type"]).toContain("application/pdf");
+    const [popup] = await Promise.all([page.waitForEvent("popup"), printLink.click()]);
     await popup.close();
 
     // Marquage explicite.
