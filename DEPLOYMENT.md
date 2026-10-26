@@ -110,6 +110,36 @@ Les emails applicatifs passent par une queue MySQL (table `Job`, voir `docs/v4/f
 
 - `stop_grace_period: 150s` : à l'arrêt (`SIGTERM`), le worker termine les envois en cours.
 - Variables optionnelles : `JOB_POLL_INTERVAL_MS` (défaut 2000), `JOB_EMAIL_CONCURRENCY` (défaut 5).
-- `deploy.sh` démarre le service (`up -d --no-deps init app worker`) ; `.github/workflows/ci.yml` lance le worker avant les e2e.
+- `deploy.sh` démarre le service (`up -d --no-deps renderer init app worker`) ; `.github/workflows/ci.yml` lance le worker avant les e2e.
 - Fichiers à recopier sur le serveur : `deploy.sh`, `docker-compose.yml` (prod) et `docker-compose.preprod.yml` (preprod).
 - Rien n'est déployé par ce changement : le worker sera créé à la prochaine release. Sans lui, les emails restent `PENDING` en base.
+
+## Moteur 2.0.0 : service de rendu
+
+Les badges sont rendus en HTML par `@tigamadou/pdf-engine` 2.0.0 ; le PDF, le document figé affiché dans l'aperçu et l'épreuve `proof.png` sont produits par un **service de rendu** (Chromium) : l'image `ghcr.io/tigamadou/pdf-engine-renderer:2.0.0`, publiée en **linux/amd64** seulement (plateforme du VPS). Son tag est toujours égal à la version du moteur (`package.json`), jamais `latest` ; un test (`renderer-version.test.ts`) le vérifie.
+
+| | Prod | Preprod |
+|---|---|---|
+| Service Compose | `renderer` | `renderer` |
+| Conteneur | `badge-renderer` | `badge-renderer-preprod` |
+| `RENDERER_URL` | `http://badge-renderer:3000` | `http://badge-renderer-preprod:3000` |
+
+- `RENDERER_URL` est posé par le compose (`environment:` de `app`, `init` et `tools`) : rien à ajouter dans `.env.production` / `.env.preprod`.
+- Le service n'est **jamais publié** (aucun `ports:`) et tourne sur un réseau compose `rendu` **interne** (`internal: true`, sans accès sortant) partagé avec `app`, `init` et `tools` seulement : il rend du HTML fourni par l'appelant et ne doit joindre ni Internet ni le réseau de l'hôte.
+- `init: true` (Chromium crée des processus enfants) et `stop_grace_period: 30s` (le délai de grâce du service est de 20 s). Santé : le `HEALTHCHECK` de l'image (`GET /health`).
+- Service indisponible ou lent : l'aperçu affiche « Aperçu indisponible, réessayer », les routes de rendu et le ZIP répondent 503, l'installation d'un template répond 503.
+- Les polices Montserrat sont embarquées dans le moteur : plus d'accès sortant à Google Fonts requis pour le rendu des badges.
+- Fichiers à recopier sur le serveur : `deploy.sh`, `docker-compose.yml` (prod) et `docker-compose.preprod.yml` (preprod).
+
+### Procédure de déploiement (préproduction d'abord, cibles `-preprod`)
+
+1. **Sauvegarde** : `make backup-prod` sur le serveur (dump MySQL) ; noter le chemin du dump. Le S3 n'est modifié que par ajout (`proof.png`) : sa sauvegarde n'est pas requise.
+2. **Service de rendu** : recopier `deploy.sh`, `docker-compose.yml` / `docker-compose.preprod.yml` ; `docker login ghcr.io` ; `docker compose pull renderer && docker compose up -d renderer` ; contrôle `docker compose ps renderer` → `healthy`.
+3. **Vérification préalable** (sans toucher à `app`) : `make verify-engine-prod TAG=sha-<commit>`. Les lignes au format 2 sont migrées en mémoire ; examiner les épreuves `proof-engine-2.0.0.png`. La référence enregistrée par le moteur 1.x n'est pas comparable : tous les templates sont « sans référence ».
+4. **Déploiement** : publier la release ; `deploy.sh` tire et relance `renderer`, `init` et `app`. Les badges s'impriment aussitôt (migration en mémoire du format 2).
+5. **Migration** : `make migrate-installed-templates-prod` (dry-run), puis `make migrate-installed-templates-prod ARGS=--apply`. Une ligne sautée n'écrit rien en base (code de sortie 1).
+6. **Vérification** : `make validate-badge-templates-prod` → `OK` ; `make verify-engine-prod ARGS=--accept` après examen des épreuves ; ouvrir la page d'un badge sur un téléphone ; télécharger un ZIP de lot.
+
+**Retour arrière** : redéployer le tag précédent **et** restaurer le dump (`make rollback-prod SQL=<dump.sql> UPLOADS=<uploads.tar.gz>`) : l'application 1.x ne lit pas le format 3.
+
+Le template ex-305v installé dans badge est à **réinstaller depuis le studio** après le déploiement, pour que le nom du participant tienne sur deux lignes avec repli « A. Nom » puis « Nom » (textes de repli, livrés dans le moteur 2.0.0).

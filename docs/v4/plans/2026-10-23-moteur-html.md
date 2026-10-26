@@ -18,7 +18,7 @@
 | 10 | Épreuve PNG au catalogue et sur la page de détail | [x] | 2026-10-26 | templateImageUrl + TemplatePreview (sans <object>) + pages catalogue/detail ; resolve.ts 100 % (41 tests), TemplatePreview.test.tsx ajoute ; typecheck OK. Detail : liste des ressources filtree par isGeneratedProofKey. Pas de commit. |
 | 11 | Suppression du code mort et de `@react-pdf/renderer` | [x] | 2026-10-26 | Composants morts, image-to-dataurl, BadgeProps/EventInfo, exclusion template.tsx et @react-pdf/renderer + file-saver + @types/file-saver retires. grep du plan : plus aucune reference react-pdf (les seules lignes restantes sont les nouveaux noms fetchBadgeDocument/renderBadgeDocument, faux positifs du motif BadgeDocument). Suite complete : 206 fichiers / 2171 tests verts, couverture 100 % (4052 stmts, 2500 branches, 668 fonctions, 3698 lignes) ; make lint 0 erreur (29 avertissements preexistants) ; make typecheck OK ; make build OK ; .next/standalone contient les 8 TTF Montserrat. Pas de commit. |
 | 12 | Parcours E2E, dont la page d'un badge à 375 px | [x] | 2026-10-26 | E2E sur le vrai service de rendu : badges.spec 7/7 (aperçu HTML, retry 503 simule par page.route, lot avec changements rapides data-src, ZIP par clic ; 2 page.request supprimes), responsive 375 px (page d'un badge) 7/7, badge-templates 9/9, settings 10/10. Suite complete par lots : event 92/92, org 60/60, public 86/86, platform 98/98, transverse 35 verts + 1 flaky (feedback-platform double clic) + 1 ECHEC logout.spec 'Confirmer la modal' (page.goto /platform ERR_ABORTED apres signOut, 3 echecs sur 4 en repetition) : parcours deconnexion sans lien avec le moteur HTML, non corrige. Verification visuelle extension Chrome non faite (indisponible). Cache .next supprime (route.tsx fantome Turbopack). Pas de commit. |
-| 13 | Documentation de déploiement et vérification finale | [ ] |  |  |
+| 13 | Documentation de déploiement et vérification finale | [x] | 2026-10-26 | Docs a jour : DEPLOYMENT.md (section Moteur 2.0.0 + procedure + retour arriere), templates-badges.md, installation.md, politique-tests.md, CLAUDE.md, README.md. Verification finale : vitest --coverage 206 fichiers / 2171 tests verts, 100 % (4052 stmts, 2500 branches, 668 fonctions, 3698 lignes) ; make lint 0 erreur (29 avertissements preexistants) ; make typecheck OK ; make build OK ; 8 TTF Montserrat dans .next/standalone ET dans l'image runner ; seed reel OK ; E2E par lots : event 92/92, org 60/60, public 86/86, platform 98/98, transverse 35 verts + 1 flaky + 1 echec logout.spec (sans lien avec le moteur, voir T12) ; docker build --target runner -t badge-verif:local OK (jamais ghcr.io/tigamadou/badge). Moteur 2.0.0 exact, image renderer 2.0.0. Ni commit, ni push, ni PR (a la demande de l'utilisateur). |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la ligne de la tâche dans le même commit que son code (tests verts et critères d'acceptation remplis). En cas d'interruption, passez la ligne à `[~]` et notez précisément l'état (étape en cours, fichiers touchés, prochaine étape). Avant chaque session, lire ce tableau pour savoir où l'on s'était arrêté.
 
@@ -147,17 +147,17 @@ export function countPdfPages(buf: Uint8Array): number;
 
 Comportement du faux : `freeze` → `{ ...doc, frozen: true, html: doc.html sans <script>…</script> et sans U+2060 }` (comme le vrai figement, voir « Note sur les traits d'union ») ; `pdf` → `%PDF-1.7\n` + un `<< /Type /Page >>` par élément de `doc.pages` + `%%EOF` ; `image` → `FAKE_PNG` ; `failNext(code)` fait rejeter l'appel suivant avec `new ExportError(code, "faux exporteur")` (`RENDER_FAILED` représente aussi un document en erreur `data-pe-error`).
 
-- [ ] **Step 1: Créer la branche**
+- [x] **Step 1: Créer la branche**
 
 Run: `cd /Users/amadou/Devs/projects/badge && /usr/bin/git switch development && /usr/bin/git pull && /usr/bin/git switch -c feat/moteur-html`
 Expected: `Switched to a new branch 'feat/moteur-html'`.
 
-- [ ] **Step 2: Monter le moteur**
+- [x] **Step 2: Monter le moteur**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn add @tigamadou/pdf-engine@2.0.0 --exact`
 Expected: `package.json` contient `"@tigamadou/pdf-engine": "2.0.0"` ; `ls node_modules/@tigamadou/pdf-engine/dist/export/service.js` existe dans le conteneur.
 
-- [ ] **Step 3: Écrire le test qui échoue** — `renderer.test.ts`
+- [x] **Step 3: Écrire le test qui échoue** — `renderer.test.ts`
 
 - `getExporter()` sans `RENDERER_URL` : `freeze(doc)` rejette une `ExportError` de code `UNAVAILABLE` dont le message contient `RENDERER_URL` (aucune exception au chargement du module : `next build` importe les routes).
 - Avec `RENDERER_URL=http://127.0.0.1:1` : deux appels renvoient la même instance ; `pdf(doc)` rejette `ExportError` `UNAVAILABLE` (connexion refusée, traduite par l'adaptateur service).
@@ -165,25 +165,25 @@ Expected: `package.json` contient `"@tigamadou/pdf-engine": "2.0.0"` ; `ls node_
 - `isRendererUnavailable` : vrai pour `UNAVAILABLE` et `TIMEOUT`, faux pour `RENDER_FAILED`, `INVALID_PAGE`, une `Error` ordinaire, `undefined`.
 - `rendererUnavailableResponse()` : statut 503, `retry-after` `5`, corps `{ error: "RENDERER_UNAVAILABLE", message: RENDERER_UNAVAILABLE_MESSAGE }`.
 
-- [ ] **Step 4: Lancer, vérifier l'échec**
+- [x] **Step 4: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/renderer.test.ts`
 Expected: FAIL (module `../renderer` introuvable).
 
-- [ ] **Step 5: Implémenter `renderer.ts`, le faux exporteur et `test-setup.ts`**
+- [x] **Step 5: Implémenter `renderer.ts`, le faux exporteur et `test-setup.ts`**
 
 `getExporter` lit `process.env.RENDERER_URL` à chaque appel et recrée l'adaptateur si la valeur change ; sans URL, renvoie un `Exporter` dont les trois méthodes rejettent `new ExportError("UNAVAILABLE", "RENDERER_URL n'est pas défini : le service de rendu est injoignable.")`. `test-setup.ts` ajoute `beforeEach(() => { fakeExporter.reset(); overrideExporter(fakeExporter); })` (le test de `renderer.ts` appelle lui-même `overrideExporter(null)`).
 
-- [ ] **Step 6: Lancer, vérifier le succès**
+- [x] **Step 6: Lancer, vérifier le succès**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/renderer.test.ts --coverage.enabled --coverage.include=src/lib/renderer.ts`
 Expected: PASS, 100 % sur `renderer.ts`.
 
-- [ ] **Step 7: `next.config.ts`**
+- [x] **Step 7: `next.config.ts`**
 
 `serverExternalPackages: ["@tigamadou/pdf-engine"]` (remplace `@react-pdf/renderer`) ; `outputFileTracingIncludes: { "/**": ["./node_modules/@tigamadou/pdf-engine/fonts/**"] }` (les TTF lus par `montserratFaces()`).
 
-- [ ] **Step 8: Service `renderer` en dev (accord utilisateur obtenu et noté dans `## Progression`)**
+- [x] **Step 8: Service `renderer` en dev (accord utilisateur obtenu et noté dans `## Progression`)**
 
 Dans `docker-compose.dev.yml` :
 
@@ -249,12 +249,12 @@ export type BadgeTemplate = {
 
 `Component` disparaît de `BadgeTemplate`, ainsi que l'import de `ComponentType`.
 
-- [ ] **Step 1: Migrer les deux paquets livrés**
+- [x] **Step 1: Migrer les deux paquets livrés**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn tsx -e "import {migrateManifest} from '@tigamadou/pdf-engine'; import fs from 'node:fs'; for (const f of ['default','recto-verso']) { const p='prisma/badge-templates/'+f+'/manifest.json'; fs.writeFileSync(p, JSON.stringify(migrateManifest(JSON.parse(fs.readFileSync(p,'utf8'))), null, 2)+'\n'); }"`
 Expected: `git diff --stat prisma/badge-templates` ne montre que `formatVersion` passé à 3 (renumérotation seule, spec « Format 3 »).
 
-- [ ] **Step 2: Écrire les tests qui échouent dans `resolve.test.ts`**
+- [x] **Step 2: Écrire les tests qui échouent dans `resolve.test.ts`**
 
 Réécrire les cas qui utilisaient `renderToJson` sur `t.Component` : ils vérifient désormais `t.assets("<nom>")` (data URL `data:image/png;base64,…`) et `renderHtml(t.manifest, { values: {}, assets: t.assets, defaultFont: montserratFaces() }).html` contient cette data URL. Ajouter :
 - `readLayout` d'une ligne `formatVersion: 3` renvoie le layout tel quel (même référence d'objet).
@@ -266,16 +266,16 @@ Réécrire les cas qui utilisaient `renderToJson` sur `t.Component` : ils vérif
 - `t.meta` vaut `{ id: row.id, version: row.version, label, description, pages, pageSize: { width: "320px", height: "460px" }, previewSrc }` pour une ligne 320 × 460.
 Passer toutes les fixtures de ligne créées par les tests de ce module et des routes `platform/badge-templates` à `formatVersion: 3` (sauf le cas « format 2 migré en mémoire »).
 
-- [ ] **Step 3: Lancer, vérifier l'échec**
+- [x] **Step 3: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/resolve.test.ts`
 Expected: FAIL (`readLayout` absent, `buildDeclarativeTemplate` introuvable dans le moteur).
 
-- [ ] **Step 4: Implémenter**
+- [x] **Step 4: Implémenter**
 
 `buildFromRow` : `readLayout` remplace la garde `formatVersion !== 2` ; plus d'appel à `buildDeclarativeTemplate` ; `meta` construit depuis la ligne ; `loadAssetResolver` reçoit le manifeste lu (et non `row.layout`). `blockAssets` couvre les formes vectorielles, livrées dans la 2.0.0 : il ne lit `b.image?.asset` que si `"image" in b` (cas de `rect`, `square`, `circle` et `ellipse`), sinon il renvoie `[]` pour ce bloc (`line`, `polygon`, `path`). Pas de `switch` exhaustif sur le type : un type sans `image` ne référence aucune ressource.
 
-- [ ] **Step 5: Lancer, vérifier le succès**
+- [x] **Step 5: Lancer, vérifier le succès**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/resolve.test.ts src/lib/badge-templates/__tests__/reference-packages.test.ts src/lib/badge-templates/__tests__/event-template-variables.test.ts`
 Expected: PASS.
@@ -310,7 +310,7 @@ export async function renderBadgeHtml(registration: BadgeRegistration): Promise<
 export async function renderBadgePdf(registration: BadgeRegistration): Promise<{ pdf: Uint8Array; templateId: string }>;      // getExporter().pdf(document vivant)
 ```
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 Conserver les cas de résolution (repli organisation, famille `default`, sans `PlatformSettings`) en les appliquant à `renderBadgeDocument`. Ajouter :
 - `renderBadgeDocument` (famille `default`) : `document.frozen === false`, `document.pages` vaut `[1]`, `document.html` commence par `<!doctype html>` et contient le prénom et le nom du participant (comparés sur `document.html.replaceAll("⁠", "")` ; la fixture porte un nom composé, ex. « Anne-Marie », pour couvrir le cas) ; `fakeExporter.calls` est vide (le rendu vivant n'appelle pas le service).
@@ -320,16 +320,16 @@ Conserver les cas de résolution (repli organisation, famille `default`, sans `P
 - `fakeExporter.failNext("UNAVAILABLE")` : `renderBadgePdf` rejette une `ExportError` de code `UNAVAILABLE`.
 - Badge trop lourd : photo d'inscription de 21 Mo (data URL factice) → `renderBadgeDocument` rejette avec un message contenant `trop volumineux`, aucun appel au service.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/render-badge.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter `render-badge.ts`**
+- [x] **Step 3: Implémenter `render-badge.ts`**
 
 Même construction du contexte qu'aujourd'hui, puis `renderHtml(template.manifest, { values, assets: template.assets, defaultFont: montserratFaces() })`. Aucun import de `react`.
 
-- [ ] **Step 4: Lancer, vérifier le succès**
+- [x] **Step 4: Lancer, vérifier le succès**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/render-badge.test.ts`
 Expected: PASS.
@@ -359,21 +359,21 @@ export function isGeneratedProofKey(key: string): boolean;
 export async function installTemplate(args: { manifest; assets; bindings; installedById }): Promise<InstallResult>; // signature inchangée
 ```
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 `install.test.ts` : `row.proofPath === \`badge-templates/${row.id}/proof.png\`` ; le fichier stocké commence par la signature PNG (`89 50 4E 47`) et a le type `image/png` ; un appel `image` au faux exporteur avec `opts.page === 1` ; `fakeExporter.failNext("UNAVAILABLE")` → `installTemplate` rejette une `ExportError` `UNAVAILABLE`, aucune ligne créée, aucun objet sous le préfixe. `isGeneratedProofKey` : vrai pour `badge-templates/x/proof.pdf`, `…/proof.png`, `…/proof-engine-2.0.0.png`, `…/proof-engine-1.2.0.pdf` ; faux pour `…/assets/proof.png` et `…/preview.png`.
 Route `POST /api/platform/badge-templates` : `proofPath` se termine par `/proof.png` ; avec `failNext("UNAVAILABLE")`, statut **503**, corps `{ error: "RENDERER_UNAVAILABLE", message: RENDERER_UNAVAILABLE_MESSAGE }`, aucune activité `BADGE_TEMPLATE_INSTALLED` ; avec `failNext("RENDER_FAILED")`, 400 `INVALID_PACKAGE` comme aujourd'hui.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/install.test.ts src/app/api/platform/badge-templates/__tests__/route.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter**
+- [x] **Step 3: Implémenter**
 
 `installTemplate` : `const { png } = await renderProof(manifest, assets, id, getExporter())`, upload `${assetPrefix}proof.png` en `image/png`. La route teste `isRendererUnavailable(err)` avant de traduire en 400.
 
-- [ ] **Step 4: Lancer, vérifier le succès**
+- [x] **Step 4: Lancer, vérifier le succès**
 
 Même commande. Expected: PASS.
 
@@ -414,7 +414,7 @@ export const BATCH_RENDER_CONCURRENCY = 4;
 export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]>;
 ```
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 Route du badge (même garde `badge.print`, mêmes cas 401/403/404 qu'aujourd'hui) :
 - PDF par défaut : 200, `application/pdf`, `%PDF-`, 1 page (`countPdfPages`) pour `default`, 2 pour recto-verso, `content-disposition` `inline` puis `attachment` avec `?download=1`.
@@ -425,16 +425,16 @@ Route du badge (même garde `badge.print`, mêmes cas 401/403/404 qu'aujourd'hui
 - `?format=png` : 400 `VALIDATION`.
 ZIP : 3 badges → 3 entrées dans l'ordre des ids, chacune `%PDF-` ; `failNext("UNAVAILABLE")` → 503 ; `failNext("RENDER_FAILED")` → 500 avec l'id. `mapWithConcurrency` : ordre conservé avec des délais inversés, jamais plus de 2 appels simultanés pour `limit = 2` (compteur), rejet sur la première erreur et aucun appel lancé après.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run "src/app/api/org/[orgId]/events/[eventId]/badges" src/lib/__tests__/badge-batch.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter les deux routes et `mapWithConcurrency`**
+- [x] **Step 3: Implémenter les deux routes et `mapWithConcurrency`**
 
 Le ZIP rend les PDF par `mapWithConcurrency(registrations, BATCH_RENDER_CONCURRENCY, …)` ; la fonction passée enrichit l'erreur de l'id de l'inscription pour la réponse 500.
 
-- [ ] **Step 4: Lancer, vérifier le succès, re-seeder**
+- [x] **Step 4: Lancer, vérifier le succès, re-seeder**
 
 Run: la commande du Step 2, puis `docker compose -f docker-compose.dev.yml exec app yarn prisma db seed`
 Expected: PASS ; le seed installe `default` et `recto-verso` avec `proof.png` par le vrai service.
@@ -469,21 +469,21 @@ export async function verifyEngineUpgrade(options: { accept: boolean }): Promise
 export async function exportEngineCorpus(outDir: string): Promise<string[]>; // écrit des manifestes format 3 (lignes 2 migrées en mémoire), ignore le format 1
 ```
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 `engine-upgrade.test.ts` : épreuves `proof-engine-<ENGINE_VERSION>.png` à signature PNG ; une ligne au format 2 est vérifiée (statut `ok`, pas `refused`) ; une ligne au format 1 est `refused` avec `make migrate-installed-templates` ; deux appels successifs à `checkTemplate` donnent les mêmes empreintes et n'appellent pas le service ; une référence enregistrée sans `fingerprint` (simuler la 1.2.0) → tous `fresh` avec `proofPath` ; `--accept` écrit `fingerprint: "html"` ; `failNext("UNAVAILABLE")` pendant l'écriture d'une épreuve → `verifyEngineUpgrade` rejette une `ExportError`. Mettre à jour les attendus de `formatReport` (`.png`).
 `engine-corpus.test.ts` : une ligne au format 2 est exportée avec `"formatVersion": 3`.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/engine-upgrade.test.ts src/lib/badge-templates/__tests__/engine-corpus.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter**
+- [x] **Step 3: Implémenter**
 
 `validate-badge-templates.ts` : une ligne `formatVersion !== 3` est une anomalie « encore au format vN (make migrate-installed-templates) » ; la lecture des variables passe par `readLayout`.
 
-- [ ] **Step 4: Vérifier**
+- [x] **Step 4: Vérifier**
 
 Run: même commande, puis `docker compose -f docker-compose.dev.yml exec app yarn prisma db seed && make verify-engine && make validate-badge-templates`
 Expected: PASS ; `verify-engine` liste les deux templates livrés, épreuves `.png` dans RustFS ; `validate-badge-templates` répond `OK`.
@@ -522,7 +522,7 @@ export async function migrateInstalledTemplatesV3(options: { apply: boolean }): 
 
 CLI : `--apply` pour écrire, dry-run sinon ; code de sortie 1 si une ligne est sautée.
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 - Dry-run sur une ligne au format 2 : `migrated` la contient, `applied === false`, la ligne est inchangée en base, aucun `proof.png` stocké, un appel `image` au faux exporteur (le rendu est validé même en dry-run).
 - `apply` : `formatVersion === 3`, `layout.formatVersion === 3`, `proofPath === \`${assetPrefix}proof.png\``, l'objet stocké commence par la signature PNG, `proof.pdf` toujours présent.
@@ -532,12 +532,12 @@ CLI : `--apply` pour écrire, dry-run sinon ; code de sortie 1 si une ligne est 
 - `failNext("UNAVAILABLE")` : la ligne est sautée avec une raison contenant `service de rendu`.
 - Second passage après `apply` : `migrated` et `skipped` vides.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run scripts/__tests__/migrate-installed-templates-v3.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter le script et les cibles make**
+- [x] **Step 3: Implémenter le script et les cibles make**
 
 Sur le modèle de `verify-engine*` :
 
@@ -552,7 +552,7 @@ migrate-installed-templates-prod:
 
 Ajouter de même `validate-badge-templates-preprod` et `validate-badge-templates-prod` (même patron, `scripts/validate-badge-templates.ts`) et les déclarer dans `.PHONY`.
 
-- [ ] **Step 4: Vérifier, puis rendre la suite entière verte (fin de la bascule)**
+- [x] **Step 4: Vérifier, puis rendre la suite entière verte (fin de la bascule)**
 
 Run: le test ci-dessus ; `grep -rln "react-pdf\|extractPdfText\|renderToJson\|formatVersion: 2" src scripts` ne doit plus lister que les tests qui exercent volontairement le format 2 ; puis `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage && make lint && make typecheck`, puis `… exec app yarn prisma db seed && make migrate-installed-templates` (dry-run sur la base seedée).
 Expected: PASS, couverture 100 % ; « DRY-RUN … migres : 0 », sortie 0.
@@ -575,16 +575,16 @@ Expected: PASS, couverture 100 % ; « DRY-RUN … migres : 0 », sortie 0.
 - Consumes: `ENGINE_VERSION` (`engine-upgrade.ts`).
 - Produces: service `renderer` (conteneur `badge-renderer` / `badge-renderer-preprod`), `RENDERER_URL=http://badge-renderer:3000` (prod) / `http://badge-renderer-preprod:3000` (preprod), posé dans `environment:` de `app`, `tools` et `init` (aucune modification manuelle des `.env` du serveur).
 
-- [ ] **Step 1: Écrire le test qui échoue** — `renderer-version.test.ts`
+- [x] **Step 1: Écrire le test qui échoue** — `renderer-version.test.ts`
 
 Pour `docker-compose.dev.yml`, `docker-compose.yml`, `docker-compose.preprod.yml` (lus comme texte) : chacun contient exactement une fois `ghcr.io/tigamadou/pdf-engine-renderer:${ENGINE_VERSION}`, aucune autre occurrence de `pdf-engine-renderer:`, et aucun bloc `ports:` dans le service `renderer` (hors CI), `init: true`, `stop_grace_period: 30s` (extraire le bloc entre `  renderer:` et le service suivant) ; le bloc `renderer` de `docker-compose.dev.yml` porte `platform: linux/amd64` (image sans variante arm64, voir la tâche 1). `package.json` déclare `@tigamadou/pdf-engine` à `ENGINE_VERSION` sans `^` ni `~`. Le job `e2e` de `ci.yml` référence la même image.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/renderer-version.test.ts`
 Expected: FAIL (prod et preprod sans service `renderer`).
 
-- [ ] **Step 3: Écrire les services et le déploiement**
+- [x] **Step 3: Écrire les services et le déploiement**
 
 Prod et preprod : bloc de la tâche 1 avec `container_name`, `restart: unless-stopped`, `expose: ["3000"]`, réseau `rendu` seulement (`internal: true`, jamais `web` ni `default`), `init: true`, `stop_grace_period: 30s` ; `app` et `tools` rejoignent le réseau `rendu` (en plus de leurs réseaux actuels) et dépendent de `renderer` (`service_healthy`). Le test de la tâche vérifie aussi `init: true`, `stop_grace_period: 30s` et le réseau interne. `deploy.sh` : `docker compose $F pull renderer app tools` puis `docker compose $F up -d --no-deps renderer init app`. `.env.production.example` : section commentée « Service de rendu » qui indique que `RENDERER_URL` est posé par le compose. CI, job `e2e` :
 
@@ -600,7 +600,7 @@ Prod et preprod : bloc de la tâche 1 avec `container_name`, `restart: unless-st
 
 et `RENDERER_URL: http://127.0.0.1:3100` dans l'`env` du job (le seed et l'application en ont besoin). Le job `unit-integration` n'en a pas besoin (faux exporteur).
 
-- [ ] **Step 4: Vérifier**
+- [x] **Step 4: Vérifier**
 
 Run: le test ci-dessus, puis `docker compose -f docker-compose.yml config -q && docker compose -f docker-compose.preprod.yml config -q && sh -n deploy.sh`
 Expected: PASS, aucune sortie d'erreur.
@@ -652,21 +652,21 @@ export function BadgeDocumentView(props: { src: string; label: string; className
 
 Règle de confiance : `fetchBadgeDocument` refuse tout document non figé (`ok: false`), et la route `?format=html` ne renvoie que `freeze` ; `BadgeDocumentView` ne reçoit donc jamais de document vivant. Comportement de `BadgeDocumentView` : un `useEffect` dépendant de `[src, attempt]` passe l'état à `loading`, appelle `fetchBadgeDocument(src, { signal })`, puis `const { definePageView } = await import("@tigamadou/pdf-engine/viewer"); definePageView();` et pose `ref.current.document = result.document` **par la ref** (avant l'enregistrement de l'élément, React écrirait un attribut texte au lieu de la propriété) ; le nettoyage de l'effet abandonne la requête et ignore toute réponse périmée. Rendu : un conteneur `data-testid="badge-document"`, `data-state="loading|ready|error"`, `data-requested-src={src}`, `data-src={src du document affiché, "" sinon}`, contenant toujours `<page-view ref label={label} layout="all" fit="width" className="block h-full w-full">`, un calque « Chargement de l'aperçu… » en `loading`, et en `error` un `<button>` dont le texte est `PREVIEW_UNAVAILABLE` (incrémente `attempt`) précédé du message reçu s'il diffère. L'état passe à `ready` sur l'événement `pe-ready` de l'élément (`PAGE_VIEW_EVENTS.ready`). Hauteur du conteneur, **obligatoire** (`<page-view>` prend `height: 100%`, minimum 160 px) : `h-[70vh] max-h-[640px] w-full`.
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 `badge-document-client.test.ts` (faux `fetch`) : `badgeDocumentUrl("o1","e1","111")` vaut `/api/org/o1/events/e1/badges/111?format=html` ; 200 figé → `ok: true` avec le document ; 200 avec `frozen: false` → `ok: false` ; 503 `{ message: "X" }` → `{ ok: false, message: "X" }` ; 500 → `PREVIEW_UNAVAILABLE` ; JSON illisible → `PREVIEW_UNAVAILABLE` ; `fetch` qui rejette (réseau, `AbortError`) → `ok: false`, sans rejet.
 `BadgeDocumentView.test.tsx` (`renderToStaticMarkup`) : contient `<page-view`, `label="Aperçu du badge"`, `data-state="loading"`, `data-requested-src="/api/…?format=html"`, « Chargement de l'aperçu… », la classe `h-[70vh]` sur le conteneur, et ni `<iframe` ni `<object`.
 `BadgePrintActions.test.tsx` : plus d'`<iframe` ; contient `<page-view` ; lien « Télécharger » `href="…/badges/r1?download=1"` ; lien « Imprimer » `href="…/badges/r1"`, `target="_blank"`, `rel="noopener noreferrer"` ; cas « non approuvé » et « archivé » inchangés.
 `BadgeBatchPanel.test.tsx` : `data-requested-src="/api/org/o1/events/e1/badges/111?format=html"` remplace l'attente sur `src=` ; l'état vide ne contient pas `<page-view`.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/__tests__/badge-document-client.test.ts src/components/badge src/components/event/__tests__/BadgeBatchPanel.test.tsx`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter les cinq fichiers**
+- [x] **Step 3: Implémenter les cinq fichiers**
 
-- [ ] **Step 4: Vérifier**
+- [x] **Step 4: Vérifier**
 
 Run: la commande ci-dessus, puis `make typecheck && make lint`
 Expected: PASS ; aucun `any` ni `@ts-expect-error` pour `page-view`.
@@ -702,18 +702,18 @@ export function templateImageUrl(row: { previewPath: string | null; proofPath: s
 
 Catalogue, `listAvailableTemplates`, `meta.previewSrc` : `prefer: "preview"` (l'image du paquet, sinon l'épreuve — les deux paquets livrés n'ont pas d'image : leur vignette devient l'épreuve). Page de détail : `prefer: "proof"` ; la liste des ressources filtre `isGeneratedProofKey`. `TemplatePreview` : plus de branche `<object>` ; une source vide ou `.pdf` affiche le repère « Aperçu indisponible ».
 
-- [ ] **Step 1: Écrire les tests qui échouent**
+- [x] **Step 1: Écrire les tests qui échouent**
 
 `templateImageUrl` : `{ previewPath: "p/a.png", proofPath: "p/proof.png" }` → `/api/files/p/a.png` (preview) et `/api/files/p/proof.png` (proof) ; `{ previewPath: null, proofPath: "p/proof.png" }`, preview → `/api/files/p/proof.png` ; `{ previewPath: null, proofPath: "p/proof.pdf" }` → `""`. `listAvailableTemplates` d'un template livré seedé : `previewSrc` se termine par `/proof.png`. `TemplatePreview.test.tsx` : une source `.png` rend un `<img` avec `alt="Aperçu X"` ; une source `.pdf` ou vide rend « Aperçu indisponible » et pas d'`<object`.
 
-- [ ] **Step 2: Lancer, vérifier l'échec**
+- [x] **Step 2: Lancer, vérifier l'échec**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib/badge-templates/__tests__/resolve.test.ts src/components/ui/__tests__/TemplatePreview.test.tsx`
 Expected: FAIL.
 
-- [ ] **Step 3: Implémenter**
+- [x] **Step 3: Implémenter**
 
-- [ ] **Step 4: Vérifier**
+- [x] **Step 4: Vérifier**
 
 Même commande, puis `make typecheck`. Expected: PASS.
 
@@ -733,16 +733,16 @@ Même commande, puis `make typecheck`. Expected: PASS.
 - Modify: `package.json`, `yarn.lock` (retirer `@react-pdf/renderer`, `file-saver`, `@types/file-saver`)
 - Modify: `vitest.config.ts` (retirer l'exclusion `**/template.tsx` et son commentaire)
 
-- [ ] **Step 1: Supprimer et désinstaller**
+- [x] **Step 1: Supprimer et désinstaller**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn remove @react-pdf/renderer file-saver @types/file-saver`
 
-- [ ] **Step 2: Vérifier l'absence de références**
+- [x] **Step 2: Vérifier l'absence de références**
 
 Run: `grep -rnE "react-pdf|PDFViewer|renderToBuffer|BadgeDocument|BadgePreview|BadgeBatchExport|BadgeWebPreview|imageUrlToDataUrl|file-saver|buildDeclarativeTemplate|renderToJson|renderTreeFingerprint|extractPdfText" src scripts prisma e2e next.config.ts vitest.config.ts package.json`
 Expected: aucune ligne.
 
-- [ ] **Step 3: Suite complète**
+- [x] **Step 3: Suite complète**
 
 Run: `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage && make lint && make typecheck && make build`, puis `… exec app yarn prisma db seed`
 Expected: PASS, 100 %, build sans erreur.
@@ -761,7 +761,7 @@ Expected: PASS, 100 %, build sans erreur.
 
 Règles du dépôt (`e2e/README.md`) : aucun `page.request.*` nouveau (les deux appels existants de `badges.spec.ts` sont remplacés par des parcours UI), URL vérifiée à chaque navigation, `afterAll` de nettoyage.
 
-- [ ] **Step 1: Écrire les parcours**
+- [x] **Step 1: Écrire les parcours**
 
 `badges.spec.ts` :
 - « La page d'un badge montre l'aperçu HTML et marque imprimé » : `[data-testid="badge-document"]` atteint `data-state="ready"` ; `page.frameLocator("page-view iframe").getByText(<prénom>)` visible ; « Télécharger » → `page.waitForEvent("download")`, `suggestedFilename()` se termine par `.pdf` ; « Imprimer » → `page.waitForEvent("popup")`, l'URL du nouvel onglet se termine par `/badges/<id>` ; marquage inchangé.
@@ -770,7 +770,7 @@ Règles du dépôt (`e2e/README.md`) : aucun `page.request.*` nouveau (les deux 
 `responsive.spec.ts` (375 × 812, `isMobile`, `hasTouch`) : « Event : la page d'un badge s'affiche sans débordement » — `data-state="ready"`, boîte de `page-view` de largeur ≤ 375 px et > 0, `expectNoHorizontalOverflow(page, "/event/<id>/badges/<regId>")`, « Télécharger » et « Imprimer » visibles dans la fenêtre.
 `badge-templates.spec.ts` : `proofPath` se termine par `/proof.png` ; la page de détail montre `img[alt="Aperçu <label>"]` et plus aucun `object[data=…]`.
 
-- [ ] **Step 2: Lancer**
+- [x] **Step 2: Lancer**
 
 Run: `make test-e2e` (stack de dev démarrée, service `renderer` sain), puis `… exec app yarn prisma db seed`
 Expected: toute la suite Playwright PASS.
@@ -789,7 +789,7 @@ Expected: toute la suite Playwright PASS.
 - Modify: `docs/v4/features/templates-badges.md` (« Aperçu et épreuve », « Migration d'une base antérieure », « Monter de version le moteur »), `docs/v4/installation.md` (service `renderer` dans la liste des services de dev), `docs/v4/features/politique-tests.md` (faux exporteur, exclusion `template.tsx` retirée)
 - Modify: `CLAUDE.md` (ligne « PDF » de la pile : `@tigamadou/pdf-engine` 2 + service de rendu Chromium ; garde-fou « Rendu PDF » : Montserrat embarquée dans le moteur, plus d'accès sortant à Google Fonts requis ; service `renderer` dans le tableau des services), `README.md` si la pile y figure
 
-- [ ] **Step 1: Écrire la procédure de déploiement, dans cet ordre**
+- [x] **Step 1: Écrire la procédure de déploiement, dans cet ordre**
 
 1. **Sauvegarde** : `make backup-prod` sur le serveur (dump MySQL) ; noter le chemin. Le S3 n'est modifié que par ajout (`proof.png`) : sa sauvegarde n'est pas requise.
 2. **Service de rendu** : recopier `deploy.sh`, `docker-compose.yml` / `docker-compose.preprod.yml` ; `docker login ghcr.io` ; `docker compose pull renderer && docker compose up -d renderer` ; contrôle `docker compose ps renderer` → `healthy`.
@@ -799,7 +799,7 @@ Expected: toute la suite Playwright PASS.
 6. **Vérification** : `make validate-badge-templates-prod` → `OK` ; `make verify-engine-prod ARGS=--accept` après examen ; ouvrir la page d'un badge sur un téléphone ; télécharger un ZIP de lot.
 Retour arrière : redéployer le tag précédent **et** restaurer le dump (`make rollback-prod SQL=… UPLOADS=…`) — l'application 1.x ne lit pas le format 3. Même procédure en préproduction d'abord (cibles `-preprod`).
 
-- [ ] **Step 2: Vérification finale**
+- [x] **Step 2: Vérification finale**
 
 Run, dans cet ordre :
 `docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage` ; `make lint` ; `make typecheck` ; `make build` ; `docker compose -f docker-compose.dev.yml exec app sh -c "ls .next/standalone/node_modules/@tigamadou/pdf-engine/fonts/*.ttf"` ; `docker compose -f docker-compose.dev.yml exec app yarn prisma db seed` ; `make test-e2e` ; `docker build --target runner -t badge-verif:local --secret id=npm_token,env=NPM_TOKEN .`

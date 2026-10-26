@@ -19,7 +19,7 @@
 | ORM | Prisma 6 |
 | BDD | MySQL 8 |
 | Auth | NextAuth.js (Credentials, JWT) |
-| PDF | @react-pdf/renderer 4 |
+| PDF / rendu | `@tigamadou/pdf-engine` 2 (HTML) + service de rendu Chromium (`ghcr.io/tigamadou/pdf-engine-renderer`) |
 | QR Code | qrcode + html5-qrcode |
 | Email | nodemailer |
 | Hash mot de passe | bcryptjs (12 rounds) |
@@ -102,7 +102,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 - **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
 - **Soft delete partout** (`archived: bool` + `archivedAt: DateTime?`). Hard delete = action staff explicite.
 - **RBAC — séparation des rôles (v1 uniquement)** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **En v2**, cette restriction n'existe plus : `SUPER_ADMIN` est au sommet de `StaffRole` (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`) avec tous les droits sans restriction, y compris les actions métier (avec audit `staffActor=true`). Voir `docs/v2/features/multi-tenancy-rbac.md`.
-- **Rendu PDF des badges** : Montserrat via Google Fonts (`https://fonts.googleapis.com/`) est la police **par défaut** — préserver l'accès sortant à ce domaine. Un paquet de template peut embarquer ses propres polices (TTF/OTF), enregistrées sous une famille préfixée par template. Les images d'un paquet sont limitées à **JPEG et PNG** : `@react-pdf` ne lit pas le WebP, pourtant accepté ailleurs pour les uploads. Voir `docs/v4/features/templates-badges.md`.
+- **Rendu des badges** : le moteur `@tigamadou/pdf-engine` rend un badge en HTML ; le PDF, le document figé de l'aperçu et l'épreuve `proof.png` sont produits par le **service de rendu** (`renderer`, jamais exposé, réseau interne sans accès sortant), dont le tag d'image est égal à la version exacte du moteur. Montserrat est embarquée dans le moteur : plus d'accès sortant à Google Fonts requis. Un paquet de template peut embarquer ses propres polices (TTF/OTF), enregistrées sous une famille préfixée par template. Les images d'un paquet sont limitées à **JPEG et PNG** : le moteur ne lit pas le WebP, pourtant accepté ailleurs pour les uploads. Un document de badge de plus de 20 Mo est refusé avant l'appel. Voir `docs/v4/features/templates-badges.md` et `DEPLOYMENT.md`.
 
 ---
 
@@ -133,6 +133,7 @@ Services disponibles :
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
 | `rustfs` | 9001 | `https://s3.badge.local` | Console RustFS (stockage S3) |
+| `renderer` | — (jamais publié) | — | Service de rendu des badges (Chromium, image linux/amd64, réseau interne `rendu`) |
 | `caddy` | 80 / 443 | — | Reverse proxy dev (sous-domaines `*.badge.local`, `tls internal`) |
 
 > **Pré-requis pour les URL `*.badge.local`** : lancer `make dev-https` une fois (renseigne `/etc/hosts` et approuve la CA locale de Caddy — voir `docs/v4/installation.md`). Les ports directs (`localhost:3785`, `localhost:8080`, `localhost:8025`) restent disponibles en parallèle.
