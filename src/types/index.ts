@@ -1,11 +1,3 @@
-export interface EventInfo {
-  id: string;
-  logo: string;
-  title: string;
-  location: string;
-  date: string;
-}
-
 export interface Team {
   id: string;
   name: string;
@@ -30,10 +22,4 @@ export interface Registration {
   teamId: string;
   status: RegistrationStatus;
   allAccessGranted: boolean;
-}
-
-export interface BadgeProps {
-  registration: Registration;
-  team: Team;
-  event: EventInfo;
 }
