@@ -2,8 +2,19 @@ import { NextResponse } from "next/server";
 import JSZip from "jszip";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
-import { badgeRegistrationInclude, renderBadgePdf } from "@/lib/badge-templates/render-badge";
-import { badgeFileName, parseBadgeIds, MAX_BADGES_PER_BATCH } from "@/lib/badge-batch";
+import {
+  BadgeRenderError,
+  badgeRegistrationInclude,
+  badgeRenderFailure,
+  renderBadgePdf,
+} from "@/lib/badge-templates/render-badge";
+import {
+  BATCH_RENDER_CONCURRENCY,
+  badgeFileName,
+  mapWithConcurrency,
+  parseBadgeIds,
+  MAX_BADGES_PER_BATCH,
+} from "@/lib/badge-batch";
 
 export const runtime = "nodejs";
 
@@ -38,14 +49,18 @@ export const GET = withEventAuth(
     // Lu avant les rendus : un echec de lecture ne gaspille pas le travail de rendu.
     const event = await prisma.event.findUniqueOrThrow({ where: { id: eventId }, select: { slug: true } });
     const zip = new JSZip();
-    for (const registration of registrations) {
-      try {
-        const { pdf } = await renderBadgePdf(registration);
-        zip.file(badgeFileName(registration), pdf);
-      } catch (err) {
-        console.error(`[badges/print-zip] rendu en echec pour ${registration.id}`, err);
-        return NextResponse.json({ error: "RENDER_FAILED", id: registration.id }, { status: 500 });
-      }
+    try {
+      const pdfs = await mapWithConcurrency(registrations, BATCH_RENDER_CONCURRENCY, async (registration) => {
+        try {
+          return (await renderBadgePdf(registration)).pdf;
+        } catch (err) {
+          throw new BadgeRenderError(registration.id, err);
+        }
+      });
+      registrations.forEach((registration, i) => zip.file(badgeFileName(registration), pdfs[i]));
+    } catch (err) {
+      const { original, registrationId } = err as BadgeRenderError;
+      return badgeRenderFailure(original, registrationId, "badges/print-zip");
     }
     const archive = await zip.generateAsync({ type: "uint8array" });
     const day = new Date().toISOString().slice(0, 10);

@@ -6,21 +6,9 @@ import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
-// renderToBuffer delegue au vrai rendu, sauf le test d'echec de rendu.
-vi.mock("@react-pdf/renderer", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@react-pdf/renderer")>();
-  return { ...actual, renderToBuffer: vi.fn(actual.renderToBuffer) };
-});
-import { renderToBuffer } from "@react-pdf/renderer";
-
-import { extractPdfText } from "@tigamadou/pdf-engine/testing";
-
-// Compte les Page objects dans un buffer PDF (cf. render.test.tsx).
-function countPdfPages(buf: Buffer): number {
-  const txt = buf.toString("latin1");
-  const matches = txt.match(/\/Type\s*\/Page(?![s])/g);
-  return matches ? matches.length : 0;
-}
+import { __TEST__ } from "@/lib/badge-templates/build-context";
+import { RENDERER_UNAVAILABLE_MESSAGE } from "@/lib/renderer";
+import { countPdfPages, fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 
 async function bodyToBuffer(res: Response): Promise<Buffer> {
   const ab = await res.arrayBuffer();
@@ -192,20 +180,80 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(json.error).toBe("EVENT_FORBIDDEN");
   });
 
+  const url = (org: { id: string }, event: { id: string }, reg: { id: string }, query = "") =>
+    new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}${query}`);
+  const paramsOf = (org: { id: string }, event: { id: string }, reg: { id: string }) => ({
+    params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
+  });
+
   it("500 RENDER_FAILED en JSON si le rendu echoue", async () => {
     const { org, event, reg } = await setupFixtures();
     const { GET } = await import("../route");
-    vi.mocked(renderToBuffer).mockRejectedValueOnce(new Error("boom-render"));
+    fakeExporter.failNext("RENDER_FAILED");
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
-    });
+    const res = await GET(url(org, event, reg), paramsOf(org, event, reg));
     expect(res.status).toBe(500);
     expect(res.headers.get("content-type")).toContain("application/json");
     expect(await res.json()).toEqual({ error: "RENDER_FAILED", id: reg.id });
     expect(err).toHaveBeenCalledTimes(1);
     err.mockRestore();
   }, 30_000);
+
+  it.each([
+    ["UNAVAILABLE", ""],
+    ["TIMEOUT", ""],
+    ["UNAVAILABLE", "?format=html"],
+    ["TIMEOUT", "?format=html"],
+  ] as const)("503 RENDERER_UNAVAILABLE si le service repond %s %s", async (code, query) => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    fakeExporter.failNext(code);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await GET(url(org, event, reg, query), paramsOf(org, event, reg));
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("5");
+    expect(await res.json()).toEqual({ error: "RENDERER_UNAVAILABLE", message: RENDERER_UNAVAILABLE_MESSAGE });
+    err.mockRestore();
+  }, 30_000);
+
+  it("500 RENDER_FAILED avec le message pour un badge trop volumineux", async () => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    const spy = vi
+      .spyOn(__TEST__, "readFileAsDataUrl")
+      .mockResolvedValue(`data:image/jpeg;base64,${"A".repeat(21 * 1024 * 1024)}`);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await GET(url(org, event, reg), paramsOf(org, event, reg));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toMatchObject({ error: "RENDER_FAILED", id: reg.id });
+    expect(body.message).toMatch(/trop volumineux/);
+    spy.mockRestore();
+    err.mockRestore();
+  }, 30_000);
+
+  it("?format=html renvoie le document fige en JSON, sans cache", async () => {
+    const { org, event, reg, defaultId } = await setupFixtures();
+    const { GET } = await import("../route");
+    const res = await GET(url(org, event, reg, "?format=html"), paramsOf(org, event, reg));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(res.headers.get("x-template-id")).toBe(defaultId);
+    const doc = await res.json();
+    expect(doc.frozen).toBe(true);
+    expect(doc.pages).toEqual([1]);
+    expect(doc.html).not.toContain("<script");
+    expect(doc.html).toContain("Diallo");
+  }, 30_000);
+
+  it("?format=png est refuse (400 VALIDATION)", async () => {
+    const { org, event, reg } = await setupFixtures();
+    const { GET } = await import("../route");
+    const res = await GET(url(org, event, reg, "?format=png"), paramsOf(org, event, reg));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "VALIDATION" });
+  });
 
   it("retourne 404 NOT_FOUND pour un badgeId inexistant", async () => {
     const { org, event } = await setupFixtures();
@@ -269,7 +317,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
   it("imprime les consignes de l'evenement, l'initiale de categorie et l'All Access", async () => {
     const { org, event, reg } = await setupFixtures("ADMIN");
     const layout = {
-      formatVersion: 2,
+      formatVersion: 3,
       family: "consignes-test",
       label: "Consignes",
       description: "",
@@ -310,7 +358,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
           isAllAccess: "badge.allAccess",
           securityInstructions: "event.securityInstructions",
         },
-        assetPrefix: "badge-templates/consignes-test/", formatVersion: 2, installedById: "u1",
+        assetPrefix: "badge-templates/consignes-test/", formatVersion: 3, installedById: "u1",
       },
     });
     try {
@@ -322,22 +370,18 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
 
       const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route");
       const call = () =>
-        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}?format=html`), {
           params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
         });
 
-      const avec = extractPdfText(await bodyToBuffer(await call()));
+      const avec = (await (await call()).json()).html as string;
       expect(avec).toContain("[V]");
       expect(avec).toContain("ALL ACCESS");
-      // Point final omis expres : apres d'autres rendus dans le meme processus, la table
-      // ToUnicode ecrite par @react-pdf associe parfois le glyphe du point a une valeur
-      // vide (`<0017><>`). Le point est bien dessine, mais aucun lecteur de texte ne
-      // peut le retrouver. Defaut de @react-pdf, sans effet sur le badge imprime.
-      expect(avec).toContain("Restez dans la zone indiquee");
+      expect(avec).toContain("Restez dans la zone indiquee.");
 
       // L'All Access retire apres coup disparait du badge suivant.
       await prisma.registration.update({ where: { id: reg.id }, data: { allAccessGranted: false } });
-      const sans = extractPdfText(await bodyToBuffer(await call()));
+      const sans = (await (await call()).json()).html as string;
       expect(sans).not.toContain("ALL ACCESS");
     } finally {
       await prisma.installedBadgeTemplate.delete({ where: { id: row.id } });
@@ -347,7 +391,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
   it("imprime les options du badge : defaut, valeur reglee et interrupteur coupe", async () => {
     const { org, event, reg } = await setupFixtures("ADMIN");
     const layout = {
-      formatVersion: 2,
+      formatVersion: 3,
       family: "options-test",
       label: "Options",
       description: "",
@@ -383,7 +427,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
           visuel: "option",
           "event.bannerDataUrl": "event.bannerDataUrl",
         },
-        assetPrefix: "badge-templates/options-test/", formatVersion: 2, installedById: "u1",
+        assetPrefix: "badge-templates/options-test/", formatVersion: 3, installedById: "u1",
       },
     });
     try {
@@ -393,11 +437,11 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
       });
       const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/badges/[badgeId]/route");
       const call = () =>
-        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}`), {
+        GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/${reg.id}?format=html`), {
           params: Promise.resolve({ orgId: org.id, eventId: event.id, badgeId: reg.id }),
         });
 
-      const avec = extractPdfText(await bodyToBuffer(await call()));
+      const avec = (await (await call()).json()).html as string;
       expect(avec).toContain("BANDEAU");
       expect(avec).toContain("Zone C");
 
@@ -405,7 +449,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
         where: { id: event.id },
         data: { templateOptions: { zone: "Zone C", showColorBar: false } },
       });
-      const sans = extractPdfText(await bodyToBuffer(await call()));
+      const sans = (await (await call()).json()).html as string;
       expect(sans).not.toContain("BANDEAU");
       expect(sans).toContain("Zone C");
     } finally {

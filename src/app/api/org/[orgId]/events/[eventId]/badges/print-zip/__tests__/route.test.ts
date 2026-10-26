@@ -6,20 +6,12 @@ import { prisma } from "@/lib/prisma";
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
-// renderToBuffer delegue au vrai rendu, sauf le test d'echec de rendu.
-vi.mock("@react-pdf/renderer", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@react-pdf/renderer")>();
-  return { ...actual, renderToBuffer: vi.fn(actual.renderToBuffer) };
-});
-import { renderToBuffer } from "@react-pdf/renderer";
-
 import { createBadgeFixtures } from "@/lib/badge-templates/__tests__/badge-fixtures";
+import { __TEST__ } from "@/lib/badge-templates/build-context";
+import { RENDERER_UNAVAILABLE_MESSAGE } from "@/lib/renderer";
+import { countPdfPages, fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 import { GET } from "../route";
 
-function countPdfPages(buf: Buffer): number {
-  const matches = buf.toString("latin1").match(/\/Type\s*\/Page(?![s])/g);
-  return matches ? matches.length : 0;
-}
 
 function call(orgId: string, eventId: string, query: string) {
   return GET(
@@ -132,19 +124,43 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/print-zip", () => {
     expect((await call(org.id, event.id, `?ids=${a.id}`)).status).toBe(200);
   }, 30_000);
 
-  it("500 RENDER_FAILED sans archive partielle si un rendu echoue", async () => {
+  it("500 RENDER_FAILED avec l'id, sans archive partielle, si un rendu echoue", async () => {
     const { org, event, addRegistration } = await createBadgeFixtures();
     const a = await addRegistration();
-    const b = await addRegistration();
-    const actual = vi.mocked(renderToBuffer).getMockImplementation()!;
-    vi.mocked(renderToBuffer)
-      .mockImplementationOnce(actual)
-      .mockRejectedValueOnce(new Error("boom-render"));
+    fakeExporter.failNext("RENDER_FAILED");
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await call(org.id, event.id, `?ids=${a.id},${b.id}`);
+    const res = await call(org.id, event.id, `?ids=${a.id}`);
     expect(res.status).toBe(500);
     expect(res.headers.get("content-type")).toContain("application/json");
-    expect(await res.json()).toEqual({ error: "RENDER_FAILED", id: b.id });
+    expect(await res.json()).toEqual({ error: "RENDER_FAILED", id: a.id });
+    err.mockRestore();
+  }, 30_000);
+
+  it("503 si le service de rendu est indisponible", async () => {
+    const { org, event, addRegistration } = await createBadgeFixtures();
+    const a = await addRegistration();
+    fakeExporter.failNext("UNAVAILABLE");
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await call(org.id, event.id, `?ids=${a.id}`);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "RENDERER_UNAVAILABLE", message: RENDERER_UNAVAILABLE_MESSAGE });
+    err.mockRestore();
+  }, 30_000);
+
+  it("500 RENDER_FAILED avec le message pour un badge trop volumineux", async () => {
+    const { org, event, addRegistration } = await createBadgeFixtures();
+    const a = await addRegistration();
+    const spy = vi
+      .spyOn(__TEST__, "readFileAsDataUrl")
+      .mockResolvedValue(`data:image/jpeg;base64,${"A".repeat(21 * 1024 * 1024)}`);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await call(org.id, event.id, `?ids=${a.id}`);
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toMatchObject({ error: "RENDER_FAILED", id: a.id });
+    expect(body.message).toMatch(/trop volumineux/);
+    expect(fakeExporter.calls).toEqual([]);
+    spy.mockRestore();
     err.mockRestore();
   }, 30_000);
 });
