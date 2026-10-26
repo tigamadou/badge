@@ -30,11 +30,30 @@ services:
     image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}-tools:${BADGE_TAG:-prod}
     env_file:
       - .env.production
+    environment:
+      RENDERER_URL: http://badge-renderer:3000
+    networks:
+      - default
+      - rendu
     command: ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx prisma/seed-super-admin.ts"]
     restart: "no"
     depends_on:
       mysql:
         condition: service_healthy
+
+  # Service de rendu des badges (Chromium) : PDF, document fige, epreuve PNG. Jamais
+  # expose : reseau `rendu` interne (sans acces sortant) partage avec app, init et
+  # tools seulement. Le tag de l'image est toujours egal a la version du moteur
+  # (@tigamadou/pdf-engine, package.json). Le HEALTHCHECK est celui de l'image.
+  renderer:
+    container_name: badge-renderer
+    image: ghcr.io/tigamadou/pdf-engine-renderer:2.0.0
+    init: true
+    stop_grace_period: 30s
+    restart: unless-stopped
+    networks: [rendu]
+    expose:
+      - "3000"
 
   app:
     container_name: badge-app
@@ -45,14 +64,21 @@ services:
       - "3000"
     env_file:
       - .env.production
+    environment:
+      RENDERER_URL: http://badge-renderer:3000
     volumes:
       - uploads_data:/app/uploads
+    networks:
+      - default
+      - rendu
     depends_on:
       init:
         condition: service_completed_successfully
       mysql:
         condition: service_healthy
       rustfs:
+        condition: service_healthy
+      renderer:
         condition: service_healthy
     restart: unless-stopped
 
@@ -136,10 +162,17 @@ services:
     image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}-tools:${BADGE_TAG:-prod}
     env_file:
       - .env.production
+    environment:
+      RENDERER_URL: http://badge-renderer:3000
     volumes:
       - uploads_data:/app/uploads
+    networks:
+      - default
+      - rendu
     depends_on:
       mysql:
+        condition: service_healthy
+      renderer:
         condition: service_healthy
 
 volumes:
@@ -156,3 +189,7 @@ networks:
   web:
     external: true
     name: badge_web
+  # Reseau du service de rendu : interne, donc sans acces sortant ni vers Internet ni
+  # vers les autres reseaux de l'hote.
+  rendu:
+    internal: true

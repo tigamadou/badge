@@ -1,5 +1,5 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 3,
   "family": "default",
   "label": "Badge standard",
   "description": "Badge mono-face au format carte bancaire (CR80 paysage). Photo a gauche, identite et QR code a droite, bande categorie pleine couleur en bas.",

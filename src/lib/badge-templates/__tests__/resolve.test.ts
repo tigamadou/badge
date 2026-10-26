@@ -1,12 +1,31 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
-import { renderToJson } from "@tigamadou/pdf-engine/testing";
-import { resolveTemplate, listAvailableTemplates, templateExists, previewUrl } from "../resolve";
+import { parseManifest } from "@tigamadou/pdf-engine";
+import { renderHtml } from "@tigamadou/pdf-engine/html";
+import { montserratFaces } from "@tigamadou/pdf-engine/fonts";
+import {
+  resolveTemplate,
+  listAvailableTemplates,
+  templateExists,
+  previewUrl,
+  readLayout,
+  referencedAssets,
+  templateImageUrl,
+} from "../resolve";
+import type { BadgeTemplate } from "../types";
 import { ensureReferenceTemplates, defaultTemplateId } from "../install";
 
+function html(t: BadgeTemplate, values: Record<string, unknown> = {}): string {
+  return renderHtml(t.manifest, {
+    values: values as never,
+    assets: t.assets,
+    defaultFont: montserratFaces(),
+  }).html;
+}
+
 const LAYOUT = {
-  formatVersion: 2,
+  formatVersion: 3,
   family: "salon",
   label: "Salon",
   description: "",
@@ -35,7 +54,7 @@ async function install(
       layout: LAYOUT,
       bindings: BINDINGS,
       assetPrefix: "badge-templates/test/",
-      formatVersion: 2,
+      formatVersion: 3,
       installedById: "u1",
       archived: overrides.archived ?? false,
     },
@@ -72,11 +91,11 @@ describe("resolveTemplate", () => {
     const row = await install();
     await prisma.installedBadgeTemplate.update({
       where: { id: row.id },
-      data: { previewPath: "badge-templates/test/preview.pdf" },
+      data: { previewPath: "badge-templates/test/preview.png" },
     });
     const t = await resolveTemplate(row.id);
     // Une cle nue n'est pas affichable cote client : /api/files la sert.
-    expect(t.meta.previewSrc).toBe("/api/files/badge-templates/test/preview.pdf");
+    expect(t.meta.previewSrc).toBe("/api/files/badge-templates/test/preview.png");
   });
 
   it("charge les ressources du stockage pour un template qui en reference", async () => {
@@ -96,7 +115,7 @@ describe("resolveTemplate", () => {
         pageWidthPx: 1011,
         pageHeightPx: 638,
         layout: {
-          formatVersion: 2,
+          formatVersion: 3,
           family: "avec-assets",
           label: "Avec ressources",
           description: "",
@@ -108,7 +127,7 @@ describe("resolveTemplate", () => {
           ],
         },
         assetPrefix: prefix,
-        formatVersion: 2,
+        formatVersion: 3,
         installedById: "u1",
       },
     });
@@ -117,8 +136,8 @@ describe("resolveTemplate", () => {
     expect(t.meta.label).toBe("Avec ressources");
     // Le rendu doit consommer les ressources prechargees : l'image de fond apparait
     // dans l'arbre sous forme de data URL, preuve que le stockage a bien ete lu.
-    const rendu = renderToJson(<t.Component values={{}} />);
-    expect(rendu.images.some((src) => src.startsWith("data:image/png;base64,"))).toBe(true);
+    expect(t.assets("assets/fond.png")).toBe(`data:image/png;base64,${png.toString("base64")}`);
+    expect(html(t)).toContain(t.assets("assets/fond.png"));
   });
 
   it("expose les variables du manifeste et la table de liaison stockee", async () => {
@@ -174,6 +193,34 @@ describe("resolveTemplate", () => {
     await expect(resolveTemplate(id)).rejects.toThrow(/format v1.*make migrate-installed-templates/);
   });
 
+  it("expose meta depuis la ligne installee", async () => {
+    const row = await install();
+    await prisma.installedBadgeTemplate.update({
+      where: { id: row.id },
+      data: { pageWidthPx: 320, pageHeightPx: 460, description: "Desc" },
+    });
+    const t = await resolveTemplate(row.id);
+    expect(t.meta).toEqual({
+      id: row.id,
+      version: 1,
+      label: "Salon",
+      description: "Desc",
+      pages: 1,
+      pageSize: { width: "320px", height: "460px" },
+      previewSrc: "",
+    });
+  });
+
+  it("migre en memoire une ligne restee au format 2", async () => {
+    const { id } = await install();
+    await prisma.installedBadgeTemplate.update({
+      where: { id },
+      data: { formatVersion: 2, layout: { ...LAYOUT, formatVersion: 2 } },
+    });
+    const t = await resolveTemplate(id);
+    expect(t.manifest.formatVersion).toBe(3);
+  });
+
   it("precharge une ressource posee dans un groupe imbrique", async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
     const prefix = `badge-templates/resolve-groupe-${Date.now()}/`;
@@ -189,7 +236,7 @@ describe("resolveTemplate", () => {
         pageWidthPx: 1011,
         pageHeightPx: 638,
         layout: {
-          formatVersion: 2,
+          formatVersion: 3,
           family: "groupe",
           label: "Groupe",
           description: "",
@@ -221,7 +268,7 @@ describe("resolveTemplate", () => {
         },
         bindings: {},
         assetPrefix: prefix,
-        formatVersion: 2,
+        formatVersion: 3,
         installedById: "u1",
       },
     });
@@ -229,8 +276,7 @@ describe("resolveTemplate", () => {
     // Avant correction, la ressource d'un enfant de groupe n'etait pas prechargee :
     // le rendu levait « ressource absente du stockage ».
     const t = await resolveTemplate(row.id);
-    const rendu = renderToJson(<t.Component values={{}} />);
-    expect(rendu.images.some((src) => src.startsWith("data:image/png;base64,"))).toBe(true);
+    expect(html(t)).toContain(t.assets("assets/fond.png"));
   });
 
   it("retombe sur la famille default pour un identifiant inconnu, en le signalant", async () => {
@@ -262,7 +308,7 @@ describe("resolveTemplate", () => {
         pageWidthPx: 300,
         pageHeightPx: 200,
         layout: {
-          formatVersion: 2,
+          formatVersion: 3,
           family: "consignes",
           label: "Consignes",
           description: "",
@@ -286,15 +332,15 @@ describe("resolveTemplate", () => {
         },
         bindings: { consignes: null },
         assetPrefix: "badge-templates/puce/",
-        formatVersion: 2,
+        formatVersion: 3,
         installedById: "u1",
       },
     });
 
     const template = await resolveTemplate(row.id);
-    const out = renderToJson(<template.Component values={{ consignes: ["Restez dans la zone."] }} />);
-    expect(out.texts).toContain("Restez dans la zone.");
-    expect(out.images).toEqual([`data:image/png;base64,${Buffer.from("PUCE").toString("base64")}`]);
+    const out = html(template, { consignes: ["Restez dans la zone."] });
+    expect(out).toContain("Restez dans la zone.");
+    expect(out).toContain(`data:image/png;base64,${Buffer.from("PUCE").toString("base64")}`);
   });
 
   it("ne precharge rien pour une puce qui n'est pas une image", async () => {
@@ -309,7 +355,7 @@ describe("resolveTemplate", () => {
         pageWidthPx: 300,
         pageHeightPx: 200,
         layout: {
-          formatVersion: 2,
+          formatVersion: 3,
           family: "consignes",
           label: "Consignes",
           description: "",
@@ -333,15 +379,85 @@ describe("resolveTemplate", () => {
         },
         bindings: { consignes: null },
         assetPrefix: "badge-templates/puce/",
-        formatVersion: 2,
+        formatVersion: 3,
         installedById: "u1",
       },
     });
 
     const template = await resolveTemplate(row.id);
-    const out = renderToJson(<template.Component values={{ consignes: ["Restez dans la zone."] }} />);
-    expect(out.texts).toContain("Restez dans la zone.");
-    expect(out.images).toEqual([]);
+    const out = html(template, { consignes: ["Restez dans la zone."] });
+    expect(out).toContain("Restez dans la zone.");
+    expect(out).not.toContain("data:image/");
+  });
+});
+
+describe("readLayout", () => {
+  it("renvoie un layout au format 3 tel quel", () => {
+    expect(readLayout({ id: "x", formatVersion: 3, layout: LAYOUT })).toBe(LAYOUT);
+  });
+
+  it("migre un layout au format 2 vers le format 3, blocs identiques", () => {
+    const layout = { ...LAYOUT, formatVersion: 2 };
+    const out = readLayout({ id: "x", formatVersion: 2, layout });
+    expect(out.formatVersion).toBe(3);
+    expect(out.blocks).toEqual(LAYOUT.blocks);
+    expect(layout.formatVersion).toBe(2);
+  });
+
+  it("refuse le format 1 en nommant la migration", () => {
+    expect(() => readLayout({ id: "x", formatVersion: 1, layout: LAYOUT })).toThrow(
+      /format v1.*make migrate-installed-templates/,
+    );
+  });
+});
+
+describe("referencedAssets", () => {
+  const base = {
+    formatVersion: 3,
+    family: "f",
+    label: "F",
+    description: "",
+    category: "badge",
+    page: { widthPx: 100, heightPx: 100, count: 1 },
+    variables: [],
+  };
+  const parse = (blocks: unknown[], entries: string[] = []) => {
+    const r = parseManifest(
+      { ...base, blocks: blocks.map((b) => ({ page: 1, ...(b as object) })) },
+      entries,
+    );
+    if (!r.ok) throw new Error(r.errors.join(" | "));
+    return r.manifest;
+  };
+
+  it("ne reference rien pour un rect a fond uni, et la ressource d'un rect a image", () => {
+    const plain = parse([{ type: "rect", x: 0, y: 0, w: 10, h: 10, fill: "#ff0000" }]);
+    expect(referencedAssets(plain)).toEqual([]);
+    const withImage = parse(
+      [{ type: "rect", x: 0, y: 0, w: 10, h: 10, image: { asset: "assets/fond.png" } }],
+      ["assets/fond.png"],
+    );
+    expect(referencedAssets(withImage)).toEqual(["assets/fond.png"]);
+  });
+
+  it("couvre l'ellipse (y compris dans un groupe) et ignore line, polygon et path", () => {
+    const m = parse(
+      [
+        {
+          type: "group",
+          x: 0,
+          y: 0,
+          w: 100,
+          h: 100,
+          blocks: [{ type: "ellipse", x: 0, y: 0, w: 10, h: 10, image: { asset: "assets/motif.png" } }],
+        },
+        { type: "line", x1: 0, y1: 0, x2: 10, y2: 10, stroke: { color: "#000000", widthPx: 1 } },
+        { type: "polygon", x: 0, y: 0, w: 10, h: 10, sides: 5, fill: "#000000" },
+        { type: "path", x: 0, y: 0, w: 10, h: 10, d: "M 0 0 L 10 10", fill: "#000000" },
+      ],
+      ["assets/motif.png"],
+    );
+    expect(referencedAssets(m)).toEqual(["assets/motif.png"]);
   });
 });
 
@@ -370,10 +486,11 @@ describe("listAvailableTemplates", () => {
     await prisma.installedBadgeTemplate.deleteMany({});
   });
 
-  it("inclut les templates livres une fois le seed passe", async () => {
+  it("inclut les templates livres une fois le seed passe, avec leur epreuve PNG pour vignette", async () => {
     await ensureReferenceTemplates("seed");
     const list = await listAvailableTemplates();
     expect(list.map((t) => t.label)).toContain("Badge standard");
+    for (const t of list) expect(t.previewSrc).toMatch(/\/proof\.png$/);
   });
 
   it("exclut les templates archives", async () => {
@@ -401,6 +518,31 @@ describe("listAvailableTemplates", () => {
     const row = await install();
     const list = await listAvailableTemplates();
     expect(list.find((t) => t.id === row.id)?.previewSrc).toBe("");
+  });
+});
+
+describe("templateImageUrl", () => {
+  it("prefere l'image du paquet pour le catalogue et l'epreuve pour le detail", () => {
+    const row = { previewPath: "p/a.png", proofPath: "p/proof.png" };
+    expect(templateImageUrl(row, "preview")).toBe("/api/files/p/a.png");
+    expect(templateImageUrl(row, "proof")).toBe("/api/files/p/proof.png");
+  });
+
+  it("se replie sur l'epreuve quand le paquet n'a pas d'image", () => {
+    expect(templateImageUrl({ previewPath: null, proofPath: "p/proof.png" }, "preview")).toBe(
+      "/api/files/p/proof.png",
+    );
+  });
+
+  it("ignore une epreuve .pdf d'avant la migration", () => {
+    expect(templateImageUrl({ previewPath: null, proofPath: "p/proof.pdf" }, "preview")).toBe("");
+    expect(templateImageUrl({ previewPath: null, proofPath: null }, "proof")).toBe("");
+  });
+
+  it("accepte jpg, jpeg et webp", () => {
+    for (const ext of ["jpg", "jpeg", "webp"]) {
+      expect(templateImageUrl({ previewPath: `p/a.${ext}`, proofPath: null }, "preview")).toBe(`/api/files/p/a.${ext}`);
+    }
   });
 });
 

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { badgeFileName, parseBadgeIds, MAX_BADGES_PER_BATCH } from "../badge-batch";
+import {
+  badgeFileName,
+  parseBadgeIds,
+  mapWithConcurrency,
+  BATCH_RENDER_CONCURRENCY,
+  MAX_BADGES_PER_BATCH,
+} from "../badge-batch";
 
 const base = {
   id: "1261001471042",
@@ -49,5 +55,45 @@ describe("parseBadgeIds", () => {
 
   it("limite de lot a 200", () => {
     expect(MAX_BADGES_PER_BATCH).toBe(200);
+  });
+});
+
+describe("mapWithConcurrency", () => {
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it("conserve l'ordre d'entree meme avec des delais inverses", async () => {
+    const out = await mapWithConcurrency([30, 20, 10, 0], 2, async (ms) => {
+      await wait(ms);
+      return ms;
+    });
+    expect(out).toEqual([30, 20, 10, 0]);
+  });
+
+  it("ne depasse jamais la limite d'appels simultanes", async () => {
+    let active = 0;
+    let max = 0;
+    await mapWithConcurrency([1, 2, 3, 4, 5, 6], 2, async () => {
+      active += 1;
+      max = Math.max(max, active);
+      await wait(5);
+      active -= 1;
+    });
+    expect(max).toBe(2);
+  });
+
+  it("rejette avec la premiere erreur, sans lancer de nouvel appel apres elle", async () => {
+    const started: number[] = [];
+    await expect(
+      mapWithConcurrency([1, 2, 3, 4, 5], 1, async (n) => {
+        started.push(n);
+        if (n === 2) throw new Error("boom");
+        return n;
+      }),
+    ).rejects.toThrow("boom");
+    expect(started).toEqual([1, 2]);
+  });
+
+  it("accepte une liste vide", async () => {
+    expect(await mapWithConcurrency([], BATCH_RENDER_CONCURRENCY, async (n) => n)).toEqual([]);
   });
 });

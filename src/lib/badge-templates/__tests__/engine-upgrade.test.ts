@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import type { Prisma } from "@prisma/client";
+import { migrateManifest } from "@tigamadou/pdf-engine";
 import { prisma } from "@/lib/prisma";
+import { fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
+import { ExportError } from "@tigamadou/pdf-engine/export";
 import { deleteFile, getFile, uploadFile } from "@/lib/storage";
 import {
   BASELINE_KEY,
@@ -14,7 +18,7 @@ import {
 
 const PNG = Buffer.from("IMG");
 
-function layout(texte = "Bonjour") {
+function layoutV2(texte = "Bonjour") {
   return {
     formatVersion: 2,
     family: "salon",
@@ -44,6 +48,11 @@ function layout(texte = "Bonjour") {
   };
 }
 
+// Layout au format courant (3), derive du fixture historique par la migration du moteur.
+function layout(texte = "Bonjour") {
+  return migrateManifest(layoutV2(texte)) as Prisma.InputJsonObject;
+}
+
 async function installer(options: { family?: string; layout?: unknown; formatVersion?: number } = {}) {
   const family = options.family ?? "salon";
   const assetPrefix = `badge-templates/test-${family}/`;
@@ -61,7 +70,7 @@ async function installer(options: { family?: string; layout?: unknown; formatVer
       layout: (options.layout ?? layout()) as object,
       bindings: {},
       assetPrefix,
-      formatVersion: options.formatVersion ?? 2,
+      formatVersion: options.formatVersion ?? 3,
       installedById: "u1",
     },
   });
@@ -167,24 +176,74 @@ describe("verifyEngineUpgrade", () => {
     const report = await verifyEngineUpgrade({ accept: false });
     expect(report.changed).toHaveLength(1);
     expect(report.changed[0].variants).toEqual(["echantillons", "prereglage Sans photo"]);
-    expect(report.changed[0].proofPath).toBe(`${row.assetPrefix}proof-engine-${ENGINE_VERSION}.pdf`);
+    expect(report.changed[0].proofPath).toBe(`${row.assetPrefix}proof-engine-${ENGINE_VERSION}.png`);
     const proof = await getFile(report.changed[0].proofPath);
-    expect(proof.body.subarray(0, 5).toString()).toBe("%PDF-");
+    expect([...proof.body.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(proof.contentType).toBe("image/png");
   });
 
   it("refuse un layout illisible, une ressource absente ou un format v1, et n'ecrit pas la reference", async () => {
-    await installer({ family: "casse", layout: { formatVersion: 2 } });
+    await installer({ family: "casse", layout: { formatVersion: 3 } });
     await installer({ family: "ancien", formatVersion: 1 });
     const sansFond = await installer({ family: "sansfond" });
     await deleteFile(`${sansFond.assetPrefix}assets/fond.png`);
 
     const report = await verifyEngineUpgrade({ accept: true });
     expect(report.refused.map((t) => t.family).sort()).toEqual(["ancien", "casse", "sansfond"]);
+    expect(report.refused.find((t) => t.family === "ancien")!.errors[0]).toMatch(
+      /format v1.*make migrate-installed-templates/,
+    );
     expect(report.refused.find((t) => t.family === "sansfond")!.errors).toEqual([
       'ressource "assets/fond.png" absente du stockage.',
     ]);
     expect(report.baselineWritten).toBe(false);
     expect(await loadBaseline()).toBeNull();
+  });
+
+  it("verifie une ligne restee au format 2 (migree en memoire) sans la refuser", async () => {
+    const row = await installer({ layout: layoutV2(), formatVersion: 2 });
+    const report = await verifyEngineUpgrade({ accept: false });
+    expect(report.refused).toEqual([]);
+    expect(report.fresh.map((t) => t.id)).toEqual([row.id]);
+  });
+
+  it("refuse un layout au format 2 que la migration ne sait pas lire", async () => {
+    await installer({ family: "casse", layout: "illisible" as never, formatVersion: 2 });
+    const report = await verifyEngineUpgrade({ accept: false });
+    expect(report.refused[0].errors[0]).toMatch(/layout illisible/);
+  });
+
+  it("deux verifications donnent les memes empreintes, sans appeler le service", async () => {
+    await installer();
+    await verifyEngineUpgrade({ accept: true });
+    const premiere = await loadBaseline();
+    await verifyEngineUpgrade({ accept: true });
+    expect((await loadBaseline())!.templates).toEqual(premiere!.templates);
+    expect(fakeExporter.calls).toEqual([]);
+  });
+
+  it("une reference sans empreinte HTML (moteur 1.x) est d'un autre moteur : tout est sans reference, epreuve regeneree", async () => {
+    const row = await installer();
+    await uploadFile(
+      BASELINE_KEY,
+      Buffer.from(JSON.stringify({ engineVersion: "1.2.0", checkedAt: "x", templates: { [row.id]: { echantillons: "abc" } } })),
+      "application/json",
+    );
+    const report = await verifyEngineUpgrade({ accept: false });
+    expect(report.changed).toEqual([]);
+    expect(report.fresh).toHaveLength(1);
+    expect(report.fresh[0].proofPath).toBe(`${row.assetPrefix}proof-engine-${ENGINE_VERSION}.png`);
+    const accepted = await verifyEngineUpgrade({ accept: true });
+    expect(accepted.baselineWritten).toBe(true);
+    expect((await loadBaseline())!.fingerprint).toBe("html");
+  });
+
+  it("rejette une ExportError quand le service manque pendant l'ecriture d'une epreuve", async () => {
+    await installer();
+    await verifyEngineUpgrade({ accept: true });
+    await installer({ family: "neuf" });
+    fakeExporter.failNext("UNAVAILABLE");
+    await expect(verifyEngineUpgrade({ accept: false })).rejects.toBeInstanceOf(ExportError);
   });
 
   it("verifie aussi les templates archives (leurs badges deja emis restent rendables)", async () => {
@@ -202,9 +261,9 @@ describe("verifyEngineUpgrade", () => {
     const report = await verifyEngineUpgrade({ accept: false });
     expect(report.fresh).toHaveLength(1);
     expect(report.fresh[0].id).toBe(neuf.id);
-    expect(report.fresh[0].proofPath).toBe(`${neuf.assetPrefix}proof-engine-${ENGINE_VERSION}.pdf`);
+    expect(report.fresh[0].proofPath).toBe(`${neuf.assetPrefix}proof-engine-${ENGINE_VERSION}.png`);
     const proof = await getFile(report.fresh[0].proofPath!);
-    expect(proof.body.subarray(0, 5).toString()).toBe("%PDF-");
+    expect([...proof.body.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
   });
 
   it("sans reference, les templates sans reference n'ont pas d'epreuve regeneree", async () => {

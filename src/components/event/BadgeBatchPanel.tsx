@@ -7,6 +7,8 @@ import { CatPill } from "@/components/ui/Labels";
 import { MAX_BADGES_PER_BATCH } from "@/lib/badge-batch";
 import { toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { BadgeDocumentView } from "@/components/badge/BadgeDocumentView";
+import { badgeDocumentUrl } from "@/lib/badge-document-client";
 
 export type BatchBadge = {
   id: string;
@@ -17,7 +19,7 @@ export type BatchBadge = {
   printed: boolean;
 };
 
-// Impression par lot : liste des badges selectionnes, apercu du PDF serveur du
+// Impression par lot : liste des badges selectionnes, apercu HTML du
 // badge choisi, ZIP d'un PDF par badge pour l'imprimante a badges, marquage explicite.
 export function BadgeBatchPanel({
   orgId,
@@ -130,11 +132,7 @@ export function BadgeBatchPanel({
           </Card>
 
           {currentId && (
-            <iframe
-              title="Aperçu du badge"
-              src={`${base}/badges/${currentId}`}
-              className="h-[640px] w-full rounded-xl border border-slate-200 bg-white"
-            />
+            <BadgeDocumentView src={badgeDocumentUrl(orgId, eventId, currentId)} label="Aperçu du badge" />
           )}
         </div>
       )}

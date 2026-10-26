@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { previewUrl } from "@/lib/badge-templates/resolve";
+import { templateImageUrl } from "@/lib/badge-templates/resolve";
 import { Icon } from "@/components/ui/Icon";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
 import { BadgeTemplateInstaller } from "@/components/staff/BadgeTemplateInstaller";
@@ -57,7 +57,7 @@ export default async function PlatformBadgeTemplatesPage() {
             {templates.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-slate-50">
-                  <TemplatePreview src={previewUrl(t.previewPath)} label={t.label} />
+                  <TemplatePreview src={templateImageUrl(t, "preview")} label={t.label} />
                 </div>
                 <div className="min-w-[220px] flex-1">
                   <p className="text-sm font-medium text-slate-900">

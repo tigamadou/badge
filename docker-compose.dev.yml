@@ -17,10 +17,14 @@ services:
         required: false
     environment:
       NPM_TOKEN: ${NPM_TOKEN}
+      RENDERER_URL: http://renderer:3000
+    networks: [default, rendu]
     depends_on:
       mysql:
         condition: service_healthy
       rustfs:
+        condition: service_healthy
+      renderer:
         condition: service_healthy
 
   # Worker de la queue d'emails (spec 23) : meme image que app, polling court en dev
@@ -48,6 +52,23 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+
+  # Service de rendu des badges (Chromium) : PDF, document fige, epreuve PNG.
+  renderer:
+    image: ghcr.io/tigamadou/pdf-engine-renderer:2.0.0
+    # Image publiee en linux/amd64 seulement : emulee (Rosetta) sur Mac Apple Silicon.
+    platform: linux/amd64
+    init: true
+    stop_grace_period: 30s
+    restart: unless-stopped
+    networks: [rendu]
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # Le studio de construction de templates vit desormais dans le projet dedie
   # pdfStudio (../pdfStudio, http://pdfstudio.localhost).
@@ -118,6 +139,10 @@ services:
       - app
       - phpmyadmin
       - mailpit
+
+networks:
+  rendu:
+    internal: true
 
 volumes:
   mysql_data:

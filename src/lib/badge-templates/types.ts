@@ -1,5 +1,4 @@
-import type { ComponentType } from "react";
-import type { VariableDeclaration, VariableValues } from "@tigamadou/pdf-engine";
+import type { AssetResolver, TemplateManifest, VariableDeclaration } from "@tigamadou/pdf-engine";
 import type { Bindings } from "./bindings";
 
 export type PageSize = {
@@ -58,7 +57,9 @@ export type TemplateContext = {
 // les variables declarees et la table de liaison choisie a l'installation.
 export type BadgeTemplate = {
   meta: TemplateMeta;
+  manifest: TemplateManifest;
   variables: VariableDeclaration[];
   bindings: Bindings;
-  Component: ComponentType<{ values: VariableValues }>;
+  // Data URL des ressources prechargees (images, polices) : l'AssetResolver est synchrone.
+  assets: AssetResolver;
 };

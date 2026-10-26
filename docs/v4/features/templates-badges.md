@@ -138,31 +138,45 @@ Archiver retire le template du sélecteur **sans supprimer ni la ligne ni ses re
 `resolveTemplate` continue de le résoudre : les événements qui le référencent impriment
 exactement le même badge qu'avant. Seules `listAvailableTemplates` filtre sur `archived`.
 
-### Aperçu et PDF d'épreuve
+### Aperçu et épreuve
 
 Deux fichiers distincts, deux rôles :
 
 | Fichier | Origine | Où il s'affiche |
 |---|---|---|
 | **Image d'aperçu** (`previewPath`) | Fournie par le paquet, déclarée par le champ `preview` du manifeste | La **vignette du catalogue** et le sélecteur de badge |
-| **PDF d'épreuve** (`proofPath`) | Produit à l'installation | L'**aperçu de la page de détail**, affiché directement |
+| **Épreuve PNG** (`proofPath`, `proof.png`) | Rendue à l'installation par le service de rendu (page 1) | L'**aperçu de la page de détail** ; **vignette de repli** du catalogue quand le paquet n'a pas d'image |
 
-La répartition suit l'usage de chaque écran. Le catalogue liste des dizaines de modèles :
-il lui faut des vignettes légères, et une image ordinaire s'affiche sans lecteur
-intercalé. La page de détail sert au contraire à examiner **un** modèle : on y veut le
-rendu réel aux dimensions exactes, donc le PDF, visible sans avoir à cliquer.
+`templateImageUrl(row, prefer)` (`src/lib/badge-templates/resolve.ts`) choisit la première
+source affichable **comme image** (`.png`, `.jpg`, `.jpeg`, `.webp`), dans l'ordre demandé :
+`"preview"` pour le catalogue et `meta.previewSrc` (l'image du paquet, sinon l'épreuve),
+`"proof"` pour la page de détail (l'épreuve, sinon l'image). Une épreuve `.pdf` d'avant la
+migration vers le format 3 est ignorée : le repère « Aperçu indisponible » s'affiche.
 
-Jusqu'à la spec 14, le PDF servait aux deux, y compris comme vignette — où le lecteur du
-navigateur superposait sa barre d'outils, illisible en petit.
+**Le champ `preview` est optionnel.** Les deux modèles livrés n'en ont pas : leur vignette est
+l'épreuve PNG. Le rendu d'épreuve est systématique : c'est la garantie qu'un template accepté
+au catalogue s'imprime. Si le service de rendu est indisponible, l'installation répond **503**
+(`RENDERER_UNAVAILABLE`), pas « paquet invalide ».
 
-**Le champ `preview` est optionnel.** Sans lui, l'interface affiche un placeholder — c'est
-le cas des deux modèles livrés, qui ne fournissent pas d'image. Le rendu d'épreuve, lui,
-reste systématique : c'est la garantie qu'un template accepté au catalogue s'imprime.
+Les fichiers sont servis par `/api/files/[...path]`, où les clés `badge-templates/` sont non
+sensibles. Le composant `src/components/ui/TemplatePreview.tsx` affiche une image ou, pour une
+source vide ou `.pdf`, le repère « Aperçu indisponible ». Les fichiers produits par
+l'application (`proof.png`, `proof.pdf`, `proof-engine-<version>.png|pdf`, à la racine du
+préfixe) sont reconnus par `isGeneratedProofKey` et exclus de la liste des ressources
+embarquées de la page de détail.
 
-Les deux fichiers sont servis par `/api/files/[...path]`, où les clés `badge-templates/`
-sont non sensibles. Le composant partagé `src/components/ui/TemplatePreview.tsx` aiguille
-selon la source : image, `<object>` PDF (pour les templates installés avant la spec 14),
-ou placeholder.
+### Aperçu d'un badge émis
+
+La page d'un badge et l'impression par lot affichent le badge dans `<page-view>`
+(`@tigamadou/pdf-engine/viewer`, composant `BadgeDocumentView`). La route
+`GET …/badges/[badgeId]?format=html` renvoie le **document figé** (`frozen: true`, sans script)
+en JSON (`cache-control: private, no-store`) ; le PDF (`GET …/badges/[badgeId]`, `?download=1`
+pour le téléchargement) et le ZIP du lot sont produits par le service. Un badge est rendu en
+HTML vivant par `renderHtml` (dans le processus Next), puis figé ou converti en PDF par le
+service ; images et polices sont intégrées en data URL (la CSP du document n'autorise rien
+d'autre). Un document de plus de 20 Mo est refusé côté serveur avant l'appel
+(« document du badge trop volumineux »). Service arrêté ou lent : aperçu « Aperçu indisponible,
+réessayer », routes et ZIP en 503.
 
 ## Créer un template
 
@@ -235,7 +249,7 @@ installés par le seed.
 
 La **page de détail** est en lecture seule, accessible à tout staff, et rassemble :
 
-- l'aperçu en grand — le **PDF d'épreuve**, donc le rendu réel — avec un lien pour
+- l'aperçu en grand — l'**épreuve PNG**, donc le rendu réel — avec un lien pour
   l'ouvrir en plein écran ;
 - **qui utilise cette version** — événements, organisations, défaut de la plateforme.
   Zéro utilisation est affiché explicitement : c'est l'information qui permet d'archiver
@@ -268,9 +282,9 @@ jamais, sa table de liaison se décide sur l'écran d'installation (voir plus ha
 Ce fichier est **propre aux paquets livrés avec l'application**
 (`prisma/badge-templates/<famille>/`) — pdfStudio n'en produit pas.
 
-**Les images sont limitées à JPEG et PNG.** `@react-pdf/image` ne reconnaît pas WebP,
-que le reste du projet accepte pourtant pour les uploads utilisateur : un WebP dans un
-paquet produirait un badge cassé.
+**Les images sont limitées à JPEG et PNG.** Le moteur ne lit pas WebP, que le reste du
+projet accepte pourtant pour les uploads utilisateur : un WebP dans un paquet produirait un
+badge cassé.
 
 ### Contrôles appliqués à l'archive
 
@@ -284,13 +298,19 @@ archive. Tout est vérifié avant extraction.
 | Nombre d'entrées | 50 | Même objectif, sur l'axe du nombre de fichiers |
 | Chemins | Ni absolus, ni `..`, ni `\` | Écriture hors du dossier cible (*zip slip*) |
 | Emplacements | `manifest.json`, `assets/`, `fonts/` | Une entrée inattendue fait échouer |
-| Images | JPEG, PNG — 5 Mo par fichier | Formats lisibles par le moteur PDF |
+| Images | JPEG, PNG — 5 Mo par fichier | Formats lisibles par le moteur |
 | Polices | TTF, OTF — 2 Mo par fichier | Formats acceptés par `Font.register` |
 
 Le type est déduit des **octets d'en-tête**, jamais de l'extension : une image WebP
 renommée en `.png` est refusée.
 
 ## Manifeste
+
+Le format courant est le **format 3** (`formatVersion: 3`, moteur 2.0.0) : 150 blocs au plus
+par manifeste (groupes et enfants compris) ; types de blocs `text`, `rect`, `square`,
+`circle`, `list`, `group` et les formes vectorielles `ellipse` (fond et/ou image, comme
+`rect`), `line`, `polygon` et `path` (sans image). Un manifeste au format 2 se renumérote par
+`migrateManifest` (exporté par le moteur), sans changer les blocs.
 
 Le moteur v2 ne connaît **aucun nom métier** : un manifeste déclare son propre
 vocabulaire dans `variables`, et les blocs y font référence par leur nom. La source
@@ -384,13 +404,10 @@ maquette Figma, positionnées en absolu depuis le coin supérieur gauche de la p
 Un bloc peut déborder de la page sans que la validation s'y oppose — le fond perdu
 est un cas print légitime, et le dépassement se juge à l'œil dans l'aperçu du studio.
 Le trop-plein est simplement coupé : une page déclarée = une page rendue, le rendu ne
-crée jamais de page supplémentaire (les blocs vivent dans une `View` insécable qui
-couvre exactement la page — `wrap={false}` posé sur la `Page` elle-même lui ferait
-adopter la hauteur du flux, c'est-à-dire zéro).
-
-Piège connu : `@react-pdf` n'affiche pas un texte dont le cadre est plus bas que sa
-ligne — il le supprime sans erreur ni rognage. Donner à chaque bloc `text` une
-hauteur d'au moins **1,45 × la taille de police** (par ligne de texte).
+crée jamais de page supplémentaire. Depuis le format 3, le cadre d'un bloc `text` masque ce
+qui le dépasse (`overflow: hidden`), à l'écran comme dans le PDF : donner à chaque bloc `text`
+une hauteur d'au moins **1,45 × la taille de police** (par ligne de texte), sous peine de
+voir la ligne rognée.
 
 ### Types de blocs
 
@@ -430,8 +447,8 @@ Outre `page`, `x`, `y`, `w`, `h` et `visibleIf` :
 Les couleurs de bordure acceptent, comme `fill`, une valeur hexadécimale ou le nom
 d'une variable de type couleur.
 
-Les **ombres portées et les dégradés ne sont pas supportés** : `@react-pdf` n'a ni
-ombre ni flou (limite du moteur, décision de la spec 18).
+Les **ombres portées et les dégradés ne sont pas supportés** (limite du moteur, décision de
+la spec 18).
 
 ### Gabarits de texte
 
@@ -543,10 +560,10 @@ bloc `text` déclare ce qu'il faut faire.
 |---|---|
 | `shrink` | Réduit la police jusqu'à `minSizePx` (obligatoire dans ce mode) |
 | `truncate` | Coupe et ajoute une ellipse |
-| `clip` | Laisse déborder — comportement brut de `@react-pdf` |
+| `clip` | Laisse le texte tel quel (le cadre du bloc masque ce qui le dépasse, à l'écran comme dans le PDF) |
 
 `maxLines` complète ces modes pour le multiligne : au-delà du nombre de lignes
-déclaré, `@react-pdf` coupe avec une ellipse.
+déclaré, le moteur coupe avec une ellipse.
 
 ### Style du texte
 
@@ -642,85 +659,72 @@ colonnes de la cascade. Idempotent, et il signale toute valeur qui ne désigne a
 template plutôt que de deviner. Une base neuve n'en a pas besoin : `make db-seed` suffit.
 
 `make migrate-installed-templates [ARGS=--apply]` migre les lignes `InstalledBadgeTemplate`
-encore au format v1 (`formatVersion = 1`) vers le v2, depuis la spec 20. Le moteur v2 ne
-sait plus rendre une ligne v1 : **aucune coexistence n'est possible**. Une ligne restée en
-v1 fait échouer la résolution (`resolveTemplate` lève une erreur explicite qui nomme cette
-cible), donc l'impression de chaque badge qui en dépend répond 500. Pour chaque ligne : `migrateManifest` (porté de pdfStudio) convertit
-le manifeste, la table de liaison est posée en **identité** (les variables produites
-portent exactement le nom des 15 sources v1, aucun choix humain requis), et
-`validateBindings` garde le résultat avant écriture. **Dry-run par défaut** ; `ARGS=--apply`
-pour écrire. Idempotent (ne regarde que `formatVersion = 1`), et couvre les templates
-**archivés** — un template archivé reste résolvable, donc migrable.
+au format v1 **ou v2** vers le **format 3** (moteur 2.0.0, `scripts/migrate-installed-templates-v3.ts`).
+Pour chaque ligne (archivées comprises) : 1 → 2 si besoin (`migrateManifest` porté de
+pdfStudio, table de liaison posée en **identité** : les variables produites portent exactement
+le nom des 15 sources v1), 2 → 3 (`migrateManifest` du moteur), `parseManifest`,
+`validateBindings`, chargement des ressources, puis **rendu de l'épreuve par le service**
+(même en dry-run : c'est ce qui prouve que la ligne s'imprimera). Avec `--apply`, l'épreuve est
+stockée sous `<préfixe>proof.png` (le `proof.pdf` existant reste en place), puis **une seule
+transaction** écrit layout, liaisons, `formatVersion = 3` et `proofPath` de toutes les lignes.
+Une ligne sautée (migration, validation, liaisons, rendu, service indisponible) n'écrit
+**rien** en base et fait sortir le script en code 1. **Dry-run par défaut**, idempotent.
+Cibles `make migrate-installed-templates-preprod` / `-prod` (conteneur `tools`), et
+`make validate-badge-templates-preprod` / `-prod`.
 
-### Ordre de release obligatoire
+**Fenêtre entre le déploiement et la migration.** Une ligne encore au format 2 est lue en
+mémoire (`readLayout` : `migrateManifest` du moteur) : elle s'imprime et passe `verify-engine`
+sans interruption. Une ligne au format 1 est refusée, avec un message qui nomme
+`make migrate-installed-templates`.
 
-Conséquence directe (spec 20, § « Migration des lignes en base ») : sur toute base qui
-contient des lignes v1, la mise en service du moteur v2 suit **cet ordre, dans la même
-fenêtre, sans trafic entre les étapes** :
+### Ordre de déploiement
 
-1. **Pousser le schéma** (colonne `InstalledBadgeTemplate.bindings`) sur la base cible.
-2. **Lancer `migrate-installed-templates-v2 --apply`** contre cette même base (un dry-run
-   juste avant est recommandé), puis `validate-badge-templates` pour confirmer qu'il ne
-   reste aucune ligne v1.
-3. **Seulement ensuite**, ouvrir le trafic sur la nouvelle version.
-
-Faits d'outillage à connaître avant de planifier la release :
-
-- La cible Makefile `migrate-installed-templates` vise **uniquement le conteneur de dev**
-  (`docker compose -f docker-compose.dev.yml exec app …`). Il n'existe pas d'équivalent
-  production.
-- L'image de production (`Dockerfile`, étape `runner` en mode standalone) ne contient ni
-  `scripts/`, ni `src/`, ni `tsx` : le script **ne peut pas** tourner dedans.
-- Le service compose `init` exécute `prisma db push` et `app` démarre **dès qu'il a
-  terminé** : `deploy.sh` pousse le schéma et ouvre le trafic d'un même geste, sans
-  laisser de place à l'étape 2.
-
-Le script doit donc être lancé depuis un environnement qui dispose des sources (le
-conteneur de dev, ou un conteneur d'outillage ponctuel) avec `DATABASE_URL` pointée sur la
-base cible, **avant** que la nouvelle image ne reçoive du trafic — par exemple : schéma
-poussé depuis cet environnement, migration, puis démarrage de la nouvelle image (le
-`db push` d'`init` n'a alors plus rien à faire). La mécanique concrète de production (accès à la
-base, conteneur utilisé, coupure éventuelle) est **à arrêter au moment de la release** ;
-elle sort du périmètre de la spec 20.
+Voir `DEPLOYMENT.md`, section « Moteur 2.0.0 : service de rendu » : sauvegarde, service de
+rendu, `verify-engine-prod`, déploiement, migration (dry-run puis `--apply`), vérification.
+Le retour arrière restaure le dump : l'application 1.x ne lit pas le format 3.
 
 ### Réserves de la migration
 
-Deux réserves à connaître :
-
 - Les échantillons d'image du studio (`assets/photo-demo.png`, etc.) n'existent pas dans
   les paquets v1 installés ; `migrateManifest` laisse alors ces variables sans `sample`,
-  sans effet sur les badges réels. Le PDF d'épreuve (`proofPath`) existant **n'est pas
-  régénéré** après migration.
+  sans effet sur les badges réels.
 - Fuseau : un template migré rend sa date **à l'identique** du v1, sauf si le serveur
   tourne à l'ouest de l'UTC — la date avance alors d'un jour, vers la bonne valeur
   calendaire (voir la spec 20, § « Dates »).
+- Le template ex-305v est à **réinstaller depuis le studio** après le déploiement pour
+  bénéficier des textes de repli (`fallbackTexts`, livrés dans le moteur 2.0.0).
 
-**Message trompeur à connaître** : quand `parseManifest` (moteur v2, donc aussi
-pdfStudio) refuse un manifeste `formatVersion: 1`, le message renvoie vers
-`make migrate-template NAME=<famille>` — la commande **de pdfStudio**, pour un
-manifeste d'atelier. Pour une **ligne déjà installée** dans ce dépôt, l'équivalent
-est `make migrate-installed-templates` ci-dessus : le message du moteur ne le sait
-pas, il est identique des deux côtés puisque le moteur est le même package.
+**Message à connaître** : quand `parseManifest` refuse un manifeste d'un format antérieur, le
+message renvoie vers `migrateManifest()` ou `make migrate-template NAME=<famille>` — la commande
+**de pdfStudio**, pour un manifeste d'atelier. Pour une **ligne déjà installée** dans ce dépôt,
+l'équivalent est `make migrate-installed-templates`.
 
 `make validate-badge-templates` vérifie qu'aucune référence n'est orpheline, que la
 famille `default` existe bien, et — depuis la spec 20 — signale aussi toute ligne restée
-au format v1 et toute table de liaison incomplète (variable non décidée, source inconnue,
+au format antérieur au 3 et toute table de liaison incomplète (variable non décidée, source inconnue,
 type incompatible).
 
 ## Monter de version le moteur
 
-Le moteur de rendu est le package `@tigamadou/pdf-engine` (publié depuis pdfStudio).
-Les badges sont re-rendus à la demande : une nouvelle version du moteur redessine
-aussi les badges déjà émis. Avant chaque déploiement d'une nouvelle version :
+Le moteur de rendu est le package `@tigamadou/pdf-engine` (publié depuis pdfStudio), accompagné
+du **service de rendu** `ghcr.io/tigamadou/pdf-engine-renderer` dont le tag est toujours égal
+à la version du moteur (trois compose et CI, vérifié par `renderer-version.test.ts`). Les badges
+sont re-rendus à la demande : une nouvelle version du moteur redessine aussi les badges déjà
+émis. Avant chaque déploiement d'une nouvelle version :
 
-1. `yarn add @tigamadou/pdf-engine@<version>` (conteneur de dev), puis `make test`.
-2. `make verify-engine` : rend chaque template installé (**archivés compris** : leurs
-   badges déjà émis restent rendables) avec ses échantillons et ses préréglages et
-   compare à la référence. Un template **refusé** bloque (code 1). Un rendu **changé**,
+1. `yarn add @tigamadou/pdf-engine@<version> --exact` (conteneur de dev), mettre à jour le tag
+   de l'image `renderer` dans `docker-compose.dev.yml`, `docker-compose.yml`,
+   `docker-compose.preprod.yml` et `.github/workflows/ci.yml`, puis `make test`.
+2. `make verify-engine` : rend chaque template installé en HTML (**archivés compris** : leurs
+   badges déjà émis restent rendables) avec ses échantillons et ses préréglages et compare
+   l'**empreinte HTML** (`htmlFingerprint`) à la référence. L'empreinte porte sur le document
+   vivant : aucun appel au service. Un template **refusé** bloque (code 1). Un rendu **changé**,
    ou un template installé depuis la dernière référence, régénère son épreuve
-   `proof-engine-<version>.pdf` à côté de `proof.pdf` : les comparer. Les épreuves sont
+   `proof-engine-<version>.png` à côté de `proof.png` : les comparer. Les épreuves sont
    écrites dans le S3 de l'environnement **même sans `--accept`**. Pour en ouvrir une :
    `/api/files/<proofPath>` (la route sert les clés `badge-templates/`) ou la console RustFS.
+   Une référence sans `fingerprint: "html"` (moteur 1.x) est « d'un autre moteur » : tous les
+   templates sont « sans référence » et reçoivent leur épreuve.
 3. Même vérification sur les données réelles, sans redéployer l'application :
    `make verify-engine-preprod`, puis `make verify-engine-prod`.
 4. Si les changements sont acceptés : `--accept` est **par environnement** (chacun a sa
@@ -732,21 +736,16 @@ aussi les badges déjà émis. Avant chaque déploiement d'une nouvelle version 
 Après l'installation d'un nouveau template, lancer `make verify-engine-prod ARGS=--accept`
 pour qu'il entre dans la référence.
 
-La première fois, aucune référence n'existe : tous les templates sont « sans
-référence » ; `ARGS=--accept` l'enregistre. Premier déploiement : l'application
-embarquait auparavant une version plus ancienne du moteur ; la première référence est
-enregistrée avec la 1.0.0. Comparer l'épreuve `proof-engine-1.0.0.pdf` de chaque
-template à son `proof.pdf` avant d'accepter.
-
 Avant le premier déploiement : vérifier que le serveur a `NPM_TOKEN` dans
 `~/prod/badge/.env` et `~/preprod/badge/.env`, et `docker compose version` >= 2.23.
 `make verify-engine-prod` exerce le même chemin de secret de build sans toucher à
 l'application.
 
 Pour que pdfStudio protège les templates de production dans son corpus de
-non-régression : `make export-engine-corpus-prod`, puis déposer le contenu de
+non-régression : `make export-engine-corpus-prod` (manifestes **au format 3**, les lignes au
+format 2 sont migrées en mémoire, le format 1 est ignoré), puis déposer le contenu de
 `backups/engine-corpus/` dans `pdfStudio/packages/engine/corpus/`.
 
 Une version **majeure** du moteur peut exiger de migrer les layouts stockés : suivre
 les instructions de sa note de version (même patron que
-`scripts/migrate-installed-templates-v2.ts`), puis `make verify-engine`.
+`scripts/migrate-installed-templates-v3.ts`), puis `make verify-engine`.

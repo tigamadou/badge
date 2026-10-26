@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto";
-import { createElement } from "react";
 import type { InstalledBadgeTemplate } from "@prisma/client";
 import {
-  buildDeclarativeTemplate,
   parseManifest,
   samplesOf,
   type AssetResolver,
@@ -11,16 +9,21 @@ import {
 } from "@tigamadou/pdf-engine";
 import type { PackageAsset } from "@tigamadou/pdf-engine/package";
 import { renderProof } from "@tigamadou/pdf-engine/proof";
-import { renderTreeFingerprint } from "@tigamadou/pdf-engine/testing";
+import { renderHtml } from "@tigamadou/pdf-engine/html";
+import { montserratFaces } from "@tigamadou/pdf-engine/fonts";
+import { htmlFingerprint } from "@tigamadou/pdf-engine/testing";
 import enginePackage from "@tigamadou/pdf-engine/package.json";
 import { prisma } from "@/lib/prisma";
 import { getFile, uploadFile } from "@/lib/storage";
-import { referencedAssets } from "./resolve";
+import { getExporter } from "@/lib/renderer";
+import { readLayout, referencedAssets } from "./resolve";
 
 // Verification d'une montee de version du moteur : chaque template installe est
-// rendu avec ses echantillons et ses prereglages, et l'empreinte de chaque rendu est
-// comparee a la reference enregistree lors de la verification precedente. Un badge
-// deja emis est re-rendu a la demande : un rendu qui change change son apparence.
+// rendu en HTML avec ses echantillons et ses prereglages, et l'empreinte de chaque
+// rendu est comparee a la reference enregistree lors de la verification precedente.
+// Un badge deja emis est re-rendu a la demande : un rendu qui change change son
+// apparence. L'empreinte porte sur le document vivant (aucun appel au service) ; le
+// service n'est sollicite que pour les epreuves PNG.
 
 export const ENGINE_VERSION: string = enginePackage.version;
 export const BASELINE_KEY = "badge-templates/_engine/fingerprints.json";
@@ -39,6 +42,9 @@ export type TemplateCheck =
 export type Baseline = {
   engineVersion: string;
   checkedAt: string;
+  // Une reference sans ce champ date du moteur 1.x (empreinte de l'arbre React-PDF) :
+  // elle n'est pas comparable.
+  fingerprint: "html";
   templates: Record<string, Record<string, string>>;
 };
 
@@ -100,15 +106,21 @@ const sha256 = (text: string) => createHash("sha256").update(text).digest("hex")
 
 export async function checkTemplate(row: InstalledBadgeTemplate): Promise<TemplateCheck> {
   const identity = { id: row.id, family: row.family, version: row.version };
-  if (row.formatVersion !== 2) {
+  let raw: TemplateManifest;
+  try {
+    raw = readLayout(row);
+  } catch (error) {
+    const message = (error as Error).message;
     return {
       ...identity,
       status: "refused",
-      errors: [`format v${row.formatVersion} : migrer le template (make migrate-installed-templates).`],
+      errors: [
+        row.formatVersion === 2
+          ? `layout illisible : ${message}`
+          : `format v${row.formatVersion} : migrer le template (make migrate-installed-templates).`,
+      ],
     };
   }
-
-  const raw = row.layout as unknown as TemplateManifest;
   let names: string[];
   try {
     names = assetNamesFor(raw);
@@ -139,13 +151,15 @@ export async function checkTemplate(row: InstalledBadgeTemplate): Promise<Templa
     return url;
   };
 
-  // Empreinte de ce que l'application rend : le layout brut, comme resolve.ts.
-  const { Component } = buildDeclarativeTemplate(raw, resolver, row.id);
+  // Empreinte de ce que l'application rend : le layout lu, comme resolve.ts.
   const fingerprints: Record<string, string> = {};
   for (const variant of variantsOf(raw, resolver)) {
-    fingerprints[variant.name] = sha256(
-      renderTreeFingerprint(createElement(Component, { values: variant.values })),
-    );
+    const document = renderHtml(raw, {
+      values: variant.values,
+      assets: resolver,
+      defaultFont: montserratFaces(),
+    });
+    fingerprints[variant.name] = sha256(htmlFingerprint(document));
   }
   return { ...identity, status: "ok", fingerprints, manifest: parsed.manifest, assets };
 }
@@ -178,6 +192,7 @@ export async function verifyEngineUpgrade(options: { accept: boolean }): Promise
     baselineWritten: false,
   };
   const next: Baseline["templates"] = {};
+  const comparable = baseline?.fingerprint === "html";
 
   for (const row of rows) {
     const identity = { id: row.id, family: row.family, version: row.version };
@@ -187,13 +202,16 @@ export async function verifyEngineUpgrade(options: { accept: boolean }): Promise
       continue;
     }
     next[row.id] = check.fingerprints;
-    const previous = baseline?.templates[row.id];
-    const proofPath = `${row.assetPrefix}proof-engine-${ENGINE_VERSION}.pdf`;
-    const writeProof = async () =>
-      uploadFile(proofPath, await renderProof(check.manifest, check.assets, row.id), "application/pdf");
+    const previous = comparable ? baseline.templates[row.id] : undefined;
+    const proofPath = `${row.assetPrefix}proof-engine-${ENGINE_VERSION}.png`;
+    const writeProof = async () => {
+      const { png } = await renderProof(check.manifest, check.assets, row.id, getExporter());
+      await uploadFile(proofPath, Buffer.from(png), "image/png");
+    };
     if (!previous) {
-      // Installe apres la derniere reference : son epreuve est regeneree pour etre
-      // comparee a celle de l'installation. Sans reference du tout, rien a comparer.
+      // Installe apres la derniere reference, ou reference d'un autre moteur : son
+      // epreuve est regeneree pour etre comparee a celle de l'installation. Sans
+      // reference du tout, rien a comparer.
       if (baseline !== null) {
         await writeProof();
         report.fresh.push({ ...identity, proofPath });
@@ -217,6 +235,7 @@ export async function verifyEngineUpgrade(options: { accept: boolean }): Promise
   if (options.accept && report.refused.length === 0) {
     const content: Baseline = {
       engineVersion: ENGINE_VERSION,
+      fingerprint: "html",
       checkedAt: new Date().toISOString(),
       templates: next,
     };

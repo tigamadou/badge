@@ -29,9 +29,6 @@ export default defineConfig({
         // Assets binaires et fichiers type-only : aucune logique executable.
         "src/lib/**/*.png",
         "src/lib/badge-templates/**/types.ts",
-        // Templates React-PDF (rendu) : couverts par build-context + E2E generation badge,
-        // pas par l'unitaire (cf. plan : composants React couverts par E2E).
-        "src/lib/badge-templates/**/template.tsx",
         // Wrapper NextAuth trivial : delegue tout a NextAuth(authOptions). La logique
         // metier (authorize, callbacks) vit dans src/lib/auth.ts (couvert 100%) et le
         // flux login est couvert en E2E. Rien de testable en unitaire ici.

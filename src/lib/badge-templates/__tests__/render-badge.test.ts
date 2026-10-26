@@ -5,12 +5,15 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
 import { createBadgeFixtures } from "./badge-fixtures";
-import { loadBadgeRegistration, renderBadgePdf, resolveEventTemplate } from "../render-badge";
-
-function countPdfPages(buf: Buffer): number {
-  const matches = buf.toString("latin1").match(/\/Type\s*\/Page(?![s])/g);
-  return matches ? matches.length : 0;
-}
+import {
+  loadBadgeRegistration,
+  renderBadgeDocument,
+  renderBadgeHtml,
+  renderBadgePdf,
+  resolveEventTemplate,
+} from "../render-badge";
+import { __TEST__ } from "../build-context";
+import { countPdfPages, fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 
 describe("loadBadgeRegistration / renderBadgePdf", () => {
   beforeEach(() => {
@@ -31,29 +34,75 @@ describe("loadBadgeRegistration / renderBadgePdf", () => {
     expect(loaded?.event.orgId).toBe(event.orgId);
   });
 
-  it("rend une page avec le template de la plateforme (famille default)", async () => {
+  it("rend le document vivant avec le template de la plateforme (famille default)", async () => {
     const { addRegistration, defaultId } = await createBadgeFixtures();
-    const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
-    const { pdf, templateId } = await renderBadgePdf(reg);
-    expect(pdf.toString("latin1", 0, 5)).toBe("%PDF-");
-    expect(countPdfPages(pdf)).toBe(1);
+    const reg = (await loadBadgeRegistration(
+      (await addRegistration({ firstName: "Anne-Marie", lastName: "Diallo" })).id,
+    ))!;
+    const { document, templateId } = await renderBadgeDocument(reg);
+    expect(document.frozen).toBe(false);
+    expect(document.pages).toEqual([1]);
+    expect(document.html.startsWith("<!doctype html>")).toBe(true);
+    const text = document.html.replaceAll("\u2060", "");
+    expect(text).toContain("Anne-Marie");
+    expect(text).toContain("Diallo");
     expect(templateId).toBe(defaultId);
+    expect(fakeExporter.calls).toEqual([]);
   }, 30_000);
 
   it("rend deux pages avec le template recto-verso de l'evenement", async () => {
     const { event, addRegistration, rectoVersoId } = await createBadgeFixtures();
     await prisma.event.update({ where: { id: event.id }, data: { badgeTemplateId: rectoVersoId } });
     const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
-    const { pdf, templateId } = await renderBadgePdf(reg);
-    expect(countPdfPages(pdf)).toBe(2);
+    const { document, templateId } = await renderBadgeDocument(reg);
+    expect(document.pages).toEqual([1, 2]);
     expect(templateId).toBe(rectoVersoId);
+  }, 30_000);
+
+  it("fige le document par le service, sans script ni WORD JOINER", async () => {
+    const { addRegistration } = await createBadgeFixtures();
+    const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
+    const { document } = await renderBadgeHtml(reg);
+    expect(document.frozen).toBe(true);
+    expect(document.html).not.toContain("<script");
+    expect(document.html).not.toContain("\u2060");
+    expect(fakeExporter.calls.map((c) => c.op)).toEqual(["freeze"]);
+  }, 30_000);
+
+  it("produit un PDF par le service a partir du document vivant", async () => {
+    const { addRegistration } = await createBadgeFixtures();
+    const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
+    const { pdf } = await renderBadgePdf(reg);
+    expect(Buffer.from(pdf).toString("latin1", 0, 5)).toBe("%PDF-");
+    expect(countPdfPages(pdf)).toBe(1);
+    expect(fakeExporter.calls).toHaveLength(1);
+    expect(fakeExporter.calls[0].op).toBe("pdf");
+    expect(fakeExporter.calls[0].doc.frozen).toBe(false);
+  }, 30_000);
+
+  it("propage l'indisponibilite du service", async () => {
+    const { addRegistration } = await createBadgeFixtures();
+    const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
+    fakeExporter.failNext("UNAVAILABLE");
+    await expect(renderBadgePdf(reg)).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  }, 30_000);
+
+  it("refuse un badge trop lourd avant tout appel au service", async () => {
+    const { addRegistration } = await createBadgeFixtures();
+    const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
+    const spy = vi
+      .spyOn(__TEST__, "readFileAsDataUrl")
+      .mockResolvedValue(`data:image/jpeg;base64,${"A".repeat(21 * 1024 * 1024)}`);
+    await expect(renderBadgePdf(reg)).rejects.toThrow(/trop volumineux/);
+    expect(fakeExporter.calls).toEqual([]);
+    spy.mockRestore();
   }, 30_000);
 
   it("se replie sur le template de l'organisation quand l'evenement n'en a pas", async () => {
     const { org, addRegistration, rectoVersoId } = await createBadgeFixtures();
     await prisma.organization.update({ where: { id: org.id }, data: { badgeTemplateId: rectoVersoId } });
     const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
-    const { templateId } = await renderBadgePdf(reg);
+    const { templateId } = await renderBadgeDocument(reg);
     expect(templateId).toBe(rectoVersoId);
   }, 30_000);
 
@@ -61,7 +110,7 @@ describe("loadBadgeRegistration / renderBadgePdf", () => {
     const { addRegistration, defaultId } = await createBadgeFixtures();
     await prisma.platformSettings.delete({ where: { id: "singleton" } });
     const reg = (await loadBadgeRegistration((await addRegistration()).id))!;
-    const { templateId } = await renderBadgePdf(reg);
+    const { templateId } = await renderBadgeDocument(reg);
     expect(templateId).toBe(defaultId);
   }, 30_000);
 

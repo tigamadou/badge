@@ -4,9 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { formatEventDate } from "@/lib/format-date";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { BadgeDocumentView } from "@/components/badge/BadgeDocumentView";
+import { badgeDocumentUrl } from "@/lib/badge-document-client";
 
-// Apercu du PDF serveur (template de l'evenement), telechargement et marquage
-// "imprime" explicite d'un badge. Un apercu ou un telechargement ne marque rien.
+// Apercu HTML du badge (template de l'evenement), telechargement, impression du PDF
+// dans un nouvel onglet et marquage "imprime" explicite. Un apercu, un telechargement
+// ou une impression ne marque rien.
 export function BadgePrintActions({
   orgId,
   eventId,
@@ -54,17 +57,21 @@ export function BadgePrintActions({
 
   return (
     <div className="space-y-4">
-      <iframe
-        title="Aperçu du badge"
-        src={pdfUrl}
-        className="h-[640px] w-full rounded-xl border border-slate-200 bg-white"
-      />
+      <BadgeDocumentView src={badgeDocumentUrl(orgId, eventId, registrationId)} label="Aperçu du badge" />
       <div className="flex flex-wrap items-center gap-3">
         <a
           href={`${pdfUrl}?download=1`}
           className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
         >
           Télécharger
+        </a>
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Imprimer
         </a>
         <Button
           type="button"

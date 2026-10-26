@@ -375,12 +375,13 @@ model InstalledBadgeTemplate {
   // chemin de source du domaine badge, ou null pour « laisser vide ». Le manifeste
   // v2 declare des variables aux noms libres et ne dit pas d'ou vient une valeur :
   // c'est ici que l'application le dit. Defaut {} : une ligne migree depuis la v1
-  // la recoit par script (scripts/migrate-installed-templates-v2.ts).
+  // la recoit par script (scripts/migrate-installed-templates-v3.ts).
   bindings      Json      @default("{}")
   assetPrefix   String
   // v4 (spec 14) : previewPath designe l'IMAGE d'apercu declaree par le manifeste
-  // (null si le paquet n'en fournit pas) ; proofPath le PDF produit a l'installation,
-  // conserve pour verifier le rendu aux dimensions reelles.
+  // (null si le paquet n'en fournit pas) ; proofPath l'epreuve PNG (page 1) rendue par le
+  // service de rendu a l'installation ; les anciennes lignes portent un proof.pdf
+  // jusqu'a la migration vers le format 3.
   previewPath   String?
   proofPath     String?
   formatVersion Int

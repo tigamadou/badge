@@ -16,13 +16,18 @@ outil, un perimetre et un objectif de couverture propres.
 
 - **Outil** : Vitest 4 + `@vitest/coverage-v8`.
 - **Perimetre** : `src/lib/**` (helpers d'autorisation, mail, storage, settings,
-  subscription, validators, badge-templates hors rendu React-PDF).
+  subscription, validators, badge-templates, rendu compris).
 - **Seuils = gate** : **100%** lignes / branches / fonctions / statements
   (`vitest.config.ts`). Un trou fait echouer `make test-coverage` et la CI.
 - **Exclusions justifiees** (commentees dans `vitest.config.ts`) : `prisma.ts`
-  (singleton trivial), assets binaires et fichiers type-only, templates React-PDF
-  (`template.tsx`, couverts par `build-context` + E2E), wrapper `auth/[...nextauth]`
+  (singleton trivial), assets binaires et fichiers type-only, wrapper `auth/[...nextauth]`
   (delegue a NextAuth ; logique dans `src/lib/auth.ts`, couverte a 100%).
+- **Service de rendu des badges** : les tests Vitest n'appellent jamais le vrai service.
+  `src/test-setup.ts` installe avant chaque test un **faux exporteur**
+  (`src/lib/__tests__/helpers/fake-exporter.ts`, via `overrideExporter`) : `freeze` retire les
+  scripts, `pdf` produit un PDF factice d'une page par page du document, `image` un PNG 1x1,
+  `failNext(code)` fait echouer l'appel suivant (`UNAVAILABLE`, `TIMEOUT`, `RENDER_FAILED`).
+  Le rendu reel est exerce par l'E2E (Playwright) et par `make db-seed`.
 - Les **composants React** ne sont pas vises par l'unitaire : ils sont couverts par l'E2E.
 
 ## 2. Integration API (Vitest + vraie MySQL) — `src/app/api`

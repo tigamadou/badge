@@ -41,6 +41,7 @@ sa CA interne (`tls internal`). Le HTTP est redirige vers HTTPS.
 | `mysql` | 33060 | -- | Base de donnees MySQL |
 | `phpmyadmin` | 8080 | `https://pma.badge.local` | Interface admin BDD |
 | `worker` | -- | -- | Worker de la queue d'emails (`tsx watch`, polling 500 ms) |
+| `renderer` | -- (jamais publie) | -- | Service de rendu des badges (Chromium) : PDF, document fige, epreuve PNG. Image `ghcr.io/tigamadou/pdf-engine-renderer`, tag egal a la version du moteur, **linux/amd64** (emulee par Rosetta sur Mac Apple Silicon). Reseau compose interne `rendu`, joint par `app` via `RENDERER_URL=http://renderer:3000`. Premier telechargement : `docker login ghcr.io` (jeton `read:packages`). |
 | `mailpit` | 8025 | `https://mail.badge.local` | Capture d'emails |
 | `rustfs` | 9001 | `https://s3.badge.local` | Console RustFS (stockage S3, `rustfsadmin` / `rustfsadmin`) |
 | `caddy` | 80 / 443 | -- | Reverse proxy dev HTTPS |
@@ -176,31 +177,26 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 > badge livres avec l'application, depuis `prisma/badge-templates/`. Sans lui, aucun
 > badge n'est imprimable et `resolveTemplate` echoue explicitement. `make
 > validate-badge-templates` verifie qu'aucune reference n'est orpheline, que chaque
-> template installe est au format v2 (le moteur ne sait plus rendre du v1) et que ses
+> template installe est au format v3 (le moteur ne sait plus rendre du v1 ; une ligne v2
+> est lue en memoire) et que ses
 > liaisons de variables sont completes ; `make migrate-badge-template-refs` convertit
 > les anciennes references texte d'une base anterieure au plan 12 (inutile sur une
 > base neuve).
 
 | Commande | Description |
 |----------|-------------|
-| `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installes du format v1 vers le v2 (dry-run par defaut) |
+| `make migrate-installed-templates [ARGS=--apply]` | Migre les templates installes (formats v1 et v2) vers le format 3 et genere leur epreuve `proof.png` par le service de rendu (dry-run par defaut ; une ligne sautee n'ecrit rien) |
 
 Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
 
-> **Release du moteur v2 (spec 20) — ordre obligatoire.** Le moteur v2 ne sait plus rendre
-> une ligne `InstalledBadgeTemplate` au format v1 (l'impression du badge repond 500). Sur une
-> base qui en contient, dans la meme fenetre et sans trafic entre les etapes :
-> 1) pousser le schema (colonne `bindings`), 2) lancer
-> `migrate-installed-templates-v2 --apply` contre la base cible (puis
-> `validate-badge-templates`), 3) seulement ensuite ouvrir le trafic sur la nouvelle version.
-> La cible `make migrate-installed-templates` ne vise **que le conteneur de dev** ; l'image
-> de production (standalone) ne contient ni `scripts/`, ni `src/`, ni `tsx`, et
-> le schema est pousse par le service compose `init` juste avant le demarrage de `app`
-> (cf. `DEPLOYMENT.md`, « Initialisation : service `init` »). Le script se lance donc
-> depuis un environnement qui a les sources (conteneur de dev ou conteneur d'outillage
-> ponctuel, `DATABASE_URL` pointee sur la base cible) **avant** que la nouvelle image ne
-> recoive du trafic. La mecanique concrete de production est a arreter au moment de la
-> release. Detail : `docs/v4/features/templates-badges.md`, § « Ordre de release obligatoire ».
+> **Release du moteur 2.0.0 — ordre de deploiement.** Une ligne au format 2 s'imprime
+> (migration en memoire), une ligne au format 1 est refusee (message qui nomme
+> `make migrate-installed-templates`). Procedure complete (sauvegarde, service de rendu,
+> `verify-engine`, deploiement, migration, verification, retour arriere) : `DEPLOYMENT.md`,
+> « Moteur 2.0.0 : service de rendu ». Cibles `-preprod` / `-prod` : `make
+> migrate-installed-templates-prod` (conteneur `tools`, qui contient `scripts/`, `src/` et
+> `tsx`), `make validate-badge-templates-prod`. Detail :
+> `docs/v4/features/templates-badges.md`, « Migration d'une base anterieure ».
 
 **Pre-requis Playwright / RustFS** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
@@ -231,8 +227,8 @@ vers `development`. Quatre jobs paralleles bloquants :
 
 1. **lint** — `yarn lint` (ESLint, 0 erreur ; warnings au niveau baseline toleres).
 2. **typecheck** — `yarn tsc --noEmit`.
-3. **unit-integration** — service MySQL 8, `prisma db push`, `yarn vitest run --coverage` (les seuils 100% font gate).
-4. **e2e** — services MySQL + Mailpit + RustFS, `prisma db seed`, build Next + `yarn start`, `yarn playwright test` (rapport uploade en artefact si echec).
+3. **unit-integration** — service MySQL 8, `prisma db push`, `yarn vitest run --coverage` (les seuils 100% font gate). Le service de rendu y est remplace par un faux exporteur (`src/test-setup.ts`) : aucune image Chromium.
+4. **e2e** — services MySQL + Mailpit + RustFS + `renderer` (`ghcr.io/tigamadou/pdf-engine-renderer`, port 3100, `RENDERER_URL=http://127.0.0.1:3100`), `prisma db seed`, build Next + `yarn start`, `yarn playwright test` (rapport uploade en artefact si echec).
 
 > Le job **e2e** reste rouge tant que la couverture E2E (Phase 3 du plan
 > `v4-02`) n'est pas verte. Ne l'ajouter aux checks **requis** qu'une fois la

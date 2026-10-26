@@ -1,5 +1,5 @@
 {
-  "formatVersion": 2,
+  "formatVersion": 3,
   "family": "recto-verso",
   "label": "Badge recto-verso",
   "description": "Badge portrait deux faces. Recto : titre, photo, identite et QR code. Verso : logo, evenement, periode et bande categorie.",

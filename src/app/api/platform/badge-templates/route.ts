@@ -5,6 +5,7 @@ import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
+import { isRendererUnavailable, rendererUnavailableResponse } from "@/lib/renderer";
 import { installTemplate } from "@/lib/badge-templates/install";
 import { checkBadgePackage, computeBindings } from "@/lib/badge-templates/bindings";
 
@@ -60,6 +61,8 @@ export async function POST(req: NextRequest) {
       installedById: session.user.id as string,
     });
   } catch (err) {
+    // Un service de rendu absent n'est pas la faute du paquet : 503, pas 400.
+    if (isRendererUnavailable(err)) return rendererUnavailableResponse();
     // Un paquet qui ne s'imprime pas n'entre pas au catalogue. installTemplate a
     // deja nettoye les ressources ; il reste a traduire l'echec pour l'installateur.
     return badRequest([

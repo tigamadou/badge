@@ -19,8 +19,8 @@ describe("BadgeBatchPanel", () => {
     );
     expect(html).toContain("Awa Diallo");
     expect(html).toContain("Identité masquée");
-    expect(html).toContain('title="Aperçu du badge"');
-    expect(html).toContain('src="/api/org/o1/events/e1/badges/111"');
+    expect(html).toContain("<page-view");
+    expect(html).toContain('data-requested-src="/api/org/o1/events/e1/badges/111?format=html"');
     expect(html).toContain('href="/api/org/o1/events/e1/badges/print-zip?ids=111%2C222"');
     expect(html).toContain("Télécharger le lot (.zip)");
     expect(html).toContain("Marquer imprimés");
@@ -36,7 +36,7 @@ describe("BadgeBatchPanel", () => {
     const html = renderToStaticMarkup(<BadgeBatchPanel {...base} badges={[]} />);
     expect(html).toContain("Aucun badge à imprimer.");
     expect(html).not.toContain("Télécharger le lot");
-    expect(html).not.toContain("<iframe");
+    expect(html).not.toContain("<page-view");
   });
 
   it("au-dela de 200 badges, le ZIP est remplace par un message", () => {

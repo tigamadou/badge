@@ -23,7 +23,7 @@ Systeme generique de gestion de badges pour evenements. L'application gere l'ins
 | ORM | Prisma 6 |
 | Base de donnees | MySQL 8 |
 | Authentification | NextAuth.js (JWT) |
-| PDF | @react-pdf/renderer |
+| PDF / rendu | @tigamadou/pdf-engine 2 + service de rendu Chromium |
 | QR Code | qrcode, html5-qrcode |
 | Email | nodemailer |
 
@@ -121,7 +121,7 @@ SEED_ADMIN_PASSWORD=<MOT_DE_PASSE_ADMIN>
 
 > Les parametres SMTP et reCAPTCHA configurables dans l'interface (`/admin/settings`) prennent precedence sur les variables d'environnement. Ces dernieres servent de valeurs par defaut au premier demarrage.
 
-> Le rendu PDF des badges utilise la police Montserrat via Google Fonts. La generation requiert un acces sortant vers `fonts.googleapis.com`.
+> Le rendu des badges (PDF, apercu, epreuve) est assure par le service `renderer` (image `ghcr.io/tigamadou/pdf-engine-renderer`, linux/amd64, telechargee avec le meme jeton `read:packages` : `docker login ghcr.io`). La police Montserrat est embarquee : aucun acces sortant n'est requis.
 
 ## Commandes utiles
 

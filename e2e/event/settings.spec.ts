@@ -20,7 +20,7 @@ import { toast } from "../helpers/feedback";
 // prefixe de famille `e2e-` le rend aussi nettoyable par cleanupE2ETestData.
 async function installE2ETemplate(opts: { adminId: string; eventId: string; withOption: boolean }) {
   const layout = {
-    formatVersion: 2,
+    formatVersion: 3,
     family: "e2e-options",
     label: "Options E2E",
     description: "",
@@ -44,7 +44,7 @@ async function installE2ETemplate(opts: { adminId: string; eventId: string; with
       label: "Options E2E", description: "",
       pages: 1, pageWidthPx: 320, pageHeightPx: 460, layout,
       bindings: opts.withOption ? { showColorBar: "option" } : {},
-      assetPrefix: "badge-templates/e2e-options/", formatVersion: 2, installedById: opts.adminId,
+      assetPrefix: "badge-templates/e2e-options/", formatVersion: 3, installedById: opts.adminId,
     },
   });
   await getDb().event.update({ where: { id: opts.eventId }, data: { badgeTemplateId: row.id } });
