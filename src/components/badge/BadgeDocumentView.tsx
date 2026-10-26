@@ -8,7 +8,8 @@ type Fetched = { key: string; src: string; error: string | null };
 
 // Apercu d'un badge dans <page-view> (composant web du moteur). La route ne renvoie que
 // des documents figes ; la vue ne recoit jamais un document vivant. <page-view> prend la
-// hauteur de son parent (minimum 160 px) : le conteneur DOIT lui en donner une.
+// hauteur de son parent (minimum 160 px) : le conteneur DOIT lui en donner une. Fond gris
+// du studio pdfStudio (.cv-area) : la page blanche s'y detache.
 export function BadgeDocumentView({ src, label, className }: { src: string; label: string; className?: string }) {
   const viewRef = useRef<PageViewElement>(null);
   const [attempt, setAttempt] = useState(0);
@@ -58,7 +59,7 @@ export function BadgeDocumentView({ src, label, className }: { src: string; labe
       data-state={state}
       data-requested-src={src}
       data-src={shownSrc}
-      className={`relative h-[70vh] max-h-[640px] w-full overflow-hidden rounded-xl border border-slate-200 bg-white ${className ?? ""}`}
+      className={`relative h-[70vh] max-h-[640px] w-full overflow-hidden rounded-xl border border-slate-200 bg-[#8b8b90] ${className ?? ""}`}
     >
       <page-view ref={viewRef} label={label} layout="all" fit="width" className="block h-full w-full" />
       {state === "loading" && (
