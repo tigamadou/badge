@@ -4,10 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { prisma } from "@/lib/prisma";
 import { deleteFile, uploadFile } from "@/lib/storage";
+import { migrateManifest } from "@tigamadou/pdf-engine";
 import { exportEngineCorpus } from "../engine-corpus";
 
 const LAYOUT = {
-  formatVersion: 2,
+  formatVersion: 3,
   family: "salon",
   label: "Salon",
   description: "",
@@ -46,7 +47,7 @@ async function installer(archived = false, extra: { layout?: object; formatVersi
       layout: extra.layout ?? LAYOUT,
       bindings: {},
       assetPrefix: "badge-templates/corpus-salon/",
-      formatVersion: extra.formatVersion ?? 2,
+      formatVersion: extra.formatVersion ?? 3,
       installedById: "u1",
       archived,
     },
@@ -73,6 +74,14 @@ describe("exportEngineCorpus", () => {
     await installer(false, { layout: { ...LAYOUT, preview: "assets/apercu.png" } });
     await exportEngineCorpus(out);
     expect(readFileSync(join(out, "salon-v3", "assets", "apercu.png")).toString()).toBe("APERCU");
+  });
+
+  it("exporte une ligne au format 2 migree au format 3", async () => {
+    await installer(false, { formatVersion: 2, layout: { ...LAYOUT, formatVersion: 2 } });
+    await exportEngineCorpus(out);
+    const written = JSON.parse(readFileSync(join(out, "salon-v3", "manifest.json"), "utf8"));
+    expect(written.formatVersion).toBe(3);
+    expect(written).toEqual(migrateManifest({ ...LAYOUT, formatVersion: 2 }));
   });
 
   it("saute les templates au format v1 et ne retourne que les dossiers exportes", async () => {

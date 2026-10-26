@@ -11,7 +11,7 @@
 | 3 | Rendu d'un badge en HTML, document figé et PDF | [x] | 2026-10-26 | render-badge.test.ts 11 tests verts ; render-badge.ts 100 % (lignes d'options image couvertes par les tests de route, a confirmer au run complet). Photo trop lourde simulee via __TEST__.readFileAsDataUrl (21 Mo). Pas de commit. |
 | 4 | Épreuve `proof.png` à l'installation | [x] | 2026-10-26 | install.test.ts + routes platform/badge-templates : 64 tests verts, install.ts et route.ts 100 %. Ancien test 'police invalide' remplace par failNext(RENDER_FAILED) (le faux exporteur ne rend plus la police). Pas de commit. |
 | 5 | Routes du badge (`PDF`, `?format=html`) et du ZIP | [x] | 2026-10-26 | routes badge + print-zip + badge-batch : 50 tests verts, 100 % sur les routes, badge-batch.ts et render-badge.ts. Ajouts hors plan listes : BadgeTooLargeError/BadgeRenderError/badgeRenderFailure dans render-badge.ts (reponse commune 503/500, message expose pour un badge trop lourd). Seed par le vrai service : voir ci-dessous. Pas de commit. |
-| 6 | `verify-engine`, export du corpus et validation au format 3 | [ ] |  |  |
+| 6 | `verify-engine`, export du corpus et validation au format 3 | [x] | 2026-10-26 | engine-upgrade (22 tests) + engine-corpus (6) verts, 100 % sur les deux ; seed reel puis make verify-engine (2 templates sans reference, 0 refuse) et make validate-badge-templates : OK. Pas d'epreuve proof-engine regeneree en dev (aucune reference S3). Pas de commit. |
 | 7 | Script de migration des templates installés vers le format 3 | [ ] |  |  |
 | 8 | Service `renderer` en production, préproduction et CI | [ ] |  |  |
 | 9 | `BadgeDocumentView` et les écrans d'impression | [ ] |  |  |

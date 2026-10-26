@@ -1,7 +1,7 @@
 // v2-12, revu au plan v4-12, puis au moteur v2 (tache 7) : valide qu'aucun
 // `badgeTemplateId` persiste en BDD ne reference un template inexistant, que
-// chaque template installe est bien au format v2 (le moteur ne sait plus rendre
-// du v1) et que ses liaisons couvrent integralement ses variables. Le registre
+// chaque template installe est bien au format v3 (le moteur ne sait plus rendre
+// du v1 ni du v2) et que ses liaisons couvrent integralement ses variables. Le registre
 // compile ayant disparu, la reference est desormais la table
 // InstalledBadgeTemplate. A executer en CI apres `prisma db push` et
 // `prisma db seed` (cf. Makefile `validate-badge-templates`).
@@ -10,6 +10,7 @@
 import { PrismaClient } from "@prisma/client";
 import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 import { validateBindings, type Bindings } from "../src/lib/badge-templates/bindings";
+import { CURRENT_FORMAT } from "../src/lib/badge-templates/resolve";
 
 const prisma = new PrismaClient();
 
@@ -70,15 +71,15 @@ async function main(): Promise<void> {
   // variables imprimerait des champs vides sans que personne l'ait voulu.
   const bindingIssues: string[] = [];
   for (const t of installed) {
-    if (t.formatVersion !== 2) {
+    if (t.formatVersion !== CURRENT_FORMAT) {
       bindingIssues.push(`${t.family} v${t.version} : encore au format v${t.formatVersion} (make migrate-installed-templates).`);
       continue;
     }
-    // Une ligne v2 sans tableau `variables` est un layout corrompu : on le signale
+    // Une ligne v3 sans tableau `variables` est un layout corrompu : on le signale
     // comme les autres anomalies au lieu de laisser validateBindings planter dessus.
     const variables = (t.layout as { variables?: unknown } | null)?.variables;
     if (!Array.isArray(variables)) {
-      bindingIssues.push(`${t.family} v${t.version} : layout v2 sans tableau "variables" (paquet a reinstaller).`);
+      bindingIssues.push(`${t.family} v${t.version} : layout sans tableau "variables" (paquet a reinstaller).`);
       continue;
     }
     const errors = validateBindings(variables as VariableDeclaration[], (t.bindings ?? {}) as Bindings);

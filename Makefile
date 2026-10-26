@@ -446,9 +446,9 @@ validate-badge-templates:
 migrate-installed-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v2.ts $(ARGS)
 
-# Montee de version du moteur : rend chaque template installe avec ses echantillons
-# et ses prereglages, compare a la reference (S3 badge-templates/_engine/), regenere
-# l'epreuve (proof-engine-<version>.pdf, ecrite dans le S3 de l'environnement meme sans
+# Montee de version du moteur : rend chaque template installe en HTML avec ses
+# echantillons et ses prereglages, compare l'empreinte a la reference (S3
+# badge-templates/_engine/), regenere l'epreuve (proof-engine-<version>.png, ecrite dans le S3 de l'environnement meme sans
 # --accept) des templates dont le rendu change ou installes apres la derniere reference.
 # Templates archives inclus. ARGS=--accept enregistre la reference de CET environnement
 # (chaque environnement a la sienne), apres examen de ses epreuves. Code 1 si refuse.

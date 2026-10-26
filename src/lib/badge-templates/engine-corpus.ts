@@ -1,9 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { TemplateManifest } from "@tigamadou/pdf-engine";
 import { prisma } from "@/lib/prisma";
 import { getFile } from "@/lib/storage";
 import { assetNamesFor } from "./engine-upgrade";
+import { readLayout } from "./resolve";
 
 // Exporte les templates installes vers un dossier a deposer dans le corpus de
 // non-regression de pdfStudio (packages/engine/corpus/) : c'est ce qui protege les
@@ -15,9 +15,10 @@ export async function exportEngineCorpus(outDir: string): Promise<string[]> {
   });
   const dirs: string[] = [];
   for (const row of rows) {
-    // Un layout v1 casserait le corpus de pdfStudio (qui ne lit que le format v2).
-    if (row.formatVersion !== 2) continue;
-    const manifest = row.layout as unknown as TemplateManifest;
+    // Un layout v1 casserait le corpus de pdfStudio (qui ne lit que le format v3) ;
+    // un layout v2 est migre en memoire.
+    if (row.formatVersion !== 2 && row.formatVersion !== 3) continue;
+    const manifest = readLayout(row);
     const dir = join(outDir, `${row.family}-v${row.version}`);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
