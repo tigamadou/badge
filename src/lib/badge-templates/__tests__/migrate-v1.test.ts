@@ -2,7 +2,7 @@
 // le bloc de parite de rendu dont les fixtures vivent dans le studio.
 import { describe, it, expect } from "vitest";
 import { migrateManifest } from "../migrate-v1";
-import { parseManifest } from "@tigamadou/pdf-engine";
+import { migrateManifest as migrateToV3, parseManifest } from "@tigamadou/pdf-engine";
 
 const V1 = {
   formatVersion: 1,
@@ -58,9 +58,9 @@ describe("migrateManifest", () => {
     expect(block.w).toBe(60);
   });
 
-  it("produit un manifeste que le schema v2 accepte", () => {
+  it("produit un manifeste que le schema v3 accepte une fois migre par le moteur", () => {
     const { manifest } = migrateManifest(V1, ENTRIES);
-    const result = parseManifest(manifest, ENTRIES);
+    const result = parseManifest(migrateToV3(manifest), ENTRIES);
     expect(result.ok ? [] : result.errors).toEqual([]);
   });
 

@@ -8,7 +8,8 @@
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
         test test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
-        validate-badge-templates migrate-badge-template-refs migrate-installed-templates \
+        validate-badge-templates migrate-badge-template-refs migrate-installed-templates migrate-installed-templates-preprod migrate-installed-templates-prod \
+        validate-badge-templates-preprod validate-badge-templates-prod \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
         net-create \
         download-uploads download-db logs-prod
@@ -441,10 +442,23 @@ test-e2e-ui:
 validate-badge-templates:
 	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
 
-# Migre les templates installes du format v1 vers le v2 (dry-run par defaut,
-# ARGS=--apply pour ecrire). Le moteur v2 ne sait pas rendre une ligne restee en v1.
+validate-badge-templates-preprod:
+	$(SSH) $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/validate-badge-templates.ts"
+
+validate-badge-templates-prod:
+	$(SSH) $(SERVER) "cd $(PROD_DIR) && export BADGE_TAG=$(or $(TAG),prod) && docker compose --profile tools pull tools && docker compose --profile tools run --rm tools yarn tsx scripts/validate-badge-templates.ts"
+
+# Migre les templates installes vers le format v3 (dry-run par defaut, ARGS=--apply
+# pour ecrire) et genere leur epreuve proof.png par le service de rendu. Le moteur
+# 2.x ne sait pas rendre une ligne restee en v1 ; une ligne v2 est lue en memoire.
 migrate-installed-templates:
-	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v2.ts $(ARGS)
+	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v3.ts $(ARGS)
+
+migrate-installed-templates-preprod:
+	$(SSH) $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/migrate-installed-templates-v3.ts $(ARGS)"
+
+migrate-installed-templates-prod:
+	$(SSH) $(SERVER) "cd $(PROD_DIR) && export BADGE_TAG=$(or $(TAG),prod) && docker compose --profile tools pull tools && docker compose --profile tools run --rm tools yarn tsx scripts/migrate-installed-templates-v3.ts $(ARGS)"
 
 # Montee de version du moteur : rend chaque template installe en HTML avec ses
 # echantillons et ses prereglages, compare l'empreinte a la reference (S3
