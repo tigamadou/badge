@@ -6,7 +6,7 @@
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Branche, montée à 2.0.0, module de l'exporteur et service `renderer` de dev | [ ] |  |  |
+| 1 | Branche, montée à 2.0.0, module de l'exporteur et service `renderer` de dev | [x] | 2026-10-26 | Accords utilisateur 2026-10-26 (suite non verte T1-T6, compose dev/prod/preprod, deploy.sh, .env.production.example). Branche deja creee. Moteur 2.0.0 exact ; renderer.test.ts 7 tests, 100 % sur renderer.ts ; renderer dev healthy, /health 200 depuis app. Pas de commit (l'utilisateur commite). |
 | 2 | Lecture des layouts au format 3 et résolution sans `@react-pdf` | [ ] |  |  |
 | 3 | Rendu d'un badge en HTML, document figé et PDF | [ ] |  |  |
 | 4 | Épreuve `proof.png` à l'installation | [ ] |  |  |

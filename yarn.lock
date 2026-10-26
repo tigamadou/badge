@@ -1436,12 +1436,14 @@
     postcss "^8.5.6"
     tailwindcss "4.2.4"
 
-"@tigamadou/pdf-engine@^1.2.0":
-  version "1.2.0"
-  resolved "https://npm.pkg.github.com/download/@tigamadou/pdf-engine/1.2.0/1a2ef08ac591af08f3448be4c79f7b1215802729#1a2ef08ac591af08f3448be4c79f7b1215802729"
-  integrity sha512-9N5uM/KlN/lT5Csi9eTFmdsfTIZeV/3TuIEEN/9wnPFSKeZM4+/tg4NpL3BBC+VfTgRheuHHWVFICozxFW1yWg==
+"@tigamadou/pdf-engine@2.0.0":
+  version "2.0.0"
+  resolved "https://npm.pkg.github.com/download/@tigamadou/pdf-engine/2.0.0/60860a5df649007fd4650535d98f03ab5c8993f2#60860a5df649007fd4650535d98f03ab5c8993f2"
+  integrity sha512-QTYygs9T6nnBIxhdFFfswTwfxXp5Q8rYvjQmf4PpzXrW/1BKzrzhcM9VbhDG0dsvykt7qAIi1VsW6UoRpOO8Gg==
   dependencies:
     jszip "^3.10.1"
+    pixelmatch "^8.0.0"
+    pngjs "^7.0.0"
     qrcode "^1.5.4"
     zod "^4.4.3"
 
@@ -4139,6 +4141,13 @@ picomatch@^4.0.3, picomatch@^4.0.4:
   resolved "https://registry.yarnpkg.com/picomatch/-/picomatch-4.0.4.tgz#fd6f5e00a143086e074dffe4c924b8fb293b0589"
   integrity sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==
 
+pixelmatch@^8.0.0:
+  version "8.0.0"
+  resolved "https://registry.yarnpkg.com/pixelmatch/-/pixelmatch-8.0.0.tgz#e1aeaa0b6e52b87603e0a6e8ae35687e1550a143"
+  integrity sha512-cIqOLfh5k52us715qf3B3+kTOxZv+WDv77HN7xokLScYQGYQHi4m/ynoDIPpvF2LvCyUJGyvzY64i0QCXtzu1g==
+  dependencies:
+    pngjs "^7.0.0"
+
 pkg-types@^2.2.0:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/pkg-types/-/pkg-types-2.3.1.tgz#fa27ed0940efcf40bba453b0e5cab41217b0d442"
@@ -4173,6 +4182,11 @@ pngjs@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-5.0.0.tgz#e79dd2b215767fd9c04561c01236df960bce7fbb"
   integrity sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==
+
+pngjs@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-7.0.0.tgz#a8b7446020ebbc6ac739db6c5415a65d17090e26"
+  integrity sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==
 
 possible-typed-array-names@^1.0.0:
   version "1.1.0"
