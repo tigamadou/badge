@@ -22,7 +22,7 @@
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la ligne de la tâche dans le même commit que son code (tests verts et critères d'acceptation remplis). En cas d'interruption, passez la ligne à `[~]` et notez précisément l'état (étape en cours, fichiers touchés, prochaine étape). Avant chaque session, lire ce tableau pour savoir où l'on s'était arrêté.
 
-**Prérequis :** `@tigamadou/pdf-engine@2.0.0` publié (GitHub Packages) et `ghcr.io/tigamadou/pdf-engine-renderer:2.0.0` disponible (GHCR). Sans les deux, ne pas commencer.
+**Prérequis :** `@tigamadou/pdf-engine@2.0.0` publié (GitHub Packages) et `ghcr.io/tigamadou/pdf-engine-renderer:2.0.0` disponible (GHCR). Sans les deux, ne pas commencer. **Remplis le 2026-10-26** (workflow « Publication du moteur », run 40256433474, tag `engine-v2.0.0` sur le commit `765c6fa` de pdfStudio). L'image n'est publiée qu'en **linux/amd64** (plateforme du VPS de production) : sur un Mac Apple Silicon, elle tourne sous émulation (Rosetta), voir la tâche 1.
 
 **Accords à obtenir de l'utilisateur avant l'exécution :**
 
@@ -45,7 +45,9 @@ Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mett
 
 **Suivi :** le tableau `## Progression` de ce fichier, mis à jour à chaque tâche dans le même commit que le code.
 
-**Note sur les textes de repli :** le texte « textes de repli » (`fallbackTexts`) d'un bloc texte arrive avec le moteur 2.0.0 (plan A7 de pdfStudio). Le template ex-305v installé dans badge devra être **réinstallé depuis le studio** une fois A7 publié, pour que le nom du participant tienne sur deux lignes avec repli « A. Nom » puis « Nom ». Cela ne bloque aucune tâche de ce plan.
+**Note sur les textes de repli :** les textes de repli (`fallbackTexts`) d'un bloc texte sont livrés dans le moteur 2.0.0 (plan A7 de pdfStudio, publié). Le template ex-305v installé dans badge doit être **réinstallé depuis le studio** à la fin de ce plan, pour que le nom du participant tienne sur deux lignes avec repli « A. Nom » puis « Nom ». Cela ne bloque aucune tâche de ce plan.
+
+**Note sur les traits d'union :** le moteur 2.0.0 place un WORD JOINER (U+2060, invisible) derrière chaque trait d'union collé à ses voisins (« Anne-Marie »), pour interdire la coupure de ligne à cet endroit. Il est présent dans le HTML du **document vivant** (`renderHtml`) et retiré au **figement** (`freeze`). Un test qui cherche un nom composé dans `document.html` d'un document vivant compare donc `document.html.replaceAll("⁠", "")`.
 
 ## Global Constraints
 
@@ -89,6 +91,11 @@ export function createServiceExporter(options: { url: string; timeoutMs?: number
 // port 3000, GET /health -> 200 { ok, version, browser, active, queued } (503 sans navigateur) ;
 // variables RENDERER_CONCURRENCY (4), RENDERER_TIMEOUT_MS (25000), RENDERER_MAX_QUEUE (100),
 // RENDERER_MAX_BODY_BYTES (20 Mo), RENDERER_SHUTDOWN_GRACE_MS (20000) ; l'image a son propre HEALTHCHECK.
+// Image publiée en linux/amd64 seulement (pas de variante arm64).
+// Format 3 (2.0.0) : 150 blocs au plus par manifeste (groupes et enfants compris) ; types de blocs
+// text, rect, square, circle, list, group et, livrés aussi dans la 2.0.0, les formes vectorielles
+// ellipse (fond fill et/ou image, comme rect), line, polygon et path (sans image). Le cadre d'un bloc texte masque
+// ce qui le dépasse (overflow: hidden), à l'écran comme dans le PDF.
 // <page-view> (@tigamadou/pdf-engine/viewer) : height: 100 %, minimum 160 px — le conteneur DOIT lui donner une hauteur.
 // Événements : PAGE_VIEW_EVENTS = { ready: "pe-ready", page: "pe-page", zoom: "pe-zoom" }.
 // Un document figé tient son signal prêt du chargement (pas de script) ; sur `data-pe-error` ou sans
@@ -138,7 +145,7 @@ export const FAKE_PNG: Uint8Array;            // PNG 1×1 valide
 export function countPdfPages(buf: Uint8Array): number;
 ```
 
-Comportement du faux : `freeze` → `{ ...doc, frozen: true, html: doc.html sans <script>…</script> }` ; `pdf` → `%PDF-1.7\n` + un `<< /Type /Page >>` par élément de `doc.pages` + `%%EOF` ; `image` → `FAKE_PNG` ; `failNext(code)` fait rejeter l'appel suivant avec `new ExportError(code, "faux exporteur")` (`RENDER_FAILED` représente aussi un document en erreur `data-pe-error`).
+Comportement du faux : `freeze` → `{ ...doc, frozen: true, html: doc.html sans <script>…</script> et sans U+2060 }` (comme le vrai figement, voir « Note sur les traits d'union ») ; `pdf` → `%PDF-1.7\n` + un `<< /Type /Page >>` par élément de `doc.pages` + `%%EOF` ; `image` → `FAKE_PNG` ; `failNext(code)` fait rejeter l'appel suivant avec `new ExportError(code, "faux exporteur")` (`RENDER_FAILED` représente aussi un document en erreur `data-pe-error`).
 
 - [ ] **Step 1: Créer la branche**
 
@@ -183,6 +190,8 @@ Dans `docker-compose.dev.yml` :
 ```yaml
   renderer:
     image: ghcr.io/tigamadou/pdf-engine-renderer:2.0.0
+    # Image publiee en linux/amd64 seulement : emulee (Rosetta) sur Mac Apple Silicon.
+    platform: linux/amd64
     init: true
     stop_grace_period: 30s
     restart: unless-stopped
@@ -199,7 +208,7 @@ Dans `docker-compose.dev.yml` :
 `app.environment` ajoute `RENDERER_URL: http://renderer:3000` ; `app.depends_on` ajoute `renderer: { condition: service_healthy }` ; `app.networks` ajoute `rendu` (en plus de `default`). Déclarer le réseau : `networks: { rendu: { internal: true } }`. Le `healthcheck` ci-dessus reprend celui de l'image : le conserver, ou le retirer pour hériter du `HEALTHCHECK` de l'image si l'accord le permet.
 
 Run: `docker login ghcr.io` (si besoin, jeton `read:packages`) puis `docker compose -f docker-compose.dev.yml up -d renderer app && docker compose -f docker-compose.dev.yml exec app node -e "fetch(process.env.RENDERER_URL+'/health').then(r=>console.log(r.status))"`
-Expected: `200`.
+Expected: `200`. Sans `platform: linux/amd64`, le pull échoue sur un Mac Apple Silicon (`no matching manifest for linux/arm64`). Sous émulation, le premier rendu est plus lent : `RENDERER_TIMEOUT_MS = 30_000` reste suffisant.
 
 - [ ] **Step 9: Progression, cocher, commiter (sur demande)**
 
@@ -253,6 +262,7 @@ Réécrire les cas qui utilisaient `renderToJson` sur `t.Component` : ils vérif
 - `readLayout` d'une ligne `formatVersion: 1` lève un message contenant `format v1` et `make migrate-installed-templates`.
 - `resolveTemplate` d'une ligne restée au format 2 réussit et `t.manifest.formatVersion === 3`.
 - `referencedAssets` d'un manifeste dont un `rect` n'a pas de propriété `image` (fond uni seulement) renvoie `[]` pour ce bloc, sans erreur ; le même manifeste avec un `rect` à `image.asset: "assets/fond.png"` renvoie `["assets/fond.png"]`.
+- Formes vectorielles (livrées dans la 2.0.0) : une `ellipse` à `image.asset: "assets/motif.png"` renvoie `["assets/motif.png"]`, y compris dans un `group` ; une `line`, un `polygon` et un `path` (sans propriété `image`) renvoient `[]`, sans erreur. Le manifeste de test est validé par `parseManifest` du moteur.
 - `t.meta` vaut `{ id: row.id, version: row.version, label, description, pages, pageSize: { width: "320px", height: "460px" }, previewSrc }` pour une ligne 320 × 460.
 Passer toutes les fixtures de ligne créées par les tests de ce module et des routes `platform/badge-templates` à `formatVersion: 3` (sauf le cas « format 2 migré en mémoire »).
 
@@ -263,7 +273,7 @@ Expected: FAIL (`readLayout` absent, `buildDeclarativeTemplate` introuvable dans
 
 - [ ] **Step 4: Implémenter**
 
-`buildFromRow` : `readLayout` remplace la garde `formatVersion !== 2` ; plus d'appel à `buildDeclarativeTemplate` ; `meta` construit depuis la ligne ; `loadAssetResolver` reçoit le manifeste lu (et non `row.layout`). `blockAssets` devient tolérant aux types sans fond (préparation des formes vectorielles de 2.1.0 : `ellipse`, `line`, `polygon`, `path`) : il ne lit `b.image?.asset` que si `"image" in b`, sinon il renvoie `[]` pour ce bloc.
+`buildFromRow` : `readLayout` remplace la garde `formatVersion !== 2` ; plus d'appel à `buildDeclarativeTemplate` ; `meta` construit depuis la ligne ; `loadAssetResolver` reçoit le manifeste lu (et non `row.layout`). `blockAssets` couvre les formes vectorielles, livrées dans la 2.0.0 : il ne lit `b.image?.asset` que si `"image" in b` (cas de `rect`, `square`, `circle` et `ellipse`), sinon il renvoie `[]` pour ce bloc (`line`, `polygon`, `path`). Pas de `switch` exhaustif sur le type : un type sans `image` ne référence aucune ressource.
 
 - [ ] **Step 5: Lancer, vérifier le succès**
 
@@ -303,9 +313,9 @@ export async function renderBadgePdf(registration: BadgeRegistration): Promise<{
 - [ ] **Step 1: Écrire les tests qui échouent**
 
 Conserver les cas de résolution (repli organisation, famille `default`, sans `PlatformSettings`) en les appliquant à `renderBadgeDocument`. Ajouter :
-- `renderBadgeDocument` (famille `default`) : `document.frozen === false`, `document.pages` vaut `[1]`, `document.html` commence par `<!doctype html>` et contient le prénom et le nom du participant ; `fakeExporter.calls` est vide (le rendu vivant n'appelle pas le service).
+- `renderBadgeDocument` (famille `default`) : `document.frozen === false`, `document.pages` vaut `[1]`, `document.html` commence par `<!doctype html>` et contient le prénom et le nom du participant (comparés sur `document.html.replaceAll("⁠", "")` ; la fixture porte un nom composé, ex. « Anne-Marie », pour couvrir le cas) ; `fakeExporter.calls` est vide (le rendu vivant n'appelle pas le service).
 - Template recto-verso : `document.pages` vaut `[1, 2]`.
-- `renderBadgeHtml` : `document.frozen === true`, ne contient pas `<script`, un seul appel `freeze`.
+- `renderBadgeHtml` : `document.frozen === true`, ne contient ni `<script` ni U+2060, un seul appel `freeze`.
 - `renderBadgePdf` : commence par `%PDF-`, `countPdfPages(pdf) === 1`, un seul appel `pdf` dont `doc.frozen === false`.
 - `fakeExporter.failNext("UNAVAILABLE")` : `renderBadgePdf` rejette une `ExportError` de code `UNAVAILABLE`.
 - Badge trop lourd : photo d'inscription de 21 Mo (data URL factice) → `renderBadgeDocument` rejette avec un message contenant `trop volumineux`, aucun appel au service.
@@ -567,7 +577,7 @@ Expected: PASS, couverture 100 % ; « DRY-RUN … migres : 0 », sortie 0.
 
 - [ ] **Step 1: Écrire le test qui échoue** — `renderer-version.test.ts`
 
-Pour `docker-compose.dev.yml`, `docker-compose.yml`, `docker-compose.preprod.yml` (lus comme texte) : chacun contient exactement une fois `ghcr.io/tigamadou/pdf-engine-renderer:${ENGINE_VERSION}`, aucune autre occurrence de `pdf-engine-renderer:`, et aucun bloc `ports:` dans le service `renderer` (hors CI), `init: true`, `stop_grace_period: 30s` (extraire le bloc entre `  renderer:` et le service suivant). `package.json` déclare `@tigamadou/pdf-engine` à `ENGINE_VERSION` sans `^` ni `~`. Le job `e2e` de `ci.yml` référence la même image.
+Pour `docker-compose.dev.yml`, `docker-compose.yml`, `docker-compose.preprod.yml` (lus comme texte) : chacun contient exactement une fois `ghcr.io/tigamadou/pdf-engine-renderer:${ENGINE_VERSION}`, aucune autre occurrence de `pdf-engine-renderer:`, et aucun bloc `ports:` dans le service `renderer` (hors CI), `init: true`, `stop_grace_period: 30s` (extraire le bloc entre `  renderer:` et le service suivant) ; le bloc `renderer` de `docker-compose.dev.yml` porte `platform: linux/amd64` (image sans variante arm64, voir la tâche 1). `package.json` déclare `@tigamadou/pdf-engine` à `ENGINE_VERSION` sans `^` ni `~`. Le job `e2e` de `ci.yml` référence la même image.
 
 - [ ] **Step 2: Lancer, vérifier l'échec**
 
@@ -810,4 +820,4 @@ gh pr create --base development --title "Moteur HTML 2.0.0 et service de rendu" 
 
 - [ ] Suite Vitest à 100 %, lint, typecheck, build, E2E (dont 375 px) au vert sur `feat/moteur-html`.
 - [ ] PR ouverte vers `development` ; aucun commit sur `development`.
-- [ ] `## Progression` complète ; prévenir que la procédure de `DEPLOYMENT.md` est prête pour la préproduction, et rappeler que le template ex-305v est à réinstaller depuis le studio une fois A7 publié.
+- [ ] `## Progression` complète ; prévenir que la procédure de `DEPLOYMENT.md` est prête pour la préproduction, et rappeler que le template ex-305v est à réinstaller depuis le studio (textes de repli d'A7, publiés dans la 2.0.0).
