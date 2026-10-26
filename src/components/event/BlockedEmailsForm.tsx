@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardBody } from "@/components/ui/Card";
-import { Alert } from "@/components/ui/Feedback";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Icon } from "@/components/ui/Icon";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { TableFrame } from "@/components/ui/TableFrame";
 
 type Row = { id: string; email: string; reason: string | null; createdAt: string };
@@ -22,7 +24,7 @@ export function BlockedEmailsForm({
   const [rows, setRows] = useState<Row[]>(initial);
   const [email, setEmail] = useState("");
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   async function refresh() {
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails`);
@@ -36,53 +38,62 @@ export function BlockedEmailsForm({
     );
   }
 
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, reason: reason || undefined }),
-    });
-    if (res.ok) {
-      setEmail("");
-      setReason("");
-      await refresh();
-    } else if (res.status === 409) {
-      setError("Cet email est deja bloque.");
-    } else {
-      setError("Échec de l'ajout.");
-    }
-  }
+  // Motif C : « déjà bloqué » (409) est rattaché au champ ; le reste lève une exception (toast).
+  const add = useAsyncAction(
+    async (): Promise<{ fieldError?: string }> => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, reason: reason || undefined }),
+      });
+      if (res.status === 409) return { fieldError: "Cet e-mail est déjà bloqué." };
+      if (!res.ok) throw res;
+      return {};
+    },
+    {
+      error: "Échec de l'ajout.",
+      onSuccess: async (result) => {
+        if (result.fieldError) {
+          setFieldError(result.fieldError);
+          return;
+        }
+        setFieldError(null);
+        setEmail("");
+        setReason("");
+        toastSuccess("E-mail bloqué.");
+        await refresh();
+      },
+    },
+  );
 
   async function remove(id: string) {
-    if (!confirm("Retirer cet email de la liste de blocage ?")) return;
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-emails/${id}`, {
       method: "DELETE",
     });
-    if (res.ok) await refresh();
+    if (!res.ok) throw res;
   }
 
   return (
     <div className="space-y-4">
       <Card>
         <CardBody>
-          <form onSubmit={add} className="flex flex-wrap items-end gap-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFieldError(null);
+              void add.run();
+            }}
+            className="flex flex-wrap items-end gap-3">
             <div className="flex-1">
-              <Input label="E-mail à bloquer" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.fr" required />
+              <Input label="E-mail à bloquer" type="email" value={email} error={fieldError ?? undefined} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.fr" required />
             </div>
             <div className="flex-1">
               <Input label="Raison (optionnelle)" value={reason} onChange={(e) => setReason(e.target.value)} />
             </div>
-            <Button type="submit" variant="danger">
+            <Button type="submit" variant="danger" loading={add.pending}>
               Bloquer
             </Button>
           </form>
-          {error && (
-            <div className="mt-3">
-              <Alert tone="err">{error}</Alert>
-            </div>
-          )}
         </CardBody>
       </Card>
 
@@ -112,13 +123,18 @@ export function BlockedEmailsForm({
                   {new Date(r.createdAt).toLocaleDateString("fr-FR")}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => remove(r.id)}
+                  <ActionButton
+                    variant="link"
+                    confirm="Retirer cet email de la liste de blocage ?"
+                    action={() => remove(r.id)}
+                    success="E-mail retiré de la liste."
+                    error="Échec du retrait."
+                    onSuccess={() => void refresh()}
                     aria-label="Retirer"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:no-underline"
                   >
                     <Icon name="trash-2" size={15} />
-                  </button>
+                  </ActionButton>
                 </td>
               </tr>
             ))}

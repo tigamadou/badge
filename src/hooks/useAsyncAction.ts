@@ -10,17 +10,18 @@ export type AsyncActionOptions<T> = {
 };
 
 // Logique testable sans DOM (Vitest tourne en environnement node).
-export async function runAsyncAction<T>(
-  action: () => Promise<T>,
+export async function runAsyncAction<T, A extends unknown[] = []>(
+  action: (...args: A) => Promise<T>,
   options: AsyncActionOptions<T> | undefined,
   guard: { current: boolean },
   setPending: (pending: boolean) => void,
+  args: A = [] as unknown as A,
 ): Promise<void> {
   if (guard.current) return;
   guard.current = true;
   setPending(true);
   try {
-    const result = await action();
+    const result = await action(...args);
     options?.onSuccess?.(result);
     if (options?.success) toastSuccess(options.success);
   } catch (err) {
@@ -33,15 +34,16 @@ export async function runAsyncAction<T>(
 }
 
 // L'action lève la `Response` quand `!res.ok` (`if (!res.ok) throw res;`).
-export function useAsyncAction<T>(
-  action: () => Promise<T>,
+// Les arguments de `run(...args)` sont transmis à l'action (actions par ligne).
+export function useAsyncAction<T, A extends unknown[] = []>(
+  action: (...args: A) => Promise<T>,
   options?: AsyncActionOptions<T>,
-): { run: () => Promise<void>; pending: boolean } {
+): { run: (...args: A) => Promise<void>; pending: boolean } {
   const [pending, setPending] = useState(false);
   // Un ref (et non `pending`) : deux appels dans le même tick voient l'état React périmé.
   const guardRef = useRef(false);
   const run = useCallback(
-    () => runAsyncAction(action, options, guardRef, setPending),
+    (...args: A) => runAsyncAction(action, options, guardRef, setPending, args),
     [action, options],
   );
   return { run, pending };

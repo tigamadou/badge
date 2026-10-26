@@ -8,11 +8,12 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Stepper } from "@/components/ui/Stepper";
 import { Segmented } from "@/components/ui/Tabs";
 import { Checkbox } from "@/components/ui/FormControls";
-import { Alert, Spinner } from "@/components/ui/Feedback";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
 import { BadgeTemplateTiles } from "@/components/admin/BadgeTemplateTiles";
 import type { TemplateSummary } from "@/components/admin/BadgeTemplatePicker";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Template = { id: string; name: string; color: string; number: number };
 type ManualCategory = {
@@ -64,8 +65,8 @@ export function EventCreationWizard({
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [manualCats, setManualCats] = useState<ManualCategory[]>([]);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ slug?: string; endDate?: string }>({});
+  const [navigating, setNavigating] = useState(false);
 
   function suggestedSlug(t: string): string {
     return t
@@ -85,42 +86,61 @@ export function EventCreationWizard({
     return title.trim() && date && location.trim();
   }
 
-  async function submit() {
-    setSubmitting(true);
-    setErr(null);
-    const body: CreatePayload = { title, date, location };
-    if (endDate) body.endDate = endDate;
-    if (description.trim()) body.description = description;
-    if (slug && slugTouched) body.slug = slug;
-    if (badgeTemplateId) body.badgeTemplateId = badgeTemplateId;
-    if (mode === "template") body.templateIds = selectedTemplates;
-    if (mode === "manual") body.manualCategories = manualCats;
+  // Motif C + D : slug pris et date de fin sont rattachés à un champ (étape 1) ; les autres erreurs
+  // (limite du plan, abonnement inactif) passent en toast. Pas de toast de succès : la page s'ouvre.
+  const create = useAsyncAction(
+    async (): Promise<{ id?: string; fieldErrors?: { slug?: string; endDate?: string } }> => {
+      const body: CreatePayload = { title, date, location };
+      if (endDate) body.endDate = endDate;
+      if (description.trim()) body.description = description;
+      if (slug && slugTouched) body.slug = slug;
+      if (badgeTemplateId) body.badgeTemplateId = badgeTemplateId;
+      if (mode === "template") body.templateIds = selectedTemplates;
+      if (mode === "manual") body.manualCategories = manualCats;
 
-    const res = await fetch(`/api/org/${orgId}/events`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSubmitting(false);
+      const res = await fetch(`/api/org/${orgId}/events`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (!res.ok) {
-      const json = (await res.json().catch(() => ({}))) as { code?: string };
-      if (json.code === "EVENT_LIMIT") {
-        setErr("Limite d'événements du plan atteinte. Contactez le support pour changer d'abonnement.");
-      } else if (json.code === "SUBSCRIPTION_INACTIVE" || json.code === "NO_SUBSCRIPTION") {
-        setErr("Votre abonnement n'est pas actif. Contactez le support.");
-      } else if (json.code === "SLUG_TAKEN") {
-        setErr("Ce slug est déjà utilisé. Modifiez-le et réessayez.");
-      } else if ((json as { issues?: { message?: string }[] }).issues?.[0]?.message === "endDate < date") {
-        setErr("La date de fin doit être postérieure ou égale à la date de l'événement.");
-      } else {
-        setErr("Erreur lors de la création.");
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as {
+          code?: string;
+          issues?: { message?: string }[];
+        };
+        if (json.code === "EVENT_LIMIT") {
+          throw new ActionError("Limite d'événements du plan atteinte. Contactez le support pour changer d'abonnement.");
+        }
+        if (json.code === "SUBSCRIPTION_INACTIVE" || json.code === "NO_SUBSCRIPTION") {
+          throw new ActionError("Votre abonnement n'est pas actif. Contactez le support.");
+        }
+        if (json.code === "SLUG_TAKEN") {
+          return { fieldErrors: { slug: "Ce slug est déjà utilisé. Modifiez-le et réessayez." } };
+        }
+        if (json.issues?.[0]?.message === "endDate < date") {
+          return {
+            fieldErrors: { endDate: "La date de fin doit être postérieure ou égale à la date de l'événement." },
+          };
+        }
+        throw new ActionError("Erreur lors de la création.");
       }
-      return;
-    }
-    const json = (await res.json()) as { event: { id: string; slug: string } };
-    router.push(`/event/${json.event.id}/settings`);
-  }
+      const json = (await res.json()) as { event: { id: string; slug: string } };
+      return { id: json.event.id };
+    },
+    {
+      onSuccess: (result) => {
+        if (result.fieldErrors) {
+          setFieldErrors(result.fieldErrors);
+          setStep(1);
+          return;
+        }
+        setNavigating(true);
+        router.push(`/event/${result.id}/settings`);
+      },
+    },
+  );
+  const submitting = create.pending || navigating;
 
   function addManualCategory() {
     setManualCats([
@@ -141,12 +161,6 @@ export function EventCreationWizard({
 
       <Stepper steps={STEPS} current={step - 1} />
 
-      {err && (
-        <Alert tone="err">
-          <Icon name="alert-triangle" size={16} /> {err}
-        </Alert>
-      )}
-
       {step === 1 && (
         <Card>
           <CardBody className="space-y-4">
@@ -157,7 +171,11 @@ export function EventCreationWizard({
                 label="Date de fin (optionnelle)"
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                error={fieldErrors.endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setFieldErrors((f) => ({ ...f, endDate: undefined }));
+                }}
               />
             </div>
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} required />
@@ -177,9 +195,11 @@ export function EventCreationWizard({
               <Input
                 label="Slug (URL publique)"
                 value={slug}
+                error={fieldErrors.slug}
                 onChange={(e) => {
                   setSlug(e.target.value);
                   setSlugTouched(true);
+                  setFieldErrors((f) => ({ ...f, slug: undefined }));
                 }}
               />
               <p className="mt-1 text-xs text-slate-400">
@@ -343,14 +363,8 @@ export function EventCreationWizard({
               <Button variant="secondary" onClick={() => setStep(3)}>
                 Précédent
               </Button>
-              <Button onClick={submit} className="flex items-center justify-center gap-2" disabled={submitting}>
-                {submitting ? (
-                  <>
-                    <Spinner size={16} /> Création…
-                  </>
-                ) : (
-                  "Créer l'événement"
-                )}
+              <Button onClick={create.run} loading={submitting}>
+                Créer l&apos;événement
               </Button>
             </div>
           </CardBody>

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export function MemberInviteForm({
   orgId,
@@ -18,36 +20,54 @@ export function MemberInviteForm({
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER">("OPERATOR");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setErr(null);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/members`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name: name || undefined, role }),
-    });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      if (j.code === "ALREADY_MEMBER") setErr("Cet utilisateur est déjà membre de l'événement.");
-      else setErr("Échec de l'invitation.");
-      setBusy(false);
-      return;
-    }
-    onDone();
-  }
+  // Motif C : ALREADY_MEMBER est rattaché au champ e-mail ; le reste lève une exception (toast).
+  const invite = useAsyncAction(
+    async (): Promise<{ emailError?: string }> => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/members`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, name: name || undefined, role }),
+      });
+      if (!res.ok) {
+        const j = await res.clone().json().catch(() => ({}));
+        if (j.code === "ALREADY_MEMBER") {
+          return { emailError: "Cet utilisateur est déjà membre de l'événement." };
+        }
+        throw res;
+      }
+      return {};
+    },
+    {
+      error: "Échec de l'invitation.",
+      // Le toast est global : il survit à la fermeture de la modale par onDone.
+      onSuccess: (result) => {
+        if (result.emailError) {
+          setEmailError(result.emailError);
+          return;
+        }
+        toastSuccess("Invitation envoyée.");
+        onDone();
+      },
+    },
+  );
+  const busy = invite.pending;
 
   return (
-    <form onSubmit={submit} className="bg-white border rounded p-4 space-y-3">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setEmailError(null);
+        void invite.run();
+      }}
+      className="bg-white border rounded p-4 space-y-3">
       <h3 className="font-semibold">Inviter un membre</h3>
-      {err && <div className="text-sm text-red-600">{err}</div>}
       <Input
         type="email"
         placeholder="Email"
         value={email}
+        error={emailError ?? undefined}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
@@ -70,8 +90,8 @@ export function MemberInviteForm({
         <Button variant="secondary" type="button" onClick={onCancel} disabled={busy}>
           Annuler
         </Button>
-        <Button type="submit" disabled={busy}>
-          {busy ? "..." : "Inviter"}
+        <Button type="submit" loading={busy}>
+          Inviter
         </Button>
       </div>
     </form>

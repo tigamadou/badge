@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CategoryTemplateForm } from "@/components/admin/CategoryTemplateForm";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
 import { CatPill } from "@/components/ui/Labels";
 import { Tag } from "@/components/ui/Labels";
@@ -35,9 +36,8 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
   }
 
   async function remove(id: string) {
-    if (!confirm("Supprimer ce modèle ?")) return;
-    await fetch(`/api/org/${orgId}/templates/${id}`, { method: "DELETE" });
-    refresh();
+    const res = await fetch(`/api/org/${orgId}/templates/${id}`, { method: "DELETE" });
+    if (!res.ok) throw res;
   }
 
   const modalOpen = adding || editing !== null;
@@ -96,13 +96,18 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
                     >
                       <Icon name="pencil" size={15} />
                     </button>
-                    <button
-                      onClick={() => remove(t.id)}
+                    <ActionButton
+                      variant="link"
+                      confirm="Supprimer ce modèle ?"
+                      action={() => remove(t.id)}
+                      success="Modèle supprimé."
+                      error="Échec de la suppression du modèle."
+                      onSuccess={() => void refresh()}
                       aria-label="Supprimer"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:no-underline"
                     >
                       <Icon name="trash-2" size={15} />
-                    </button>
+                    </ActionButton>
                   </div>
                 </td>
               </tr>

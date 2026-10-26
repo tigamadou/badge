@@ -31,4 +31,11 @@ describe("Button", () => {
     expect(html).toContain('disabled=""');
     expect(html).not.toContain("aria-busy");
   });
+
+  it("la variante link n'a ni fond ni padding", () => {
+    const html = renderToStaticMarkup(<Button variant="link">Archiver</Button>);
+    expect(html).not.toContain("px-4");
+    expect(html).not.toContain("bg-");
+    expect(html).toContain("hover:underline");
+  });
 });

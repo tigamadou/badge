@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Alert } from "@/components/ui/Feedback";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type ProfileStatus = "INCOMPLETE" | "PENDING" | "APPROVED" | "REJECTED";
 
@@ -53,8 +54,6 @@ export function ProfileReviewPanel({
   const [rejecting, setRejecting] = useState(false);
   const [reasonId, setReasonId] = useState("");
   const [details, setDetails] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const currentPending = canDecide && submissions[0]?.status === "PENDING";
 
@@ -65,42 +64,35 @@ export function ProfileReviewPanel({
       .catch(() => setReasons([]));
   }, []);
 
-  async function approve() {
-    setBusy(true);
-    setError(null);
-    const res = await fetch(`/api/platform/profiles/${user.id}/approve`, { method: "POST" });
-    setBusy(false);
-    if (res.ok) {
-      router.refresh();
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setError(d.error === "NO_PENDING_SUBMISSION" ? "Aucune soumission en attente." : "Échec de l'approbation.");
-    }
-  }
+  const approve = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/profiles/${user.id}/approve`, { method: "POST" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        if (d.error === "NO_PENDING_SUBMISSION") throw new ActionError("Aucune soumission en attente.");
+        throw res;
+      }
+    },
+    { success: "Profil approuvé.", error: "Échec de l'approbation.", onSuccess: () => router.refresh() },
+  );
 
-  async function reject() {
-    if (!reasonId) return;
-    setBusy(true);
-    setError(null);
-    const res = await fetch(`/api/platform/profiles/${user.id}/reject`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reasonId, details: details || undefined }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      router.refresh();
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setError(
-        d.error === "REASON_WRONG_SCOPE"
-          ? "Ce motif ne s'applique pas à un profil."
-          : d.error === "NO_PENDING_SUBMISSION"
-            ? "Aucune soumission en attente."
-            : "Échec du rejet.",
-      );
-    }
-  }
+  const reject = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/profiles/${user.id}/reject`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reasonId, details: details || undefined }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        if (d.error === "REASON_WRONG_SCOPE") throw new ActionError("Ce motif ne s'applique pas à un profil.");
+        if (d.error === "NO_PENDING_SUBMISSION") throw new ActionError("Aucune soumission en attente.");
+        throw res;
+      }
+    },
+    { success: "Profil rejeté.", error: "Échec du rejet.", onSuccess: () => router.refresh() },
+  );
+  const busy = approve.pending || reject.pending;
 
   return (
     <div className="space-y-6">
@@ -115,7 +107,6 @@ export function ProfileReviewPanel({
           subtitle={`${user.email}${user.structure ? ` — ${user.structure}` : ""}`}
         />
         <CardBody className="space-y-4">
-          {error && <Alert tone="err">{error}</Alert>}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <DocumentPreview storageKey={user.photo} label="Photo" />
             <DocumentPreview storageKey={user.idDocument} label="Pièce d'identité" />
@@ -130,7 +121,7 @@ export function ProfileReviewPanel({
           {currentPending && (
             <div className="space-y-3 border-t border-slate-100 pt-4">
               <div className="flex flex-wrap gap-2">
-                <Button onClick={approve} disabled={busy}>
+                <Button onClick={approve.run} loading={approve.pending} disabled={busy}>
                   Approuver
                 </Button>
                 <Button variant="secondary" onClick={() => setRejecting((v) => !v)} disabled={busy}>
@@ -162,7 +153,7 @@ export function ProfileReviewPanel({
                     placeholder="Détails (optionnel)"
                     className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                   />
-                  <Button variant="danger" onClick={reject} disabled={busy || !reasonId}>
+                  <Button variant="danger" onClick={reject.run} loading={reject.pending} disabled={busy || !reasonId}>
                     Confirmer le rejet
                   </Button>
                 </div>

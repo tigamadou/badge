@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/FormControls";
-import { Alert } from "@/components/ui/Feedback";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Initial = { id: string; name: string; color: string; number: number; neutralBadge: boolean; anonymous: boolean };
 
@@ -26,33 +27,62 @@ export function CategoryForm({
   const [number, setNumber] = useState(initial?.number ?? 0);
   const [neutralBadge, setNeutralBadge] = useState(initial?.neutralBadge ?? false);
   const [anonymous, setAnonymous] = useState(initial?.anonymous ?? false);
-  const [err, setErr] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ number?: string; name?: string }>({});
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    const url = initial
-      ? `/api/org/${orgId}/events/${eventId}/categories/${initial.id}`
-      : `/api/org/${orgId}/events/${eventId}/categories`;
-    const res = await fetch(url, {
-      method: initial ? "PATCH" : "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, color, number, neutralBadge, anonymous }),
-    });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      if (json.code === "NUMBER_TAKEN") setErr(`Le numéro ${number} est déjà utilisé dans cet événement.`);
-      else if (json.code === "NAME_TAKEN") setErr(`Le nom « ${name} » est déjà utilisé dans cet événement.`);
-      else setErr("Échec de l'enregistrement.");
-      return;
-    }
-    onSaved();
-  }
+  // Motif C : NUMBER_TAKEN / NAME_TAKEN sont rattachés à leur champ, sans toast d'erreur.
+  const save = useAsyncAction(
+    async (): Promise<{ fieldErrors?: { number?: string; name?: string } }> => {
+      const url = initial
+        ? `/api/org/${orgId}/events/${eventId}/categories/${initial.id}`
+        : `/api/org/${orgId}/events/${eventId}/categories`;
+      const res = await fetch(url, {
+        method: initial ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, color, number, neutralBadge, anonymous }),
+      });
+      if (!res.ok) {
+        const json = await res.clone().json().catch(() => ({}));
+        if (json.code === "NUMBER_TAKEN") {
+          return { fieldErrors: { number: `Le numéro ${number} est déjà utilisé dans cet événement.` } };
+        }
+        if (json.code === "NAME_TAKEN") {
+          return { fieldErrors: { name: `Le nom « ${name} » est déjà utilisé dans cet événement.` } };
+        }
+        throw res;
+      }
+      return {};
+    },
+    {
+      error: "Échec de l'enregistrement.",
+      // Le toast est global : il survit à la fermeture de la modale qui porte ce formulaire.
+      onSuccess: (result) => {
+        if (result.fieldErrors) {
+          setFieldErrors(result.fieldErrors);
+          return;
+        }
+        toastSuccess(initial ? "Catégorie modifiée." : "Catégorie créée.");
+        onSaved();
+      },
+    },
+  );
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      {err && <Alert tone="err">{err}</Alert>}
-      <Input label="Nom" placeholder="Nom" value={name} onChange={(e) => setName(e.target.value)} required />
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        setFieldErrors({});
+        void save.run();
+      }}
+      className="space-y-4"
+    >
+      <Input
+        label="Nom"
+        placeholder="Nom"
+        value={name}
+        error={fieldErrors.name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
       <div className="grid grid-cols-[auto_1fr] items-end gap-3">
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-slate-700">Couleur</span>
@@ -67,6 +97,7 @@ export function CategoryForm({
           label="Numéro"
           type="number"
           value={number}
+          error={fieldErrors.number}
           onChange={(e) => setNumber(Number(e.target.value))}
           min={0}
           max={999}
@@ -82,7 +113,9 @@ export function CategoryForm({
             Annuler
           </Button>
         )}
-        <Button type="submit">{initial ? "Enregistrer" : "Créer"}</Button>
+        <Button type="submit" loading={save.pending}>
+          {initial ? "Enregistrer" : "Créer"}
+        </Button>
       </div>
     </form>
   );

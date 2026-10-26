@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
-import { Alert } from "@/components/ui/Feedback";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
@@ -29,62 +29,45 @@ export function UserDetailActions({
   isSelf,
 }: Props) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
   const [staffRole, setStaffRole] = useState<StaffRoleStr>(
     user.staffRole ?? "STAFF_OBSERVER",
   );
 
-  async function resetPwd() {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/platform/users/${user.id}/reset-password`, {
-      method: "POST",
-    });
-    setBusy(false);
-    setMsg(res.ok ? "Lien d'invitation regenere." : "Echec de la reinitialisation.");
-  }
+  const resetPwd = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/users/${user.id}/reset-password`, { method: "POST" });
+      if (!res.ok) throw res;
+    },
+    { success: "Lien d'invitation régénéré.", error: "Échec de la réinitialisation." },
+  );
 
-  async function changeRole() {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/platform/users/${user.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ staffRole }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      setMsg("Role mis a jour.");
-      router.refresh();
-    } else {
-      const json = await res.json().catch(() => ({}));
-      setMsg(json.error ?? "Echec du changement de role.");
-    }
-  }
+  const changeRole = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ staffRole }),
+      });
+      if (!res.ok) throw res;
+    },
+    { success: "Rôle mis à jour.", error: "Échec du changement de rôle.", onSuccess: () => router.refresh() },
+  );
 
-  async function archive() {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/platform/users/${user.id}`, { method: "DELETE" });
-    setBusy(false);
-    if (res.ok) {
-      setMsg("Utilisateur archive.");
-      router.refresh();
-    } else {
-      const json = await res.json().catch(() => ({}));
-      setMsg(json.error ?? "Echec de l'archivage.");
-    }
-  }
+  const archive = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/users/${user.id}`, { method: "DELETE" });
+      if (!res.ok) throw res;
+    },
+    { success: "Utilisateur archivé.", error: "Échec de l'archivage.", onSuccess: () => router.refresh() },
+  );
+  const busy = resetPwd.pending || changeRole.pending || archive.pending;
 
   return (
     <Card>
       <CardHead title="Actions" />
       <CardBody className="space-y-3">
-        {msg && <Alert tone="info">{msg}</Alert>}
-
         {canResetPassword && !user.archived && (
-          <Button variant="secondary" onClick={resetPwd} disabled={busy}>
+          <Button variant="secondary" onClick={resetPwd.run} loading={resetPwd.pending} disabled={busy}>
             Renvoyer un lien de configuration de mot de passe
           </Button>
         )}
@@ -101,14 +84,14 @@ export function UserDetailActions({
               {canEditTopRoles && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
               {canEditTopRoles && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
             </select>
-            <Button onClick={changeRole} disabled={busy}>
+            <Button onClick={changeRole.run} loading={changeRole.pending} disabled={busy}>
               Changer le rôle
             </Button>
           </div>
         )}
 
         {canAdmin && !user.archived && !isSelf && (
-          <Button variant="danger" onClick={archive} disabled={busy}>
+          <Button variant="danger" onClick={archive.run} loading={archive.pending} disabled={busy}>
             Archiver l&apos;utilisateur
           </Button>
         )}

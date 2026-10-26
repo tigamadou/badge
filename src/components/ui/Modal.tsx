@@ -12,6 +12,7 @@ interface ModalProps {
   onCancel: () => void;
   confirmLabel?: string;
   confirmVariant?: "primary" | "danger";
+  confirmLoading?: boolean;
 }
 
 export function Modal({
@@ -22,6 +23,7 @@ export function Modal({
   onCancel,
   confirmLabel = "Confirmer",
   confirmVariant = "primary",
+  confirmLoading = false,
 }: ModalProps) {
   // Échap annule ; l'écouteur suit la dernière version de onCancel.
   useEffect(() => {
@@ -44,6 +46,7 @@ export function Modal({
       onCancel={onCancel}
       confirmLabel={confirmLabel}
       confirmVariant={confirmVariant}
+      confirmLoading={confirmLoading}
     >
       {children}
     </ModalPanel>,
@@ -59,6 +62,7 @@ export function ModalPanel({
   onCancel,
   confirmLabel = "Confirmer",
   confirmVariant = "primary",
+  confirmLoading = false,
 }: Omit<ModalProps, "open">) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
@@ -76,7 +80,7 @@ export function ModalPanel({
           <Button variant="secondary" onClick={onCancel}>
             Annuler
           </Button>
-          <Button variant={confirmVariant} onClick={onConfirm}>
+          <Button variant={confirmVariant} loading={confirmLoading} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>

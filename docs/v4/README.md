@@ -28,7 +28,7 @@ et retires du depot une fois implementes.
   [25 — categorie d'inscription rejetee](specs/2026-10-24-25-v4-categorie-inscription-rejetee.md) · [Plan](plans/2026-10-24-categorie-inscription-rejetee.md) · [Feature](features/inscriptions-resoumission.md) (**livre**, 2026-10-24) ·
   [26 — cover d'evenement](specs/2026-10-24-26-v4-cover-evenement.md) · [Plan](plans/2026-10-24-cover-evenement.md) · [Feature](features/cover-evenement.md) (**livre**, 2026-10-24) ·
   [27 — avatar photo validee](specs/2026-10-24-27-v4-avatar-photo-validee.md) · [Plan](plans/2026-10-24-avatar-photo-validee.md) · [Feature](features/validation-profils.md) (**livre**, 2026-10-24) ·
-  [28 — feedback des actions](specs/2026-10-24-28-v4-feedback-actions.md) · [Plan](plans/2026-10-24-feedback-actions.md)
+  [28 — feedback des actions](specs/2026-10-24-28-v4-feedback-actions.md) · [Plan](plans/2026-10-24-feedback-actions.md) · [Feature](features/feedback-actions.md) (**livre**, 2026-10-24)
 
 ### Chantiers livres
 
@@ -61,6 +61,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Lot notifications — socle commun](features/lot-notifications-socle.md) — contrats C1 a C4 (`enqueueEmail`, `NotificationBell`, `UserAvatar`, toasts) tels que livres.
 - [Notifications internes et email](features/notifications.md) — cloche, panneau, pages par espace, matrice des evenements, destinataires, API, retention.
+- [Loader et toast sur les actions](features/feedback-actions.md) — primitives, `apiErrorMessage`, motifs A a G, regles d'usage, helpers e2e.
 - [Resoumission avec changement de categorie](features/inscriptions-resoumission.md) — `resubmit` (corps optionnel, nouvel ID, `INVALID_CATEGORY`), `allocateRegistrationId`, rejet interdit apres impression du badge.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
@@ -98,6 +99,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Lot notifications — queue d'emails (spec 23) | Livre (2026-10-24) — table `Job`, worker (`SKIP LOCKED`, backoff, orphelins, retention), `enqueueEmail` insere en base, ecran `/platform/jobs` (relance, annulation). Voir [feature](features/queue-emails.md). `deploy.sh` et la CI adaptes pour le worker ; rien n'est deploye |
 | Lot notifications — categorie d'inscription rejetee (spec 25) | Livre (2026-10-24) — `resubmit` accepte `{ categoryId }`, nouvel ID en transaction (`allocateRegistrationId`), selecteur `RadioCards` et redirection ; rejet refuse si le badge est imprime (`BADGE_ALREADY_PRINTED`). Voir [feature](features/inscriptions-resoumission.md) |
 | Lot notifications — notifications internes et email (spec 24) | Livre (2026-10-24) — table `Notification`, service `src/lib/notifications/` (destinataires, `notify`, declencheurs), cloche + panneau (polling 30 s), pages des quatre espaces, email par la queue, retention 90 j dans le worker, `EMAIL_FAILED`. Voir [feature](features/notifications.md) |
+| Lot notifications — feedback des actions (spec 28) | Livre (2026-10-24) — loader + `disabled` + toast sur toutes les actions des quatre espaces et des pages publiques (`useAsyncAction`, `ActionButton`, `apiErrorMessage` qui filtre codes et messages anglais, erreurs de champ sous les champs). Voir [feature](features/feedback-actions.md) |
 
 Pour un chantier livre, le detail task par task vit dans l'historique git du plan
 supprime ; le *pourquoi* reste dans la spec.

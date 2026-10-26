@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
-import { Alert } from "@/components/ui/Feedback";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { Icon } from "@/components/ui/Icon";
 
 export function OrgDetailActions({
@@ -17,78 +17,78 @@ export function OrgDetailActions({
   canDelete: boolean;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmSlug, setConfirmSlug] = useState("");
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [navigating, setNavigating] = useState(false);
 
-  async function archive() {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/platform/organizations/${org.id}/archive`, { method: "POST" });
-    setBusy(false);
-    if (res.ok) {
-      setMsg("Organisation archivée.");
-      router.refresh();
-    } else {
-      setMsg("Échec de l'archivage.");
-    }
-  }
+  const archive = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/organizations/${org.id}/archive`, { method: "POST" });
+      if (!res.ok) throw res;
+    },
+    { success: "Organisation archivée.", error: "Échec de l'archivage.", onSuccess: () => router.refresh() },
+  );
 
-  async function restore() {
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/platform/organizations/${org.id}/restore`, { method: "POST" });
-    setBusy(false);
-    if (res.ok) {
-      setMsg("Organisation restaurée.");
-      router.refresh();
-    } else {
-      setMsg("Échec de la restauration.");
-    }
-  }
+  const restore = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/organizations/${org.id}/restore`, { method: "POST" });
+      if (!res.ok) throw res;
+    },
+    { success: "Organisation restaurée.", error: "Échec de la restauration.", onSuccess: () => router.refresh() },
+  );
 
-  async function destroy() {
+  const destroy = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/organizations/${org.id}`, {
+        method: "DELETE",
+        headers: {
+          "content-type": "application/json",
+          "x-confirm": `delete-${org.slug}`,
+        },
+        body: JSON.stringify({ confirmSlug: org.slug }),
+      });
+      if (!res.ok) {
+        setConfirmOpen(false);
+        throw res;
+      }
+    },
+    {
+      // Le toast survit à la navigation : le Toaster vit dans le layout racine.
+      success: "Organisation supprimée.",
+      error: "Échec de la suppression.",
+      onSuccess: () => {
+        setNavigating(true);
+        router.push("/platform/organizations");
+      },
+    },
+  );
+
+  function confirmDestroy() {
     if (confirmSlug !== org.slug) {
-      setMsg("Confirmation invalide : saisissez le slug exact.");
+      setSlugError("Confirmation invalide : saisissez le slug exact.");
       return;
     }
-    setBusy(true);
-    setMsg(null);
-    const res = await fetch(`/api/platform/organizations/${org.id}`, {
-      method: "DELETE",
-      headers: {
-        "content-type": "application/json",
-        "x-confirm": `delete-${org.slug}`,
-      },
-      body: JSON.stringify({ confirmSlug: org.slug }),
-    });
-    setBusy(false);
-    if (res.ok) {
-      router.push("/platform/organizations");
-    } else {
-      setConfirmOpen(false);
-      setMsg("Échec de la suppression.");
-    }
+    setSlugError(null);
+    void destroy.run();
   }
 
   return (
     <Card className="border-rose-200">
       <CardHead title="Zone de danger" />
       <CardBody className="space-y-4">
-        {msg && <Alert tone="info">{msg}</Alert>}
         <div className="flex flex-wrap gap-3">
           {!org.archived ? (
-            <Button variant="secondary" onClick={archive} disabled={busy}>
+            <Button variant="secondary" onClick={archive.run} loading={archive.pending} disabled={restore.pending}>
               Archiver
             </Button>
           ) : (
-            <Button variant="secondary" onClick={restore} disabled={busy}>
+            <Button variant="secondary" onClick={restore.run} loading={restore.pending} disabled={archive.pending}>
               Restaurer
             </Button>
           )}
           {canDelete && (
-            <Button variant="danger" onClick={() => setConfirmOpen(true)} disabled={busy}>
+            <Button variant="danger" onClick={() => setConfirmOpen(true)} disabled={archive.pending || restore.pending}>
               <span className="inline-flex items-center gap-1.5">
                 <Icon name="trash-2" size={16} /> Supprimer définitivement
               </span>
@@ -108,8 +108,10 @@ export function OrgDetailActions({
         onCancel={() => {
           setConfirmOpen(false);
           setConfirmSlug("");
+          setSlugError(null);
         }}
-        onConfirm={destroy}
+        onConfirm={confirmDestroy}
+        confirmLoading={destroy.pending || navigating}
       >
         <div className="space-y-3">
           <p>
@@ -121,6 +123,7 @@ export function OrgDetailActions({
             value={confirmSlug}
             onChange={(e) => setConfirmSlug(e.target.value)}
             placeholder={org.slug}
+            error={slugError ?? undefined}
           />
         </div>
       </Modal>

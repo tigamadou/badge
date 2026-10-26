@@ -16,17 +16,29 @@ export function BatchButton({
   icon,
   children,
   onClick,
+  loading = false,
 }: {
   icon?: IconName;
   children: ReactNode;
   onClick: () => void;
+  loading?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.14] px-3 py-1.5 text-[13px] font-medium text-white hover:bg-white/[0.24]"
+      disabled={loading}
+      aria-busy={loading || undefined}
+      className="inline-flex items-center gap-1.5 rounded-md bg-white/[0.14] px-3 py-1.5 text-[13px] font-medium text-white hover:bg-white/[0.24] disabled:opacity-60"
     >
-      {icon ? <Icon name={icon} size={14} /> : null}
+      {loading ? (
+        <span
+          aria-hidden="true"
+          data-testid="button-spinner"
+          className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+        />
+      ) : icon ? (
+        <Icon name={icon} size={14} />
+      ) : null}
       {children}
     </button>
   );

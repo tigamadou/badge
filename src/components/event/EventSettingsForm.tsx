@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/FormControls";
-import { Alert } from "@/components/ui/Feedback";
 import { Dropzone, FileBox } from "@/components/ui/FileBox";
+import { toastApiError, toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { linesToInstructions } from "@/lib/security-instructions";
 import { BadgeOptionsFields, type BadgeOption } from "@/components/event/BadgeOptionsFields";
 import { mergeTemplateOptions, normalizeEditedOptions, type OptionValue } from "@/lib/badge-templates/template-options";
@@ -59,108 +60,122 @@ export function EventSettingsForm({
   );
   const [contactEmail, setContactEmail] = useState(initial.settings.contactEmail ?? "");
   const [contactPhone, setContactPhone] = useState(initial.settings.contactPhone ?? "");
-  const [msg, setMsg] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    endDate?: string;
+    securityInstructions?: string;
+    templateOptions?: string;
+  }>({});
 
-  async function uploadLogo(files: FileList) {
+  // Motif F : l'indicateur « Envoi… » sert de loader, la FileBox affiche le succès ; seule l'erreur donne un toast.
+  async function upload(
+    files: FileList,
+    setUploading: (v: boolean) => void,
+    setter: (key: string) => void,
+    fallback: string,
+  ) {
     const file = files[0];
     if (!file) return;
-    setUploadingLogo(true);
-    setMsg(null);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
-    setUploadingLogo(false);
-    if (!res.ok) {
-      setMsg("Échec de l'envoi du logo.");
-      return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+      if (!res.ok) throw res;
+      const { storageKey } = await res.json();
+      setter(storageKey);
+    } catch (err) {
+      await toastApiError(err, fallback);
+    } finally {
+      setUploading(false);
     }
-    const { storageKey } = await res.json();
-    setLogo(storageKey);
   }
 
-  async function uploadBanner(files: FileList) {
-    const file = files[0];
-    if (!file) return;
-    setUploadingBanner(true);
-    setMsg(null);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
-    setUploadingBanner(false);
-    if (!res.ok) {
-      setMsg("Échec de l'envoi de la bannière.");
-      return;
-    }
-    const { storageKey } = await res.json();
-    setBanner(storageKey);
-  }
+  const uploadLogo = (files: FileList) =>
+    upload(files, setUploadingLogo, setLogo, "Échec de l'envoi du logo.");
+  const uploadBanner = (files: FileList) =>
+    upload(files, setUploadingBanner, setBanner, "Échec de l'envoi de la bannière.");
 
   async function uploadOptionImage(file: File): Promise<string | null> {
-    setMsg(null);
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
-    if (!res.ok) {
-      setMsg("Échec de l'envoi de l'image.");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
+      if (!res.ok) throw res;
+      const { storageKey } = await res.json();
+      return storageKey;
+    } catch (err) {
+      await toastApiError(err, "Échec de l'envoi de l'image.");
       return null;
     }
-    const { storageKey } = await res.json();
-    return storageKey;
   }
 
-  async function saveEvent(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg(null);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        title,
-        location,
-        date,
-        endDate: endDate || null,
-        description: description || null,
-        logo,
-        banner,
-        securityInstructions: linesToInstructions(instructionsDraft),
-        registrationOpen,
-        ...(initial.options.length > 0
-          ? { templateOptions: mergeTemplateOptions(
-                initial.storedOptions,
-                normalizeEditedOptions(initial.options, optionValues),
-              ) }
-          : {}),
-      }),
-    });
-    if (res.ok) {
-      setMsg("Événement mis à jour.");
-    } else {
-      const data = await res.json().catch(() => null);
-      if (data?.issues?.[0]?.message === "endDate < date") {
-        setMsg("La date de fin doit être postérieure ou égale à la date de l'événement.");
-      } else if (data?.issues?.[0]?.path?.[0] === "securityInstructions") {
-        setMsg("Consignes : 30 au plus, 500 caractères chacune.");
-      } else if (data?.issues?.[0]?.path?.[0] === "templateOptions") {
-        setMsg("Options du badge : valeur refusée (texte de 500 caractères au plus, 30 lignes au plus).");
-      } else {
-        setMsg("Échec de la mise à jour.");
+  // Motif C : endDate, consignes et options sont rattachés à leur champ ; le reste lève (toast).
+  const saveEvent = useAsyncAction(
+    async (): Promise<{ fieldErrors?: typeof fieldErrors }> => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title,
+          location,
+          date,
+          endDate: endDate || null,
+          description: description || null,
+          logo,
+          banner,
+          securityInstructions: linesToInstructions(instructionsDraft),
+          registrationOpen,
+          ...(initial.options.length > 0
+            ? { templateOptions: mergeTemplateOptions(
+                  initial.storedOptions,
+                  normalizeEditedOptions(initial.options, optionValues),
+                ) }
+            : {}),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.issues?.[0]?.message === "endDate < date") {
+          return { fieldErrors: { endDate: "La date de fin doit être postérieure ou égale à la date de l'événement." } };
+        }
+        if (data?.issues?.[0]?.path?.[0] === "securityInstructions") {
+          return { fieldErrors: { securityInstructions: "Consignes : 30 au plus, 500 caractères chacune." } };
+        }
+        if (data?.issues?.[0]?.path?.[0] === "templateOptions") {
+          return {
+            fieldErrors: {
+              templateOptions:
+                "Options du badge : valeur refusée (texte de 500 caractères au plus, 30 lignes au plus).",
+            },
+          };
+        }
+        throw res;
       }
-    }
-  }
+      return {};
+    },
+    {
+      error: "Échec de la mise à jour.",
+      onSuccess: (result) => {
+        if (result.fieldErrors) setFieldErrors(result.fieldErrors);
+        else toastSuccess("Événement mis à jour.");
+      },
+    },
+  );
 
-  async function saveSettings(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg(null);
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/settings`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contactEmail: contactEmail || null,
-        contactPhone: contactPhone || null,
-      }),
-    });
-    setMsg(res.ok ? "Paramètres enregistrés." : "Échec.");
-  }
+  const saveSettings = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/org/${orgId}/events/${eventId}/settings`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contactEmail: contactEmail || null,
+          contactPhone: contactPhone || null,
+        }),
+      });
+      if (!res.ok) throw res;
+    },
+    { success: "Paramètres enregistrés.", error: "Échec de l'enregistrement des paramètres." },
+  );
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -168,12 +183,18 @@ export function EventSettingsForm({
         <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;événement</h1>
         <p className="mt-0.5 text-sm text-slate-400">Informations, inscriptions et contact</p>
       </div>
-      {msg && <Alert tone={/Échec|refusée/.test(msg) ? "err" : "success"}>{msg}</Alert>}
 
       <Card>
         <CardHead title="Informations" />
         <CardBody>
-          <form onSubmit={saveEvent} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setFieldErrors({});
+              void saveEvent.run();
+            }}
+            className="space-y-4"
+          >
             <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -182,6 +203,7 @@ export function EventSettingsForm({
                 label="Date de fin (optionnelle)"
                 type="date"
                 value={endDate}
+                error={fieldErrors.endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
@@ -255,6 +277,9 @@ export function EventSettingsForm({
                 placeholder="Une consigne par ligne"
                 className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
+              {fieldErrors.securityInstructions && (
+                <p className="mt-1 text-sm text-rose-600">{fieldErrors.securityInstructions}</p>
+              )}
               <p className="text-xs text-slate-400">
                 Imprimées sur les badges dont le template affiche les consignes. Une par ligne,
                 30 au plus, 500 caractères chacune.
@@ -266,12 +291,15 @@ export function EventSettingsForm({
               uniquement)
             </p>
             <div className="flex justify-end">
-              <Button type="submit">Enregistrer</Button>
+              <Button type="submit" loading={saveEvent.pending}>
+                Enregistrer
+              </Button>
             </div>
           </form>
         </CardBody>
       </Card>
 
+      {fieldErrors.templateOptions && <p className="text-sm text-rose-600">{fieldErrors.templateOptions}</p>}
       <BadgeOptionsFields
         options={initial.options}
         values={optionValues}
@@ -282,7 +310,13 @@ export function EventSettingsForm({
       <Card>
         <CardHead title="Contact (surcharges)" subtitle="Laisser vide pour hériter du niveau organisation." />
         <CardBody>
-          <form onSubmit={saveSettings} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveSettings.run();
+            }}
+            className="space-y-4"
+          >
             <Input
               label="E-mail de contact"
               type="email"
@@ -300,7 +334,9 @@ export function EventSettingsForm({
               Les paramètres SMTP sont gérés au niveau plateforme uniquement (décision 2026-05-31).
             </p>
             <div className="flex justify-end">
-              <Button type="submit">Enregistrer</Button>
+              <Button type="submit" loading={saveSettings.pending}>
+                Enregistrer
+              </Button>
             </div>
           </form>
         </CardBody>

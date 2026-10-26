@@ -2,6 +2,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/Icon";
+import { Button } from "@/components/ui/Button";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 const SUBJECTS = [
   "Demander une démo",
@@ -15,7 +17,6 @@ const inputClass =
   "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600";
 
 export function ContactForm() {
-  const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -33,32 +34,31 @@ export function ContactForm() {
   }
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const canSubmit = emailValid && form.consent && !pending;
+  const canSubmit = emailValid && form.consent;
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!canSubmit) {
-      setError("Renseignez un e-mail valide et acceptez la politique de confidentialité.");
-      return;
-    }
-    setPending(true);
-    try {
+  // Succès : l'écran de remerciement tient lieu de retour (pas de toast).
+  const send = useAsyncAction(
+    async () => {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "L'envoi a échoué.");
-      }
-      setDone(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "L'envoi a échoué.");
-    } finally {
-      setPending(false);
+      if (!res.ok) throw res;
+    },
+    { error: "L'envoi a échoué.", onSuccess: () => setDone(true) },
+  );
+  const pending = send.pending;
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    // Validation côté client : inline, sans requête.
+    if (!canSubmit) {
+      setError("Renseignez un e-mail valide et acceptez la politique de confidentialité.");
+      return;
     }
+    void send.run();
   }
 
   if (done) {
@@ -147,13 +147,11 @@ export function ContactForm() {
 
       {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {pending ? "Envoi…" : "Envoyer la demande"} <Icon name="send" size={16} />
-      </button>
+      <Button type="submit" loading={pending} disabled={!canSubmit} className="mt-5 w-full py-2.5">
+        <span className="inline-flex items-center justify-center gap-2">
+          Envoyer la demande <Icon name="send" size={16} />
+        </span>
+      </Button>
       <p className="mt-3 text-center text-xs text-slate-400">Réponse sous 1 jour ouvré · Aucune carte requise</p>
     </form>
   );

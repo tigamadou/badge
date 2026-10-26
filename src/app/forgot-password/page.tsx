@@ -6,25 +6,21 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { useRecaptcha } from "@/components/auth/Recaptcha";
-import { Alert, Spinner, SuccessRing } from "@/components/ui/Feedback";
+import { SuccessRing } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export default function ForgotPasswordPage() {
   const recaptcha = useRecaptcha();
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
+  const send = useAsyncAction(
+    async () => {
       const recaptchaToken = await recaptcha.execute("forgot_password");
       if (recaptcha.enabled && !recaptchaToken) {
-        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
-        return;
+        throw new ActionError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
       }
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
@@ -32,19 +28,12 @@ export default function ForgotPasswordPage() {
         // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
         body: JSON.stringify({ email, recaptchaToken: recaptchaToken ?? undefined }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.error ?? "Erreur, réessayez.");
-        return;
-      }
-      // Anti-enumeration : reponse toujours uniforme (success message).
-      setDone(true);
-    } catch {
-      setError("Erreur réseau, réessayez.");
-    } finally {
-      setLoading(false);
-    }
-  }
+      if (!res.ok) throw res;
+    },
+    // Anti-enumeration : reponse toujours uniforme ; l'écran « done » tient lieu de retour.
+    { error: "Erreur, réessayez.", onSuccess: () => setDone(true) },
+  );
+  const loading = send.pending;
 
   return (
     <AuthCard
@@ -69,13 +58,13 @@ export default function ForgotPasswordPage() {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert tone="err">
-              <Icon name="alert-triangle" size={16} /> {error}
-            </Alert>
-          )}
-          <Input
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void send.run();
+          }}
+          className="space-y-4"
+        >          <Input
             label="Adresse e-mail"
             type="email"
             value={email}
@@ -85,14 +74,8 @@ export default function ForgotPasswordPage() {
             autoComplete="email"
             disabled={loading}
           />
-          <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
-            {loading ? (
-              <>
-                <Spinner size={16} /> Envoi…
-              </>
-            ) : (
-              "Envoyer le lien"
-            )}
+          <Button type="submit" className="w-full" loading={loading}>
+            Envoyer le lien
           </Button>
         </form>
       )}

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/FormControls";
-import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Alert } from "@/components/ui/Feedback";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export type PublicSettings = {
   smtpHost: string;
@@ -45,12 +46,9 @@ export function PlatformSettingsForm({
     recaptchaSecretKey: "",
   });
   const [showSecrets, setShowSecrets] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
-  async function save() {
-    setBusy(true);
-    setMsg(null);
+  const save = useAsyncAction(
+    async () => {
     const payload: Record<string, unknown> = {
       smtpHost: form.smtpHost,
       smtpPort: Number(form.smtpPort) || 587,
@@ -70,17 +68,18 @@ export function PlatformSettingsForm({
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
-    setBusy(false);
-    if (res.ok) {
-      setMsg("Paramètres enregistrés.");
-      // Reset les champs secrets pour eviter de re-soumettre la meme valeur.
-      setForm((f) => ({ ...f, smtpPassword: "", recaptchaSecretKey: "" }));
-      router.refresh();
-    } else {
-      const body = await res.json().catch(() => ({}));
-      setMsg(`Échec de l'enregistrement (${res.status}). ${body.error ?? ""}`.trim());
-    }
-  }
+    if (!res.ok) throw res;
+    },
+    {
+      success: "Paramètres enregistrés.",
+      error: "Échec de l'enregistrement des paramètres.",
+      onSuccess: () => {
+        // Reset les champs secrets pour eviter de re-soumettre la meme valeur.
+        setForm((f) => ({ ...f, smtpPassword: "", recaptchaSecretKey: "" }));
+        router.refresh();
+      },
+    },
+  );
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -90,7 +89,6 @@ export function PlatformSettingsForm({
           SUPER_ADMIN. Vous pouvez modifier les autres paramètres normalement.
         </Alert>
       )}
-      {msg && <Alert tone="info">{msg}</Alert>}
 
       <Card>
         <CardHead title="Serveur SMTP" subtitle="Configuration d'envoi des e-mails de la plateforme." />
@@ -134,14 +132,8 @@ export function PlatformSettingsForm({
       <Switch checked={showSecrets} onChange={setShowSecrets} label="Afficher les valeurs masquées pendant la saisie" />
 
       <div className="flex justify-end">
-        <Button onClick={save} className="flex items-center justify-center gap-2" disabled={busy}>
-          {busy ? (
-            <>
-              <Spinner size={16} /> Enregistrement…
-            </>
-          ) : (
-            "Enregistrer les paramètres"
-          )}
+        <Button onClick={save.run} loading={save.pending}>
+          Enregistrer les paramètres
         </Button>
       </div>
     </div>

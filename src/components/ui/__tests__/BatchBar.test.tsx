@@ -26,4 +26,15 @@ describe("BatchBar", () => {
     expect(html).toContain("sélectionnée(s)");
     expect(html).toContain("flex-wrap");
   });
+
+  it("BatchButton en chargement est désactivé avec un spinner", () => {
+    const html = renderToStaticMarkup(
+      <BatchButton loading onClick={() => {}}>
+        Marquer
+      </BatchButton>,
+    );
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('disabled=""');
+    expect(html).toContain("button-spinner");
+  });
 });

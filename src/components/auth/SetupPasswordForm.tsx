@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Alert, Spinner } from "@/components/ui/Feedback";
 import { PasswordMeter } from "@/components/ui/PasswordMeter";
-import { Icon } from "@/components/ui/Icon";
 import { useRecaptcha } from "@/components/auth/Recaptcha";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Props = {
   token: string;
@@ -28,29 +28,14 @@ export default function SetupPasswordForm({ token }: Props) {
   const recaptcha = useRecaptcha();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ password?: string; confirm?: string }>({});
+  const [navigating, setNavigating] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (password.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caracteres");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas");
-      return;
-    }
-
-    setLoading(true);
-    try {
+  const setup = useAsyncAction(
+    async () => {
       const recaptchaToken = await recaptcha.execute("setup_password");
       if (recaptcha.enabled && !recaptchaToken) {
-        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
-        setLoading(false);
-        return;
+        throw new ActionError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
       }
       const res = await fetch("/api/auth/setup-password", {
         method: "POST",
@@ -58,33 +43,44 @@ export default function SetupPasswordForm({ token }: Props) {
         // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
         body: JSON.stringify({ token, password, recaptchaToken: recaptchaToken ?? undefined }),
       });
+      if (!res.ok) throw res;
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Une erreur est survenue");
-        setLoading(false);
-        return;
-      }
-      const email = typeof data.email === "string" ? data.email : "";
-      const url = email ? `/login?email=${encodeURIComponent(email)}` : "/login";
-      router.push(url);
-    } catch {
-      setError("Une erreur est survenue");
-      setLoading(false);
+      return typeof data.email === "string" ? data.email : "";
+    },
+    {
+      error: "Une erreur est survenue",
+      // Redirection sans toast ; navigating garde le bouton bloqué pendant router.push.
+      onSuccess: (email) => {
+        setNavigating(true);
+        router.push(email ? `/login?email=${encodeURIComponent(email)}` : "/login");
+      },
+    },
+  );
+  const loading = setup.pending || navigating;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    // Erreurs de champ : sous les champs, sans requête.
+    if (password.length < 6) {
+      setFieldErrors({ password: "Le mot de passe doit contenir au moins 6 caractères." });
+      return;
     }
+    if (password !== confirmPassword) {
+      setFieldErrors({ confirm: "Les mots de passe ne correspondent pas." });
+      return;
+    }
+    setFieldErrors({});
+    void setup.run();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <Alert tone="err">
-          <Icon name="alert-triangle" size={16} /> {error}
-        </Alert>
-      )}
       <div>
         <Input
           label="Nouveau mot de passe"
           type="password"
           value={password}
+          error={fieldErrors.password}
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={6}
@@ -103,20 +99,15 @@ export default function SetupPasswordForm({ token }: Props) {
         label="Confirmer le mot de passe"
         type="password"
         value={confirmPassword}
+        error={fieldErrors.confirm}
         onChange={(e) => setConfirmPassword(e.target.value)}
         required
         minLength={6}
         autoComplete="new-password"
         disabled={loading}
       />
-      <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading}>
-        {loading ? (
-          <>
-            <Spinner size={16} /> Configuration…
-          </>
-        ) : (
-          "Activer mon compte"
-        )}
+      <Button type="submit" className="w-full" loading={loading}>
+        Activer mon compte
       </Button>
     </form>
   );

@@ -10,27 +10,50 @@ export function toastError(message: string): void {
   toast.error(message);
 }
 
-function readErrorField(value: unknown): string | null {
-  if (typeof value !== "object" || value === null) return null;
-  const error = (value as { error?: unknown }).error;
-  return typeof error === "string" && error !== "" ? error : null;
+// Erreur dont le message, en français, est destiné à l'utilisateur.
+export class ActionError extends Error {}
+
+// Messages anglais renvoyés par des routes de src/app/api (relevé du 2026-10-24) :
+// lisibles pour un développeur, pas pour l'utilisateur.
+const NON_USER_FACING_ERRORS = new Set([
+  "Rate limited",
+  "Not found",
+  "Missing orgId",
+  "Missing orgId or eventId",
+  "Last OWNER cannot be removed",
+  "Bad request",
+]);
+
+// Un code technique (`NOT_FOUND`, `Unauthorized`) ne contient pas d'espace.
+function isReadable(text: string): boolean {
+  return text.includes(" ") && !NON_USER_FACING_ERRORS.has(text);
 }
 
-// Lit le champ `error` du format API `{ code, error }` ; tout autre cas (corps non JSON,
-// corps déjà lu, erreur réseau) affiche le repli, jamais un message technique.
-export async function toastApiError(
+function readBody(value: unknown): string | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { message, error } = value as { message?: unknown; error?: unknown };
+  if (typeof message === "string" && message !== "") return message;
+  return typeof error === "string" && isReadable(error) ? error : null;
+}
+
+// Message à afficher pour une erreur d'action : ActionError, puis corps JSON d'une Response
+// (`message`, sinon `error` lisible), sinon le repli (réseau, HTML, code technique).
+export async function apiErrorMessage(
   source: unknown,
   fallback: string = DEFAULT_ERROR_MESSAGE,
-): Promise<void> {
+): Promise<string> {
+  if (source instanceof ActionError) return source.message;
+  // Toute autre valeur (TypeError réseau, AbortError…) porte un message anglais : repli.
+  if (!(source instanceof Response)) return fallback;
   let message: string | null = null;
-  if (source instanceof Response) {
-    try {
-      message = readErrorField(await source.json());
-    } catch {
-      message = null;
-    }
-  } else {
-    message = readErrorField(source);
+  try {
+    message = readBody(await source.json());
+  } catch {
+    message = null;
   }
-  toast.error(message ?? fallback);
+  return message ?? fallback;
+}
+
+export async function toastApiError(source: unknown, fallback?: string): Promise<void> {
+  toast.error(await apiErrorMessage(source, fallback));
 }

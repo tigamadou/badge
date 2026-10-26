@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 // v4 Phase 3 : deconnexion via modal de confirmation, puis signOut vers l'accueil public.
 export function LogoutButton({
@@ -17,7 +18,12 @@ export function LogoutButton({
   labelClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  // Pas de toast : la page change. Le hook garde le bouton bloqué et n'envoie qu'un seul signOut.
+  // `leaving` couvre la navigation : signOut se résout avant le changement de page.
+  const [leaving, setLeaving] = useState(false);
+  const { run, pending } = useAsyncAction(() => signOut({ callbackUrl: "/" }), {
+    onSuccess: () => setLeaving(true),
+  });
 
   return (
     <>
@@ -33,12 +39,10 @@ export function LogoutButton({
       <Modal
         open={open}
         title="Se déconnecter"
-        confirmLabel={pending ? "Déconnexion…" : "Se déconnecter"}
+        confirmLabel="Se déconnecter"
+        confirmLoading={pending || leaving}
         onCancel={() => setOpen(false)}
-        onConfirm={() => {
-          setPending(true);
-          void signOut({ callbackUrl: "/" });
-        }}
+        onConfirm={run}
       >
         Voulez-vous vraiment vous déconnecter ?
       </Modal>

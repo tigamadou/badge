@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Alert } from "@/components/ui/Feedback";
 import { Tag } from "@/components/ui/Labels";
-import { Icon } from "@/components/ui/Icon";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export type TemplateSummary = {
   id: string;
@@ -43,33 +41,18 @@ export default function BadgeTemplatePicker({
   canClearToInherit,
 }: Props) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  function patch(badgeTemplateId: string | null) {
-    setMessage(null);
-    startTransition(async () => {
-      try {
-        const res = await fetch(patchUrl, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ badgeTemplateId }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          setMessage({
-            type: "error",
-            text: data?.error ?? "Echec de la sauvegarde.",
-          });
-          return;
-        }
-        setMessage({ type: "success", text: "Template enregistre." });
-        router.refresh();
-      } catch {
-        setMessage({ type: "error", text: "Erreur reseau." });
-      }
-    });
-  }
+  const save = useAsyncAction(
+    async (badgeTemplateId: string | null) => {
+      const res = await fetch(patchUrl, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ badgeTemplateId }),
+      });
+      if (!res.ok) throw res;
+    },
+    { success: "Template enregistré.", error: "Échec de la sauvegarde.", onSuccess: () => router.refresh() },
+  );
+  const { pending } = save;
 
   return (
     <div className="space-y-5">
@@ -79,13 +62,14 @@ export default function BadgeTemplatePicker({
           <span className="text-slate-400">(niveau {LEVEL_LABEL[effectiveLevel]})</span>
         </p>
         {canClearToInherit && currentValue !== null && (
-          <button
-            onClick={() => patch(null)}
-            disabled={pending}
-            className="text-sm font-medium text-green-600 hover:underline disabled:opacity-50"
+          <Button
+            variant="link"
+            className="text-green-600"
+            onClick={() => save.run(null)}
+            loading={pending}
           >
             Utiliser le défaut hérité
-          </button>
+          </Button>
         )}
       </div>
 
@@ -117,7 +101,7 @@ export default function BadgeTemplatePicker({
               </div>
               <div className="flex items-center gap-3">
                 <Button
-                  onClick={() => patch(tpl.id)}
+                  onClick={() => save.run(tpl.id)}
                   disabled={pending || isCurrent}
                   data-testid={`select-${tpl.id}`}
                 >
@@ -130,18 +114,6 @@ export default function BadgeTemplatePicker({
         })}
       </div>
 
-      {message &&
-        (message.type === "success" ? (
-          <div data-testid="save-success">
-            <Alert tone="success">
-              <Icon name="check" size={16} /> {message.text}
-            </Alert>
-          </div>
-        ) : (
-          <div data-testid="save-error">
-            <Alert tone="err">{message.text}</Alert>
-          </div>
-        ))}
     </div>
   );
 }

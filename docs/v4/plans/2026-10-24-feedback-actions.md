@@ -29,16 +29,16 @@ socle), Vitest 4 (environnement `node`, rendu statique `renderToStaticMarkup`), 
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Inventaire figé et lecture des primitives du socle | [ ] |  |  |
-| 2 | Compléments aux primitives (`toast.ts`, `Button`, `Modal`, `ActionButton`, helpers e2e) | [ ] |  |  |
-| 3 | `/platform` — organisations, utilisateurs, abonnements | [ ] |  |  |
-| 4 | `/platform` — réglages, plans, profils, templates + composants partagés | [ ] |  |  |
-| 5 | `/org` | [ ] |  |  |
-| 6 | `/event` — inscriptions, scan, listes de blocage | [ ] |  |  |
-| 7 | `/event` — catégories, membres, réglages, badges | [ ] |  |  |
-| 8 | `/account`, pages publiques et auth | [ ] |  |  |
-| 9 | Après fusion de 23 à 27 : conformité des fichiers exclus | [ ] |  |  |
-| 10 | Documentation (`features/feedback-actions.md`, `README.md`) | [ ] |  |  |
+| 1 | Inventaire figé et lecture des primitives du socle | [x] | 2026-10-24 | Inventaire = 48 + JobActions, MarkAllReadButton, NotificationBell, NotificationPanel (23-27, task 9). Hook : try/catch + toastApiError, garde useRef, sans args (ajoutés), toastApiError async, Toaster bottom-right (AppToaster). |
+| 2 | Compléments aux primitives (`toast.ts`, `Button`, `Modal`, `ActionButton`, helpers e2e) | [x] | 2026-10-24 | apiErrorMessage/ActionError, run(...args), Button link, Modal confirmLoading, ActionButton, e2e/helpers/feedback.ts. Objets non-Response -> repli. |
+| 3 | `/platform` — organisations, utilisateurs, abonnements | [x] | 2026-10-24 | 6 fichiers migres, e2e feedback-platform (3) + specs platform existantes verts (organization-subscription adapte a toast). |
+| 4 | `/platform` — réglages, plans, profils, templates + composants partagés | [x] | 2026-10-24 | 8 fichiers migres (P7-P12, S1, S2), e2e feedback-platform + specs existantes verts ; badge-template-picker : save-success remplace par toast. |
+| 5 | `/org` | [x] | 2026-10-24 | 7 fichiers /org migres ; specs members/settings/events adaptes (toast) ; feedback-org (3). |
+| 6 | `/event` — inscriptions, scan, listes de blocage | [x] | 2026-10-24 | 6 fichiers (E1-E6) migres ; feedback-event ; QRScanner garde anti double scan. |
+| 7 | `/event` — catégories, membres, réglages, badges | [x] | 2026-10-24 | 10 fichiers (E7-E16) migres ; BatchButton accepte loading ; badges.spec adapte. |
+| 8 | `/account`, pages publiques et auth | [x] | 2026-10-24 | 8 fichiers (A1, U1-U7) migres ; feedback-public (4). |
+| 9 | Après fusion de 23 à 27 : conformité des fichiers exclus | [x] | 2026-10-24 | Ecarts signales, non corriges : MarkAllReadButton (pas de hook, erreur ignoree, pas de toast), NotificationPanel mark-read/read-all (catch silencieux, sans loader), NotificationBell (GET polling, hors action). JobActions et ResubmitButton conformes. |
+| 10 | Documentation (`features/feedback-actions.md`, `README.md`) | [x] | 2026-10-24 | features/feedback-actions.md, README, socle C4, e2e/README. |
 | — | Vérification finale (lint, typecheck, test, e2e, navigateur 375 / 1280 par espace) | [ ] |  |  |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la

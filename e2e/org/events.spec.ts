@@ -10,6 +10,7 @@ import {
 import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 
 // Page Evenements — /org/[orgId]/events (liste) et /org/[orgId]/events/new (wizard)
 // Liste : AUDITOR (aucune garde de page). Creation : MANAGER cote API — un AUDITOR
@@ -186,7 +187,7 @@ test.describe("Org — Evenements", () => {
     await submitWizard(page, orgId, "Event de trop");
 
     // Reponse attendue — ECHEC : message affiche, aucun event supplementaire.
-    await expect(page.getByText(/limite d.[ée]v[ée]nements/i)).toBeVisible();
+    await expect(toast(page, /limite d.[ée]v[ée]nements/i)).toBeVisible();
     expect(await getDb().event.count({ where: { orgId } })).toBe(1);
   });
 

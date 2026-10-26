@@ -94,4 +94,12 @@ describe("runAsyncAction", () => {
     release();
     await third;
   });
+
+  it("transmet les arguments à l'action", async () => {
+    const action = vi.fn(async (role: string, id: number) => `${role}-${id}`);
+    const onSuccess = vi.fn();
+    await runAsyncAction(action, { onSuccess }, { current: false }, vi.fn(), ["ADMIN", 3]);
+    expect(action).toHaveBeenCalledWith("ADMIN", 3);
+    expect(onSuccess).toHaveBeenCalledWith("ADMIN-3");
+  });
 });

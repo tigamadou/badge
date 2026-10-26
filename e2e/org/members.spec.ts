@@ -11,6 +11,7 @@ import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity, expectNoActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 
 // Page Membres — /org/[orgId]/members
 // Nav : MANAGER+. Mutations (POST/PATCH/DELETE members) : OWNER-only.
@@ -148,7 +149,7 @@ test.describe("Org — Membres", () => {
     await row.getByRole("combobox").selectOption("MANAGER");
 
     // Reponse attendue — ECHEC : message d'erreur affiche et role inchange.
-    await expect(page.getByText(/dernier OWNER/i)).toBeVisible();
+    await expect(toast(page, /dernier OWNER/i)).toBeVisible();
     const still = await getDb().orgMembership.findUnique({
       where: { userId_orgId: { userId: owner.id, orgId } },
     });

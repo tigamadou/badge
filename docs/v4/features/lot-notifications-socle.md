@@ -87,10 +87,11 @@ sont hors périmètre.
 - `sonner` ; `<AppToaster />` (`src/components/ui/AppToaster.tsx`) monté une fois dans
   `src/app/layout.tsx`, bas-droite, `richColors`, région libellée « Messages ».
 - `src/lib/toast.ts` : `toastSuccess`, `toastError`, `toastApiError(source, fallback)`.
-  `toastApiError` lit le champ `error` du format `{ code, error }` d'une `Response` (ou d'un
-  objet) et retombe sur le repli (`« Une erreur est survenue. Réessayez. »` par défaut)
-  pour un corps non JSON, déjà lu ou une erreur réseau.
+  `toastApiError` délègue à `apiErrorMessage` (spec 28) : message d'une `ActionError`, sinon
+  `message` / `error` lisible du corps d'une `Response` ; un code technique, un message
+  anglais connu, un corps non JSON, déjà lu ou une erreur réseau donnent le repli
+  (`« Une erreur est survenue. Réessayez. »` par défaut). Voir [feedback-actions](feedback-actions.md).
 - `Button` : prop `loading` (spinner, `disabled`, `aria-busy`, largeur stable).
 - `useAsyncAction(action, { success, error, onSuccess })` → `{ run, pending }` ; ignore les
   appels pendant `pending` (garde par `ref`). **Convention : l'action lève la `Response`**
-  quand `!res.ok` (`if (!res.ok) throw res;`). Appliqué au seul `ResubmitButton`.
+  quand `!res.ok` (`if (!res.ok) throw res;`). Appliqué à `ResubmitButton`, puis à toutes les actions par la spec 28 ; `run(...args)` transmet ses arguments à l'action.

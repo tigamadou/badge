@@ -9,6 +9,7 @@ import {
 import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 import { ensureFixtures } from "../fixtures";
 
 // Page Parametres — /org/[orgId]/settings et /org/[orgId]/settings/badge
@@ -68,7 +69,7 @@ test.describe("Org — Parametres", () => {
     await page.getByLabel("E-mail de contact").fill("ui-contact@e2e.test");
     await page.getByRole("button", { name: /^enregistrer$/i }).click();
 
-    await expect(page.getByText(/paramètres enregistrés/i)).toBeVisible();
+    await expect(toast(page, /paramètres enregistrés/i)).toBeVisible();
 
     const updated = await getDb().organization.findUnique({ where: { id: orgId } });
     expect(updated?.name).toBe(newName);
@@ -97,7 +98,7 @@ test.describe("Org — Parametres", () => {
 
     await page.goto(`/org/${orgId}/settings/badge`);
     await page.getByTestId(`select-${rectoVersoId}`).click();
-    await expect(page.getByTestId("save-success")).toBeVisible();
+    await expect(toast(page, "Template enregistré.")).toBeVisible();
     await expect(
       page.locator(`[data-testid="template-card-${rectoVersoId}"][data-selected="true"]`),
     ).toBeVisible();
@@ -126,7 +127,7 @@ test.describe("Org — Parametres", () => {
 
     // 1. Choisir un modele explicite.
     await page.getByTestId(`select-${rectoVersoId}`).click();
-    await expect(page.getByTestId("save-success")).toBeVisible();
+    await expect(toast(page, "Template enregistré.")).toBeVisible();
     expect(
       (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
         ?.badgeTemplateId,
@@ -134,7 +135,8 @@ test.describe("Org — Parametres", () => {
 
     // 2. Revenir a l'heritage : reponse attendue = succes affiche + valeur nulle.
     await page.getByRole("button", { name: /défaut hérité/i }).click();
-    await expect(page.getByTestId("save-success")).toBeVisible();
+    // Deux toasts « Template enregistré. » : le premier est encore affiché.
+    await expect(toast(page, "Template enregistré.")).toHaveCount(2);
     expect(
       (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
         ?.badgeTemplateId,
@@ -172,7 +174,7 @@ test.describe("Org — Parametres", () => {
     await page.getByTestId(`select-${rectoVersoId}`).click();
 
     // Reponse attendue — SUCCES : le MANAGER est autorise sur le badge.
-    await expect(page.getByTestId("save-success")).toBeVisible();
+    await expect(toast(page, "Template enregistré.")).toBeVisible();
     expect(
       (await getDb().organization.findUnique({ where: { id: orgId }, select: { badgeTemplateId: true } }))
         ?.badgeTemplateId,

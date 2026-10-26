@@ -4,47 +4,46 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
-import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () => void }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"OWNER" | "MANAGER" | "AUDITOR">("MANAGER");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setErr(null);
-    const res = await fetch(`/api/org/${orgId}/members`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name, role }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setErr("Échec de l'invitation.");
-      return;
-    }
-    setEmail("");
-    setName("");
-    setRole("MANAGER");
-    onAdded();
-  }
+  const invite = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/org/${orgId}/members`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, name, role }),
+      });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Invitation envoyée.",
+      error: "Échec de l'invitation.",
+      onSuccess: () => {
+        setEmail("");
+        setName("");
+        setRole("MANAGER");
+        onAdded();
+      },
+    },
+  );
 
   return (
     <Card>
       <CardHead title="Inviter un membre" subtitle="Un e-mail d'invitation sera envoyé au rôle choisi." />
       <CardBody>
-        <form onSubmit={submit} className="space-y-4">
-          {err && (
-            <Alert tone="err">
-              <Icon name="alert-triangle" size={16} /> {err}
-            </Alert>
-          )}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void invite.run();
+          }}
+          className="space-y-4"
+        >          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input placeholder="Nom complet" value={name} onChange={(e) => setName(e.target.value)} required />
             <Input
               type="email"
@@ -66,16 +65,10 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
               <option value="AUDITOR">Auditeur (AUDITOR) — lecture seule</option>
             </select>
           </label>
-          <Button type="submit" className="flex items-center justify-center gap-2" disabled={loading}>
-            {loading ? (
-              <>
-                <Spinner size={16} /> Envoi…
-              </>
-            ) : (
-              <>
-                <Icon name="send" size={16} /> Inviter
-              </>
-            )}
+          <Button type="submit" loading={invite.pending}>
+            <span className="inline-flex items-center gap-2">
+              <Icon name="send" size={16} /> Inviter
+            </span>
           </Button>
         </form>
       </CardBody>

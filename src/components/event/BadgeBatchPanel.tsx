@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { CatPill } from "@/components/ui/Labels";
 import { MAX_BADGES_PER_BATCH } from "@/lib/badge-batch";
+import { toastSuccess } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 export type BatchBadge = {
   id: string;
@@ -33,35 +36,31 @@ export function BadgeBatchPanel({
   const [printedIds, setPrintedIds] = useState<Set<string>>(
     () => new Set(badges.filter((b) => b.printed).map((b) => b.id)),
   );
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const base = `/api/org/${orgId}/events/${eventId}`;
   const ids = badges.map((b) => b.id);
   const tooMany = badges.length > MAX_BADGES_PER_BATCH;
 
-  async function markPrinted() {
-    setBusy(true);
-    setMessage(null);
-    try {
+  // Motif G : le ZIP et l'aperçu ne changent pas ; seul le marquage passe par le hook.
+  const markPrinted = useAsyncAction(
+    async () => {
       const res = await fetch(`${base}/registrations/print`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ids }),
       });
-      if (!res.ok) {
-        setMessage("Le marquage a échoué.");
-        return;
-      }
+      if (!res.ok) throw res;
       const json = await res.json();
-      setPrintedIds(new Set(ids));
-      setMessage(`${json.printed} badge(s) marqué(s) imprimé(s).`);
-    } catch {
-      setMessage("Le marquage a échoué.");
-    } finally {
-      setBusy(false);
-    }
-  }
+      return json.printed as number;
+    },
+    {
+      error: "Le marquage a échoué.",
+      onSuccess: (count) => {
+        setPrintedIds(new Set(ids));
+        toastSuccess(`${count} badge(s) marqué(s) imprimé(s).`);
+      },
+    },
+  );
 
   return (
     <div className="space-y-4">
@@ -115,19 +114,18 @@ export function BadgeBatchPanel({
                     Télécharger le lot (.zip)
                   </a>
                 )}
-                <button
+                <Button
                   type="button"
-                  onClick={markPrinted}
-                  disabled={archived || busy}
-                  className="inline-flex items-center rounded-lg bg-green-600 px-3 py-2 text-[13px] font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => void markPrinted.run()}
+                  loading={markPrinted.pending}
+                  disabled={archived}
                 >
                   Marquer imprimés
-                </button>
+                </Button>
               </div>
               {archived && (
                 <p className="text-[13px] text-slate-500">Événement archivé : le marquage est désactivé.</p>
               )}
-              {message && <p className="text-[13px] text-slate-600">{message}</p>}
             </CardBody>
           </Card>
 

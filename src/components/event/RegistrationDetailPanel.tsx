@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { KeyValue } from "@/components/ui/JournalBlocks";
@@ -10,6 +11,7 @@ import { CatPill, Tag } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Alert } from "@/components/ui/Feedback";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { RegistrationActions } from "./RegistrationActions";
 
 type Reg = {
@@ -47,44 +49,34 @@ export function RegistrationDetailPanel({
   rejectionReasons: { id: string; label: string }[];
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [navigating, setNavigating] = useState(false);
   const r = registration;
+  const base = `/api/org/${orgId}/events/${eventId}/registrations/${r.id}`;
 
-  async function blockEmail() {
-    if (!confirm(`Bloquer l'email ${r.email} sur cet événement ?`)) return;
-    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}/block-email`, {
+  async function post(path: string, body: unknown) {
+    const res = await fetch(`${base}/${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reason: "Bloqué via le détail inscription" }),
+      body: JSON.stringify(body),
     });
-    alert("Email bloqué.");
+    if (!res.ok) throw res;
   }
 
-  async function blockDocument() {
-    if (!confirm(`Bloquer le document ${r.idDocumentNumber} ?`)) return;
-    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}/block-document`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reason: "Bloqué via le détail inscription" }),
-    });
-    alert("Document bloqué.");
-  }
-
-  async function toggleAllAccess() {
-    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}/all-access`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ allAccessGranted: !r.allAccessGranted }),
-    });
-    router.refresh();
-  }
-
-  async function remove() {
-    if (!confirm(`Supprimer définitivement l'inscription de ${r.firstName} ${r.lastName} ?`)) return;
-    setBusy(true);
-    await fetch(`/api/org/${orgId}/events/${eventId}/registrations/${r.id}`, { method: "DELETE" });
-    router.push(`/event/${eventId}/registrations`);
-  }
+  // Motif D : le toast survit à la navigation vers la liste.
+  const remove = useAsyncAction(
+    async () => {
+      const res = await fetch(base, { method: "DELETE" });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Inscription supprimée.",
+      error: "Échec de la suppression.",
+      onSuccess: () => {
+        setNavigating(true);
+        router.push(`/event/${eventId}/registrations`);
+      },
+    },
+  );
 
   return (
     <div className="space-y-6">
@@ -164,19 +156,47 @@ export function RegistrationDetailPanel({
         <CardHead title="Actions avancées" />
         <CardBody>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={toggleAllAccess} disabled={busy}>
+            <ActionButton
+              variant="secondary"
+              disabled={navigating}
+              action={() => post("all-access", { allAccessGranted: !r.allAccessGranted })}
+              success={r.allAccessGranted ? "Accès ALL ACCESS retiré." : "Accès ALL ACCESS accordé."}
+              error="Échec de la modification de l'accès."
+              onSuccess={() => router.refresh()}
+            >
               {r.allAccessGranted ? "Retirer ALL ACCESS" : "Activer ALL ACCESS"}
-            </Button>
+            </ActionButton>
             <Link href={`/event/${eventId}/badges/${r.id}`}>
               <Button variant="secondary">Voir le badge</Button>
             </Link>
-            <Button variant="secondary" onClick={blockEmail} disabled={busy}>
+            <ActionButton
+              variant="secondary"
+              disabled={navigating}
+              confirm={`Bloquer l'email ${r.email} sur cet événement ?`}
+              action={() => post("block-email", { reason: "Bloqué via le détail inscription" })}
+              success="E-mail bloqué."
+              error="Échec du blocage de l'e-mail."
+            >
               Bloquer cet e-mail
-            </Button>
-            <Button variant="secondary" onClick={blockDocument} disabled={busy}>
+            </ActionButton>
+            <ActionButton
+              variant="secondary"
+              disabled={navigating}
+              confirm={`Bloquer le document ${r.idDocumentNumber} ?`}
+              action={() => post("block-document", { reason: "Bloqué via le détail inscription" })}
+              success="Document bloqué."
+              error="Échec du blocage du document."
+            >
               Bloquer ce document
-            </Button>
-            <Button variant="danger" onClick={remove} disabled={busy}>
+            </ActionButton>
+            <Button
+              variant="danger"
+              loading={remove.pending || navigating}
+              onClick={() => {
+                if (!confirm(`Supprimer définitivement l'inscription de ${r.firstName} ${r.lastName} ?`)) return;
+                void remove.run();
+              }}
+            >
               Supprimer
             </Button>
           </div>

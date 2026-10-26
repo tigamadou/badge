@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Alert } from "@/components/ui/Feedback";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 // v4 Task 4.2 : le staff invite un membre d'org (role choisi) sans entrer dans /org.
 // POST vers l'endpoint plateforme owners (generalise a tous les roles org).
@@ -13,33 +13,37 @@ export function PlatformOrgMemberInviteForm({ orgId }: { orgId: string }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"OWNER" | "MANAGER" | "AUDITOR">("OWNER");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setErr(null);
-    const res = await fetch(`/api/platform/organizations/${orgId}/owners`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name, role }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setErr("Échec de l'invitation.");
-      return;
-    }
-    setEmail("");
-    setName("");
-    setRole("OWNER");
-    router.refresh();
-  }
+  const invite = useAsyncAction(
+    async () => {
+      const res = await fetch(`/api/platform/organizations/${orgId}/owners`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, name, role }),
+      });
+      if (!res.ok) throw res;
+    },
+    {
+      success: "Invitation envoyée.",
+      error: "Échec de l'invitation.",
+      onSuccess: () => {
+        setEmail("");
+        setName("");
+        setRole("OWNER");
+        router.refresh();
+      },
+    },
+  );
 
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void invite.run();
+      }}
+      className="space-y-3 rounded-xl border border-slate-200 bg-white p-4"
+    >
       <h3 className="text-sm font-semibold text-slate-800">Inviter un membre</h3>
-      {err && <Alert tone="err">{err}</Alert>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Input placeholder="Nom complet" value={name} onChange={(e) => setName(e.target.value)} required />
         <Input
@@ -59,8 +63,8 @@ export function PlatformOrgMemberInviteForm({ orgId }: { orgId: string }) {
           <option value="AUDITOR">Auditeur (AUDITOR)</option>
         </select>
       </div>
-      <Button type="submit" disabled={loading}>
-        {loading ? "Envoi…" : "Inviter"}
+      <Button type="submit" loading={invite.pending}>
+        Inviter
       </Button>
     </form>
   );

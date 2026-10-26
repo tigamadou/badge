@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { OrgMemberForm } from "@/components/admin/OrgMemberForm";
-import { Button } from "@/components/ui/Button";
-import { Alert } from "@/components/ui/Feedback";
+import { ActionButton } from "@/components/ui/ActionButton";
+import { ActionError } from "@/lib/toast";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { RoleBadge } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
@@ -48,8 +49,6 @@ export function MembersClient({
   canManageRoles?: boolean;
 }) {
   const [members, setMembers] = useState(initial);
-  const [err, setErr] = useState<string | null>(null);
-  const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   async function refresh() {
     const res = await fetch(`/api/org/${orgId}/members`);
@@ -66,41 +65,21 @@ export function MembersClient({
     );
   }
 
-  async function remove(userId: string) {
-    setErr(null);
-    if (!confirm("Retirer ce membre ?")) return;
+  // Le dernier OWNER ne peut ni changer de rôle ni être retiré (409).
+  async function removeMember(userId: string) {
     const res = await fetch(`/api/org/${orgId}/members/${userId}`, { method: "DELETE" });
-    if (res.status === 409) {
-      setErr("Impossible : c'est le dernier OWNER.");
-      return;
-    }
-    if (!res.ok) {
-      setErr("Échec.");
-      return;
-    }
-    refresh();
+    if (res.status === 409) throw new ActionError("Impossible : c'est le dernier OWNER.");
+    if (!res.ok) throw res;
   }
 
   async function changeRole(userId: string, role: string) {
-    setErr(null);
-    setBusyUserId(userId);
     const res = await fetch(`/api/org/${orgId}/members/${userId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role }),
     });
-    setBusyUserId(null);
-    if (res.status === 409) {
-      setErr("Impossible : c'est le dernier OWNER.");
-      refresh();
-      return;
-    }
-    if (!res.ok) {
-      setErr("Échec du changement de rôle.");
-      refresh();
-      return;
-    }
-    refresh();
+    if (res.status === 409) throw new ActionError("Impossible : c'est le dernier OWNER.");
+    if (!res.ok) throw res;
   }
 
   const ownerCount = members.filter((m) => m.role === "OWNER").length;
@@ -111,7 +90,6 @@ export function MembersClient({
         <h1 className="text-xl font-semibold text-slate-900">Membres</h1>
         <p className="mt-0.5 text-sm text-slate-400">Les membres de votre organisation et leurs rôles</p>
       </div>
-      {err && <Alert tone="err">{err}</Alert>}
 
       {/* Inviter est OWNER-only : on masque le formulaire pour les autres roles. */}
       {canManageRoles && <OrgMemberForm orgId={orgId} onAdded={refresh} />}
@@ -127,60 +105,104 @@ export function MembersClient({
             </tr>
           </thead>
           <tbody>
-            {members.map((m) => {
-              const isLastOwner = m.role === "OWNER" && ownerCount === 1;
-              return (
-                <tr key={m.userId} className="border-t border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
-                        {initials(m.name)}
-                      </span>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">{m.name}</div>
-                        <div className="text-xs text-slate-400">{m.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {canManageRoles ? (
-                      <select
-                        aria-label={`Rôle de ${m.email}`}
-                        value={m.role}
-                        disabled={busyUserId === m.userId}
-                        onChange={(e) => changeRole(m.userId, e.target.value)}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-                      >
-                        {ORG_ROLES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <RoleBadge tone={m.role === "OWNER" ? "green" : "slate"}>{m.role}</RoleBadge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm tabular-nums text-slate-500">
-                    {new Date(m.invitedAt).toLocaleDateString("fr-FR")}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {isLastOwner ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-slate-400">
-                        <Icon name="lock" size={12} /> Dernier OWNER
-                      </span>
-                    ) : (
-                      <Button variant="secondary" onClick={() => remove(m.userId)}>
-                        Retirer
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+            {members.map((m) => (
+              <MemberRow
+                key={m.userId}
+                member={m}
+                isLastOwner={m.role === "OWNER" && ownerCount === 1}
+                canManageRoles={canManageRoles}
+                changeRole={changeRole}
+                removeMember={removeMember}
+                refresh={refresh}
+              />
+            ))}
           </tbody>
         </table>
       </TableFrame>
     </div>
+  );
+}
+
+function MemberRow({
+  member: m,
+  isLastOwner,
+  canManageRoles,
+  changeRole,
+  removeMember,
+  refresh,
+}: {
+  member: Member;
+  isLastOwner: boolean;
+  canManageRoles: boolean;
+  changeRole: (userId: string, role: string) => Promise<void>;
+  removeMember: (userId: string) => Promise<void>;
+  refresh: () => Promise<void>;
+}) {
+  // La liste est rechargée aussi en cas d'échec : le select retrouve la valeur serveur.
+  const role = useAsyncAction(
+    async (value: string) => {
+      try {
+        await changeRole(m.userId, value);
+      } catch (err) {
+        await refresh();
+        throw err;
+      }
+    },
+    { success: "Rôle mis à jour.", error: "Échec du changement de rôle.", onSuccess: () => void refresh() },
+  );
+
+  return (
+    <tr className="border-t border-slate-100 hover:bg-slate-50">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+            {initials(m.name)}
+          </span>
+          <div>
+            <div className="text-sm font-medium text-slate-900">{m.name}</div>
+            <div className="text-xs text-slate-400">{m.email}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        {canManageRoles ? (
+          <select
+            aria-label={`Rôle de ${m.email}`}
+            value={m.role}
+            disabled={role.pending}
+            onChange={(e) => role.run(e.target.value)}
+            className="rounded-lg border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
+          >
+            {ORG_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <RoleBadge tone={m.role === "OWNER" ? "green" : "slate"}>{m.role}</RoleBadge>
+        )}
+      </td>
+      <td className="px-4 py-3 text-sm tabular-nums text-slate-500">
+        {new Date(m.invitedAt).toLocaleDateString("fr-FR")}
+      </td>
+      <td className="px-4 py-3 text-right">
+        {isLastOwner ? (
+          <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+            <Icon name="lock" size={12} /> Dernier OWNER
+          </span>
+        ) : (
+          <ActionButton
+            confirm="Retirer ce membre ?"
+            action={() => removeMember(m.userId)}
+            success="Membre retiré."
+            error="Échec du retrait du membre."
+            onSuccess={() => void refresh()}
+          >
+            Retirer
+          </ActionButton>
+        )}
+      </td>
+    </tr>
   );
 }

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { RadioCards } from "@/components/ui/RadioCards";
 import { Checkbox, FormSection } from "@/components/ui/FormControls";
-import { Alert, Spinner } from "@/components/ui/Feedback";
+import { Alert } from "@/components/ui/Feedback";
 import { useRecaptcha } from "@/components/auth/Recaptcha";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Category = {
   id: string;
@@ -27,21 +28,14 @@ export default function RegisterEventForm({
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [navigating, setNavigating] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!accepted) {
-      setError("Vous devez confirmer l'utilisation de vos données.");
-      return;
-    }
-    setLoading(true);
-    try {
+  // Consentement manquant et reCAPTCHA indisponible : inline. Erreur API : toast. Redirection sans toast.
+  const register = useAsyncAction(
+    async (): Promise<{ to?: string; blocked?: string }> => {
       const recaptchaToken = await recaptcha.execute("event_register");
       if (recaptcha.enabled && !recaptchaToken) {
-        setError("La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez.");
-        return;
+        return { blocked: "La vérification anti-spam n'a pas pu démarrer. Rechargez la page et réessayez." };
       }
       const res = await fetch(`/api/events/${slug}/register`, {
         method: "POST",
@@ -49,21 +43,37 @@ export default function RegisterEventForm({
         // null (reCAPTCHA desactive) -> champ omis : le serveur n'accepte qu'une chaine.
         body: JSON.stringify({ categoryId, recaptchaToken: recaptchaToken ?? undefined }),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.clone().json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 409 && data?.registrationId) {
-          router.push(`/account/registrations/${data.registrationId}`);
+          return { to: `/account/registrations/${data.registrationId}` };
+        }
+        throw res;
+      }
+      return { to: `/e/${slug}/success?id=${encodeURIComponent(data.id)}` };
+    },
+    {
+      error: "Inscription impossible.",
+      onSuccess: (result) => {
+        if (result.blocked) {
+          setError(result.blocked);
           return;
         }
-        setError(data?.error ?? "Inscription impossible.");
-        return;
-      }
-      router.push(`/e/${slug}/success?id=${encodeURIComponent(data.id)}`);
-    } catch {
-      setError("Erreur réseau, réessayez.");
-    } finally {
-      setLoading(false);
+        setNavigating(true);
+        router.push(result.to!);
+      },
+    },
+  );
+  const loading = register.pending || navigating;
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!accepted) {
+      setError("Vous devez confirmer l'utilisation de vos données.");
+      return;
     }
+    void register.run();
   }
 
   return (
@@ -92,14 +102,8 @@ export default function RegisterEventForm({
         <Alert tone="err">{error}</Alert>
       )}
 
-      <Button type="submit" className="flex w-full items-center justify-center gap-2" disabled={loading || !categoryId}>
-        {loading ? (
-          <>
-            <Spinner size={16} /> Inscription…
-          </>
-        ) : (
-          "S'inscrire"
-        )}
+      <Button type="submit" className="w-full" loading={loading} disabled={!categoryId}>
+        S&apos;inscrire
       </Button>
     </form>
   );

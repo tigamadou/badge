@@ -3,7 +3,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { toast } from "sonner";
-import { toastSuccess, toastError, toastApiError, DEFAULT_ERROR_MESSAGE } from "@/lib/toast";
+import {
+  toastSuccess,
+  toastError,
+  toastApiError,
+  apiErrorMessage,
+  ActionError,
+  DEFAULT_ERROR_MESSAGE,
+} from "@/lib/toast";
+
+const json = (body: unknown, status = 400) => new Response(JSON.stringify(body), { status });
 
 beforeEach(() => {
   vi.mocked(toast.success).mockClear();
@@ -25,11 +34,6 @@ describe("toast", () => {
       "repli",
     );
     expect(toast.error).toHaveBeenCalledWith(message);
-  });
-
-  it("affiche le champ error d'un objet déjà lu", async () => {
-    await toastApiError({ error: "Accès refusé." });
-    expect(toast.error).toHaveBeenCalledWith("Accès refusé.");
   });
 
   it("retombe sur le repli pour un corps non JSON, un corps déjà lu ou une erreur réseau", async () => {
@@ -56,5 +60,55 @@ describe("toast", () => {
   it("utilise le repli fourni par l'appelant", async () => {
     await toastApiError(undefined, "Resoumission impossible.");
     expect(toast.error).toHaveBeenCalledWith("Resoumission impossible.");
+  });
+
+  it("toastApiError affiche le message d'une ActionError", async () => {
+    await toastApiError(new ActionError("Impossible : c'est le dernier OWNER."), "repli");
+    expect(toast.error).toHaveBeenCalledWith("Impossible : c'est le dernier OWNER.");
+  });
+});
+
+describe("apiErrorMessage", () => {
+  it("privilégie le message d'une ActionError", async () => {
+    expect(await apiErrorMessage(new ActionError("Dit en français."))).toBe("Dit en français.");
+  });
+
+  it("lit le champ message d'une réponse", async () => {
+    const message = "Seules les inscriptions approuvées peuvent être imprimées.";
+    expect(await apiErrorMessage(json({ message }, 409))).toBe(message);
+  });
+
+  it("lit un champ error lisible", async () => {
+    const error = "Un compte avec cet email existe déjà.";
+    expect(await apiErrorMessage(json({ error }))).toBe(error);
+  });
+
+  it("remplace un code technique par le repli", async () => {
+    expect(await apiErrorMessage(json({ error: "NOT_FOUND" }, 404))).toBe(DEFAULT_ERROR_MESSAGE);
+    expect(await apiErrorMessage(json({ error: "Unauthorized" }, 401))).toBe(DEFAULT_ERROR_MESSAGE);
+  });
+
+  it("remplace un message anglais connu par le repli", async () => {
+    for (const error of [
+      "Rate limited",
+      "Not found",
+      "Missing orgId",
+      "Missing orgId or eventId",
+      "Last OWNER cannot be removed",
+      "Bad request",
+    ]) {
+      expect(await apiErrorMessage(json({ error }), "repli")).toBe("repli");
+    }
+  });
+
+  it("retombe sur le repli pour un corps HTML, une erreur réseau ou une valeur vide", async () => {
+    expect(await apiErrorMessage(new Response("<html>", { status: 502 }))).toBe(DEFAULT_ERROR_MESSAGE);
+    expect(await apiErrorMessage(new TypeError("Failed to fetch"))).toBe(DEFAULT_ERROR_MESSAGE);
+    expect(await apiErrorMessage(undefined)).toBe(DEFAULT_ERROR_MESSAGE);
+    expect(await apiErrorMessage(json({ message: "" }))).toBe(DEFAULT_ERROR_MESSAGE);
+  });
+
+  it("utilise le repli fourni", async () => {
+    expect(await apiErrorMessage(new TypeError("x"), "Échec de l'archivage.")).toBe("Échec de l'archivage.");
   });
 });
