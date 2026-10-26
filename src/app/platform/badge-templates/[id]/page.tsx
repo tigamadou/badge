@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { listPrefix } from "@/lib/storage";
-import { previewUrl } from "@/lib/badge-templates/resolve";
+import { templateImageUrl } from "@/lib/badge-templates/resolve";
+import { isGeneratedProofKey } from "@/lib/badge-templates/install";
 import { Icon } from "@/components/ui/Icon";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
 import { ManifestDownloadButton } from "@/components/staff/ManifestDownloadButton";
@@ -46,15 +47,16 @@ export default async function BadgeTemplateDetailPage({
     listPrefix(template.assetPrefix),
   ]);
 
-  // Sur le detail, on veut le rendu REEL aux dimensions exactes : c'est le PDF
-  // d'epreuve. L'image fournie par le paquet sert de vignette au catalogue, ou une
-  // page legere prime. Repli sur l'image, puis sur le placeholder.
-  const apercu = previewUrl(template.proofPath) || previewUrl(template.previewPath);
+  // Sur le detail, on veut le rendu REEL aux dimensions exactes : c'est l'epreuve PNG.
+  // L'image fournie par le paquet sert de vignette au catalogue. Repli sur l'image,
+  // puis sur le placeholder.
+  const apercu = templateImageUrl(template, "proof");
   const manifeste = JSON.stringify(template.layout, null, 2);
   const totalUsages = events.length + orgs.length + platformCount;
-  // proof.pdf est produit a l'installation, pas fourni par le paquet : il n'a pas sa
-  // place dans la liste des ressources embarquees. L'image d'apercu, elle, en est une.
-  const ressources = objets.filter((o) => !o.key.endsWith("/proof.pdf"));
+  // Les epreuves sont produites par l'application, pas fournies par le paquet : elles
+  // n'ont pas leur place dans la liste des ressources embarquees. L'image d'apercu,
+  // elle, en est une.
+  const ressources = objets.filter((o) => !isGeneratedProofKey(o.key));
 
   return (
     <div className="space-y-6">
