@@ -58,6 +58,9 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   EVENT_SETTINGS_UPDATED: "Paramètres d'événement modifiés",
   JOB_RETRIED: "Email relancé",
   JOB_CANCELLED: "Email annulé",
+  PAYMENT_INITIATED: "Paiement initié",
+  PAYMENT_APPROVED: "Paiement approuvé",
+  PAYMENT_FAILED: "Paiement échoué",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

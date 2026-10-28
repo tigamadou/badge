@@ -4,6 +4,8 @@ import {
   resolveOrgLimits,
   assertCanCreateEvent,
   assertCanRegister,
+  subscriptionDatesForPlan,
+  DEFAULT_PLAN_NAME,
 } from "@/lib/subscription";
 
 async function makeOrgWithPlan(opts: {
@@ -180,5 +182,25 @@ describe("assertCanRegister", () => {
       data: { orgId: org.id, title: "E", slug: "r4-evt", location: "x", date: new Date() },
     });
     await expect(assertCanRegister(event.id)).resolves.toBeUndefined();
+  });
+});
+
+
+describe("subscriptionDatesForPlan", () => {
+  const from = new Date("2026-01-01T00:00:00.000Z");
+
+  it("plan free : sans echeance (endDate null), startDate = from", () => {
+    const { startDate, endDate } = subscriptionDatesForPlan(
+      { name: DEFAULT_PLAN_NAME, period: "MONTHLY" },
+      from,
+    );
+    expect(startDate).toEqual(from);
+    expect(endDate).toBeNull();
+  });
+
+  it("plan payant mensuel : endDate = from + 30 jours", () => {
+    const { startDate, endDate } = subscriptionDatesForPlan({ name: "Pro", period: "MONTHLY" }, from);
+    expect(startDate).toEqual(from);
+    expect(endDate).toEqual(new Date("2026-01-31T00:00:00.000Z"));
   });
 });

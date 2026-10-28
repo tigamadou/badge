@@ -8,6 +8,7 @@ import { getApprovedPhotoUrl } from "@/lib/approved-photo";
 import { hasOrgRole } from "@/lib/auth-helpers";
 import { resolveOrgLimits } from "@/lib/subscription";
 import { OrgShell } from "@/components/admin/OrgShell";
+import { isSubscriptionPath } from "@/lib/subscription-path";
 import { SubscriptionBlockedNotice } from "@/components/admin/SubscriptionBlockedNotice";
 
 export default async function OrgLayout({
@@ -62,7 +63,7 @@ export default async function OrgLayout({
   // que l'org puisse consulter son statut et ses dates.
   const { active } = await resolveOrgLimits(orgId);
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const onSubscriptionTab = pathname.endsWith("/subscription");
+  const onSubscriptionTab = isSubscriptionPath(pathname, orgId);
   const content =
     active || onSubscriptionTab ? children : <SubscriptionBlockedNotice orgId={orgId} />;
 

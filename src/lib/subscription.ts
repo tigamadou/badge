@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { settleSubscription } from "@/lib/subscription-changes";
 import type { SubscriptionPeriod } from "@prisma/client";
 
 // Duree d'un abonnement selon sa periode (jours calendaires).
@@ -20,6 +21,18 @@ export function computeSubscriptionDates(
   const endDate = new Date(from);
   endDate.setUTCDate(endDate.getUTCDate() + PERIOD_DAYS[period]);
   return { startDate, endDate };
+}
+
+// Dates d'un abonnement a un plan : le plan par defaut (free) n'a pas d'echeance
+// (endDate null), les autres derivent de leur periode.
+export function subscriptionDatesForPlan(
+  plan: { name: string; period: SubscriptionPeriod },
+  from: Date = new Date(),
+): { startDate: Date; endDate: Date | null } {
+  if (plan.name === DEFAULT_PLAN_NAME) {
+    return { startDate: new Date(from), endDate: null };
+  }
+  return computeSubscriptionDates(plan.period, from);
 }
 
 export type SubscriptionErrorCode =
@@ -54,6 +67,8 @@ export interface OrgLimits {
 }
 
 export async function resolveOrgLimits(orgId: string): Promise<OrgLimits> {
+  // Bascule d'abord une echeance depassee (plan programme ou retour sur free).
+  await settleSubscription(orgId);
   const subscription = await prisma.subscription.findUnique({
     where: { orgId },
     include: { plan: true },

@@ -25,6 +25,7 @@ export const EMAIL_BY_TYPE: Record<NotificationType, boolean> = {
   SUBSCRIPTION_CHANGED: true,
   QUOTA_EXCEEDED: true,
   EMAIL_FAILED: false,
+  SUBSCRIPTION_EXPIRING: true,
 };
 
 function buildEmailBody(content: NotificationContent): string {

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SubscriptionForm } from "@/components/staff/SubscriptionForm";
 import { Icon } from "@/components/ui/Icon";
+import { Card, CardHead, CardBody } from "@/components/ui/Card";
+import { PaymentHistory } from "@/components/admin/PaymentHistory";
 
 export default async function OrgSubscriptionPage({
   params,
@@ -16,11 +18,32 @@ export default async function OrgSubscriptionPage({
   });
   if (!org) notFound();
 
-  const plans = await prisma.plan.findMany({
-    where: { archived: false },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, period: true },
-  });
+  const [plans, payments, scheduledPlan] = await Promise.all([
+    prisma.plan.findMany({
+      where: { archived: false },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, period: true },
+    }),
+    prisma.payment.findMany({
+      where: { orgId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        createdAt: true,
+        amount: true,
+        status: true,
+        fedapayReference: true,
+        plan: { select: { name: true } },
+      },
+    }),
+    org.subscription?.scheduledPlanId
+      ? prisma.plan.findUnique({
+          where: { id: org.subscription.scheduledPlanId },
+          select: { name: true },
+        })
+      : null,
+  ]);
 
   const sub = org.subscription;
   const current = sub
@@ -48,7 +71,18 @@ export default async function OrgSubscriptionPage({
         <h1 className="text-xl font-semibold text-slate-900">Abonnement — {org.name}</h1>
         <p className="mt-0.5 text-sm text-slate-400">Assigner un plan et gérer le statut de l&apos;abonnement</p>
       </div>
-      <SubscriptionForm orgId={org.id} plans={plans} current={current} />
+      <SubscriptionForm
+        orgId={org.id}
+        plans={plans}
+        current={current}
+        scheduledPlanName={sub?.scheduledPlanId ? (scheduledPlan?.name ?? "—") : null}
+      />
+      <Card>
+        <CardHead title="Historique des paiements" />
+        <CardBody>
+          <PaymentHistory payments={payments.map(({ plan, ...p }) => ({ ...p, planName: plan.name }))} />
+        </CardBody>
+      </Card>
     </div>
   );
 }

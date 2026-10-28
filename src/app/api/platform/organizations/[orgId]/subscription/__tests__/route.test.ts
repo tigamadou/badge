@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_PLAN_NAME } from "@/lib/subscription";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -84,6 +85,21 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
   });
 
+  it("assigne le plan free : sans echeance (endDate null)", async () => {
+    const staff = await seedStaff();
+    const org = await seedOrg();
+    const plan = await prisma.plan.create({
+      data: { name: DEFAULT_PLAN_NAME, maxEvents: 1, maxParticipantsPerEvent: 100 },
+    });
+    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
+
+    const res = await callPut(org.id, { planId: plan.id, status: "ACTIVE" });
+    expect(res.status).toBe(200);
+
+    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
+    expect(sub?.endDate).toBeNull();
+  });
+
   it("refuse un planId manquant (400)", async () => {
     const staff = await seedStaff();
     const org = await seedOrg();
@@ -91,6 +107,24 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
 
     const res = await callPut(org.id, { status: "ACTIVE" });
     expect(res.status).toBe(400);
+  });
+
+  it("refuse un corps non JSON (400 VALIDATION)", async () => {
+    const staff = await seedStaff();
+    const org = await seedOrg();
+    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
+
+    const { PUT } = await import("../route");
+    const res = await PUT(
+      new NextRequest("http://localhost/x", {
+        method: "PUT",
+        body: "not json",
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId: org.id }) },
+    );
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error?: string }).error).toBe("VALIDATION");
   });
 
   it("recalcule les dates lors d'une reassignation selon la periode du plan", async () => {
@@ -106,6 +140,30 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
     expect(sub?.planId).toBe(planAnnual.id);
     expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
+  });
+
+  it("efface le changement programmé (scheduledPlanId) lors d'une assignation staff", async () => {
+    const staff = await seedStaff();
+    const org = await seedOrg();
+    const planA = await seedPlan("MONTHLY");
+    const planB = await seedPlan("ANNUAL");
+    await prisma.subscription.create({
+      data: {
+        orgId: org.id,
+        planId: planA.id,
+        status: "ACTIVE",
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * DAY_MS),
+        scheduledPlanId: planB.id,
+      },
+    });
+    withStaffSession({ id: staff.id, email: staff.email, name: staff.name });
+
+    const res = await callPut(org.id, { planId: planA.id, status: "ACTIVE" });
+    expect(res.status).toBe(200);
+
+    const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
+    expect(sub?.scheduledPlanId).toBeNull();
   });
 
   it("STAFF_OBSERVER ne peut pas assigner un abonnement (403)", async () => {

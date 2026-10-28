@@ -122,6 +122,38 @@ describe("PATCH /api/platform/plans/[planId]", () => {
     expect(details.archived).toBe(true);
   });
 
+  it("sets a price, then removes the plan from sale with price null, logging price", async () => {
+    await asStaff();
+    const plan = await prisma.plan.create({ data: { name: `plan-price-${Date.now()}` } });
+    const { PATCH } = await import("@/app/api/platform/plans/[planId]/route");
+    const params = { params: Promise.resolve({ planId: plan.id }) };
+
+    const set = await PATCH(req(`/api/platform/plans/${plan.id}`, "PATCH", { price: 15000 }), params);
+    expect(set.status).toBe(200);
+    expect((await set.json()).plan.price).toBe(15000);
+
+    const unset = await PATCH(req(`/api/platform/plans/${plan.id}`, "PATCH", { price: null }), params);
+    expect(unset.status).toBe(200);
+    expect((await unset.json()).plan.price).toBeNull();
+
+    const logs = await prisma.activityLog.findMany({
+      where: { type: "PLAN_UPDATED", targetId: plan.id },
+      orderBy: { createdAt: "asc" },
+    });
+    expect(logs.map((l) => (l.details as { price: number | null }).price)).toEqual([15000, null]);
+  });
+
+  it("returns 400 VALIDATION for a price below 100", async () => {
+    await asStaff();
+    const plan = await prisma.plan.create({ data: { name: `plan-lowprice-${Date.now()}` } });
+    const { PATCH } = await import("@/app/api/platform/plans/[planId]/route");
+    const res = await PATCH(req(`/api/platform/plans/${plan.id}`, "PATCH", { price: 50 }), {
+      params: Promise.resolve({ planId: plan.id }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("VALIDATION");
+  });
+
   it("returns 404 NOT_FOUND for an unknown planId (P2025)", async () => {
     await asStaff();
     const { PATCH } = await import("@/app/api/platform/plans/[planId]/route");

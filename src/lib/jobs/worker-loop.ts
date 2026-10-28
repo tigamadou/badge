@@ -1,7 +1,8 @@
-import { PURGE_INTERVAL_MS } from "./constants";
+import { PURGE_INTERVAL_MS, SUBSCRIPTION_SWEEP_INTERVAL_MS } from "./constants";
 import type { WorkerConfig } from "./config";
 import { purgeOldJobs, recoverStaleJobs } from "./maintenance";
 import { processBatch, type BatchSummary } from "./process-batch";
+import { runSubscriptionSweep } from "./subscription-sweep";
 import { purgeReadNotifications } from "@/lib/notifications/retention";
 
 export type WorkerLog = (message: string, meta?: Record<string, unknown>) => void;
@@ -10,6 +11,7 @@ export type WorkerDeps = {
   recoverStaleJobs: typeof recoverStaleJobs;
   purgeOldJobs: typeof purgeOldJobs;
   purgeReadNotifications: typeof purgeReadNotifications;
+  runSubscriptionSweep: typeof runSubscriptionSweep;
 };
 
 export function createWorkerLoop(opts: {
@@ -20,10 +22,18 @@ export function createWorkerLoop(opts: {
 }) {
   const { workerId, config } = opts;
   const log: WorkerLog = opts.log ?? (() => {});
-  const deps: WorkerDeps = { processBatch, recoverStaleJobs, purgeOldJobs, purgeReadNotifications, ...opts.deps };
+  const deps: WorkerDeps = {
+    processBatch,
+    recoverStaleJobs,
+    purgeOldJobs,
+    purgeReadNotifications,
+    runSubscriptionSweep,
+    ...opts.deps,
+  };
 
   let stopping = false;
   let lastPurgeAt: number | null = null;
+  let lastSweepAt: number | null = null;
   let current: Promise<unknown> = Promise.resolve();
   let wake: (() => void) | null = null;
 
@@ -37,6 +47,13 @@ export function createWorkerLoop(opts: {
       const purgedNotifications = await deps.purgeReadNotifications(now);
       if (purgedNotifications > 0) {
         log("[worker] purged read notifications", { purged: purgedNotifications });
+      }
+    }
+    if (lastSweepAt === null || now.getTime() - lastSweepAt >= SUBSCRIPTION_SWEEP_INTERVAL_MS) {
+      lastSweepAt = now.getTime();
+      const sweep = await deps.runSubscriptionSweep(now);
+      if (sweep.settled + sweep.reminded + sweep.reconciled + sweep.expired > 0) {
+        log("[worker] subscription sweep", { ...sweep });
       }
     }
     return deps.processBatch({ workerId, limit: config.emailConcurrency, now });

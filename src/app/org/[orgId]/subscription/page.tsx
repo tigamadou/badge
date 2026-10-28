@@ -9,6 +9,8 @@ import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Alert } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
+import { PlanCatalog } from "@/components/admin/PlanCatalog";
+import { PaymentHistory } from "@/components/admin/PaymentHistory";
 
 function fmtDate(d: Date | null): string {
   return d ? new Date(d).toLocaleDateString("fr-FR") : "—";
@@ -39,7 +41,10 @@ export default async function OrgSubscriptionPage({
           status: true,
           startDate: true,
           endDate: true,
-          plan: { select: { name: true, period: true } },
+          planId: true,
+          scheduledPlanId: true,
+          scheduledPlan: { select: { name: true } },
+          plan: { select: { name: true, period: true, price: true } },
         },
       },
     },
@@ -48,13 +53,42 @@ export default async function OrgSubscriptionPage({
 
   const limits = await resolveOrgLimits(orgId);
   const sub = org.subscription;
+  const canPay = hasOrgRole(ctx, orgId, "OWNER");
+
+  const [catalog, payments] = await Promise.all([
+    prisma.plan.findMany({
+      where: { archived: false, price: { not: null } },
+      orderBy: { price: "asc" },
+      select: {
+        id: true,
+        name: true,
+        period: true,
+        price: true,
+        maxEvents: true,
+        maxParticipantsPerEvent: true,
+      },
+    }),
+    prisma.payment.findMany({
+      where: { orgId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        createdAt: true,
+        amount: true,
+        status: true,
+        fedapayReference: true,
+        plan: { select: { name: true } },
+      },
+    }),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Abonnement</h1>
         <p className="mt-0.5 text-sm text-slate-400">
-          Plan et limites de votre organisation (lecture seule — géré par la plateforme)
+          Plan, limites et paiements de votre organisation
         </p>
       </div>
 
@@ -88,7 +122,29 @@ export default async function OrgSubscriptionPage({
               { label: "Début", value: fmtDate(sub?.startDate ?? null) },
               { label: "Fin", value: sub?.endDate ? fmtDate(sub.endDate) : "Sans échéance" },
               { label: "Actif", value: limits.active ? "Oui" : "Non" },
+              ...(sub?.scheduledPlanId
+                ? [
+                    {
+                      label: "Changement programmé",
+                      value: `${sub.scheduledPlan?.name ?? "—"} le ${fmtDate(sub.endDate)}`,
+                    },
+                  ]
+                : []),
             ]}
+          />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title="Changer de plan" />
+        <CardBody>
+          <PlanCatalog
+            orgId={orgId}
+            plans={catalog.map((p) => ({ ...p, price: p.price as number }))}
+            currentPlanId={sub?.planId ?? null}
+            currentPrice={sub?.plan.price ?? 0}
+            scheduledPlanId={sub?.scheduledPlanId ?? null}
+            canPay={canPay}
           />
         </CardBody>
       </Card>
@@ -102,6 +158,13 @@ export default async function OrgSubscriptionPage({
               { label: "Participants / événement", value: fmtLimit(limits.maxParticipantsPerEvent) },
             ]}
           />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHead title="Historique des paiements" />
+        <CardBody>
+          <PaymentHistory payments={payments.map(({ plan, ...p }) => ({ ...p, planName: plan.name }))} />
         </CardBody>
       </Card>
     </div>

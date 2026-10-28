@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
-import { computeSubscriptionDates, DEFAULT_PLAN_NAME } from "@/lib/subscription";
+import { subscriptionDatesForPlan, DEFAULT_PLAN_NAME } from "@/lib/subscription";
 import { sendUserInvitation } from "@/lib/mail";
 import { notifyOrgCreated, notifyOrgMembershipAdded } from "@/lib/notifications/triggers";
 
@@ -172,7 +172,7 @@ export const POST = withStaffAuth(
       // sur le plan par defaut, que le staff pourra changer ensuite.
       const defaultPlan = await tx.plan.findFirst({
         where: { name: DEFAULT_PLAN_NAME, archived: false },
-        select: { id: true, period: true },
+        select: { id: true, name: true, period: true },
       });
       const subscription = defaultPlan
         ? await tx.subscription.create({
@@ -180,7 +180,7 @@ export const POST = withStaffAuth(
               orgId: org.id,
               planId: defaultPlan.id,
               status: "ACTIVE",
-              ...computeSubscriptionDates(defaultPlan.period),
+              ...subscriptionDatesForPlan(defaultPlan),
             },
           })
         : null;

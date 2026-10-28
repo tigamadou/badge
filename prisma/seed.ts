@@ -257,8 +257,15 @@ async function main() {
   });
   await prisma.plan.upsert({
     where: { name: "Standard" },
-    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000 },
+    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000, price: 15000 },
     update: {},
+  });
+  // Prix de demo pour un Standard existant sans prix (ne touche pas un prix ajuste par le staff).
+  await prisma.plan.updateMany({ where: { name: "Standard", price: null }, data: { price: 15000 } });
+  // Rattrapage : les organisations free existantes n'ont plus d'echeance (idempotent).
+  await prisma.subscription.updateMany({
+    where: { plan: { name: DEFAULT_PLAN_NAME }, endDate: { not: null }, status: { not: "CANCELLED" } },
+    data: { endDate: null, status: "ACTIVE" },
   });
   console.log(`Plans par defaut (${DEFAULT_PLAN_NAME}, Standard) prets.`);
 

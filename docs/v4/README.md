@@ -6,7 +6,7 @@ La v4 regroupe sept chantiers appliques a la base v2/v3 :
 
 1. HTTPS local (Caddy `tls internal`)
 2. Retrait des quotas ad-hoc au profit d'un systeme d'abonnements
-3. Systeme d'abonnements (plans catalogue + overrides, facturation manuelle)
+3. Systeme d'abonnements (plans catalogue + overrides, paiement en libre-service par FedaPay)
 4. Deconnexion via modal de confirmation
 5. Choix du role a la creation/invitation d'utilisateurs
 6. Stockage objet MinIO/S3 + champs upload fonctionnels
@@ -58,6 +58,8 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 ### References
 
 - [reCAPTCHA v3](features/recaptcha.md) — protection anti-spam de l'inscription et du mot de passe oublié : configuration, jeton côté navigateur, diagnostic.
+- [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox.
+- [Abonnements](features/abonnements.md) — plans, prix, echeance, retour sur free, rappels.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Lot notifications — socle commun](features/lot-notifications-socle.md) — contrats C1 a C4 (`enqueueEmail`, `NotificationBell`, `UserAvatar`, toasts) tels que livres.
 - [Notifications internes et email](features/notifications.md) — cloche, panneau, pages par espace, matrice des evenements, destinataires, API, retention.
@@ -78,6 +80,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Roles a la creation (item 5) | Livre |
 | Stockage MinIO/S3 (item 6) | Driver S3 livre ; securisation `/api/files` et champs upload en cours |
 | Abonnements (items 2+3) | Livre — catalogue `Plan` + `Subscription`, periodicite (30/365 j) pilotant les dates, slug org auto en lecture seule, blocage de l'espace org sans abonnement actif |
+| Paiement des abonnements par FedaPay | En cours (branche `feat/paiement-fedapay`, 2026-10-28) — prix des plans, checkout OWNER, webhook signe, free sans echeance, rappels J-7/J-1, tache horaire du worker. Voir [feature](features/paiements-fedapay.md) ; migration versionnee requise avant deploiement |
 | Couverture de tests | Unitaire lib + integration API a **100%** (gate vert) ; cibles make + CI livrees |
 | Reorganisation E2E par page | Livre — **un fichier par page** sur les 4 espaces (org 8, event 13, platform 15, public 12, transverse 2). Les fichiers transversaux `pages-render`/`rbac`/`interactions` sont dissous. Convention : [`e2e/README.md`](../../e2e/README.md) |
 | Cover d'evenement (chantier 26) | Livre — composant `EventCover` (`hero` 3:1 / `thumb` 16:9) sur tableau de bord, pages publiques `/e/[slug]` et compte participant. Fiche : [`features/cover-evenement.md`](features/cover-evenement.md) |

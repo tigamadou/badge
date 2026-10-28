@@ -176,6 +176,43 @@ describe("POST /api/platform/plans — validation, defaults, conflicts", () => {
     expect(plan.maxParticipantsPerEvent).toBeNull();
   });
 
+  it("creates a plan with a price and logs it", async () => {
+    await asStaff();
+    const { POST } = await import("@/app/api/platform/plans/route");
+    const res = await POST(
+      req("/api/platform/plans", "POST", { name: `priced-${Date.now()}`, price: 15000 }),
+      { params: Promise.resolve({}) },
+    );
+    expect(res.status).toBe(201);
+    const { plan } = await res.json();
+    expect(plan.price).toBe(15000);
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "PLAN_CREATED", targetId: plan.id },
+    });
+    expect((log?.details as { price: number }).price).toBe(15000);
+  });
+
+  it("defaults price to null when omitted", async () => {
+    await asStaff();
+    const { POST } = await import("@/app/api/platform/plans/route");
+    const res = await POST(req("/api/platform/plans", "POST", { name: `noprice-${Date.now()}` }), {
+      params: Promise.resolve({}),
+    });
+    const { plan } = await res.json();
+    expect(plan.price).toBeNull();
+  });
+
+  it("returns 400 VALIDATION for a price below 100", async () => {
+    await asStaff();
+    const { POST } = await import("@/app/api/platform/plans/route");
+    const res = await POST(
+      req("/api/platform/plans", "POST", { name: `lowprice-${Date.now()}`, price: 50 }),
+      { params: Promise.resolve({}) },
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("VALIDATION");
+  });
+
   it("returns 409 NAME_TAKEN when the name is already used", async () => {
     await asStaff();
     const name = `dup-${Date.now()}`;
