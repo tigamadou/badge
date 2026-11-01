@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { lockEventRow, setBadges, updateDetails } from "@/lib/print-requests/content";
-import { cancelRequest } from "@/lib/print-requests/lifecycle";
+import { acceptQuote, cancelRequest } from "@/lib/print-requests/lifecycle";
 import { applyOrgCredit } from "@/lib/print-requests/org-credit";
 import { recordOnsitePrint, setOnsiteMargin } from "@/lib/print-requests/onsite-station";
 import { advanceStatus, markPaidManually, reopenQuote } from "@/lib/print-requests/quote";
@@ -199,6 +199,35 @@ describe("ordre des verrous Event, PrintRequest puis Organization (crédit d'imp
       expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
       expect(await prisma.orgPrintCredit.count({ where: { requestId: closing.id, kind: "EARNED" } })).toBe(1);
       await prisma.printRequest.update({ where: { id: applying.id }, data: { status: "CANCELLED" } });
+    }
+  });
+
+  it("acceptation d'un devis à 0 (PAID + SPENT) face à applyOrgCredit d'une autre demande et à un changement de template : pas d'interblocage", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 10000 } });
+      const accepting = await makeRequest(fx, { status: "QUOTED", total: 0, quoteVersion: 1 });
+      await prisma.printQuoteLine.create({
+        data: {
+          requestId: accepting.id, kind: "DISCOUNT", label: "Crédit", quantity: 1, unitPrice: -1000,
+          lineTotal: -1000, position: 0, addedBy: "STAFF", usesOrgCredit: true,
+        },
+      });
+      const applying = await makeRequest(fx, { status: "SUBMITTED", total: 5000 });
+      await prisma.printQuoteLine.create({
+        data: {
+          requestId: applying.id, kind: "SERVICE", label: "L", quantity: 1, unitPrice: 5000, lineTotal: 5000,
+          position: 0, addedBy: "STAFF",
+        },
+      });
+      const res = await Promise.allSettled([
+        acceptQuote({ requestId: accepting.id, eventId: fx.event.id, userId: fx.owner.id, version: 1 }),
+        applyOrgCredit({ requestId: applying.id, amount: 1000, userId: fx.staffAdmin.id }),
+        orgTemplateChange(),
+      ]);
+      expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
+      expect((await state(accepting.id)).request.status).toBe("PAID");
+      await prisma.printRequest.update({ where: { id: applying.id }, data: { status: "CANCELLED" } });
+      await prisma.printRequest.update({ where: { id: accepting.id }, data: { status: "CANCELLED" } });
     }
   });
 });

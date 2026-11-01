@@ -14,6 +14,7 @@ import {
   sendQuote,
   updateStaffLine,
 } from "@/lib/print-requests/quote";
+import { applyOrgCredit } from "@/lib/print-requests/org-credit";
 import { applyTransition, paymentProbe } from "@/lib/print-requests/service";
 import { describeLineChange } from "@/lib/print-requests/thread";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
@@ -328,6 +329,30 @@ describe("sendQuote", () => {
     expect(err).toMatchObject({ code: "ZERO_TOTAL", status: 400 });
     expect(PRINT_REQUEST_ERROR_MESSAGES.ZERO_TOTAL).toBe("Le total du devis doit être supérieur à zéro.");
     expect(await reload(r.id)).toMatchObject({ status: "SUBMITTED", quoteVersion: 0, quotedAt: null });
+  });
+
+  it("total nul sans ligne de crédit : ZERO_TOTAL même si une ligne de crédit a été retirée ; total négatif -> NEGATIVE_TOTAL", async () => {
+    const { r } = await requestWithLines();
+    await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 6000 } });
+    await applyOrgCredit({ requestId: r.id, amount: 6000, userId: staff() });
+    await prisma.printQuoteLine.updateMany({
+      where: { requestId: r.id, usesOrgCredit: true },
+      data: { removedAt: new Date() },
+    });
+    await prisma.printQuoteLine.create({
+      data: { requestId: r.id, kind: "DISCOUNT", label: "Remise", quantity: 1, unitPrice: -6000, lineTotal: -6000, position: 9, addedBy: "STAFF" },
+    });
+    expect(await reject(sendQuote({ requestId: r.id, userId: staff() }))).toMatchObject({ code: "ZERO_TOTAL" });
+    expect((await reload(r.id)).status).toBe("SUBMITTED");
+  });
+
+  it("total nul couvert par une ligne de crédit active : le devis part (QUOTED, total 0, entrée du fil)", async () => {
+    const { r } = await requestWithLines();
+    await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 6000 } });
+    await applyOrgCredit({ requestId: r.id, amount: 6000, userId: staff() });
+    const out = await sendQuote({ requestId: r.id, userId: staff() });
+    expect(out).toMatchObject({ status: "QUOTED", total: 0, quoteVersion: 1 });
+    expect((await thread(r.id)).map((e) => e.eventType)).toContain("QUOTE_SENT");
   });
 
   it("depuis un autre statut -> INVALID_TRANSITION ; demande inconnue -> 404", async () => {

@@ -29,3 +29,9 @@ export function payButtonLabel(amount: number): string {
 export function hasPendingPayment(payments: { status: string }[]): boolean {
   return payments.some((p) => p.status === "PENDING");
 }
+
+// « Payer » n'a de sens que pour un montant strictement positif : un devis entièrement couvert par le
+// crédit d'impression passe PAID à l'acceptation et ne se paie pas.
+export function canShowPayButton(amount: number): boolean {
+  return amount > 0;
+}

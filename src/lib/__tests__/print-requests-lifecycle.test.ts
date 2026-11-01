@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "@/lib/print-requests/errors";
 import { acceptQuote, cancelRequest, submitRequest } from "@/lib/print-requests/lifecycle";
 import { paymentProbe } from "@/lib/print-requests/service";
+import { applyOrgCredit } from "@/lib/print-requests/org-credit";
+import { sendQuote } from "@/lib/print-requests/quote";
+import { findTemplateLock } from "@/lib/print-requests/template-lock";
 import * as templateVars from "@/lib/badge-templates/event-template-variables";
 import * as triggers from "@/lib/notifications/triggers";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
@@ -14,6 +17,7 @@ vi.mock("@/lib/badge-templates/event-template-variables", async (orig) => {
 vi.mock("@/lib/notifications/triggers", () => ({
   notifyPrintRequestSubmitted: vi.fn(async () => {}),
   notifyPrintRequestStatusChanged: vi.fn(async () => {}),
+  notifyPrintRequestPaid: vi.fn(async () => {}),
 }));
 
 let fx: PrintFixture;
@@ -289,5 +293,60 @@ describe("acceptQuote", () => {
     expect((await reject(acceptQuote({ ...base(r.id), eventId: "autre", version: 2 })))?.code).toBe("NOT_FOUND");
     const s = await makeRequest(fx, { status: "SUBMITTED", quoteVersion: 2 });
     expect((await reject(acceptQuote({ ...base(s.id), version: 2 })))?.code).toBe("INVALID_TRANSITION");
+  });
+});
+
+describe("acceptQuote : devis entièrement couvert par le crédit", () => {
+  // Demande à 6000 FCFA, crédit de 6000 appliqué (total 0) puis devis envoyé : QUOTED v1, total 0.
+  async function zeroQuoted() {
+    const r = await makeRequest(fx, { status: "SUBMITTED", total: 6000 });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Support badge PVC",
+        quantity: 4, unitPrice: 1500, lineTotal: 6000, position: 0, addedBy: "ORGANIZER",
+      },
+    });
+    await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 6000 } });
+    await applyOrgCredit({ requestId: r.id, amount: 6000, userId: fx.staffAdmin.id });
+    await sendQuote({ requestId: r.id, userId: fx.staffAdmin.id });
+    return r;
+  }
+
+  it("ACCEPTED puis PAID dans la même transaction : un seul SPENT, template verrouillé, fil et notification de paiement", async () => {
+    const r = await zeroQuoted();
+    vi.clearAllMocks();
+    const out = await acceptQuote({ ...base(r.id), version: 1 });
+    expect(out).toMatchObject({
+      status: "PAID", acceptedVersion: 1, acceptedTotal: 0, total: 0, paidPaymentId: null, acceptedById: fx.owner.id,
+    });
+    expect(out.paidAt).toBeInstanceOf(Date);
+    const spent = await prisma.orgPrintCredit.findMany({ where: { requestId: r.id, kind: "SPENT" } });
+    expect(spent.map((m) => m.amount)).toEqual([-6000]);
+    expect(await prisma.payment.count({ where: { printRequestId: r.id } })).toBe(0);
+    expect(await findTemplateLock(fx.event.id)).toMatchObject({ requestId: r.id });
+    const types = (await thread(r.id)).map((e) => e.eventType);
+    expect(types).toEqual(expect.arrayContaining(["QUOTE_ACCEPTED", "PAYMENT_RECEIVED", "ORG_CREDIT_SPENT"]));
+    expect(types.indexOf("QUOTE_ACCEPTED")).toBeLessThan(types.indexOf("PAYMENT_RECEIVED"));
+    const payment = (await thread(r.id)).find((e) => e.eventType === "PAYMENT_RECEIVED");
+    expect(payment?.details).toMatchObject({ amount: 0, byCredit: true });
+    expect(triggers.notifyPrintRequestPaid).toHaveBeenCalledTimes(1);
+    expect(triggers.notifyPrintRequestPaid).toHaveBeenCalledWith(r.id, fx.owner.id);
+    expect(triggers.notifyPrintRequestStatusChanged).not.toHaveBeenCalled();
+  });
+
+  it("l'acceptation par un non-OWNER reste refusée : rien n'est écrit", async () => {
+    const r = await zeroQuoted();
+    expect((await reject(acceptQuote({ ...base(r.id), userId: fx.manager.id, version: 1 })))?.code).toBe("OWNER_REQUIRED");
+    expect((await reject(acceptQuote({ ...base(r.id), userId: fx.staffAdmin.id, version: 1 })))?.code).toBe("STAFF_FORBIDDEN");
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
+    expect(await prisma.orgPrintCredit.count({ where: { requestId: r.id, kind: "SPENT" } })).toBe(0);
+  });
+
+  it("rejeu : la seconde acceptation est refusée et le SPENT reste unique", async () => {
+    const r = await zeroQuoted();
+    await acceptQuote({ ...base(r.id), version: 1 });
+    expect((await reject(acceptQuote({ ...base(r.id), version: 1 })))?.code).toBe("INVALID_TRANSITION");
+    expect(await prisma.orgPrintCredit.count({ where: { requestId: r.id, kind: "SPENT" } })).toBe(1);
+    expect(triggers.notifyPrintRequestPaid).toHaveBeenCalledTimes(1);
   });
 });

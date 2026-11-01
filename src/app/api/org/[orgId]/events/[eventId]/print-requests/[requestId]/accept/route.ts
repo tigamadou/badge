@@ -25,6 +25,9 @@ export const POST = organizerRoute({ allowArchived: true }, async (req, ctx) => 
     details: { reference: request.reference, version, total: request.total },
     req,
   });
-  await notifyPrintRequestStatusChanged(request.id, ctx.session.user.id, { organizer: true, staff: false });
+  // Devis couvert par le crédit : acceptQuote a déjà notifié le paiement (organisateur compris).
+  if (request.status !== "PAID") {
+    await notifyPrintRequestStatusChanged(request.id, ctx.session.user.id, { organizer: true, staff: false });
+  }
   return json({ request: toOrganizerDTO(request) });
 });

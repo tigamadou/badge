@@ -333,7 +333,7 @@ export async function requestBadgeCount(
 export async function markPaid(
   tx: Prisma.TransactionClient,
   requestId: string,
-  opts: { paymentId?: string; manual?: { userId: string; reason: string } },
+  opts: { paymentId?: string; manual?: { userId: string; reason: string }; byCredit?: boolean },
 ): Promise<boolean> {
   // Verrou de la ligne : deux confirmations simultanées (webhook et page de retour) s'enchaînent.
   // Demande inconnue : faux, comme avant (le helper lève NOT_FOUND).
@@ -363,6 +363,8 @@ export async function markPaid(
       amount: request.acceptedTotal ?? 0,
       ...(opts.paymentId ? { paymentId: opts.paymentId } : {}),
       ...(manual ? { reason: manual.reason } : {}),
+      // Devis entièrement couvert par le crédit d'impression : aucun paiement n'a eu lieu.
+      ...(opts.byCredit ? { byCredit: true } : {}),
     },
     manual ? { userId: manual.userId, side: "STAFF" } : undefined,
   );
