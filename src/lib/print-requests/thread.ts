@@ -32,7 +32,8 @@ export type ThreadEventType =
   | "SHEETS_GENERATED"
   | "REGISTRATIONS_SKIPPED"
   | "ORG_CREDIT_APPLIED"
-  | "ORG_CREDIT_SPENT";
+  | "ORG_CREDIT_SPENT"
+  | "ONSITE_MARGIN_CHANGED";
 
 export type ThreadActor = { userId: string | null; side: PrintThreadSide };
 
@@ -110,6 +111,8 @@ export function describeThreadEvent(
       return `Crédit d'impression appliqué : ${F(details.amount)}`;
     case "ORG_CREDIT_SPENT":
       return `Crédit d'impression décompté : ${F(details.amount)}`;
+    case "ONSITE_MARGIN_CHANGED":
+      return `Marge : ${num(details.from)} % → ${num(details.to)} % (${txt(details.reason)})`;
   }
 }
 

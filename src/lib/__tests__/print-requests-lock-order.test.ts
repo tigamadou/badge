@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { lockEventRow } from "@/lib/print-requests/content";
 import { cancelRequest } from "@/lib/print-requests/lifecycle";
 import { applyOrgCredit } from "@/lib/print-requests/org-credit";
-import { recordOnsitePrint } from "@/lib/print-requests/onsite-station";
+import { recordOnsitePrint, setOnsiteMargin } from "@/lib/print-requests/onsite-station";
 import { advanceStatus, markPaidManually, reopenQuote } from "@/lib/print-requests/quote";
 import { pinLockedEventTemplates } from "@/lib/print-requests/template-lock";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
@@ -102,6 +102,19 @@ describe("ordre des verrous Event puis PrintRequest", () => {
         orgTemplateChange(),
       ]);
       expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled"]);
+      await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
+    }
+  });
+
+  it("réglage de la marge face à un changement de template : pas d'interblocage", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      const r = await makeRequest(fx, { type: "ONSITE", status: "IN_PRODUCTION", estimatedQuantity: 10, marginPercent: 10 });
+      const res = await Promise.allSettled([
+        setOnsiteMargin({ requestId: r.id, marginPercent: 20, reason: "Motif", userId: fx.owner.id }),
+        orgTemplateChange(),
+      ]);
+      expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled"]);
+      expect((await state(r.id)).request.marginPercent).toBe(20);
       await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
     }
   });

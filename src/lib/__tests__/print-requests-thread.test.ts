@@ -96,6 +96,7 @@ describe("describeThreadEvent", () => {
     ],
     ORG_CREDIT_APPLIED: [{ amount: 45000 }, `Crédit d'impression appliqué : ${formatFcfa(45000)}`],
     ORG_CREDIT_SPENT: [{ amount: 45000 }, `Crédit d'impression décompté : ${formatFcfa(45000)}`],
+    ONSITE_MARGIN_CHANGED: [{ from: 10, to: 15, reason: "Badges perdus" }, "Marge : 10 % → 15 % (Badges perdus)"],
   };
 
   it("REQUEST_UPDATED mentionne les lignes fixées en retard", () => {
