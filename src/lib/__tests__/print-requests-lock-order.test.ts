@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { lockEventRow } from "@/lib/print-requests/content";
 import { cancelRequest } from "@/lib/print-requests/lifecycle";
 import { advanceStatus, reopenQuote } from "@/lib/print-requests/quote";
+import { recordOnsitePrint } from "@/lib/print-requests/onsite-station";
 import { pinLockedEventTemplates } from "@/lib/print-requests/template-lock";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
 
@@ -86,6 +87,20 @@ describe("ordre des verrous Event puis PrintRequest", () => {
       expect(s.request.status).toBe("SUBMITTED");
       expect(s.request.templatePinned).toBe(false);
       expect(s.event.badgeTemplateId).toBeNull();
+      await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
+    }
+  });
+
+  it("impression sur place face à un changement de template : pas d'interblocage", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      const r = await makeRequest(fx, { type: "ONSITE", status: "IN_PRODUCTION", estimatedQuantity: 10, marginPercent: 10 });
+      const reg = fx.approved[i % fx.approved.length];
+      await prisma.registration.update({ where: { id: reg.id }, data: { badgePrinted: false, badgePrintedAt: null } });
+      const res = await Promise.allSettled([
+        recordOnsitePrint({ requestId: r.id, registrationId: reg.id, userId: fx.owner.id, confirmReprint: false }),
+        orgTemplateChange(),
+      ]);
+      expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled"]);
       await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
     }
   });

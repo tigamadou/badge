@@ -31,7 +31,7 @@ export const ONSITE_ERROR_MESSAGES: Record<OnsiteErrorCode, string> = {
   NOT_ONSITE: "Cette demande n'est pas une demande d'impression sur place.",
   REQUEST_NOT_PRINTABLE: "Cette demande n'est pas ouverte à l'impression.",
   REGISTRATION_NOT_FOUND: "Inscription introuvable.",
-  FOREIGN_EVENT: "Cette inscription appartient à un autre évènement.",
+  FOREIGN_EVENT: "Ce QR ne correspond pas à cet évènement.",
   NOT_APPROVED: "Cette inscription n'est pas approuvée.",
   ALREADY_PRINTED: "Le badge de cette inscription a déjà été imprimé.",
   CAP_REACHED: "Le plafond d'impression de cette demande est atteint.",
