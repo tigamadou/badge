@@ -3,7 +3,7 @@
 > **Statut** : proposée — 2026-11-01 — en attente de relecture
 > **Type** : nouvelle fonctionnalité
 > **Périmètre** : v4 — espace `/platform` (nouveau groupe « Impression »), `src/lib/print-sheets/**`, worker
-> **Plan** : à rédiger
+> **Plan** : [`plans/2026-11-01-gabarits-et-planches-d-impression.md`](../plans/2026-11-01-gabarits-et-planches-d-impression.md)
 > **Chantier** : service d'impression, spec 1 sur 5 — voir aussi les specs
 > [32](2026-11-01-32-v4-catalogue-produits-d-impression.md),
 > [33](2026-11-01-33-v4-demandes-d-impression-et-devis.md),
@@ -52,6 +52,23 @@ aperçu.
     n'y ont pas accès.
 11. Il faut un **aperçu** des planches.
 12. Pour l'instant, **seulement les badges**.
+13. **La limite de 200 badges de l'export ZIP est levée** (2026-11-01) : le ZIP devient
+    **asynchrone**, produit par le worker comme les planches.
+
+## Export ZIP sans limite (décision 13)
+
+- Aujourd'hui, `GET …/badges/print-zip?ids=` rend les badges pendant la requête et passe les
+  identifiants dans l'URL : d'où `MAX_BADGES_PER_BATCH = 200`.
+- Désormais, l'organisateur (permission `badge.print`) **demande** un export
+  (`POST …/badges/exports`, sélection dans le corps) ; le worker produit le ZIP (un PDF par
+  badge, même nommage `badgeFileName`) dans la même file que les planches
+  (`PrintSheetGeneration.output = ZIP`, sans gabarit), le stocke en
+  `badge-exports/{eventId}/{id}.zip`, et l'organisateur le télécharge depuis le panneau de
+  lot quand il est prêt. Aucune limite de nombre.
+- `/api/files` : `badge-exports/{eventId}/…` sensible, lisible par le staff et par les
+  détenteurs de `badge.print` sur l'évènement.
+- L'ancienne route `print-zip` et `MAX_BADGES_PER_BATCH` sont supprimés. « Marquer
+  imprimés » découpe les grosses sélections en appels de 500 (limite de la route).
 
 ## Choix de conception (arbitrages de l'agent, à relire)
 
@@ -128,20 +145,24 @@ Règles :
 - **Ordre des pages du PDF** : en recto-verso, feuille 1 recto, feuille 1 verso, feuille 2
   recto… ; sinon, une page par feuille.
 - **Asynchrone** : un évènement peut compter des milliers de badges (le rendu prend plusieurs
-  minutes). Nouveau `JobType` `PRINT_SHEETS` traité par le worker existant. Le résultat est
-  stocké en S3 (`print-sheets/{generationId}.pdf`) et servi seulement au staff (nouvelle
-  famille de clés sensibles dans `/api/files` : `print-sheets/` réservé au staff, `no-store`).
-- **Le worker ne sait aujourd'hui traiter que des emails** (vérifié le 2026-11-01) : à faire
-  dans ce chantier :
-  - `claimEmailJobs` filtre `type = 'EMAIL'` et `processJob` lit un payload d'email : la
-    boucle doit réclamer et aiguiller les jobs par type ; `failJob` ne notifie
-    `EMAIL_FAILED` que pour les emails (un échec de génération passe la génération en
-    `FAILED` et notifie son auteur) ;
-  - le conteneur `worker` n'a ni `RENDERER_URL` ni accès au réseau `rendu` dans les
-    `docker-compose*.yml` (dev, preprod, prod) : les ajouter ;
-  - `STALE_LOCK_MS` (10 min) est plus court qu'une grosse génération : le job
-    `PRINT_SHEETS` renouvelle son verrou à chaque lot de badges rendus, pour ne jamais être
-    repris et rendu deux fois.
+  minutes). Le worker existant traite les générations. Le résultat est stocké en S3
+  (`print-sheets/{generationId}.pdf`) et servi seulement au staff (nouvelle famille de clés
+  sensibles dans `/api/files` : `print-sheets/` réservé au staff, `no-store`).
+- **Le worker ne sait aujourd'hui traiter que des emails** (vérifié le 2026-11-01) :
+  `claimEmailJobs`, `processJob` et `failJob` sont propres aux emails, et une génération de
+  plusieurs minutes dans la boucle bloquerait les envois. Donc :
+  - **la table `PrintSheetGeneration` sert elle-même de file** (statut, verrou, battement de
+    cœur), sans passer par `Job` : la file d'emails et son écran `/platform/jobs` restent
+    inchangés ;
+  - la boucle du worker lance au plus **une génération à la fois, en parallèle** du
+    traitement des emails (non attendue par le tour de boucle) ;
+  - la génération met à jour son **battement de cœur** après chaque badge rendu ; une
+    génération `RUNNING` sans battement depuis 3 min est reprise (worker mort), au plus
+    3 tentatives, puis `FAILED` ;
+  - le conteneur `worker` n'a ni `RENDERER_URL` ni accès au réseau `rendu` en prod et en
+    preprod : les ajouter (le dev les a déjà).
+- Un échec s'affiche sur la génération (statut et message) dans `/platform/print/sheets` ;
+  pas de notification.
 - Modèle `PrintSheetGeneration` : évènement, gabarit, **copie figée des réglages du gabarit**
   (JSON), recto-verso, liste ordonnée des inscriptions, statut (`PENDING`, `RUNNING`, `DONE`,
   `FAILED`), nombre de feuilles et de badges, clé du fichier, erreur, auteur, dates, et plus
