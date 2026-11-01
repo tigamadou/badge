@@ -119,6 +119,20 @@ describe("POST /api/platform/print/sheets", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400 VALIDATION when the IDS list exceeds 5000", async () => {
+    await asStaff();
+    const { POST } = await import("@/app/api/platform/print/sheets/route");
+    const registrationIds = Array.from({ length: 5001 }, (_, i) => `r${i}`);
+    const res = await POST(
+      req("/api/platform/print/sheets", "POST", {
+        eventId: "e", layoutId: "l", selection: { mode: "IDS", registrationIds },
+      }),
+      noParams,
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("VALIDATION");
+  });
+
   it("translates GenerationError to its status and code", async () => {
     await asStaff();
     const { event } = await fixture();
@@ -150,7 +164,7 @@ describe("POST /api/platform/print/sheets", () => {
 describe("GET /api/platform/print/sheets", () => {
   beforeEach(() => vi.mocked(getServerSession).mockReset());
 
-  it("401 without session, 200 for STAFF_OBSERVER?  403 (SUPPORT minimum)", async () => {
+  it("401 without session, 403 for STAFF_OBSERVER (SUPPORT minimum)", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null as never);
     const { GET } = await import("@/app/api/platform/print/sheets/route");
     expect((await GET(req("/api/platform/print/sheets", "GET"), noParams)).status).toBe(401);
@@ -195,6 +209,10 @@ describe("GET /api/platform/print/sheets/[generationId]", () => {
     const g = await prisma.printSheetGeneration.create({ data: { eventId: event.id, registrationIds: [] } });
     const res = await GET(req("/x", "GET"), idParams(g.id));
     expect(res.status).toBe(200);
-    expect((await res.json()).generation.id).toBe(g.id);
+    const body = (await res.json()).generation;
+    expect(body.id).toBe(g.id);
+    expect(body.status).toBe("PENDING");
+    expect(body).not.toHaveProperty("registrationIds");
+    expect(body).not.toHaveProperty("lockedBy");
   });
 });

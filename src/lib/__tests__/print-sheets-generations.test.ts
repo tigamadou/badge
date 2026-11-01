@@ -211,6 +211,16 @@ describe("createGeneration", () => {
     expect(e.httpStatus).toBe(404);
   });
 
+  it("LAYOUT_NOT_FOUND 404 for an archived layout", async () => {
+    const { event, user, layout } = await setup();
+    await prisma.printSheetLayout.update({ where: { id: layout.id }, data: { archived: true, archivedAt: new Date() } });
+    const e = await code(
+      createGeneration({ eventId: event.id, layoutId: layout.id, selection: { mode: "ALL" }, duplex: false, userId: user.id }),
+    );
+    expect(e.code).toBe("LAYOUT_NOT_FOUND");
+    expect(e.httpStatus).toBe(404);
+  });
+
   it("EVENT_NOT_FOUND 404", async () => {
     const { user, layout } = await setup();
     const e = await code(

@@ -68,15 +68,23 @@ export function orderRegistrations<
 }
 
 async function selectRegistrations(eventId: string, selection: GenerationSelection) {
-  const include = { category: { select: { number: true } } };
+  // Colonnes minimales : des milliers de lignes, sans photo ni pieces d'identite.
+  const select = {
+    id: true,
+    eventId: true,
+    status: true,
+    snapshotLastName: true,
+    snapshotFirstName: true,
+    category: { select: { number: true } },
+  } as const;
   if (selection.mode === "IDS") {
     const ids = [...new Set(selection.registrationIds)];
-    if (ids.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription selectionnee");
-    const rows = await prisma.registration.findMany({ where: { id: { in: ids } }, include });
+    if (ids.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription sélectionnée");
+    const rows = await prisma.registration.findMany({ where: { id: { in: ids } }, select });
     if (rows.length !== ids.length || rows.some((r) => r.eventId !== eventId || r.status !== "APPROVED")) {
       throw new GenerationError(
         "INVALID_SELECTION",
-        "La selection contient une inscription inconnue, non approuvee ou d'un autre evenement",
+        "La sélection contient une inscription inconnue, non approuvée ou d'un autre évènement",
       );
     }
     return rows;
@@ -87,7 +95,7 @@ async function selectRegistrations(eventId: string, selection: GenerationSelecti
       status: "APPROVED",
       ...(selection.mode === "CATEGORIES" ? { categoryId: { in: selection.categoryIds } } : {}),
     },
-    include,
+    select,
   });
 }
 
@@ -99,15 +107,16 @@ export async function createGeneration(input: {
   userId: string;
 }): Promise<PrintSheetGeneration> {
   const layout = await prisma.printSheetLayout.findUnique({ where: { id: input.layoutId } });
-  if (!layout) throw new GenerationError("LAYOUT_NOT_FOUND", "Gabarit introuvable");
+  // Un gabarit archivé n'est plus proposable : traité comme introuvable.
+  if (!layout || layout.archived) throw new GenerationError("LAYOUT_NOT_FOUND", "Gabarit introuvable");
   const event = await prisma.event.findUnique({
     where: { id: input.eventId },
     select: { id: true, badgeTemplateId: true, orgId: true },
   });
-  if (!event) throw new GenerationError("EVENT_NOT_FOUND", "Evenement introuvable");
+  if (!event) throw new GenerationError("EVENT_NOT_FOUND", "Évènement introuvable");
 
   const rows = orderRegistrations(await selectRegistrations(event.id, input.selection));
-  if (rows.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription approuvee a imprimer");
+  if (rows.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription approuvée à imprimer");
 
   const template = await resolveEventTemplate(event);
   const badgePages = template.meta.pages === 2 ? 2 : 1;
