@@ -133,3 +133,21 @@ describe("POST /api/platform/upload", () => {
     expect(res.status).toBe(415);
   });
 });
+
+describe("POST /api/platform/upload : erreur inattendue", () => {
+  it("relance une erreur qui n'est pas une AuthError (print-product)", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/auth-guards", async (orig) => ({
+      ...(await orig<typeof import("@/lib/auth-guards")>()),
+      // 1er appel : garde du wrapper (passe) ; 2e appel : STAFF_ADMIN dans la route (echoue).
+      requireStaff: vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("boom")),
+    }));
+    try {
+      await login("STAFF_ADMIN");
+      await expect(post(makeReq("print-product", jpg))).rejects.toThrow("boom");
+    } finally {
+      vi.doUnmock("@/lib/auth-guards");
+      vi.resetModules();
+    }
+  });
+});
