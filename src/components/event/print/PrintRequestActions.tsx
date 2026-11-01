@@ -11,8 +11,7 @@ import { toastSuccess } from "@/lib/toast";
 const EDITABLE = ["DRAFT", "SUBMITTED", "QUOTED"];
 const CANCELLABLE = ["DRAFT", "SUBMITTED", "QUOTED", "ACCEPTED"];
 
-// Actions de l'organisateur sur une demande. Le bouton « Payer » est ajouté par le plan 34
-// (à placer après « Accepter le devis », pour le statut ACCEPTED).
+// Actions de l'organisateur sur une demande. Le bouton « Payer » est rendu par la page (PrintPayButton).
 export function PrintRequestActions({
   orgId,
   eventId,
