@@ -27,6 +27,7 @@ export type PaymentErrorCode =
   | "PROVIDER_ERROR"
   | "REQUEST_NOT_FOUND"
   | "REQUEST_NOT_PAYABLE"
+  | "REQUEST_ALREADY_PAID"
   | "PAYMENT_IN_PROGRESS";
 
 const HTTP_STATUS: Record<PaymentErrorCode, number> = {
@@ -36,6 +37,7 @@ const HTTP_STATUS: Record<PaymentErrorCode, number> = {
   PROVIDER_ERROR: 502,
   REQUEST_NOT_FOUND: 404,
   REQUEST_NOT_PAYABLE: 409,
+  REQUEST_ALREADY_PAID: 409,
   PAYMENT_IN_PROGRESS: 409,
 };
 
@@ -54,7 +56,9 @@ export class PaymentError extends Error {
 const PLAN_LITE_SELECT = { id: true, name: true, period: true, price: true } as const;
 
 // Ouvre la transaction FedaPay d'un Payment deja cree et renvoie l'URL de paiement.
-// En cas d'echec, le Payment passe CANCELED et PROVIDER_ERROR est levee.
+// En cas d'echec, le Payment passe CANCELED et PROVIDER_ERROR est levee. Si le Payment n'est plus
+// PENDING quand la transaction est creee (remplace par un autre checkout), la transaction est quand
+// meme enregistree sur la ligne, mais PAYMENT_IN_PROGRESS est levee : aucune URL n'est renvoyee.
 async function openTransaction(
   paymentId: string,
   tx: {
@@ -74,14 +78,19 @@ async function openTransaction(
       customer: tx.customer,
       metadata: tx.metadata,
     });
-    await prisma.payment.update({
-      where: { id: paymentId },
+    // La transaction est toujours enregistree (meme sur un paiement remplace) : un paiement tardif
+    // reste ainsi retrouvable par le webhook et le sweep.
+    await prisma.payment.updateMany({
+      where: { id: paymentId, fedapayTransactionId: null },
       data: { fedapayTransactionId: created.id, fedapayReference: created.reference },
     });
+    const row = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, select: { status: true } });
+    if (row.status !== "PENDING") throw new PaymentError("PAYMENT_IN_PROGRESS");
     return await createPaymentUrl(created.id);
   } catch (error) {
+    if (error instanceof PaymentError) throw error;
     console.error("[checkout fedapay]", error instanceof FedapayError ? error.code : (error as Error).name);
-    await prisma.payment.update({ where: { id: paymentId }, data: { status: "CANCELED" } });
+    await prisma.payment.updateMany({ where: { id: paymentId, status: "PENDING" }, data: { status: "CANCELED" } });
     throw new PaymentError("PROVIDER_ERROR");
   }
 }
@@ -160,6 +169,8 @@ function assertPayable(
   if (!request || request.eventId !== scope.eventId || request.orgId !== scope.orgId) {
     throw new PaymentError("REQUEST_NOT_FOUND");
   }
+  // Payee entre-temps (ex. paiement du candidat approuve pendant le checkout) : message distinct.
+  if (request.status === "PAID") throw new PaymentError("REQUEST_ALREADY_PAID");
   if (request.status !== "ACCEPTED" || request.acceptedTotal === null || request.acceptedTotal <= 0) {
     throw new PaymentError("REQUEST_NOT_PAYABLE");
   }
@@ -249,14 +260,19 @@ export async function startPrintRequestCheckout(input: {
         customer: { email: user.email, firstname: user.name },
         metadata: { paymentId, printRequestId: requestId },
       });
-      await logActivity({
-        type: "PAYMENT_INITIATED",
-        userId,
-        orgId,
-        targetId: paymentId,
-        details: { paymentId, purpose: "PRINT_REQUEST", printRequestId: requestId, amount: request.acceptedTotal },
-        req,
-      });
+      // Le journal ne doit jamais empecher le client d'atteindre la page de paiement.
+      try {
+        await logActivity({
+          type: "PAYMENT_INITIATED",
+          userId,
+          orgId,
+          targetId: paymentId,
+          details: { paymentId, purpose: "PRINT_REQUEST", printRequestId: requestId, amount: request.acceptedTotal },
+          req,
+        });
+      } catch (error) {
+        console.error("[payment] journal du checkout en echec", error);
+      }
       return { paymentId, url };
     }
 
@@ -274,8 +290,11 @@ export async function startPrintRequestCheckout(input: {
       try {
         return { paymentId: candidate.id, url: await createPaymentUrl(candidate.fedapayTransactionId) };
       } catch (error) {
-        throw providerError(error);
+        // Jeton refuse pour un candidat encore valable : un seul remplacement, puis nouveau paiement.
+        const failure = providerError(error);
+        if (attempt > 0) throw failure;
       }
+      status = null;
     }
     if (status === null) {
       // Transaction inconnue de FedaPay : le paiement est remplace par un nouveau.
@@ -288,7 +307,7 @@ export async function startPrintRequestCheckout(input: {
         throw providerError(error);
       }
     }
-    // Reprise : si la demande est devenue PAID, assertPayable leve REQUEST_NOT_PAYABLE.
+    // Reprise : si la demande est devenue PAID, assertPayable leve REQUEST_ALREADY_PAID.
   }
   throw new PaymentError("PAYMENT_IN_PROGRESS");
 }
@@ -340,14 +359,19 @@ async function failPayment(
       return res.count;
     });
     if (count === 1) {
-      await logActivity({
-        type: "PAYMENT_FAILED",
-        userId: userId ?? undefined,
-        orgId,
-        targetId: paymentId,
-        details: { paymentId, reason, purpose: "PRINT_REQUEST", printRequestId: requestId },
-      });
-      // Argent recu pour un montant ou une devise inattendu : le staff doit regler.
+      try {
+        await logActivity({
+          type: "PAYMENT_FAILED",
+          userId: userId ?? undefined,
+          orgId,
+          targetId: paymentId,
+          details: { paymentId, reason, purpose: "PRINT_REQUEST", printRequestId: requestId },
+        });
+      } catch (error) {
+        console.error("[payment] journal apres paiement en echec", error);
+      }
+      // Argent recu pour un montant ou une devise inattendu : le staff doit regler. Notification a
+      // part : un echec du journal ne doit pas la supprimer.
       if (reason === "MISMATCH") {
         try {
           await notifyPrintPaymentUnmatched(requestId, paymentId);

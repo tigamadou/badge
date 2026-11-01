@@ -355,6 +355,38 @@ describe("confirmPayment : demande d'impression", () => {
     expect((await prisma.payment.findUniqueOrThrow({ where: { id: t.payment.id } })).status).toBe("CANCELED");
     expect(await thread(t.request.id, "PAYMENT_FAILED")).toHaveLength(0);
   });
+
+  it("MISMATCH : échec du journal → la notification staff part quand même, l'issue est conservée", async () => {
+    const t = await seed();
+    fetchMock.mockResolvedValue(txResponse("approved", 149000));
+    const actLog = await import("@/lib/activity-log");
+    vi.spyOn(actLog, "logActivity").mockRejectedValue(new Error("boom"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await confirmPayment(77)).toEqual({ status: "DECLINED", applied: false });
+    expect(errorSpy).toHaveBeenCalledWith("[payment] journal apres paiement en echec", expect.any(Error));
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: t.payment.id } })).status).toBe("DECLINED");
+    const rows = await prisma.notification.findMany({
+      where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.staffAdmin.id },
+    });
+    expect(rows[0]).toMatchObject({ title: `Paiement à vérifier : ${t.request.reference}` });
+  });
+
+  it("MISMATCH sur un paiement EXPIRED → DECLINED, entrée du fil, alerte staff", async () => {
+    const t = await seed();
+    await prisma.payment.update({ where: { id: t.payment.id }, data: { status: "EXPIRED" } });
+    fetchMock.mockResolvedValue(txResponse("approved", 149000));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await confirmPayment(77)).toEqual({ status: "DECLINED", applied: false });
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: t.payment.id } })).status).toBe("DECLINED");
+    const entries = await thread(t.request.id, "PAYMENT_FAILED");
+    expect(entries).toHaveLength(1);
+    expect(entries[0].details).toMatchObject({ reason: "MISMATCH", paymentId: t.payment.id });
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: t.request.id } })).status).toBe("ACCEPTED");
+    const rows = await prisma.notification.findMany({
+      where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.staffAdmin.id },
+    });
+    expect(rows[0]).toMatchObject({ title: `Paiement à vérifier : ${t.request.reference}` });
+  });
 });
 
 function jsonResponse(body: unknown, status = 200) {
@@ -365,7 +397,7 @@ const TOKEN_URL = "https://pay.fedapay.com/t88";
 // Routeur de fetch : GET/POST par chemin, avec temporisation optionnelle de la création.
 function routeFetch(
   fetchMock: ReturnType<typeof vi.fn>,
-  routes: { create?: () => Response | Promise<Response>; retrieve?: Record<number, () => Response>; token?: () => Response },
+  routes: { create?: () => Response | Promise<Response>; retrieve?: Record<number, () => Response>; token?: () => Response | Promise<Response> },
 ) {
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const path = new URL(url).pathname.replace(/^\/v1/, "");
@@ -505,12 +537,10 @@ describe("startPrintRequestCheckout", () => {
     ]);
   });
 
-  it("erreur FedaPay à la lecture ou au jeton du paiement existant → PROVIDER_ERROR, paiement conservé", async () => {
+  it("erreur FedaPay à la lecture ou à la confirmation du paiement existant → PROVIDER_ERROR, paiement conservé", async () => {
     const t = await seedAccepted();
     const existing = await pendingPayment(t);
     routeFetch(fetchMock, {});
-    await rejects(startPrintRequestCheckout(input(t)), "PROVIDER_ERROR", 502);
-    routeFetch(fetchMock, { retrieve: { 88: () => txResponse("pending", 150000, 88) }, token: () => jsonResponse({}, 500) });
     await rejects(startPrintRequestCheckout(input(t)), "PROVIDER_ERROR", 502);
     routeFetch(fetchMock, { retrieve: { 88: () => txResponse("declined", 150000, 88) } });
     fetchMock.mockImplementationOnce(async () => txResponse("declined", 150000, 88)).mockImplementationOnce(async () => jsonResponse({}, 500));
@@ -539,11 +569,11 @@ describe("startPrintRequestCheckout", () => {
     });
   });
 
-  it("PENDING existant approuvé chez FedaPay → demande PAID, REQUEST_NOT_PAYABLE", async () => {
+  it("PENDING existant approuvé chez FedaPay → demande PAID, REQUEST_ALREADY_PAID (409)", async () => {
     const t = await seedAccepted();
     const old = await pendingPayment(t);
     routeFetch(fetchMock, { retrieve: { 88: () => txResponse("approved", 150000, 88) } });
-    await rejects(startPrintRequestCheckout(input(t)), "REQUEST_NOT_PAYABLE", 409);
+    await rejects(startPrintRequestCheckout(input(t)), "REQUEST_ALREADY_PAID", 409);
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: t.request.id } }))).toMatchObject({
       status: "PAID", paidPaymentId: old.id,
     });
@@ -690,5 +720,85 @@ describe("startPrintRequestCheckout", () => {
     });
     await rejects(startPrintRequestCheckout(input(t)), "PAYMENT_IN_PROGRESS", 409);
     expect(await prisma.payment.count({ where: { printRequestId: t.request.id, status: "DECLINED" } })).toBe(2);
+  });
+
+  it("demande déjà PAID → REQUEST_ALREADY_PAID (409), aucun Payment créé", async () => {
+    const t = await seedAccepted();
+    await prisma.printRequest.update({ where: { id: t.request.id }, data: { status: "PAID" } });
+    await rejects(startPrintRequestCheckout(input(t)), "REQUEST_ALREADY_PAID", 409);
+    expect(await paymentsOf(t.request.id)).toHaveLength(0);
+  });
+
+  it("échec du journal PAYMENT_INITIATED → l'URL est quand même renvoyée, l'erreur est loggée", async () => {
+    const t = await seedAccepted();
+    routeFetch(fetchMock, {});
+    const actLog = await import("@/lib/activity-log");
+    vi.spyOn(actLog, "logActivity").mockRejectedValue(new Error("boom"));
+    const res = await startPrintRequestCheckout(input(t));
+    expect(res.url).toBe(TOKEN_URL);
+    expect(console.error).toHaveBeenCalledWith("[payment] journal du checkout en echec", expect.any(Error));
+  });
+
+  it("paiement remplacé pendant la création de la transaction → PAYMENT_IN_PROGRESS, transaction enregistrée sur la ligne CANCELED, pas d'URL", async () => {
+    const t = await seedAccepted();
+    routeFetch(fetchMock, {
+      create: async () => {
+        // Un autre checkout a remplacé le paiement pendant l'appel FedaPay.
+        await prisma.payment.updateMany({ where: { printRequestId: t.request.id }, data: { status: "CANCELED" } });
+        return txResponse("pending", 150000, 88);
+      },
+    });
+    await rejects(startPrintRequestCheckout(input(t)), "PAYMENT_IN_PROGRESS", 409);
+    const payments = await paymentsOf(t.request.id);
+    expect(payments).toHaveLength(1);
+    expect(payments[0]).toMatchObject({ status: "CANCELED", fedapayTransactionId: 88, fedapayReference: "trx_88" });
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/token"))).toBe(false);
+  });
+
+  it("échec FedaPay après création : le Payment déjà approuvé n'est pas écrasé par CANCELED", async () => {
+    const t = await seedAccepted();
+    routeFetch(fetchMock, {
+      token: async () => {
+        await prisma.payment.updateMany({ where: { printRequestId: t.request.id }, data: { status: "APPROVED" } });
+        return jsonResponse({}, 500);
+      },
+    });
+    await rejects(startPrintRequestCheckout(input(t)), "PROVIDER_ERROR", 502);
+    expect((await paymentsOf(t.request.id))[0].status).toBe("APPROVED");
+  });
+
+  it("jeton refusé pour un candidat pending → candidat CANCELED (REPLACED, entrée du fil), nouveau Payment et URL", async () => {
+    const t = await seedAccepted();
+    const old = await pendingPayment(t, { txId: 55 });
+    let tokenCalls = 0;
+    routeFetch(fetchMock, {
+      retrieve: { 55: () => txResponse("pending", 150000, 55) },
+      token: () => (++tokenCalls === 1 ? jsonResponse({}, 500) : jsonResponse({ "v1/token": { url: TOKEN_URL } })),
+    });
+    const res = await startPrintRequestCheckout(input(t));
+    expect(res.url).toBe(TOKEN_URL);
+    expect(res.paymentId).not.toBe(old.id);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: old.id } })).status).toBe("CANCELED");
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: res.paymentId } }))).toMatchObject({
+      status: "PENDING", fedapayTransactionId: 88,
+    });
+    const entries = await prisma.printRequestMessage.findMany({
+      where: { requestId: t.request.id, eventType: "PAYMENT_FAILED" },
+    });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].details).toMatchObject({ reason: "REPLACED", paymentId: old.id });
+  });
+
+  it("jeton refusé deux fois de suite : un seul remplacement, puis PROVIDER_ERROR", async () => {
+    const t = await seedAccepted();
+    const older = await pendingPayment(t, { txId: 55, createdAt: new Date(Date.now() - 1000) });
+    const newer = await pendingPayment(t, { txId: 56 });
+    routeFetch(fetchMock, {
+      retrieve: { 55: () => txResponse("pending", 150000, 55), 56: () => txResponse("pending", 150000, 56) },
+      token: () => jsonResponse({}, 500),
+    });
+    await rejects(startPrintRequestCheckout(input(t)), "PROVIDER_ERROR", 502);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: newer.id } })).status).toBe("CANCELED");
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: older.id } })).status).toBe("PENDING");
   });
 });

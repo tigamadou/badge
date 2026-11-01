@@ -1,9 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { toastError } from "@/lib/toast";
-import { NOT_OWNER_MESSAGE, PENDING_NOTICE, payButtonLabel, payErrorMessage } from "./pay-button";
+import {
+  NOT_OWNER_MESSAGE,
+  PENDING_NOTICE,
+  payButtonLabel,
+  payErrorMessage,
+  shouldRefreshAfterPayError,
+} from "./pay-button";
 
 // Paiement du devis accepté : ouvre la page de paiement FedaPay (OWNER hors mode staff).
 export function PrintPayButton({
@@ -21,6 +28,7 @@ export function PrintPayButton({
   canPay: boolean;
   pending: boolean;
 }) {
+  const router = useRouter();
   const { run, pending: starting } = useAsyncAction(
     async () => {
       const res = await fetch(`/api/org/${orgId}/events/${eventId}/print-requests/${requestId}/checkout`, {
@@ -32,6 +40,7 @@ export function PrintPayButton({
           .then((b: { error?: unknown }) => (typeof b.error === "string" ? b.error : null))
           .catch(() => null);
         toastError(payErrorMessage(code));
+        if (shouldRefreshAfterPayError(code)) router.refresh();
         return;
       }
       const { url } = (await res.json()) as { url: string };

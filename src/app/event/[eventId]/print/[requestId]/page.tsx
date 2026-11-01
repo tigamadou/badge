@@ -144,7 +144,7 @@ export default async function PrintRequestDetailPage({
           orgId={orgId}
           eventId={eventId}
           requestId={requestId}
-          amount={request.total}
+          amount={request.acceptedTotal ?? request.total}
           canPay={isOwner}
           pending={hasPendingPayment(payments)}
         />

@@ -604,6 +604,21 @@ describe("mark-paid", () => {
     expect(staffNotifs[0].body).toContain("a été marquée payée par l'équipe Badge.");
   });
 
+  it("échec du journal : réponse 200, demande PAID, notification organisateur envoyée quand même", async () => {
+    const r = await acceptedRequest();
+    const actLog = await import("@/lib/activity-log");
+    vi.spyOn(actLog, "logActivity").mockRejectedValue(new Error("boom"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const res = await call(markPaidPOST, `${BASE}/${r.id}/mark-paid`, "POST", { requestId: r.id }, { reason: "Virement reçu" });
+    expect(res.status).toBe(200);
+    expect(res.json.request.status).toBe("PAID");
+    expect(errorSpy).toHaveBeenCalledWith("[mark-paid] journal en echec", expect.any(Error));
+    expect((await reload(r.id)).status).toBe("PAID");
+    const ownerNotifs = await prisma.notification.findMany({ where: { userId: fx.eventAdmin.id, type: "PRINT_REQUEST_STATUS_CHANGED" } });
+    expect(ownerNotifs).toHaveLength(1);
+    expect(ownerNotifs[0].body).toContain("a été marquée payée par l'équipe Badge.");
+  });
+
   it("paiement réel en cours (Payment PENDING, sonde non espionnée) : 409 et demande inchangée", async () => {
     const r = await acceptedRequest();
     await prisma.payment.create({

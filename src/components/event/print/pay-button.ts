@@ -9,7 +9,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   PAYMENT_IN_PROGRESS: "Un paiement est déjà en cours d'ouverture. Réessayez dans un instant.",
   PAYMENTS_DISABLED: "Le paiement en ligne n'est pas disponible pour le moment.",
   REQUEST_NOT_PAYABLE: "Ce devis n'est plus payable. Rechargez la page.",
+  REQUEST_ALREADY_PAID: "Ce devis vient d'être payé.",
 };
+
+// La page est périmée (le devis est déjà payé) : il faut la rafraîchir pour afficher le nouvel état.
+export function shouldRefreshAfterPayError(code: string | null): boolean {
+  return code === "REQUEST_ALREADY_PAID";
+}
 
 // Message français pour le code d'erreur `{ error }` de la route de checkout.
 export function payErrorMessage(code: string | null): string {
