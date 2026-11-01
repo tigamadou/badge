@@ -69,7 +69,7 @@ export function onsiteOrPrintErrorResponse(err: unknown): NextResponse {
 
 // Éligibilité : le template effectif de l'évènement (celui que copie la demande à l'envoi,
 // repli compris) figure dans la liste des templates adaptés à l'impression sur place.
-export async function getOnsiteEligibility(eventId: string): Promise<{ eligible: boolean; templateId: string }> {
+export async function getOnsiteEligibility(eventId: string): Promise<{ eligible: boolean; templateId: string | null }> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: { badgeTemplateId: true, orgId: true },
@@ -79,7 +79,8 @@ export async function getOnsiteEligibility(eventId: string): Promise<{ eligible:
     findEffectiveTemplateRow(await resolveEventTemplateId(event)),
     getOnsitePrintSettings(),
   ]);
-  if (!row) throw new PrintRequestError("VALIDATION", 400);
+  // Aucun template lisible : non éligible, sans erreur (l'assistant désactive l'option).
+  if (!row) return { eligible: false, templateId: null };
   return { eligible: settings.templateIds.includes(row.id), templateId: row.id };
 }
 

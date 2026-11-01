@@ -83,12 +83,12 @@ describe("getOnsiteEligibility", () => {
     }
   });
 
-  it("évènement inconnu -> NOT_FOUND ; aucun template lisible -> VALIDATION", async () => {
+  it("évènement inconnu -> NOT_FOUND ; aucun template lisible -> non éligible", async () => {
     expect(((await reject(getOnsiteEligibility("nope"))) as PrintRequestError).code).toBe("NOT_FOUND");
     await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: "inconnu" } });
     await prisma.installedBadgeTemplate.deleteMany({ where: { family: "default" } });
     await prisma.installedBadgeTemplate.delete({ where: { id: fx.template.id } }).catch(() => {});
-    expect(((await reject(getOnsiteEligibility(fx.event.id))) as PrintRequestError).code).toBe("VALIDATION");
+    expect(await getOnsiteEligibility(fx.event.id)).toEqual({ eligible: false, templateId: null });
   });
 });
 

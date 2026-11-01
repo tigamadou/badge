@@ -28,7 +28,6 @@ export async function guarded(run: () => Promise<Response>): Promise<Response> {
     return await run();
   } catch (err) {
     return onsiteOrPrintErrorResponse(err);
-    throw err;
   }
 }
 
