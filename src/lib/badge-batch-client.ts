@@ -39,6 +39,85 @@ export async function markInChunks(
 
 export const MAX_POLL_FAILURES = 10;
 
+// Au-dela de cette attente en PENDING, le panneau previent que le traitement peut etre retarde.
+export const PENDING_HINT_MS = 5 * 60_000;
+
+// Stockage cle/valeur minimal (sessionStorage ou doublure de test).
+export type KeyValueStore = Pick<Storage, "getItem" | "setItem" | "removeItem" | "key" | "length">;
+
+export const SELECTION_KEY_PREFIX = "badge-batch-sel:";
+const EXPORT_KEY_PREFIX = "badge-batch-export:";
+
+function randomKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Range la selection (liste d'ids, potentiellement des milliers) sous une cle aleatoire et
+// renvoie cette cle, a passer dans l'URL (`?sel=`) a la place des ids. Les anciennes selections
+// sont purgees. null si le stockage est indisponible ou plein.
+export function storeSelection(store: KeyValueStore, ids: string[]): string | null {
+  try {
+    const stale: string[] = [];
+    try {
+      for (let i = 0; i < store.length; i++) {
+        const k = store.key(i);
+        if (k?.startsWith(SELECTION_KEY_PREFIX)) stale.push(k);
+      }
+    } catch {
+      // Lecture des cles impossible : on garde les anciennes, sans bloquer.
+    }
+    stale.forEach((k) => store.removeItem(k));
+    const key = randomKey();
+    store.setItem(`${SELECTION_KEY_PREFIX}${key}`, JSON.stringify(ids));
+    return key;
+  } catch {
+    return null;
+  }
+}
+
+// Relit la selection ; null si absente, illisible, mal formee ou vide.
+export function readSelection(store: KeyValueStore, key: string | null): string[] | null {
+  if (!key) return null;
+  try {
+    const parsed: unknown = JSON.parse(store.getItem(`${SELECTION_KEY_PREFIX}${key}`) ?? "null");
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    if (!parsed.every((v) => typeof v === "string" && v.length > 0)) return null;
+    return parsed as string[];
+  } catch {
+    return null;
+  }
+}
+
+// Export ZIP en cours, retenu par evenement + selection pour reprendre le suivi apres un rechargement.
+export function exportStorageKey(eventId: string, selectionKey: string): string {
+  return `${EXPORT_KEY_PREFIX}${eventId}:${selectionKey}`;
+}
+
+export function rememberExport(store: KeyValueStore, eventId: string, selectionKey: string, exportId: string): void {
+  try {
+    store.setItem(exportStorageKey(eventId, selectionKey), exportId);
+  } catch {
+    // Stockage indisponible : le suivi fonctionne, seule la reprise est perdue.
+  }
+}
+
+export function recallExport(store: KeyValueStore, eventId: string, selectionKey: string): string | null {
+  try {
+    return store.getItem(exportStorageKey(eventId, selectionKey));
+  } catch {
+    return null;
+  }
+}
+
+export function forgetExport(store: KeyValueStore, eventId: string, selectionKey: string): void {
+  try {
+    store.removeItem(exportStorageKey(eventId, selectionKey));
+  } catch {
+    // ignore
+  }
+}
+
 export type PollOutcome =
   | { kind: "done"; fileKey: string }
   | { kind: "failed"; message: string }
@@ -52,9 +131,18 @@ export async function pollExport(opts: {
   cancelled: () => boolean;
   intervalMs: number;
   maxFailures?: number;
+  // Horloge et seuil de l'attente en PENDING ; `onPendingLong(true)` une fois le seuil depasse,
+  // `onPendingLong(false)` quand l'export quitte PENDING apres avoir ete signale.
+  now?: () => number;
+  pendingHintMs?: number;
+  onPendingLong?: (long: boolean) => void;
 }): Promise<PollOutcome> {
   const maxFailures = opts.maxFailures ?? MAX_POLL_FAILURES;
+  const now = opts.now ?? Date.now;
+  const hintMs = opts.pendingHintMs ?? PENDING_HINT_MS;
   let failures = 0;
+  let pendingSince: number | null = null;
+  let hinted = false;
   for (;;) {
     await opts.sleep(opts.intervalMs);
     if (opts.cancelled()) return { kind: "cancelled" };
@@ -64,6 +152,19 @@ export async function pollExport(opts: {
       if (res.ok) {
         failures = 0;
         const { export: exp } = (await res.json()) as { export: { status: string; fileKey: string | null } };
+        if (exp.status === "PENDING") {
+          pendingSince ??= now();
+          if (!hinted && now() - pendingSince > hintMs) {
+            hinted = true;
+            opts.onPendingLong?.(true);
+          }
+        } else {
+          pendingSince = null;
+          if (hinted) {
+            hinted = false;
+            opts.onPendingLong?.(false);
+          }
+        }
         if (exp.status === "DONE" && exp.fileKey) return { kind: "done", fileKey: exp.fileKey };
         if (exp.status === "FAILED") {
           return { kind: "failed", message: "La préparation du ZIP a échoué. Réessayez." };

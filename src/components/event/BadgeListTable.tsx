@@ -7,7 +7,8 @@ import { Checkbox } from "@/components/ui/FormControls";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
-import { toastSuccess } from "@/lib/toast";
+import { toastError, toastSuccess } from "@/lib/toast";
+import { storeSelection } from "@/lib/badge-batch-client";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Row = {
@@ -87,8 +88,14 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
 
   function openBatchPdf() {
     if (selected.size === 0) return;
-    const ids = Array.from(selected).join(",");
-    window.open(`/event/${eventId}/badges/print?ids=${encodeURIComponent(ids)}`, "_blank");
+    // La sélection (potentiellement des milliers d'ids) ne passe pas par l'URL : elle est rangée
+    // dans sessionStorage, l'onglet ouvert la relit par sa clé (copiée à l'ouverture de l'onglet).
+    const key = storeSelection(window.sessionStorage, Array.from(selected));
+    if (!key) {
+      toastError("Impossible de préparer la sélection : le stockage du navigateur est indisponible.");
+      return;
+    }
+    window.open(`/event/${eventId}/badges/print?sel=${key}`, "_blank");
   }
 
   return (

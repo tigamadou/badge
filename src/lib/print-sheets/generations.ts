@@ -1,5 +1,6 @@
 import type { PrintSheetGeneration } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { chunk } from "@/lib/badge-batch";
 import { logActivity } from "@/lib/activity-log";
 import { resolveEventTemplate } from "@/lib/badge-templates/render-badge";
 import { BadgeTooLargeError, computeSheetLayout, type LayoutSpec } from "./compute-layout";
@@ -67,6 +68,9 @@ export function orderRegistrations<
   );
 }
 
+// Taille des lectures par identifiants (borne le nombre de parametres SQL d'une requete).
+const READ_CHUNK = 5000;
+
 async function selectRegistrations(eventId: string, selection: GenerationSelection) {
   // Colonnes minimales : des milliers de lignes, sans photo ni pieces d'identite.
   const select = {
@@ -80,7 +84,12 @@ async function selectRegistrations(eventId: string, selection: GenerationSelecti
   if (selection.mode === "IDS") {
     const ids = [...new Set(selection.registrationIds)];
     if (ids.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription sélectionnée");
-    const rows = await prisma.registration.findMany({ where: { id: { in: ids } }, select });
+    // Lecture par paquets : une selection de plusieurs milliers d'ids ne tient pas dans une requete.
+    const rows = (
+      await Promise.all(
+        chunk(ids, READ_CHUNK).map((part) => prisma.registration.findMany({ where: { id: { in: part } }, select })),
+      )
+    ).flat();
     if (rows.length !== ids.length || rows.some((r) => r.eventId !== eventId || r.status !== "APPROVED")) {
       throw new GenerationError(
         "INVALID_SELECTION",
@@ -161,16 +170,33 @@ export async function createGeneration(input: {
 
 // Export ZIP de l'organisateur : un PDF par badge, dans l'ordre de la sélection, sans plafond.
 // Pas de gabarit ni d'instantané de planche (layoutSnapshot reste null).
+// Un export identique (même évènement, même utilisateur, même liste ordonnée) encore PENDING ou
+// RUNNING est renvoyé tel quel (`reused`) au lieu d'être dupliqué : double clic, rechargement.
 export async function createZipExport(input: {
   eventId: string;
   registrationIds: string[];
   userId: string;
-}): Promise<PrintSheetGeneration> {
+}): Promise<{ generation: PrintSheetGeneration; reused: boolean }> {
   const ids = [...new Set(input.registrationIds)];
+  if (ids.length > 0) {
+    const inProgress = await prisma.printSheetGeneration.findMany({
+      where: {
+        eventId: input.eventId,
+        output: "ZIP",
+        createdById: input.userId,
+        status: { in: ["PENDING", "RUNNING"] },
+        badgeCount: ids.length,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    // badgeCount egal : les deux listes ont la meme longueur, il reste a comparer l'ordre.
+    const same = inProgress.find((g) => (g.registrationIds as string[]).every((id, i) => id === ids[i]));
+    if (same) return { generation: same, reused: true };
+  }
   const rows = await selectRegistrations(input.eventId, { mode: "IDS", registrationIds: ids });
   const byId = new Map(rows.map((r) => [r.id, r]));
   const ordered = ids.map((id) => byId.get(id)!);
-  return prisma.printSheetGeneration.create({
+  const generation = await prisma.printSheetGeneration.create({
     data: {
       output: "ZIP",
       eventId: input.eventId,
@@ -179,4 +205,5 @@ export async function createZipExport(input: {
       createdById: input.userId,
     },
   });
+  return { generation, reused: false };
 }

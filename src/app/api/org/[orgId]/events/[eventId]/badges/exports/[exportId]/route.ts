@@ -21,7 +21,6 @@ export const GET = withEventAuth(
         status: true,
         badgeCount: true,
         fileKey: true,
-        error: true,
         createdAt: true,
         completedAt: true,
       },

@@ -19,6 +19,7 @@ import {
   claimGeneration,
   defaultRunDeps,
   recoverStaleGenerations,
+  releaseGeneration,
   runGeneration,
   type RunDeps,
 } from "@/lib/print-sheets/run-generation";
@@ -146,7 +147,7 @@ describe("runGeneration", () => {
     const { d } = await deps({ missing: ["r1"], sizes: { r3: { w: 90, h: 120 } } });
     expect(await runGeneration(g.id, "w1", d)).toBe("FAILED");
     const row = await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } });
-    expect(row.error).toBe("le badge n° 3 n'a pas le format attendu");
+    expect(row.error).toBe("le badge n° 3 n'a pas le format attendu (le template a peut-être changé depuis la création)");
   });
 
   it("echoue quand le PDF d'un badge est illisible", async () => {
@@ -483,5 +484,41 @@ describe("recoverStaleGenerations", () => {
     });
     expect((await get(alive.id)).status).toBe("RUNNING");
     expect(await recoverStaleGenerations(t0)).toBe(0);
+  });
+});
+
+describe("releaseGeneration", () => {
+  const get = (id: string) => prisma.printSheetGeneration.findUniqueOrThrow({ where: { id } });
+
+  it("remet la generation du worker en PENDING sans consommer d'essai", async () => {
+    const g = await create({ attempts: 2, heartbeatAt: t0 });
+    expect(await releaseGeneration(g.id, "w1")).toBe(true);
+    expect(await get(g.id)).toMatchObject({ status: "PENDING", lockedBy: null, heartbeatAt: null, attempts: 1 });
+    // Un autre worker la prend aussitot, sans attendre le delai de reprise.
+    expect((await claimGeneration({ workerId: "w2", now: t0 }))!.id).toBe(g.id);
+  });
+
+  it("ne touche pas une generation d'un autre worker, terminee ou deja PENDING", async () => {
+    const other = await create({ lockedBy: "w2", attempts: 1 });
+    const pending = await create({ status: "PENDING", attempts: 0 });
+    const done = await create({ attempts: 1 });
+    await prisma.printSheetGeneration.update({ where: { id: done.id }, data: { status: "DONE" } });
+    for (const g of [other, pending, done]) expect(await releaseGeneration(g.id, "w1")).toBe(false);
+    expect(await get(other.id)).toMatchObject({ status: "RUNNING", lockedBy: "w2", attempts: 1 });
+    expect(await get(pending.id)).toMatchObject({ status: "PENDING", attempts: 0 });
+    expect((await get(done.id)).status).toBe("DONE");
+  });
+
+  it("le run en cours ne reecrit plus rien apres la liberation (LOCK_LOST)", async () => {
+    const g = await create({ attempts: 1, heartbeatAt: t0 });
+    const { d, upload } = await deps({
+      renderBadge: async (id) => {
+        await releaseGeneration(g.id, "w1");
+        return { pdf: await makeBadgePdf({ widthMm: BADGE.width, heightMm: BADGE.height, pages: 1 }), fileName: `${id}.pdf` };
+      },
+    });
+    expect(await runGeneration(g.id, "w1", d)).toBe("LOCK_LOST");
+    expect(upload).not.toHaveBeenCalled();
+    expect(await get(g.id)).toMatchObject({ status: "PENDING", lockedBy: null, fileKey: null, attempts: 0 });
   });
 });

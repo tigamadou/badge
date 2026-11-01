@@ -91,8 +91,10 @@ rôle, un composant de ligne appelle `useAsyncAction((role) => …)` et `run(rol
 **F — upload** : l'indicateur en place (« Envoi… ») sert de loader ; une erreur donne un
 `toastApiError` avec un repli propre au fichier ; pas de toast de succès (la `FileBox` affiche le fichier).
 
-**G — action longue** : inchangée (`BadgeTemplateInstaller`, ZIP de lot) ; on vérifie que le
-bouton est désactivé ou masqué pendant l'exécution.
+**G — action longue** : inchangée pour `BadgeTemplateInstaller` ; on vérifie que le bouton est
+désactivé ou masqué pendant l'exécution. Le ZIP de lot n'est plus une action synchrone : c'est un
+export asynchrone préparé par le worker (le panneau affiche « Préparation… » puis le lien de
+téléchargement, voir [`impression-planches.md`](impression-planches.md#export-zip-de-lorganisateur)).
 
 ## Hors migration
 

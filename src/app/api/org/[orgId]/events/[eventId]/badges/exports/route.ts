@@ -20,11 +20,13 @@ export const POST = withEventAuth(
       return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
     }
     try {
-      const generation = await createZipExport({
+      const { generation, reused } = await createZipExport({
         eventId,
         registrationIds: parsed.data.ids,
         userId: session.user.id,
       });
+      // Export identique déjà en cours : on le renvoie, sans doublon ni nouvelle entrée de journal.
+      if (reused) return NextResponse.json({ export: exportView(generation) });
       await logActivity({
         type: "BADGE_BATCH_EXPORTED",
         userId: session.user.id,

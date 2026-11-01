@@ -231,9 +231,15 @@ test.describe("Event — Badges", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     const urlOf = (id: string) => `/api/org/${orgId}/events/${eventId}/badges/${id}?format=html`;
-    const res = await page.goto(`/event/${eventId}/badges/print?ids=${reg.id},${reg2.id},${pending.id},inconnu`);
+    // La selection voyage par sessionStorage (cle `?sel=`), jamais dans l'URL.
+    const selKey = "e2e-selection";
+    await page.evaluate(
+      ([key, ids]) => window.sessionStorage.setItem(`badge-batch-sel:${key}`, JSON.stringify(ids)),
+      [selKey, [reg.id, reg2.id, pending.id, "inconnu"]] as const,
+    );
+    const res = await page.goto(`/event/${eventId}/badges/print?sel=${selKey}`);
     expect(res?.status()).toBe(200);
-    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/print`));
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges/print\\?sel=${selKey}$`));
     await expect(page.getByText("2 identifiant(s) ignoré(s) : introuvables ou non approuvés.")).toBeVisible();
 
     const view = page.locator('[data-testid="badge-document"]');
@@ -253,15 +259,51 @@ test.describe("Event — Badges", () => {
     // Export asynchrone : le worker prépare l'archive, le lien apparaît à la fin.
     await page.getByRole("button", { name: "Préparer le ZIP" }).click();
     await expect(page.getByText("Préparation… (2 badges)")).toBeVisible();
+    // Rechargement pendant la preparation : le suivi du meme export reprend, sans doublon.
+    await page.reload();
+    await expect(page.getByText("Préparation… (2 badges)")).toBeVisible();
     const zipLink = page.getByRole("link", { name: "Télécharger le ZIP" });
     await expect(zipLink).toBeVisible({ timeout: 90_000 });
     const [download] = await Promise.all([page.waitForEvent("download"), zipLink.click()]);
     expect(download.suggestedFilename()).toMatch(/\.zip$/);
     await expectLastActivity({ type: "BADGE_BATCH_EXPORTED", userId: admin.id, eventId });
+    expect(await getDb().printSheetGeneration.count({ where: { eventId, output: "ZIP" } })).toBe(1);
 
     await page.getByRole("button", { name: "Marquer imprimés" }).click();
     await expect(toast(page, "2 badge(s) marqué(s) imprimé(s).")).toBeVisible();
     await expectLastActivity({ type: "BADGE_BATCH_PRINTED", userId: admin.id, eventId });
+  });
+
+  test("Une selection introuvable affiche un message clair", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "bdg-nosel" });
+    const admin = await makeEventAdminUser({ scope: "bdg-nosel", eventId, orgId });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+    for (const path of [`/event/${eventId}/badges/print`, `/event/${eventId}/badges/print?sel=expiree`]) {
+      await page.goto(path);
+      await expect(page.getByText("Sélection introuvable : revenez à la liste des badges.")).toBeVisible();
+    }
+  });
+
+  test("Depuis la liste, « Aperçu PDF » ouvre le lot par une cle de selection, sans ids dans l'URL", async ({
+    page,
+    context,
+  }) => {
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-list-open" });
+    const admin = await makeEventAdminUser({ scope: "bdg-list-open", eventId, orgId });
+    const participant = await createTestUser({ scope: "bdg-list-open-p", verified: true, profile: true });
+    const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+    await page.getByRole("link", { name: /badges/i }).first().click();
+    await page.getByRole("checkbox").first().check();
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByRole("button", { name: /aperçu pdf/i }).click(),
+    ]);
+    await popup.waitForLoadState();
+    expect(popup.url()).toMatch(/\/badges\/print\?sel=[0-9a-f]{32}$/);
+    expect(popup.url()).not.toContain(reg.id);
+    await expect(popup.getByText("1 badge(s) à imprimer")).toBeVisible();
+    await expect(popup.getByRole("button", { name: new RegExp(`N° ${reg.id}`) })).toBeVisible();
   });
 
   // --- Garde des pages -----------------------------------------------------
@@ -273,7 +315,7 @@ test.describe("Event — Badges", () => {
     const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
     await loginAndEnter(page, viewer, { kind: "event", id: eventId });
 
-    for (const path of [`/event/${eventId}/badges/print?ids=${reg.id}`, `/event/${eventId}/badges/${reg.id}`]) {
+    for (const path of [`/event/${eventId}/badges/print?sel=inconnue`, `/event/${eventId}/badges/${reg.id}`]) {
       await page.goto(path);
       await expect(page).toHaveURL(new RegExp(`/event/${eventId}$`));
       // Le tableau de bord de l'evenement liste d'autres informations (accessibles au VIEWER) :

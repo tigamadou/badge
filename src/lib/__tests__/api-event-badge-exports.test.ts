@@ -110,6 +110,65 @@ describe("POST /api/org/[orgId]/events/[eventId]/badges/exports", () => {
     expect((await res.json()).export.badgeCount).toBe(750);
   }, 60_000);
 
+  it("reutilise (200) un export identique encore PENDING ou RUNNING du meme utilisateur", async () => {
+    const { admin, org, event, addRegistration } = await createBadgeFixtures();
+    const a = await addRegistration();
+    const b = await addRegistration();
+    const first = await post(org.id, event.id, { ids: [a.id, b.id] });
+    expect(first.status).toBe(201);
+    const { export: created } = await first.json();
+
+    const again = await post(org.id, event.id, { ids: [a.id, b.id, a.id] });
+    expect(again.status).toBe(200);
+    expect((await again.json()).export.id).toBe(created.id);
+
+    await prisma.printSheetGeneration.update({
+      where: { id: created.id },
+      data: { status: "RUNNING", lockedBy: "w", heartbeatAt: new Date(), attempts: 1 },
+    });
+    const running = await post(org.id, event.id, { ids: [a.id, b.id] });
+    expect(running.status).toBe(200);
+    expect((await running.json()).export).toMatchObject({ id: created.id, status: "RUNNING" });
+
+    expect(await prisma.printSheetGeneration.count({ where: { eventId: event.id } })).toBe(1);
+    // Pas de nouvelle entree de journal pour une reutilisation.
+    expect(await prisma.activityLog.count({ where: { type: "BADGE_BATCH_EXPORTED", eventId: event.id } })).toBe(1);
+    expect(admin.id).toBeTruthy();
+  });
+
+  it("ne reutilise pas : autre ordre, autre selection, autre utilisateur, export termine ou en echec", async () => {
+    const { org, event, addRegistration } = await createBadgeFixtures();
+    const a = await addRegistration();
+    const b = await addRegistration();
+    const { export: base } = await (await post(org.id, event.id, { ids: [a.id, b.id] })).json();
+
+    const reversed = await post(org.id, event.id, { ids: [b.id, a.id] });
+    expect(reversed.status).toBe(201);
+    const subset = await post(org.id, event.id, { ids: [a.id] });
+    expect(subset.status).toBe(201);
+
+    // Autre utilisateur : l'export de base lui appartient plus.
+    const other = await prisma.user.create({
+      data: { email: `o-${Date.now()}@render.test`, password: "x", name: "O", emailVerifiedAt: new Date() },
+    });
+    await prisma.printSheetGeneration.deleteMany({ where: { eventId: event.id, id: { not: base.id } } });
+    await prisma.printSheetGeneration.update({ where: { id: base.id }, data: { createdById: other.id } });
+    const foreign = await post(org.id, event.id, { ids: [a.id, b.id] });
+    expect(foreign.status).toBe(201);
+    expect((await foreign.json()).export.id).not.toBe(base.id);
+
+    // Termine ou en echec : on en cree un nouveau.
+    await prisma.printSheetGeneration.deleteMany({ where: { eventId: event.id } });
+    for (const status of ["DONE", "FAILED"] as const) {
+      const { export: e } = await (await post(org.id, event.id, { ids: [a.id] })).json();
+      await prisma.printSheetGeneration.update({ where: { id: e.id }, data: { status } });
+      const next = await post(org.id, event.id, { ids: [a.id] });
+      expect(next.status).toBe(201);
+      expect((await next.json()).export.id).not.toBe(e.id);
+      await prisma.printSheetGeneration.deleteMany({ where: { eventId: event.id } });
+    }
+  });
+
   it("fonctionne sur un evenement archive", async () => {
     const { org, event, addRegistration } = await createBadgeFixtures();
     const a = await addRegistration();
@@ -124,6 +183,26 @@ describe("POST /api/org/[orgId]/events/[eventId]/badges/exports", () => {
       expect(res.status).toBe(400);
       expect(await res.json()).toEqual({ error: "VALIDATION" });
     }
+  });
+
+  it("400 VALIDATION si le corps n'est pas du JSON", async () => {
+    const { org, event } = await createBadgeFixtures();
+    const res = await POST(
+      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/badges/exports`, {
+        method: "POST",
+        body: "{pas du json",
+      }),
+      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("une erreur inattendue n'est pas masquee en reponse metier", async () => {
+    const { org, event, addRegistration } = await createBadgeFixtures();
+    const a = await addRegistration();
+    const spy = vi.spyOn(prisma.printSheetGeneration, "create").mockRejectedValueOnce(new Error("db HS"));
+    await expect(post(org.id, event.id, { ids: [a.id] })).rejects.toThrow("db HS");
+    spy.mockRestore();
   });
 
   it("400 EMPTY_SELECTION sans identifiant", async () => {
@@ -166,6 +245,23 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/exports/[exportId]", () =
       status: "DONE",
       fileKey: `badge-exports/${event.id}/${exp.id}.zip`,
     });
+  });
+
+  it("n'expose jamais le message d'erreur interne du worker a l'organisateur", async () => {
+    const { org, event, addRegistration } = await createBadgeFixtures();
+    const a = await addRegistration();
+    const created = await post(org.id, event.id, { ids: [a.id] });
+    expect("error" in (await created.json()).export).toBe(false);
+    const { export: exp } = await (await post(org.id, event.id, { ids: [a.id] })).json();
+    await prisma.printSheetGeneration.update({
+      where: { id: exp.id },
+      data: { status: "FAILED", error: "S3 AccessDenied bucket=prod-secret PrismaClientKnownRequestError" },
+    });
+    const res = await get(org.id, event.id, exp.id);
+    const body = await res.json();
+    expect(body.export.status).toBe("FAILED");
+    expect("error" in body.export).toBe(false);
+    expect(JSON.stringify(body)).not.toMatch(/S3|Prisma|prod-secret/);
   });
 
   it("404 pour l'export d'un autre evenement", async () => {

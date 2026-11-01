@@ -15,7 +15,9 @@ const MIN = 60_000;
 beforeEach(() => fakeTransport().install());
 afterEach(() => __mailTesting.reset());
 
+const noRelease = async () => false;
 const noGen = {
+  release: noRelease,
   claim: async () => null,
   run: async () => "DONE" as const,
   recover: async () => 0,
@@ -185,7 +187,7 @@ describe("createWorkerLoop", () => {
         workerId: "w",
         config,
         log,
-        deps: { processBatch, printSheets: { claim, run, recover } },
+        deps: { processBatch, printSheets: { release: noRelease, claim, run, recover } },
       });
       await loop.runOnce(t0);
       expect(run).toHaveBeenCalledWith("g1", "w");
@@ -208,12 +210,98 @@ describe("createWorkerLoop", () => {
       const loop = createWorkerLoop({
         workerId: "w",
         config,
-        deps: { processBatch: async () => empty, printSheets: { claim, run, recover: async () => 0 } },
+        deps: { processBatch: async () => empty, printSheets: { release: noRelease, claim, run, recover: async () => 0 } },
       });
       const running = loop.start();
       await sleep(30);
       await Promise.race([loop.stop(), sleep(500).then(() => Promise.reject(new Error("bloque")))]);
       await running;
+    });
+
+    it("stop() libere la generation en cours pour qu'un autre worker la reprenne", async () => {
+      const run = vi.fn(() => new Promise<"DONE">(() => {}));
+      const claim = vi.fn().mockResolvedValueOnce(row).mockResolvedValue(null);
+      const release = vi.fn(async () => true);
+      const log = vi.fn();
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch: async () => empty, printSheets: { release, claim, run, recover: async () => 0 } },
+      });
+      const running = loop.start();
+      await sleep(30);
+      await loop.stop();
+      await running;
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(release).toHaveBeenCalledWith("g1", "w");
+      expect(log).toHaveBeenCalledWith("[worker] print generation released", { id: "g1", released: true });
+    });
+
+    it("stop() sans generation en cours, ou deja terminee, ne libere rien", async () => {
+      const release = vi.fn(async () => true);
+      const claim = vi.fn().mockResolvedValueOnce(row).mockResolvedValue(null);
+      const run = vi.fn(async () => "DONE" as const);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch: async () => empty, printSheets: { release, claim, run, recover: async () => 0 } },
+      });
+      await loop.runOnce(t0);
+      await sleep(10); // la generation est terminee
+      await loop.stop();
+      expect(release).not.toHaveBeenCalled();
+      const idle = createWorkerLoop({ workerId: "w", config, deps: { processBatch: async () => empty, printSheets: { ...noGen, release } } });
+      await idle.stop();
+      expect(release).not.toHaveBeenCalled();
+    });
+
+    it("un echec de liberation est journalise sans empecher l'arret", async () => {
+      const run = vi.fn(() => new Promise<"DONE">(() => {}));
+      const claim = vi.fn().mockResolvedValue(row);
+      const release = vi.fn().mockRejectedValueOnce(new Error("db")).mockRejectedValueOnce("x");
+      const log = vi.fn();
+      const mk = () =>
+        createWorkerLoop({
+          workerId: "w",
+          config,
+          log,
+          deps: { processBatch: async () => empty, printSheets: { release, claim, run, recover: async () => 0 } },
+        });
+      for (const error of ["db", "x"]) {
+        const loop = mk();
+        await loop.runOnce(t0);
+        await loop.stop();
+        expect(log).toHaveBeenCalledWith("[worker] print generation release failed", { id: "g1", error });
+      }
+    });
+
+    it("apres stop(), plus aucune generation n'est reservee", async () => {
+      const claim = vi.fn().mockResolvedValue(row);
+      const recover = vi.fn(async () => 0);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch: async () => empty, printSheets: { ...noGen, claim, recover } },
+      });
+      await loop.stop();
+      await loop.runOnce(t0);
+      expect(claim).not.toHaveBeenCalled();
+    });
+
+    it("runOnce sans planches (mode --once) ne reprend ni ne reserve de generation, mais envoie les emails", async () => {
+      const claim = vi.fn().mockResolvedValue(row);
+      const recover = vi.fn(async () => 0);
+      const processBatch = vi.fn(async () => empty);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch, printSheets: { ...noGen, claim, recover } },
+      });
+      await loop.runOnce(t0, { printSheets: false });
+      expect(claim).not.toHaveBeenCalled();
+      expect(recover).not.toHaveBeenCalled();
+      expect(processBatch).toHaveBeenCalledTimes(1);
     });
 
     it("journalise un run qui plante, puis libère le worker", async () => {
@@ -224,7 +312,7 @@ describe("createWorkerLoop", () => {
         workerId: "w",
         config,
         log,
-        deps: { processBatch: async () => empty, printSheets: { claim, run, recover: async () => 0 } },
+        deps: { processBatch: async () => empty, printSheets: { release: noRelease, claim, run, recover: async () => 0 } },
       });
       await loop.runOnce(t0);
       await sleep(5);
@@ -248,7 +336,7 @@ describe("createWorkerLoop", () => {
         workerId: "w",
         config,
         log,
-        deps: { processBatch, printSheets: { claim, run, recover: async () => 1 } },
+        deps: { processBatch, printSheets: { release: noRelease, claim, run, recover: async () => 1 } },
       });
       await loop.runOnce(t0);
       await sleep(10);

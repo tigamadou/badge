@@ -7,6 +7,7 @@ import { purgeReadNotifications } from "@/lib/notifications/retention";
 import {
   claimGeneration,
   recoverStaleGenerations,
+  releaseGeneration,
   runGeneration,
 } from "@/lib/print-sheets/run-generation";
 
@@ -19,6 +20,7 @@ export type WorkerDeps = {
   runSubscriptionSweep: typeof runSubscriptionSweep;
   printSheets: {
     claim: typeof claimGeneration;
+    release: typeof releaseGeneration;
     run: typeof runGeneration;
     recover: typeof recoverStaleGenerations;
   };
@@ -38,7 +40,12 @@ export function createWorkerLoop(opts: {
     purgeOldJobs,
     purgeReadNotifications,
     runSubscriptionSweep,
-    printSheets: { claim: claimGeneration, run: runGeneration, recover: recoverStaleGenerations },
+    printSheets: {
+      claim: claimGeneration,
+      release: releaseGeneration,
+      run: runGeneration,
+      recover: recoverStaleGenerations,
+    },
     ...opts.deps,
   };
 
@@ -49,6 +56,7 @@ export function createWorkerLoop(opts: {
   let wake: (() => void) | null = null;
   // Generation d'impression en cours dans ce worker : une seule a la fois, jamais attendue.
   let generation: Promise<unknown> | null = null;
+  let generationId: string | null = null;
 
   // Un journal defaillant ne doit jamais faire echouer une generation ni l'envoi des emails.
   function safeLog(message: string, meta?: Record<string, unknown>): void {
@@ -65,7 +73,8 @@ export function createWorkerLoop(opts: {
     try {
       const recovered = await deps.printSheets.recover(now);
       if (recovered > 0) safeLog("[worker] recovered stale print generations", { recovered });
-      if (generation) return;
+      // Arret demande : aucune nouvelle reservation (elle serait a rendre aussitot).
+      if (generation || stopping) return;
       const claimed = await deps.printSheets.claim({ workerId, now });
       if (!claimed) return;
       safeLog("[worker] print generation started", { id: claimed.id });
@@ -78,11 +87,12 @@ export function createWorkerLoop(opts: {
             error: err instanceof Error ? err.message : String(err),
           }),
         )
-        .catch(() => {})
         .finally(() => {
           generation = null;
+          generationId = null;
         });
       generation = promise;
+      generationId = claimed.id;
     } catch (err) {
       safeLog("[worker] print generation dispatch failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -90,7 +100,12 @@ export function createWorkerLoop(opts: {
     }
   }
 
-  async function runOnce(now: Date = new Date()): Promise<BatchSummary> {
+  // `printSheets: false` (mode --once) : ni reprise ni reservation de generation, qu'un processus
+  // qui s'arrete aussitot laisserait a moitie faite.
+  async function runOnce(
+    now: Date = new Date(),
+    opts: { printSheets?: boolean } = {},
+  ): Promise<BatchSummary> {
     const recovered = await deps.recoverStaleJobs(now);
     if (recovered > 0) log("[worker] recovered stale jobs", { recovered });
     if (lastPurgeAt === null || now.getTime() - lastPurgeAt >= PURGE_INTERVAL_MS) {
@@ -109,7 +124,7 @@ export function createWorkerLoop(opts: {
         log("[worker] subscription sweep", { ...sweep });
       }
     }
-    await dispatchGeneration(now);
+    if (opts.printSheets !== false) await dispatchGeneration(now);
     return deps.processBatch({ workerId, limit: config.emailConcurrency, now });
   }
 
@@ -149,6 +164,20 @@ export function createWorkerLoop(opts: {
     stopping = true;
     wake?.();
     await current;
+    // La generation en cours n'est pas attendue : on rend sa reservation pour qu'un autre worker
+    // la prenne tout de suite (le run detache ne pourra plus rien ecrire).
+    const id = generationId;
+    if (id) {
+      try {
+        const released = await deps.printSheets.release(id, workerId);
+        safeLog("[worker] print generation released", { id, released });
+      } catch (err) {
+        safeLog("[worker] print generation release failed", {
+          id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
   }
 
   return { runOnce, start, stop };

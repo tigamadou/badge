@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { CatPill } from "@/components/ui/Labels";
-import { markInChunks, pollExport } from "@/lib/badge-batch-client";
+import {
+  forgetExport,
+  markInChunks,
+  pollExport,
+  recallExport,
+  rememberExport,
+} from "@/lib/badge-batch-client";
 import { ActionError, apiErrorMessage, toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { BadgeDocumentView } from "@/components/badge/BadgeDocumentView";
@@ -37,12 +43,15 @@ export function BadgeBatchPanel({
   archived,
   badges,
   ignored,
+  selectionKey,
 }: {
   orgId: string;
   eventId: string;
   archived: boolean;
   badges: BatchBadge[];
   ignored: number;
+  // Clé de la sélection (sessionStorage) : sert à retrouver l'export en cours après un rechargement.
+  selectionKey: string;
 }) {
   const [currentId, setCurrentId] = useState<string | null>(badges[0]?.id ?? null);
   const [printedIds, setPrintedIds] = useState<Set<string>>(
@@ -52,6 +61,8 @@ export function BadgeBatchPanel({
   const base = `/api/org/${orgId}/events/${eventId}`;
   const ids = badges.map((b) => b.id);
   const [exportState, setExportState] = useState<ExportState>({ kind: "idle" });
+  // Vrai quand l'export reste PENDING depuis plus de 5 minutes (worker absent ou saturé).
+  const [pendingLong, setPendingLong] = useState(false);
 
   const prepareZip = useAsyncAction(
     async () => {
@@ -66,9 +77,22 @@ export function BadgeBatchPanel({
     },
     {
       error: "La préparation du ZIP a échoué.",
-      onSuccess: (exp) => setExportState({ kind: "pending", id: exp.id, count: exp.badgeCount ?? ids.length }),
+      onSuccess: (exp) => {
+        rememberExport(window.sessionStorage, eventId, selectionKey, exp.id);
+        setPendingLong(false);
+        setExportState({ kind: "pending", id: exp.id, count: exp.badgeCount ?? ids.length });
+      },
     },
   );
+
+  // Rechargement pendant la préparation : on reprend le suivi du même export. Le serveur renvoie
+  // aussi l'export en cours pour une même sélection, un second onglet ne crée donc pas de doublon.
+  useEffect(() => {
+    const remembered = recallExport(window.sessionStorage, eventId, selectionKey);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (remembered) setExportState({ kind: "pending", id: remembered, count: badges.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, selectionKey]);
 
   // Interroge l'export toutes les 3 s (requêtes jamais simultanées) tant qu'il est en préparation.
   const pendingId = exportState.kind === "pending" ? exportState.id : null;
@@ -80,14 +104,21 @@ export function BadgeBatchPanel({
       sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
       cancelled: () => cancelled,
       intervalMs: EXPORT_POLL_MS,
+      onPendingLong: (long) => {
+        if (!cancelled) setPendingLong(long);
+      },
     }).then((outcome) => {
+      if (outcome.kind === "cancelled") return;
+      // Export terminé ou perdu : inutile de le reprendre au prochain rechargement d'un échec.
+      if (outcome.kind === "failed") forgetExport(window.sessionStorage, eventId, selectionKey);
+      setPendingLong(false);
       if (outcome.kind === "done") setExportState({ kind: "done", fileKey: outcome.fileKey });
-      else if (outcome.kind === "failed") setExportState({ kind: "failed", message: outcome.message });
+      else setExportState({ kind: "failed", message: outcome.message });
     });
     return () => {
       cancelled = true;
     };
-  }, [base, pendingId]);
+  }, [base, pendingId, eventId, selectionKey]);
 
   // Identifiants déjà marqués pendant cette session : un nouvel essai n'envoie que le reste
   // (la route renvoie les mails et notifications à chaque appel, elle n'est pas idempotente).
@@ -195,6 +226,12 @@ export function BadgeBatchPanel({
                   Marquer imprimés
                 </Button>
               </div>
+              {exportState.kind === "pending" && pendingLong && (
+                <p role="status" className="text-[13px] text-amber-700">
+                  Toujours en attente : le traitement peut être retardé. Vous pouvez fermer cette page et revenir
+                  plus tard.
+                </p>
+              )}
               {exportState.kind === "failed" && (
                 <p role="alert" className="text-[13px] text-red-700">
                   {exportState.message}

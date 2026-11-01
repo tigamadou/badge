@@ -156,7 +156,7 @@ export async function runGeneration(
       } catch (err) {
         if (err instanceof BadgeSizeMismatchError) {
           throw new Error(
-            `le badge n° ${kept[err.badgeIndex].position} n'a pas le format attendu`,
+            `le badge n° ${kept[err.badgeIndex].position} n'a pas le format attendu (le template a peut-être changé depuis la création)`,
           );
         }
         throw err;
@@ -185,6 +185,18 @@ export async function runGeneration(
   } finally {
     clearInterval(beat);
   }
+}
+
+// Arret propre du worker : rend la generation qu'il avait reservee, sans consommer d'essai
+// (claim l'avait compte), pour qu'un autre worker la reprenne aussitot. Conditionnel a la
+// reservation : le run encore en cours echouera sur sa condition de propriete (LOCK_LOST) et
+// n'ecrira plus rien. false si la generation n'est plus RUNNING chez ce worker (deja terminee).
+export async function releaseGeneration(generationId: string, workerId: string): Promise<boolean> {
+  const { count } = await prisma.printSheetGeneration.updateMany({
+    where: { id: generationId, status: "RUNNING", lockedBy: workerId },
+    data: { status: "PENDING", lockedBy: null, heartbeatAt: null, attempts: { decrement: 1 } },
+  });
+  return count > 0;
 }
 
 // RUNNING sans battement recent : PENDING tant qu'il reste des essais, sinon FAILED.

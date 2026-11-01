@@ -187,7 +187,7 @@ limite de nombre) ; le worker le produit, avec la file et la reprise des planche
 d'impression (`PrintSheetGeneration` de sortie `ZIP`), le stocke en
 `badge-exports/{eventId}/{id}.zip`, et « Télécharger le ZIP » apparaît quand il est prêt.
 Le fichier est lisible par le staff et par les détenteurs de `badge.print` sur l'évènement.
-Voir [`impression-planches.md`](impression-planches.md#génération-asynchrone).
+Voir [`impression-planches.md`](impression-planches.md#export-zip-de-lorganisateur).
 
 ## Créer un template
 

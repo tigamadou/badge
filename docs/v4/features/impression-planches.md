@@ -76,7 +76,7 @@ Le service de rendu produit des pages **légèrement plus grandes** que le forma
 (de l'ordre de 0,1 à 0,4 mm). Chaque page de badge est donc contrôlée puis **rognée au format
 exact en conservant le coin haut-gauche**. La tolérance est de **0 à 2 mm au-dessus du format**
 (plus petit que le format, à 0,01 mm près, ou plus grand de plus de 2 mm : la génération
-échoue, aucune planche fausse ne sort). Un PDF de badge illisible ou sans la page attendue
+échoue, aucune planche fausse ne sort ; message : « le badge n° N n'a pas le format attendu (le template a peut-être changé depuis la création) »). Un PDF de badge illisible ou sans la page attendue
 fait aussi échouer la génération.
 
 ## Génération asynchrone
@@ -113,6 +113,44 @@ L'ancienne route `…/badges/print-zip` (200 badges au plus) est supprimée. L'o
 reprise. Le ZIP (un PDF par badge) est stocké en `badge-exports/{eventId}/{id}.zip` et se
 télécharge quand il est prêt. **Aucune limite de nombre.** Voir
 [`templates-badges.md`](templates-badges.md#export-zip-asynchrone).
+
+### Transport de la sélection (sans limite)
+
+Une sélection peut compter des milliers de badges : elle ne passe **pas par l'URL**.
+
+1. La liste des badges range les identifiants dans `sessionStorage` (clé
+   `badge-batch-sel:<clé aléatoire>`, les anciennes sélections sont purgées) et ouvre
+   `/event/[eventId]/badges/print?sel=<clé>` dans un nouvel onglet (qui hérite de la copie du
+   `sessionStorage` à l'ouverture).
+2. La page (garde `badge.print`) affiche `BadgeBatchLoader`, qui relit les identifiants et charge
+   les lignes par `POST …/badges/batch` (`badge.print`, évènement archivé permis). La route
+   lit par paquets de 5 000 identifiants, renvoie les inscriptions approuvées **dans l'ordre de la
+   sélection** avec le strict nécessaire (id, libellé, catégorie, couleur, imprimé) et le nombre
+   `ignored` (inconnus, d'un autre évènement ou non approuvés), calculé sur la liste complète.
+3. Aucun plafond : plus de `MAX_IDS_READ` ni de lien `?ids=`. Clé absente ou expirée (onglet
+   ouvert autrement) : « Sélection introuvable : revenez à la liste des badges. »
+
+### Export identique déjà en cours, attente et reprise
+
+- `POST …/badges/exports` renvoie l'export existant (`200`, sans nouvelle ligne ni entrée de
+  journal) si le même utilisateur a déjà, pour le même évènement et la même liste ordonnée
+  d'identifiants, un export `PENDING` ou `RUNNING` (double clic, second onglet). Sinon `201`.
+- Le panneau retient l'export en cours dans `sessionStorage` (par évènement et sélection) : un
+  rechargement reprend le suivi du même export (et, si fini, réaffiche le lien de téléchargement).
+- Si l'export reste `PENDING` plus de **5 minutes** (`PENDING_HINT_MS`), le panneau ajoute :
+  « Toujours en attente : le traitement peut être retardé. Vous pouvez fermer cette page et
+  revenir plus tard. » Le suivi continue.
+- L'organisateur ne reçoit **jamais** le message d'erreur du worker (S3, rendu, Prisma) : la vue
+  d'export ne contient que le statut, l'écran plateforme du staff garde le détail.
+
+### Arrêt du worker
+
+À l'arrêt (SIGTERM/SIGINT), le worker **rend la réservation** de la génération en cours
+(`releaseGeneration` : `PENDING`, `attempts − 1`, conditionnel à `RUNNING` et à son identifiant) :
+un autre worker la reprend aussitôt, sans attendre les 3 minutes et sans consommer d'essai. Le run
+détaché perd sa condition de propriété et n'écrit plus rien (`LOCK_LOST`). Le mode `--once`
+n'amorce ni ne reprend aucune génération (il traite uniquement les emails), pour ne jamais en
+laisser une à moitié faite.
 
 ## Droits
 

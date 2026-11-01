@@ -10,7 +10,7 @@ const badge = (id: string, label = "Awa Diallo"): BatchBadge => ({
   printed: false,
 });
 
-const base = { orgId: "o1", eventId: "e1", archived: false, ignored: 0 };
+const base = { orgId: "o1", eventId: "e1", archived: false, ignored: 0, selectionKey: "s1" };
 
 describe("BadgeBatchPanel", () => {
   it("liste les badges, montre le premier et propose le ZIP", () => {
@@ -39,11 +39,12 @@ describe("BadgeBatchPanel", () => {
     expect(html).not.toContain("<page-view");
   });
 
-  it("aucun plafond : 750 badges gardent le bouton de preparation", () => {
-    const many = Array.from({ length: 750 }, (_, i) => badge(String(i)));
+  it("aucun plafond : 5 000 badges gardent le bouton de preparation", () => {
+    const many = Array.from({ length: 5000 }, (_, i) => badge(String(i)));
     const html = renderToStaticMarkup(<BadgeBatchPanel {...base} badges={many} />);
     expect(html).toContain("Préparer le ZIP");
     expect(html).not.toContain("au plus");
+    expect(html).toContain("5000 badge(s)");
   });
 
   it("evenement archive : marquage desactive avec la raison", () => {
