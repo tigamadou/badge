@@ -279,7 +279,7 @@ export async function advanceStatus(input: {
   requestId: string;
   userId: string;
   to: "IN_PRODUCTION" | "READY" | "COMPLETED";
-}): Promise<PrintRequest> {
+}): Promise<PrintRequest & { previousStatus: PrintRequestStatus }> {
   const action = Object.hasOwn(ADVANCE_ACTIONS, input.to) ? ADVANCE_ACTIONS[input.to] : null;
   if (!action) throw new PrintRequestError("VALIDATION", 400);
   const request = await loadRequest(input.requestId);
@@ -288,7 +288,8 @@ export async function advanceStatus(input: {
     const from: PrintRequestStatus = current.status;
     const to = await applyTransition(tx, current, action, "STAFF");
     await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
-    return tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    // Statut lu sous verrou : le journal d'activité n'utilise pas une lecture périmée.
+    return { ...(await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } })), previousStatus: from };
   });
 }
 
