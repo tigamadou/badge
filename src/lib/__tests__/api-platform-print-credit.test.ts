@@ -69,11 +69,26 @@ describe("POST /api/platform/print/requests/[requestId]/credit", () => {
     const { status, json } = await post(r.id, { amount: 20000 });
     expect(status).toBe(201);
     expect(json.line).toMatchObject({ kind: "DISCOUNT", unitPrice: -20000, lineTotal: -20000, addedBy: "STAFF" });
-    expect(json.available).toBe(25000);
+    // Chiffre de la page : la réservation de CETTE demande n'est pas retirée (excludeRequestId).
+    expect(json.available).toBe(45000);
     const logs = await prisma.activityLog.findMany({ where: { targetId: r.id, type: "PRINT_CREDIT_APPLIED" } });
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({ userId: fx.staffAdmin.id, orgId: fx.org.id, eventId: fx.event.id });
     expect(logs[0].details).toEqual({ amount: 20000 });
+  });
+
+  it("available exclut la réservation de la demande elle-même mais retire celle d'une autre demande", async () => {
+    const r = await requestOf();
+    const other = await requestOf();
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: other.id, kind: "DISCOUNT", label: "Crédit d'impression", quantity: 1, unitPrice: -5000,
+        lineTotal: -5000, position: 5, addedBy: "STAFF", usesOrgCredit: true,
+      },
+    });
+    expect((await post(r.id, { amount: 20000 })).json.available).toBe(40000);
+    // Rejouer remplace la ligne de cette demande : le chiffre ne dépend pas de sa propre réservation.
+    expect((await post(r.id, { amount: 30000 })).json.available).toBe(40000);
   });
 
   it("demande QUOTED : repasse SUBMITTED et prévient l'organisateur", async () => {

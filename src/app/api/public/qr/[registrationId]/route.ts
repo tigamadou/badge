@@ -12,8 +12,14 @@ export const runtime = "nodejs";
 export async function GET(req: Request, ctx: { params: Promise<{ registrationId: string }> }) {
   const { registrationId } = await ctx.params;
   const ip = extractClientIp(new Headers(req.headers));
-  const rl = checkRateLimit(ip, "public-qr", { max: 60 });
-  if (!rl.ok) return NextResponse.json({ error: "Rate limited", code: "RATE_LIMITED" }, { status: 429 });
+  const rl = checkRateLimit(ip, "public-qr", { max: 300 });
+  if (!rl.ok) {
+    // Les proxys d'images des clients mail rejouent beaucoup de requêtes depuis une même IP.
+    return NextResponse.json(
+      { error: "Rate limited", code: "RATE_LIMITED" },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
 
   const registration = await prisma.registration.findUnique({
     where: { id: registrationId },

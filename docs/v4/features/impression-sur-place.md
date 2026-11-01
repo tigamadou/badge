@@ -58,8 +58,9 @@ Une nouvelle version d'un template n'est **pas** adaptée d'office : l'admin doi
   ultérieure du réglage ne touche pas les demandes déjà envoyées.
 - **Changement de template après l'envoi** : si l'organisateur choisit ensuite un template non
   adapté, la demande affiche une alerte des deux côtés (`OnsiteTemplateAlert`) et le staff ne peut
-  plus la faire avancer (`assertOnsiteCanAdvance`). La **clôture** (`COMPLETED`), le refus et
-  l'annulation restent permis. Les demandes en amont, complémentaires et les brouillons ne sont pas
+  plus **envoyer son devis** (`assertOnsiteCanAdvance`, dans `sendQuote`). Le template est figé au
+  paiement : depuis `PAID`, plus rien n'est bloqué (production, mise à disposition, clôture) ; l'alerte
+  reste affichée. Le refus et l'annulation restent permis. Les demandes en amont, complémentaires et les brouillons ne sont pas
   concernés (`onsiteTemplateStatus` vaut `NOT_APPLICABLE`).
 
 ## QR d'accueil
@@ -71,7 +72,8 @@ qu'une demande sur place existe ou non.
 - **Email d'approbation** (`sendStatusNotification`) : bloc « Votre QR d'accueil » avec l'image
   hébergée `/api/public/qr/<ID>` (les clients mail bloquent les images `data:`), l'ID en clair et un
   lien vers « Voir mon inscription ». La route publique ne répond (PNG) que pour une inscription
-  `APPROVED` (`404` sinon), est limitée à 60 requêtes par minute et par IP, et ne contient aucune
+  `APPROVED` (`404` sinon), est limitée à 300 requêtes par minute et par IP (les proxys d'images des clients mail rejouent
+  beaucoup de requêtes ; un `429` porte `Retry-After`, en secondes), et ne contient aucune
   donnée personnelle.
 - **Compte participant** : la page `/account/registrations/[id]` affiche la carte « QR d'accueil »
   (image, ID, « À présenter à l'accueil, sur votre téléphone ou imprimé. ») pour une inscription
@@ -100,7 +102,8 @@ compteur, la caméra (désactivable) et un champ « Nom, email, ID ou contenu du
 | Inscription d'un autre évènement | `404 FOREIGN_EVENT` | « Ce QR ne correspond pas à cet évènement. » |
 | Inscription inconnue | `404 REGISTRATION_NOT_FOUND` | « Inscription introuvable. » |
 | Inscription non approuvée | `409 NOT_APPROVED` | « Inscription non approuvée (en attente) : le poste n'approuve personne. » (ou « refusée ») |
-| Demande ni payée ni en production | `409 REQUEST_NOT_PRINTABLE` | « Cette demande n'est pas ouverte à l'impression. » |
+| Demande ni payée, ni en production, ni prête (`loadOnsiteRequest`, recherche, lecture du QR) | `409 REQUEST_NOT_PRINTABLE` (brouillon : `404 NOT_FOUND`) | « Cette demande n'est pas ouverte à l'impression. » (l'écran du poste renvoie à la fiche de la demande) |
+| Demande sans ligne de badges | `409 REQUEST_NOT_PRINTABLE` | Pas de repli sur la quantité estimée : sans commande à honorer, le poste n'imprime pas |
 | Plafond atteint | `409 CAP_REACHED` | Bouton « Imprimer » désactivé et « Plafond atteint : seules les réimpressions restent possibles. » |
 
 **Impression.** « Imprimer » (`POST …/onsite/print`) ouvre l'onglet du PDF depuis le clic (sinon le
@@ -110,10 +113,15 @@ navigateur bloque la fenêtre), crée une ligne de journal `PrintRequestPrint` (
 (la première impression seulement ; l'échec de l'email ne bloque rien). La transaction prend les
 verrous dans l'ordre évènement puis demande : deux postes ne dépassent jamais le plafond.
 
-**Réimpression.** Un badge déjà imprimé affiche « Déjà imprimé le … » et ne propose plus que
-« Réimprimer ». La réimpression (`confirmReprint`) est journalisée avec `reprint = true`, **ne compte
-pas** et reste possible au plafond. Si le badge est imprimé entre le scan et le clic (autre poste),
-la fiche est rechargée pour proposer la réimpression.
+**Réimpression.** Une impression est une réimpression **seulement si le journal du poste
+(`PrintRequestPrint`) contient déjà une impression de cette inscription pour cette demande**
+(`printedOnsite` sur la fiche, calculé sous verrou à l'impression). Elle est journalisée avec
+`reprint = true`, **ne compte pas** et reste possible au plafond ; la fiche affiche « Déjà imprimé le … »
+et ne propose que « Réimprimer ». `badgePrinted` ne sert qu'à l'avertissement « déjà imprimé le … » :
+un badge marqué imprimé **ailleurs** (par l'organisateur) affiche l'avertissement « hors du poste :
+cette impression sera comptée » ; la confirmation (`confirmReprint`) reste demandée, mais l'impression
+est une **première impression** : elle est comptée et bloquée au plafond (`CAP_REACHED`). Si le badge est
+imprimé entre le scan et le clic (autre poste), la fiche est rechargée.
 
 ## Compteur et marge
 
@@ -144,12 +152,22 @@ Les deux issues s'excluent :
 
 | Situation | Issue |
 |---|---|
-| Imprimés < commandés | **Crédit** : `(commandés − imprimés) × prix unitaire de la ligne de badges`, versé à l'organisation (mouvement `EARNED`, entrée « badges non utilisés » au fil). 200 commandés à 1 500 FCFA, 170 imprimés : 45 000 FCFA |
-| Imprimés > commandés | **Demande complémentaire** liée (`parentRequestId`), créée directement en `QUOTED` : une ligne « Badges supplémentaires » (surplus × même prix unitaire), marge à 0. 200 commandés, 212 imprimés : 12 badges |
+| Imprimés < commandés | **Crédit** : `(commandés − imprimés) × prix unitaire effectif`, versé à l'organisation (mouvement `EARNED`, entrée « badges non utilisés » au fil). 200 commandés à 1 500 FCFA, 170 imprimés : 45 000 FCFA |
+| Imprimés > commandés | **Demande complémentaire** liée (`parentRequestId`), créée directement en `QUOTED` : une ligne « Badges supplémentaires » (surplus × prix unitaire effectif, quantité verrouillée), marge à 0. 200 commandés, 212 imprimés : 12 badges |
 | Imprimés = commandés, ligne gratuite ou absente | Rien |
 
-L'admin peut ajuster la demande complémentaire avant envoi ; l'OWNER l'accepte et la paie comme tout
-devis. Des liens croisés (`RelatedRequestLinks`) relient la demande, son complément et son parent des
+**Prix unitaire effectif.** `unitPrice × min(1, (total accepté + crédit dépensé) / somme des lignes
+positives actives)`, arrondi à l'entier (`effectiveUnitPrice`) : une remise du staff n'est pas recréditée
+comme si les badges avaient été payés plein tarif (remise de −150 000 sur 200 × 1 500, rien imprimé :
+crédit de 150 000, pas 300 000). Le crédit dépensé est la valeur absolue du mouvement `SPENT` de la
+demande. Sans total accepté, le prix de la ligne est conservé ; un prix effectif arrondi à 0 ne donne
+ni crédit ni surplus.
+
+L'admin peut ajuster la demande complémentaire avant envoi (crédit compris) ; l'OWNER l'accepte et la
+paie comme tout devis, mais **l'organisateur ne peut ni l'annuler ni la modifier** (`409 REQUEST_LOCKED`) :
+c'est une quantité ferme issue du journal. Le staff garde le refus. La clôture elle-même
+(`COMPLETED` sur une demande sur place) exige `STAFF_ADMIN` (`403 STAFF_FORBIDDEN` pour `STAFF_SUPPORT`) ;
+les journaux et notifications d'après commit ne la défont jamais en cas d'échec. Des liens croisés (`RelatedRequestLinks`) relient la demande, son complément et son parent des
 deux côtés. Le surplus n'est donc facturé qu'à la clôture, jamais en cours d'évènement. Une demande
 en amont et une demande sur place peuvent coexister sur un même évènement (aucun contrôle ajouté).
 
@@ -185,10 +203,12 @@ mouvements) s'affiche côté organisation et côté staff.
    C'est la première ligne produit `BADGE` active ; les autres lignes de badges et les accessoires
    sont ignorés (`findOrderedBadgeLine`). Le crédit et le surplus utilisent le prix unitaire de cette
    ligne (suppléments d'options compris).
-2. **Un badge déjà imprimé par l'organisateur puis réimprimé au poste n'est pas compté.** Le poste
-   traite tout badge déjà marqué imprimé comme une réimpression (`reprint = true`), quelle qu'en soit
-   l'origine. Les impressions de l'organisateur ou d'une demande en amont n'entrent jamais dans le
-   compteur : il ne lit que le journal du poste, premières impressions seulement.
+2. **Une réimpression est une impression déjà faite AU POSTE pour cette demande** (journal
+   `PrintRequestPrint`). Un badge marqué imprimé par l'organisateur ou par une demande en amont puis
+   imprimé au poste pour la première fois est **compté** et bloqué au plafond : sinon l'organisateur
+   marquerait tout « imprimé » pour obtenir des badges hors compteur et un crédit. Le compteur lit le
+   journal du poste, premières impressions seulement.
+3. **Ordre des lignes** : à position égale, la ligne de badges retenue est la première par identifiant.
 
 ## Droits
 
@@ -225,5 +245,5 @@ mouvements) s'affiche côté organisation et côté staff.
 - Le surplus n'est facturé qu'à la clôture ; le crédit n'est pas remboursable.
 - Les e2e ne couvrent pas la caméra : le contenu du QR est saisi dans le champ de recherche. La
   clôture et le crédit sont couverts par les tests unitaires et d'intégration.
-- Un badge imprimé par l'organisateur avant la demande sur place n'entre pas dans le compteur.
+- Un badge imprimé ailleurs puis imprimé au poste consomme du stock réel : il est compté (voir « Règles de comptage »).
 - L'énumération d'activité garde le nom `PRINT_REQUEST_MARGIN_RAISED` pour tout changement de marge.

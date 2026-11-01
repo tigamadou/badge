@@ -213,6 +213,15 @@ export async function applyTransition(
   return to;
 }
 
+// Une demande complémentaire (surplus facturé à la clôture) est une quantité ferme fixée par le
+// poste : l'organisateur ne la modifie ni ne l'annule, il l'accepte ou la laisse au staff.
+export function assertOrganizerMayChange(
+  request: { parentRequestId?: string | null },
+  side: "ORGANIZER" | "STAFF",
+): void {
+  if (side === "ORGANIZER" && request.parentRequestId) throw new PrintRequestError("REQUEST_LOCKED", 409);
+}
+
 // Refuse une modification hors des statuts éditables (sans rien écrire).
 export function assertEditable(status: PrintRequestStatus, side: "ORGANIZER" | "STAFF"): void {
   if (status === "ACCEPTED") throw new PrintRequestError("QUOTE_ACCEPTED", 409);
@@ -224,10 +233,11 @@ export function assertEditable(status: PrintRequestStatus, side: "ORGANIZER" | "
 // l'entrée QUOTE_REVISION est écrite en premier (l'appelant ajoute ensuite la sienne).
 export async function applyEdit(
   tx: Prisma.TransactionClient,
-  request: Pick<PrintRequest, "id" | "status">,
+  request: Pick<PrintRequest, "id" | "status"> & { parentRequestId?: string | null },
   side: "ORGANIZER" | "STAFF",
   userId: string,
 ): Promise<{ from: PrintRequestStatus; to: PrintRequestStatus }> {
+  assertOrganizerMayChange(request, side);
   const from = request.status;
   assertEditable(from, side);
   const action: PrintRequestAction = side === "STAFF" ? "STAFF_EDIT" : "ORGANIZER_EDIT";

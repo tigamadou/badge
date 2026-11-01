@@ -7,7 +7,6 @@ import { getOnsitePrintSettings } from "@/lib/settings";
 import { loadUserContext } from "@/lib/user-context";
 import { OnsiteError } from "@/lib/print-requests/onsite";
 import { loadOnsiteRequest } from "@/lib/print-requests/onsite-station";
-import { canOpenOnsiteStation } from "@/lib/print-requests/onsite-station-view";
 import { OnsiteStation } from "@/components/staff/print/OnsiteStation";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +24,13 @@ export default async function OnsiteStationPage({ params }: { params: Promise<{ 
   try {
     loaded = await loadOnsiteRequest(requestId);
   } catch (err) {
-    // Demande introuvable ou qui n'est pas une impression sur place.
+    // Statut qui n'ouvre pas le poste : retour à la fiche de la demande.
+    if (err instanceof OnsiteError && err.code === "REQUEST_NOT_PRINTABLE") redirect(detail);
+    // Demande introuvable, brouillon ou qui n'est pas une impression sur place.
     if (err instanceof OnsiteError) notFound();
     throw err;
   }
   const { request, orgId, eventId, counter } = loaded;
-  if (!canOpenOnsiteStation(request.status)) redirect(detail);
 
   const [event, settings] = await Promise.all([
     prisma.event.findUnique({ where: { id: eventId }, select: { title: true, location: true } }),

@@ -56,8 +56,16 @@ describe("GET /api/public/qr/[registrationId]", () => {
     expect((await call("inconnu")).status).toBe(404);
   });
 
-  it("429 au-delà de la limite", async () => {
-    for (let i = 0; i < 60; i++) await call("inconnu", "2.2.2.2");
-    expect((await call("inconnu", "2.2.2.2")).status).toBe(429);
-  });
+  it("429 au-delà de 300 requêtes par minute, avec Retry-After en secondes", async () => {
+    for (let i = 0; i < 300; i++) await call("inconnu", "2.2.2.2");
+    const res = await call("inconnu", "2.2.2.2");
+    expect(res.status).toBe(429);
+    expect(await res.json()).toMatchObject({ code: "RATE_LIMITED" });
+    const retryAfter = Number(res.headers.get("retry-after"));
+    expect(Number.isInteger(retryAfter)).toBe(true);
+    expect(retryAfter).toBeGreaterThanOrEqual(1);
+    expect(retryAfter).toBeLessThanOrEqual(60);
+    // Une autre IP n'est pas touchée.
+    expect((await call("inconnu", "3.3.3.3")).status).toBe(404);
+  }, 30_000);
 });

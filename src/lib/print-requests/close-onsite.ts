@@ -14,6 +14,24 @@ export type OnsiteClosure =
   | { outcome: "SUPPLEMENT"; supplementRequestId: string; extraBadges: number; total: number }
   | { outcome: "NONE" };
 
+// Prix unitaire effectif : unitPrice x min(1, (total accepté + crédit dépensé) / somme des lignes
+// positives), arrondi à l'entier. Une remise du staff ou un crédit appliqué ne doit pas être
+// recrédité comme si les badges avaient été payés plein tarif. Calcul entier (BigInt) : les montants
+// peuvent atteindre 2 milliards. Sans total accepté, le prix de la ligne reste inchangé.
+export function effectiveUnitPrice(
+  unitPrice: number,
+  acceptedTotal: number | null,
+  creditSpent: number,
+  positiveSum: number,
+): number {
+  if (!acceptedTotal || positiveSum <= 0) return unitPrice;
+  const paid = acceptedTotal + creditSpent;
+  if (paid >= positiveSum) return unitPrice;
+  const two = BigInt(2);
+  const total = BigInt(positiveSum);
+  return Number((two * BigInt(unitPrice) * BigInt(paid) + total) / (two * total));
+}
+
 const SUPPLEMENT_LABEL = "Badges supplémentaires";
 
 // Un JSON absent en base s'écrit Prisma.JsonNull, pas null.
@@ -53,13 +71,25 @@ export async function closeOnsiteInTx(
 
   const lines = await tx.printQuoteLine.findMany({
     where: { requestId, removedAt: null },
-    orderBy: { position: "asc" },
+    orderBy: [{ position: "asc" }, { id: "asc" }],
     include: { product: { select: { kind: true } } },
   });
   // Règle : seule la PREMIÈRE ligne BADGE active compte, pour le crédit comme pour le surplus
   // (les autres lignes BADGE et les accessoires sont ignorés). Un badge gratuit ne donne rien.
   const badge = findOrderedBadgeLine(lines);
   if (!badge || badge.unitPrice <= 0) return { outcome: "NONE" };
+
+  // Prix effectif (remise et crédit répartis sur les lignes positives) : le crédit comme le surplus
+  // l'utilisent, jamais le prix catalogue de la ligne.
+  const spent = await tx.orgPrintCredit.findUnique({
+    where: { requestId_kind: { requestId, kind: "SPENT" } },
+    select: { amount: true },
+  });
+  const positiveSum = lines.filter((l) => l.lineTotal > 0).reduce((sum, l) => sum + l.lineTotal, 0);
+  const unitPrice = effectiveUnitPrice(badge.unitPrice, request.acceptedTotal, Math.abs(spent?.amount ?? 0), positiveSum);
+
+  // Prix effectif nul (arrondi) : ni crédit ni surplus.
+  if (unitPrice <= 0) return { outcome: "NONE" };
 
   // Premières impressions seulement : une réimpression ne consomme pas la commande.
   const printed = await tx.printRequestPrint.count({ where: { requestId, reprint: false } });
@@ -71,15 +101,15 @@ export async function closeOnsiteInTx(
 
   if (printed < badge.quantity) {
     const unusedBadges = badge.quantity - printed;
-    // Prix unitaire de la ligne BADGE (suppléments compris) ; les accessoires n'entrent pas en compte.
-    const amount = unusedBadges * badge.unitPrice;
+    // Prix effectif de la ligne BADGE (suppléments compris) ; les accessoires n'entrent pas en compte.
+    const amount = unusedBadges * unitPrice;
     await tx.orgPrintCredit.create({
       data: {
         orgId: request.orgId,
         kind: "EARNED",
         amount,
         quantity: unusedBadges,
-        unitPrice: badge.unitPrice,
+        unitPrice,
         requestId,
         createdById: userId ?? null,
       },
@@ -90,12 +120,12 @@ export async function closeOnsiteInTx(
 
   // Le total tient dans une colonne Int : au-delà de MAX_AMOUNT on plafonne la quantité plutôt que de
   // bloquer la clôture (cas théorique : il faudrait une marge démesurée sur un très gros devis).
-  const extraBadges = Math.min(counter.beyondOrder, Math.floor(MAX_AMOUNT / badge.unitPrice));
+  const extraBadges = Math.min(counter.beyondOrder, Math.floor(MAX_AMOUNT / unitPrice));
   if (extraBadges === 0) return { outcome: "NONE" };
 
   // Créée directement en QUOTED (ce n'est pas une transition) : le devis est prêt, l'organisateur
   // peut l'accepter. Marge à 0 : c'est une quantité ferme, sans tolérance d'impression supplémentaire.
-  const total = extraBadges * badge.unitPrice;
+  const total = extraBadges * unitPrice;
   const now = new Date();
   const child = await tx.printRequest.create({
     data: {
@@ -124,10 +154,12 @@ export async function closeOnsiteInTx(
           optionsSnapshot: jsonOrNull(badge.optionsSnapshot),
           choices: jsonOrNull(badge.choices),
           quantity: extraBadges,
-          unitPrice: badge.unitPrice,
+          unitPrice,
           lineTotal: total,
           position: 0,
           addedBy: "STAFF",
+          // La quantité est celle du poste : l'organisateur ne la conteste pas.
+          quantityOverridden: true,
         },
       },
     },

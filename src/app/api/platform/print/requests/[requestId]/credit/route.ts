@@ -23,7 +23,7 @@ export const POST = withStaffAuth<{ requestId: string }>(
         req,
       });
       if (revised) await notifyPrintRequestStatusChanged(requestId, userId, { organizer: true, staff: false });
-      return json({ line: lineDTO(line), available: await getAvailableOrgPrintCredit(request.orgId) }, 201);
+      return json({ line: lineDTO(line), available: await getAvailableOrgPrintCredit(request.orgId, requestId) }, 201);
     }),
   { minRole: "STAFF_ADMIN" },
 );

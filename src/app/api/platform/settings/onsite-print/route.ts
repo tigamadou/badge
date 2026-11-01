@@ -25,7 +25,12 @@ export const PATCH = withStaffAuth(
     const printerNote = parsed.data.printerNote?.trim() || null;
     const templateIds = [...new Set(parsed.data.templateIds)];
 
-    const known = await prisma.installedBadgeTemplate.count({ where: { id: { in: templateIds }, archived: false } });
+    // Seuls les NOUVEAUX ids doivent être non archivés : un template archivé depuis son ajout reste
+    // dans la liste enregistrée et ne doit pas empêcher d'enregistrer le reste des réglages.
+    const saved = (await getOnsitePrintSettings()).templateIds;
+    const known = await prisma.installedBadgeTemplate.count({
+      where: { id: { in: templateIds }, OR: [{ archived: false }, { id: { in: saved } }] },
+    });
     if (known !== templateIds.length) {
       return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
     }

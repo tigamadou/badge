@@ -184,6 +184,23 @@ describe("PATCH /api/platform/settings/onsite-print", () => {
     expect((await res.json()).error).toBe("UNKNOWN_TEMPLATE");
   });
 
+  it("un template archivé déjà dans la liste enregistrée reste accepté ; un nouvel archivé est refusé", async () => {
+    await asStaff("STAFF_ADMIN");
+    const kept = await install(1);
+    const added = await install(2);
+    const fresh = await install(3);
+    await prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: [kept.id] } });
+    await prisma.installedBadgeTemplate.updateMany({ where: { id: { in: [kept.id, added.id] } }, data: { archived: true } });
+    const refused = await call({ templateIds: [kept.id, added.id], printerNote: null, defaultMarginPercent: 20 });
+    expect(refused.status).toBe(400);
+    expect((await refused.json()).error).toBe("UNKNOWN_TEMPLATE");
+    const ok = await call({ templateIds: [kept.id, fresh.id], printerNote: "Zebra", defaultMarginPercent: 20 });
+    expect(ok.status).toBe(200);
+    expect(await getOnsitePrintSettings()).toMatchObject({
+      templateIds: [kept.id, fresh.id], printerNote: "Zebra", defaultMarginPercent: 20,
+    });
+  });
+
   it("journalise aussi la marge par défaut", async () => {
     const admin = await asStaff("STAFF_ADMIN");
     await call({ templateIds: [], printerNote: null, defaultMarginPercent: 25 });
