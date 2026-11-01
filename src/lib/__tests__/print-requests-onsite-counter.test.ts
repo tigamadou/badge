@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeOnsiteCounter,
+  findOrderedBadgeLine,
   onsiteCap,
   orderedBadgeLine,
 } from "@/lib/print-requests/onsite-counter";
@@ -64,6 +65,12 @@ describe("orderedBadgeLine", () => {
       badge,
     ];
     expect(orderedBadgeLine(lines)).toEqual({ quantity: 200, unitPrice: 1500 });
+  });
+
+  it("findOrderedBadgeLine rend la ligne elle-même (autres champs conservés)", () => {
+    const line = { ...badge, id: "l1" };
+    expect(findOrderedBadgeLine([{ ...badge, id: "l0", product: { kind: "ACCESSORY" } }, line])).toBe(line);
+    expect(findOrderedBadgeLine([])).toBeUndefined();
   });
 
   it("aucune ligne BADGE -> null", () => {

@@ -134,4 +134,37 @@ describe("ordre des verrous Event, PrintRequest puis Organization (crédit d'imp
       await prisma.printRequest.update({ where: { id: applying.id }, data: { status: "CANCELLED" } });
     }
   });
+
+  it("clôture sur place (crédit gagné) face à applyOrgCredit d'une autre demande et à un changement de template : pas d'interblocage", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 10000 } });
+      const closing = await makeRequest(fx, {
+        type: "ONSITE", status: "READY", estimatedQuantity: 10, marginPercent: 10, templatePinned: true, ...copy(),
+      });
+      await prisma.printQuoteLine.create({
+        data: {
+          requestId: closing.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Badge", quantity: 10,
+          unitPrice: 1500, lineTotal: 15000, position: 0, addedBy: "ORGANIZER",
+        },
+      });
+      await prisma.printRequestPrint.createMany({
+        data: Array.from({ length: 4 }, () => ({ requestId: closing.id, registrationId: null, reprint: false })),
+      });
+      const applying = await makeRequest(fx, { status: "SUBMITTED", total: 5000 });
+      await prisma.printQuoteLine.create({
+        data: {
+          requestId: applying.id, kind: "SERVICE", label: "L", quantity: 1, unitPrice: 5000, lineTotal: 5000,
+          position: 0, addedBy: "STAFF",
+        },
+      });
+      const res = await Promise.allSettled([
+        advanceStatus({ requestId: closing.id, userId: fx.staffAdmin.id, to: "COMPLETED" }),
+        applyOrgCredit({ requestId: applying.id, amount: 1000, userId: fx.staffAdmin.id }),
+        orgTemplateChange(),
+      ]);
+      expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
+      expect(await prisma.orgPrintCredit.count({ where: { requestId: closing.id, kind: "EARNED" } })).toBe(1);
+      await prisma.printRequest.update({ where: { id: applying.id }, data: { status: "CANCELLED" } });
+    }
+  });
 });

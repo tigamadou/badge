@@ -96,6 +96,14 @@ describe("describeThreadEvent", () => {
     ],
     ORG_CREDIT_APPLIED: [{ amount: 45000 }, `Crédit d'impression appliqué : ${formatFcfa(45000)}`],
     ORG_CREDIT_SPENT: [{ amount: 45000 }, `Crédit d'impression décompté : ${formatFcfa(45000)}`],
+    ONSITE_CREDIT_EARNED: [
+      { quantity: 30, amount: 45000 },
+      `30 badges non utilisés : ${formatFcfa(45000)} versés au crédit d'impression`,
+    ],
+    ONSITE_SUPPLEMENT_CREATED: [
+      { reference: "IMP-2026-0002", extraBadges: 12 },
+      "Demande complémentaire IMP-2026-0002 : 12 badges supplémentaires",
+    ],
   };
 
   it("REQUEST_UPDATED mentionne les lignes fixées en retard", () => {

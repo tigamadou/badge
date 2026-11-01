@@ -8,6 +8,7 @@ import {
   validateChoices,
   type OptionChoice,
 } from "@/lib/print-catalog/pricing";
+import { closeOnsiteInTx, type OnsiteClosure } from "./close-onsite";
 import { PrintRequestError } from "./errors";
 import { assertOnsiteCanAdvance } from "./onsite";
 import { spendOrgCreditForPaidRequest } from "./org-credit";
@@ -27,6 +28,7 @@ import {
   lockRequestWithEvent,
   markPaid,
   recomputeTotal,
+  retryOnReferenceCollision,
 } from "./service";
 import type { LineChange } from "./thread";
 import {
@@ -44,9 +46,8 @@ const STAFF = { side: "STAFF" } as const;
 // touche jamais aux réservations, il ne prend donc que celui-ci.
 async function lockRequest(tx: Prisma.TransactionClient, requestId: string): Promise<PrintRequest> {
   await lockRequestWithEvent(tx, requestId);
-  const request = await tx.printRequest.findUnique({ where: { id: requestId } });
-  if (!request) throw new PrintRequestError("NOT_FOUND", 404);
-  return request;
+  // Verrouillée par lockRequestWithEvent (qui lève NOT_FOUND si elle n'existe pas) : elle existe.
+  return tx.printRequest.findUniqueOrThrow({ where: { id: requestId } });
 }
 
 // Retire les caractères de contrôle et les espaces de bord, puis borne la longueur.
@@ -287,21 +288,35 @@ export async function advanceStatus(input: {
   requestId: string;
   userId: string;
   to: "IN_PRODUCTION" | "READY" | "COMPLETED";
-}): Promise<PrintRequest & { previousStatus: PrintRequestStatus }> {
+}): Promise<PrintRequest & { previousStatus: PrintRequestStatus; closure?: OnsiteClosure }> {
   const action = Object.hasOwn(ADVANCE_ACTIONS, input.to) ? ADVANCE_ACTIONS[input.to] : null;
   if (!action) throw new PrintRequestError("VALIDATION", 400);
   const request = await loadRequest(input.requestId);
-  return prisma.$transaction(async (tx) => {
-    const current = await lockRequest(tx, request.id);
-    const from: PrintRequestStatus = current.status;
-    const to = await applyTransition(tx, current, action, "STAFF");
-    // Après la transition (INVALID_TRANSITION prime) ; annule la transaction. La clôture (COMPLETED)
-    // reste permise : seuls la production et la mise à disposition sont bloquées.
-    if (input.to !== "COMPLETED") await assertOnsiteCanAdvance(current);
-    await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
-    // Statut lu sous verrou : le journal d'activité n'utilise pas une lecture périmée.
-    return { ...(await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } })), previousStatus: from };
-  });
+  // La clôture d'une demande sur place (crédit ou demande complémentaire) fait partie de la
+  // transaction : si elle échoue, la demande reste READY et peut être clôturée de nouveau. Une
+  // collision de référence (demande complémentaire) rejoue toute la transaction.
+  return retryOnReferenceCollision(() =>
+    prisma.$transaction(async (tx) => {
+      const current = await lockRequest(tx, request.id);
+      const from: PrintRequestStatus = current.status;
+      const to = await applyTransition(tx, current, action, "STAFF");
+      // Après la transition (INVALID_TRANSITION prime) ; annule la transaction. La clôture (COMPLETED)
+      // reste permise : seuls la production et la mise à disposition sont bloquées.
+      if (input.to !== "COMPLETED") await assertOnsiteCanAdvance(current);
+      await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
+      // Seule une demande sur place sans parent se clôture (une complémentaire ne produit ni crédit ni surplus).
+      const closure =
+        input.to === "COMPLETED" && current.type === "ONSITE" && current.parentRequestId === null
+          ? await closeOnsiteInTx(tx, request.id, input.userId)
+          : undefined;
+      // Statut lu sous verrou : le journal d'activité n'utilise pas une lecture périmée.
+      return {
+        ...(await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } })),
+        previousStatus: from,
+        closure,
+      };
+    }),
+  );
 }
 
 // Seul passage manuel en PAID du chantier : STAFF_ADMIN (ou SUPER_ADMIN) avec un motif.

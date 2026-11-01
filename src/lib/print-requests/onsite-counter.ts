@@ -40,16 +40,20 @@ export function computeOnsiteCounter(input: {
   };
 }
 
+type OrderableLine = {
+  kind: string;
+  quantity: number;
+  unitPrice: number;
+  removedAt: Date | null;
+  product: { kind: string } | null;
+};
+
 /** Ligne de badges commandée : première ligne produit BADGE non retirée, accessoires ignorés. */
-export function orderedBadgeLine(
-  lines: Array<{
-    kind: string;
-    quantity: number;
-    unitPrice: number;
-    removedAt: Date | null;
-    product: { kind: string } | null;
-  }>,
-): { quantity: number; unitPrice: number } | null {
-  const line = lines.find((l) => l.kind === "PRODUCT" && l.removedAt === null && l.product?.kind === "BADGE");
+export function findOrderedBadgeLine<T extends OrderableLine>(lines: T[]): T | undefined {
+  return lines.find((l) => l.kind === "PRODUCT" && l.removedAt === null && l.product?.kind === "BADGE");
+}
+
+export function orderedBadgeLine(lines: OrderableLine[]): { quantity: number; unitPrice: number } | null {
+  const line = findOrderedBadgeLine(lines);
   return line ? { quantity: line.quantity, unitPrice: line.unitPrice } : null;
 }

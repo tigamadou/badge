@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { PaymentError, confirmPayment, startPrintRequestCheckout } from "@/lib/payments";
+import { markPaidManually } from "@/lib/print-requests/quote";
 import { seedAcceptedPrintRequest } from "./helpers/print-requests";
 
 function txResponse(status: string, amount = 150000, id = 77) {
@@ -111,6 +112,35 @@ describe("confirmPayment : demande d'impression", () => {
     const spent = await prisma.orgPrintCredit.findMany({ where: { requestId: t.request.id } });
     expect(spent).toMatchObject([{ kind: "SPENT", amount: -45000, orgId: t.org.id }]);
     expect(await thread(t.request.id, "ORG_CREDIT_SPENT")).toHaveLength(1);
+  });
+
+  it("course markPaidManually / confirmPayment sur une demande avec crédit : un seul mouvement SPENT", async () => {
+    // Paiement CANCELED puis approuvé tardivement chez FedaPay : aucune sonde PENDING ne départage
+    // les deux chemins, seul le verrou de la demande les sérialise.
+    for (let i = 0; i < 3; i++) {
+      const t = await seed({ total: 15000, amount: 15000, txId: 900 + i });
+      await prisma.payment.update({ where: { id: t.payment.id }, data: { status: "CANCELED" } });
+      await prisma.orgPrintCredit.create({ data: { orgId: t.org.id, kind: "EARNED", amount: 45000 } });
+      await prisma.printQuoteLine.create({
+        data: {
+          requestId: t.request.id, kind: "DISCOUNT", label: "Crédit d'impression", quantity: 1, unitPrice: -45000,
+          lineTotal: -45000, position: 0, addedBy: "STAFF", usesOrgCredit: true,
+        },
+      });
+      fetchMock.mockResolvedValue(txResponse("approved", 15000, 900 + i));
+      const res = await Promise.allSettled([
+        confirmPayment(900 + i),
+        markPaidManually({ requestId: t.request.id, userId: t.staffAdmin.id, reason: "Virement reçu" }),
+      ]);
+      expect(res.some((x) => x.status === "fulfilled")).toBe(true);
+      expect(await prisma.orgPrintCredit.findMany({ where: { requestId: t.request.id, kind: "SPENT" } })).toMatchObject([
+        { amount: -45000, orgId: t.org.id },
+      ]);
+      expect(await thread(t.request.id, "ORG_CREDIT_SPENT")).toHaveLength(1);
+      const sum = await prisma.orgPrintCredit.aggregate({ where: { orgId: t.org.id }, _sum: { amount: true } });
+      expect(sum._sum.amount).toBe(0);
+      expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: t.request.id } })).status).toBe("PAID");
+    }
   });
 
   it("approved sans crédit : aucun mouvement ; paiement non attendu (UNMATCHED) : aucun mouvement", async () => {
