@@ -6,6 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { RequestDetail } from "@/components/staff/print/RequestDetail";
 import { OnsiteError } from "@/lib/print-requests/onsite";
 import { loadOnsiteRequest } from "@/lib/print-requests/onsite-station";
+import {
+  getAvailableOrgPrintCredit,
+  getOrgPrintCreditBalance,
+  listOrgPrintCreditMovements,
+} from "@/lib/print-requests/org-credit";
 import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-history";
 
 export default async function PrintRequestDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
@@ -34,14 +39,41 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
     })
   ).map(toPaymentHistoryItem);
 
-  // Compteur de l'impression sur place ; absent pour une demande en amont ou inexistante.
-  const onsiteCounter = await loadOnsiteRequest(requestId).then(
-    (r) => r.counter,
-    (err) => {
-      if (err instanceof OnsiteError) return null;
-      throw err;
+  // Demande, crédit de l'organisation et liens vers la demande principale / les compléments.
+  const request = await prisma.printRequest.findUnique({
+    where: { id: requestId },
+    select: {
+      orgId: true,
+      status: true,
+      parentRequestId: true,
+      parentRequest: { select: { id: true, reference: true } },
+      childRequests: { select: { id: true, reference: true }, orderBy: { createdAt: "asc" } },
     },
-  );
+  });
+  if (!request) notFound();
+  const [lines, balance, available, movements] = await Promise.all([
+    prisma.printQuoteLine.findMany({
+      where: { requestId, removedAt: null },
+      select: { lineTotal: true, usesOrgCredit: true },
+    }),
+    getOrgPrintCreditBalance(request.orgId),
+    getAvailableOrgPrintCredit(request.orgId, requestId),
+    listOrgPrintCreditMovements(request.orgId),
+  ]);
+  const applied = -lines.filter((l) => l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
+  const grossTotal = lines.filter((l) => !l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
+
+  // Compteur de l'impression sur place ; absent pour une demande en amont, complémentaire ou inexistante.
+  const onsiteCounter =
+    request.parentRequestId !== null
+      ? null
+      : await loadOnsiteRequest(requestId).then(
+          (r) => r.counter,
+          (err) => {
+            if (err instanceof OnsiteError) return null;
+            throw err;
+          },
+        );
 
   return (
     <RequestDetail
@@ -50,6 +82,9 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
       products={products}
       payments={payments}
       onsiteCounter={onsiteCounter}
+      credit={{ balance, available, applied, grossTotal, movements }}
+      parentRequest={request.parentRequest}
+      supplements={request.childRequests}
     />
   );
 }

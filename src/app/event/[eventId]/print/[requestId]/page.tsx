@@ -17,6 +17,10 @@ import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labe
 import { requestBadgeCount } from "@/lib/print-requests/service";
 import { PrintPayButton } from "@/components/event/print/PrintPayButton";
 import { hasPendingPayment } from "@/components/event/print/pay-button";
+import { RelatedRequestLinks } from "@/components/print/RelatedRequestLinks";
+import { creditOfferSentence, showsCreditOffer } from "@/lib/print-requests/credit-view";
+import { getAvailableOrgPrintCredit } from "@/lib/print-requests/org-credit";
+import { Alert } from "@/components/ui/Feedback";
 import { PaymentHistory } from "@/components/admin/PaymentHistory";
 import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-history";
 
@@ -41,8 +45,16 @@ export default async function PrintRequestDetailPage({
 }) {
   const { eventId, requestId } = await params;
   const { event, orgId, ctx } = await requirePrintAccess(eventId, `/print/${requestId}`);
-  const request = await prisma.printRequest.findFirst({ where: { id: requestId, eventId } });
+  const request = await prisma.printRequest.findFirst({
+    where: { id: requestId, eventId },
+    include: {
+      parentRequest: { select: { id: true, reference: true } },
+      childRequests: { select: { id: true, reference: true }, orderBy: { createdAt: "asc" } },
+    },
+  });
   if (!request) notFound();
+  // Crédit encore libre pour cette demande (hors sa propre réservation) : proposé tant qu'elle est ouverte.
+  const availableCredit = await getAvailableOrgPrintCredit(orgId, requestId);
 
   const [lines, badgeCount, owner, paymentRows] = await Promise.all([
     prisma.printQuoteLine.findMany({
@@ -101,6 +113,16 @@ export default async function PrintRequestDetailPage({
           <div className="text-lg font-semibold tabular-nums text-slate-900">{formatFcfa(request.total)}</div>
         </div>
       </div>
+
+      <RelatedRequestLinks
+        parent={request.parentRequest}
+        supplements={request.childRequests}
+        hrefOf={(id) => `/event/${eventId}/print/${id}`}
+      />
+
+      {showsCreditOffer(request.status, availableCredit) ? (
+        <Alert tone="info">{creditOfferSentence(availableCredit)}</Alert>
+      ) : null}
 
       {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
 

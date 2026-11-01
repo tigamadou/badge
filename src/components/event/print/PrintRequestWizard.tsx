@@ -13,6 +13,7 @@ import { QuoteLinesTable, type QuoteLineView } from "@/components/print/QuoteLin
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { ActionError, toastSuccess } from "@/lib/toast";
 import { PRINT_REQUEST_TYPE_LABELS } from "@/lib/print-requests/labels";
+import { creditOfferSentence } from "@/lib/print-requests/credit-view";
 import {
   choiceErrorMessage,
   defaultConfiguration,
@@ -71,10 +72,13 @@ export function PrintRequestWizard({
   orgId,
   eventId,
   requestId,
+  availableCredit = 0,
 }: {
   orgId: string;
   eventId: string;
   requestId: string;
+  /** Crédit d'impression libre de l'organisation, proposé au récapitulatif. */
+  availableCredit?: number;
 }) {
   const router = useRouter();
   const base = `/api/org/${orgId}/events/${eventId}/print-requests`;
@@ -517,6 +521,7 @@ export function PrintRequestWizard({
           <QuoteLinesTable lines={lines} total={total} badgeCount={badgeCount} />
           <p className="text-sm text-slate-500">{deliverySummary}</p>
           <Alert tone="info">Le prix définitif est fixé par l&apos;équipe Badge dans le devis.</Alert>
+          {availableCredit > 0 ? <Alert tone="info">{creditOfferSentence(availableCredit)}</Alert> : null}
         </div>
       ) : null}
 
