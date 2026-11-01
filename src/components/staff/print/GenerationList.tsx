@@ -47,7 +47,10 @@ export function GenerationList({
   generations: GenerationRow[];
   onChange: (rows: GenerationRow[]) => void;
 }) {
-  const [previewId, setPreviewId] = useState<string | null>(null);
+  // nonce : chaque clic sur « Aperçu » remonte le composant, donc rouvre l'aperçu fermé.
+  const [previewState, setPreviewState] = useState<{ id: string; nonce: number } | null>(null);
+  const previewId = previewState?.id ?? null;
+  const inFlight = useRef(false);
   const active = generations.some(isActive);
   // Dernière version de onChange sans relancer le minuteur à chaque rendu.
   const onChangeRef = useRef(onChange);
@@ -58,13 +61,19 @@ export function GenerationList({
   // Rafraîchit toutes les 5 s tant qu'une ligne est en attente ou en cours, onglet visible.
   useEffect(() => {
     if (!active) return;
+    let cancelled = false;
     let timer: ReturnType<typeof setInterval> | undefined;
     async function refresh() {
+      // Une seule requête à la fois : une réponse lente ne chevauche pas le tick suivant.
+      if (inFlight.current) return;
+      inFlight.current = true;
       try {
         const res = await fetch("/api/platform/print/sheets");
-        if (res.ok) onChangeRef.current((await res.json()).generations);
+        if (res.ok && !cancelled) onChangeRef.current((await res.json()).generations);
       } catch {
         // Réseau coupé : le prochain tick réessaie.
+      } finally {
+        inFlight.current = false;
       }
     }
     function start() {
@@ -87,6 +96,7 @@ export function GenerationList({
     start();
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      cancelled = true;
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
@@ -122,9 +132,13 @@ export function GenerationList({
                       <p className="text-xs text-rose-600">{g.error ?? "Erreur inconnue."}</p>
                     )}
                     {skippedOf(g).length > 0 && (
-                      <p className="text-xs text-amber-700">
-                        Badges écartés ({skippedOf(g).length}) : {skippedOf(g).join(", ")}
-                      </p>
+                      <details className="text-xs text-amber-700">
+                        <summary className="cursor-pointer">
+                          {skippedOf(g).length} badge{skippedOf(g).length > 1 ? "s" : ""} écarté
+                          {skippedOf(g).length > 1 ? "s" : ""}
+                        </summary>
+                        <p className="mt-1 break-all">{skippedOf(g).join(", ")}</p>
+                      </details>
                     )}
                   </div>
                 ),
@@ -136,7 +150,7 @@ export function GenerationList({
                 render: (g) =>
                   g.status === "DONE" ? (
                     <div className="flex items-center gap-3">
-                      <Button type="button" variant="link" className="text-green-600" onClick={() => setPreviewId(g.id)}>
+                      <Button type="button" variant="link" className="text-green-600" onClick={() => setPreviewState((p) => ({ id: g.id, nonce: (p?.nonce ?? 0) + 1 }))}>
                         Aperçu
                       </Button>
                       <a
@@ -157,7 +171,7 @@ export function GenerationList({
         <CardBody className="border-t border-slate-100">
           {/* key : une nouvelle ligne rouvre l'aperçu, la fermeture le laisse dans la carte. */}
           <DocumentPreview
-            key={`${preview.id}-${previewId}`}
+            key={`${preview.id}-${previewState?.nonce}`}
             storageKey={fileKey(preview.id)}
             label={`Planches — ${preview.event.title}`}
             defaultOpen

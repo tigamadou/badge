@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { pxToMm } from "@/lib/print-sheets/units";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
+const template = vi.hoisted(() => ({ pages: 2 }));
 vi.mock("@/lib/badge-templates/render-badge", () => ({
   resolveEventTemplate: vi.fn(async () => ({
-    meta: { pages: 2, pageSize: { width: "324px", height: "204px" } },
+    meta: { pages: template.pages, pageSize: { width: "324px", height: "204px" } },
   })),
 }));
 import { getServerSession } from "next-auth";
@@ -50,7 +51,10 @@ async function fixture() {
 }
 
 describe("GET /api/platform/print/sheets/options", () => {
-  beforeEach(() => vi.mocked(getServerSession).mockReset());
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+    template.pages = 2;
+  });
 
   it("401 without session, 403 for STAFF_OBSERVER", async () => {
     const { GET } = await import("@/app/api/platform/print/sheets/options/route");
@@ -89,6 +93,37 @@ describe("GET /api/platform/print/sheets/options", () => {
     expect(detail.registrations).toEqual([
       { id: ok.id, firstName: "Ada", lastName: "Zed", categoryId: cat.id },
     ]);
+  });
+
+  it("reports badgePages 1 for a single-page template", async () => {
+    await asStaff();
+    const { event } = await fixture();
+    template.pages = 1;
+    const { GET } = await import("@/app/api/platform/print/sheets/options/route");
+    const { event: detail } = await (await GET(req(`/api/platform/print/sheets/options?eventId=${event.id}`), noParams)).json();
+    expect(detail.badgePages).toBe(1);
+  });
+
+  it("returns total and truncated when the list is capped", async () => {
+    await asStaff();
+    const { event, cat } = await fixture();
+    await registration(event.id, cat.id, "APPROVED", "Second");
+    await registration(event.id, cat.id, "APPROVED", "Third");
+    const { GET, OPTIONS_LIMITS } = await import("@/app/api/platform/print/sheets/options/route");
+    const get = async () =>
+      (await (await GET(req(`/api/platform/print/sheets/options?eventId=${event.id}`), noParams)).json()).event;
+    const full = await get();
+    expect(full.total).toBe(3);
+    expect(full.truncated).toBe(false);
+    OPTIONS_LIMITS.maxRegistrations = 2;
+    try {
+      const capped = await get();
+      expect(capped.total).toBe(3);
+      expect(capped.truncated).toBe(true);
+      expect(capped.registrations).toHaveLength(2);
+    } finally {
+      OPTIONS_LIMITS.maxRegistrations = 5000;
+    }
   });
 
   it("404 for an unknown eventId", async () => {

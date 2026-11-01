@@ -4,8 +4,8 @@ import { withStaffAuth } from "@/lib/with-staff-auth";
 import { resolveEventTemplate } from "@/lib/badge-templates/render-badge";
 import { pxToMm } from "@/lib/print-sheets/units";
 
-// Limite alignee sur la selection par identifiants de POST /sheets.
-const MAX_REGISTRATIONS = 5000;
+// Limite alignee sur la selection par identifiants de POST /sheets (objet : abaissable en test).
+export const OPTIONS_LIMITS = { maxRegistrations: 5000 };
 
 // Donnees du formulaire de generation. Sans parametre : organisations -> evenements ->
 // categories avec le nombre d'inscriptions approuvees. Avec ?eventId= : en plus, le
@@ -20,14 +20,15 @@ export const GET = withStaffAuth(
         select: { id: true, orgId: true, badgeTemplateId: true },
       });
       if (!event) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-      const [template, registrations] = await Promise.all([
+      const [template, registrations, total] = await Promise.all([
         resolveEventTemplate(event),
         prisma.registration.findMany({
           where: { eventId, status: "APPROVED" },
           orderBy: [{ snapshotLastName: "asc" }, { snapshotFirstName: "asc" }, { id: "asc" }],
-          take: MAX_REGISTRATIONS,
+          take: OPTIONS_LIMITS.maxRegistrations,
           select: { id: true, snapshotFirstName: true, snapshotLastName: true, categoryId: true },
         }),
+        prisma.registration.count({ where: { eventId, status: "APPROVED" } }),
       ]);
       return NextResponse.json({
         event: {
@@ -37,6 +38,8 @@ export const GET = withStaffAuth(
             height: pxToMm(parseFloat(template.meta.pageSize.height)),
           },
           badgePages: template.meta.pages === 2 ? 2 : 1,
+          total,
+          truncated: total > registrations.length,
           registrations: registrations.map((r) => ({
             id: r.id,
             firstName: r.snapshotFirstName,

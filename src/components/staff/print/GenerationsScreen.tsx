@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toastError } from "@/lib/toast";
 import { GenerationForm, type LayoutOption } from "@/components/staff/print/GenerationForm";
 import { GenerationList, type GenerationRow } from "@/components/staff/print/GenerationList";
 
@@ -15,8 +16,13 @@ export function GenerationsScreen({
   const [rows, setRows] = useState(initial);
 
   async function reload() {
-    const res = await fetch("/api/platform/print/sheets");
-    if (res.ok) setRows((await res.json()).generations);
+    try {
+      const res = await fetch("/api/platform/print/sheets");
+      if (!res.ok) throw res;
+      setRows((await res.json()).generations);
+    } catch {
+      toastError("Impossible d'actualiser l'historique. Rechargez la page.");
+    }
   }
 
   return (

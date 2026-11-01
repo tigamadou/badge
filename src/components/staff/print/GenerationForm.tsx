@@ -21,10 +21,15 @@ type Registrant = { id: string; firstName: string; lastName: string; categoryId:
 type EventDetail = {
   badgeMm: { width: number; height: number };
   badgePages: 1 | 2;
+  total: number;
+  truncated: boolean;
   registrations: Registrant[];
 };
 
 type Mode = "ALL" | "CATEGORIES" | "IDS";
+
+// Au-delà, le DOM devient lourd : on invite à affiner la recherche.
+const MAX_RENDERED = 200;
 
 const collator = new Intl.Collator("fr", { sensitivity: "base" });
 
@@ -91,15 +96,21 @@ export function GenerationForm({
         ? event.categories.filter((c) => categoryIds.includes(c.id)).reduce((n, c) => n + c.approvedCount, 0)
         : registrationIds.length;
 
-  const registrants = useMemo(() => {
+  // Tri une seule fois par chargement ; la recherche ne fait que filtrer.
+  const sortedRegistrants = useMemo(
+    () =>
+      [...(eventDetail?.registrations ?? [])].sort(
+        (a, b) => collator.compare(a.lastName, b.lastName) || collator.compare(a.firstName, b.firstName),
+      ),
+    [eventDetail],
+  );
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = (eventDetail?.registrations ?? []).filter(
-      (r) => q === "" || `${r.firstName} ${r.lastName} ${r.id}`.toLowerCase().includes(q),
-    );
-    return list.sort(
-      (a, b) => collator.compare(a.lastName, b.lastName) || collator.compare(a.firstName, b.firstName),
-    );
-  }, [eventDetail, search]);
+    return q === ""
+      ? sortedRegistrants
+      : sortedRegistrants.filter((r) => `${r.firstName} ${r.lastName} ${r.id}`.toLowerCase().includes(q));
+  }, [sortedRegistrants, search]);
+  const registrants = filtered.slice(0, MAX_RENDERED);
 
   function chooseOrg(id: string) {
     setOrgId(id);
@@ -141,7 +152,7 @@ export function GenerationForm({
     },
   );
 
-  const canSubmit = !!event && !!layout && !!eventDetail && badgeCount > 0 && registrationIds.length <= 5000;
+  const canSubmit = !!event && !!layout && !!eventDetail && badgeCount > 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
@@ -204,6 +215,29 @@ export function GenerationForm({
               {mode === "IDS" && (
                 <div>
                   <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un nom ou un identifiant" />
+                  {eventDetail?.truncated && (
+                    <p className="mb-2 text-sm text-amber-700">
+                      Liste limitée aux 5 000 premières inscriptions : utilisez « Tous les approuvés » ou « Par
+                      catégorie » pour imprimer les autres.
+                    </p>
+                  )}
+                  {filtered.length > 0 && (
+                    <div className="mb-2 flex items-center gap-3 text-[13px]">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="text-green-600"
+                        onClick={() =>
+                          setRegistrationIds((l) => [...new Set([...l, ...filtered.map((r) => r.id)])])
+                        }
+                      >
+                        Tout sélectionner ({filtered.length})
+                      </Button>
+                      <Button type="button" variant="link" className="text-slate-500" onClick={() => setRegistrationIds([])}>
+                        Tout désélectionner
+                      </Button>
+                    </div>
+                  )}
                   <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
                     {!eventDetail && <p className="text-sm text-slate-400">Chargement…</p>}
                     {eventDetail && registrants.length === 0 && (
@@ -217,6 +251,11 @@ export function GenerationForm({
                         label={`${r.lastName} ${r.firstName} · ${r.id}`}
                       />
                     ))}
+                    {filtered.length > MAX_RENDERED && (
+                      <p className="text-sm text-slate-500">
+                        {filtered.length - MAX_RENDERED} autres résultats : affinez la recherche.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
