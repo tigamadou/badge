@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { withEventAuth } from "@/lib/with-event-auth";
+import { PrintRequestError, printRequestErrorResponse } from "@/lib/print-requests/errors";
 import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES, printRequestFileKey } from "@/lib/storage";
 
 // Plan 33 : fichier joint à une demande d'impression (maquette, logo, PDF). Réservé aux
@@ -14,7 +15,9 @@ const EXT: Record<string, string> = {
 
 export const POST = withEventAuth(
   { permission: "print.request", allowArchived: true },
-  async (req, { eventId }) => {
+  async (req, { eventId, session }) => {
+    // Le staff n'agit jamais côté organisateur (C10).
+    if (session.user.isStaff) return printRequestErrorResponse(new PrintRequestError("STAFF_FORBIDDEN", 403));
     const form = await req.formData().catch(() => null);
     const file = form?.get("file");
     if (!(file instanceof File)) {
