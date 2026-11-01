@@ -278,6 +278,47 @@ test.describe("Account resubmit after rejection", () => {
     });
   });
 
+  // --- QR d'accueil (plan 35) -----------------------------------------------
+
+  test("une inscription approuvée affiche la carte « QR d'accueil » avec son ID", async ({ page }) => {
+    const user = await createTestUser({ scope: "welcome-qr", verified: true, profile: true });
+    const { eventId, categoryId } = await createTestEvent({ scope: "welcome-qr" });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "APPROVED",
+    });
+
+    await loginAs(page, user);
+    await page.goto(`/account/registrations/${regId}`);
+    await expect(page).toHaveURL(new RegExp(`/account/registrations/${regId}$`));
+    await expect(page.getByText("QR d'accueil", { exact: true })).toBeVisible();
+    const qr = page.getByRole("img", { name: "QR d'accueil" });
+    await expect(qr).toBeVisible();
+    await expect(qr).toHaveAttribute("src", /^data:image\//);
+    await expect(page.getByText(regId, { exact: true })).toBeVisible();
+    await expect(page.getByText("À présenter à l'accueil, sur votre téléphone ou imprimé.")).toBeVisible();
+  });
+
+  test("une inscription en attente ou rejetée n'affiche pas de QR d'accueil", async ({ page }) => {
+    const user = await createTestUser({ scope: "welcome-qr-none", verified: true, profile: true });
+    const { eventId, categoryId } = await createTestEvent({ scope: "welcome-qr-none" });
+    const { id: regId } = await createTestRegistration({
+      userId: user.id,
+      eventId,
+      categoryId,
+      status: "PENDING",
+    });
+
+    await loginAs(page, user);
+    await page.goto(`/account/registrations/${regId}`);
+    await expect(page).toHaveURL(new RegExp(`/account/registrations/${regId}$`));
+    await expect(page.getByRole("heading", { name: "Salon E2E" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "QR d'accueil" })).toHaveCount(0);
+    await expect(page.getByText("QR d'accueil", { exact: true })).toHaveCount(0);
+  });
+
   // --- Gardes -------------------------------------------------------------
 
 });

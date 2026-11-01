@@ -203,7 +203,7 @@ cas d'échec. Les entrées du journal d'activité sont `PRINT_REQUEST_SUBMITTED`
 - **Plan 35 (impression sur place)** : `marginPercent` (marge d'impression sur place),
   `parentRequestId` (demande complémentaire rattachée), `PrintQuoteLine.usesOrgCredit` (ligne payée
   par le crédit de l'organisation, `CREDIT_LINE_LOCKED`), compteur et plafond
-  (`onsite-counter.ts`). Les colonnes existent déjà ; l'interface arrive avec ce plan.
+  (`onsite-counter.ts`). Livré : voir [impression pendant l'évènement](impression-sur-place.md).
 
 ## Limites connues
 
