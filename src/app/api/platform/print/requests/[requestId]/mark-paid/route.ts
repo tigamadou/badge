@@ -15,15 +15,20 @@ export const POST = withStaffAuth<{ requestId: string }>(
       const { reason } = await parseBody(req, bodySchema);
       const userId = session.user.id;
       const request = await markPaidManually({ requestId, userId, reason });
-      await logActivity({
-        type: "PRINT_REQUEST_MARKED_PAID",
-        userId,
-        orgId: request.orgId,
-        eventId: request.eventId,
-        targetId: requestId,
-        details: { reason },
-        req,
-      });
+      // Le paiement est deja enregistre : un echec du journal ne doit ni changer la reponse ni supprimer la notification.
+      try {
+        await logActivity({
+          type: "PRINT_REQUEST_MARKED_PAID",
+          userId,
+          orgId: request.orgId,
+          eventId: request.eventId,
+          targetId: requestId,
+          details: { reason },
+          req,
+        });
+      } catch (error) {
+        console.error("[mark-paid] journal en echec", error);
+      }
       await notifyPrintRequestPaid(requestId, userId, { manual: true });
       return json({ request: requestDTO(request) });
     }),
