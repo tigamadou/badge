@@ -4,6 +4,7 @@ import {
   findEffectiveTemplateRow,
   resolveEventTemplateId,
 } from "@/lib/badge-templates/event-template-variables";
+import { onsiteTemplateStatus } from "@/lib/print-requests/onsite";
 import { guarded, json, lineDTO, loadStaffRequest, requestDTO } from "@/lib/print-requests/staff-api";
 
 type Params = { requestId: string };
@@ -69,6 +70,7 @@ export const GET = withStaffAuth<Params>(async (_req, _ctx, { params }) =>
 
     return json({
       request: requestDTO(request),
+      onsiteTemplate: await onsiteTemplateStatus(request),
       event: {
         id: event.id,
         title: event.title,

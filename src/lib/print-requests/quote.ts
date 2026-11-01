@@ -9,6 +9,7 @@ import {
   type OptionChoice,
 } from "@/lib/print-catalog/pricing";
 import { PrintRequestError } from "./errors";
+import { assertOnsiteCanAdvance } from "./onsite";
 import {
   choiceFailureToError,
   isEventFileKey,
@@ -228,6 +229,8 @@ export async function sendQuote(input: {
   const request = await loadRequest(input.requestId);
   return prisma.$transaction(async (tx) => {
     const current = await lockRequest(tx, request.id);
+    // Template devenu inadapté : le devis d'une demande sur place ne part pas.
+    await assertOnsiteCanAdvance(current);
     // Transition d'abord : un statut interdit prime sur un devis vide. Les refus qui suivent
     // annulent la transaction, donc rien n'est écrit.
     await applyTransition(tx, current, "SEND_QUOTE", "STAFF", input.now);
@@ -286,6 +289,8 @@ export async function advanceStatus(input: {
   return prisma.$transaction(async (tx) => {
     const current = await lockRequest(tx, request.id);
     const from: PrintRequestStatus = current.status;
+    // La clôture (COMPLETED) reste permise : seuls la production et la mise à disposition sont bloquées.
+    if (input.to !== "COMPLETED") await assertOnsiteCanAdvance(current);
     const to = await applyTransition(tx, current, action, "STAFF");
     await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
     // Statut lu sous verrou : le journal d'activité n'utilise pas une lecture périmée.

@@ -4,9 +4,11 @@ import { PrintRequestError } from "@/lib/print-requests/errors";
 import { submitRequest } from "@/lib/print-requests/lifecycle";
 import {
   OnsiteError,
+  assertOnsiteCanAdvance,
   getOnsiteEligibility,
   onsiteErrorResponse,
   onsiteOrPrintErrorResponse,
+  onsiteTemplateStatus,
   prepareOnsiteSubmission,
 } from "@/lib/print-requests/onsite";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
@@ -158,5 +160,34 @@ describe("traduction des erreurs", () => {
     expect((onsiteOrPrintErrorResponse(new OnsiteError("NOT_ONSITE", 409))).status).toBe(409);
     expect((onsiteOrPrintErrorResponse(new PrintRequestError("NOT_FOUND", 404))).status).toBe(404);
     expect(() => onsiteOrPrintErrorResponse(new Error("boom"))).toThrow("boom");
+  });
+});
+
+describe("onsiteTemplateStatus / assertOnsiteCanAdvance", () => {
+  const onsite = (over: Partial<Parameters<typeof onsiteTemplateStatus>[0]> = {}) => ({
+    type: "ONSITE" as const, parentRequestId: null, badgeTemplateId: fx.template.id, ...over,
+  });
+
+  it("OK : la copie du template figure dans la liste", async () => {
+    await setList([fx.template.id]);
+    expect(await onsiteTemplateStatus(onsite())).toBe("OK");
+    await expect(assertOnsiteCanAdvance(onsite())).resolves.toBeUndefined();
+  });
+
+  it("NOT_APPLICABLE : demande en amont, demande complémentaire, brouillon sans copie", async () => {
+    await setList([]);
+    expect(await onsiteTemplateStatus(onsite({ type: "ADVANCE" }))).toBe("NOT_APPLICABLE");
+    expect(await onsiteTemplateStatus(onsite({ parentRequestId: "parent" }))).toBe("NOT_APPLICABLE");
+    expect(await onsiteTemplateStatus(onsite({ badgeTemplateId: null }))).toBe("NOT_APPLICABLE");
+    await expect(assertOnsiteCanAdvance(onsite({ type: "ADVANCE" }))).resolves.toBeUndefined();
+  });
+
+  it("UNSUITABLE après retrait du template de la liste ; l'avancement est refusé en 409", async () => {
+    await setList([fx.template.id]);
+    expect(await onsiteTemplateStatus(onsite())).toBe("OK");
+    await setList([]);
+    expect(await onsiteTemplateStatus(onsite())).toBe("UNSUITABLE");
+    const err = (await reject(assertOnsiteCanAdvance(onsite()))) as OnsiteError;
+    expect([err.code, err.httpStatus]).toEqual(["ONSITE_TEMPLATE_UNSUITABLE", 409]);
   });
 });

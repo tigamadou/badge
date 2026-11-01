@@ -33,6 +33,7 @@ export type DetailGeneration = {
 };
 
 export type RequestDetailData = {
+  onsiteTemplate: "OK" | "UNSUITABLE" | "NOT_APPLICABLE";
   request: {
     id: string;
     reference: string;

@@ -104,3 +104,22 @@ export async function prepareOnsiteSubmission(
   }
   return { marginPercent: settings.defaultMarginPercent };
 }
+
+export type OnsiteTemplateStatus = "OK" | "UNSUITABLE" | "NOT_APPLICABLE";
+type StatusInput = { type: PrintRequestType; parentRequestId: string | null; badgeTemplateId: string | null };
+
+// Lit la copie du template de la demande (tenue à jour par syncRequestTemplates). Les demandes
+// en amont, les demandes complémentaires et les brouillons (pas de copie) ne sont pas concernés.
+export async function onsiteTemplateStatus(request: StatusInput): Promise<OnsiteTemplateStatus> {
+  if (request.type !== "ONSITE" || request.parentRequestId !== null || request.badgeTemplateId === null) {
+    return "NOT_APPLICABLE";
+  }
+  const settings = await getOnsitePrintSettings();
+  return settings.templateIds.includes(request.badgeTemplateId) ? "OK" : "UNSUITABLE";
+}
+
+export async function assertOnsiteCanAdvance(request: StatusInput): Promise<void> {
+  if ((await onsiteTemplateStatus(request)) === "UNSUITABLE") {
+    throw new OnsiteError("ONSITE_TEMPLATE_UNSUITABLE", 409);
+  }
+}
