@@ -126,6 +126,9 @@ demande existante. Un produit archivé disparaît de la vitrine.
   estimé correspond au calcul ci-dessus.
 - Archiver le cordon le retire de la vitrine sans toucher aux demandes qui le contiennent.
 - La route de téléversement plateforme refuse un non-staff (403), un fichier trop lourd ou
-  d'un type interdit (400).
+  d'un type interdit (413 pour un fichier trop lourd, 415 pour un type interdit, comme les
+  routes d'upload existantes).
+  > Amendé le 2026-11-01 : ce critère disait « 400 » ; il est aligné sur les routes d'upload
+  > existantes et sur la convention e2e (`TOO_LARGE` / `BAD_TYPE`).
 - Couverture 100 % maintenue sur `src/lib/**` et `src/app/api/**` ; e2e de la page catalogue
   et de la fiche produit.

@@ -67,8 +67,30 @@ export async function createTestPrintLayout(opts: {
   return layout;
 }
 
+// Cree un produit du catalogue d'impression (slug prefixe `e2e-` pour le cleanup). Le nom est libre.
+export async function createTestPrintProduct(opts: {
+  name: string;
+  kind?: "BADGE" | "ACCESSORY";
+  published?: boolean;
+}): Promise<{ id: string }> {
+  const slug = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return db().printProduct.create({
+    data: {
+      name: opts.name,
+      slug,
+      kind: opts.kind ?? "ACCESSORY",
+      basePrice: 1000,
+      published: opts.published ?? false,
+    },
+    select: { id: true },
+  });
+}
+
 export async function cleanupE2ETestData(): Promise<void> {
   const prisma = db();
+
+  // Produits du catalogue d'impression crees par les e2e (images, paliers et options en cascade).
+  await prisma.printProduct.deleteMany({ where: { slug: { startsWith: "e2e-" } } });
 
   // 1. Recuperer les users E2E (suffixe convention).
   const users = await prisma.user.findMany({

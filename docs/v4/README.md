@@ -68,6 +68,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 - [Loader et toast sur les actions](features/feedback-actions.md) — primitives, `apiErrorMessage`, motifs A a G, regles d'usage, helpers e2e.
 - [Resoumission avec changement de categorie](features/inscriptions-resoumission.md) — `resubmit` (corps optionnel, nouvel ID, `INVALID_CATEGORY`), `allocateRegistrationId`, rejet interdit apres impression du badge.
 - [Planches d'impression](features/impression-planches.md) — gabarits, calcul de la grille, recto-verso, génération asynchrone par le worker, export ZIP organisateur sans limite, droits, limites connues.
+- [Catalogue des produits d'impression](features/catalogue-impression.md) — familles, produits, images, paliers, six types d'options, règle de prix et arrondi de la répartition, copie figée, upload (415/413), droits, `GET /api/print/catalog`, contrat `pricing.ts` pour le plan 33.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
 - [Spec backups hebdomadaires](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01) ; volet stockage S3/MinIO implemente et retire du document.
