@@ -36,13 +36,18 @@ const event = {
 
 describe("StaffShell", () => {
   const html = renderToStaticMarkup(
-    <StaffShell user={{ ...user, staffRole: "STAFF_OBSERVER" }}>
+    <StaffShell user={{ ...user, staffRole: "STAFF_OBSERVER" }} pendingPrintRequests={2}>
       <p>x</p>
     </StaffShell>,
   );
 
   it("place la cloche en portée platform", () => {
     expect(bellScope(html)).toEqual({ kind: "platform" });
+  });
+
+  it("affiche l'entrée Demandes avec son compteur", () => {
+    expect(html).toContain("Demandes");
+    expect(html).toContain('aria-label="2 en attente"');
   });
 
   it("ajoute les entrées Notifications et Emails", () => {
