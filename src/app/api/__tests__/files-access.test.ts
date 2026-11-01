@@ -129,4 +129,33 @@ describe("GET /api/files — controle d'acces aux documents", () => {
     const res = await GET(req(), ctx(traversalPath));
     expect(res.status).toBe(403);
   });
+
+  it("print-sheets/ : 403 sans session, pour un non-staff et pour STAFF_OBSERVER", async () => {
+    const key = "print-sheets/gen-1.pdf";
+    await uploadFile(key, Buffer.from("pdf"), "application/pdf");
+    vi.mocked(getServerSession).mockResolvedValue(null);
+    expect((await GET(req(), ctx(key))).status).toBe(403);
+
+    const plain = await prisma.user.create({ data: { email: "ps-plain@x", password: "x", name: "P" } });
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: plain.id } } as never);
+    expect((await GET(req(), ctx(key))).status).toBe(403);
+
+    const observer = await prisma.user.create({
+      data: { email: "ps-obs@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_OBSERVER" },
+    });
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: observer.id } } as never);
+    expect((await GET(req(), ctx(key))).status).toBe(403);
+  });
+
+  it("print-sheets/ : 200 private no-store pour STAFF_SUPPORT", async () => {
+    const key = "print-sheets/gen-2.pdf";
+    await uploadFile(key, Buffer.from("pdf"), "application/pdf");
+    const support = await prisma.user.create({
+      data: { email: "ps-sup@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_SUPPORT" },
+    });
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: support.id } } as never);
+    const res = await GET(req(), ctx(key));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
 });

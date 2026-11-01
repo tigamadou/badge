@@ -3,22 +3,26 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
-import { hasEventPermission } from "@/lib/auth-helpers";
+import { hasEventPermission, staffRoleAtLeast } from "@/lib/auth-helpers";
 import { getFile } from "@/lib/storage";
 
 // v4 Task 5.3 : les documents d'identite ne doivent JAMAIS etre servis publiquement.
 // Cles sensibles : `profile/{userId}/documents/...` (compte participant) et
 // `events/{eventId}/idDocuments/...` (piece jointe a une inscription). Les photos et
 // logos restent publics (ils apparaissent sur les badges / pages publiques).
+// Les planches d'impression (`print-sheets/...`) contiennent des donnees de
+// participants : lisibles par le staff STAFF_SUPPORT minimum uniquement.
 // Union discriminee : un fichier sensible est TOUJOURS soit un document de profil
 // (profileUserId), soit un document d'evenement (eventId). Le type garantit qu'un
 // des deux est present quand sensitive vaut true.
 type SensitiveFile =
   | { sensitive: true; profileUserId: string; eventId?: undefined }
-  | { sensitive: true; eventId: string; profileUserId?: undefined };
+  | { sensitive: true; eventId: string; profileUserId?: undefined }
+  | { sensitive: true; staffOnly: true; eventId?: undefined; profileUserId?: undefined };
 type FileClass = { sensitive: false } | SensitiveFile;
 
 function classify(key: string): FileClass {
+  if (key.startsWith("print-sheets/")) return { sensitive: true, staffOnly: true };
   const profileDoc = key.match(/^profile\/([^/]+)\/documents\//);
   if (profileDoc) return { sensitive: true, profileUserId: profileDoc[1] };
   const eventDoc = key.match(/^events\/([^/]+)\/idDocuments\//);
@@ -29,6 +33,9 @@ function classify(key: string): FileClass {
 async function canRead(userId: string, c: SensitiveFile): Promise<boolean> {
   const ctx = await loadUserContext(userId);
   if (!ctx) return false;
+  if ("staffOnly" in c) {
+    return ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT");
+  }
   if (ctx.isStaff) return true;
   if (c.eventId === undefined) return c.profileUserId === userId;
   // Sinon c'est un document d'evenement : eventId est garanti par le type.
