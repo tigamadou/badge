@@ -28,7 +28,10 @@ export default async function PrintPaymentReturnPage({
           <div className="space-y-4">
             {outcome === "PAID" && (
               <Alert tone="success">
-                Paiement confirmé. La demande {reference} est payée ; l&apos;équipe Badge lance la production.
+                {/* Alert est en flex : une seule ligne de texte, sinon les espaces autour de {reference} disparaissent. */}
+                <span>
+                  Paiement confirmé. La demande {reference} est payée ; l&apos;équipe Badge lance la production.
+                </span>
               </Alert>
             )}
             {outcome === "UNMATCHED" && (
