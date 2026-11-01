@@ -13,6 +13,7 @@ import {
   applyTransition,
   assertOwner,
   loadRequest,
+  lockRequestWithEvent,
   requestBadgeCount,
   snapshotEventTemplate,
 } from "./service";
@@ -55,7 +56,7 @@ export async function submitRequest(input: {
     await lockEventRow(tx, input.eventId);
     // Verrou de la demande avant toute lecture : une modification ou annulation concurrente
     // s'enchaîne au lieu d'être validée à tort ou perdue.
-    await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${input.requestId} FOR UPDATE`;
+    await lockRequestWithEvent(tx, input.requestId);
     const request = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
     if (request.status !== "DRAFT") {
       throw new PrintRequestError("INVALID_TRANSITION", 409, { from: request.status, action: "SUBMIT" });
@@ -142,7 +143,7 @@ export async function cancelRequest(input: {
 }): Promise<{ request: PrintRequest; from: PrintRequestStatus }> {
   await loadRequest(input.requestId, { eventId: input.eventId });
   const { request, from } = await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${input.requestId} FOR UPDATE`;
+    await lockRequestWithEvent(tx, input.requestId);
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
     await applyTransition(tx, current, "CANCEL", "ORGANIZER");
     // Un brouillon n'a jamais été vu du staff : ni entrée du fil ni notification.
@@ -172,7 +173,7 @@ export async function acceptQuote(input: {
   await assertOwner(input.userId, loaded.orgId);
   const now = input.now ?? new Date();
   const result = await prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${input.requestId} FOR UPDATE`;
+    await lockRequestWithEvent(tx, input.requestId);
     const request = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
     if (request.status !== "QUOTED") {
       throw new PrintRequestError("INVALID_TRANSITION", 409, { from: request.status, action: "ACCEPT" });

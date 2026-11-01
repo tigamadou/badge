@@ -19,6 +19,7 @@ import {
   applyEdit,
   assertEditable,
   loadRequest,
+  lockRequestWithEvent,
   recomputeTotal,
   requestBadgeCount,
 } from "./service";
@@ -444,7 +445,7 @@ export async function setOrganizerProducts(input: {
   const ordered = [...badges, ...resolved.filter((r) => r.product.kind !== "BADGE")];
 
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${request.id} FOR UPDATE`;
+    await lockRequestWithEvent(tx, request.id);
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
     assertEditable(current.status, "ORGANIZER");
 

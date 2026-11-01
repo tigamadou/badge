@@ -22,6 +22,7 @@ import {
   assertEditable,
   isPaymentInProgress,
   loadRequest,
+  lockRequestWithEvent,
   markPaid,
   recomputeTotal,
 } from "./service";
@@ -40,7 +41,7 @@ const STAFF = { side: "STAFF" } as const;
 // relit. Ordre des verrous du chantier : Event d'abord, PrintRequest ensuite ; le staff ne
 // touche jamais aux réservations, il ne prend donc que celui-ci.
 async function lockRequest(tx: Prisma.TransactionClient, requestId: string): Promise<PrintRequest> {
-  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
+  await lockRequestWithEvent(tx, requestId);
   const request = await tx.printRequest.findUnique({ where: { id: requestId } });
   if (!request) throw new PrintRequestError("NOT_FOUND", 404);
   return request;

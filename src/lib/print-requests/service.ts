@@ -248,7 +248,13 @@ export async function markPaid(
   opts: { paymentId?: string; manual?: { userId: string; reason: string } },
 ): Promise<boolean> {
   // Verrou de la ligne : deux confirmations simultanées (webhook et page de retour) s'enchaînent.
-  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
+  // Demande inconnue : faux, comme avant (le helper lève NOT_FOUND).
+  try {
+    await lockRequestWithEvent(tx, requestId);
+  } catch (e) {
+    if (e instanceof PrintRequestError && e.code === "NOT_FOUND") return false;
+    throw e;
+  }
   const request = await tx.printRequest.findUnique({
     where: { id: requestId },
     select: { id: true, status: true, acceptedTotal: true },
