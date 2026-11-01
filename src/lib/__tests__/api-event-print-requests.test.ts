@@ -38,8 +38,6 @@ type User = { id: string; email: string; name: string };
 let fx: PrintFixture;
 beforeEach(async () => {
   vi.mocked(getServerSession).mockReset();
-  // Les courriels ne sont pas configurés en test : l'échec d'envoi est journalisé sans bloquer.
-  vi.spyOn(console, "error").mockImplementation(() => {});
   fx = await seedPrintFixture();
   await loginAs(fx.eventAdmin);
 });
@@ -147,6 +145,39 @@ describe("liste et création", () => {
     await makeRequest(fx, { status: "DRAFT", type: "ONSITE" });
     const body = await (await call(list.GET as Handler, "GET")).json();
     expect(body.requests[0].badgeCount).toBe(0);
+  });
+
+  it("GET : ne renvoie jamais les demandes d'un autre évènement", async () => {
+    const other = await prisma.event.create({
+      data: { orgId: fx.org.id, title: "Autre", slug: `o-${Date.now()}-${Math.random()}`, location: "L", date: new Date() },
+    });
+    await makeRequest(fx, { status: "SUBMITTED", eventId: other.id });
+    const mine = await makeRequest(fx, { status: "SUBMITTED" });
+    const body = await (await call(list.GET as Handler, "GET")).json();
+    expect(body.requests.map((x: { id: string }) => x.id)).toEqual([mine.id]);
+  });
+
+  it("GET et PATCH : aucun champ interne dans la demande ni dans les lignes", async () => {
+    const r = await makeRequest(fx, {
+      status: "QUOTED", quoteVersion: 1, marginPercent: 20, paidPaymentId: "pay", templatePinned: true,
+      acceptedById: fx.owner.id,
+    });
+    await prisma.printQuoteLine.create({
+      data: { requestId: r.id, kind: "CUSTOM", label: "L", quantity: 1, unitPrice: 10, lineTotal: 10, position: 0, addedBy: "STAFF" },
+    });
+    const internal = [
+      "createdById", "acceptedById", "paidPaymentId", "marginPercent", "parentRequestId", "templatePinned",
+      "badgeTemplateId", "orgId",
+    ];
+    const got = await (await call(detail.GET as Handler, "GET", { requestId: r.id })).json();
+    for (const key of internal) expect(got.request).not.toHaveProperty(key);
+    expect(got.request).toMatchObject({ id: r.id, reference: r.reference, quoteVersion: 1 });
+    expect(got.lines[0]).not.toHaveProperty("requestId");
+    expect(got.lines[0]).toMatchObject({ label: "L", lineTotal: 10 });
+    const patched = await (await call(detail.PATCH as Handler, "PATCH", { requestId: r.id, body: { notes: "z" } })).json();
+    for (const key of internal) expect(patched.request).not.toHaveProperty(key);
+    const listed = await (await call(list.GET as Handler, "GET")).json();
+    for (const key of internal) expect(listed.requests[0]).not.toHaveProperty(key);
   });
 
   it("GET sur évènement archivé : 200", async () => {
@@ -351,9 +382,9 @@ describe("acceptation", () => {
     expect(res.status).toBe(200);
     expect((await res.json()).request).toMatchObject({ status: "ACCEPTED", acceptedVersion: 2, acceptedTotal: 5000 });
     expect(await logs("PRINT_REQUEST_ACCEPTED")).toHaveLength(1);
-    // Notifié côté organisateur (ADMIN de l'évènement) et côté staff.
+    // Le staff est prévenu une seule fois (par acceptQuote), l'organisateur par la route.
     const mine = { type: "PRINT_REQUEST_STATUS_CHANGED" as const };
-    expect(await prisma.notification.count({ where: { ...mine, userId: fx.staffAdmin.id } })).toBeGreaterThanOrEqual(1);
+    expect(await prisma.notification.count({ where: { ...mine, userId: fx.staffAdmin.id } })).toBe(1);
     expect(await prisma.notification.count({ where: { ...mine, userId: fx.eventAdmin.id } })).toBe(1);
   });
 

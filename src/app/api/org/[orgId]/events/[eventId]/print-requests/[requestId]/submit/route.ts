@@ -1,6 +1,6 @@
 import { logActivity } from "@/lib/activity-log";
 import { submitRequest } from "@/lib/print-requests/lifecycle";
-import { json, organizerRoute } from "@/lib/print-requests/route";
+import { json, organizerRoute, toOrganizerDTO } from "@/lib/print-requests/route";
 
 // Le déclencheur « demande envoyée » est appelé par submitRequest.
 export const POST = organizerRoute({ allowArchived: false }, async (req, ctx) => {
@@ -18,5 +18,5 @@ export const POST = organizerRoute({ allowArchived: false }, async (req, ctx) =>
     details: { reference: request.reference },
     req,
   });
-  return json({ request });
+  return json({ request: toOrganizerDTO(request) });
 });

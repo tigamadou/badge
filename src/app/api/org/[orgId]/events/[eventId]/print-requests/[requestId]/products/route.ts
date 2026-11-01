@@ -2,7 +2,7 @@ import { z } from "zod";
 import { setOrganizerProducts } from "@/lib/print-requests/content";
 import { organizerProductsSchema } from "@/lib/print-requests/inputs";
 import { loadRequest } from "@/lib/print-requests/service";
-import { afterEdit, json, organizerRoute, parseBody } from "@/lib/print-requests/route";
+import { afterEdit, json, organizerRoute, parseBody, toLineDTO } from "@/lib/print-requests/route";
 
 const bodySchema = z.object({ products: organizerProductsSchema });
 
@@ -16,5 +16,5 @@ export const PUT = organizerRoute({ allowArchived: false }, async (req, ctx) => 
     products,
   });
   await afterEdit(req, ctx, before.status, revised, "products");
-  return json({ lines, total });
+  return json({ lines: lines.map(toLineDTO), total });
 });

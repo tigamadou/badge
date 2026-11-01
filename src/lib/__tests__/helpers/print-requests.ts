@@ -45,6 +45,8 @@ async function registration(
 // Jeu de données commun aux tests des demandes d'impression : une organisation, un évènement
 // (template 320 x 460 px, 2 pages), des membres de chaque rôle, des inscriptions et des produits.
 export async function seedPrintFixture() {
+  // Singleton requis par l'envoi de courriels (déclencheurs de notification).
+  await prisma.platformSettings.upsert({ where: { id: "singleton" }, update: {}, create: { id: "singleton" } });
   const org = await prisma.organization.create({ data: { name: "Org", slug: uniq("org") } });
   const template = await prisma.installedBadgeTemplate.create({
     data: {

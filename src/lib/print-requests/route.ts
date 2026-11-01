@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { z } from "zod";
-import type { PrintRequestStatus } from "@prisma/client";
+import type { PrintQuoteLine, PrintRequest, PrintRequestStatus } from "@prisma/client";
 import { logActivity } from "@/lib/activity-log";
 import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
 import { withEventAuth, type EventAuthCtx } from "@/lib/with-event-auth";
@@ -66,4 +66,60 @@ export async function afterEdit(
   if (revised) {
     await notifyPrintRequestStatusChanged(ctx.requestId, ctx.session.user.id, { organizer: false, staff: true });
   }
+}
+
+// Liste blanche des champs d'une demande exposés à l'organisateur (rien de interne : créateur,
+// accepteur, paiement, marge, demande parente, verrou de template).
+export function toOrganizerDTO(r: PrintRequest) {
+  return {
+    id: r.id,
+    reference: r.reference,
+    eventId: r.eventId,
+    type: r.type,
+    status: r.status,
+    badgeWidthPx: r.badgeWidthPx,
+    badgeHeightPx: r.badgeHeightPx,
+    badgePages: r.badgePages,
+    delivery: r.delivery,
+    deliveryAddress: r.deliveryAddress,
+    deliveryContactName: r.deliveryContactName,
+    deliveryContactPhone: r.deliveryContactPhone,
+    wantedBy: r.wantedBy,
+    estimatedQuantity: r.estimatedQuantity,
+    onsiteSchedule: r.onsiteSchedule,
+    onsiteLocation: r.onsiteLocation,
+    onsiteContactName: r.onsiteContactName,
+    onsiteContactPhone: r.onsiteContactPhone,
+    notes: r.notes,
+    quoteVersion: r.quoteVersion,
+    acceptedVersion: r.acceptedVersion,
+    acceptedTotal: r.acceptedTotal,
+    acceptedAt: r.acceptedAt,
+    total: r.total,
+    submittedAt: r.submittedAt,
+    quotedAt: r.quotedAt,
+    paidAt: r.paidAt,
+    completedAt: r.completedAt,
+    cancelledAt: r.cancelledAt,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
+  };
+}
+
+export function toLineDTO(l: PrintQuoteLine) {
+  return {
+    id: l.id,
+    kind: l.kind,
+    productId: l.productId,
+    label: l.label,
+    optionsSnapshot: l.optionsSnapshot,
+    choices: l.choices,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    lineTotal: l.lineTotal,
+    position: l.position,
+    addedBy: l.addedBy,
+    priceOverridden: l.priceOverridden,
+    quantityOverridden: l.quantityOverridden,
+  };
 }
