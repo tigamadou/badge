@@ -39,6 +39,20 @@ export function slotAnchor(
   }
 }
 
+export class EmptyBadgeListError extends Error {
+  constructor() {
+    super("aucun badge à imprimer");
+    this.name = "EmptyBadgeListError";
+  }
+}
+
+export class InvalidBadgePdfError extends Error {
+  constructor(readonly badgeIndex: number) {
+    super(`Le PDF du badge ${badgeIndex} est illisible`);
+    this.name = "InvalidBadgePdfError";
+  }
+}
+
 const ptToMm = (pt: number) => (pt * 25.4) / 72;
 
 export async function composeSheets(input: {
@@ -49,13 +63,16 @@ export async function composeSheets(input: {
   badges: Uint8Array[];
 }): Promise<{ pdf: Uint8Array; sheetCount: number }> {
   const { layout, spec, duplex, badgeMm, badges } = input;
+  if (badges.length === 0) throw new EmptyBadgeListError();
   const out = await PDFDocument.create();
 
   // Controle puis incorporation de chaque badge (une seule fois chacun).
   const wanted = duplex ? [0, 1] : [0];
   const embedded: PDFEmbeddedPage[][] = [];
   for (let b = 0; b < badges.length; b++) {
-    const src = await PDFDocument.load(badges[b]);
+    const src = await PDFDocument.load(badges[b]).catch(() => {
+      throw new InvalidBadgePdfError(b);
+    });
     const pages = src.getPages();
     for (const p of wanted) {
       if (p >= pages.length) throw new BadgeSizeMismatchError(b, p);

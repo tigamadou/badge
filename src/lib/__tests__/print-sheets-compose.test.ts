@@ -4,9 +4,13 @@ import type { LayoutSpec } from "@/lib/print-sheets/compute-layout";
 import { computeSheetLayout } from "@/lib/print-sheets/compute-layout";
 import {
   BadgeSizeMismatchError,
+  EmptyBadgeListError,
+  InvalidBadgePdfError,
   composeSheets,
   slotAnchor,
 } from "@/lib/print-sheets/compose";
+import { planPlacements } from "@/lib/print-sheets/placements";
+import { mmToPt } from "@/lib/print-sheets/units";
 import { makeBadgePdf } from "./helpers/badge-pdf";
 
 const A3_W = 841.89;
@@ -140,5 +144,86 @@ describe("composeSheets", () => {
     const line = vi.spyOn(PDFPage.prototype, "drawLine");
     await composeSheets({ layout, spec: s, duplex: false, badgeMm: BADGE, badges: await badges(2, 1) });
     expect(line).not.toHaveBeenCalled();
+  });
+
+  it("zero badge leve EmptyBadgeListError", async () => {
+    const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
+    const err = await composeSheets({
+      layout, spec, duplex: false, badgeMm: BADGE, badges: [],
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(EmptyBadgeListError);
+    expect(err.message).toBe("aucun badge à imprimer");
+  });
+
+  it("octets corrompus : InvalidBadgePdfError avec l'index du badge", async () => {
+    const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
+    const good = await makeBadgePdf({ widthMm: 84, heightMm: 120, pages: 1 });
+    const err = await composeSheets({
+      layout, spec, duplex: false, badgeMm: BADGE,
+      badges: [good, new Uint8Array([1, 2, 3])],
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(InvalidBadgePdfError);
+    expect(err.badgeIndex).toBe(1);
+    expect(err.name).toBe("InvalidBadgePdfError");
+  });
+
+  it("tolerance : 0.009 mm d'ecart accepte, 0.011 mm refuse", async () => {
+    const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
+    const run = async (delta: number) =>
+      composeSheets({
+        layout, spec, duplex: false, badgeMm: BADGE,
+        badges: [await makeBadgePdf({ widthMm: 84, heightMm: 120 + delta, pages: 1 })],
+      });
+    await expect(run(0.009)).resolves.toBeDefined();
+    await expect(run(0.011)).rejects.toBeInstanceOf(BadgeSizeMismatchError);
+  });
+});
+
+// Boite englobante analytique : pdf-lib tourne anti-horaire autour de (x, y).
+function drawnBox(o: { x: number; y: number; width: number; height: number; rotate?: { angle: number } }) {
+  const corners: [number, number][] = [[0, 0], [o.width, 0], [0, o.height], [o.width, o.height]];
+  const turn = ([u, v]: [number, number]): [number, number] => {
+    switch (o.rotate?.angle) {
+      case 90: return [-v, u];
+      case 180: return [-u, -v];
+      case 270: return [v, -u];
+      default: return [u, v];
+    }
+  };
+  const pts = corners.map((c) => turn(c));
+  const xs = pts.map((p) => o.x + p[0]);
+  const ys = pts.map((p) => o.y + p[1]);
+  return {
+    x: Math.min(...xs), y: Math.min(...ys),
+    width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys),
+  };
+}
+
+describe("boite dessinee = emplacement", () => {
+  const cases: [string, Partial<LayoutSpec>][] = [
+    ["portrait LONG_EDGE non tourne", {}],
+    ["portrait LONG_EDGE ROTATED", { badgeOrientation: "ROTATED" }],
+    ["portrait SHORT_EDGE", { duplexFlip: "SHORT_EDGE" }],
+    ["paysage LONG_EDGE", { sheetOrientation: "LANDSCAPE" }],
+  ];
+  it.each(cases)("%s, recto-verso", async (_n, over) => {
+    const s = { ...spec, ...over };
+    const layout = computeSheetLayout(s, { widthMm: 84, heightMm: 120 });
+    const count = layout.perSheet + 2;
+    const { placements } = planPlacements(layout, s, { badgeCount: count, duplex: true });
+    const draw = vi.spyOn(PDFPage.prototype, "drawPage");
+    await composeSheets({
+      layout, spec: s, duplex: true, badgeMm: BADGE, badges: await badges(count, 2),
+    });
+    expect(draw).toHaveBeenCalledTimes(placements.length);
+    placements.forEach((pl, i) => {
+      const o = draw.mock.calls[i][1] as Parameters<typeof drawnBox>[0];
+      const box = drawnBox(o);
+      expect(o.rotate?.angle).toBe(pl.rotation);
+      expect(box.x).toBeCloseTo(mmToPt(pl.slot.x), 2);
+      expect(box.y).toBeCloseTo(mmToPt(layout.sheet.height - pl.slot.y - pl.slot.height), 2);
+      expect(box.width).toBeCloseTo(mmToPt(pl.slot.width), 2);
+      expect(box.height).toBeCloseTo(mmToPt(pl.slot.height), 2);
+    });
   });
 });
