@@ -441,14 +441,32 @@ describe("mark-paid", () => {
     expect(res.json.request).not.toHaveProperty("paidPaymentId");
     const [log] = await logs(r.id, "PRINT_REQUEST_MARKED_PAID");
     expect(log.details).toEqual({ reason: "Virement reçu" });
-    expect(await prisma.notification.count({ where: { userId: fx.owner.id, type: "PRINT_REQUEST_STATUS_CHANGED" } })).toBe(1);
+    expect((await reload(r.id)).paidPaymentId).toBeNull();
+    // Message du marquage hors ligne (plan 34), pas la notification de changement de statut.
+    const manualBody = `La demande ${r.reference} (${fx.event.title}) a été marquée payée par l'équipe Badge.`;
+    const ownerNotifs = await prisma.notification.findMany({ where: { userId: fx.eventAdmin.id, type: "PRINT_REQUEST_STATUS_CHANGED" } });
+    expect(ownerNotifs.map((n) => n.body)).toEqual([manualBody]);
     // Le staff est notifié, sauf l'acteur lui-même : un autre STAFF_ADMIN la reçoit.
     const other = await prisma.user.create({
       data: { email: `adm-${Date.now()}@x.test`, password: "x", name: "A2", isStaff: true, staffRole: "STAFF_ADMIN" },
     });
     const r2 = await acceptedRequest();
     await call(markPaidPOST, `${BASE}/${r2.id}/mark-paid`, "POST", { requestId: r2.id }, { reason: "Espèces" });
-    expect(await prisma.notification.count({ where: { userId: other.id, type: "PRINT_REQUEST_STATUS_CHANGED" } })).toBe(1);
+    const staffNotifs = await prisma.notification.findMany({ where: { userId: other.id, type: "PRINT_REQUEST_STATUS_CHANGED" } });
+    expect(staffNotifs).toHaveLength(1);
+    expect(staffNotifs[0].body).toContain("a été marquée payée par l'équipe Badge.");
+  });
+
+  it("paiement réel en cours (Payment PENDING, sonde non espionnée) : 409 et demande inchangée", async () => {
+    const r = await acceptedRequest();
+    await prisma.payment.create({
+      data: { orgId: fx.org.id, purpose: "PRINT_REQUEST", printRequestId: r.id, amount: 1000, status: "PENDING" },
+    });
+    const res = await call(markPaidPOST, `${BASE}/${r.id}/mark-paid`, "POST", { requestId: r.id }, { reason: "Virement" });
+    expect(res).toMatchObject({ status: 409, json: { error: "PAYMENT_IN_PROGRESS" } });
+    const after = await reload(r.id);
+    expect(after).toMatchObject({ status: "ACCEPTED", paidPaymentId: null });
+    expect(await logs(r.id, "PRINT_REQUEST_MARKED_PAID")).toHaveLength(0);
   });
 
   it("409 PAYMENT_IN_PROGRESS et INVALID_TRANSITION", async () => {
