@@ -13,6 +13,7 @@ import {
 import { PrintRequestError } from "./errors";
 import { nextStatus, type PrintRequestAction, type PrintRequestActor } from "./transitions";
 import { appendThreadEvent } from "./thread";
+import { releaseTemplatePin } from "./template-lock-core";
 
 export { appendThreadEvent } from "./thread";
 
@@ -141,6 +142,8 @@ function needsPaymentGuard(
   );
 }
 
+const PIN_HOLDING_STATUSES: PrintRequestStatus[] = ["ACCEPTED", "PAID", "IN_PRODUCTION", "READY"];
+
 // Applique une transition de la table (nextStatus) sous garde de statut. N'écrit pas le fil :
 // l'appelant le fait, il connaît les détails.
 export async function applyTransition(
@@ -175,6 +178,8 @@ export async function applyTransition(
     data,
   });
   if (count === 0) throw new PrintRequestError("INVALID_TRANSITION", 409, { from, action });
+  // Hors des statuts qui retiennent le template, l'épinglage de la demande est levé.
+  if (!PIN_HOLDING_STATUSES.includes(to)) await releaseTemplatePin(tx, request.id);
   return to;
 }
 

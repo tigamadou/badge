@@ -11,6 +11,7 @@ import BadgeTemplatePicker, {
   type TemplateSummary,
 } from "@/components/admin/BadgeTemplatePicker";
 import { getEventOrgId } from "@/lib/event-org";
+import { findTemplateLock } from "@/lib/print-requests/template-lock-core";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function EventBadgeSettingsPage({
       : "platform";
 
   const templates: TemplateSummary[] = await listAvailableTemplates();
+  const lock = await findTemplateLock(eventId);
 
   return (
     <div className="space-y-6">
@@ -78,6 +80,11 @@ export default async function EventBadgeSettingsPage({
         effectiveLevel={effectiveLevel}
         patchUrl={`/api/org/${orgId}/events/${eventId}/settings/badge`}
         canClearToInherit
+        lockedReason={
+          lock
+            ? `Le template est verrouillé : la demande d'impression ${lock.reference} a été payée. Il redeviendra modifiable quand elle sera terminée.`
+            : undefined
+        }
       />
     </div>
   );

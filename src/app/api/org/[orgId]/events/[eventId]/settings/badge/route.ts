@@ -4,6 +4,10 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { prisma } from "@/lib/prisma";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
+import { printRequestErrorResponse } from "@/lib/print-requests/errors";
+import { lockEventRow } from "@/lib/print-requests/content";
+import { assertTemplateChangeAllowed, syncRequestTemplates } from "@/lib/print-requests/template-lock";
+import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
 
 // v2-12 : PATCH event.badgeTemplateId. requireEventPermission event.settings.update
 // (helper geree par withEventAuth + check explicite via hasEventPermission).
@@ -34,10 +38,20 @@ export const PATCH = withEventAuth(
       return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
     }
 
-    await prisma.event.update({
-      where: { id: eventId },
-      data: { badgeTemplateId },
-    });
+    // Verrou de l'évènement puis contrôle et écriture dans la même transaction.
+    try {
+      await prisma.$transaction(async (tx) => {
+        await lockEventRow(tx, eventId);
+        await assertTemplateChangeAllowed(eventId, tx);
+        await tx.event.update({ where: { id: eventId }, data: { badgeTemplateId } });
+      });
+    } catch (err) {
+      return printRequestErrorResponse(err);
+    }
+    const resubmitted = await syncRequestTemplates({ eventId }, session.user.id);
+    for (const id of resubmitted) {
+      await notifyPrintRequestStatusChanged(id, session.user.id, { organizer: true, staff: true });
+    }
 
     await logActivity({
       type: "EVENT_SETTINGS_UPDATED",

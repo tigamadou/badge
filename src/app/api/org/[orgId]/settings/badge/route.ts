@@ -6,6 +6,8 @@ import { requireOrgRole, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
+import { pinLockedEventTemplates, syncRequestTemplates } from "@/lib/print-requests/template-lock";
+import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
 
 // v2-12 : PATCH organization.badgeTemplateId.
 // Note (2026-05-31) : OrgSettings supprime -- le champ vit sur Organization.
@@ -44,10 +46,18 @@ export async function PATCH(
     return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
   }
 
+  // Les évènements verrouillés gardent leur template : épinglés avant le changement.
+  await pinLockedEventTemplates({ orgId });
+
   await prisma.organization.update({
     where: { id: orgId },
     data: { badgeTemplateId },
   });
+
+  const resubmitted = await syncRequestTemplates({ orgId }, session.user.id);
+  for (const id of resubmitted) {
+    await notifyPrintRequestStatusChanged(id, session.user.id, { organizer: true, staff: true });
+  }
 
   await logActivity({
     type: "ORG_UPDATED",
