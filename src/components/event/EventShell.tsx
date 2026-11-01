@@ -32,6 +32,10 @@ export function EventShell({
     { href: `${base}/notifications`, label: "Notifications", icon: "bell" },
     { href: `${base}/registrations`, label: "Inscriptions", icon: "user-check" },
     { href: `${base}/badges`, label: "Badges", icon: "id-card" },
+    // Demandes d'impression : réservées à ceux qui détiennent la permission `print.request`.
+    ...(effectiveRole === "ADMIN" || effectiveRole === "STAFF"
+      ? [{ href: `${base}/print`, label: "Impression", icon: "printer" } as const]
+      : []),
     { href: `${base}/categories`, label: "Catégories", icon: "tags" },
     { href: `${base}/scan`, label: "Scanner", icon: "scan-line" },
     { href: `${base}/members`, label: "Membres", icon: "users" },

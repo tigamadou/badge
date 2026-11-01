@@ -8,6 +8,10 @@ import type {
 import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "./errors";
 import { PRINT_REQUEST_STATUS_LABELS, formatFcfa } from "./labels";
+import { describeLineChange, num, txt, type LineChange } from "./line-change";
+
+// Pur et réutilisable côté navigateur : défini dans line-change.ts.
+export { describeLineChange, type LineChange };
 
 export type ThreadEventType =
   | "SUBMITTED"
@@ -32,41 +36,8 @@ export type ThreadActor = { userId: string | null; side: PrintThreadSide };
 
 const SYSTEM_ACTOR: ThreadActor = { userId: null, side: "SYSTEM" };
 
-export type LineChange = {
-  op: "ADDED" | "UPDATED" | "REMOVED";
-  lineId: string;
-  label: string;
-  from?: { quantity: number; unitPrice: number };
-  to?: { quantity: number; unitPrice: number };
-};
-
 const MAX_BODY_LENGTH = 5000;
 
-export function describeLineChange(c: LineChange): string {
-  const label = txt(c.label);
-  if (c.op === "ADDED") {
-    const to = qp(c.to);
-    return `Ligne ajoutée : ${label} (${to.quantity} × ${formatFcfa(to.unitPrice)})`;
-  }
-  if (c.op === "REMOVED") return `Ligne retirée : ${label}`;
-  const from = qp(c.from);
-  const to = qp(c.to);
-  const parts: string[] = [];
-  if (from.quantity !== to.quantity) parts.push(`quantité ${from.quantity} → ${to.quantity}`);
-  if (from.unitPrice !== to.unitPrice) {
-    parts.push(`prix unitaire ${formatFcfa(from.unitPrice)} → ${formatFcfa(to.unitPrice)}`);
-  }
-  // Changement d'intitulé seul : aucune différence de quantité ni de prix à détailler.
-  return parts.length > 0 ? `Ligne modifiée : ${label} (${parts.join(", ")})` : `Ligne modifiée : ${label}`;
-}
-
-// Valeurs par défaut sûres : un `details` mal formé ne produit ni « NaN FCFA » ni « undefined ».
-const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
-const txt = (v: unknown): string => (typeof v === "string" || typeof v === "number" ? String(v) : "—");
-const qp = (v?: { quantity: number; unitPrice: number }) => ({
-  quantity: num(v?.quantity),
-  unitPrice: num(v?.unitPrice),
-});
 const F = (x: unknown) => formatFcfa(num(x));
 const L = (s: unknown) => PRINT_REQUEST_STATUS_LABELS[s as PrintRequestStatus] ?? txt(s);
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
