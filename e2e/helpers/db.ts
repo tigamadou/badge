@@ -86,6 +86,136 @@ export async function createTestPrintProduct(opts: {
   });
 }
 
+export type TestPrintRequestStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "QUOTED"
+  | "ACCEPTED"
+  | "PAID"
+  | "IN_PRODUCTION"
+  | "READY"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED";
+
+const QUOTED_OR_LATER: TestPrintRequestStatus[] = ["QUOTED", "ACCEPTED", "PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
+const ACCEPTED_OR_LATER: TestPrintRequestStatus[] = ["ACCEPTED", "PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
+const PAID_OR_LATER: TestPrintRequestStatus[] = ["PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
+
+// Cree une demande d'impression directement en base (sans passer par le service), dans l'etat voulu.
+// La reference porte le prefixe IMP-E2E- : elle n'entre jamais en collision avec la numerotation reelle
+// (IMP-{annee}-NNNN). Items, lignes et messages partent avec l'evenement (cascade) dans le cleanup.
+// Les lignes PRODUCT sont ajoutees par l'organisateur, les autres par le staff ; le total est la somme
+// des lignes. Un devis QUOTED ou plus avance porte la version `quoteVersion` (1 par defaut).
+export async function createTestPrintRequest(opts: {
+  eventId: string;
+  orgId: string;
+  createdById: string;
+  status: TestPrintRequestStatus;
+  type?: "ADVANCE" | "ONSITE";
+  quoteVersion?: number;
+  registrationIds?: string[];
+  lines?: { label: string; quantity: number; unitPrice: number; kind?: "PRODUCT" | "SERVICE" | "DISCOUNT" | "CUSTOM" }[];
+}): Promise<{ id: string; reference: string }> {
+  const prisma = db();
+  const type = opts.type ?? "ADVANCE";
+  const lines = opts.lines ?? [];
+  const total = lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  const quoted = QUOTED_OR_LATER.includes(opts.status);
+  const accepted = ACCEPTED_OR_LATER.includes(opts.status);
+  const quoteVersion = opts.quoteVersion ?? (quoted ? 1 : 0);
+  const now = new Date();
+  const reference = `IMP-E2E-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const request = await prisma.printRequest.create({
+    data: {
+      reference,
+      eventId: opts.eventId,
+      orgId: opts.orgId,
+      createdById: opts.createdById,
+      type,
+      status: opts.status,
+      ...(type === "ADVANCE"
+        ? { delivery: "PICKUP" as const }
+        : {
+            estimatedQuantity: 100,
+            onsiteLocation: "Palais des congres",
+            onsiteContactName: "Awa Traore",
+            onsiteContactPhone: "+22500000000",
+            onsiteSchedule: [{ date: "2030-01-15", from: "08:00", to: "18:00" }],
+          }),
+      total,
+      quoteVersion,
+      submittedAt: opts.status === "DRAFT" ? null : now,
+      quotedAt: quoted ? now : null,
+      ...(accepted
+        ? { acceptedVersion: quoteVersion, acceptedTotal: total, acceptedAt: now, acceptedById: opts.createdById }
+        : {}),
+      paidAt: PAID_OR_LATER.includes(opts.status) ? now : null,
+      completedAt: opts.status === "COMPLETED" ? now : null,
+      cancelledAt: opts.status === "CANCELLED" ? now : null,
+    },
+    select: { id: true, reference: true },
+  });
+  const registrationIds = opts.registrationIds ?? [];
+  if (registrationIds.length > 0) {
+    await prisma.printRequestItem.createMany({
+      data: registrationIds.map((registrationId, position) => ({ requestId: request.id, registrationId, position })),
+    });
+  }
+  if (lines.length > 0) {
+    await prisma.printQuoteLine.createMany({
+      data: lines.map((l, position) => {
+        const kind = l.kind ?? "SERVICE";
+        return {
+          requestId: request.id,
+          kind,
+          label: l.label,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          lineTotal: l.quantity * l.unitPrice,
+          position,
+          addedBy: kind === "PRODUCT" ? ("ORGANIZER" as const) : ("STAFF" as const),
+        };
+      }),
+    });
+  }
+  return request;
+}
+
+// Epingle sur l'evenement un template installe jetable (famille `e2e-`, nettoye par cleanupE2ETestData),
+// pour que l'envoi d'une demande ne depende pas du template par defaut de la base de dev.
+export async function pinTestEventTemplate(opts: { eventId: string; installedById: string }): Promise<{ id: string }> {
+  const prisma = db();
+  const row = await prisma.installedBadgeTemplate.create({
+    data: {
+      family: `e2e-print-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      version: 1,
+      label: "Badge E2E impression",
+      description: "",
+      pages: 1,
+      pageWidthPx: 320,
+      pageHeightPx: 460,
+      layout: {
+        formatVersion: 3,
+        family: "e2e-print",
+        label: "Badge E2E impression",
+        description: "",
+        category: "badge",
+        page: { widthPx: 320, heightPx: 460, count: 1 },
+        variables: [],
+        blocks: [],
+      },
+      bindings: {},
+      assetPrefix: "badge-templates/e2e-print/",
+      formatVersion: 3,
+      installedById: opts.installedById,
+    },
+    select: { id: true },
+  });
+  await prisma.event.update({ where: { id: opts.eventId }, data: { badgeTemplateId: row.id } });
+  return row;
+}
+
 export async function cleanupE2ETestData(): Promise<void> {
   const prisma = db();
 
