@@ -142,6 +142,17 @@ describe("pinLockedEventTemplates", () => {
     expect((await prisma.printRequest.findUnique({ where: { id: stale.id } }))?.templatePinned).toBe(true);
   });
 
+  it("sans template effectif résolvable : fige la copie de la demande qui le retient", async () => {
+    // Template de l'organisation inconnu et aucun template de repli « default » installé.
+    await prisma.organization.update({ where: { id: fx.org.id }, data: { badgeTemplateId: "inconnu" } });
+    await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: null } });
+    await prisma.installedBadgeTemplate.deleteMany({ where: { family: "default" } });
+    const held = await makeRequest(fx, { status: "PAID", ...copyOf(other) });
+    expect(await pinLockedEventTemplates({ orgId: fx.org.id })).toBe(1);
+    expect((await prisma.event.findUnique({ where: { id: fx.event.id } }))?.badgeTemplateId).toBe(other.id);
+    expect((await prisma.printRequest.findUnique({ where: { id: held.id } }))?.templatePinned).toBe(true);
+  });
+
   it("ignore un évènement qui a changé entre la lecture et le verrou", async () => {
     const own = await inheritingEvent(fx.org.id);
     await prisma.event.update({ where: { id: own.id }, data: { badgeTemplateId: other.id } });
