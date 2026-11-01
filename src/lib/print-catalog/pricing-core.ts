@@ -85,6 +85,151 @@ export function unitPriceFor(product: ProductForPricing, quantity: number, choic
   return price;
 }
 
+export type ChoiceErrorCode =
+  | "PRODUCT_UNAVAILABLE" | "QUANTITY_BELOW_MINIMUM" | "UNKNOWN_OPTION" | "OPTION_ARCHIVED"
+  | "DUPLICATE_OPTION" | "REQUIRED_OPTION_MISSING" | "UNKNOWN_VALUE" | "VALUE_ARCHIVED"
+  | "TOO_MANY_VALUES" | "TEXT_TOO_LONG" | "INVALID_FILE" | "SPLIT_MISMATCH";
+
+export type ChoiceResult = { ok: true } | { ok: false; code: ChoiceErrorCode; optionId?: string };
+
+const valueIdsOf = (choice: OptionChoice): string[] => choice.valueIds ?? [];
+const splitOf = (choice: OptionChoice): NonNullable<OptionChoice["split"]> => choice.split ?? [];
+const textOf = (choice: OptionChoice): string => choice.text ?? "";
+const fileKeyOf = (choice: OptionChoice): string => choice.fileKey ?? "";
+
+// Un choix est vide si le champ de son type est absent ou vide : il compte comme absent.
+function isEmptyChoice(option: PricingOption, choice: OptionChoice): boolean {
+  switch (option.type) {
+    case "CHOICE":
+    case "COLOR":
+    case "MULTI_CHOICE":
+      return valueIdsOf(choice).length === 0;
+    case "TEXT":
+      return !textOf(choice).trim();
+    case "FILE":
+      return !fileKeyOf(choice);
+    default:
+      return splitOf(choice).length === 0;
+  }
+}
+
+const fail = (code: ChoiceErrorCode, optionId?: string): ChoiceResult => ({ ok: false, code, optionId });
+
+// Controle d'un choix non vide ; renvoie le premier code d'echec ou null.
+function checkChoiceContent(
+  option: PricingOption, choice: OptionChoice, quantity: number,
+): ChoiceErrorCode | null {
+  const ids = option.type === "QUANTITY_SPLIT"
+    ? splitOf(choice).map((part) => part.valueId)
+    : valueIdsOf(choice);
+  for (const id of ids) {
+    const value = option.values.find((val) => val.id === id);
+    if (!value) return "UNKNOWN_VALUE";
+    if (value.archived) return "VALUE_ARCHIVED";
+  }
+  switch (option.type) {
+    case "CHOICE":
+    case "COLOR":
+      return ids.length > 1 ? "TOO_MANY_VALUES" : null;
+    case "TEXT":
+      return option.maxLength !== null && textOf(choice).length > option.maxLength ? "TEXT_TOO_LONG" : null;
+    case "FILE":
+      return fileKeyOf(choice).startsWith("print-requests/") ? null : "INVALID_FILE";
+    case "QUANTITY_SPLIT": {
+      const parts = splitOf(choice);
+      const valid = parts.every((part) => Number.isInteger(part.quantity) && part.quantity > 0)
+        && new Set(ids).size === ids.length
+        && parts.reduce((sum, part) => sum + part.quantity, 0) === quantity;
+      return valid ? null : "SPLIT_MISMATCH";
+    }
+    default:
+      return null;
+  }
+}
+
+// Valide la configuration (premier echec renvoye). A appeler avant tout chiffrage.
+export function validateChoices(
+  product: ProductForPricing, choices: OptionChoice[], quantity: number,
+): ChoiceResult {
+  if (product.archived || !product.published) return fail("PRODUCT_UNAVAILABLE");
+  if (quantity < product.minQuantity) return fail("QUANTITY_BELOW_MINIMUM");
+  const seen = new Set<string>();
+  const filled = new Set<string>();
+  for (const choice of choices) {
+    const option = product.options.find((o) => o.id === choice.optionId);
+    if (!option) return fail("UNKNOWN_OPTION", choice.optionId);
+    if (option.archived) return fail("OPTION_ARCHIVED", option.id);
+    if (seen.has(option.id)) return fail("DUPLICATE_OPTION", option.id);
+    seen.add(option.id);
+    if (isEmptyChoice(option, choice)) continue;
+    const code = checkChoiceContent(option, choice, quantity);
+    if (code) return fail(code, option.id);
+    filled.add(option.id);
+  }
+  const missing = product.options.find((o) => o.required && !o.archived && !filled.has(o.id));
+  return missing ? fail("REQUIRED_OPTION_MISSING", missing.id) : { ok: true };
+}
+
+export type ChoiceSnapshot = {
+  optionName: string; type: string; labels: string[]; text?: string; fileKey?: string;
+  split?: { label: string; quantity: number }[]; priceDelta: number;
+};
+
+// Copie figee des choix : libelles et supplements au moment de la demande.
+export function snapshotChoices(
+  product: ProductForPricing, choices: OptionChoice[], quantity: number,
+): ChoiceSnapshot[] {
+  const snapshot: ChoiceSnapshot[] = [];
+  for (const option of product.options) {
+    const choice = choices.find((c) => c.optionId === option.id);
+    if (!choice || isEmptyChoice(option, choice)) continue;
+    const label = (id: string) => option.values.find((val) => val.id === id)?.label ?? id;
+    const entry: ChoiceSnapshot = {
+      optionName: option.name, type: option.type, labels: [],
+      priceDelta: optionSupplement(option, choice, quantity),
+    };
+    if (option.type === "TEXT") entry.text = choice.text;
+    else if (option.type === "FILE") entry.fileKey = choice.fileKey;
+    else if (option.type === "QUANTITY_SPLIT") {
+      entry.split = splitOf(choice).map((part) => ({ label: label(part.valueId), quantity: part.quantity }));
+    } else entry.labels = valueIdsOf(choice).map(label);
+    snapshot.push(entry);
+  }
+  return snapshot;
+}
+
+const CHOICE_MESSAGES: Record<ChoiceErrorCode, string> = {
+  PRODUCT_UNAVAILABLE: "Ce produit n'est plus disponible.",
+  QUANTITY_BELOW_MINIMUM: "La quantité est inférieure au minimum de commande.",
+  UNKNOWN_OPTION: "Une option demandée n'existe pas pour ce produit.",
+  OPTION_ARCHIVED: "Une option demandée n'est plus proposée.",
+  DUPLICATE_OPTION: "Une option est renseignée plusieurs fois.",
+  REQUIRED_OPTION_MISSING: "Choisissez une valeur pour chaque option obligatoire.",
+  UNKNOWN_VALUE: "Une valeur choisie n'existe pas pour cette option.",
+  VALUE_ARCHIVED: "Une valeur choisie n'est plus proposée.",
+  TOO_MANY_VALUES: "Une seule valeur est autorisée pour cette option.",
+  TEXT_TOO_LONG: "Le texte dépasse la longueur autorisée.",
+  INVALID_FILE: "Le fichier joint n'est pas valide.",
+  SPLIT_MISMATCH: "La répartition doit totaliser exactement la quantité commandée.",
+};
+
+export function choiceErrorMessage(code: ChoiceErrorCode): string {
+  return CHOICE_MESSAGES[code];
+}
+
+// Configuration de depart du configurateur : quantite minimale, premiere valeur
+// non archivee des options CHOICE/COLOR requises, rien d'autre.
+export function defaultConfiguration(product: ProductForPricing): { quantity: number; choices: OptionChoice[] } {
+  const choices: OptionChoice[] = [];
+  for (const option of product.options) {
+    if (option.archived || !option.required) continue;
+    if (option.type !== "CHOICE" && option.type !== "COLOR") continue;
+    const first = option.values.find((val) => !val.archived);
+    if (first) choices.push({ optionId: option.id, valueIds: [first.id] });
+  }
+  return { quantity: product.minQuantity, choices };
+}
+
 // « 70 000 FCFA » : separateur de milliers = espace fine insecable (U+202F).
 export function formatFcfa(amount: number): string {
   return `${String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, " ")} FCFA`;
