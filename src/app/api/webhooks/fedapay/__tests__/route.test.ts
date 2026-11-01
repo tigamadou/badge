@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { POST } from "../route";
+import { seedAcceptedPrintRequest } from "@/lib/__tests__/helpers/print-requests";
 
 const SECRET = "whsec_test";
 
@@ -24,10 +25,10 @@ function signed(event: unknown) {
   return req(body, sign(body));
 }
 
-function txResponse(status: string) {
+function txResponse(status: string, amount = 15000) {
   return new Response(
     JSON.stringify({
-      "v1/transaction": { id: 77, reference: "trx_77", amount: 15000, status, currency: { iso: "XOF" } },
+      "v1/transaction": { id: 77, reference: "trx_77", amount, status, currency: { iso: "XOF" } },
     }),
     { status: 200 },
   );
@@ -84,6 +85,45 @@ describe("POST /api/webhooks/fedapay", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(await prisma.activityLog.count({ where: { type: "PAYMENT_APPROVED", targetId: payment.id } })).toBe(1);
     expect(await prisma.subscription.count({ where: { orgId: org.id } })).toBe(1);
+  });
+
+  it("transaction.approved d'un paiement d'impression → demande PAID, 200", async () => {
+    const fx = await seedAcceptedPrintRequest({ total: 150000 });
+    const payment = await prisma.payment.create({
+      data: {
+        orgId: fx.org.id, purpose: "PRINT_REQUEST", printRequestId: fx.request.id, userId: fx.owner.id,
+        amount: 150000, status: "PENDING", fedapayTransactionId: 77,
+      },
+    });
+    fetchMock.mockResolvedValue(txResponse("approved", 150000));
+
+    const res = await POST(signed({ name: "transaction.approved", entity: { id: 77 } }));
+
+    expect(res.status).toBe(200);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe("APPROVED");
+    const request = await prisma.printRequest.findUniqueOrThrow({ where: { id: fx.request.id } });
+    expect(request.status).toBe("PAID");
+    expect(request.paidPaymentId).toBe(payment.id);
+  });
+
+  it("rejoué → 200, une seule entrée « Paiement reçu »", async () => {
+    const fx = await seedAcceptedPrintRequest({ total: 150000 });
+    await prisma.payment.create({
+      data: {
+        orgId: fx.org.id, purpose: "PRINT_REQUEST", printRequestId: fx.request.id, userId: fx.owner.id,
+        amount: 150000, status: "PENDING", fedapayTransactionId: 77,
+      },
+    });
+    fetchMock.mockResolvedValue(txResponse("approved", 150000));
+    const event = { name: "transaction.approved", entity: { id: 77 } };
+
+    await POST(signed(event));
+    const res = await POST(signed(event));
+
+    expect(res.status).toBe(200);
+    expect(await prisma.printRequestMessage.count({
+      where: { requestId: fx.request.id, eventType: "PAYMENT_RECEIVED" },
+    })).toBe(1);
   });
 
   it("signature invalide : 400 et rien n'est appliqué", async () => {
