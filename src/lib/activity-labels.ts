@@ -16,7 +16,7 @@ export function logKind(t: ActivityType): LogKind {
     return "creation";
   if (s.endsWith("_DELETED") || s.endsWith("_ARCHIVED") || s === "MEMBERSHIP_REMOVED" || s === "USER_BLOCKED")
     return "suppression";
-  if (s === "BADGE_SCANNED" || s.endsWith("_PRINTED") || s.endsWith("_EXPORTED")) return "acces";
+  if (s === "BADGE_SCANNED" || s === "PRINT_SHEETS_GENERATED" || s.endsWith("_PRINTED") || s.endsWith("_EXPORTED")) return "acces";
   if (
     s.endsWith("_UPDATED") ||
     s === "REGISTRATION_SNAPSHOT_REFRESHED" ||
@@ -61,6 +61,10 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PAYMENT_INITIATED: "Paiement initié",
   PAYMENT_APPROVED: "Paiement approuvé",
   PAYMENT_FAILED: "Paiement échoué",
+  PRINT_LAYOUT_CREATED: "Gabarit d'impression créé",
+  PRINT_LAYOUT_UPDATED: "Gabarit d'impression modifié",
+  PRINT_LAYOUT_ARCHIVED: "Gabarit d'impression archivé",
+  PRINT_SHEETS_GENERATED: "Planches de badges générées",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

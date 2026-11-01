@@ -135,6 +135,30 @@ describe("REGISTRATION_SNAPSHOT_REFRESHED", () => {
   });
 });
 
+describe("types d'impression (gabarits et planches)", () => {
+  const PRINT_TYPES = [
+    "PRINT_LAYOUT_CREATED",
+    "PRINT_LAYOUT_UPDATED",
+    "PRINT_LAYOUT_ARCHIVED",
+    "PRINT_SHEETS_GENERATED",
+  ] as const;
+
+  it("ont un libelle humain different du type brut", () => {
+    for (const t of PRINT_TYPES) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+  });
+
+  it("sont classes par categorie visuelle", () => {
+    expect(logKind(as("PRINT_LAYOUT_CREATED"))).toBe("creation");
+    expect(logKind(as("PRINT_LAYOUT_UPDATED"))).toBe("modification");
+    expect(logKind(as("PRINT_LAYOUT_ARCHIVED"))).toBe("suppression");
+    expect(logKind(as("PRINT_SHEETS_GENERATED"))).toBe("acces");
+  });
+});
+
 describe("describeActivity", () => {
   const KNOWN: Partial<Record<string, string>> = {
     REGISTRATION_CREATED: "Inscription créée",

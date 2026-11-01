@@ -55,13 +55,15 @@ model User {
   // v2-14 Task 14 : derniere connexion reussie (mise a jour par NextAuth signIn callback).
   lastLoginAt DateTime?
 
-  orgMemberships     OrgMembership[]
-  eventMemberships   EventMembership[]
-  payments           Payment[]
-  activityLogs       ActivityLog[]
-  registrations      Registration[]
-  profileSubmissions ProfileSubmission[]
-  notifications      Notification[]
+  orgMemberships        OrgMembership[]
+  eventMemberships      EventMembership[]
+  payments              Payment[]
+  activityLogs          ActivityLog[]
+  registrations         Registration[]
+  profileSubmissions    ProfileSubmission[]
+  notifications         Notification[]
+  printSheetLayouts     PrintSheetLayout[]
+  printSheetGenerations PrintSheetGeneration[]
 }
 
 enum StaffRole {
@@ -108,7 +110,7 @@ model Organization {
 
   // v2-12 : id de template de badge override pour cette org (null = heritage platform).
   // Note (2026-05-31) : OrgSettings supprime, ce champ vit directement sur Organization.
-  badgeTemplateId       String?
+  badgeTemplateId String?
 
   memberships       OrgMembership[]
   events            Event[]
@@ -152,37 +154,38 @@ model Event {
   orgId        String
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  title            String
-  slug             String    @unique
-  location         String
-  date             DateTime
+  title                String
+  slug                 String    @unique
+  location             String
+  date                 DateTime
   // v4 (plan 07) : informatif uniquement. `date` reste la date de reference pour
   // l'ID metier, les badges et l'ouverture des inscriptions.
-  endDate          DateTime?
-  description      String?   @db.Text
-  logo             String?
+  endDate              DateTime?
+  description          String?   @db.Text
+  logo                 String?
   // Consignes de securite imprimees sur les badges (liste de textes, variable
   // `list` des templates). Nullable : null vaut « aucune consigne ».
   securityInstructions Json?
   // Banniere de l'evenement (chemin de fichier, comme `logo`), source
   // event.bannerDataUrl des templates.
-  banner           String?
+  banner               String?
   // Options des templates de badge : { nomDeVariable: valeur }, reglees par
   // evenement. Nullable (pas de defaut JSON sous MySQL) : null vaut « aucune ».
-  templateOptions  Json?
-  registrationOpen Boolean   @default(false)
+  templateOptions      Json?
+  registrationOpen     Boolean   @default(false)
   // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).
-  badgeTemplateId  String?
-  archived         Boolean   @default(false)
-  archivedAt       DateTime?
-  createdAt        DateTime  @default(now())
+  badgeTemplateId      String?
+  archived             Boolean   @default(false)
+  archivedAt           DateTime?
+  createdAt            DateTime  @default(now())
 
-  memberships      EventMembership[]
-  categories       Category[]
-  registrations    Registration[]
-  blockedEmails    BlockedEmail[]
-  blockedDocuments BlockedDocument[]
-  settings         EventSettings?
+  memberships           EventMembership[]
+  categories            Category[]
+  registrations         Registration[]
+  blockedEmails         BlockedEmail[]
+  blockedDocuments      BlockedDocument[]
+  printSheetGenerations PrintSheetGeneration[]
+  settings              EventSettings?
 
   @@index([orgId])
 }
@@ -269,16 +272,16 @@ model Registration {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  status           RegistrationStatus @default(PENDING)
-  badgePrinted     Boolean            @default(false)
-  badgePrintedAt   DateTime?
-  allAccessGranted Boolean            @default(false)
-  rejectionReason  String?
+  status             RegistrationStatus @default(PENDING)
+  badgePrinted       Boolean            @default(false)
+  badgePrintedAt     DateTime?
+  allAccessGranted   Boolean            @default(false)
+  rejectionReason    String?
   // v4 (plan 08) : reference au catalogue ; `rejectionReason` conserve le libelle
   // fige au moment de la decision.
   rejectionReasonId  String?
-  rejectionReasonRef RejectionReason? @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
-  rejectionDetails String?            @db.Text
+  rejectionReasonRef RejectionReason?   @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
+  rejectionDetails   String?            @db.Text
 
   // v2-11 : snapshot inline du profil au moment de la soumission. Reecrit a
   // chaque resoumission (pas de versionning historique). Les valeurs ici font
@@ -329,7 +332,7 @@ model ProfileSubmission {
 
   reviewedById String?
   reviewedAt   DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([userId, createdAt])
   @@index([status])
@@ -507,6 +510,11 @@ model ActivityLog {
 }
 
 enum ActivityType {
+  // Gabarits d'impression et planches de badges
+  PRINT_LAYOUT_CREATED
+  PRINT_LAYOUT_UPDATED
+  PRINT_LAYOUT_ARCHIVED
+  PRINT_SHEETS_GENERATED
   REGISTRATION_CREATED
   REGISTRATION_APPROVED
   REGISTRATION_REJECTED
@@ -628,23 +636,23 @@ enum SubscriptionPeriod {
 }
 
 model Subscription {
-  id        String             @id @default(cuid())
-  orgId     String             @unique // un abonnement courant par org
-  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  planId    String
-  plan      Plan               @relation(fields: [planId], references: [id])
-  status    SubscriptionStatus @default(ACTIVE)
-  startDate DateTime           @default(now())
-  endDate   DateTime? // null = sans echeance
+  id                              String                 @id @default(cuid())
+  orgId                           String                 @unique // un abonnement courant par org
+  org                             Organization           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId                          String
+  plan                            Plan                   @relation(fields: [planId], references: [id])
+  status                          SubscriptionStatus     @default(ACTIVE)
+  startDate                       DateTime               @default(now())
+  endDate                         DateTime? // null = sans echeance
   // Overrides par org (null = herite du plan)
   overrideMaxEvents               Int?
   overrideMaxParticipantsPerEvent Int?
   // Plan programme pour prendre le relais a l'echeance (changement SCHEDULED).
-  scheduledPlanId String?
-  scheduledPlan   Plan?              @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
-  reminders       SubscriptionReminder[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  scheduledPlanId                 String?
+  scheduledPlan                   Plan?                  @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
+  reminders                       SubscriptionReminder[]
+  createdAt                       DateTime               @default(now())
+  updatedAt                       DateTime               @updatedAt
 
   @@index([planId])
   @@index([scheduledPlanId])
@@ -714,18 +722,18 @@ enum JobStatus {
 }
 
 model Job {
-  id        String    @id @default(cuid())
-  type      JobType
-  status    JobStatus @default(PENDING)
-  priority  Int       @default(0) // plus grand = plus prioritaire
+  id          String    @id @default(cuid())
+  type        JobType
+  status      JobStatus @default(PENDING)
+  priority    Int       @default(0) // plus grand = plus prioritaire
   // EMAIL : { to, subject, html, kind, ctx?, replyTo? }. Purge (html vide) apres succes.
-  payload   Json
+  payload     Json
   // Champs denormalises pour l'ecran d'admin (filtres, recherche) sans lire le payload.
-  kind      String // ex. "registration.approved"
-  recipient String?
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(5)
-  runAt       DateTime @default(now()) // prochain essai
+  kind        String // ex. "registration.approved"
+  recipient   String?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  runAt       DateTime  @default(now()) // prochain essai
   lockedAt    DateTime?
   lockedBy    String?
   lastError   String?   @db.Text
@@ -788,4 +796,91 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@index([userId, scope, createdAt])
+}
+
+// --- Gabarits d'impression et planches de badges -----------------------------
+
+enum SheetOrientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum BadgeOrientation {
+  AUTO
+  ORIGINAL
+  ROTATED
+}
+
+enum DuplexFlip {
+  LONG_EDGE
+  SHORT_EDGE
+}
+
+enum PrintSheetGenerationStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum GenerationOutput {
+  SHEETS
+  ZIP
+}
+
+// Toutes les longueurs sont en dixiemes de mm. Format stocke en portrait
+// (sheetWidth <= sheetHeight) ; l'orientation est portee par sheetOrientation.
+model PrintSheetLayout {
+  id               String           @id @default(cuid())
+  name             String           @unique
+  sheetWidth       Int
+  sheetHeight      Int
+  sheetOrientation SheetOrientation
+  marginTop        Int
+  marginRight      Int
+  marginBottom     Int
+  marginLeft       Int
+  gapHorizontal    Int
+  gapVertical      Int
+  badgeOrientation BadgeOrientation @default(AUTO)
+  duplexFlip       DuplexFlip       @default(LONG_EDGE)
+  cropMarks        Boolean          @default(true)
+  archived         Boolean          @default(false)
+  archivedAt       DateTime?
+  createdById      String?
+  createdBy        User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  generations PrintSheetGeneration[]
+}
+
+model PrintSheetGeneration {
+  id              String                     @id @default(cuid())
+  output          GenerationOutput           @default(SHEETS)
+  eventId         String
+  event           Event                      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  layoutId        String?
+  layout          PrintSheetLayout?          @relation(fields: [layoutId], references: [id], onDelete: SetNull)
+  // { spec, badgeMm, badgePages } fige a la creation ; null pour ZIP.
+  layoutSnapshot  Json?
+  duplex          Boolean                    @default(false)
+  registrationIds Json
+  status          PrintSheetGenerationStatus @default(PENDING)
+  attempts        Int                        @default(0)
+  lockedBy        String?
+  heartbeatAt     DateTime?
+  sheetCount      Int?
+  badgeCount      Int?
+  skippedIds      Json?
+  fileKey         String?
+  error           String?                    @db.Text
+  createdById     String?
+  createdBy       User?                      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime                   @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  @@index([status, createdAt])
+  @@index([eventId])
 }

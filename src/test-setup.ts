@@ -12,6 +12,8 @@ import { fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 beforeEach(async () => {
   fakeExporter.reset();
   overrideExporter(fakeExporter);
+  await prisma.printSheetGeneration.deleteMany();
+  await prisma.printSheetLayout.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.job.deleteMany();
   await prisma.activityLog.deleteMany();
