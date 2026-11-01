@@ -472,9 +472,30 @@ describe("template inadapté à l'impression sur place", () => {
   it("IN_PRODUCTION -> READY bloqué ; READY -> COMPLETED reste permis", async () => {
     await setList([]);
     const r = await onsiteRequest("IN_PRODUCTION");
-    expect((await advance(r.id, "READY")).status).toBe(409);
+    const blocked = await advance(r.id, "READY");
+    expect(blocked).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await reload(r.id)).status).toBe("IN_PRODUCTION");
+    await setList([fx.template.id]);
+    expect((await advance(r.id, "READY")).json.request.status).toBe("READY");
+    await setList([]);
     await prisma.printRequest.update({ where: { id: r.id }, data: { status: "READY" } });
     expect((await advance(r.id, "COMPLETED")).json.request.status).toBe("COMPLETED");
+  });
+
+  it("template courant de l'évènement coché mais copie de la demande non cochée : UNSUITABLE", async () => {
+    const other = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: `copie-${Date.now()}`, version: 1, label: "Ancienne copie", description: "", pages: 1,
+        pageWidthPx: 100, pageHeightPx: 100, layout: { variables: [] }, bindings: {},
+        assetPrefix: "badge-templates/copie/", formatVersion: 3, installedById: "u1",
+      },
+    });
+    await setList([fx.template.id]);
+    const r = await onsiteRequest("PAID");
+    await prisma.printRequest.update({ where: { id: r.id }, data: { badgeTemplateId: other.id } });
+    const res = await advance(r.id, "IN_PRODUCTION");
+    expect(res).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
   });
 
   it("refus d'une demande SUBMITTED toujours permis", async () => {

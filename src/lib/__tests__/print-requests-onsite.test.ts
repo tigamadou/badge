@@ -67,17 +67,20 @@ describe("getOnsiteEligibility", () => {
   it("id inconnu : repli sur la famille par défaut, comparé sur l'id de la copie", async () => {
     const fallback = await prisma.installedBadgeTemplate.create({
       data: {
-        family: "default", version: 9000 + Math.floor(Math.random() * 900), label: "Défaut", description: "",
+        family: "default", version: 987654, label: "Défaut", description: "",
         pages: 1, pageWidthPx: 100, pageHeightPx: 100, layout: { variables: [] }, bindings: {},
         assetPrefix: "badge-templates/default/", formatVersion: 3, installedById: "u1",
       },
     });
-    await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: "inconnu" } });
-    await setList(["inconnu"]);
-    const out = await getOnsiteEligibility(fx.event.id);
-    expect(out.eligible).toBe(false);
-    expect(out.templateId).toBe(fallback.id);
-    await prisma.installedBadgeTemplate.delete({ where: { id: fallback.id } });
+    try {
+      await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: "inconnu" } });
+      await setList(["inconnu"]);
+      const out = await getOnsiteEligibility(fx.event.id);
+      expect(out.eligible).toBe(false);
+      expect(out.templateId).toBe(fallback.id);
+    } finally {
+      await prisma.installedBadgeTemplate.delete({ where: { id: fallback.id } });
+    }
   });
 
   it("évènement inconnu -> NOT_FOUND ; aucun template lisible -> VALIDATION", async () => {
@@ -92,20 +95,15 @@ describe("getOnsiteEligibility", () => {
 describe("prepareOnsiteSubmission", () => {
   it("ADVANCE -> null", async () => {
     await prisma.$transaction(async (tx) => {
-      expect(await prepareOnsiteSubmission(tx, { eventId: fx.event.id, type: "ADVANCE" })).toBeNull();
+      expect(await prepareOnsiteSubmission(tx, { type: "ADVANCE", badgeTemplateId: "x" })).toBeNull();
     });
   });
 
-  it("évènement inconnu -> NOT_FOUND", async () => {
-    const err = await reject(prisma.$transaction((tx) => prepareOnsiteSubmission(tx, { eventId: "nope", type: "ONSITE" })));
-    expect((err as PrintRequestError).code).toBe("NOT_FOUND");
-  });
-
-  it("template introuvable -> ONSITE_TEMPLATE_UNSUITABLE", async () => {
-    await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: "inconnu" } });
-    await prisma.installedBadgeTemplate.deleteMany({ where: { family: "default" } });
-    const err = await reject(prisma.$transaction((tx) => prepareOnsiteSubmission(tx, { eventId: fx.event.id, type: "ONSITE" })));
-    expect((err as OnsiteError).code).toBe("ONSITE_TEMPLATE_UNSUITABLE");
+  it("ONSITE : copie hors liste -> ONSITE_TEMPLATE_UNSUITABLE ; dans la liste -> marge par défaut", async () => {
+    const run = () => prisma.$transaction((tx) => prepareOnsiteSubmission(tx, { type: "ONSITE", badgeTemplateId: "t1" }));
+    expect(((await reject(run())) as OnsiteError).code).toBe("ONSITE_TEMPLATE_UNSUITABLE");
+    await setList(["t1"], 12);
+    expect(await run()).toEqual({ marginPercent: 12 });
   });
 });
 

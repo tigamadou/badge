@@ -111,7 +111,7 @@ export async function submitRequest(input: {
 
     const snapshot = await snapshotEventTemplate(input.eventId, tx);
     // Demande sur place : template adapté exigé, marge par défaut figée dans la demande.
-    const onsite = await prepareOnsiteSubmission(tx, request);
+    const onsite = await prepareOnsiteSubmission(tx, { type: request.type, badgeTemplateId: snapshot.badgeTemplateId });
     await tx.printRequest.update({
       where: { id: request.id },
       data: {

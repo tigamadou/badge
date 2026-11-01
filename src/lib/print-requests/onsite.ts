@@ -83,23 +83,15 @@ export async function getOnsiteEligibility(eventId: string): Promise<{ eligible:
   return { eligible: settings.templateIds.includes(row.id), templateId: row.id };
 }
 
-// Accroche de l'envoi : `null` pour une demande en amont ; sinon refuse un template inadapté et
-// rend la marge par défaut du moment (figée dans la demande).
+// Accroche de l'envoi, sur la copie du template prise par l'envoi : `null` pour une demande en
+// amont ; sinon refuse un template inadapté et rend la marge par défaut du moment (figée dans la demande).
 export async function prepareOnsiteSubmission(
-  tx: Prisma.TransactionClient,
-  request: { eventId: string; type: PrintRequestType },
+  _tx: Prisma.TransactionClient,
+  request: { type: PrintRequestType; badgeTemplateId: string },
 ): Promise<{ marginPercent: number } | null> {
   if (request.type !== "ONSITE") return null;
-  const event = await tx.event.findUnique({
-    where: { id: request.eventId },
-    select: { badgeTemplateId: true, orgId: true },
-  });
-  if (!event) throw new PrintRequestError("NOT_FOUND", 404);
-  const [row, settings] = await Promise.all([
-    findEffectiveTemplateRow(await resolveEventTemplateId(event)),
-    getOnsitePrintSettings(),
-  ]);
-  if (!row || !settings.templateIds.includes(row.id)) {
+  const settings = await getOnsitePrintSettings();
+  if (!settings.templateIds.includes(request.badgeTemplateId)) {
     throw new OnsiteError("ONSITE_TEMPLATE_UNSUITABLE", 409);
   }
   return { marginPercent: settings.defaultMarginPercent };

@@ -27,6 +27,7 @@ import * as registrations from "@/app/api/org/[orgId]/events/[eventId]/print-req
 import * as badges from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/badges/route";
 import * as products from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/products/route";
 import * as submit from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/submit/route";
+import * as eligibility from "@/app/api/org/[orgId]/events/[eventId]/print-requests/onsite-eligibility/route";
 import * as cancel from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/cancel/route";
 import * as accept from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/accept/route";
 import * as messages from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/messages/route";
@@ -351,15 +352,20 @@ describe("envoi, annulation", () => {
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("DRAFT");
   });
 
-  it("GET liste : expose l'éligibilité à l'impression sur place", async () => {
-    await prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: [] } });
-    expect((await (await call(list.GET as Handler, "GET")).json()).onsiteEligibility).toEqual({
-      eligible: false, templateId: fx.template.id,
-    });
-    await prisma.platformSettings.update({
-      where: { id: "singleton" }, data: { onsitePrintTemplateIds: [fx.template.id] },
-    });
-    expect((await (await call(list.GET as Handler, "GET")).json()).onsiteEligibility).toMatchObject({ eligible: true });
+  it("onsite-eligibility : éligible, non éligible, sans template, accès refusé", async () => {
+    const setList = (ids: string[]) =>
+      prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: ids } });
+    const get = () => call(eligibility.GET as Handler, "GET");
+    await setList([fx.template.id]);
+    expect(await (await get()).json()).toEqual({ eligible: true, templateId: fx.template.id });
+    await setList([]);
+    expect(await (await get()).json()).toEqual({ eligible: false, templateId: fx.template.id });
+    await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: "inconnu" } });
+    await prisma.installedBadgeTemplate.deleteMany({});
+    const none = await get();
+    expect([none.status, await none.json()]).toEqual([200, { eligible: false, templateId: null }]);
+    await loginAs(null);
+    expect((await get()).status).toBe(401);
   });
 
   it("submit sur évènement archivé : 410", async () => {
