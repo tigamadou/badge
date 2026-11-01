@@ -60,21 +60,17 @@ async function openTransaction(
     description: string;
     amount: number;
     callbackPath: string;
-    userId: string;
+    customer: { email: string; firstname: string };
     metadata: Record<string, string>;
   },
 ): Promise<string> {
   try {
-    const user = await prisma.user.findUniqueOrThrow({
-      where: { id: tx.userId },
-      select: { email: true, name: true },
-    });
     const baseUrl = (process.env.NEXTAUTH_URL as string).replace(/\/$/, "");
     const created = await createTransaction({
       description: tx.description,
       amount: tx.amount,
       callbackUrl: `${baseUrl}${tx.callbackPath}`,
-      customer: { email: user.email, firstname: user.name },
+      customer: tx.customer,
       metadata: tx.metadata,
     });
     await prisma.payment.update({
@@ -113,7 +109,10 @@ export async function startCheckout(input: {
   const { configured } = getFedapayConfig();
   if (!configured) throw new PaymentError("PAYMENTS_DISABLED");
 
-  const org = await prisma.organization.findUniqueOrThrow({ where: { id: orgId }, select: { name: true } });
+  const [org, user] = await Promise.all([
+    prisma.organization.findUniqueOrThrow({ where: { id: orgId }, select: { name: true } }),
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true } }),
+  ]);
 
   const payment = await prisma.payment.create({
     data: { orgId, planId, userId, amount: plan.price, currency: "XOF", status: "PENDING" },
@@ -123,7 +122,7 @@ export async function startCheckout(input: {
     description: `Abonnement ${plan.name} — ${org.name}`,
     amount: plan.price,
     callbackPath: `/org/${orgId}/subscription/return`,
-    userId,
+    customer: { email: user.email, firstname: user.name },
     metadata: { paymentId: payment.id, orgId },
   });
 
@@ -196,15 +195,20 @@ async function prepareCheckout(input: {
       where: { printRequestId: requestId, status: "PENDING" },
       orderBy: { createdAt: "desc" },
     });
-    if (pending?.fedapayTransactionId) {
+    if (pending?.fedapayTransactionId && pending.amount === request.acceptedTotal) {
       return { request, candidate: { id: pending.id, fedapayTransactionId: pending.fedapayTransactionId } };
     }
     if (pending) {
-      if (Date.now() - pending.createdAt.getTime() < CHECKOUT_OPENING_MS) {
+      if (!pending.fedapayTransactionId && Date.now() - pending.createdAt.getTime() < CHECKOUT_OPENING_MS) {
         throw new PaymentError("PAYMENT_IN_PROGRESS");
       }
-      // Checkout interrompu avant la creation de la transaction : rien n'a ete presente au client.
+      // Checkout interrompu (rien presente au client) ou montant different du devis accepte : remplace.
       await db.payment.updateMany({ where: { id: pending.id, status: "PENDING" }, data: { status: "CANCELED" } });
+      if (pending.fedapayTransactionId) {
+        await appendThreadEvent(db, requestId, "PAYMENT_FAILED", {
+          amount: pending.amount, paymentId: pending.id, reason: "REPLACED",
+        });
+      }
     }
     const created = await db.payment.create({
       data: {
@@ -230,6 +234,7 @@ export async function startPrintRequestCheckout(input: {
     { orgId, eventId },
   );
   if (!getFedapayConfig().configured) throw new PaymentError("PAYMENTS_DISABLED");
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true } });
 
   for (let attempt = 0; attempt < PRINT_CHECKOUT_ATTEMPTS; attempt += 1) {
     const prepared = await prepareCheckout(input);
@@ -240,7 +245,7 @@ export async function startPrintRequestCheckout(input: {
         description: `Impression ${request.reference} — ${request.eventTitle}`,
         amount: request.acceptedTotal,
         callbackPath: `/event/${eventId}/print/${requestId}/return`,
-        userId,
+        customer: { email: user.email, firstname: user.name },
         metadata: { paymentId, printRequestId: requestId },
       });
       await logActivity({
@@ -321,7 +326,7 @@ async function failPayment(
     const count = await prisma.$transaction(async (db) => {
       await lockRequestWithEvent(db, requestId);
       const res = await db.payment.updateMany({
-        where: { id: paymentId, status: { in: CONFIRMABLE } },
+        where: { id: paymentId, status: { in: CONFIRMABLE_PRINT } },
         data: { status },
       });
       if (res.count === 1) {
@@ -337,6 +342,14 @@ async function failPayment(
         targetId: paymentId,
         details: { paymentId, reason, purpose: "PRINT_REQUEST", printRequestId: requestId },
       });
+      // Argent recu pour un montant ou une devise inattendu : le staff doit regler.
+      if (reason === "MISMATCH") {
+        try {
+          await notifyPrintPaymentUnmatched(requestId, paymentId);
+        } catch (error) {
+          console.error("[payment] notification apres paiement en echec", error);
+        }
+      }
     }
     return { status, applied: false };
   }

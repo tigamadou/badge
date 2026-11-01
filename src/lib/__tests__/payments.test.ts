@@ -229,6 +229,24 @@ describe("payments", () => {
       ).toBe(1);
     });
 
+    it("paiement sans utilisateur (userId null) : approuvé et refusé sans userId dans le journal", async () => {
+      const { user, org, pro } = await seed();
+      const approved = await pendingPayment(org.id, pro.id, user.id);
+      await prisma.payment.update({ where: { id: approved.id }, data: { userId: null } });
+      fetchMock.mockResolvedValue(jsonResponse(txBody({ status: "approved" })));
+      expect(await confirmPayment(77)).toEqual({ status: "APPROVED", applied: true });
+      const logs = await prisma.activityLog.findMany({ where: { type: { in: ["PAYMENT_APPROVED", "SUBSCRIPTION_UPDATED"] } } });
+      expect(logs).toHaveLength(2);
+      expect(logs.every((l) => l.userId === null)).toBe(true);
+
+      const declined = await pendingPayment(org.id, pro.id, user.id, 15000, 78);
+      await prisma.payment.update({ where: { id: declined.id }, data: { userId: null } });
+      fetchMock.mockResolvedValue(jsonResponse(txBody({ id: 78, status: "declined" })));
+      expect(await confirmPayment(78)).toEqual({ status: "DECLINED", applied: false });
+      const failed = await prisma.activityLog.findFirstOrThrow({ where: { type: "PAYMENT_FAILED", targetId: declined.id } });
+      expect(failed.userId).toBeNull();
+    });
+
     it("sans abonnement existant → abonnement créé", async () => {
       const { user, org, pro } = await seed();
       await pendingPayment(org.id, pro.id, user.id);

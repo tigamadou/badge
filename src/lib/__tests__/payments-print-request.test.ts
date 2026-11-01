@@ -230,6 +230,55 @@ describe("confirmPayment : demande d'impression", () => {
     expect(rows[0]).toMatchObject({ title: `Paiement à vérifier : ${t.request.reference}` });
   });
 
+  it("paiement sans utilisateur (userId null) : approuvé et refusé sans userId dans le journal", async () => {
+    const t = await seed();
+    await prisma.payment.update({ where: { id: t.payment.id }, data: { userId: null } });
+    fetchMock.mockResolvedValue(txResponse("approved"));
+    expect(await confirmPayment(77)).toEqual({ status: "APPROVED", applied: true });
+    expect((await approvedLogs(t.payment.id))[0].userId).toBeNull();
+
+    const d = await seed({ txId: 78 });
+    await prisma.payment.update({ where: { id: d.payment.id }, data: { userId: null } });
+    fetchMock.mockResolvedValue(txResponse("declined", 150000, 78));
+    expect(await confirmPayment(78)).toEqual({ status: "DECLINED", applied: false });
+    const log = await prisma.activityLog.findFirstOrThrow({ where: { type: "PAYMENT_FAILED", targetId: d.payment.id } });
+    expect(log.userId).toBeNull();
+  });
+
+  it("CANCELED approuvé tard avec un montant incohérent → DECLINED/MISMATCH, entrée du fil, alerte staff, statut retourné = statut stocké", async () => {
+    const t = await seed();
+    await prisma.payment.update({ where: { id: t.payment.id }, data: { status: "CANCELED" } });
+    fetchMock.mockResolvedValue(txResponse("approved", 149000));
+    expect(await confirmPayment(77)).toEqual({ status: "DECLINED", applied: false });
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: t.payment.id } })).status).toBe("DECLINED");
+    const entries = await thread(t.request.id, "PAYMENT_FAILED");
+    expect(entries).toHaveLength(1);
+    expect(entries[0].details).toMatchObject({ reason: "MISMATCH", paymentId: t.payment.id });
+    const rows = await prisma.notification.findMany({
+      where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.staffAdmin.id },
+    });
+    expect(rows[0]).toMatchObject({ title: `Paiement à vérifier : ${t.request.reference}` });
+  });
+
+  it("MISMATCH : échec de la notification → l'issue est conservée", async () => {
+    const t = await seed();
+    fetchMock.mockResolvedValue(txResponse("approved", 149000));
+    const triggers = await import("@/lib/notifications/triggers");
+    vi.spyOn(triggers, "notifyPrintPaymentUnmatched").mockRejectedValue(new Error("boom"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await confirmPayment(77)).toEqual({ status: "DECLINED", applied: false });
+    expect(errorSpy).toHaveBeenCalledWith("[payment] notification apres paiement en echec", expect.any(Error));
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: t.payment.id } })).status).toBe("DECLINED");
+  });
+
+  it("deux refus concurrents → une seule entrée PAYMENT_FAILED et un seul journal", async () => {
+    const t = await seed();
+    fetchMock.mockImplementation(async () => txResponse("declined"));
+    await Promise.all([confirmPayment(77), confirmPayment(77)]);
+    expect(await thread(t.request.id, "PAYMENT_FAILED")).toHaveLength(1);
+    expect(await prisma.activityLog.count({ where: { type: "PAYMENT_FAILED", targetId: t.payment.id } })).toBe(1);
+  });
+
   it("paiement CANCELED : refus ou attente chez FedaPay → rien ne change", async () => {
     const t = await seed();
     await prisma.payment.update({ where: { id: t.payment.id }, data: { status: "CANCELED" } });
@@ -456,6 +505,67 @@ describe("startPrintRequestCheckout", () => {
     routeFetch(fetchMock, { retrieve: { 55: () => txResponse("approved", 150000, 55) } });
     expect(await confirmPayment(55)).toEqual({ status: "APPROVED", applied: true });
     expect((await prisma.payment.findUniqueOrThrow({ where: { id: old.id } })).status).toBe("APPROVED");
+  });
+
+  it("erreur non FedaPay à la lecture du paiement existant → PROVIDER_ERROR", async () => {
+    const t = await seedAccepted();
+    await pendingPayment(t);
+    fetchMock.mockImplementation(async () => {
+      throw new TypeError("boom");
+    });
+    // Le client FedaPay encapsule les erreurs reseau : on force une erreur brute au niveau du module.
+    const fedapay = await import("@/lib/fedapay");
+    vi.spyOn(fedapay, "retrieveTransaction").mockRejectedValue(new TypeError("boom"));
+    await rejects(startPrintRequestCheckout(input(t)), "PROVIDER_ERROR", 502);
+  });
+
+  it("paiement existant d'un autre montant que le devis accepté → CANCELED (REPLACED), nouveau Payment", async () => {
+    const t = await seedAccepted();
+    const old = await pendingPayment(t, { txId: 55 });
+    await prisma.payment.update({ where: { id: old.id }, data: { amount: 120000 } });
+    routeFetch(fetchMock, {});
+    const res = await startPrintRequestCheckout(input(t));
+    expect(res.paymentId).not.toBe(old.id);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: old.id } })).status).toBe("CANCELED");
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: res.paymentId } })).amount).toBe(150000);
+    const entries = await prisma.printRequestMessage.findMany({
+      where: { requestId: t.request.id, eventType: "PAYMENT_FAILED" },
+    });
+    expect(entries[0].details).toMatchObject({ reason: "REPLACED", paymentId: old.id });
+  });
+
+  it("utilisateur introuvable → échec avant toute création de Payment", async () => {
+    const t = await seedAccepted();
+    await expect(startPrintRequestCheckout({ ...input(t), userId: "inconnu" })).rejects.toThrow();
+    expect(await paymentsOf(t.request.id)).toHaveLength(0);
+  });
+
+  it("P1 remplacé puis P2 créé : P1 approuvé tard → PAID ; P2 approuvé ensuite → UNMATCHED et alerte staff", async () => {
+    const t = await seedAccepted();
+    const p1 = await pendingPayment(t, { txId: 55 });
+    routeFetch(fetchMock, { retrieve: { 55: () => jsonResponse({}, 404) } });
+    const { paymentId: p2 } = await startPrintRequestCheckout(input(t));
+    const status = async () => (await prisma.printRequest.findUniqueOrThrow({ where: { id: t.request.id } })).status;
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: p1.id } })).status).toBe("CANCELED");
+    expect(await status()).toBe("ACCEPTED");
+
+    routeFetch(fetchMock, { retrieve: { 55: () => txResponse("approved", 150000, 55), 88: () => txResponse("approved", 150000, 88) } });
+    expect(await confirmPayment(55)).toEqual({ status: "APPROVED", applied: true });
+    expect(await status()).toBe("PAID");
+
+    expect(await confirmPayment(88)).toEqual({ status: "APPROVED", applied: false });
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: p2 } })).status).toBe("APPROVED");
+    expect(await status()).toBe("PAID");
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: t.request.id } })).paidPaymentId).toBe(p1.id);
+    const unmatched = await prisma.printRequestMessage.findMany({
+      where: { requestId: t.request.id, eventType: "PAYMENT_UNMATCHED" },
+    });
+    expect(unmatched).toHaveLength(1);
+    expect(unmatched[0].details).toMatchObject({ paymentId: p2 });
+    const rows = await prisma.notification.findMany({
+      where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.staffAdmin.id, title: { startsWith: "Paiement à vérifier" } },
+    });
+    expect(rows).toHaveLength(1);
   });
 
   it("PENDING sans transaction créé il y a 30 s → PAYMENT_IN_PROGRESS", async () => {
