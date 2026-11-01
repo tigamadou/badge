@@ -28,9 +28,13 @@ export function OnsitePrintSettingsForm({
   initial: OnsitePrintSettings;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<string[]>(initial.templateIds);
+  const [selected, setSelected] = useState<string[]>(() =>
+    initial.templateIds.filter((id) => templates.some((t) => t.id === id)),
+  );
   const [note, setNote] = useState(initial.printerNote ?? "");
   const [margin, setMargin] = useState(String(initial.defaultMarginPercent));
+
+  const marginValid = /^\d+$/.test(margin.trim()) && Number(margin) <= 100;
 
   const save = useAsyncAction(
     async () => {
@@ -60,7 +64,7 @@ export function OnsitePrintSettingsForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        void save.run();
+        if (marginValid) void save.run();
       }}
       className="max-w-2xl space-y-6"
     >
@@ -118,10 +122,11 @@ export function OnsitePrintSettingsForm({
         value={margin}
         onChange={(e) => setMargin(e.target.value)}
         disabled={save.pending}
+        error={marginValid ? undefined : "Saisir un entier entre 0 et 100."}
       />
 
       <div className="flex justify-end">
-        <Button type="submit" loading={save.pending}>
+        <Button type="submit" loading={save.pending} disabled={!marginValid}>
           Enregistrer
         </Button>
       </div>

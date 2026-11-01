@@ -180,17 +180,20 @@ export async function templateExists(id: string): Promise<boolean> {
 
 // Ce qui est PROPOSABLE : la version la plus recente de chaque famille non archivee.
 export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
-  const rows = await prisma.installedBadgeTemplate.findMany({
-    where: { archived: false },
-    orderBy: [{ family: "asc" }, { version: "desc" }],
-  });
+  const [rows, onsite] = await Promise.all([
+    prisma.installedBadgeTemplate.findMany({
+      where: { archived: false },
+      orderBy: [{ family: "asc" }, { version: "desc" }],
+    }),
+    getOnsitePrintSettings(),
+  ]);
 
   const latestByFamily = new Map<string, InstalledBadgeTemplate>();
   for (const row of rows) {
     if (!latestByFamily.has(row.family)) latestByFamily.set(row.family, row);
   }
 
-  const onsiteIds = new Set((await getOnsitePrintSettings()).templateIds);
+  const onsiteIds = new Set(onsite.templateIds);
 
   return [...latestByFamily.values()].map((row) => ({
     id: row.id,

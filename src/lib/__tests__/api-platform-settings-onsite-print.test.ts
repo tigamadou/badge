@@ -146,4 +146,50 @@ describe("PATCH /api/platform/settings/onsite-print", () => {
     });
     expect(log?.details).toMatchObject({ section: "onsite-print", templateCount: 2 });
   });
+
+  it("400 INVALID_BODY pour un corps non JSON", async () => {
+    await asStaff("STAFF_ADMIN");
+    const { PATCH } = await import("@/app/api/platform/settings/onsite-print/route");
+    const bad = new NextRequest("http://localhost/api/platform/settings/onsite-print", {
+      method: "PATCH",
+      body: "{not json",
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(bad, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("INVALID_BODY");
+  });
+
+  it("400 INVALID_BODY pour un identifiant de plus de 64 caractères", async () => {
+    await asStaff("STAFF_ADMIN");
+    const res = await call({ templateIds: ["x".repeat(65)], printerNote: null, defaultMarginPercent: 10 });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("INVALID_BODY");
+  });
+
+  it("rogne la note ; une note blanche devient null", async () => {
+    await asStaff("STAFF_ADMIN");
+    await call({ templateIds: [], printerNote: "  Zebra  ", defaultMarginPercent: 10 });
+    expect((await getOnsitePrintSettings()).printerNote).toBe("Zebra");
+    await call({ templateIds: [], printerNote: "   ", defaultMarginPercent: 10 });
+    expect((await getOnsitePrintSettings()).printerNote).toBeNull();
+  });
+
+  it("400 UNKNOWN_TEMPLATE pour un template archivé", async () => {
+    await asStaff("STAFF_ADMIN");
+    const t = await install(1);
+    await prisma.installedBadgeTemplate.update({ where: { id: t.id }, data: { archived: true } });
+    const res = await call({ templateIds: [t.id], printerNote: null, defaultMarginPercent: 10 });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("UNKNOWN_TEMPLATE");
+  });
+
+  it("journalise aussi la marge par défaut", async () => {
+    const admin = await asStaff("STAFF_ADMIN");
+    await call({ templateIds: [], printerNote: null, defaultMarginPercent: 25 });
+    const log = await prisma.activityLog.findFirst({
+      where: { type: "PLATFORM_SETTINGS_UPDATED", userId: admin.id },
+    });
+    expect(log?.details).toMatchObject({ defaultMarginPercent: 25 });
+  });
 });

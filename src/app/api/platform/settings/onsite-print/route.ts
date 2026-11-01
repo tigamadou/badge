@@ -8,7 +8,7 @@ import { getOnsitePrintSettings } from "@/lib/settings";
 // Plan 35 : templates proposes pour l'impression sur place, note de l'imprimante et
 // marge par defaut. Reserve a STAFF_ADMIN.
 const bodySchema = z.object({
-  templateIds: z.array(z.string().min(1)).max(100),
+  templateIds: z.array(z.string().min(1).max(64)).max(100),
   printerNote: z.string().max(500).nullable(),
   defaultMarginPercent: z.number().int().min(0).max(100),
 });
@@ -20,10 +20,12 @@ export const PATCH = withStaffAuth(
     if (!parsed.success) {
       return NextResponse.json({ error: "INVALID_BODY" }, { status: 400 });
     }
-    const { printerNote, defaultMarginPercent } = parsed.data;
+    const { defaultMarginPercent } = parsed.data;
+    // Note vide ou blanche : aucune note.
+    const printerNote = parsed.data.printerNote?.trim() || null;
     const templateIds = [...new Set(parsed.data.templateIds)];
 
-    const known = await prisma.installedBadgeTemplate.count({ where: { id: { in: templateIds } } });
+    const known = await prisma.installedBadgeTemplate.count({ where: { id: { in: templateIds }, archived: false } });
     if (known !== templateIds.length) {
       return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
     }
@@ -42,7 +44,7 @@ export const PATCH = withStaffAuth(
     await logActivity({
       type: "PLATFORM_SETTINGS_UPDATED",
       userId: session.user.id,
-      details: { section: "onsite-print", templateCount: templateIds.length },
+      details: { section: "onsite-print", templateCount: templateIds.length, defaultMarginPercent },
       req,
     });
 
