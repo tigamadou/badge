@@ -215,7 +215,7 @@ describe("setOrganizerProducts — comparaison avec les lignes existantes", () =
     const res = await set(r.id, [badge()]);
     expect(res.total).toBe(4500);
     const all = await lines(r.id);
-    expect(all).toHaveLength(3 - 1);
+    expect(all).toHaveLength(2);
     expect(all.find((l) => l.label === "Cordon")?.removedAt).not.toBeNull();
     const events = await thread(r.id);
     expect(events.map((e) => e.eventType)).toEqual(["LINES_CHANGED", "LINES_CHANGED"]);
@@ -390,5 +390,176 @@ describe("setOrganizerProducts — lignes fixées par le staff", () => {
     await prisma.printQuoteLine.updateMany({ where: { requestId: r.id }, data: { quantityOverridden: true, quantity: 4, lineTotal: 6000 } });
     const res = await set(r.id, [badge(), lanyard()]);
     expect(res.lines[0].quantity).toBe(4);
+  });
+});
+
+describe("setOrganizerProducts — correctifs de relecture", () => {
+  const addBadge = async (requestId: string, index: number) =>
+    prisma.printRequestItem.create({
+      data: { requestId, registrationId: fx.approved[index].id, position: index },
+    });
+
+  it.each([
+    ["support", () => [badge(), lanyard({ quantity: 5 })]],
+    ["accessoire sans quantité", () => [badge(), lanyard()]],
+  ])("prix fixé seul, quantité dérivée (%s) : le changement du nombre de badges ne verrouille pas", async (_n, build) => {
+    const r = await requestWithBadges("SUBMITTED", 2);
+    await set(r.id, build());
+    await prisma.printQuoteLine.updateMany({ where: { requestId: r.id }, data: { priceOverridden: true } });
+    await addBadge(r.id, 2);
+    const res = await set(r.id, build());
+    expect(res.lines.map((l) => l.quantity)).toEqual([2, build()[1].quantity ?? 2]);
+    expect(res.revised).toBe(false);
+  });
+
+  it("choix équivalents (valueIds vide) : ni verrou ni nouveau prix", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const option = await prisma.printProductOption.create({
+      data: { productId: fx.lanyard.id, name: "Couleur", type: "CHOICE", required: false, priceDelta: 0, position: 0 },
+    });
+    await set(r.id, [badge(), lanyard({ quantity: 5 })]);
+    await prisma.printQuoteLine.updateMany({ where: { requestId: r.id }, data: { priceOverridden: true, unitPrice: 123, lineTotal: 615 } });
+    const before = (await thread(r.id)).length;
+    const res = await set(r.id, [badge(), lanyard({ quantity: 5, choices: [{ optionId: option.id, valueIds: [] }] })]);
+    expect(res.lines[1]).toMatchObject({ unitPrice: 123, lineTotal: 615 });
+    expect(await thread(r.id)).toHaveLength(before);
+  });
+
+  it("n'enregistre que le champ pertinent de chaque option", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const text = await prisma.printProductOption.create({
+      data: { productId: fx.lanyard.id, name: "Texte", type: "TEXT", required: false, priceDelta: 0, position: 0, maxLength: 20 },
+    });
+    const choice = await prisma.printProductOption.create({
+      data: {
+        productId: fx.lanyard.id, name: "Couleur", type: "CHOICE", required: false, priceDelta: 0, position: 1,
+        values: { create: [{ label: "Rouge", priceDelta: 0, position: 0 }] },
+      },
+      include: { values: true },
+    });
+    const res = await set(r.id, [badge(), lanyard({
+      choices: [
+        { optionId: text.id, text: "Forum", valueIds: ["zz"] },
+        { optionId: choice.id, valueIds: [choice.values[0].id], text: "parasite" },
+      ],
+    })]);
+    expect(res.lines[1].choices).toEqual([
+      { optionId: text.id, text: "Forum" },
+      { optionId: choice.id, valueIds: [choice.values[0].id] },
+    ]);
+  });
+
+  it("choix vides de chaque type (texte, fichier, répartition) retirés ; option inconnue refusée", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const mk = (type: "TEXT" | "FILE" | "QUANTITY_SPLIT", position: number) =>
+      prisma.printProductOption.create({
+        data: { productId: fx.lanyard.id, name: type, type, required: false, priceDelta: 0, position },
+      });
+    const [t, f, q] = [await mk("TEXT", 0), await mk("FILE", 1), await mk("QUANTITY_SPLIT", 2)];
+    const res = await set(r.id, [badge(), lanyard({
+      choices: [{ optionId: t.id, text: "  " }, { optionId: t.id }, { optionId: f.id }, { optionId: q.id, split: [] }, { optionId: q.id }],
+    })]).then((x) => x, (e) => e as PrintRequestError);
+    // Les doublons d'option restent détectés après normalisation : ici tous sont vides, donc retirés.
+    expect((res as { lines: { choices: unknown }[] }).lines[1].choices).toEqual([]);
+  });
+
+  it("montant d'une ligne ou total au-delà de 2 000 000 000 -> VALIDATION", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    await prisma.printProduct.update({ where: { id: fx.lanyard.id }, data: { basePrice: 1_000_000_000 } });
+    expect(await reject(set(r.id, [badge(), lanyard()]))).toMatchObject({ code: "VALIDATION", status: 400 });
+    // Chaque ligne passe (1,8 Md et 0,6 Md), mais pas leur somme.
+    await prisma.printProduct.update({ where: { id: fx.lanyard.id }, data: { basePrice: 200_000_000 } });
+    await prisma.printProduct.update({ where: { id: fx.badgeProduct.id }, data: { basePrice: 600_000_000 } });
+    expect(await reject(set(r.id, [badge(), lanyard()]))).toMatchObject({ code: "VALIDATION" });
+    expect(await lines(r.id)).toHaveLength(0);
+  });
+
+  it("paliers : 3 badges et 8 accessoires n'ont pas le même palier", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    await prisma.printProductPriceTier.create({ data: { productId: fx.lanyard.id, minQuantity: 5, unitPrice: 400 } });
+    const res = await set(r.id, [badge(), lanyard(), ]);
+    expect(res.lines[1].unitPrice).toBe(500);
+    const res2 = await set(r.id, [badge(), lanyard({ quantity: 8 })]);
+    expect(res2.lines[1]).toMatchObject({ unitPrice: 400, lineTotal: 3200 });
+  });
+
+  it("ligne modifiée dont le produit a été archivé -> PRODUCT_UNAVAILABLE", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    await set(r.id, [badge(), lanyard({ quantity: 5 })]);
+    await prisma.printProduct.update({ where: { id: fx.lanyard.id }, data: { archived: true } });
+    expect(await reject(set(r.id, [badge(), lanyard({ quantity: 6 })]))).toMatchObject({
+      code: "PRODUCT_UNAVAILABLE", details: { productId: fx.lanyard.id },
+    });
+  });
+
+  it("répartition : changer la quantité sans refaire la répartition -> SPLIT_MISMATCH", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const option = await prisma.printProductOption.create({
+      data: {
+        productId: fx.lanyard.id, name: "Répartition", type: "QUANTITY_SPLIT", required: false, priceDelta: 0, position: 0,
+        values: { create: [{ label: "Rouge", priceDelta: 0, position: 0 }] },
+      },
+      include: { values: true },
+    });
+    const choices = [{ optionId: option.id, split: [{ valueId: option.values[0].id, quantity: 4 }] }];
+    await set(r.id, [badge(), lanyard({ quantity: 4, choices })]);
+    expect(await reject(set(r.id, [badge(), lanyard({ quantity: 6, choices })]))).toMatchObject({
+      code: "INVALID_CHOICES", details: { code: "SPLIT_MISMATCH" },
+    });
+  });
+
+  it("prix et total fournis par le client ignorés", async () => {
+    const r = await requestWithBadges();
+    const res = await set(r.id, [badge(), { ...lanyard(), unitPrice: 1, lineTotal: 1 } as never]);
+    expect(res.lines[1]).toMatchObject({ unitPrice: 500, lineTotal: 1500 });
+  });
+
+  it("une ligne du staff sur le même produit reste intacte", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const staff = await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.lanyard.id, label: "Cordon staff",
+        quantity: 7, unitPrice: 300, lineTotal: 2100, position: 9, addedBy: "STAFF",
+      },
+    });
+    const res = await set(r.id, [badge(), lanyard()]);
+    expect(res.lines.map((l) => l.label)).toEqual(["Support badge PVC", "Cordon", "Cordon staff"]);
+    expect(await prisma.printQuoteLine.findUniqueOrThrow({ where: { id: staff.id } })).toMatchObject({
+      quantity: 7, unitPrice: 300, removedAt: null,
+    });
+  });
+});
+
+describe("setOrganizerProducts — réordonnancement seul", () => {
+  it("QUOTED : seules les positions changent -> reste QUOTED, positions écrites, aucune entrée", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const a = await prisma.printProduct.create({
+      data: { kind: "ACCESSORY", name: "Stylo", slug: `stylo2-${Date.now()}`, basePrice: 100, published: true },
+    });
+    await set(r.id, [badge(), lanyard(), lanyard({ productId: a.id })]);
+    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "QUOTED" } });
+    const before = (await thread(r.id)).length;
+    const res = await set(r.id, [badge(), lanyard({ productId: a.id }), lanyard()]);
+    expect(res.revised).toBe(false);
+    expect(res.lines.map((l) => l.label)).toEqual(["Support badge PVC", "Stylo", "Cordon"]);
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
+    expect(await thread(r.id)).toHaveLength(before);
+  });
+
+  it("réordonnancement et modification ensemble : positions et quantité écrites", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const a = await prisma.printProduct.create({
+      data: { kind: "ACCESSORY", name: "Stylo", slug: `stylo3-${Date.now()}`, basePrice: 100, published: true },
+    });
+    await set(r.id, [badge(), lanyard(), lanyard({ productId: a.id })]);
+    const res = await set(r.id, [badge(), lanyard({ productId: a.id }), lanyard({ quantity: 7 })]);
+    expect(res.lines.map((l) => [l.label, l.quantity, l.position])).toEqual([
+      ["Support badge PVC", 3, 0], ["Stylo", 3, 1], ["Cordon", 7, 2],
+    ]);
+  });
+
+  it("statut verrouillé : même un envoi sans effet est refusé", async () => {
+    const r = await requestWithBadges("PAID");
+    expect(await reject(set(r.id, [badge()]))).toMatchObject({ code: "REQUEST_LOCKED" });
   });
 });

@@ -17,19 +17,13 @@ import { chunk, RESERVING_STATUSES } from "./labels";
 import {
   appendThreadEvent,
   applyEdit,
+  assertEditable,
   loadRequest,
   recomputeTotal,
   requestBadgeCount,
 } from "./service";
 import type { LineChange } from "./thread";
 import type { BadgeSelection, DetailsPatch, OnsiteSlot, OrganizerProductInput } from "./inputs";
-
-// Signal interne : annule la transaction d'une modification sans effet (rien n'est écrit).
-class NoEffect extends Error {
-  constructor(readonly positions: { id: string; position: number }[]) {
-    super("NO_EFFECT");
-  }
-}
 
 // Taille des paquets pour les lectures et écritures par identifiants (borne les paramètres SQL).
 const ID_CHUNK = 5000;
@@ -362,10 +356,39 @@ function canonical(value: unknown): string {
   );
 }
 
+// Plafond d'un montant (colonnes Int de MySQL) : au-delà, refus propre plutôt qu'une erreur 500.
+const MAX_AMOUNT = 2_000_000_000;
+
+// Ne garde que le champ pertinent pour le type de chaque option et retire les choix vides, afin
+// que deux saisies équivalentes soient égales et que seule la forme utile soit enregistrée.
+function normalizeChoices(product: ProductForPricing, choices: OptionChoice[]): OptionChoice[] {
+  const result: OptionChoice[] = [];
+  for (const choice of choices) {
+    const option = product.options.find((o) => o.id === choice.optionId);
+    // Option inconnue : conservée telle quelle, validateChoices la refusera.
+    if (!option) {
+      result.push(choice);
+      continue;
+    }
+    if (option.type === "TEXT") {
+      if (choice.text?.trim()) result.push({ optionId: option.id, text: choice.text });
+    } else if (option.type === "FILE") {
+      if (choice.fileKey) result.push({ optionId: option.id, fileKey: choice.fileKey });
+    } else if (option.type === "QUANTITY_SPLIT") {
+      if (choice.split?.length) result.push({ optionId: option.id, split: choice.split });
+    } else if (choice.valueIds?.length) {
+      result.push({ optionId: option.id, valueIds: choice.valueIds });
+    }
+  }
+  return result;
+}
+
 function priced(product: ProductForPricing, choices: OptionChoice[], quantity: number): number {
   const result = validateChoices(product, choices, quantity);
   if (!result.ok) throw choiceFailureToError(product, result);
-  return unitPriceFor(product, quantity, choices);
+  const unitPrice = unitPriceFor(product, quantity, choices);
+  if (unitPrice * quantity > MAX_AMOUNT) throw new PrintRequestError("VALIDATION", 400);
+  return unitPrice;
 }
 
 function lineData(
@@ -420,10 +443,10 @@ export async function setOrganizerProducts(input: {
   if (badges.length !== 1) throw new PrintRequestError("BADGE_PRODUCT_REQUIRED", 400);
   const ordered = [...badges, ...resolved.filter((r) => r.product.kind !== "BADGE")];
 
-  const attempt = prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${request.id} FOR UPDATE`;
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
-    const { from } = await applyEdit(tx, current, "ORGANIZER", input.userId);
+    assertEditable(current.status, "ORGANIZER");
 
     const badgeCount = await requestBadgeCount(tx, current);
     if (badgeCount === 0) throw new PrintRequestError("BADGE_COUNT_REQUIRED", 409);
@@ -433,70 +456,104 @@ export async function setOrganizerProducts(input: {
       orderBy: { position: "asc" },
     });
     const byProduct = new Map(existing.map((line) => [line.productId, line]));
-    const changes: LineChange[] = [];
-    const positions: { id: string; position: number }[] = [];
     const keptIds = new Set<string>();
+
+    // Phase 1 : calcul des différences et validations, sans écrire.
+    type Prepared = {
+      product: ProductForPricing;
+      choices: OptionChoice[];
+      quantity: number;
+      unitPrice: number;
+      position: number;
+    };
+    const additions: Prepared[] = [];
+    const updates: (Prepared & { line: PrintQuoteLine })[] = [];
+    const moves: { id: string; position: number }[] = [];
 
     for (const [position, { product, entry }] of ordered.entries()) {
       const derivedQuantity = product.kind === "BADGE" || entry.quantity === null;
       const line = byProduct.get(product.id);
       const quantity = product.kind === "BADGE" ? badgeCount : (entry.quantity ?? badgeCount);
-      let choices = entry.choices;
+      let choices = normalizeChoices(product, entry.choices);
 
-      if (line) {
-        keptIds.add(line.id);
-        const sameChoices = canonical(line.choices ?? []) === canonical(choices);
-        // Quantité non saisie sur une ligne fixée par le staff : l'organisateur ne la conteste pas.
-        const effectiveQuantity = derivedQuantity && line.quantityOverridden ? line.quantity : quantity;
-        if (sameChoices && effectiveQuantity === line.quantity) {
-          if (line.position !== position) {
-            await tx.printQuoteLine.update({ where: { id: line.id }, data: { position } });
-            positions.push({ id: line.id, position });
-          }
-          continue;
-        }
-        if (line.priceOverridden || line.quantityOverridden) {
-          throw new PrintRequestError("LINE_LOCKED_BY_STAFF", 409, { productId: product.id });
-        }
-        // Mêmes choix : on rouvre la configuration enregistrée, sans ce qui a disparu du catalogue.
-        if (sameChoices) choices = pruneChoices(product, choices);
-        const unitPrice = priced(product, choices, effectiveQuantity);
-        await tx.printQuoteLine.update({
-          where: { id: line.id },
-          data: lineData(product, choices, effectiveQuantity, unitPrice, position),
-        });
-        changes.push({
-          op: "UPDATED",
-          lineId: line.id,
-          label: product.name,
-          from: { quantity: line.quantity, unitPrice: line.unitPrice },
-          to: { quantity: effectiveQuantity, unitPrice },
-        });
+      if (!line) {
+        additions.push({ product, choices, quantity, unitPrice: priced(product, choices, quantity), position });
         continue;
       }
+      keptIds.add(line.id);
+      const storedChoices = normalizeChoices(product, (line.choices ?? []) as unknown as OptionChoice[]);
+      const sameChoices = canonical(storedChoices) === canonical(choices);
+      const locked = line.priceOverridden || line.quantityOverridden;
+      // Quantité non saisie sur une ligne fixée par le staff : l'organisateur ne la conteste pas
+      // (le suivi du nombre de badges appartient à followBadgeCount).
+      const effectiveQuantity = derivedQuantity && locked ? line.quantity : quantity;
+      if (sameChoices && effectiveQuantity === line.quantity) {
+        if (line.position !== position) moves.push({ id: line.id, position });
+        continue;
+      }
+      if (locked) {
+        throw new PrintRequestError("LINE_LOCKED_BY_STAFF", 409, { productId: product.id });
+      }
+      // Mêmes choix : on rouvre la configuration enregistrée, sans ce qui a disparu du catalogue.
+      if (sameChoices) choices = pruneChoices(product, choices);
+      updates.push({
+        line, product, choices, quantity: effectiveQuantity, position,
+        unitPrice: priced(product, choices, effectiveQuantity),
+      });
+    }
+    const removals = existing.filter((l) => !keptIds.has(l.id));
 
-      const unitPrice = priced(product, choices, quantity);
+    // Simple réordonnancement (ou rien) : positions écrites, sans révision ni entrée du fil.
+    const hasEffect = additions.length + updates.length + removals.length > 0;
+    if (!hasEffect) {
+      for (const { id, position } of moves) {
+        await tx.printQuoteLine.update({ where: { id }, data: { position } });
+      }
+      const lines = await tx.printQuoteLine.findMany({
+        where: { requestId: request.id, removedAt: null },
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      });
+      return { lines, total: current.total, revised: false };
+    }
+
+    // Phase 2 : écritures, la révision du devis n'étant posée qu'ici.
+    const { from } = await applyEdit(tx, current, "ORGANIZER", input.userId);
+    const changes: LineChange[] = [];
+    for (const { id, position } of moves) {
+      await tx.printQuoteLine.update({ where: { id }, data: { position } });
+    }
+    for (const u of updates) {
+      await tx.printQuoteLine.update({
+        where: { id: u.line.id },
+        data: lineData(u.product, u.choices, u.quantity, u.unitPrice, u.position),
+      });
+      changes.push({
+        op: "UPDATED",
+        lineId: u.line.id,
+        label: u.product.name,
+        from: { quantity: u.line.quantity, unitPrice: u.line.unitPrice },
+        to: { quantity: u.quantity, unitPrice: u.unitPrice },
+      });
+    }
+    for (const a of additions) {
       const created = await tx.printQuoteLine.create({
         data: {
           requestId: request.id,
           kind: "PRODUCT",
-          productId: product.id,
+          productId: a.product.id,
           addedBy: "ORGANIZER",
-          ...lineData(product, choices, quantity, unitPrice, position),
+          ...lineData(a.product, a.choices, a.quantity, a.unitPrice, a.position),
         },
       });
       changes.push({
         op: "ADDED",
         lineId: created.id,
-        label: product.name,
-        to: { quantity, unitPrice },
+        label: a.product.name,
+        to: { quantity: a.quantity, unitPrice: a.unitPrice },
       });
     }
-
-    let removedFromDraft = false;
-    for (const line of existing.filter((l) => !keptIds.has(l.id))) {
+    for (const line of removals) {
       if (current.status === "DRAFT") {
-        removedFromDraft = true;
         await tx.printQuoteLine.delete({ where: { id: line.id } });
       } else {
         await tx.printQuoteLine.update({ where: { id: line.id }, data: { removedAt: new Date() } });
@@ -509,8 +566,6 @@ export async function setOrganizerProducts(input: {
       }
     }
 
-    // Aucune ligne ajoutée, retirée ou modifiée : on annule tout (y compris la révision du devis).
-    if (changes.length === 0 && !removedFromDraft) throw new NoEffect(positions);
     if (current.status !== "DRAFT" && changes.length > 0) {
       await appendThreadEvent(
         tx,
@@ -520,6 +575,11 @@ export async function setOrganizerProducts(input: {
         { userId: input.userId, side: "ORGANIZER" },
       );
     }
+    const sum = await tx.printQuoteLine.aggregate({
+      where: { requestId: request.id, removedAt: null },
+      _sum: { lineTotal: true },
+    });
+    if (sum._sum.lineTotal! > MAX_AMOUNT) throw new PrintRequestError("VALIDATION", 400);
     const total = await recomputeTotal(tx, request.id);
     const lines = await tx.printQuoteLine.findMany({
       where: { requestId: request.id, removedAt: null },
@@ -527,19 +587,4 @@ export async function setOrganizerProducts(input: {
     });
     return { lines, total, revised: from === "QUOTED" };
   });
-  try {
-    return await attempt;
-  } catch (err) {
-    if (!(err instanceof NoEffect)) throw err;
-    // Les changements d'ordre seuls sont rejoués hors de la transaction annulée (sans révision).
-    for (const { id, position } of err.positions) {
-      await prisma.printQuoteLine.update({ where: { id }, data: { position } });
-    }
-    const lines = await prisma.printQuoteLine.findMany({
-      where: { requestId: request.id, removedAt: null },
-      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-    });
-    const { total } = await prisma.printRequest.findUniqueOrThrow({ where: { id: request.id } });
-    return { lines, total, revised: false };
-  }
 }

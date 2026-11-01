@@ -178,6 +178,13 @@ export async function applyTransition(
   return to;
 }
 
+// Refuse une modification hors des statuts éditables (sans rien écrire).
+export function assertEditable(status: PrintRequestStatus, side: "ORGANIZER" | "STAFF"): void {
+  if (status === "ACCEPTED") throw new PrintRequestError("QUOTE_ACCEPTED", 409);
+  const action: PrintRequestAction = side === "STAFF" ? "STAFF_EDIT" : "ORGANIZER_EDIT";
+  if (!nextStatus(status, action, side)) throw new PrintRequestError("REQUEST_LOCKED", 409);
+}
+
 // Modification par l'organisateur ou le staff. Depuis QUOTED, le devis repasse en révision :
 // l'entrée QUOTE_REVISION est écrite en premier (l'appelant ajoute ensuite la sienne).
 export async function applyEdit(
@@ -187,9 +194,8 @@ export async function applyEdit(
   userId: string,
 ): Promise<{ from: PrintRequestStatus; to: PrintRequestStatus }> {
   const from = request.status;
-  if (from === "ACCEPTED") throw new PrintRequestError("QUOTE_ACCEPTED", 409);
+  assertEditable(from, side);
   const action: PrintRequestAction = side === "STAFF" ? "STAFF_EDIT" : "ORGANIZER_EDIT";
-  if (!nextStatus(from, action, side)) throw new PrintRequestError("REQUEST_LOCKED", 409);
   if (from === "QUOTED") await appendThreadEvent(tx, request.id, "QUOTE_REVISION", {}, { userId, side });
   const to = await applyTransition(tx, request, action, side);
   return { from, to };
