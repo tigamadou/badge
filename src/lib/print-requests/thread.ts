@@ -248,13 +248,8 @@ export type ThreadEntryDTO = {
   createdAt: string;
 };
 
-export async function listThread(requestId: string): Promise<ThreadEntryDTO[]> {
-  const rows = await prisma.printRequestMessage.findMany({
-    where: { requestId },
-    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-    include: { author: { select: { name: true } } },
-  });
-  return rows.map((m) => ({
+export function toEntryDTO(m: PrintRequestMessage, authorName: string | null): ThreadEntryDTO {
+  return {
     id: m.id,
     side: m.side,
     kind: m.kind,
@@ -262,7 +257,16 @@ export async function listThread(requestId: string): Promise<ThreadEntryDTO[]> {
     eventType: m.eventType,
     details: m.details,
     attachmentKey: m.attachmentKey,
-    authorName: m.author?.name ?? null,
+    authorName,
     createdAt: m.createdAt.toISOString(),
-  }));
+  };
+}
+
+export async function listThread(requestId: string): Promise<ThreadEntryDTO[]> {
+  const rows = await prisma.printRequestMessage.findMany({
+    where: { requestId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    include: { author: { select: { name: true } } },
+  });
+  return rows.map((m) => toEntryDTO(m, m.author?.name ?? null));
 }
