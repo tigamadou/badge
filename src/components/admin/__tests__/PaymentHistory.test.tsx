@@ -5,7 +5,7 @@ import { PaymentHistory } from "../PaymentHistory";
 const base = {
   id: "p1",
   createdAt: new Date("2026-10-28T10:00:00Z"),
-  planName: "Pro",
+  label: "Pro",
   amount: 15000,
   status: "APPROVED" as const,
   fedapayReference: "REF-1",
@@ -21,6 +21,19 @@ describe("PaymentHistory", () => {
     expect(html).toContain("Pro");
     expect(html).toContain("REF-1");
     expect(html.replace(/[  ]/g, " ")).toContain("15 000 FCFA");
+  });
+
+  it("a une colonne Objet et plus Plan", () => {
+    const html = renderToStaticMarkup(<PaymentHistory payments={[base]} />);
+    expect(html).toContain("Objet");
+    expect(html).not.toContain("Plan");
+  });
+
+  it("affiche l'objet d'un paiement d'impression", () => {
+    const html = renderToStaticMarkup(
+      <PaymentHistory payments={[{ ...base, label: "Impression IMP-2026-0042" }]} />,
+    );
+    expect(html).toContain("Impression IMP-2026-0042");
   });
 
   it("traduit chaque statut", () => {

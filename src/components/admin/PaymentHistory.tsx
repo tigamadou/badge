@@ -4,7 +4,7 @@ import { Table } from "@/components/ui/Table";
 export interface PaymentHistoryItem {
   id: string;
   createdAt: Date;
-  planName: string;
+  label: string;
   amount: number;
   status: PaymentStatus;
   fedapayReference: string | null;
@@ -30,7 +30,7 @@ export function PaymentHistory({ payments }: { payments: PaymentHistoryItem[] })
       keyExtractor={(p) => p.id}
       columns={[
         { key: "date", header: "Date", render: (p) => new Date(p.createdAt).toLocaleDateString("fr-FR") },
-        { key: "plan", header: "Plan", render: (p) => p.planName },
+        { key: "label", header: "Objet", render: (p) => p.label },
         { key: "amount", header: "Montant", render: (p) => `${amountFormat.format(p.amount)} FCFA` },
         { key: "status", header: "Statut", render: (p) => STATUS_LABELS[p.status] },
         {

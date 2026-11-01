@@ -5,6 +5,7 @@ import { SubscriptionForm } from "@/components/staff/SubscriptionForm";
 import { Icon } from "@/components/ui/Icon";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { PaymentHistory } from "@/components/admin/PaymentHistory";
+import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-history";
 
 export default async function OrgSubscriptionPage({
   params,
@@ -28,14 +29,7 @@ export default async function OrgSubscriptionPage({
       where: { orgId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: {
-        id: true,
-        createdAt: true,
-        amount: true,
-        status: true,
-        fedapayReference: true,
-        plan: { select: { name: true } },
-      },
+      select: PAYMENT_HISTORY_SELECT,
     }),
     org.subscription?.scheduledPlanId
       ? prisma.plan.findUnique({
@@ -80,7 +74,7 @@ export default async function OrgSubscriptionPage({
       <Card>
         <CardHead title="Historique des paiements" />
         <CardBody>
-          <PaymentHistory payments={payments.map(({ plan, ...p }) => ({ ...p, planName: plan?.name ?? "—" }))} />
+          <PaymentHistory payments={payments.map(toPaymentHistoryItem)} />
         </CardBody>
       </Card>
     </div>
