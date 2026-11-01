@@ -182,6 +182,41 @@ export async function createTestPrintRequest(opts: {
   return request;
 }
 
+// Cree un paiement FedaPay d'impression directement en base (aucun appel FedaPay). L'identifiant de
+// transaction est aleatoire (colonne unique) ; il sert de `?id=` a la page de retour. Un paiement
+// `APPROVED` qui solde la demande (`settle: true`) devient son `paidPaymentId` : c'est ce que fait
+// markPaid en production. Le paiement part avec l'organisation (cascade) dans le cleanup.
+export async function createTestPrintPayment(opts: {
+  orgId: string;
+  requestId: string;
+  userId?: string;
+  amount: number;
+  status: "PENDING" | "APPROVED" | "DECLINED" | "CANCELED" | "EXPIRED";
+  settle?: boolean;
+}): Promise<{ id: string; fedapayTransactionId: number }> {
+  const prisma = db();
+  const fedapayTransactionId = 900_000_000 + Math.floor(Math.random() * 99_000_000);
+  const payment = await prisma.payment.create({
+    data: {
+      orgId: opts.orgId,
+      purpose: "PRINT_REQUEST",
+      printRequestId: opts.requestId,
+      userId: opts.userId ?? null,
+      amount: opts.amount,
+      currency: "XOF",
+      status: opts.status,
+      fedapayTransactionId,
+      fedapayReference: `trx_e2e_${fedapayTransactionId}`,
+      approvedAt: opts.status === "APPROVED" ? new Date() : null,
+    },
+    select: { id: true },
+  });
+  if (opts.settle) {
+    await prisma.printRequest.update({ where: { id: opts.requestId }, data: { paidPaymentId: payment.id } });
+  }
+  return { id: payment.id, fedapayTransactionId };
+}
+
 // Epingle sur l'evenement un template installe jetable (famille `e2e-`, nettoye par cleanupE2ETestData),
 // pour que l'envoi d'une demande ne depende pas du template par defaut de la base de dev.
 export async function pinTestEventTemplate(opts: { eventId: string; installedById: string }): Promise<{ id: string }> {

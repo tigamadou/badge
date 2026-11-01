@@ -60,7 +60,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 ### References
 
 - [reCAPTCHA v3](features/recaptcha.md) — protection anti-spam de l'inscription et du mot de passe oublié : configuration, jeton côté navigateur, diagnostic.
-- [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox.
+- [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox, paiement des devis d'impression (`purpose`, un seul paiement en cours, paiement hors contexte, marquage manuel, URL de retour).
 - [Abonnements](features/abonnements.md) — plans, prix, essai free de 30 jours, echeance (`EXPIRED`), droits selon l'abonnement, rappels.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Lot notifications — socle commun](features/lot-notifications-socle.md) — contrats C1 a C4 (`enqueueEmail`, `NotificationBell`, `UserAvatar`, toasts) tels que livres.
