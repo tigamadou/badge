@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
 import { prisma } from "@/lib/prisma";
 import { RequestDetail } from "@/components/staff/print/RequestDetail";
+import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-history";
 
 export default async function PrintRequestDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const { requestId } = await params;
@@ -22,5 +23,14 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
         })
       : [];
 
-  return <RequestDetail requestId={requestId} role={ctx.staffRole} products={products} />;
+  // Paiements de cette demande (FedaPay), du plus récent au plus ancien.
+  const payments = (
+    await prisma.payment.findMany({
+      where: { printRequestId: requestId },
+      orderBy: { createdAt: "desc" },
+      select: PAYMENT_HISTORY_SELECT,
+    })
+  ).map(toPaymentHistoryItem);
+
+  return <RequestDetail requestId={requestId} role={ctx.staffRole} products={products} payments={payments} />;
 }

@@ -1,8 +1,23 @@
-import { toastApiError } from "@/lib/toast";
+import { toastApiError, toastError } from "@/lib/toast";
+
+async function errorCode(res: Response): Promise<string | null> {
+  try {
+    const { error } = (await res.clone().json()) as { error?: unknown };
+    return typeof error === "string" ? error : null;
+  } catch {
+    return null;
+  }
+}
 
 // Appel JSON vers une route staff ; en cas d'erreur, le message français de l'API est affiché
 // en toast et la fonction renvoie null.
-export async function staffRequest(url: string, method: string, body?: unknown): Promise<Response | null> {
+// `codeMessages` remplace le message de l'API pour certains codes d'erreur (champ `error`).
+export async function staffRequest(
+  url: string,
+  method: string,
+  body?: unknown,
+  codeMessages?: Record<string, string>,
+): Promise<Response | null> {
   try {
     const res = await fetch(url, {
       method,
@@ -10,7 +25,9 @@ export async function staffRequest(url: string, method: string, body?: unknown):
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!res.ok) {
-      await toastApiError(res);
+      const code = codeMessages ? await errorCode(res) : null;
+      if (code && codeMessages?.[code]) toastError(codeMessages[code]);
+      else await toastApiError(res);
       return null;
     }
     return res;

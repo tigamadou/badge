@@ -8,6 +8,7 @@ import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBa
 import { Alert } from "@/components/ui/Feedback";
 import { Card, CardBody, CardHead } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
+import { PaymentHistory, type PaymentHistoryItem } from "@/components/admin/PaymentHistory";
 import { toastApiError } from "@/lib/toast";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
@@ -37,10 +38,12 @@ export function RequestDetail({
   requestId,
   role,
   products,
+  payments = [],
 }: {
   requestId: string;
   role: StaffRole;
   products: ProductOption[];
+  payments?: PaymentHistoryItem[];
 }) {
   const router = useRouter();
   const [data, setData] = useState<RequestDetailData | null>(null);
@@ -266,6 +269,15 @@ export function RequestDetail({
                 </li>
               ))}
             </ul>
+          </CardBody>
+        </Card>
+      )}
+
+      {payments.length > 0 && (
+        <Card>
+          <CardHead title="Paiements" />
+          <CardBody>
+            <PaymentHistory payments={payments} />
           </CardBody>
         </Card>
       )}
