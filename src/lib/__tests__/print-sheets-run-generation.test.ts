@@ -293,6 +293,77 @@ describe("runGeneration", () => {
     expect(await runGeneration(done.id, "w1", d)).toBe("LOCK_LOST");
   });
 
+  it("battement periodique pendant l'envoi : le heartbeat avance entre rendu et ecriture finale", async () => {
+    const g = await create({ ids: ["r1"], heartbeatAt: new Date(0) });
+    let tick = 0;
+    const { d, upload } = await deps({ beatIntervalMs: 10, now: () => new Date(1_000_000 + 1000 * tick++) });
+    let during: Date | null = null;
+    upload.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 120));
+      during = (await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } })).heartbeatAt;
+    });
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    // 1 battement apres le badge (tick 0) + au moins un periodique
+    expect(during!.getTime()).toBeGreaterThan(1_000_000);
+  });
+
+  it("verrou perdu detecte par le battement : LOCK_LOST sans ecriture finale", async () => {
+    const g = await create({ ids: ["r1"] });
+    const { d, upload } = await deps({ beatIntervalMs: 10 });
+    upload.mockImplementation(async () => {
+      await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { lockedBy: "w2" } });
+      await new Promise((r) => setTimeout(r, 100));
+    });
+    expect(await runGeneration(g.id, "w1", d)).toBe("LOCK_LOST");
+    expect(await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } })).toMatchObject({
+      status: "RUNNING",
+      lockedBy: "w2",
+      fileKey: null,
+    });
+  });
+
+  it("verrou perdu detecte par le battement puis erreur d'envoi : LOCK_LOST", async () => {
+    const g = await create({ ids: ["r1"] });
+    const { d, upload } = await deps({ beatIntervalMs: 10 });
+    upload.mockImplementation(async () => {
+      await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { lockedBy: "w2" } });
+      await new Promise((r) => setTimeout(r, 100));
+      throw new Error("s3 HS");
+    });
+    expect(await runGeneration(g.id, "w1", d)).toBe("LOCK_LOST");
+    expect((await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } })).error).toBeNull();
+  });
+
+  it("une erreur transitoire du battement est ignoree", async () => {
+    const g = await create({ ids: ["r1"] });
+    const { d, upload } = await deps({ beatIntervalMs: 10 });
+    const orig = prisma.printSheetGeneration.updateMany.bind(prisma.printSheetGeneration);
+    let first = true;
+    const spy = vi.spyOn(prisma.printSheetGeneration, "updateMany");
+    spy.mockImplementation(((args: Parameters<typeof orig>[0]) => {
+      if (upload.mock.calls.length > 0 && first) {
+        first = false;
+        return Promise.reject(new Error("db"));
+      }
+      return orig(args);
+    }) as never);
+    upload.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 80));
+    });
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    spy.mockRestore();
+  });
+
+  it("une reservation plus recente (attempts different) empeche l'ancien run d'ecrire", async () => {
+    const g = await create({ ids: ["r1"] });
+    const { d, upload } = await deps();
+    upload.mockImplementation(async () => {
+      await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { attempts: 2 } });
+    });
+    expect(await runGeneration(g.id, "w1", d)).toBe("LOCK_LOST");
+    expect((await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } })).status).toBe("RUNNING");
+  });
+
   it("recto-verso : compose avec les deux pages", async () => {
     const g = await prisma.printSheetGeneration.create({
       data: {

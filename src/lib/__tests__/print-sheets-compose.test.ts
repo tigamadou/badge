@@ -93,10 +93,10 @@ describe("composeSheets", () => {
     }
   });
 
-  it("une page de badge de 84 x 121 mm leve BadgeSizeMismatchError(index, 0)", async () => {
+  it("une page de badge de 84 x 123 mm leve BadgeSizeMismatchError(index, 0)", async () => {
     const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
     const good = await makeBadgePdf({ widthMm: 84, heightMm: 120, pages: 1 });
-    const bad = await makeBadgePdf({ widthMm: 84, heightMm: 121, pages: 1 });
+    const bad = await makeBadgePdf({ widthMm: 84, heightMm: 123, pages: 1 });
     const err = await composeSheets({
       layout, spec, duplex: false, badgeMm: BADGE, badges: [good, bad],
     }).catch((e) => e);
@@ -109,7 +109,7 @@ describe("composeSheets", () => {
     const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
     const doc = await PDFDocument.create();
     doc.addPage([(84 * 72) / 25.4, (120 * 72) / 25.4]);
-    doc.addPage([(84 * 72) / 25.4, (121 * 72) / 25.4]);
+    doc.addPage([(84 * 72) / 25.4, (123 * 72) / 25.4]);
     const err = await composeSheets({
       layout, spec, duplex: true, badgeMm: BADGE, badges: [await doc.save()],
     }).catch((e) => e);
@@ -167,15 +167,42 @@ describe("composeSheets", () => {
     expect(err.name).toBe("InvalidBadgePdfError");
   });
 
-  it("tolerance : 0.009 mm d'ecart accepte, 0.011 mm refuse", async () => {
+  describe("rognage au format", () => {
     const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
-    const run = async (delta: number) =>
+    const run = async (dw: number, dh: number) =>
       composeSheets({
         layout, spec, duplex: false, badgeMm: BADGE,
-        badges: [await makeBadgePdf({ widthMm: 84, heightMm: 120 + delta, pages: 1 })],
+        badges: [await makeBadgePdf({ widthMm: 84 + dw, heightMm: 120 + dh, pages: 1 })],
       });
-    await expect(run(0.009)).resolves.toBeDefined();
-    await expect(run(0.011)).rejects.toBeInstanceOf(BadgeSizeMismatchError);
+
+    it("page 0.08 mm plus large et 0.36 mm plus haute : acceptee, XObject exactement au format", async () => {
+      const draw = vi.spyOn(PDFPage.prototype, "drawPage");
+      draw.mockClear();
+      await run(0.08, 0.36);
+      expect(draw).toHaveBeenCalledTimes(1);
+      const o = draw.mock.calls[0][1]!;
+      expect(o.width).toBeCloseTo((84 * 72) / 25.4, 4);
+      expect(o.height).toBeCloseTo((120 * 72) / 25.4, 4);
+    });
+
+    it("la boite de rognage est ancree en haut a gauche de la page", async () => {
+      const spy = vi.spyOn(PDFDocument.prototype, "embedPages");
+      await run(0, 1);
+      const boxes = spy.mock.calls[0][1] as { left: number; right: number; top: number; bottom: number }[];
+      const pageH = ((120 + 1) * 72) / 25.4;
+      expect(boxes[0].left).toBe(0);
+      expect(boxes[0].top).toBeCloseTo(pageH, 4);
+      expect(boxes[0].bottom).toBeCloseTo(pageH - (120 * 72) / 25.4, 4);
+    });
+
+    it("2 mm de debord (inclus) acceptes, 2.5 mm refuses, 0.011 mm trop petit refuse, 0.009 accepte", async () => {
+      await expect(run(2, 2)).resolves.toBeDefined();
+      await expect(run(2.5, 0)).rejects.toBeInstanceOf(BadgeSizeMismatchError);
+      await expect(run(0, 2.5)).rejects.toBeInstanceOf(BadgeSizeMismatchError);
+      await expect(run(-0.02, 0)).rejects.toBeInstanceOf(BadgeSizeMismatchError);
+      await expect(run(0, -0.02)).rejects.toBeInstanceOf(BadgeSizeMismatchError);
+      await expect(run(-0.009, -0.009)).resolves.toBeDefined();
+    });
   });
 });
 

@@ -50,31 +50,41 @@ export function createWorkerLoop(opts: {
   // Generation d'impression en cours dans ce worker : une seule a la fois, jamais attendue.
   let generation: Promise<unknown> | null = null;
 
+  // Un journal defaillant ne doit jamais faire echouer une generation ni l'envoi des emails.
+  function safeLog(message: string, meta?: Record<string, unknown>): void {
+    try {
+      log(message, meta);
+    } catch {
+      // ignore
+    }
+  }
+
   // Reprise des orphelines, puis lancement (sans attente) d'une generation si le worker est libre.
   // Une erreur ici ne doit jamais bloquer l'envoi des emails.
   async function dispatchGeneration(now: Date): Promise<void> {
     try {
       const recovered = await deps.printSheets.recover(now);
-      if (recovered > 0) log("[worker] recovered stale print generations", { recovered });
+      if (recovered > 0) safeLog("[worker] recovered stale print generations", { recovered });
       if (generation) return;
       const claimed = await deps.printSheets.claim({ workerId, now });
       if (!claimed) return;
-      log("[worker] print generation started", { id: claimed.id });
+      safeLog("[worker] print generation started", { id: claimed.id });
       const promise: Promise<unknown> = deps.printSheets
         .run(claimed.id, workerId)
-        .then((outcome) => log("[worker] print generation finished", { id: claimed.id, outcome }))
+        .then((outcome) => safeLog("[worker] print generation finished", { id: claimed.id, outcome }))
         .catch((err) =>
-          log("[worker] print generation crashed", {
+          safeLog("[worker] print generation crashed", {
             id: claimed.id,
             error: err instanceof Error ? err.message : String(err),
           }),
         )
+        .catch(() => {})
         .finally(() => {
           generation = null;
         });
       generation = promise;
     } catch (err) {
-      log("[worker] print generation dispatch failed", {
+      safeLog("[worker] print generation dispatch failed", {
         error: err instanceof Error ? err.message : String(err),
       });
     }

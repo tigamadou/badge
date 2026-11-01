@@ -7,6 +7,8 @@ import { mmToPt } from "./units";
 
 // Ecart maximal admis entre la page d'un badge et la taille attendue.
 const SIZE_TOLERANCE_MM = 0.01;
+// Debord admis : une page plus grande que le format (de 0 a 2 mm) est rognee, ancree en haut a gauche.
+const MAX_OVERSIZE_MM = 2;
 const CROP_THICKNESS_PT = 0.25;
 
 export class BadgeSizeMismatchError extends Error {
@@ -69,6 +71,8 @@ export async function composeSheets(input: {
   // Controle puis incorporation de chaque badge (une seule fois chacun).
   const wanted = duplex ? [0, 1] : [0];
   const embedded: PDFEmbeddedPage[][] = [];
+  const badgeWPt = mmToPt(badgeMm.width);
+  const badgeHPt = mmToPt(badgeMm.height);
   for (let b = 0; b < badges.length; b++) {
     const src = await PDFDocument.load(badges[b]).catch(() => {
       throw new InvalidBadgePdfError(b);
@@ -77,14 +81,26 @@ export async function composeSheets(input: {
     for (const p of wanted) {
       if (p >= pages.length) throw new BadgeSizeMismatchError(b, p);
       const { width, height } = pages[p].getSize();
+      const dw = ptToMm(width) - badgeMm.width;
+      const dh = ptToMm(height) - badgeMm.height;
       if (
-        Math.abs(ptToMm(width) - badgeMm.width) > SIZE_TOLERANCE_MM ||
-        Math.abs(ptToMm(height) - badgeMm.height) > SIZE_TOLERANCE_MM
+        dw < -SIZE_TOLERANCE_MM ||
+        dh < -SIZE_TOLERANCE_MM ||
+        dw > MAX_OVERSIZE_MM + 1e-9 ||
+        dh > MAX_OVERSIZE_MM + 1e-9
       ) {
         throw new BadgeSizeMismatchError(b, p);
       }
     }
-    embedded.push(await out.embedPdf(src, wanted));
+    // Rognage au format exact, coin haut gauche conserve (origine PDF en bas a gauche).
+    const boxes = wanted.map((p) => ({
+      left: 0,
+      right: badgeWPt,
+      top: pages[p].getHeight(),
+      bottom: pages[p].getHeight() - badgeHPt,
+    }));
+    // embedPdf ignore les boites : on passe par embedPages.
+    embedded.push(await out.embedPages(wanted.map((p) => pages[p]), boxes));
   }
 
   const { sheetCount, placements } = planPlacements(layout, spec, {

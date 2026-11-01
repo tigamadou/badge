@@ -47,11 +47,15 @@ services:
     environment:
       NPM_TOKEN: ${NPM_TOKEN}
       JOB_POLL_INTERVAL_MS: "500"
+      RENDERER_URL: http://renderer:3000
+    networks: [default, rendu]
     depends_on:
       mysql:
         condition: service_healthy
       mailpit:
         condition: service_started
+      renderer:
+        condition: service_healthy
 
   # Service de rendu des badges (Chromium) : PDF, document fige, epreuve PNG.
   renderer:

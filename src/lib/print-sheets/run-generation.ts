@@ -17,7 +17,11 @@ export type RunDeps = {
   renderBadge(registrationId: string): Promise<{ pdf: Uint8Array; fileName: string } | null>;
   upload(key: string, body: Uint8Array, contentType: string): Promise<void>;
   now(): Date;
+  // Periode du battement entre la fin du rendu et l'ecriture finale (composition, ZIP, envoi).
+  beatIntervalMs?: number;
 };
+
+export const POST_RENDER_BEAT_MS = 30_000;
 
 export const defaultRunDeps: RunDeps = {
   async renderBadge(registrationId) {
@@ -70,15 +74,23 @@ export async function runGeneration(
   deps: RunDeps = defaultRunDeps,
 ): Promise<"DONE" | "FAILED" | "LOCK_LOST"> {
   // Toute ecriture est conditionnee au verrou : si un autre worker a repris la ligne, on n'ecrit rien.
-  const owned = { id: generationId, status: "RUNNING" as const, lockedBy: workerId };
-  const write = async (data: Parameters<typeof prisma.printSheetGeneration.updateMany>[0]["data"]) =>
-    (await prisma.printSheetGeneration.updateMany({ where: owned, data })).count > 0;
-
   const generation = await prisma.printSheetGeneration.findUnique({ where: { id: generationId } });
   if (!generation || generation.status !== "RUNNING" || generation.lockedBy !== workerId) {
     return "LOCK_LOST";
   }
+  // `attempts` identifie la reservation en cours : une reprise puis nouvelle reservation par ce
+  // meme worker ne doit pas laisser l'ancien run ecrire.
+  const owned = {
+    id: generationId,
+    status: "RUNNING" as const,
+    lockedBy: workerId,
+    attempts: generation.attempts,
+  };
+  const write = async (data: Parameters<typeof prisma.printSheetGeneration.updateMany>[0]["data"]) =>
+    (await prisma.printSheetGeneration.updateMany({ where: owned, data })).count > 0;
 
+  let beat: ReturnType<typeof setInterval> | undefined;
+  let lockLostByBeat = false;
   try {
     const ids = generation.registrationIds as string[];
     const rendered = await mapWithConcurrency(ids, BATCH_RENDER_CONCURRENCY, async (id) => {
@@ -86,6 +98,16 @@ export async function runGeneration(
       if (!(await write({ heartbeatAt: deps.now() }))) throw new LockLostError();
       return badge;
     });
+
+    // Le rendu est fini : un battement periodique couvre composition, archive et envoi.
+    beat = setInterval(() => {
+      write({ heartbeatAt: deps.now() }).then(
+        (ok) => {
+          if (!ok) lockLostByBeat = true;
+        },
+        () => {}, // erreur transitoire : le prochain battement reessaiera
+      );
+    }, deps.beatIntervalMs ?? POST_RENDER_BEAT_MS);
 
     // Positions (1-based) dans la liste ordonnee de la generation, pour les messages d'erreur.
     const kept: { position: number; pdf: Uint8Array; fileName: string }[] = [];
@@ -144,6 +166,7 @@ export async function runGeneration(
     }
 
     await deps.upload(key, body, contentType);
+    if (lockLostByBeat) return "LOCK_LOST";
     const done = await write({
       status: "DONE",
       sheetCount,
@@ -155,10 +178,12 @@ export async function runGeneration(
     });
     return done ? "DONE" : "LOCK_LOST";
   } catch (err) {
-    if (err instanceof LockLostError) return "LOCK_LOST";
+    if (err instanceof LockLostError || lockLostByBeat) return "LOCK_LOST";
     return (await write({ status: "FAILED", error: message(err), completedAt: deps.now() }))
       ? "FAILED"
       : "LOCK_LOST";
+  } finally {
+    clearInterval(beat);
   }
 }
 

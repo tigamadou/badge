@@ -235,6 +235,33 @@ describe("createWorkerLoop", () => {
       expect(run).toHaveBeenCalledTimes(2);
     });
 
+    it("un journal qui jette ne provoque ni rejet non gere ni blocage", async () => {
+      const unhandled = vi.fn();
+      process.on("unhandledRejection", unhandled);
+      const log = vi.fn(() => {
+        throw new Error("log HS");
+      });
+      const run = vi.fn().mockResolvedValueOnce("DONE").mockRejectedValueOnce(new Error("x"));
+      const claim = vi.fn().mockResolvedValue(row);
+      const processBatch = vi.fn(async () => empty);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch, printSheets: { claim, run, recover: async () => 1 } },
+      });
+      await loop.runOnce(t0);
+      await sleep(10);
+      await loop.runOnce(t0);
+      await sleep(10);
+      // le worker est libere malgre le journal defaillant : un 3e claim a lieu
+      await loop.runOnce(t0);
+      expect(run).toHaveBeenCalledTimes(3);
+      expect(processBatch).toHaveBeenCalledTimes(3);
+      process.off("unhandledRejection", unhandled);
+      expect(unhandled).not.toHaveBeenCalled();
+    });
+
     it("une erreur de claim/recover ne bloque pas les emails et est journalisée", async () => {
       const log = vi.fn();
       const processBatch = vi.fn(async () => empty);
