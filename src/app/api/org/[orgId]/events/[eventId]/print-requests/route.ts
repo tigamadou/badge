@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getOnsiteEligibility } from "@/lib/print-requests/onsite";
 import { createDraft } from "@/lib/print-requests/service";
 import { json, organizerRoute, parseBody, toOrganizerDTO } from "@/lib/print-requests/route";
 
@@ -9,7 +10,10 @@ export const GET = organizerRoute({ allowArchived: true }, async (_req, { eventI
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: { _count: { select: { items: true } } },
   });
+  // Sert l'assistant de création : l'option « sur place » est désactivée si le template ne convient pas.
+  const onsiteEligibility = await getOnsiteEligibility(eventId);
   return json({
+    onsiteEligibility,
     requests: rows.map((r) => ({
       id: r.id,
       reference: r.reference,

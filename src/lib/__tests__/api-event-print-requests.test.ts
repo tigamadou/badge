@@ -330,6 +330,38 @@ describe("envoi, annulation", () => {
     expect(res.status).toBe(409);
   });
 
+  it("submit ONSITE avec un template hors liste : 409 ONSITE_TEMPLATE_UNSUITABLE, demande inchangée", async () => {
+    await prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: [] } });
+    const r = await makeRequest(fx, {
+      type: "ONSITE", status: "DRAFT", estimatedQuantity: 20, onsiteLocation: "Hall",
+      onsiteContactName: "M", onsiteContactPhone: "1", onsiteSchedule: [{ date: "2026-11-02", from: "09:00", to: "18:00" }],
+    });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Support", quantity: 20,
+        unitPrice: 1500, lineTotal: 30000, position: 0, addedBy: "ORGANIZER",
+      },
+    });
+    const res = await call(submit.POST as Handler, "POST", { requestId: r.id });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: "ONSITE_TEMPLATE_UNSUITABLE",
+      message: "Le modèle de badge de cet évènement n'est pas adapté à l'impression sur place.",
+    });
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("DRAFT");
+  });
+
+  it("GET liste : expose l'éligibilité à l'impression sur place", async () => {
+    await prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: [] } });
+    expect((await (await call(list.GET as Handler, "GET")).json()).onsiteEligibility).toEqual({
+      eligible: false, templateId: fx.template.id,
+    });
+    await prisma.platformSettings.update({
+      where: { id: "singleton" }, data: { onsitePrintTemplateIds: [fx.template.id] },
+    });
+    expect((await (await call(list.GET as Handler, "GET")).json()).onsiteEligibility).toMatchObject({ eligible: true });
+  });
+
   it("submit sur évènement archivé : 410", async () => {
     const r = await makeRequest(fx, { status: "DRAFT" });
     await prisma.event.update({ where: { id: fx.event.id }, data: { archived: true } });

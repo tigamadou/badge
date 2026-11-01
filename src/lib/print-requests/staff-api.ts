@@ -2,7 +2,8 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import type { PrintQuoteLine, PrintRequest } from "@prisma/client";
 import type { z } from "zod";
-import { PrintRequestError, printRequestErrorResponse } from "./errors";
+import { PrintRequestError } from "./errors";
+import { OnsiteError, onsiteOrPrintErrorResponse } from "./onsite";
 import { prisma } from "@/lib/prisma";
 import { loadRequest } from "./service";
 
@@ -26,7 +27,7 @@ export async function guarded(run: () => Promise<Response>): Promise<Response> {
   try {
     return await run();
   } catch (err) {
-    if (err instanceof PrintRequestError) return printRequestErrorResponse(err);
+    if (err instanceof PrintRequestError || err instanceof OnsiteError) return onsiteOrPrintErrorResponse(err);
     throw err;
   }
 }

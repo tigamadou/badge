@@ -5,7 +5,8 @@ import type { PrintQuoteLine, PrintRequest, PrintRequestStatus } from "@prisma/c
 import { logActivity } from "@/lib/activity-log";
 import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
 import { withEventAuth, type EventAuthCtx } from "@/lib/with-event-auth";
-import { PrintRequestError, printRequestErrorResponse } from "./errors";
+import { PrintRequestError } from "./errors";
+import { onsiteOrPrintErrorResponse } from "./onsite";
 
 // Le staff supervise depuis /platform : il lit les demandes mais n'agit jamais côté organisateur.
 export function assertNotStaff(session: EventAuthCtx["session"]): void {
@@ -36,7 +37,7 @@ export function organizerRoute(
         const params = (await extra.params) as { requestId?: string };
         return await handler(req, { ...ctx, requestId: params.requestId ?? "" });
       } catch (err) {
-        return printRequestErrorResponse(err);
+        return onsiteOrPrintErrorResponse(err);
       }
     },
   );

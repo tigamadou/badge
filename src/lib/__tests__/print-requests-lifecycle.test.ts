@@ -121,6 +121,11 @@ describe("submitRequest", () => {
     const empty = await makeRequest(fx, { ...full, onsiteSchedule: [] });
     await badgeLine(empty.id);
     expect((await reject(submitRequest(base(empty.id))))?.details).toEqual({ fields: ["onsiteSchedule"] });
+    // Envoi sur place : le template doit figurer dans la liste de l'impression sur place.
+    await prisma.platformSettings.update({
+      where: { id: "singleton" },
+      data: { onsitePrintTemplateIds: [fx.template.id] },
+    });
     const ok = await makeRequest(fx, { ...full, onsiteSchedule: [{ date: "2026-11-02", from: "09:00", to: "18:00" }] });
     await badgeLine(ok.id);
     const out = await submitRequest(base(ok.id));
