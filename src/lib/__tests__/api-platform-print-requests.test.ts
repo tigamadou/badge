@@ -492,6 +492,74 @@ describe("clôture d'une demande sur place (READY -> COMPLETED)", () => {
   });
 });
 
+describe("clôture sur place : STAFF_ADMIN et suites d'après commit", () => {
+  const onsiteReady = async (printed: number) => {
+    const r = await makeRequest(fx, { type: "ONSITE", status: "READY", estimatedQuantity: 200, marginPercent: 10 });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Badge", quantity: 200,
+        unitPrice: 1500, lineTotal: 300000, position: 0, addedBy: "ORGANIZER",
+      },
+    });
+    await prisma.printRequestPrint.createMany({
+      data: Array.from({ length: printed }, () => ({ requestId: r.id, registrationId: null, reprint: false })),
+    });
+    return r;
+  };
+  const complete = (id: string) => call(statusPOST, `${BASE}/${id}/status`, "POST", { requestId: id }, { to: "COMPLETED" });
+
+  it("COMPLETED sur une demande sur place : 403 STAFF_FORBIDDEN pour STAFF_SUPPORT, rien n'est écrit ; 200 pour STAFF_ADMIN", async () => {
+    const r = await onsiteReady(170);
+    as(fx.staffSupport);
+    expect(await complete(r.id)).toMatchObject({ status: 403, json: { error: "STAFF_FORBIDDEN" } });
+    expect((await reload(r.id)).status).toBe("READY");
+    expect(await prisma.orgPrintCredit.count({ where: { orgId: fx.org.id } })).toBe(0);
+    as(fx.staffAdmin);
+    const done = await complete(r.id);
+    expect(done.status).toBe(200);
+    expect(done.json.request.status).toBe("COMPLETED");
+  });
+
+  it("STAFF_SUPPORT garde les autres passages : IN_PRODUCTION sur place, COMPLETED en amont", async () => {
+    as(fx.staffSupport);
+    const paid = await makeRequest(fx, { type: "ONSITE", status: "PAID" });
+    expect((await call(statusPOST, `${BASE}/${paid.id}/status`, "POST", { requestId: paid.id }, { to: "IN_PRODUCTION" })).status).toBe(200);
+    const advance = await makeRequest(fx, { type: "ADVANCE", status: "READY" });
+    expect((await complete(advance.id)).status).toBe(200);
+  });
+
+  it("journal et notifications en échec : 200, la clôture est validée, chaque suite est tentée", async () => {
+    const actLog = await import("@/lib/activity-log");
+    const triggers = await import("@/lib/notifications/triggers");
+    const logSpy = vi.spyOn(actLog, "logActivity").mockRejectedValue(new Error("log"));
+    const statusSpy = vi.spyOn(triggers, "notifyPrintRequestStatusChanged").mockRejectedValue(new Error("notif"));
+    const quotedSpy = vi.spyOn(triggers, "notifyPrintRequestQuoted").mockRejectedValue(new Error("quoted"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const credit = await onsiteReady(170);
+    const res = await complete(credit.id);
+    expect(res.status).toBe(200);
+    expect(res.json.closure).toMatchObject({ outcome: "CREDIT", amount: 45000 });
+    expect(await prisma.orgPrintCredit.count({ where: { requestId: credit.id, kind: "EARNED" } })).toBe(1);
+    // Journal du statut, notification, journal du crédit : trois suites, trois échecs distincts.
+    expect(logSpy).toHaveBeenCalledTimes(2);
+    expect(statusSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(3);
+
+    vi.clearAllMocks();
+    const surplus = await onsiteReady(212);
+    const second = await complete(surplus.id);
+    expect(second.status).toBe(200);
+    expect(second.json.closure).toMatchObject({ outcome: "SUPPLEMENT", extraBadges: 12 });
+    expect(await prisma.printRequest.count({ where: { parentRequestId: surplus.id } })).toBe(1);
+    // Le journal du surplus échoue, la notification de devis est tout de même tentée.
+    expect(logSpy).toHaveBeenCalledTimes(2);
+    expect(quotedSpy).toHaveBeenCalledTimes(1);
+    expect(statusSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(4);
+  });
+});
+
 describe("template inadapté à l'impression sur place", () => {
   const setList = (ids: string[]) =>
     prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: ids } });
@@ -531,27 +599,14 @@ describe("template inadapté à l'impression sur place", () => {
     expect((await call(sendQuotePOST, `${BASE}/${r.id}/send-quote`, "POST", { requestId: r.id })).status).toBe(200);
   });
 
-  it("PAID -> IN_PRODUCTION : 409 ONSITE_TEMPLATE_UNSUITABLE, statut inchangé", async () => {
+  it("après le paiement, un template devenu inadapté ne bloque plus la demande (PAID -> IN_PRODUCTION -> READY -> COMPLETED)", async () => {
     await setList([]);
     const r = await onsiteRequest("PAID");
-    const res = await advance(r.id, "IN_PRODUCTION");
-    expect(res).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
-    expect((await reload(r.id)).status).toBe("PAID");
-    await setList([fx.template.id]);
     expect((await advance(r.id, "IN_PRODUCTION")).json.request.status).toBe("IN_PRODUCTION");
-  });
-
-  it("IN_PRODUCTION -> READY bloqué ; READY -> COMPLETED reste permis", async () => {
-    await setList([]);
-    const r = await onsiteRequest("IN_PRODUCTION");
-    const blocked = await advance(r.id, "READY");
-    expect(blocked).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
-    expect((await reload(r.id)).status).toBe("IN_PRODUCTION");
-    await setList([fx.template.id]);
     expect((await advance(r.id, "READY")).json.request.status).toBe("READY");
-    await setList([]);
-    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "READY" } });
     expect((await advance(r.id, "COMPLETED")).json.request.status).toBe("COMPLETED");
+    // L'alerte d'interface reste calculée.
+    expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
   });
 
   it("template courant de l'évènement coché mais copie de la demande non cochée : UNSUITABLE", async () => {
@@ -565,8 +620,7 @@ describe("template inadapté à l'impression sur place", () => {
     await setList([fx.template.id]);
     const r = await onsiteRequest("PAID");
     await prisma.printRequest.update({ where: { id: r.id }, data: { badgeTemplateId: other.id } });
-    const res = await advance(r.id, "IN_PRODUCTION");
-    expect(res).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await advance(r.id, "IN_PRODUCTION")).status).toBe(200);
     expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
   });
 

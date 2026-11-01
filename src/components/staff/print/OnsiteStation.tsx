@@ -32,6 +32,8 @@ type StationCard = {
   category: { name: string; color: string };
   badgePrinted: boolean;
   badgePrintedAt: string | null;
+  /** Déjà imprimé AU POSTE pour cette demande : seule cette impression est une réimpression non comptée. */
+  printedOnsite: boolean;
 };
 
 export type OnsiteStationProps = {
@@ -105,7 +107,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
         }
         const body = (await res.json()) as { print: { printedAt: string }; counter: OnsiteCounter; pdfUrl: string };
         setCounter(body.counter);
-        setCard((c) => (c ? { ...c, badgePrinted: true, badgePrintedAt: body.print.printedAt } : c));
+        setCard((c) => (c ? { ...c, badgePrinted: true, badgePrintedAt: body.print.printedAt, printedOnsite: true } : c));
         setPdfUrl(body.pdfUrl);
         if (tab) tab.location.href = body.pdfUrl;
         toastSuccess(tab ? "Badge envoyé à l'impression" : "Badge prêt : ouvrez le PDF");
@@ -135,7 +137,10 @@ export function OnsiteStation(props: OnsiteStationProps) {
     void lookup(id);
   }
 
-  const alreadyPrinted = card?.badgePrinted === true;
+  // « Réimpression » : déjà imprimé au poste (non comptée). Imprimé ailleurs (organisateur) : avertissement
+  // seulement, l'impression au poste est une première impression, comptée et soumise au plafond.
+  const printedHere = card?.printedOnsite === true;
+  const printedElsewhere = card?.badgePrinted === true && !printedHere;
   const capReached = counter.level === "CAP_REACHED";
 
   return (
@@ -232,7 +237,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
                 label={`Badge de ${card.snapshotFirstName} ${card.snapshotLastName}`}
                 className="!h-[320px]"
               />
-              {alreadyPrinted ? (
+              {printedHere ? (
                 <div className="space-y-2">
                   <Alert tone="warn">{alreadyPrintedLabel(card.badgePrintedAt)}</Alert>
                   <Button variant="secondary" loading={printing} onClick={() => onPrint(true)}>
@@ -241,7 +246,12 @@ export function OnsiteStation(props: OnsiteStationProps) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Button loading={printing} disabled={capReached} onClick={() => onPrint(false)}>
+                  {printedElsewhere ? (
+                    <Alert tone="warn">
+                      {alreadyPrintedLabel(card.badgePrintedAt)} hors du poste : cette impression sera comptée.
+                    </Alert>
+                  ) : null}
+                  <Button loading={printing} disabled={capReached} onClick={() => onPrint(printedElsewhere)}>
                     Imprimer
                   </Button>
                   {capReached ? (

@@ -5,7 +5,7 @@ import { loadUserContext } from "@/lib/user-context";
 import { prisma } from "@/lib/prisma";
 import { RequestDetail } from "@/components/staff/print/RequestDetail";
 import { OnsiteError } from "@/lib/print-requests/onsite";
-import { loadOnsiteRequest } from "@/lib/print-requests/onsite-station";
+import { loadOnsiteOverview } from "@/lib/print-requests/onsite-station";
 import {
   getAvailableOrgPrintCredit,
   getOrgPrintCreditBalance,
@@ -67,7 +67,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
   const onsiteCounter =
     request.parentRequestId !== null
       ? null
-      : await loadOnsiteRequest(requestId).then(
+      : await loadOnsiteOverview(requestId).then(
           (r) => r.counter,
           (err) => {
             if (err instanceof OnsiteError) return null;

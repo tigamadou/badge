@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 import type { PrintRequestStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { closeOnsiteRequest } from "@/lib/print-requests/close-onsite";
+import { closeOnsiteRequest, effectiveUnitPrice } from "@/lib/print-requests/close-onsite";
 import { advanceStatus } from "@/lib/print-requests/quote";
 import { getOrgPrintCreditBalance } from "@/lib/print-requests/org-credit";
 import { formatFcfa } from "@/lib/print-requests/labels";
@@ -328,6 +328,81 @@ describe("référence de la demande complémentaire", () => {
     expect(err.code).toBe("P2002");
     expect(await children(r.id)).toHaveLength(0);
     expect(await thread(r.id)).toHaveLength(0);
+  });
+});
+
+describe("prix unitaire effectif (remise staff, crédit dépensé)", () => {
+  const discount = (requestId: string, amount: number, usesOrgCredit = false) =>
+    prisma.printQuoteLine.create({
+      data: {
+        requestId, kind: "DISCOUNT", label: usesOrgCredit ? "Crédit d'impression" : "Remise", quantity: 1,
+        unitPrice: -amount, lineTotal: -amount, position: 5, addedBy: "STAFF", usesOrgCredit,
+      },
+    });
+
+  it("remise staff de -150 000 sur 200 x 1 500, rien imprimé : crédit de 150 000 (pas 300 000)", async () => {
+    const r = await onsite({ printed: 0, over: { acceptedTotal: 150000, total: 150000 } });
+    await discount(r.id, 150000);
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "CREDIT", amount: 150000, unusedBadges: 200 });
+    expect(await movements()).toMatchObject([{ kind: "EARNED", amount: 150000, quantity: 200, unitPrice: 750 }]);
+  });
+
+  it("crédit dépensé ajouté au total accepté : sans autre remise, le prix reste plein", async () => {
+    const r = await onsite({ printed: 170, over: { acceptedTotal: 200000, total: 200000 } });
+    await discount(r.id, 100000, true);
+    await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "SPENT", amount: -100000, requestId: r.id } });
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "CREDIT", amount: 45000, unusedBadges: 30 });
+  });
+
+  it("remise et crédit ensemble : (150 000 + 90 000) / 300 000 = 0,8, prix effectif 1 200", async () => {
+    const r = await onsite({ printed: 170, over: { acceptedTotal: 150000, total: 150000 } });
+    await discount(r.id, 60000);
+    await discount(r.id, 90000, true);
+    await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "SPENT", amount: -90000, requestId: r.id } });
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "CREDIT", amount: 36000, unusedBadges: 30 });
+    expect(await movements()).toEqual(expect.arrayContaining([expect.objectContaining({ kind: "EARNED", unitPrice: 1200 })]));
+  });
+
+  it("le surplus est facturé au prix effectif, quantité verrouillée pour l'organisateur", async () => {
+    const r = await onsite({ printed: 212, status: "COMPLETED", over: { acceptedTotal: 150000, total: 150000 } });
+    await discount(r.id, 150000);
+    const closure = await closeOnsiteRequest(r.id);
+    const [child] = await children(r.id);
+    expect(closure).toEqual({ outcome: "SUPPLEMENT", supplementRequestId: child.id, extraBadges: 12, total: 9000 });
+    const lines = await prisma.printQuoteLine.findMany({ where: { requestId: child.id } });
+    expect(lines).toMatchObject([{ unitPrice: 750, lineTotal: 9000, quantity: 12, quantityOverridden: true }]);
+  });
+
+  it("surplus au prix plein : la ligne reste verrouillée en quantité", async () => {
+    const r = await onsite({ printed: 212 });
+    await closeOnsiteRequest(r.id);
+    const [child] = await children(r.id);
+    const [line] = await prisma.printQuoteLine.findMany({ where: { requestId: child.id } });
+    expect(line).toMatchObject({ unitPrice: 1500, quantityOverridden: true });
+  });
+
+  it("total accepté nul ou absent : le prix de la ligne est conservé", async () => {
+    const zero = await onsite({ printed: 170, over: { acceptedTotal: 0 } });
+    expect(await closeOnsiteRequest(zero.id)).toEqual({ outcome: "CREDIT", amount: 45000, unusedBadges: 30 });
+  });
+
+  it("prix effectif arrondi à zéro : ni crédit ni surplus", async () => {
+    const r = await onsite({ printed: 0, over: { acceptedTotal: 1, total: 1 } });
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "NONE" });
+    expect(await movements()).toHaveLength(0);
+  });
+
+  it("effectiveUnitPrice : plafonné à 1, arrondi à l'entier, sans total accepté ou sans lignes positives", () => {
+    expect(effectiveUnitPrice(1500, 300000, 0, 300000)).toBe(1500);
+    expect(effectiveUnitPrice(1500, 400000, 0, 300000)).toBe(1500);
+    expect(effectiveUnitPrice(1500, 150000, 0, 300000)).toBe(750);
+    expect(effectiveUnitPrice(1500, 100001, 0, 300000)).toBe(500);
+    expect(effectiveUnitPrice(3, 1, 0, 2)).toBe(2);
+    expect(effectiveUnitPrice(1500, null, 0, 300000)).toBe(1500);
+    expect(effectiveUnitPrice(1500, 0, 50000, 300000)).toBe(1500);
+    expect(effectiveUnitPrice(1500, 100, 0, 0)).toBe(1500);
+    // Montants proches du plafond : pas de perte de précision.
+    expect(effectiveUnitPrice(2_000_000_000, 1_000_000_000, 0, 2_000_000_000)).toBe(1_000_000_000);
   });
 });
 

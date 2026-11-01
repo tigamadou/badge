@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "@/lib/print-requests/errors";
 import { OnsiteError } from "@/lib/print-requests/onsite";
 import {
+  loadOnsiteOverview,
   loadOnsiteRequest,
   lookupOnsiteRegistration,
   recordOnsitePrint,
@@ -84,6 +85,57 @@ describe("loadOnsiteRequest", () => {
   });
 });
 
+describe("statut de la demande (poste)", () => {
+  it("DRAFT : NOT_FOUND 404 ; les autres statuts non imprimables : REQUEST_NOT_PRINTABLE 409", async () => {
+    const reg = fx.approved[0];
+    for (const [status, expected] of [
+      ["DRAFT", { code: "NOT_FOUND", status: 404 }],
+      ["SUBMITTED", { code: "REQUEST_NOT_PRINTABLE", status: 409 }],
+      ["QUOTED", { code: "REQUEST_NOT_PRINTABLE", status: 409 }],
+      ["ACCEPTED", { code: "REQUEST_NOT_PRINTABLE", status: 409 }],
+      ["COMPLETED", { code: "REQUEST_NOT_PRINTABLE", status: 409 }],
+      ["CANCELLED", { code: "REQUEST_NOT_PRINTABLE", status: 409 }],
+    ] as const) {
+      const r = await onsiteRequest({ status });
+      expect(await rejectCode(loadOnsiteRequest(r.id)), status).toMatchObject(expected);
+      expect(await rejectCode(lookupOnsiteRegistration(r.id, reg.id)), status).toMatchObject(expected);
+      expect(await rejectCode(searchOnsiteRegistrations(r.id, "Prenom")), status).toMatchObject(expected);
+    }
+  });
+
+  it("PAID, IN_PRODUCTION et READY sont servis", async () => {
+    for (const status of ["PAID", "IN_PRODUCTION", "READY"] as const) {
+      const r = await onsiteRequest({ status });
+      expect((await loadOnsiteRequest(r.id)).request.status).toBe(status);
+      expect((await lookupOnsiteRegistration(r.id, fx.approved[0].id)).id).toBe(fx.approved[0].id);
+      expect(await searchOnsiteRegistrations(r.id, "Prenom")).not.toHaveLength(0);
+    }
+  });
+
+  it("loadOnsiteOverview lit la demande quel que soit son statut (pages de détail, route de marge)", async () => {
+    const done = await onsiteRequest({ status: "COMPLETED" });
+    const loaded = await loadOnsiteOverview(done.id);
+    expect(loaded.request.status).toBe("COMPLETED");
+    expect(loaded.counter).toMatchObject({ ordered: 10, cap: 11 });
+    expect(loaded.hasBadgeLine).toBe(true);
+    const bare = await onsiteRequest({}, null);
+    expect((await loadOnsiteOverview(bare.id)).hasBadgeLine).toBe(false);
+  });
+
+  it("deux lignes BADGE à la même position : la première par identifiant fait foi", async () => {
+    const r = await onsiteRequest({}, null);
+    for (const [id, quantity] of [["zzz-badge-line", 99], ["aaa-badge-line", 20]] as const) {
+      await prisma.printQuoteLine.create({
+        data: {
+          id, requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Badge",
+          quantity, unitPrice: 1500, lineTotal: quantity * 1500, position: 0, addedBy: "STAFF",
+        },
+      });
+    }
+    expect((await loadOnsiteRequest(r.id)).counter.ordered).toBe(20);
+  });
+});
+
 describe("lookupOnsiteRegistration", () => {
   it("par URL de QR : fiche avec nom, catégorie, statut APPROVED", async () => {
     const r = await onsiteRequest();
@@ -92,9 +144,21 @@ describe("lookupOnsiteRegistration", () => {
     expect(card).toMatchObject({
       id: reg.id, snapshotFirstName: "Prenom", snapshotLastName: "Alpha", status: "APPROVED",
       snapshotPhoto: "", category: { name: "Participant", color: "#000000" },
-      badgePrinted: false, badgePrintedAt: null,
+      badgePrinted: false, badgePrintedAt: null, printedOnsite: false,
     });
     expect(card.snapshotEmail).toContain("@x.test");
+  });
+
+  it("printedOnsite distingue « imprimé ailleurs » de « déjà imprimé au poste »", async () => {
+    const r = await onsiteRequest();
+    const other = await onsiteRequest();
+    const [elsewhere, here] = fx.approved;
+    await prisma.registration.update({ where: { id: elsewhere.id }, data: { badgePrinted: true, badgePrintedAt: new Date() } });
+    await recordOnsitePrint(input(r.id, here.id));
+    expect(await lookupOnsiteRegistration(r.id, elsewhere.id)).toMatchObject({ badgePrinted: true, printedOnsite: false });
+    expect(await lookupOnsiteRegistration(r.id, here.id)).toMatchObject({ badgePrinted: true, printedOnsite: true });
+    // Le journal est propre à la demande : une autre demande ne voit pas cette impression.
+    expect(await lookupOnsiteRegistration(other.id, here.id)).toMatchObject({ badgePrinted: true, printedOnsite: false });
   });
 
   it("ID brut accepté ; inconnu : REGISTRATION_NOT_FOUND 404", async () => {
@@ -147,6 +211,16 @@ describe("searchOnsiteRegistrations", () => {
     // Inscriptions d'un autre évènement exclues ; tous statuts inclus (REJECTED ci-dessus).
     const other = await seedPrintFixture();
     expect(await names(other.approved[0].id.slice(0, 6))).toEqual([]);
+  });
+
+  it("chaque résultat indique s'il a déjà été imprimé au poste", async () => {
+    const r = await onsiteRequest();
+    await recordOnsitePrint(input(r.id, fx.approved[1].id));
+    const cards = await searchOnsiteRegistrations(r.id, "Prenom");
+    expect(cards.map((c) => [c.id, c.printedOnsite])).toEqual(
+      expect.arrayContaining([[fx.approved[0].id, false], [fx.approved[1].id, true]]),
+    );
+    expect(await searchOnsiteRegistrations(r.id, "zzzzzz")).toEqual([]);
   });
 
   it("20 au plus, triées par nom puis prénom", async () => {
@@ -218,16 +292,71 @@ describe("recordOnsitePrint", () => {
     expect(sendBadgePrintedNotification).not.toHaveBeenCalled();
   });
 
-  it("badge imprimé par l'organisateur : ALREADY_PRINTED sans confirmation ; reprint avec", async () => {
+  it("badge imprimé par l'organisateur : ALREADY_PRINTED sans confirmation ; avec, première impression comptée", async () => {
     const r = await onsiteRequest();
     const at = new Date("2026-11-01T10:00:00Z");
     await prisma.registration.update({ where: { id: fx.approved[0].id }, data: { badgePrinted: true, badgePrintedAt: at } });
     const err = await rejectCode(recordOnsitePrint(input(r.id, fx.approved[0].id)));
     expect(err).toMatchObject({ code: "ALREADY_PRINTED", status: 409 });
     expect(err.details).toEqual({ printedAt: at });
+    expect(await prisma.printRequestPrint.count({ where: { requestId: r.id } })).toBe(0);
     const { print, counter } = await recordOnsitePrint(input(r.id, fx.approved[0].id, true));
-    expect(print.reprint).toBe(true);
-    expect(counter.printed).toBe(0);
+    // Marqué imprimé ailleurs, jamais au poste : ce n'est pas une réimpression.
+    expect(print.reprint).toBe(false);
+    expect(counter.printed).toBe(1);
+    expect(notifyBadgePrinted).toHaveBeenCalledWith([fx.approved[0].id], fx.owner.id);
+  });
+
+  it("badge marqué imprimé par l'organisateur : bloqué au plafond, même confirmé", async () => {
+    const r = await onsiteRequest();
+    await prior(r.id, 11);
+    await prisma.registration.update({ where: { id: fx.approved[0].id }, data: { badgePrinted: true, badgePrintedAt: new Date() } });
+    expect(await rejectCode(recordOnsitePrint(input(r.id, fx.approved[0].id)))).toMatchObject({ code: "ALREADY_PRINTED" });
+    expect(await rejectCode(recordOnsitePrint(input(r.id, fx.approved[0].id, true)))).toMatchObject({
+      code: "CAP_REACHED", status: 409,
+    });
+    expect(await prisma.printRequestPrint.count({ where: { requestId: r.id } })).toBe(11);
+  });
+
+  it("réimpression au poste : journalisée reprint=true, non comptée, confirmation exigée", async () => {
+    const r = await onsiteRequest();
+    const reg = fx.approved[0];
+    await recordOnsitePrint(input(r.id, reg.id));
+    expect(await rejectCode(recordOnsitePrint(input(r.id, reg.id)))).toMatchObject({ code: "ALREADY_PRINTED" });
+    const again = await recordOnsitePrint(input(r.id, reg.id, true));
+    expect(again.print.reprint).toBe(true);
+    expect(again.counter.printed).toBe(1);
+    expect(await prisma.printRequestPrint.count({ where: { requestId: r.id, reprint: false } })).toBe(1);
+  });
+
+  it("journal du poste sans badgePrinted (remis à zéro) : toujours une réimpression, à confirmer", async () => {
+    const r = await onsiteRequest();
+    const reg = fx.approved[0];
+    await recordOnsitePrint(input(r.id, reg.id));
+    await prisma.registration.update({ where: { id: reg.id }, data: { badgePrinted: false, badgePrintedAt: null } });
+    expect(await rejectCode(recordOnsitePrint(input(r.id, reg.id)))).toMatchObject({ code: "ALREADY_PRINTED" });
+    const again = await recordOnsitePrint(input(r.id, reg.id, true));
+    expect(again.print.reprint).toBe(true);
+    expect(again.counter.printed).toBe(1);
+  });
+
+  it("sans ligne BADGE : REQUEST_NOT_PRINTABLE, pas de repli sur la quantité estimée", async () => {
+    const r = await onsiteRequest({ estimatedQuantity: 25 }, null);
+    expect(await rejectCode(recordOnsitePrint(input(r.id, fx.approved[0].id)))).toMatchObject({
+      code: "REQUEST_NOT_PRINTABLE", status: 409,
+    });
+    expect(await prisma.printRequestPrint.count({ where: { requestId: r.id } })).toBe(0);
+  });
+
+  it("200 commandés, marge 10 % : la 220e impression passe, la 221e est refusée CAP_REACHED", async () => {
+    const r = await onsiteRequest({ estimatedQuantity: 200, marginPercent: 10 }, 200);
+    await prior(r.id, 219);
+    const { counter } = await recordOnsitePrint(input(r.id, fx.approved[0].id));
+    expect(counter).toMatchObject({ ordered: 200, cap: 220, printed: 220, level: "CAP_REACHED" });
+    expect(await rejectCode(recordOnsitePrint(input(r.id, fx.approved[1].id)))).toMatchObject({
+      code: "CAP_REACHED", status: 409,
+    });
+    expect(await prisma.printRequestPrint.count({ where: { requestId: r.id, reprint: false } })).toBe(220);
   });
 
   it("demande QUOTED : REQUEST_NOT_PRINTABLE ; PAID et READY passent", async () => {

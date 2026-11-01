@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
-import { loadOnsiteRequest, setOnsiteMargin } from "@/lib/print-requests/onsite-station";
+import { loadOnsiteOverview, setOnsiteMargin } from "@/lib/print-requests/onsite-station";
 import { guarded, json, parseBody } from "@/lib/print-requests/staff-api";
 
 const bodySchema = z.object({
@@ -15,7 +15,7 @@ export const PATCH = withStaffAuth<{ requestId: string }>(
       const { requestId } = await params;
       const { marginPercent, reason } = await parseBody(req, bodySchema);
       const userId = session.user.id;
-      const { orgId, eventId } = await loadOnsiteRequest(requestId);
+      const { orgId, eventId } = await loadOnsiteOverview(requestId);
       // `from` est lu sous verrou (marge nulle en base -> from: 0).
       const { counter, from } = await setOnsiteMargin({ requestId, marginPercent, reason, userId });
       // Même marge : aucun changement, donc aucun journal.

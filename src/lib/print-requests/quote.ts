@@ -306,9 +306,8 @@ export async function advanceStatus(input: {
       const current = await lockRequest(tx, request.id);
       const from: PrintRequestStatus = current.status;
       const to = await applyTransition(tx, current, action, "STAFF");
-      // Après la transition (INVALID_TRANSITION prime) ; annule la transaction. La clôture (COMPLETED)
-      // reste permise : seuls la production et la mise à disposition sont bloquées.
-      if (input.to !== "COMPLETED") await assertOnsiteCanAdvance(current);
+      // Aucun contrôle du template ici : il est figé au paiement (PAID et au-delà), un changement
+      // ultérieur de l'organisateur ne doit pas bloquer une demande déjà payée. Le contrôle se fait à l'envoi du devis.
       await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
       // Seule une demande sur place sans parent se clôture (une complémentaire ne produit ni crédit ni surplus).
       const closure =

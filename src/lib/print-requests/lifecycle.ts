@@ -12,6 +12,7 @@ import { prepareOnsiteSubmission } from "./onsite";
 import {
   appendThreadEvent,
   applyTransition,
+  assertOrganizerMayChange,
   assertOwner,
   loadRequest,
   lockRequestWithEvent,
@@ -149,6 +150,7 @@ export async function cancelRequest(input: {
   const { request, from } = await prisma.$transaction(async (tx) => {
     await lockRequestWithEvent(tx, input.requestId);
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
+    assertOrganizerMayChange(current, "ORGANIZER");
     await applyTransition(tx, current, "CANCEL", "ORGANIZER");
     // Un brouillon n'a jamais été vu du staff : ni entrée du fil ni notification.
     if (current.status !== "DRAFT") {

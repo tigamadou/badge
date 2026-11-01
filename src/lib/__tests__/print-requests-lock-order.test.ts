@@ -109,6 +109,13 @@ describe("ordre des verrous Event puis PrintRequest", () => {
   it("impression sur place face à un changement de template : pas d'interblocage", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       const r = await makeRequest(fx, { type: "ONSITE", status: "IN_PRODUCTION", estimatedQuantity: 10, marginPercent: 10 });
+      // Le poste exige une ligne de badges (pas de repli sur la quantité estimée).
+      await prisma.printQuoteLine.create({
+        data: {
+          requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Badge", quantity: 10,
+          unitPrice: 1500, lineTotal: 15000, position: 0, addedBy: "ORGANIZER",
+        },
+      });
       const reg = fx.approved[i % fx.approved.length];
       await prisma.registration.update({ where: { id: reg.id }, data: { badgePrinted: false, badgePrintedAt: null } });
       const res = await Promise.allSettled([
