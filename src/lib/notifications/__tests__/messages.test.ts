@@ -22,6 +22,8 @@ import {
   printRequestQuotedMessage,
   printRequestMessageMessage,
   printRequestStatusChangedMessage,
+  printRequestPaidMessage,
+  printPaymentUnmatchedMessage,
 } from "../messages";
 import type { NotificationContent } from "../types";
 import { formatFcfa } from "@/lib/print-requests/labels";
@@ -287,6 +289,33 @@ describe("messages", () => {
       const exact = printRequestMessageMessage({ ...base, body: "y".repeat(140), toStaff: false });
       expect(exact.body).toBe(`Awa : ${"y".repeat(140)}`);
       expect(exact.href).toBe("/event/e1/print/p1");
+    });
+
+    it("printRequestPaid : titre, corps et lien selon l'audience", () => {
+      const base = { requestId: "p1", eventId: "e1", reference: "IMP-2026-0042", eventTitle: "Forum", amount: 150000 };
+      const m = printRequestPaidMessage({ ...base, manual: false, audience: "event" });
+      expect(m.title).toBe("Demande IMP-2026-0042 payée");
+      expect(m.body).toBe(`Le paiement de ${formatFcfa(150000)} de la demande IMP-2026-0042 (Forum) est reçu.`);
+      expect(m.body).toContain("150");
+      expect(m.href).toBe("/event/e1/print/p1");
+      expect(m.primaryLabel).toBe("Voir la demande");
+      expect(m.links).toEqual([]);
+      expect(printRequestPaidMessage({ ...base, manual: false, audience: "platform" }).href).toBe("/platform/print/requests/p1");
+    });
+
+    it("printRequestPaid manual : marquée payée par l'équipe Badge", () => {
+      const m = printRequestPaidMessage({
+        requestId: "p1", eventId: "e1", reference: "IMP-2026-0042", eventTitle: "Forum", amount: 1, manual: true, audience: "platform",
+      });
+      expect(m.body).toBe("La demande IMP-2026-0042 (Forum) a été marquée payée par l'équipe Badge.");
+    });
+
+    it("printPaymentUnmatched : titre, corps, lien plateforme", () => {
+      const m = printPaymentUnmatchedMessage({ requestId: "p1", reference: "IMP-2026-0042", amount: 150000 });
+      expect(m.title).toBe("Paiement à vérifier : IMP-2026-0042");
+      expect(m.body).toBe(`Un paiement de ${formatFcfa(150000)} a été approuvé alors que la demande n'attendait plus ce paiement.`);
+      expect(m.href).toBe("/platform/print/requests/p1");
+      expect(m.primaryLabel).toBe("Voir la demande");
     });
 
     it("printRequestStatusChanged : lien selon le destinataire", () => {

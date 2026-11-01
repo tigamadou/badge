@@ -17,6 +17,8 @@ import {
   printRequestStatusChangedMessage,
   printRequestSubmittedMessage,
   profileApprovedMessage,
+  printPaymentUnmatchedMessage,
+  printRequestPaidMessage,
   profileRejectedMessage,
   profileSubmittedMessage,
   registrationApprovedMessage,
@@ -452,6 +454,7 @@ const PRINT_REQUEST_SELECT = {
   eventId: true,
   quoteVersion: true,
   total: true,
+  acceptedTotal: true,
   estimatedQuantity: true,
   event: { select: { title: true } },
   org: { select: { name: true } },
@@ -582,5 +585,63 @@ export async function notifyPrintRequestStatusChanged(
       });
     }
     await notifyAll(inputs);
+  });
+}
+
+// Passage en PAID : remplace notifyPrintRequestStatusChanged pour cette transition.
+// Organisateur (ADMIN de l'évènement) et staff (STAFF_ADMIN) ; `manual` pour un marquage hors ligne.
+export async function notifyPrintRequestPaid(
+  requestId: string,
+  actorId: string | null,
+  opts: { manual?: boolean } = {},
+): Promise<void> {
+  await withNotificationGuard("print-request-paid", async () => {
+    const r = await prisma.printRequest.findUnique({ where: { id: requestId }, select: PRINT_REQUEST_SELECT });
+    if (!r) return;
+    const base = { type: "PRINT_REQUEST_STATUS_CHANGED", actorId, orgId: r.orgId, eventId: r.eventId } as const;
+    const args = {
+      requestId: r.id,
+      eventId: r.eventId,
+      reference: r.reference,
+      eventTitle: r.event.title,
+      amount: r.acceptedTotal ?? r.total,
+      manual: opts.manual ?? false,
+    };
+    await notifyAll([
+      {
+        ...base,
+        scope: "EVENT",
+        recipients: { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        content: printRequestPaidMessage({ ...args, audience: "event" }),
+      },
+      {
+        ...base,
+        scope: "PLATFORM",
+        recipients: { staffMinRole: "STAFF_ADMIN" },
+        content: printRequestPaidMessage({ ...args, audience: "platform" }),
+      },
+    ]);
+  });
+}
+
+// Paiement approuvé que la demande n'attendait plus : le staff vérifie (montant lu sur le Payment).
+export async function notifyPrintPaymentUnmatched(requestId: string, paymentId: string): Promise<void> {
+  await withNotificationGuard("print-payment-unmatched", async () => {
+    const [r, payment] = await Promise.all([
+      prisma.printRequest.findUnique({ where: { id: requestId }, select: PRINT_REQUEST_SELECT }),
+      prisma.payment.findUnique({ where: { id: paymentId }, select: { amount: true } }),
+    ]);
+    if (!r || !payment) return;
+    await notifyAll([
+      {
+        type: "PRINT_REQUEST_STATUS_CHANGED",
+        scope: "PLATFORM",
+        recipients: { staffMinRole: "STAFF_ADMIN" },
+        actorId: null,
+        orgId: r.orgId,
+        eventId: r.eventId,
+        content: printPaymentUnmatchedMessage({ requestId: r.id, reference: r.reference, amount: payment.amount }),
+      },
+    ]);
   });
 }

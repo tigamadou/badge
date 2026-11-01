@@ -126,7 +126,7 @@ export function describeThreadEvent(
     case "PAYMENT_FAILED":
       return `Paiement échoué : ${F(details.amount)}`;
     case "PAYMENT_UNMATCHED":
-      return `Paiement reçu sans correspondance avec le devis : ${F(details.amount)}`;
+      return `Paiement de ${F(details.amount)} reçu alors que la demande n'attendait plus ce paiement : l'équipe Badge vérifie.`;
     case "SHEETS_GENERATED":
       return `Planches lancées pour ${num(details.badgeCount)} badges`;
     case "REGISTRATIONS_SKIPPED": {
