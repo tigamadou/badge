@@ -12,6 +12,10 @@ import { PrintRequestActions } from "@/components/event/print/PrintRequestAction
 import { requirePrintAccess } from "@/components/event/print/guard";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 import { requestBadgeCount } from "@/lib/print-requests/service";
+import { PrintPayButton } from "@/components/event/print/PrintPayButton";
+import { hasPendingPayment } from "@/components/event/print/pay-button";
+import { PaymentHistory } from "@/components/admin/PaymentHistory";
+import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-history";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +41,7 @@ export default async function PrintRequestDetailPage({
   const request = await prisma.printRequest.findFirst({ where: { id: requestId, eventId } });
   if (!request) notFound();
 
-  const [lines, badgeCount, owner] = await Promise.all([
+  const [lines, badgeCount, owner, paymentRows] = await Promise.all([
     prisma.printQuoteLine.findMany({
       where: { requestId, removedAt: null },
       orderBy: [{ position: "asc" }, { id: "asc" }],
@@ -47,9 +51,16 @@ export default async function PrintRequestDetailPage({
       where: { userId: ctx.user.id, orgId, role: "OWNER" },
       select: { userId: true },
     }),
+    prisma.payment.findMany({
+      where: { printRequestId: requestId },
+      orderBy: { createdAt: "desc" },
+      select: PAYMENT_HISTORY_SELECT,
+    }),
   ]);
+  const payments = paymentRows.map(toPaymentHistoryItem);
   const onsiteTemplate = await onsiteTemplateStatus(request);
-  const canAccept = !ctx.isStaff && owner !== null && request.status === "QUOTED";
+  const isOwner = !ctx.isStaff && owner !== null;
+  const canAccept = isOwner && request.status === "QUOTED";
   const base = `/api/org/${orgId}/events/${eventId}/print-requests`;
   const schedule = Array.isArray(request.onsiteSchedule)
     ? (request.onsiteSchedule as Slot[])
@@ -96,11 +107,31 @@ export default async function PrintRequestDetailPage({
         readOnly={ctx.isStaff}
       />
 
+      {request.status === "ACCEPTED" ? (
+        <PrintPayButton
+          orgId={orgId}
+          eventId={eventId}
+          requestId={requestId}
+          amount={request.total}
+          canPay={isOwner}
+          pending={hasPendingPayment(payments)}
+        />
+      ) : null}
+
       <section>
         <h2 className="mb-2 text-sm font-semibold text-slate-900">Lignes de la demande</h2>
         <QuoteLinesTable lines={lines} total={request.total} badgeCount={badgeCount} />
         <p className="mt-2 text-xs text-slate-400">Le prix définitif est fixé par l&apos;équipe Badge dans le devis.</p>
       </section>
+
+      {payments.length > 0 ? (
+        <Card>
+          <CardHead title="Paiements" />
+          <CardBody>
+            <PaymentHistory payments={payments} />
+          </CardBody>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHead title="Remise et informations" />
