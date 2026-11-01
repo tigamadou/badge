@@ -56,7 +56,8 @@ export function describeLineChange(c: LineChange): string {
   if (from.unitPrice !== to.unitPrice) {
     parts.push(`prix unitaire ${formatFcfa(from.unitPrice)} → ${formatFcfa(to.unitPrice)}`);
   }
-  return `Ligne modifiée : ${label} (${parts.join(", ")})`;
+  // Changement d'intitulé seul : aucune différence de quantité ni de prix à détailler.
+  return parts.length > 0 ? `Ligne modifiée : ${label} (${parts.join(", ")})` : `Ligne modifiée : ${label}`;
 }
 
 // Valeurs par défaut sûres : un `details` mal formé ne produit ni « NaN FCFA » ni « undefined ».

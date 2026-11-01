@@ -307,7 +307,7 @@ describe("describeThreadEvent : details mal formés", () => {
     expect(describeThreadEvent("LINES_CHANGED", {})).toBe("0 lignes modifiées");
     expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 5, reason: "" })).toBe(`Paiement reçu : ${formatFcfa(5)}`);
     expect(describeThreadEvent("STATUS_CHANGED", { from: "ZZ", to: undefined })).toBe("Statut : ZZ → —");
-    expect(describeLineChange({ op: "UPDATED", lineId: "a", label: "X" })).toBe("Ligne modifiée : X ()");
+    expect(describeLineChange({ op: "UPDATED", lineId: "a", label: "X" })).toBe("Ligne modifiée : X");
     expect(describeLineChange({ op: "ADDED", lineId: "a", label: "X" })).toContain("0 ×");
   });
 });
