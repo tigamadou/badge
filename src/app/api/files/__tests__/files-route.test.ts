@@ -20,7 +20,7 @@ async function setup() {
   return { org, event };
 }
 
-async function login(opts: { eventId?: string; role?: "PRINTER" | "VIEWER"; staff?: boolean }) {
+async function login(opts: { eventId?: string; role?: "ADMIN" | "PRINTER" | "VIEWER"; staff?: boolean }) {
   const u = await prisma.user.create({
     data: {
       email: `${uniq("u")}@x`,
@@ -117,5 +117,78 @@ describe("GET /api/files/print-requests/... et platform/print-products/...", () 
     });
     expect(res.status).toBe(404);
     expect(getFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/files/print-requests/{eventId}/... (organisateur)", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("l'ADMIN de l'évènement lit sa pièce jointe, sans cache", async () => {
+    const { event } = await setup();
+    await login({ eventId: event.id, role: "ADMIN" });
+    const res = await read(`print-requests/${event.id}/x.pdf`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("l'ADMIN d'un autre évènement, un PRINTER et un évènement inconnu reçoivent 403", async () => {
+    const mine = await setup();
+    const other = await setup();
+    await login({ eventId: other.event.id, role: "ADMIN" });
+    expect((await read(`print-requests/${mine.event.id}/x.pdf`)).status).toBe(403);
+    await login({ eventId: mine.event.id, role: "PRINTER" });
+    expect((await read(`print-requests/${mine.event.id}/x.pdf`)).status).toBe(403);
+    expect((await read(`print-requests/inconnu/x.pdf`)).status).toBe(403);
+  });
+
+  it("une clé sans sous-dossier reste réservée au staff", async () => {
+    await login({ staff: false });
+    expect((await read("print-requests/x.pdf")).status).toBe(403);
+    await loginStaff("STAFF_OBSERVER");
+    expect((await read("print-requests/x.pdf")).status).toBe(200);
+  });
+
+  it("le staff lit une clé d'évènement", async () => {
+    const { event } = await setup();
+    await loginStaff("STAFF_OBSERVER");
+    expect((await read(`print-requests/${event.id}/x.pdf`)).status).toBe(200);
+  });
+});
+
+describe("GET /api/files/print-requests/staff/... (pièce jointe staff)", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  async function seedStaffMessage(eventId: string, orgId: string, key: string) {
+    const req = await prisma.printRequest.create({
+      data: {
+        reference: uniq("PR"),
+        eventId,
+        orgId,
+        type: "ONSITE",
+      } as never,
+    });
+    await prisma.printRequestMessage.create({
+      data: { requestId: req.id, side: "STAFF", kind: "MESSAGE", body: "b", attachmentKey: key } as never,
+    });
+  }
+
+  it("lisible par l'ADMIN de l'évènement du message, 403 pour un autre évènement", async () => {
+    const mine = await setup();
+    const other = await setup();
+    const key = `print-requests/staff/${uniq("k")}.pdf`;
+    await seedStaffMessage(mine.event.id, mine.org.id, key);
+    await login({ eventId: mine.event.id, role: "ADMIN" });
+    expect((await read(key)).status).toBe(200);
+    await login({ eventId: other.event.id, role: "ADMIN" });
+    expect((await read(key)).status).toBe(403);
+  });
+
+  it("clé orpheline : 403 non-staff, 200 staff", async () => {
+    const { event } = await setup();
+    const key = `print-requests/staff/${uniq("orph")}.pdf`;
+    await login({ eventId: event.id, role: "ADMIN" });
+    expect((await read(key)).status).toBe(403);
+    await loginStaff("STAFF_OBSERVER");
+    expect((await read(key)).status).toBe(200);
   });
 });

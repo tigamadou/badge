@@ -58,6 +58,11 @@ export function eventIdDocumentKey(eventId: string, filename: string): string {
   return `events/${eventId}/idDocuments/${safeFilename(filename)}`;
 }
 
+// Plan 33 : pieces jointes des demandes d'impression (fichier d'un organisateur).
+export function printRequestFileKey(eventId: string, filename: string): string {
+  return `print-requests/${eventId}/${safeFilename(filename)}`;
+}
+
 export function accountProfileKey(userId: string, kind: UploadKind, filename: string): string {
   return `profile/${userId}/${kind === "photo" ? "photos" : "documents"}/${safeFilename(filename)}`;
 }
