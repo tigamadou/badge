@@ -214,7 +214,7 @@ test.describe("Event — Badges", () => {
     await expect(view).toHaveAttribute("data-state", "ready");
   });
 
-  test("La page de lot montre l'aperçu, ignore une réponse périmée et livre un ZIP", async ({ page }) => {
+  test("La page de lot montre l'aperçu, ignore une réponse périmée et livre un ZIP asynchrone", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-batch" });
     const admin = await makeEventAdminUser({ scope: "bdg-batch", eventId, orgId });
     const participant = await createTestUser({ scope: "bdg-batch-p", verified: true, profile: true });
@@ -250,11 +250,14 @@ test.describe("Event — Badges", () => {
     await expect(view).toHaveAttribute("data-src", urlOf(reg2.id));
     await expect(view).toHaveAttribute("data-state", "ready");
 
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      page.getByRole("link", { name: "Télécharger le lot (.zip)" }).click(),
-    ]);
+    // Export asynchrone : le worker prépare l'archive, le lien apparaît à la fin.
+    await page.getByRole("button", { name: "Préparer le ZIP" }).click();
+    await expect(page.getByText("Préparation… (2 badges)")).toBeVisible();
+    const zipLink = page.getByRole("link", { name: "Télécharger le ZIP" });
+    await expect(zipLink).toBeVisible({ timeout: 90_000 });
+    const [download] = await Promise.all([page.waitForEvent("download"), zipLink.click()]);
     expect(download.suggestedFilename()).toMatch(/\.zip$/);
+    await expectLastActivity({ type: "BADGE_BATCH_EXPORTED", userId: admin.id, eventId });
 
     await page.getByRole("button", { name: "Marquer imprimés" }).click();
     await expect(toast(page, "2 badge(s) marqué(s) imprimé(s).")).toBeVisible();

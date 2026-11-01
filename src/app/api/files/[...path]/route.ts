@@ -12,17 +12,22 @@ import { getFile } from "@/lib/storage";
 // logos restent publics (ils apparaissent sur les badges / pages publiques).
 // Les planches d'impression (`print-sheets/...`) contiennent des donnees de
 // participants : lisibles par le staff STAFF_SUPPORT minimum uniquement.
+// Les archives ZIP d'export (`badge-exports/{eventId}/...`) contiennent des badges nominatifs :
+// lisibles par le staff et par les titulaires de `badge.print` sur l'evenement.
 // Union discriminee : un fichier sensible est TOUJOURS soit un document de profil
 // (profileUserId), soit un document d'evenement (eventId). Le type garantit qu'un
 // des deux est present quand sensitive vaut true.
 type SensitiveFile =
   | { sensitive: true; profileUserId: string; eventId?: undefined }
   | { sensitive: true; eventId: string; profileUserId?: undefined }
-  | { sensitive: true; staffOnly: true; eventId?: undefined; profileUserId?: undefined };
+  | { sensitive: true; staffOnly: true; eventId?: undefined; profileUserId?: undefined }
+  | { sensitive: true; printEventId: string; eventId?: undefined; profileUserId?: undefined };
 type FileClass = { sensitive: false } | SensitiveFile;
 
 function classify(key: string): FileClass {
   if (key.startsWith("print-sheets/")) return { sensitive: true, staffOnly: true };
+  const exportFile = key.match(/^badge-exports\/([^/]+)\//);
+  if (exportFile) return { sensitive: true, printEventId: exportFile[1] };
   const profileDoc = key.match(/^profile\/([^/]+)\/documents\//);
   if (profileDoc) return { sensitive: true, profileUserId: profileDoc[1] };
   const eventDoc = key.match(/^events\/([^/]+)\/idDocuments\//);
@@ -37,6 +42,10 @@ async function canRead(userId: string, c: SensitiveFile): Promise<boolean> {
     return ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT");
   }
   if (ctx.isStaff) return true;
+  if ("printEventId" in c) {
+    const event = await prisma.event.findUnique({ where: { id: c.printEventId }, select: { orgId: true } });
+    return !!event && hasEventPermission(ctx, c.printEventId, event.orgId, "badge.print");
+  }
   if (c.eventId === undefined) return c.profileUserId === userId;
   // Sinon c'est un document d'evenement : eventId est garanti par le type.
   const event = await prisma.event.findUnique({

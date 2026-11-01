@@ -2,8 +2,15 @@
 // `ids` des ecrans d'impression par lot. Aucune dependance Prisma.
 import { slugify } from "@/lib/slugify";
 
-// Taille maximale d'un lot (route ZIP et page d'impression par lot).
-export const MAX_BADGES_PER_BATCH = 200;
+// Taille maximale d'un envoi de marquage "imprime" (`registrations/print`).
+export const MARK_PRINTED_CHUNK = 500;
+
+// Decoupe en paquets consecutifs d'au plus `size` elements, ordre conserve.
+export function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
 
 export type BadgeFileNameInput = {
   id: string;

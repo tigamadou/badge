@@ -158,3 +158,25 @@ export async function createGeneration(input: {
   });
   return generation;
 }
+
+// Export ZIP de l'organisateur : un PDF par badge, dans l'ordre de la sélection, sans plafond.
+// Pas de gabarit ni d'instantané de planche (layoutSnapshot reste null).
+export async function createZipExport(input: {
+  eventId: string;
+  registrationIds: string[];
+  userId: string;
+}): Promise<PrintSheetGeneration> {
+  const ids = [...new Set(input.registrationIds)];
+  const rows = await selectRegistrations(input.eventId, { mode: "IDS", registrationIds: ids });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const ordered = ids.map((id) => byId.get(id)!);
+  return prisma.printSheetGeneration.create({
+    data: {
+      output: "ZIP",
+      eventId: input.eventId,
+      registrationIds: ordered.map((r) => r.id),
+      badgeCount: ordered.length,
+      createdById: input.userId,
+    },
+  });
+}
