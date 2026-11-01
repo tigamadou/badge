@@ -127,6 +127,7 @@ function checkChoiceContent(
     if (!value) return "UNKNOWN_VALUE";
     if (value.archived) return "VALUE_ARCHIVED";
   }
+  if (new Set(ids).size !== ids.length && option.type !== "QUANTITY_SPLIT") return "TOO_MANY_VALUES";
   switch (option.type) {
     case "CHOICE":
     case "COLOR":
@@ -134,7 +135,11 @@ function checkChoiceContent(
     case "TEXT":
       return option.maxLength !== null && textOf(choice).length > option.maxLength ? "TEXT_TOO_LONG" : null;
     case "FILE":
-      return fileKeyOf(choice).startsWith("print-requests/") ? null : "INVALID_FILE";
+      {
+      const key = fileKeyOf(choice);
+      const safe = key.startsWith("print-requests/") && !key.includes("..") && !key.includes("//");
+      return safe ? null : "INVALID_FILE";
+    }
     case "QUANTITY_SPLIT": {
       const parts = splitOf(choice);
       const valid = parts.every((part) => Number.isInteger(part.quantity) && part.quantity > 0)
@@ -152,7 +157,7 @@ export function validateChoices(
   product: ProductForPricing, choices: OptionChoice[], quantity: number,
 ): ChoiceResult {
   if (product.archived || !product.published) return fail("PRODUCT_UNAVAILABLE");
-  if (quantity < product.minQuantity) return fail("QUANTITY_BELOW_MINIMUM");
+  if (!Number.isInteger(quantity) || quantity < product.minQuantity) return fail("QUANTITY_BELOW_MINIMUM");
   const seen = new Set<string>();
   const filled = new Set<string>();
   for (const choice of choices) {

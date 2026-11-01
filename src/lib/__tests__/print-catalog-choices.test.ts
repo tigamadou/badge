@@ -102,6 +102,25 @@ describe("validateChoices", () => {
   });
 });
 
+describe("durcissement", () => {
+  it("valeur en double -> TOO_MANY_VALUES", () => {
+    expect(validateChoices(withOption(multiOpt), [COLOR, { optionId: "o-multi", valueIds: ["a", "a"] }], 100))
+      .toEqual({ ok: false, code: "TOO_MANY_VALUES", optionId: "o-multi" });
+  });
+  it("quantité non entière ou non finie -> QUANTITY_BELOW_MINIMUM", () => {
+    for (const q of [NaN, 100.5, Infinity]) {
+      expect(validateChoices(CORDON, [COLOR], q)).toEqual({ ok: false, code: "QUANTITY_BELOW_MINIMUM" });
+    }
+  });
+  it("clé de fichier avec .. ou // -> INVALID_FILE", () => {
+    const p = withOption(fileOpt);
+    for (const fileKey of ["print-requests/../orgs/x/a.png", "print-requests//a.pdf"]) {
+      expect(validateChoices(p, [COLOR, { optionId: "o-file", fileKey }], 100))
+        .toEqual({ ok: false, code: "INVALID_FILE", optionId: "o-file" });
+    }
+  });
+});
+
 describe("snapshotChoices", () => {
   it("x100, Or + texte", () => {
     expect(snapshotChoices(CORDON, [COLOR, TEXT], 100)).toEqual([
