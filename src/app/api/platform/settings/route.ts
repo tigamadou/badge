@@ -5,6 +5,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
+import {
+  SUBSCRIPTION_RIGHTS,
+  parseRights,
+  type RightsMatrix,
+} from "@/lib/subscription-rights";
 
 // =====================================================
 //  PlatformSettings singleton (id = "singleton")
@@ -20,6 +25,7 @@ type SettingsRecord = {
   recaptchaEnabled: boolean;
   recaptchaSiteKey: string;
   recaptchaSecretKey: string;
+  subscriptionRights: unknown;
 };
 
 async function ensureSingleton(): Promise<SettingsRecord> {
@@ -46,6 +52,7 @@ function publicView(s: SettingsRecord) {
     recaptchaEnabled: s.recaptchaEnabled,
     recaptchaSiteKey: s.recaptchaSiteKey,
     recaptchaSecretKeySet: !!s.recaptchaSecretKey,
+    subscriptionRights: parseRights(s.subscriptionRights),
   };
 }
 
@@ -56,6 +63,16 @@ export const GET = withStaffAuth(async () => {
 
 // Schema strict : refuser tout champ inconnu (id, createdAt, etc.) pour eviter
 // qu'un client legacy n'ecrive une cle non prevue.
+const rightCellSchema = z.object({ active: z.boolean(), inactive: z.boolean() }).strict();
+const rightsSchema = z
+  .object(
+    Object.fromEntries(SUBSCRIPTION_RIGHTS.map((r) => [r, rightCellSchema])) as Record<
+      (typeof SUBSCRIPTION_RIGHTS)[number],
+      typeof rightCellSchema
+    >,
+  )
+  .strict();
+
 const patchSchema = z
   .object({
     smtpHost: z.string().max(255).optional(),
@@ -67,6 +84,7 @@ const patchSchema = z
     recaptchaEnabled: z.boolean().optional(),
     recaptchaSiteKey: z.string().max(255).optional(),
     recaptchaSecretKey: z.string().max(255).optional(),
+    subscriptionRights: rightsSchema.optional(),
   })
   .strict();
 
@@ -124,6 +142,11 @@ export const PATCH = withStaffAuth(
     }
     if (data.recaptchaSecretKey !== undefined && data.recaptchaSecretKey !== "") {
       updateData.recaptchaSecretKey = data.recaptchaSecretKey;
+    }
+
+    if (data.subscriptionRights !== undefined) {
+      const rights: RightsMatrix = data.subscriptionRights;
+      updateData.subscriptionRights = rights;
     }
 
     const updated = await prisma.platformSettings.update({

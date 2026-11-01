@@ -15,6 +15,7 @@ import {
   eventRegistrationToggledMessage,
   orgCreatedMessage,
   subscriptionChangedMessage,
+  subscriptionExpiringMessage,
   quotaExceededMessage,
   emailFailedMessage,
 } from "../messages";
@@ -168,6 +169,20 @@ describe("messages", () => {
     expect(org.body).toContain("actif");
   });
 
+  it("subscriptionExpiring J-7 et J-1", () => {
+    const endDate = new Date("2026-11-04T12:00:00.000Z");
+    const j7 = subscriptionExpiringMessage({ orgId: "o1", orgName: "Acme", planName: "Pro", daysBefore: 7, endDate });
+    expect(j7.title).toBe("Votre abonnement Pro expire dans 7 jours");
+    expect(j7.body).toContain("l'abonnement expire");
+    expect(j7.body).toContain("onglet Abonnement");
+    expect(j7.body).not.toContain("gratuit");
+    expect(j7.body).toContain("04/11/2026");
+    expect(j7.href).toBe("/org/o1/subscription");
+    expect(j7.primaryLabel).toBe("Renouveler");
+    const j1 = subscriptionExpiringMessage({ orgId: "o1", orgName: "Acme", planName: "Pro", daysBefore: 1, endDate });
+    expect(j1.title).toBe("Votre abonnement Pro expire demain");
+  });
+
   it("quotaExceeded (org et plateforme)", () => {
     const org = quotaExceededMessage({ orgId: "o1", orgName: "Acme", eventId: "e1", audience: "org" });
     expect(org.title).toBe("Quota dépassé");
@@ -217,6 +232,7 @@ describe("messages", () => {
       eventRegistrationToggledMessage({ eventId: "e", eventTitle: "t", eventSlug: "s", open: true }),
       orgCreatedMessage({ orgId: "o", orgName: "n" }),
       subscriptionChangedMessage({ orgId: "o", orgName: "n", planName: "p", status: "ACTIVE", audience: "org" }),
+      subscriptionExpiringMessage({ orgId: "o", orgName: "n", planName: "p", daysBefore: 7, endDate: new Date() }),
       quotaExceededMessage({ orgId: "o", orgName: "n", eventId: "e", audience: "platform" }),
       emailFailedMessage({ jobId: "j", kind: "k", recipient: null, attempts: 1 }),
     ];

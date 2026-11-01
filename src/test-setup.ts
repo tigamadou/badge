@@ -15,6 +15,8 @@ beforeEach(async () => {
   await prisma.notification.deleteMany();
   await prisma.job.deleteMany();
   await prisma.activityLog.deleteMany();
+  await prisma.subscriptionReminder.deleteMany();
+  await prisma.payment.deleteMany();
   await prisma.subscription.deleteMany();
   await prisma.plan.deleteMany();
   await prisma.profileSubmission.deleteMany();

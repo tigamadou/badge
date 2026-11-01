@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+import { getOrgAccess } from "@/lib/org-access";
+import { can } from "@/lib/subscription-rights";
 import { prisma } from "@/lib/prisma";
 import { EventCreationWizard } from "@/components/admin/EventCreationWizard";
 import { listAvailableTemplates } from "@/lib/badge-templates/resolve";
@@ -11,6 +14,8 @@ export default async function NewEventPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  // Sans le droit de création, retour à la liste avant tout chargement.
+  if (!can(await getOrgAccess(orgId), "CREATE_EVENT")) redirect(`/org/${orgId}/events`);
   const [templates, badgeTemplates, organization, platform] = await Promise.all([
     prisma.categoryTemplate.findMany({
       where: { orgId },

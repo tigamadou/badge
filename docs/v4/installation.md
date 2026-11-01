@@ -148,6 +148,18 @@ est cree au premier upload.
 > reference) : repartir d'une base propre avec `make db-seed`. Une fois rassure, le
 > volume orphelin se supprime avec `docker volume rm badge_minio_data_dev`.
 
+## Paiements FedaPay (dev)
+
+Les abonnements se paient via FedaPay (voir [`features/paiements-fedapay.md`](features/paiements-fedapay.md)). La configuration se fait par variables d'environnement (`.env.example`).
+
+1. Creer un compte **sandbox** sur FedaPay et recuperer la **cle secrete** sandbox (`sk_sandbox_...`).
+2. Renseigner dans `.env` : `FEDAPAY_ENVIRONMENT=sandbox`, `FEDAPAY_SECRET_KEY` (cle secrete) et `FEDAPAY_WEBHOOK_SECRET` (secret du webhook, etape 3), puis redemarrer `app` et `worker` (`make dev`). Ces secrets ne sont ni en base ni dans une reponse API.
+3. Declarer le webhook dans le tableau de bord FedaPay avec l'URL `${NEXTAUTH_URL}/api/webhooks/fedapay`, evenements `transaction.*`, et copier son secret dans `FEDAPAY_WEBHOOK_SECRET`.
+4. FedaPay doit joindre l'app : exposer le port via un tunnel (ex. `cloudflared tunnel --url http://localhost:3785`), mettre l'URL du tunnel dans `NEXTAUTH_URL` puis redemarrer `app`. Sans tunnel, le paiement reste confirme par la page de retour, et le webhook peut etre rejoue a la main depuis le tableau de bord FedaPay.
+5. Donner un `price` a un plan dans `/platform/plans`, puis payer depuis `/org/[orgId]/subscription` avec un compte `OWNER` (numeros de test de la sandbox FedaPay).
+
+Rappels et paiements orphelins sont traites par le conteneur `worker` : le relancer apres modification de `endDate` pour tester sans attendre l'heure suivante.
+
 ## Tests
 
 Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).

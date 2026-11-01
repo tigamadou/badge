@@ -9,6 +9,7 @@ const updateSchema = z.object({
   period: z.enum(["MONTHLY", "ANNUAL"]).optional(),
   maxEvents: z.number().int().min(0).nullable().optional(),
   maxParticipantsPerEvent: z.number().int().min(0).nullable().optional(),
+  price: z.number().int().min(100).max(10_000_000).nullable().optional(),
   archived: z.boolean().optional(),
 });
 
@@ -35,6 +36,7 @@ export const PATCH = withStaffAuth<{ planId: string }>(
           ...(data.maxParticipantsPerEvent !== undefined && {
             maxParticipantsPerEvent: data.maxParticipantsPerEvent,
           }),
+          ...(data.price !== undefined && { price: data.price }),
           ...(data.archived !== undefined && { archived: data.archived }),
         },
       });
@@ -46,6 +48,7 @@ export const PATCH = withStaffAuth<{ planId: string }>(
           name: plan.name,
           maxEvents: plan.maxEvents,
           maxParticipantsPerEvent: plan.maxParticipantsPerEvent,
+          price: plan.price,
           archived: plan.archived,
         },
         req,

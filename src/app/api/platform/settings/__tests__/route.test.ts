@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_RIGHTS } from "@/lib/subscription-rights";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -236,5 +238,104 @@ describe("PATCH /api/platform/settings", () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe("NOTHING_TO_UPDATE");
+  });
+
+  describe("subscriptionRights", () => {
+    const valid = {
+      CREATE_EVENT: { active: true, inactive: true },
+      RECEIVE_REGISTRATIONS: { active: true, inactive: true },
+      MANAGE_ONGOING_EVENTS: { active: true, inactive: false },
+      ACCESS_ORG_SPACE: { active: true, inactive: false },
+    };
+
+    it("STAFF_ADMIN enregistre une matrice valide et journalise", async () => {
+      const admin = await makeStaff("STAFF_ADMIN");
+      const { PATCH } = await import("../route");
+      const res = await PATCH(makeReq({ subscriptionRights: valid }), { params: Promise.resolve({}) });
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.settings.subscriptionRights).toEqual(valid);
+
+      const reloaded = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+      expect(reloaded?.subscriptionRights).toEqual(valid);
+      const log = await prisma.activityLog.findFirst({
+        where: { type: "PLATFORM_SETTINGS_UPDATED", userId: admin.id },
+      });
+      expect(log).not.toBeNull();
+      expect((log?.details as { changedFields: string[] }).changedFields).toContain("subscriptionRights");
+    });
+
+    it("clé inconnue -> 400 VALIDATION", async () => {
+      await makeStaff("STAFF_ADMIN");
+      const { PATCH } = await import("../route");
+      const res = await PATCH(
+        makeReq({ subscriptionRights: { ...valid, FOO: { active: true, inactive: true } } }),
+        { params: Promise.resolve({}) },
+      );
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("VALIDATION");
+    });
+
+    it("valeur non booléenne -> 400 VALIDATION", async () => {
+      await makeStaff("STAFF_ADMIN");
+      const { PATCH } = await import("../route");
+      const res = await PATCH(
+        makeReq({ subscriptionRights: { ...valid, CREATE_EVENT: { active: "oui", inactive: true } } }),
+        { params: Promise.resolve({}) },
+      );
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("VALIDATION");
+    });
+
+    it("droit manquant -> 400 VALIDATION", async () => {
+      await makeStaff("STAFF_ADMIN");
+      const { PATCH } = await import("../route");
+      const { ACCESS_ORG_SPACE: _omit, ...partial } = valid;
+      void _omit;
+      const res = await PATCH(makeReq({ subscriptionRights: partial }), { params: Promise.resolve({}) });
+      expect(res.status).toBe(400);
+    });
+
+    it("STAFF_SUPPORT -> 403", async () => {
+      await makeStaff("STAFF_SUPPORT");
+      const { PATCH } = await import("../route");
+      const res = await PATCH(makeReq({ subscriptionRights: valid }), { params: Promise.resolve({}) });
+      expect(res.status).toBe(403);
+    });
+
+    it("un PATCH sans subscriptionRights laisse la matrice inchangée", async () => {
+      const admin = await makeStaff("STAFF_ADMIN");
+      await prisma.platformSettings.update({
+        where: { id: "singleton" },
+        data: { subscriptionRights: valid },
+      });
+      const { PATCH } = await import("../route");
+      const res = await PATCH(makeReq({ smtpHost: "x" }), { params: Promise.resolve({}) });
+      expect(res.status).toBe(200);
+
+      const reloaded = await prisma.platformSettings.findUnique({ where: { id: "singleton" } });
+      expect(reloaded?.subscriptionRights).toEqual(valid);
+      const log = await prisma.activityLog.findFirst({
+        where: { type: "PLATFORM_SETTINGS_UPDATED", userId: admin.id },
+      });
+      const changed = (log?.details as { changedFields: string[] }).changedFields;
+      expect(changed).toContain("smtpHost");
+      expect(changed).not.toContain("subscriptionRights");
+    });
+
+    it("GET sans valeur enregistrée renvoie les défauts", async () => {
+      await makeStaff("STAFF_OBSERVER");
+      await prisma.platformSettings.update({
+        where: { id: "singleton" },
+        data: { subscriptionRights: Prisma.DbNull },
+      });
+      const { GET } = await import("../route");
+      const res = await GET(
+        new NextRequest("http://localhost/api/platform/settings"),
+        { params: Promise.resolve({}) },
+      );
+      expect(res.status).toBe(200);
+      expect((await res.json()).settings.subscriptionRights).toEqual(DEFAULT_RIGHTS);
+    });
   });
 });

@@ -164,7 +164,7 @@ export function RejectionReasonsManager({
         </form>
       )}
 
-      <TableFrame>
+      <TableFrame className="border-0">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-200 text-left text-slate-500">

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { __mailTesting } from "@/lib/mail";
 import { createWorkerLoop } from "@/lib/jobs/worker-loop";
 import type { BatchSummary } from "@/lib/jobs/process-batch";
-import { PURGE_INTERVAL_MS } from "@/lib/jobs/constants";
+import { PURGE_INTERVAL_MS, SUBSCRIPTION_SWEEP_INTERVAL_MS } from "@/lib/jobs/constants";
 import { createEmailJob, fakeTransport } from "./helpers";
 
 const config = { pollIntervalMs: 10, emailConcurrency: 5 };
@@ -30,6 +30,31 @@ describe("createWorkerLoop", () => {
     await loop.runOnce(new Date(t0.getTime() + 10 * MIN));
     await loop.runOnce(new Date(t0.getTime() + PURGE_INTERVAL_MS + MIN));
     expect(purgeOldJobs).toHaveBeenCalledTimes(2);
+  });
+
+  it("runSubscriptionSweep : au premier passage, pas à +10 min, de nouveau à +1 h", async () => {
+    const sweep = { settled: 0, reminded: 0, reconciled: 0, expired: 0 };
+    const runSubscriptionSweep = vi.fn(async () => sweep);
+    const loop = createWorkerLoop({ workerId: "w", config, deps: { runSubscriptionSweep } });
+    await loop.runOnce(t0);
+    await loop.runOnce(new Date(t0.getTime() + 10 * MIN));
+    expect(runSubscriptionSweep).toHaveBeenCalledTimes(1);
+    await loop.runOnce(new Date(t0.getTime() + SUBSCRIPTION_SWEEP_INTERVAL_MS));
+    expect(runSubscriptionSweep).toHaveBeenCalledTimes(2);
+  });
+
+  it("logge la passe d'abonnements seulement si un compteur est non nul", async () => {
+    const log = vi.fn();
+    const runSubscriptionSweep = vi
+      .fn()
+      .mockResolvedValueOnce({ settled: 1, reminded: 2, reconciled: 0, expired: 0 })
+      .mockResolvedValueOnce({ settled: 0, reminded: 0, reconciled: 0, expired: 0 });
+    const loop = createWorkerLoop({ workerId: "w", config, log, deps: { runSubscriptionSweep } });
+    await loop.runOnce(t0);
+    expect(log).toHaveBeenCalledWith("[worker] subscription sweep", { settled: 1, reminded: 2, reconciled: 0, expired: 0 });
+    log.mockClear();
+    await loop.runOnce(new Date(t0.getTime() + SUBSCRIPTION_SWEEP_INTERVAL_MS));
+    expect(log).not.toHaveBeenCalledWith("[worker] subscription sweep", expect.anything());
   });
 
   it("la passe de rétention purge aussi les notifications lues de plus de 90 jours", async () => {

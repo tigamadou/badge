@@ -4,7 +4,9 @@ import { loginAsStaff } from "../helpers/auth";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity } from "../helpers/audit";
 
-// Page Parametres plateforme — /platform/settings et /platform/settings/badge
+// Page Parametres plateforme — /platform/settings, en onglets pilotes par ?tab=
+// (email, security, subscriptions, reasons, badge). /platform/settings/badge redirige
+// vers l'onglet badge, masque sous STAFF_ADMIN.
 // Rôle : STAFF_ADMIN. Les SECRETS (smtpPassword, recaptchaSecretKey) sont
 // reserves au SUPER_ADMIN (403 FORBIDDEN_SECRET_CHANGE sinon) et ne sont JAMAIS
 // renvoyes par l'API. La page badge exige STAFF_ADMIN (redirection sinon).
@@ -84,7 +86,7 @@ test.describe("Platform — Parametres", () => {
   test("STAFF_ADMIN configure le reCAPTCHA (activation + site key)", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-ui-recaptcha" });
 
-    await page.goto("/platform/settings");
+    await page.goto("/platform/settings?tab=security");
     const siteKey = `site-key-${Date.now()}`;
     await page.getByLabel("Site key").fill(siteKey);
     await page.getByRole("switch", { name: /activé par défaut/i }).click();
@@ -102,13 +104,37 @@ test.describe("Platform — Parametres", () => {
 
     await page.goto("/platform/settings/badge");
     await expect(page).not.toHaveURL(/\/platform\/settings\/badge$/);
+    // L'onglet Badge est masque : la page retombe sur le premier onglet.
+    await expect(page.getByRole("link", { name: "Badge", exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("Utilisateur SMTP")).toBeVisible();
+  });
+
+  test("Les onglets changent de section et l'URL suit", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-tabs" });
+
+    await page.goto("/platform/settings");
+    const tabs = page.getByRole("navigation", { name: "Sections des paramètres" });
+    await expect(tabs.getByRole("link", { name: "E-mails" })).toHaveAttribute("aria-current", "page");
+    await expect(page.getByLabel("Site key")).toHaveCount(0);
+
+    await tabs.getByRole("link", { name: "Sécurité" }).click();
+    await expect(page).toHaveURL(/\?tab=security$/);
+    await expect(page.getByLabel("Site key")).toBeVisible();
+    await expect(page.getByLabel("Utilisateur SMTP")).toHaveCount(0);
+
+    await tabs.getByRole("link", { name: "Abonnements" }).click();
+    await expect(page.getByText("Droits selon l'abonnement")).toBeVisible();
+
+    await tabs.getByRole("link", { name: "Badge" }).click();
+    await expect(page).toHaveURL(/\?tab=badge$/);
+    await expect(page.getByText("Template de badge par défaut")).toBeVisible();
   });
 
   test("STAFF_ADMIN ajoute puis archive un motif de rejet", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-reasons" });
     const label = `E2E motif ${Date.now()}`;
 
-    await page.goto("/platform/settings");
+    await page.goto("/platform/settings?tab=reasons");
     await page.getByLabel("Libellé").fill(label);
     await page.getByRole("button", { name: /^ajouter$/i }).click();
 
@@ -137,7 +163,7 @@ test.describe("Platform — Parametres", () => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-reasons-edit" });
     const label = `E2E motif edit ${Date.now()}`;
 
-    await page.goto("/platform/settings");
+    await page.goto("/platform/settings?tab=reasons");
     await page.getByLabel("Libellé").fill(label);
     await page.getByRole("button", { name: /^ajouter$/i }).click();
     await expect(page.getByRole("cell", { name: label })).toBeVisible();
@@ -160,8 +186,8 @@ test.describe("Platform — Parametres", () => {
 
   test("STAFF_SUPPORT ne voit pas le formulaire de motifs", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "pset-reasons-obs" });
-    await page.goto("/platform/settings");
-    await expect(page.getByText(/motifs de rejet/i)).toBeVisible();
+    await page.goto("/platform/settings?tab=reasons");
+    await expect(page.getByText(/catalogue partagé par la validation/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /^ajouter$/i })).toHaveCount(0);
   });
 });

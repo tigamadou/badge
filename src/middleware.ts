@@ -47,8 +47,9 @@ export async function middleware(req: NextRequest) {
   }
 
   // Propage le pathname en header de requete : les Server Components n'ont pas
-  // d'API native pour le lire, et le layout org en a besoin pour laisser passer
-  // l'onglet /subscription quand l'abonnement est inactif.
+  // d'API native pour le lire. Le blocage de l'espace org est decide cote client
+  // (OrgAccessGate, via usePathname) car le layout n'est pas re-rendu en navigation douce ;
+  // ce header reste disponible aux Server Components qui en ont besoin.
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   return NextResponse.next({ request: { headers: requestHeaders } });

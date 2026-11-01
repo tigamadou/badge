@@ -23,10 +23,12 @@ export function SubscriptionForm({
   orgId,
   plans,
   current,
+  scheduledPlanName = null,
 }: {
   orgId: string;
   plans: PlanOption[];
   current: SubscriptionState;
+  scheduledPlanName?: string | null;
 }) {
   const router = useRouter();
   const [planId, setPlanId] = useState(current?.planId ?? plans[0]?.id ?? "");
@@ -85,7 +87,15 @@ export function SubscriptionForm({
       ["Plan", plan?.name ?? "—"],
       ["Statut", current.status],
       ["Période", plan ? periodLabel(plan.period) : "—"],
-      ["Fin", current.endDate ? new Date(current.endDate).toLocaleDateString("fr-FR") : "—"],
+      ["Fin", current.endDate ? new Date(current.endDate).toLocaleDateString("fr-FR") : "Sans échéance"],
+      ...(scheduledPlanName
+        ? [
+            [
+              "Changement programmé",
+              `${scheduledPlanName}${current.endDate ? ` le ${new Date(current.endDate).toLocaleDateString("fr-FR")}` : ""}`,
+            ] as [string, string],
+          ]
+        : []),
       ["Override max events", current.overrideMaxEvents || "—"],
       ["Override max participants/event", current.overrideMaxParticipantsPerEvent || "—"],
     ];

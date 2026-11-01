@@ -3,6 +3,19 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
+
+// Les gardes d'abonnement sont couverts ailleurs : ici l'organisation est considérée active.
+vi.mock("@/lib/subscription-access", async () => {
+  const { DEFAULT_RIGHTS } = await import("@/lib/subscription-rights");
+  return {
+    loadOrgAccess: vi.fn(async () => ({
+      active: true,
+      maxEvents: null,
+      maxParticipantsPerEvent: null,
+      rights: DEFAULT_RIGHTS,
+    })),
+  };
+});
 import { getServerSession } from "next-auth";
 
 vi.mock("@/lib/mail", async () => {

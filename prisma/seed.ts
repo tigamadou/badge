@@ -257,9 +257,11 @@ async function main() {
   });
   await prisma.plan.upsert({
     where: { name: "Standard" },
-    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000 },
+    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000, price: 15000 },
     update: {},
   });
+  // Prix de demo pour un Standard existant sans prix (ne touche pas un prix ajuste par le staff).
+  await prisma.plan.updateMany({ where: { name: "Standard", price: null }, data: { price: 15000 } });
   console.log(`Plans par defaut (${DEFAULT_PLAN_NAME}, Standard) prets.`);
 
   // 1b. Catalogue de motifs de rejet (v4 plan 08). Idempotent via findFirst sur le libelle.

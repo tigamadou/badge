@@ -57,6 +57,7 @@ model User {
 
   orgMemberships     OrgMembership[]
   eventMemberships   EventMembership[]
+  payments           Payment[]
   activityLogs       ActivityLog[]
   registrations      Registration[]
   profileSubmissions ProfileSubmission[]
@@ -113,6 +114,7 @@ model Organization {
   events            Event[]
   categoryTemplates CategoryTemplate[]
   subscription      Subscription?
+  payments          Payment[]
 }
 
 model OrgMembership {
@@ -459,6 +461,9 @@ model PlatformSettings {
   // vide signifie « aucune racine definie » : resolveTemplate retombe alors sur la
   // famille `default`, dont le seed garantit l'existence.
   badgeTemplateId    String  @default("")
+  // v4 : droits selon l'etat de l'abonnement (actif / inactif), `{ [droit]: { active, inactive } }`.
+  // Null = valeurs par defaut ; lecture tolerante via parseRights (src/lib/subscription-rights.ts).
+  subscriptionRights Json?
 }
 
 // Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs
@@ -583,6 +588,11 @@ enum ActivityType {
   // v4 spec 23 : queue d'emails
   JOB_RETRIED
   JOB_CANCELLED
+
+  // Paiement d'abonnement (FedaPay)
+  PAYMENT_INITIATED
+  PAYMENT_APPROVED
+  PAYMENT_FAILED
 }
 
 // =====================================================
@@ -598,8 +608,12 @@ model Plan {
   // elle pilote le calcul de startDate/endDate (MONTHLY=30j, ANNUAL=365j).
   period                  SubscriptionPeriod @default(MONTHLY)
   archived                Boolean            @default(false)
+  // Prix en XOF (entier) ; null = plan non payable en ligne (ex. free).
+  price                   Int?
   createdAt               DateTime           @default(now())
   subscriptions           Subscription[]
+  scheduledSubscriptions  Subscription[]     @relation("ScheduledPlan")
+  payments                Payment[]
 }
 
 enum SubscriptionStatus {
@@ -625,10 +639,66 @@ model Subscription {
   // Overrides par org (null = herite du plan)
   overrideMaxEvents               Int?
   overrideMaxParticipantsPerEvent Int?
+  // Plan programme pour prendre le relais a l'echeance (changement SCHEDULED).
+  scheduledPlanId String?
+  scheduledPlan   Plan?              @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
+  reminders       SubscriptionReminder[]
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
 
   @@index([planId])
+  @@index([scheduledPlanId])
+}
+
+// Rappel d'echeance deja envoye (idempotence : un rappel par echeance et par delai).
+model SubscriptionReminder {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  endDate        DateTime
+  daysBefore     Int
+  sentAt         DateTime     @default(now())
+
+  @@unique([subscriptionId, endDate, daysBefore])
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELED
+  EXPIRED
+}
+
+enum SubscriptionChangeMode {
+  IMMEDIATE
+  EXTENSION
+  SCHEDULED
+}
+
+// Paiement FedaPay d'un abonnement. Seule la transaction relue via l'API fait foi.
+model Payment {
+  id                   String                  @id @default(cuid())
+  orgId                String
+  org                  Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId               String
+  plan                 Plan                    @relation(fields: [planId], references: [id])
+  userId               String? // payeur
+  user                 User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  amount               Int
+  currency             String                  @default("XOF")
+  status               PaymentStatus           @default(PENDING)
+  fedapayTransactionId Int?                    @unique
+  fedapayReference     String?
+  mode                 SubscriptionChangeMode?
+  approvedAt           DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  @@index([orgId, createdAt])
+  @@index([status, createdAt])
+  @@index([planId])
+  @@index([userId])
 }
 
 enum JobType {
@@ -689,6 +759,7 @@ enum NotificationType {
   SUBSCRIPTION_CHANGED
   QUOTA_EXCEEDED
   EMAIL_FAILED
+  SUBSCRIPTION_EXPIRING
 }
 
 enum NotificationScope {

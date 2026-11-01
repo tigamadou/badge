@@ -264,4 +264,51 @@ describe("withEventAuth", () => {
     const json = await res.json();
     expect(json.code).toBe("REGISTRATION_CLOSED");
   });
+
+  describe("garde d'abonnement (écritures)", () => {
+    const DAY = 86_400_000;
+
+    async function memberSetup(eventDate: Date) {
+      const { org, event } = await setup();
+      await prisma.event.update({ where: { id: event.id }, data: { date: eventDate } });
+      const u = await prisma.user.create({ data: { email: "m@x", password: "x", name: "M" } });
+      await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN" } });
+      mockSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+      return { org, event };
+    }
+
+    async function call(method: string, orgId: string, eventId: string) {
+      const handler = withEventAuth({ minRole: "OPERATOR" }, async () => new Response("ok"));
+      const req = new NextRequest(`http://localhost/api/org/${orgId}/events/${eventId}`, { method });
+      return handler(req, { params: Promise.resolve({ orgId, eventId }) });
+    }
+
+    // Aucun abonnement créé : l'organisation est inactive.
+    it("POST + abonnement inactif + évènement en cours : handler appelé", async () => {
+      const { org, event } = await memberSetup(new Date(Date.now() + DAY));
+      expect((await call("POST", org.id, event.id)).status).toBe(200);
+    });
+
+    it("POST + abonnement inactif + évènement terminé : 403 SUBSCRIPTION_INACTIVE", async () => {
+      const { org, event } = await memberSetup(new Date(Date.now() - 10 * DAY));
+      const res = await call("POST", org.id, event.id);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "SUBSCRIPTION_INACTIVE", code: "SUBSCRIPTION_INACTIVE" });
+    });
+
+    it("GET + abonnement inactif + évènement terminé : handler appelé", async () => {
+      const { org, event } = await memberSetup(new Date(Date.now() - 10 * DAY));
+      expect((await call("GET", org.id, event.id)).status).toBe(200);
+    });
+
+    it("staff + abonnement inactif + évènement terminé : handler appelé", async () => {
+      const { org, event } = await setup();
+      await prisma.event.update({ where: { id: event.id }, data: { date: new Date(Date.now() - 10 * DAY) } });
+      const s = await prisma.user.create({
+        data: { email: "s2@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_SUPPORT" },
+      });
+      mockSession({ id: s.id, email: s.email, name: s.name, isStaff: true });
+      expect((await call("DELETE", org.id, event.id)).status).toBe(200);
+    });
+  });
 });

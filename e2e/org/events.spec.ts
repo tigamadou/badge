@@ -191,20 +191,63 @@ test.describe("Org — Evenements", () => {
     expect(await getDb().event.count({ where: { orgId } })).toBe(1);
   });
 
-  test("Abonnement inactif : l'espace org est bloque (pas de wizard)", async ({ page }) => {
-    const { orgId, owner } = await createTestOrgWithOwner({
-      scope: "ev-inactive",
-      activeSubscription: false,
+  // Abonnement echu : statut EXPIRED, date de fin passee, plan inchange.
+  async function mkExpiredOrg(scope: string) {
+    const ctx = await createTestOrgWithOwner({ scope });
+    await getDb().subscription.update({
+      where: { orgId: ctx.orgId },
+      data: { status: "EXPIRED", endDate: new Date(Date.now() - 24 * 3600 * 1000) },
     });
-    await loginAndEnter(page, owner, { kind: "org", id: orgId });
+    return ctx;
+  }
 
-    // Sans abonnement actif, l'espace est bloque : le wizard n'est pas atteignable.
+  test("Abonnement expire : la liste reste visible, creation desactivee", async ({ page }) => {
+    const { orgId, owner } = await mkExpiredOrg("ev-inactive-list");
+    await mkEvent(orgId, "Event Expire E2E");
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByText("Event Expire E2E")).toBeVisible();
+    await expect(page.getByRole("link", { name: /créer un événement/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /créer un événement/i })).toBeDisabled();
+    await expect(page.getByText(/abonnement inactif/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /voir mon abonnement/i })).toBeVisible();
+  });
+
+  test("Abonnement expire : /events/new redirige vers la liste", async ({ page }) => {
+    const { orgId, owner } = await mkExpiredOrg("ev-inactive-new");
+    await loginAs(page, owner);
+
     await page.goto(`/org/${orgId}/events/new`);
-    await expect(page.getByText(/abonnement (inactif|n.est pas actif)/i)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/events$`));
     await expect(page.getByLabel("Titre")).toHaveCount(0);
     expect(await getDb().event.count({ where: { orgId } })).toBe(0);
   });
 
+  test("Abonnement expire : les autres pages affichent l'ecran bloquant", async ({ page }) => {
+    const { orgId, owner } = await mkExpiredOrg("ev-inactive-members");
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}/members`);
+    await expect(page.getByText(/abonnement inactif/i).first()).toBeVisible();
+  });
+
+  test("Abonnement expire : navigation douce entre Abonnement, Membres et Evenements", async ({ page }) => {
+    const { orgId, owner } = await mkExpiredOrg("ev-inactive-soft");
+    await loginAs(page, owner);
+
+    await page.goto(`/org/${orgId}/subscription`);
+    await expect(page.getByText(/abonnement inactif/i)).toHaveCount(0);
+
+    await page.getByRole("link", { name: "Membres" }).click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/members$`));
+    await expect(page.getByText(/abonnement inactif/i).first()).toBeVisible();
+
+    await page.getByRole("link", { name: "Événements" }).click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/events$`));
+    await expect(page.getByRole("heading", { name: /événements/i }).first()).toBeVisible();
+    await expect(page.getByText(/votre abonnement est inactif\. pour le renouveler/i)).toHaveCount(0);
+  });
   
   test("AUDITOR atteint le wizard mais la creation echoue", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud" });

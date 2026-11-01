@@ -4,6 +4,9 @@ export const RETRY_DELAYS_MS: readonly number[] = [60_000, 300_000, 1_800_000, 7
 export const STALE_LOCK_MS = 600_000;
 export const RETENTION_MS = 30 * 24 * 3_600_000;
 export const PURGE_INTERVAL_MS = 3_600_000;
+// Passe horaire des abonnements : échéances, rappels, paiements orphelins.
+export const SUBSCRIPTION_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+export const REMINDER_DAYS = [7, 1] as const;
 // Doit rester nettement sous STALE_LOCK_MS : sinon un envoi bloque serait recupere puis duplique.
 export const SEND_TIMEOUT_MS = 120_000;
 export const LAST_ERROR_MAX_LENGTH = 2000;

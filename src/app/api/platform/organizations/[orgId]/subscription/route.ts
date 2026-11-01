@@ -35,20 +35,22 @@ export const PUT = withStaffAuth<{ orgId: string }>(
     }
     const plan = await prisma.plan.findUnique({
       where: { id: data.planId },
-      select: { id: true, period: true },
+      select: { id: true, name: true, period: true },
     });
     if (!plan) {
       return NextResponse.json({ error: "PLAN_NOT_FOUND" }, { status: 404 });
     }
 
     const existing = await prisma.subscription.findUnique({ where: { orgId } });
-    // Les dates derivent de la periode du plan choisi.
+    // Les dates derivent de la periode du plan choisi (free : essai de 30 jours).
     const { startDate, endDate } = computeSubscriptionDates(plan.period);
     const values = {
       planId: data.planId,
       status: data.status,
       startDate,
       endDate,
+      // Une assignation staff annule tout changement de plan programmé
+      scheduledPlanId: null,
       overrideMaxEvents: data.overrideMaxEvents ?? null,
       overrideMaxParticipantsPerEvent: data.overrideMaxParticipantsPerEvent ?? null,
     };

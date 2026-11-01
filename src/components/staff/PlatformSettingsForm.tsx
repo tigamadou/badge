@@ -22,9 +22,12 @@ export type PublicSettings = {
 };
 
 export function PlatformSettingsForm({
+  section,
   initial,
   canEditSecrets = false,
 }: {
+  /** Onglet de /platform/settings : seul le bloc de la section est rendu et enregistre. */
+  section: "smtp" | "recaptcha";
   initial: PublicSettings;
   /**
    * ADR 2026-06-01 : smtpPassword et recaptchaSecretKey sont editables uniquement
@@ -49,19 +52,24 @@ export function PlatformSettingsForm({
 
   const save = useAsyncAction(
     async () => {
-    const payload: Record<string, unknown> = {
-      smtpHost: form.smtpHost,
-      smtpPort: Number(form.smtpPort) || 587,
-      smtpFrom: form.smtpFrom,
-      smtpUser: form.smtpUser,
-      smtpSecure: form.smtpSecure,
-      recaptchaEnabled: form.recaptchaEnabled,
-      recaptchaSiteKey: form.recaptchaSiteKey,
-    };
+    // Le PATCH est partiel : chaque onglet n'envoie que ses propres champs.
+    const payload: Record<string, unknown> =
+      section === "smtp"
+        ? {
+            smtpHost: form.smtpHost,
+            smtpPort: Number(form.smtpPort) || 587,
+            smtpFrom: form.smtpFrom,
+            smtpUser: form.smtpUser,
+            smtpSecure: form.smtpSecure,
+          }
+        : {
+            recaptchaEnabled: form.recaptchaEnabled,
+            recaptchaSiteKey: form.recaptchaSiteKey,
+          };
     // Champs secrets : on n'envoie que si l'admin a saisi une nouvelle valeur,
     // pour conserver l'ancienne valeur cote serveur.
-    if (form.smtpPassword) payload.smtpPassword = form.smtpPassword;
-    if (form.recaptchaSecretKey) payload.recaptchaSecretKey = form.recaptchaSecretKey;
+    if (section === "smtp" && form.smtpPassword) payload.smtpPassword = form.smtpPassword;
+    if (section === "recaptcha" && form.recaptchaSecretKey) payload.recaptchaSecretKey = form.recaptchaSecretKey;
 
     const res = await fetch("/api/platform/settings", {
       method: "PATCH",
@@ -85,11 +93,12 @@ export function PlatformSettingsForm({
     <div className="max-w-2xl space-y-4">
       {!canEditSecrets && (
         <Alert tone="warn">
-          Les champs <strong>Mot de passe SMTP</strong> et <strong>Secret key reCAPTCHA</strong> sont réservés au rôle
-          SUPER_ADMIN. Vous pouvez modifier les autres paramètres normalement.
+          Le champ <strong>{section === "smtp" ? "Mot de passe SMTP" : "Secret key reCAPTCHA"}</strong> est réservé
+          au rôle SUPER_ADMIN. Vous pouvez modifier les autres paramètres normalement.
         </Alert>
       )}
 
+      {section === "smtp" && (
       <Card>
         <CardHead title="Serveur SMTP" subtitle="Configuration d'envoi des e-mails de la plateforme." />
         <CardBody className="space-y-4">
@@ -109,7 +118,9 @@ export function PlatformSettingsForm({
           <Switch checked={form.smtpSecure} onChange={(v) => setForm((f) => ({ ...f, smtpSecure: v }))} label="TLS (connexion sécurisée)" />
         </CardBody>
       </Card>
+      )}
 
+      {section === "recaptcha" && (
       <Card>
         <CardHead title="reCAPTCHA" subtitle="Protection anti-spam des formulaires publics." />
         <CardBody className="space-y-4">
@@ -128,6 +139,7 @@ export function PlatformSettingsForm({
           />
         </CardBody>
       </Card>
+      )}
 
       <Switch checked={showSecrets} onChange={setShowSecrets} label="Afficher les valeurs masquées pendant la saisie" />
 

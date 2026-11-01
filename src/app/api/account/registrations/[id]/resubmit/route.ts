@@ -7,6 +7,7 @@ import { requireAuth, AuthError } from "@/lib/auth-participant";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
 import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationResubmitted } from "@/lib/mail";
+import { assertCanRegister, SubscriptionError } from "@/lib/subscription";
 import { allocateRegistrationId } from "@/lib/registration-id";
 import { notifyRegistrationResubmitted } from "@/lib/notifications/triggers";
 import { rewriteNotificationLinks } from "@/lib/notifications/rewrite-links";
@@ -62,6 +63,19 @@ export async function POST(
         { code: "INVALID_STATE", error: "Seules les inscriptions rejetées peuvent être resoumises." },
         { status: 409 },
       );
+    }
+
+    // Même garde que l'inscription : l'inscription rejetée n'est pas comptée (REJECTED exclu),
+    // le plafond par évènement s'applique donc à la re-soumission.
+    try {
+      await assertCanRegister(registration.eventId);
+    } catch (e) {
+      if (e instanceof SubscriptionError) {
+        const error =
+          e.code === "PARTICIPANT_LIMIT" ? "Inscriptions complètes." : "Inscriptions fermées.";
+        return NextResponse.json({ code: e.code, error }, { status: e.httpStatus });
+      }
+      throw e;
     }
 
     let targetCategory: { id: string; name: string; number: number } | null = null;

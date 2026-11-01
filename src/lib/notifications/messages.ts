@@ -228,6 +228,23 @@ export function subscriptionChangedMessage(a: {
   };
 }
 
+export function subscriptionExpiringMessage(a: {
+  orgId: string;
+  orgName: string;
+  planName: string;
+  daysBefore: number;
+  endDate: Date;
+}): NotificationContent {
+  const delay = a.daysBefore === 1 ? "demain" : `dans ${a.daysBefore} jours`;
+  return {
+    title: `Votre abonnement ${a.planName} expire ${delay}`,
+    body: `L'abonnement ${a.planName} de ${a.orgName} arrive à échéance le ${a.endDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })}. À l'échéance, l'abonnement expire et il n'est plus possible de créer de nouvel évènement. Pour le renouveler, rendez-vous dans l'onglet Abonnement.`,
+    href: subscriptionHref(a.orgId, "org"),
+    primaryLabel: "Renouveler",
+    links: [],
+  };
+}
+
 export function quotaExceededMessage(a: {
   orgId: string;
   orgName: string;

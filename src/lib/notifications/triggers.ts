@@ -11,6 +11,7 @@ import {
   orgMembershipAddedMessage,
   quotaExceededMessage,
   subscriptionChangedMessage,
+  subscriptionExpiringMessage,
   profileApprovedMessage,
   profileRejectedMessage,
   profileSubmittedMessage,
@@ -323,7 +324,7 @@ export async function notifyOrgCreated(orgId: string, actorId: string): Promise<
 
 // OWNER de l'org d'abord (portée ORG), puis staff plateforme (portée PLATFORM) :
 // notifyAll dédoublonne un staff qui est aussi OWNER.
-export async function notifySubscriptionChanged(orgId: string, actorId: string): Promise<void> {
+export async function notifySubscriptionChanged(orgId: string, actorId: string | null): Promise<void> {
   await withNotificationGuard("subscription-changed", async () => {
     const org = await prisma.organization.findUnique({
       where: { id: orgId },
@@ -351,6 +352,32 @@ export async function notifySubscriptionChanged(orgId: string, actorId: string):
         recipients: { staffMinRole: "STAFF_ADMIN" },
         actorId,
         content: subscriptionChangedMessage({ ...args, audience: "platform" }),
+      },
+    ]);
+  });
+}
+
+export async function notifySubscriptionExpiring(orgId: string, daysBefore: number, endDate: Date): Promise<void> {
+  await withNotificationGuard("subscription-expiring", async () => {
+    const org = await prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { name: true, subscription: { select: { plan: { select: { name: true } } } } },
+    });
+    if (!org?.subscription) return;
+    await notifyAll([
+      {
+        type: "SUBSCRIPTION_EXPIRING",
+        scope: "ORG",
+        recipients: { orgRoles: { orgId, roles: ["OWNER"] } },
+        actorId: null,
+        orgId,
+        content: subscriptionExpiringMessage({
+          orgId,
+          orgName: org.name,
+          planName: org.subscription.plan.name,
+          daysBefore,
+          endDate,
+        }),
       },
     ]);
   });

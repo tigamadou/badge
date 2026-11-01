@@ -13,6 +13,7 @@ export default async function PlatformPlansPage() {
     period: p.period,
     maxEvents: p.maxEvents,
     maxParticipantsPerEvent: p.maxParticipantsPerEvent,
+    price: p.price,
     archived: p.archived,
     subscriptionsCount: p._count.subscriptions,
   }));
