@@ -114,7 +114,8 @@ export function describeThreadEvent(
     case "ORG_CREDIT_SPENT":
       return `Crédit d'impression décompté : ${F(details.amount)}`;
     case "ONSITE_MARGIN_CHANGED":
-      return `Marge : ${num(details.from)} % → ${num(details.to)} % (${txt(details.reason)})`;
+      // Sans motif (côté organisateur, il reste interne au staff) : pas de parenthèses.
+      return `Marge : ${num(details.from)} % → ${num(details.to)} %${details.reason ? ` (${txt(details.reason)})` : ""}`;
     case "ONSITE_CREDIT_EARNED":
       return `${num(details.quantity)} badges non utilisés : ${F(details.amount)} versés au crédit d'impression`;
     case "ONSITE_SUPPLEMENT_CREATED":
@@ -263,7 +264,8 @@ const ORGANIZER_DETAILS: Record<ThreadEventType, string[]> = {
   REGISTRATIONS_SKIPPED: ["registrationIds"],
   ORG_CREDIT_APPLIED: ["amount"],
   ORG_CREDIT_SPENT: ["amount"],
-  ONSITE_MARGIN_CHANGED: ["from", "to", "reason"],
+  // Le motif d'un changement de marge reste interne au staff.
+  ONSITE_MARGIN_CHANGED: ["from", "to"],
   ONSITE_CREDIT_EARNED: ["quantity", "amount"],
   ONSITE_SUPPLEMENT_CREATED: ["reference", "extraBadges"],
 };

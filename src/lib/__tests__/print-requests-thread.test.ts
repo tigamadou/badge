@@ -402,6 +402,17 @@ describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
     expect(staff[0].body).toBe("stocké");
   });
 
+  it("ONSITE_MARGIN_CHANGED : l'organisateur voit la marge sans le motif, le staff le voit", async () => {
+    const { request } = await seed();
+    const { organizer, staff } = await entries(request, [
+      { eventType: "ONSITE_MARGIN_CHANGED", details: { from: 10, to: 15, reason: "Badges perdus" } },
+    ]);
+    expect(organizer[0].details).toEqual({ from: 10, to: 15 });
+    expect(organizer[0].body).toBe("Marge : 10 % → 15 %");
+    expect(JSON.stringify(organizer)).not.toContain("Badges perdus");
+    expect(staff[0].details).toEqual({ from: 10, to: 15, reason: "Badges perdus" });
+  });
+
   it("LINES_CHANGED garde de quoi afficher le texte, sans identifiant de ligne", async () => {
     const { request } = await seed();
     const { organizer } = await entries(request, [
