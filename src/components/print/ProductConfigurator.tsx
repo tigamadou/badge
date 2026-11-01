@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/FormControls";
@@ -15,10 +15,16 @@ import {
 } from "@/lib/print-catalog/pricing-core";
 import { ProductGallery } from "./ProductGallery";
 
+// quantity peut valoir NaN tant que le champ est vide : valider avant tout envoi.
 export type ProductConfiguration = { quantity: number; choices: OptionChoice[] };
 
 const supplement = (delta: number) => (delta > 0 ? ` (+${formatFcfa(delta)})` : "");
 const isEmpty = (c: OptionChoice) => !c.valueIds?.length && !c.text && !c.fileKey && !c.split?.length;
+
+// Cliquer la pastille deja choisie d'une option facultative la deselectionne.
+export function nextColorChoice(option: PricingOption, selected: string[], valueId: string): OptionChoice | null {
+  return !option.required && selected.includes(valueId) ? null : { optionId: option.id, valueIds: [valueId] };
+}
 
 function ErrorText({ children }: { children: string }) {
   return <p className="mt-1 text-sm text-rose-600">{children}</p>;
@@ -58,6 +64,7 @@ function FileField({
     );
   }
   async function pick(files: FileList) {
+    if (busy) return;
     setBusy(true);
     setFailed(false);
     try {
@@ -99,6 +106,7 @@ function OptionField({
 }) {
   const label = option.required ? `${option.name} *` : option.name;
   const selected = choice?.valueIds ?? [];
+  const labelId = useId();
   let field;
   switch (option.type) {
     case "CHOICE":
@@ -136,16 +144,16 @@ function OptionField({
     case "COLOR":
       field = (
         <div className="mb-4">
-          <div className="mb-1 text-sm font-medium text-slate-700">{label}</div>
-          <div className="flex flex-wrap gap-2">
+          <div id={labelId} className="mb-1 text-sm font-medium text-slate-700">{label}</div>
+          <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
             {option.values.map((val) => (
               <button
                 key={val.id}
                 type="button"
-                aria-label={val.label}
+                aria-label={`${val.label}${supplement(val.priceDelta)}`}
                 aria-pressed={selected.includes(val.id)}
                 title={`${val.label}${supplement(val.priceDelta)}`}
-                onClick={() => onChange({ optionId: option.id, valueIds: [val.id] })}
+                onClick={() => onChange(nextColorChoice(option, selected, val.id))}
                 style={{ backgroundColor: val.colorHex ?? undefined }}
                 className={`h-8 w-8 rounded-full border border-slate-300 ${
                   selected.includes(val.id) ? "ring-2 ring-green-600 ring-offset-2" : ""
@@ -237,7 +245,9 @@ export function ProductConfigurator({
   quantityLocked?: boolean;
 }) {
   const result = validateChoices(product, value.choices, value.quantity);
-  const unit = result.ok ? unitPriceFor(product, value.quantity, value.choices) : 0;
+  const partial = !result.ok && result.code === "REQUIRED_OPTION_MISSING";
+  const showPrice = result.ok || partial;
+  const unit = showPrice ? unitPriceFor(product, value.quantity, value.choices) : 0;
   const errorFor = (optionId: string) =>
     !result.ok && result.optionId === optionId ? choiceErrorMessage(result.code) : undefined;
   const quantityError = !result.ok && !result.optionId ? choiceErrorMessage(result.code) : undefined;
@@ -253,8 +263,8 @@ export function ProductConfigurator({
       <ProductGallery images={product.images} />
       <div>
         <h2 className="text-lg font-semibold text-slate-900">{product.name}</h2>
-        {paragraphs.map((p) => (
-          <p key={p} className="mt-2 whitespace-pre-line text-sm text-slate-600">{p}</p>
+        {paragraphs.map((p, i) => (
+          <p key={i} className="mt-2 whitespace-pre-line text-sm text-slate-600">{p}</p>
         ))}
         <div className="mt-4">
           {product.options.map((option) => (
@@ -279,11 +289,14 @@ export function ProductConfigurator({
           />
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-          {result.ok ? (
+          {showPrice ? (
             <>
               <div className="flex justify-between"><span>Prix unitaire estimé</span><strong>{formatFcfa(unit)}</strong></div>
               <div className="mt-1 flex justify-between"><span>Total estimé</span><strong>{formatFcfa(unit * value.quantity)}</strong></div>
             </>
+          ) : null}
+          {partial ? (
+            <p className="mt-2 text-xs text-amber-700">{"Estimation partielle : options obligatoires manquantes."}</p>
           ) : null}
           <p className="mt-2 text-xs text-slate-400">{"Estimation : le prix définitif est fixé dans le devis."}</p>
         </div>

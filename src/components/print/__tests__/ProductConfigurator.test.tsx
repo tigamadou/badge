@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ProductConfigurator } from "../ProductConfigurator";
+import { ProductConfigurator, nextColorChoice } from "../ProductConfigurator";
 import { ProductGallery } from "../ProductGallery";
 import { CORDON, v } from "@/lib/__tests__/helpers/print-products";
 import { choiceErrorMessage, formatFcfa, type CatalogProduct, type PricingOption } from "@/lib/print-catalog/pricing-core";
@@ -34,7 +34,9 @@ describe("ProductConfigurator", () => {
     expect(html).toContain("10/30");
     expect(html).toContain("Premier paragraphe.");
     expect(html).toContain("Second paragraphe.");
-    expect(html).toContain('aria-label="Or"');
+    expect(html).toContain('aria-label="Or (+100 FCFA)"');
+    expect(html).toContain('role="group"');
+    expect(html).toContain("aria-labelledby=");
     expect(html).toContain('aria-pressed="true"');
     expect(html).toContain('min="50"');
     expect(html).not.toContain("readOnly");
@@ -59,6 +61,16 @@ describe("ProductConfigurator", () => {
       <ProductConfigurator product={CORDON} value={{ quantity: 100, choices: [] }} onChange={noop} />,
     );
     expect(html).toContain(esc(choiceErrorMessage("REQUIRED_OPTION_MISSING")));
+    expect(html).toContain(formatFcfa(450));
+    expect(html).toContain(formatFcfa(45000));
+    expect(html).toContain("Estimation partielle : options obligatoires manquantes.");
+  });
+
+  it("COLOR : la pastille choisie se desélectionne seulement si l'option est facultative", () => {
+    const color = opt({ id: "c", type: "COLOR", values: [v("a", "Rouge", "#f00", 0)] });
+    expect(nextColorChoice(color, ["a"], "a")).toBeNull();
+    expect(nextColorChoice(color, [], "a")).toEqual({ optionId: "c", valueIds: ["a"] });
+    expect(nextColorChoice({ ...color, required: true }, ["a"], "a")).toEqual({ optionId: "c", valueIds: ["a"] });
   });
 
   it("erreur sans option (produit indisponible) : sous la quantite", () => {
