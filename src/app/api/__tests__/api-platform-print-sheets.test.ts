@@ -90,6 +90,35 @@ describe("POST /api/platform/print/sheets", () => {
     expect(logs).toHaveLength(1);
   });
 
+  it("transmet printRequestId et lie la generation a la demande", async () => {
+    await asStaff();
+    const { event, layout, r } = await fixture();
+    const owner = await prisma.user.create({ data: { email: `${uniq("ow")}@x`, password: "x", name: "O" } });
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-A"), eventId: event.id, orgId: event.orgId, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    await prisma.printRequestItem.create({ data: { requestId: request.id, registrationId: r.id, position: 0 } });
+    const { POST } = await import("@/app/api/platform/print/sheets/route");
+    const res = await POST(
+      req("/api/platform/print/sheets", "POST", {
+        eventId: event.id, layoutId: layout.id, printRequestId: request.id,
+        selection: { mode: "IDS", registrationIds: [r.id] }, duplex: false,
+      }),
+      noParams,
+    );
+    expect(res.status).toBe(201);
+    const { generation } = await res.json();
+    expect(generation.printRequestId).toBe(request.id);
+    expect(generation.duplex).toBe(true);
+    const bad = await POST(
+      req("/api/platform/print/sheets", "POST", {
+        eventId: event.id, layoutId: layout.id, printRequestId: "nope", selection: { mode: "ALL" },
+      }),
+      noParams,
+    );
+    expect(bad.status).toBe(404);
+  });
+
   it("duplex defaults to false", async () => {
     await asStaff();
     const { event, layout } = await fixture();

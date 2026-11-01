@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { toLayoutSpec } from "@/lib/print-sheets/layout-input";
 import { pxToMm } from "@/lib/print-sheets/units";
+import { makeRequest } from "./helpers/print-requests";
 
 const template = vi.hoisted(() => ({ pages: 2, w: "324px", h: "204px" }));
 vi.mock("@/lib/badge-templates/render-badge", () => ({
@@ -306,6 +307,146 @@ describe("createGeneration", () => {
       mod.createGeneration({ eventId: event.id, layoutId: layout.id, selection: { mode: "ALL" }, duplex: false, userId: user.id }),
     ).rejects.toThrow("boom");
     vi.doUnmock("@/lib/print-sheets/compute-layout");
+    vi.resetModules();
+  });
+});
+
+describe("createGeneration depuis une demande", () => {
+  async function linked(
+    statusOver: "PAID" | "QUOTED" | "IN_PRODUCTION" | "READY" | "COMPLETED" = "PAID",
+    typeOver: "ADVANCE" | "ONSITE" = "ADVANCE",
+  ) {
+    template.pages = 2;
+    template.w = "324px";
+    template.h = "204px";
+    const s = await setup();
+    const regs = [
+      await reg(s.event.id, s.catB.id, "Zed", "Z"),
+      await reg(s.event.id, s.catA.id, "Abe", "A"),
+      await reg(s.event.id, s.catA.id, "Bob", "B"),
+    ];
+    const request = await makeRequest(
+      { org: s.org, event: s.event, owner: s.user },
+      { status: statusOver, type: typeOver },
+    );
+    // Position choisie a l'envers de l'ordre d'impression habituel.
+    await prisma.printRequestItem.createMany({
+      data: [regs[2], regs[0], regs[1]].map((r, position) => ({
+        requestId: request.id,
+        registrationId: r.id,
+        position,
+      })),
+    });
+    return { ...s, regs, request, ordered: [regs[2].id, regs[0].id, regs[1].id] };
+  }
+
+  const base = (s: Awaited<ReturnType<typeof linked>>, over: Record<string, unknown> = {}) => ({
+    eventId: s.event.id,
+    layoutId: s.layout.id,
+    selection: { mode: "IDS" as const, registrationIds: s.regs.map((r) => r.id) },
+    duplex: false,
+    userId: s.user.id,
+    printRequestId: s.request.id,
+    ...over,
+  });
+
+  it("garde l'ordre des positions, impose le recto-verso et ecrit l'entree du fil", async () => {
+    const s = await linked();
+    const g = await createGeneration(base(s));
+    expect(g.registrationIds).toEqual(s.ordered);
+    expect(g.printRequestId).toBe(s.request.id);
+    expect(g.duplex).toBe(true);
+    expect(g.badgeCount).toBe(3);
+    const entry = await prisma.printRequestMessage.findFirstOrThrow({
+      where: { requestId: s.request.id, eventType: "SHEETS_GENERATED" },
+    });
+    expect(entry).toMatchObject({
+      side: "STAFF",
+      authorId: s.user.id,
+      body: "Planches lancées pour 3 badges",
+    });
+    expect(entry.details).toEqual({ generationId: g.id, badgeCount: 3 });
+  });
+
+  it("accepte aussi IN_PRODUCTION et READY", async () => {
+    for (const st of ["IN_PRODUCTION", "READY"] as const) {
+      const s = await linked(st);
+      expect((await createGeneration(base(s))).printRequestId).toBe(s.request.id);
+    }
+  });
+
+  it("refuse un devis non paye et une demande terminee (PRINT_REQUEST_NOT_PAID 409)", async () => {
+    for (const st of ["QUOTED", "COMPLETED"] as const) {
+      const s = await linked(st);
+      const e = await code(createGeneration(base(s)));
+      expect(e.code).toBe("PRINT_REQUEST_NOT_PAID");
+      expect(e.httpStatus).toBe(409);
+    }
+  });
+
+  it("refuse une demande inconnue (404) et une demande sur place (400)", async () => {
+    const s = await linked();
+    const missing = await code(createGeneration(base(s, { printRequestId: "nope" })));
+    expect(missing.code).toBe("PRINT_REQUEST_NOT_FOUND");
+    expect(missing.httpStatus).toBe(404);
+    const onsite = await linked("PAID", "ONSITE");
+    const e = await code(createGeneration(base(onsite)));
+    expect(e.code).toBe("PRINT_REQUEST_NOT_ADVANCE");
+    expect(e.httpStatus).toBe(400);
+  });
+
+  it("refuse un autre evenement, une selection non IDS ou une inscription hors demande", async () => {
+    const s = await linked();
+    const other = await prisma.event.create({
+      data: { orgId: s.org.id, title: "E2", slug: uniq("e2"), location: "L", date: new Date() },
+    });
+    expect((await code(createGeneration(base(s, { eventId: other.id })))).code).toBe("INVALID_SELECTION");
+    expect((await code(createGeneration(base(s, { selection: { mode: "ALL" } })))).code).toBe(
+      "INVALID_SELECTION",
+    );
+    const stranger = await reg(s.event.id, s.catA.id, "Out", "O");
+    const e = await code(
+      createGeneration(base(s, { selection: { mode: "IDS", registrationIds: [s.regs[0].id, stranger.id] } })),
+    );
+    expect(e.code).toBe("INVALID_SELECTION");
+  });
+
+  it("refuse une selection vide", async () => {
+    const s = await linked();
+    const e = await code(createGeneration(base(s, { selection: { mode: "IDS", registrationIds: [] } })));
+    expect(e.code).toBe("EMPTY_SELECTION");
+  });
+
+  it("garde une inscription passee REJECTED apres le paiement (ecartee au rendu)", async () => {
+    const s = await linked();
+    await prisma.registration.update({ where: { id: s.regs[0].id }, data: { status: "REJECTED" } });
+    const g = await createGeneration(base(s));
+    expect(g.registrationIds).toEqual(s.ordered);
+    expect(g.badgeCount).toBe(3);
+  });
+
+  it("ne cree ni planche ni entree quand le gabarit est trop petit", async () => {
+    const s = await linked();
+    template.w = "2000px";
+    template.h = "2000px";
+    const e = await code(createGeneration(base(s)));
+    expect(e.code).toBe("BADGE_TOO_LARGE");
+    expect(await prisma.printSheetGeneration.count({ where: { printRequestId: s.request.id } })).toBe(0);
+  });
+
+  it("annule la planche quand l'ecriture du fil echoue (transaction)", async () => {
+    const s = await linked();
+    vi.resetModules();
+    vi.doMock("@/lib/print-requests/thread", async (orig) => ({
+      ...(await orig<typeof import("@/lib/print-requests/thread")>()),
+      appendThreadEvent: async () => {
+        throw new Error("fil indisponible");
+      },
+    }));
+    const mod = await import("@/lib/print-sheets/generations");
+    await expect(mod.createGeneration(base(s))).rejects.toThrow("fil indisponible");
+    expect(await prisma.printSheetGeneration.count({ where: { printRequestId: s.request.id } })).toBe(0);
+    vi.doUnmock("@/lib/print-requests/thread");
     vi.resetModules();
   });
 });

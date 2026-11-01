@@ -7,13 +7,41 @@ import { prisma } from "@/lib/prisma";
 import { GenerationsScreen } from "@/components/staff/print/GenerationsScreen";
 import type { GenerationRow } from "@/components/staff/print/GenerationList";
 
-export default async function PrintSheetsPage() {
+export default async function PrintSheetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ printRequestId?: string }>;
+}) {
+  const { printRequestId } = await searchParams;
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
   // L'observateur n'a pas accès à la génération (STAFF_SUPPORT minimum).
   if (!ctx || !ctx.isStaff || !ctx.staffRole || !staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT")) {
     redirect("/platform");
   }
+
+  // Demande à l'avance dont on génère les planches : préremplit le formulaire.
+  const linked = printRequestId
+    ? await prisma.printRequest.findFirst({
+        where: { id: printRequestId, type: "ADVANCE" },
+        select: {
+          id: true,
+          reference: true,
+          orgId: true,
+          eventId: true,
+          items: { orderBy: { position: "asc" }, select: { registrationId: true } },
+        },
+      })
+    : null;
+  const printRequest = linked
+    ? {
+        id: linked.id,
+        reference: linked.reference,
+        orgId: linked.orgId,
+        eventId: linked.eventId,
+        registrationIds: linked.items.map((i) => i.registrationId),
+      }
+    : undefined;
 
   const [layouts, generations] = await Promise.all([
     prisma.printSheetLayout.findMany({
@@ -69,7 +97,7 @@ export default async function PrintSheetsPage() {
           Génération des badges en planches PDF prêtes à imprimer, et historique
         </p>
       </div>
-      <GenerationsScreen layouts={layouts} initial={initial} />
+      <GenerationsScreen layouts={layouts} initial={initial} printRequest={printRequest} />
     </div>
   );
 }

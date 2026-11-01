@@ -1,6 +1,7 @@
 import type { PrintSheetGeneration } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { chunk } from "@/lib/badge-batch";
+import { appendThreadEvent } from "@/lib/print-requests/thread";
 import { logActivity } from "@/lib/activity-log";
 import { resolveEventTemplate } from "@/lib/badge-templates/render-badge";
 import { BadgeTooLargeError, computeSheetLayout, type LayoutSpec } from "./compute-layout";
@@ -13,7 +14,10 @@ export type GenerationErrorCode =
   | "EMPTY_SELECTION"
   | "INVALID_SELECTION"
   | "DUPLEX_UNAVAILABLE"
-  | "BADGE_TOO_LARGE";
+  | "BADGE_TOO_LARGE"
+  | "PRINT_REQUEST_NOT_FOUND"
+  | "PRINT_REQUEST_NOT_ADVANCE"
+  | "PRINT_REQUEST_NOT_PAID";
 
 const HTTP_STATUS: Record<GenerationErrorCode, number> = {
   LAYOUT_NOT_FOUND: 404,
@@ -22,6 +26,9 @@ const HTTP_STATUS: Record<GenerationErrorCode, number> = {
   INVALID_SELECTION: 400,
   DUPLEX_UNAVAILABLE: 400,
   BADGE_TOO_LARGE: 400,
+  PRINT_REQUEST_NOT_FOUND: 404,
+  PRINT_REQUEST_NOT_ADVANCE: 400,
+  PRINT_REQUEST_NOT_PAID: 409,
 };
 
 export class GenerationError extends Error {
@@ -108,12 +115,55 @@ async function selectRegistrations(eventId: string, selection: GenerationSelecti
   });
 }
 
+// Statuts d'une demande qui autorisent la generation (pas de reimpression apres COMPLETED).
+const GENERATION_REQUEST_STATUSES = ["PAID", "IN_PRODUCTION", "READY"];
+
+// Selection d'une generation liee a une demande : contrôles de la demande, puis lecture des
+// inscriptions SANS filtre de statut (une inscription passee non APPROVED apres le paiement
+// est ecartee au rendu par le worker) ; ordre = position des items.
+async function selectRequestRegistrations(
+  printRequestId: string,
+  eventId: string,
+  selection: GenerationSelection,
+) {
+  const request = await prisma.printRequest.findUnique({
+    where: { id: printRequestId },
+    select: { id: true, type: true, status: true, eventId: true },
+  });
+  if (!request) throw new GenerationError("PRINT_REQUEST_NOT_FOUND", "Demande d'impression introuvable");
+  if (request.type !== "ADVANCE") {
+    throw new GenerationError("PRINT_REQUEST_NOT_ADVANCE", "Seule une demande à l'avance donne lieu à des planches");
+  }
+  if (request.eventId !== eventId) {
+    throw new GenerationError("INVALID_SELECTION", "La demande concerne un autre évènement");
+  }
+  if (!GENERATION_REQUEST_STATUSES.includes(request.status)) {
+    throw new GenerationError("PRINT_REQUEST_NOT_PAID", "La demande doit être payée pour générer les planches");
+  }
+  if (selection.mode !== "IDS") {
+    throw new GenerationError("INVALID_SELECTION", "Une génération liée à une demande exige une sélection d'inscriptions");
+  }
+  const wanted = new Set(selection.registrationIds);
+  if (wanted.size === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription sélectionnée");
+  const items = await prisma.printRequestItem.findMany({
+    where: { requestId: request.id },
+    orderBy: { position: "asc" },
+    select: { registrationId: true },
+  });
+  const inRequest = new Set(items.map((i) => i.registrationId));
+  if ([...wanted].some((id) => !inRequest.has(id))) {
+    throw new GenerationError("INVALID_SELECTION", "La sélection contient une inscription absente de la demande");
+  }
+  return items.filter((i) => wanted.has(i.registrationId)).map((i) => ({ id: i.registrationId }));
+}
+
 export async function createGeneration(input: {
   eventId: string;
   layoutId: string;
   selection: GenerationSelection;
   duplex: boolean;
   userId: string;
+  printRequestId?: string;
 }): Promise<PrintSheetGeneration> {
   const layout = await prisma.printSheetLayout.findUnique({ where: { id: input.layoutId } });
   // Un gabarit archivé n'est plus proposable : traité comme introuvable.
@@ -124,12 +174,16 @@ export async function createGeneration(input: {
   });
   if (!event) throw new GenerationError("EVENT_NOT_FOUND", "Évènement introuvable");
 
-  const rows = orderRegistrations(await selectRegistrations(event.id, input.selection));
+  const rows = input.printRequestId
+    ? await selectRequestRegistrations(input.printRequestId, event.id, input.selection)
+    : orderRegistrations(await selectRegistrations(event.id, input.selection));
   if (rows.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription approuvée à imprimer");
 
   const template = await resolveEventTemplate(event);
   const badgePages = template.meta.pages === 2 ? 2 : 1;
-  if (input.duplex && badgePages === 1) {
+  // Demande liee : le recto-verso est impose par le template, la valeur recue est ignoree.
+  const duplex = input.printRequestId ? badgePages === 2 : input.duplex;
+  if (duplex && badgePages === 1) {
     throw new GenerationError("DUPLEX_UNAVAILABLE", "Le template du badge n'a qu'une page");
   }
   const badgeMm = {
@@ -147,18 +201,30 @@ export async function createGeneration(input: {
   }
   const snapshot: GenerationSnapshot = { spec, badgeMm, badgePages };
 
-  const generation = await prisma.printSheetGeneration.create({
-    data: {
-      output: "SHEETS",
-      eventId: event.id,
-      layoutId: layout.id,
-      layoutSnapshot: snapshot,
-      duplex: input.duplex,
-      registrationIds: rows.map((r) => r.id),
-      badgeCount: rows.length,
-      createdById: input.userId,
-    },
-  });
+  const data = {
+    output: "SHEETS" as const,
+    eventId: event.id,
+    layoutId: layout.id,
+    layoutSnapshot: snapshot,
+    duplex,
+    registrationIds: rows.map((r) => r.id),
+    badgeCount: rows.length,
+    createdById: input.userId,
+  };
+  const { printRequestId } = input;
+  const generation = printRequestId
+    ? await prisma.$transaction(async (tx) => {
+        const created = await tx.printSheetGeneration.create({ data: { ...data, printRequestId } });
+        await appendThreadEvent(
+          tx,
+          printRequestId,
+          "SHEETS_GENERATED",
+          { generationId: created.id, badgeCount: rows.length },
+          { userId: input.userId, side: "STAFF" },
+        );
+        return created;
+      })
+    : await prisma.printSheetGeneration.create({ data });
   await logActivity({
     type: "PRINT_SHEETS_GENERATED",
     userId: input.userId,

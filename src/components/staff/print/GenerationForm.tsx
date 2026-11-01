@@ -33,21 +33,33 @@ const MAX_RENDERED = 200;
 
 const collator = new Intl.Collator("fr", { sensitivity: "base" });
 
+// Demande d'impression dont on génère les planches : organisation, évènement et badges
+// (dans l'ordre des positions) sont imposés.
+export type LinkedPrintRequest = {
+  id: string;
+  reference: string;
+  orgId: string;
+  eventId: string;
+  registrationIds: string[];
+};
+
 export function GenerationForm({
   layouts,
   onCreated,
+  printRequest,
 }: {
   layouts: LayoutOption[];
   onCreated: () => void;
+  printRequest?: LinkedPrintRequest;
 }) {
   const [orgs, setOrgs] = useState<OrgOption[] | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [orgId, setOrgId] = useState("");
-  const [eventId, setEventId] = useState("");
+  const [orgId, setOrgId] = useState(printRequest?.orgId ?? "");
+  const [eventId, setEventId] = useState(printRequest?.eventId ?? "");
   const [detail, setDetail] = useState<{ eventId: string; data: EventDetail } | null>(null);
-  const [mode, setMode] = useState<Mode>("ALL");
+  const [mode, setMode] = useState<Mode>(printRequest ? "IDS" : "ALL");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [registrationIds, setRegistrationIds] = useState<string[]>([]);
+  const [registrationIds, setRegistrationIds] = useState<string[]>(printRequest?.registrationIds ?? []);
   const [search, setSearch] = useState("");
   const [layoutId, setLayoutId] = useState(layouts[0]?.id ?? "");
   const [duplex, setDuplex] = useState(true);
@@ -139,7 +151,13 @@ export function GenerationForm({
       const res = await fetch("/api/platform/print/sheets", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ eventId, layoutId, selection, duplex: twoPages && duplex }),
+        body: JSON.stringify({
+          eventId,
+          layoutId,
+          selection,
+          duplex: twoPages && duplex,
+          ...(printRequest ? { printRequestId: printRequest.id } : {}),
+        }),
       });
       if (!res.ok) throw res;
     },
@@ -157,7 +175,14 @@ export function GenerationForm({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
       <Card>
-        <CardHead title="Nouvelle génération" subtitle="Choisissez les badges à imprimer et le gabarit de planche." />
+        <CardHead
+          title={printRequest ? `Planches de la demande ${printRequest.reference}` : "Nouvelle génération"}
+          subtitle={
+            printRequest
+              ? "Organisation, évènement et badges sont ceux de la demande ; choisissez le gabarit de planche."
+              : "Choisissez les badges à imprimer et le gabarit de planche."
+          }
+        />
         <CardBody>
           {loadError && (
             <p role="alert" className="mb-4 text-sm text-rose-600">
@@ -168,13 +193,14 @@ export function GenerationForm({
             <Select
               label="Organisation"
               value={orgId}
+              disabled={!!printRequest}
               onChange={(e) => chooseOrg(e.target.value)}
               options={(orgs ?? []).map((o) => ({ value: o.id, label: o.name }))}
             />
             <Select
               label="Évènement"
               value={eventId}
-              disabled={!org}
+              disabled={!org || !!printRequest}
               onChange={(e) => chooseEvent(e.target.value)}
               options={(org?.events ?? []).map((e) => ({
                 value: e.id,
@@ -183,7 +209,13 @@ export function GenerationForm({
             />
           </div>
 
-          {event && (
+          {event && printRequest && (
+            <p className="mb-4 text-sm text-slate-700">
+              {printRequest.registrationIds.length} badge{printRequest.registrationIds.length > 1 ? "s" : ""} de la
+              demande, dans l&apos;ordre de la demande.
+            </p>
+          )}
+          {event && !printRequest && (
             <div className="mb-4 space-y-3">
               <p className="text-sm font-medium text-slate-700">Inscriptions à imprimer</p>
               <Segmented
@@ -274,7 +306,10 @@ export function GenerationForm({
             </p>
           )}
 
-          {twoPages && (
+          {twoPages && printRequest && (
+            <p className="mb-4 text-sm text-slate-500">Recto-verso imposé (le template a deux pages).</p>
+          )}
+          {twoPages && !printRequest && (
             <div className="mb-4">
               <Checkbox checked={duplex} onChange={setDuplex} label="Recto-verso (le template a deux pages)" />
             </div>

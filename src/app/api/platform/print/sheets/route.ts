@@ -15,6 +15,7 @@ const bodySchema = z.object({
     z.object({ mode: z.literal("IDS"), registrationIds: z.array(id).max(5000) }),
   ]),
   duplex: z.boolean().default(false),
+  printRequestId: id.optional(),
 });
 
 export const GET = withStaffAuth(

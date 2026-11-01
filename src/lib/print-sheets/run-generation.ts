@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
 import { BATCH_RENDER_CONCURRENCY, badgeFileName, mapWithConcurrency } from "@/lib/badge-batch";
 import { loadBadgeRegistration, renderBadgePdf } from "@/lib/badge-templates/render-badge";
+import { appendThreadEvent } from "@/lib/print-requests/thread";
 import { PRINT_SHEETS_MAX_ATTEMPTS, PRINT_SHEETS_STALE_MS } from "@/lib/jobs/constants";
 import { computeSheetLayout } from "./compute-layout";
 import { BadgeSizeMismatchError, composeSheets } from "./compose";
@@ -176,7 +177,15 @@ export async function runGeneration(
       error: null,
       completedAt: deps.now(),
     });
-    return done ? "DONE" : "LOCK_LOST";
+    if (!done) return "LOCK_LOST";
+    // Planches d'une demande : les badges ecartes sont signales dans son fil.
+    if (generation.printRequestId && skippedIds.length > 0) {
+      const requestId = generation.printRequestId;
+      await prisma.$transaction((tx) =>
+        appendThreadEvent(tx, requestId, "REGISTRATIONS_SKIPPED", { registrationIds: skippedIds }),
+      );
+    }
+    return "DONE";
   } catch (err) {
     if (err instanceof LockLostError || lockLostByBeat) return "LOCK_LOST";
     return (await write({ status: "FAILED", error: message(err), completedAt: deps.now() }))

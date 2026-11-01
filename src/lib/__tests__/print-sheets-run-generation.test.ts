@@ -132,6 +132,41 @@ describe("runGeneration", () => {
     expect(row.skippedIds).toEqual(["r2"]);
   });
 
+  it("ajoute l'entree REGISTRATIONS_SKIPPED au fil d'une demande liee", async () => {
+    const owner = await prisma.user.create({
+      data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
+    });
+    const org = await prisma.organization.create({ data: { name: "O2", slug: uniq("o2") } });
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-S"), eventId, orgId: org.id, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    const g = await create();
+    await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { printRequestId: request.id } });
+    const { d } = await deps({ missing: ["r2"] });
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    const entry = await prisma.printRequestMessage.findFirstOrThrow({
+      where: { requestId: request.id, eventType: "REGISTRATIONS_SKIPPED" },
+    });
+    expect(entry).toMatchObject({ side: "SYSTEM", authorId: null });
+    expect(entry.details).toEqual({ registrationIds: ["r2"] });
+    expect(entry.body).toContain("1 badge(s) écarté(s)");
+  });
+
+  it("n'ajoute pas d'entree quand rien n'est ecarte, meme pour une demande liee", async () => {
+    const owner = await prisma.user.create({
+      data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
+    });
+    const org = await prisma.organization.create({ data: { name: "O3", slug: uniq("o3") } });
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-S"), eventId, orgId: org.id, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    const g = await create();
+    await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { printRequestId: request.id } });
+    const { d } = await deps();
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
+  });
+
   it("echoue quand tous les badges sont null", async () => {
     const g = await create();
     const { d, upload } = await deps({ missing: ["r1", "r2", "r3"] });
