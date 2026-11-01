@@ -185,6 +185,46 @@ describe("closeOnsiteRequest : demande complémentaire", () => {
   });
 });
 
+describe("règles de la ligne BADGE et plafond", () => {
+  const secondBadge = (requestId: string) =>
+    prisma.printQuoteLine.create({
+      data: {
+        requestId, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Autre badge", quantity: 50,
+        unitPrice: 1000, lineTotal: 50000, position: 1, addedBy: "STAFF",
+      },
+    });
+
+  it("seule la première ligne BADGE compte pour le crédit", async () => {
+    const r = await onsite({ printed: 170 });
+    await secondBadge(r.id);
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "CREDIT", amount: 45000, unusedBadges: 30 });
+  });
+
+  it("seule la première ligne BADGE compte pour le surplus", async () => {
+    const r = await onsite({ printed: 212 });
+    await secondBadge(r.id);
+    expect(await closeOnsiteRequest(r.id)).toMatchObject({ outcome: "SUPPLEMENT", extraBadges: 12, total: 18000 });
+  });
+
+  it("badge à 0 FCFA avec surplus : NONE, aucune demande à 0 FCFA", async () => {
+    const r = await onsite({ printed: 212, unitPrice: 0 });
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "NONE" });
+    expect(await children(r.id)).toHaveLength(0);
+  });
+
+  it("surplus dont le total dépasse MAX_AMOUNT : quantité plafonnée, total <= MAX_AMOUNT", async () => {
+    const r = await onsite({ ordered: 1, unitPrice: 1_000_000_000, marginPercent: 300, printed: 4 });
+    const closure = await closeOnsiteRequest(r.id);
+    expect(closure).toMatchObject({ outcome: "SUPPLEMENT", extraBadges: 2, total: 2_000_000_000 });
+    expect((await children(r.id))[0]).toMatchObject({ estimatedQuantity: 2, total: 2_000_000_000 });
+  });
+
+  it("prix unitaire supérieur à MAX_AMOUNT : plafonné à 0 badge, NONE", async () => {
+    const r = await onsite({ ordered: 1, unitPrice: 2_100_000_000, marginPercent: 300, printed: 2 });
+    expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "NONE" });
+  });
+});
+
 describe("closeOnsiteRequest : rien à faire et refus", () => {
   it("200 imprimés sur 200 : NONE, rien n'est créé, y compris à la relecture", async () => {
     const r = await onsite({ printed: 200 });

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { MAX_AMOUNT } from "./content";
 import { OnsiteError } from "./onsite";
 import { computeOnsiteCounter, findOrderedBadgeLine } from "./onsite-counter";
 import { lockRequestWithEvent, nextReference, retryOnReferenceCollision } from "./service";
@@ -55,8 +56,10 @@ export async function closeOnsiteInTx(
     orderBy: { position: "asc" },
     include: { product: { select: { kind: true } } },
   });
+  // Règle : seule la PREMIÈRE ligne BADGE active compte, pour le crédit comme pour le surplus
+  // (les autres lignes BADGE et les accessoires sont ignorés). Un badge gratuit ne donne rien.
   const badge = findOrderedBadgeLine(lines);
-  if (!badge) return { outcome: "NONE" };
+  if (!badge || badge.unitPrice <= 0) return { outcome: "NONE" };
 
   // Premières impressions seulement : une réimpression ne consomme pas la commande.
   const printed = await tx.printRequestPrint.count({ where: { requestId, reprint: false } });
@@ -70,7 +73,6 @@ export async function closeOnsiteInTx(
     const unusedBadges = badge.quantity - printed;
     // Prix unitaire de la ligne BADGE (suppléments compris) ; les accessoires n'entrent pas en compte.
     const amount = unusedBadges * badge.unitPrice;
-    if (amount <= 0) return { outcome: "NONE" };
     await tx.orgPrintCredit.create({
       data: {
         orgId: request.orgId,
@@ -86,7 +88,9 @@ export async function closeOnsiteInTx(
     return { outcome: "CREDIT", amount, unusedBadges };
   }
 
-  const extraBadges = counter.beyondOrder;
+  // Le total tient dans une colonne Int : au-delà de MAX_AMOUNT on plafonne la quantité plutôt que de
+  // bloquer la clôture (cas théorique : il faudrait une marge démesurée sur un très gros devis).
+  const extraBadges = Math.min(counter.beyondOrder, Math.floor(MAX_AMOUNT / badge.unitPrice));
   if (extraBadges === 0) return { outcome: "NONE" };
 
   // Créée directement en QUOTED (ce n'est pas une transition) : le devis est prêt, l'organisateur

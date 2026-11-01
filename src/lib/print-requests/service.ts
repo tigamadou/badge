@@ -73,8 +73,14 @@ export async function nextReference(tx: Prisma.TransactionClient, now: Date): Pr
   return `${prefix}${String(max + 1).padStart(4, "0")}`;
 }
 
+// Collision sur la colonne `reference` seulement : MySQL donne le nom de l'index
+// (« PrintRequest_reference_key »), d'autres pilotes un tableau de colonnes. Toute autre
+// contrainte unique (ex. [requestId, kind] du crédit) est une vraie erreur : elle remonte aussitôt.
 function isReferenceCollision(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+  if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== "P2002") return false;
+  const target = err.meta?.target;
+  const names = Array.isArray(target) ? target.map(String) : [String(target)];
+  return names.some((n) => n.includes("reference"));
 }
 
 // Rejoue `run` (qui ouvre sa propre transaction : l'instantané de lecture de MySQL ne verrait pas
