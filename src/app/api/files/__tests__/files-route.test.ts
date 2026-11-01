@@ -74,3 +74,37 @@ describe("GET /api/files/badge-exports/{eventId}/...", () => {
     expect((await read(`badge-exports/${event.id}/abc.zip`)).status).toBe(200);
   });
 });
+
+async function loginStaff(role: "STAFF_OBSERVER" | "STAFF_SUPPORT") {
+  const u = await prisma.user.create({
+    data: { email: `${uniq("st")}@x`, password: "x", name: "S", isStaff: true, staffRole: role },
+  });
+  vi.mocked(getServerSession).mockResolvedValue({
+    user: { id: u.id, email: u.email, name: u.name, isStaff: true },
+  } as never);
+}
+
+describe("GET /api/files/print-requests/... et platform/print-products/...", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("print-requests/ : 403 sans session et pour un non-staff", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+    expect((await read("print-requests/staff/x.pdf")).status).toBe(403);
+    await login({ staff: false });
+    expect((await read("print-requests/staff/x.pdf")).status).toBe(403);
+  });
+
+  it("print-requests/ : 200 private no-store pour tout staff, STAFF_OBSERVER compris", async () => {
+    await loginStaff("STAFF_OBSERVER");
+    const res = await read("print-requests/staff/x.pdf");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("platform/print-products/ reste public", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+    const res = await read("platform/print-products/x.jpg");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+  });
+});
