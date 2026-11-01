@@ -91,8 +91,13 @@ export function describeThreadEvent(
         ? `${base} — quantités fixées par l'équipe à vérifier : ${lagging.join(", ")}`
         : base;
     }
-    case "REQUEST_UPDATED":
-      return `Informations modifiées : ${strings(details.fields).join(", ")}`;
+    case "REQUEST_UPDATED": {
+      const lagging = strings(details.lagging);
+      const base = `Informations modifiées : ${strings(details.fields).join(", ")}`;
+      return lagging.length > 0
+        ? `${base} — quantités fixées par l'équipe à vérifier : ${lagging.join(", ")}`
+        : base;
+    }
     case "QUOTE_SENT":
       return `Devis v${num(details.version)} envoyé : ${F(details.total)}`;
     case "QUOTE_ACCEPTED":

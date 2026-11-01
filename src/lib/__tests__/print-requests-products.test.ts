@@ -300,6 +300,30 @@ describe("setOrganizerProducts — comparaison avec les lignes existantes", () =
     expect((await thread(r.id)).map((e) => e.eventType)).toEqual(["QUOTE_REVISION", "LINES_CHANGED"]);
   });
 
+  it("QUOTED : produits identiques -> reste QUOTED, aucune entrée ; une position seule est enregistrée", async () => {
+    const r = await requestWithBadges("QUOTED");
+    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "SUBMITTED" } });
+    await set(r.id, [badge(), lanyard()]);
+    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "QUOTED" } });
+    const before = await thread(r.id);
+    const res = await set(r.id, [badge(), lanyard()]);
+    expect(res.revised).toBe(false);
+    expect(res.lines).toHaveLength(2);
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
+    expect(await thread(r.id)).toHaveLength(before.length);
+    // Ordre inversé côté demande : le support reste en tête, rien ne change.
+    const swapped = await set(r.id, [lanyard(), badge()]);
+    expect(swapped.revised).toBe(false);
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
+  });
+
+  it("DRAFT : retirer un produit reste un changement effectif", async () => {
+    const r = await requestWithBadges("DRAFT");
+    await set(r.id, [badge(), lanyard()]);
+    const res = await set(r.id, [badge()]);
+    expect(res.lines).toHaveLength(1);
+  });
+
   it("choices rouvertes : une valeur archivée depuis est retirée quand seule la quantité change", async () => {
     const r = await requestWithBadges("SUBMITTED");
     const option = await prisma.printProductOption.create({

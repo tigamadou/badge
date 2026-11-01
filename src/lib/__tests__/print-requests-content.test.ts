@@ -49,11 +49,17 @@ describe("schémas", () => {
     expect(onsiteSlotSchema.safeParse({ date: "2026-11-02", from: "09:00", to: "18:00" }).success).toBe(true);
     expect(onsiteSlotSchema.safeParse({ date: "2026-11-02", from: "18:00", to: "09:00" }).success).toBe(false);
     expect(onsiteSlotSchema.safeParse({ date: "2/11", from: "09:00", to: "18:00" }).success).toBe(false);
+    expect(onsiteSlotSchema.safeParse({ date: "2026-02-30", from: "09:00", to: "18:00" }).success).toBe(false);
+    expect(onsiteSlotSchema.safeParse({ date: "2026-11-02", from: "09:00", to: "24:00" }).success).toBe(false);
+    expect(onsiteSlotSchema.safeParse({ date: "2026-11-02", from: "09:60", to: "23:59" }).success).toBe(false);
   });
   it("patch : bornes et valeurs nulles", () => {
     expect(detailsPatchSchema.safeParse({ wantedBy: null, notes: null }).success).toBe(true);
     expect(detailsPatchSchema.safeParse({ wantedBy: "2026-12-01" }).success).toBe(true);
     expect(detailsPatchSchema.safeParse({ wantedBy: "pas une date" }).success).toBe(false);
+    expect(detailsPatchSchema.safeParse({ wantedBy: "2026-02-30" }).success).toBe(false);
+    expect(detailsPatchSchema.safeParse({ wantedBy: "2026-12-01T10:00:00+01:00" }).success).toBe(true);
+    expect(detailsPatchSchema.safeParse({ wantedBy: "2026-12-01T10:00:00" }).success).toBe(false);
     expect(detailsPatchSchema.safeParse({ estimatedQuantity: 0 }).success).toBe(false);
     expect(detailsPatchSchema.safeParse({ estimatedQuantity: 100_001 }).success).toBe(false);
     expect(detailsPatchSchema.safeParse({ onsiteSchedule: [] }).success).toBe(false);
@@ -202,6 +208,17 @@ describe("setBadges", () => {
     expect(await thread(r.id)).toHaveLength(0);
   });
 
+  it("sélection identique sur QUOTED : reste QUOTED, aucune entrée ; l'ordre seul ne compte pas", async () => {
+    const r = await makeRequest(fx, { status: "SUBMITTED" });
+    await setBadges(base({ requestId: r.id }));
+    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "QUOTED" } });
+    const before = (await thread(r.id)).length;
+    const res = await setBadges(base({ requestId: r.id, selection: { mode: "IDS", registrationIds: [...fx.approved].reverse().map((a) => a.id) } }));
+    expect(res).toEqual({ count: 3, revised: false });
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
+    expect(await thread(r.id)).toHaveLength(before);
+  });
+
   it("deux demandes simultanées ne se réservent pas la même inscription", async () => {
     const a = await makeRequest(fx, { status: "SUBMITTED" });
     const b = await makeRequest(fx, { status: "SUBMITTED" });
@@ -298,6 +315,49 @@ describe("updateDetails", () => {
     const n = await makeRequest(fx, { type: "ONSITE", status: "DRAFT" });
     await upd(n.id, { estimatedQuantity: 40 });
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: n.id } })).estimatedQuantity).toBe(40);
+  });
+
+  it("QUOTED : patch vide ou valeurs identiques -> reste QUOTED, sans entrée", async () => {
+    const r = await makeRequest(fx, {
+      status: "QUOTED", delivery: "PICKUP", wantedBy: new Date("2026-12-01"), notes: "n",
+      type: "ONSITE", estimatedQuantity: 10, onsiteSchedule: [{ date: "2026-11-02", from: "08:00", to: "12:00" }],
+    });
+    for (const patch of [
+      {}, { notes: "n" }, { estimatedQuantity: 10 },
+      { onsiteSchedule: [{ date: "2026-11-02", from: "08:00", to: "12:00" }] },
+    ]) {
+      const res = await upd(r.id, patch);
+      expect(res.revised).toBe(false);
+      expect(res.request.status).toBe("QUOTED");
+    }
+    const a = await makeRequest(fx, { status: "QUOTED", delivery: "PICKUP", wantedBy: new Date("2026-12-01") });
+    for (const patch of [{ delivery: "PICKUP" as const }, { wantedBy: "2026-12-01" }]) {
+      expect((await upd(a.id, patch)).request.status).toBe("QUOTED");
+    }
+    expect(await thread(r.id)).toHaveLength(0);
+    expect(await thread(a.id)).toHaveLength(0);
+    // Un changement réel (horaire, date, null) révise.
+    const t = await upd(r.id, { onsiteSchedule: [{ date: "2026-11-02", from: "08:00", to: "13:00" }] });
+    expect(t.revised).toBe(true);
+    const longer = await makeRequest(fx, { type: "ONSITE", status: "SUBMITTED", onsiteSchedule: [{ date: "2026-11-02", from: "08:00", to: "12:00" }] });
+    await upd(longer.id, { onsiteSchedule: [{ date: "2026-11-02", from: "08:00", to: "12:00" }, { date: "2026-11-03", from: "08:00", to: "12:00" }] });
+    expect(await thread(longer.id)).toHaveLength(1);
+    const w = await makeRequest(fx, { status: "SUBMITTED", wantedBy: new Date("2026-12-01") });
+    await upd(w.id, { wantedBy: null });
+    await upd(w.id, { wantedBy: "2026-12-02T10:00:00+01:00" });
+    expect(await thread(w.id)).toHaveLength(2);
+    const nul = await makeRequest(fx, { status: "SUBMITTED" });
+    expect((await upd(nul.id, { wantedBy: null })).request.status).toBe("SUBMITTED");
+    expect(await thread(nul.id)).toHaveLength(0);
+  });
+
+  it("quantité estimée : lagging dans REQUEST_UPDATED quand une ligne fixée diverge", async () => {
+    const r = await makeRequest(fx, { type: "ONSITE", status: "SUBMITTED", estimatedQuantity: 5 });
+    await line(r.id, { label: "Fixe", quantity: 9, unitPrice: 10, quantityOverridden: true });
+    await upd(r.id, { estimatedQuantity: 7 });
+    const [entry] = await thread(r.id);
+    expect(entry.details).toMatchObject({ fields: ["quantité estimée"], lagging: ["Fixe"] });
+    expect(entry.body).toContain("à vérifier : Fixe");
   });
 
   it("patch vide ou brouillon : aucune entrée", async () => {

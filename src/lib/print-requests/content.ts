@@ -22,7 +22,14 @@ import {
   requestBadgeCount,
 } from "./service";
 import type { LineChange } from "./thread";
-import type { BadgeSelection, DetailsPatch, OrganizerProductInput } from "./inputs";
+import type { BadgeSelection, DetailsPatch, OnsiteSlot, OrganizerProductInput } from "./inputs";
+
+// Signal interne : annule la transaction d'une modification sans effet (rien n'est écrit).
+class NoEffect extends Error {
+  constructor(readonly positions: { id: string; position: number }[]) {
+    super("NO_EFFECT");
+  }
+}
 
 // Taille des paquets pour les lectures et écritures par identifiants (borne les paramètres SQL).
 const ID_CHUNK = 5000;
@@ -193,9 +200,10 @@ export async function setBadges(input: {
   const request = await loadRequest(input.requestId, { eventId: input.eventId });
   if (request.type !== "ADVANCE") throw new PrintRequestError("TYPE_MISMATCH", 400);
 
+  // Ordre des verrous : la ligne Event d'abord, puis la ligne PrintRequest (appendThreadEvent,
+  // setOrganizerProducts). Ne jamais verrouiller l'Event après avoir verrouillé une PrintRequest.
   return prisma.$transaction(async (tx) => {
     if (request.status !== "DRAFT") await lockEventRow(tx, input.eventId);
-    const { from } = await applyEdit(tx, request, "ORGANIZER", input.userId);
 
     const rows = orderRegistrations(await resolveSelection(tx, request, input.eventId, input.selection));
     const previousItems = await tx.printRequestItem.findMany({
@@ -206,7 +214,10 @@ export async function setBadges(input: {
     const nextIds = new Set(rows.map((row) => row.id));
     const added = rows.filter((row) => !previousIds.has(row.id)).length;
     const removed = [...previousIds].filter((id) => !nextIds.has(id)).length;
+    // Sélection identique (l'ordre seul ne compte pas) : ni révision du devis ni entrée du fil.
+    if (added === 0 && removed === 0) return { count: rows.length, revised: false };
 
+    const { from } = await applyEdit(tx, request, "ORGANIZER", input.userId);
     await tx.printRequestItem.deleteMany({ where: { requestId: request.id } });
     for (const part of chunk(rows.map((row, position) => ({ requestId: request.id, registrationId: row.id, position })), ID_CHUNK)) {
       await tx.printRequestItem.createMany({ data: part });
@@ -248,6 +259,22 @@ const ONSITE_ONLY: (keyof DetailsPatch)[] = [
   "estimatedQuantity", "onsiteSchedule", "onsiteLocation", "onsiteContactName", "onsiteContactPhone",
 ];
 
+const sameSchedule = (a: unknown, b: OnsiteSlot[]): boolean =>
+  Array.isArray(a) &&
+  a.length === b.length &&
+  b.every((slot, i) => a[i]?.date === slot.date && a[i]?.from === slot.from && a[i]?.to === slot.to);
+
+// Le champ du patch diffère-t-il de la valeur enregistrée ?
+function isChanged(request: PrintRequest, patch: DetailsPatch, key: keyof DetailsPatch): boolean {
+  const value = patch[key];
+  if (value === undefined) return false;
+  if (key === "wantedBy") {
+    return (value === null ? null : new Date(value as string).getTime()) !== (request.wantedBy?.getTime() ?? null);
+  }
+  if (key === "onsiteSchedule") return !sameSchedule(request.onsiteSchedule, value as OnsiteSlot[]);
+  return request[key] !== value;
+}
+
 export async function updateDetails(input: {
   requestId: string;
   eventId: string;
@@ -260,28 +287,36 @@ export async function updateDetails(input: {
   if (forbidden.some((key) => patch[key] !== undefined)) {
     throw new PrintRequestError("TYPE_MISMATCH", 400);
   }
+  // Seules les modifications réelles comptent : sans effet, le devis n'est pas révisé.
+  const changed = FIELD_LABELS.filter(([key]) => isChanged(request, patch, key));
+  if (changed.length === 0) return { request, revised: false };
 
   return prisma.$transaction(async (tx) => {
     const { from } = await applyEdit(tx, request, "ORGANIZER", input.userId);
 
-    const data: Prisma.PrintRequestUncheckedUpdateInput = {};
-    for (const [key] of FIELD_LABELS) {
+    const data: Record<string, unknown> = {};
+    for (const [key] of changed) {
       const value = patch[key];
-      if (value === undefined) continue;
-      (data as Record<string, unknown>)[key] =
-        key === "wantedBy" && value !== null ? new Date(value as string) : value;
+      data[key] = key === "wantedBy" && value !== null ? new Date(value as string) : value;
     }
-    const updated = await tx.printRequest.update({ where: { id: request.id }, data });
+    await tx.printRequest.update({ where: { id: request.id }, data: data as Prisma.PrintRequestUncheckedUpdateInput });
 
-    if (patch.estimatedQuantity !== undefined && patch.estimatedQuantity !== request.estimatedQuantity) {
-      await followBadgeCount(tx, request.id, request.estimatedQuantity ?? 0, patch.estimatedQuantity);
+    let lagging: string[] | undefined;
+    if (changed.some(([key]) => key === "estimatedQuantity")) {
+      ({ lagging } = await followBadgeCount(tx, request.id, request.estimatedQuantity ?? 0, patch.estimatedQuantity as number));
     }
 
-    const fields = [...new Set(FIELD_LABELS.filter(([key]) => patch[key] !== undefined).map(([, label]) => label))];
-    if (request.status !== "DRAFT" && fields.length > 0) {
-      await appendThreadEvent(tx, request.id, "REQUEST_UPDATED", { fields }, { userId: input.userId, side: "ORGANIZER" });
+    if (request.status !== "DRAFT") {
+      const fields = [...new Set(changed.map(([, label]) => label))];
+      await appendThreadEvent(
+        tx,
+        request.id,
+        "REQUEST_UPDATED",
+        { fields, ...(lagging ? { lagging } : {}) },
+        { userId: input.userId, side: "ORGANIZER" },
+      );
     }
-    const fresh = await tx.printRequest.findUniqueOrThrow({ where: { id: updated.id } });
+    const fresh = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
     return { request: fresh, revised: from === "QUOTED" };
   });
 }
@@ -385,7 +420,7 @@ export async function setOrganizerProducts(input: {
   if (badges.length !== 1) throw new PrintRequestError("BADGE_PRODUCT_REQUIRED", 400);
   const ordered = [...badges, ...resolved.filter((r) => r.product.kind !== "BADGE")];
 
-  return prisma.$transaction(async (tx) => {
+  const attempt = prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${request.id} FOR UPDATE`;
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
     const { from } = await applyEdit(tx, current, "ORGANIZER", input.userId);
@@ -399,6 +434,7 @@ export async function setOrganizerProducts(input: {
     });
     const byProduct = new Map(existing.map((line) => [line.productId, line]));
     const changes: LineChange[] = [];
+    const positions: { id: string; position: number }[] = [];
     const keptIds = new Set<string>();
 
     for (const [position, { product, entry }] of ordered.entries()) {
@@ -415,6 +451,7 @@ export async function setOrganizerProducts(input: {
         if (sameChoices && effectiveQuantity === line.quantity) {
           if (line.position !== position) {
             await tx.printQuoteLine.update({ where: { id: line.id }, data: { position } });
+            positions.push({ id: line.id, position });
           }
           continue;
         }
@@ -456,8 +493,10 @@ export async function setOrganizerProducts(input: {
       });
     }
 
+    let removedFromDraft = false;
     for (const line of existing.filter((l) => !keptIds.has(l.id))) {
       if (current.status === "DRAFT") {
+        removedFromDraft = true;
         await tx.printQuoteLine.delete({ where: { id: line.id } });
       } else {
         await tx.printQuoteLine.update({ where: { id: line.id }, data: { removedAt: new Date() } });
@@ -470,6 +509,8 @@ export async function setOrganizerProducts(input: {
       }
     }
 
+    // Aucune ligne ajoutée, retirée ou modifiée : on annule tout (y compris la révision du devis).
+    if (changes.length === 0 && !removedFromDraft) throw new NoEffect(positions);
     if (current.status !== "DRAFT" && changes.length > 0) {
       await appendThreadEvent(
         tx,
@@ -486,4 +527,19 @@ export async function setOrganizerProducts(input: {
     });
     return { lines, total, revised: from === "QUOTED" };
   });
+  try {
+    return await attempt;
+  } catch (err) {
+    if (!(err instanceof NoEffect)) throw err;
+    // Les changements d'ordre seuls sont rejoués hors de la transaction annulée (sans révision).
+    for (const { id, position } of err.positions) {
+      await prisma.printQuoteLine.update({ where: { id }, data: { position } });
+    }
+    const lines = await prisma.printQuoteLine.findMany({
+      where: { requestId: request.id, removedAt: null },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    });
+    const { total } = await prisma.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    return { lines, total, revised: false };
+  }
 }

@@ -1,20 +1,31 @@
 import { z } from "zod";
 import type { OptionChoice } from "@/lib/print-catalog/pricing";
 
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// AAAA-MM-JJ existant au calendrier (rejette 2026-02-30).
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 // Créneau de présence sur place : date AAAA-MM-JJ, horaires HH:MM (début strictement avant la fin).
 export const onsiteSlotSchema = z
   .object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    from: z.string().regex(/^\d{2}:\d{2}$/),
-    to: z.string().regex(/^\d{2}:\d{2}$/),
+    date: z.string().refine(isCalendarDate, { message: "Date invalide" }),
+    from: z.string().regex(HH_MM),
+    to: z.string().regex(HH_MM),
   })
   .refine((slot) => slot.from < slot.to, { message: "L'heure de début doit précéder l'heure de fin" });
 
 export type OnsiteSlot = z.infer<typeof onsiteSlotSchema>;
 
-const isoDate = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-  message: "Date invalide",
-});
+// AAAA-MM-JJ (minuit UTC) ou date-heure ISO complète avec décalage.
+const isoDate = z.string().refine(
+  (value) => isCalendarDate(value) || z.string().datetime({ offset: true }).safeParse(value).success,
+  { message: "Date invalide" },
+);
 
 // Modification partielle des informations d'une demande : tous les champs sont facultatifs.
 export const detailsPatchSchema = z.object({

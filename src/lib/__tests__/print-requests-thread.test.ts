@@ -96,6 +96,12 @@ describe("describeThreadEvent", () => {
     ],
   };
 
+  it("REQUEST_UPDATED mentionne les lignes fixées en retard", () => {
+    expect(describeThreadEvent("REQUEST_UPDATED", { fields: ["quantité estimée"], lagging: ["Cordon"] })).toBe(
+      "Informations modifiées : quantité estimée — quantités fixées par l'équipe à vérifier : Cordon",
+    );
+  });
+
   it("couvre chaque ThreadEventType (texte non vide, sans 'undefined')", () => {
     for (const [type, [details, text]] of Object.entries(cases)) {
       const out = describeThreadEvent(type as ThreadEventType, details);
