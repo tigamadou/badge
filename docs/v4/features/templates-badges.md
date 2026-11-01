@@ -171,12 +171,23 @@ La page d'un badge et l'impression par lot affichent le badge dans `<page-view>`
 (`@tigamadou/pdf-engine/viewer`, composant `BadgeDocumentView`). La route
 `GET …/badges/[badgeId]?format=html` renvoie le **document figé** (`frozen: true`, sans script)
 en JSON (`cache-control: private, no-store`) ; le PDF (`GET …/badges/[badgeId]`, `?download=1`
-pour le téléchargement) et le ZIP du lot sont produits par le service. Un badge est rendu en
+pour le téléchargement) sont produits par le service ; le ZIP du lot est produit à part (voir « Export ZIP asynchrone »). Un badge est rendu en
 HTML vivant par `renderHtml` (dans le processus Next), puis figé ou converti en PDF par le
 service ; images et polices sont intégrées en data URL (la CSP du document n'autorise rien
 d'autre). Un document de plus de 20 Mo est refusé côté serveur avant l'appel
 (« document du badge trop volumineux »). Service arrêté ou lent : aperçu « Aperçu indisponible,
-réessayer », routes et ZIP en 503.
+réessayer », routes en 503.
+
+### Export ZIP asynchrone
+
+Le ZIP d'un lot (un PDF par badge) n'est plus produit pendant la requête : l'ancienne route
+`…/badges/print-zip` et sa limite de 200 badges n'existent plus. Dans le panneau de lot,
+« Préparer le ZIP » demande un export (`POST …/badges/exports`, sélection dans le corps, sans
+limite de nombre) ; le worker le produit, avec la file et la reprise des planches
+d'impression (`PrintSheetGeneration` de sortie `ZIP`), le stocke en
+`badge-exports/{eventId}/{id}.zip`, et « Télécharger le ZIP » apparaît quand il est prêt.
+Le fichier est lisible par le staff et par les détenteurs de `badge.print` sur l'évènement.
+Voir [`impression-planches.md`](impression-planches.md#génération-asynchrone).
 
 ## Créer un template
 

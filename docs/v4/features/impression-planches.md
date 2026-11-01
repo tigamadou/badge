@@ -1,0 +1,142 @@
+# Planches d'impression
+
+> Ce document décrit le *quoi* et le *comment* actuels. Le *pourquoi* vit dans
+> [`../specs/2026-11-01-31-v4-gabarits-et-planches-d-impression.md`](../specs/2026-11-01-31-v4-gabarits-et-planches-d-impression.md).
+
+## État actuel
+
+Le staff de la plateforme compose des **planches PDF** pour l'imprimeur : plusieurs badges par
+feuille grand format (A3, SRA3…), placés au point près, avec traits de coupe, prêtes pour la
+découpe au massicot. Tout vit dans Badge ; les badges sont rendus par le service de rendu
+(`renderBadgePdf`) puis **posés comme objets vectoriels** avec `pdf-lib`, sans re-rendu ni
+rastérisation, et **jamais mis à l'échelle** (100 %).
+
+| Écran | Rôle | Droits |
+|---|---|---|
+| `/platform/print/layouts` (« Gabarits ») | Liste, création, modification, archivage des gabarits, avec aperçu en schéma | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
+| `/platform/print/sheets` (« Planches ») | Lancer une génération, historique, aperçu et téléchargement | `STAFF_SUPPORT` minimum (`STAFF_OBSERVER` est redirigé vers `/platform`) |
+
+Les deux entrées sont dans le groupe « Impression » de la navigation staff (`StaffShell`).
+Les organisateurs n'ont accès ni aux gabarits ni aux planches.
+
+## Gabarits
+
+Modèle `PrintSheetLayout` (suppression logique : `archived`, `archivedAt`). Le nom est unique
+(`NAME_TAKEN` affiché sous le champ). Toutes les longueurs sont stockées en **dixièmes de
+millimètre** (entiers) ; l'interface saisit des millimètres.
+
+| Réglage | Contenu |
+|---|---|
+| Format | préréglages A3 (297 × 420), A4 (210 × 297), SRA3 (320 × 450) ou libre ; stocké en portrait (largeur ≤ hauteur) |
+| Orientation de la feuille | `PORTRAIT` ou `LANDSCAPE` |
+| Marges | haute, droite, basse, gauche (minimums) |
+| Espaces | horizontal (entre colonnes) et vertical (entre lignes) |
+| Orientation des badges | `AUTO`, `ORIGINAL` ou `ROTATED` (pivoté de 90°) |
+| Retournement recto-verso | `LONG_EDGE` (défaut) ou `SHORT_EDGE` |
+| Traits de coupe | oui par défaut |
+
+L'écran affiche un **badge témoin** (template installé ou taille libre) qui sert à annoncer
+« N badges par feuille » dans la liste et dans l'aperçu. Modifier un gabarit ne change pas les
+générations passées : leurs réglages sont **figés à la création** (`layoutSnapshot`). Un
+gabarit archivé ne peut plus servir à générer.
+
+## Calcul de la grille
+
+Fonction pure partagée par l'aperçu et la génération :
+`computeSheetLayout` dans `src/lib/print-sheets/compute-layout.ts`.
+
+1. **Zone utile** = feuille moins les marges. Colonnes = `floor((utile + espace) / (largeur +
+   espace))`, idem pour les lignes.
+2. **`AUTO`** calcule les deux orientations et garde celle qui place le plus de badges ; à
+   égalité, l'orientation d'origine. `ORIGINAL` et `ROTATED` imposent la leur.
+3. **La grille est centrée** dans la zone utile : les marges sont des minimums.
+4. **Aucune mise à l'échelle.** Si aucun badge ne tient, le gabarit est refusé pour ce badge
+   (`BADGE_TOO_LARGE`, « Ce badge ne tient pas dans ce gabarit » dans la liste).
+5. **Traits de coupe** : dans les marges, dans le prolongement de chaque bord de badge, longueur
+   **5 mm**, décalés de **2 mm** de la zone des badges, filet noir de 0,25 pt. Rien n'est tracé
+   entre les badges. Si une marge fait **moins de 7 mm** (5 + 2), les traits de ce côté sont
+   **omis** et l'aperçu l'indique par un avertissement.
+6. La dernière feuille est remplie dans l'ordre de lecture (gauche à droite, haut en bas).
+
+## Recto-verso et bord de retournement
+
+Le recto-verso suit le template : il n'est proposé que si le template de l'évènement a deux
+pages. Les pages du PDF alternent : feuille 1 recto, feuille 1 verso, feuille 2 recto, etc. ;
+sans recto-verso, une page par feuille.
+
+La feuille de versos est la **symétrique** de la feuille de rectos selon l'axe de retournement
+du gabarit : `LONG_EDGE` (retournement sur le bord long) ou `SHORT_EDGE` (bord court). La règle
+est **chaque verso derrière son recto**, avec la rotation qui le remet à l'endroit une fois la
+feuille retournée, y compris pour les badges pivotés. Les transformations sont couvertes par
+les tests unitaires.
+
+## Rognage au format
+
+Le service de rendu produit des pages **légèrement plus grandes** que le format du template
+(de l'ordre de 0,1 à 0,4 mm). Chaque page de badge est donc contrôlée puis **rognée au format
+exact en conservant le coin haut-gauche**. La tolérance est de **0 à 2 mm au-dessus du format**
+(plus petit que le format, à 0,01 mm près, ou plus grand de plus de 2 mm : la génération
+échoue, aucune planche fausse ne sort). Un PDF de badge illisible ou sans la page attendue
+fait aussi échouer la génération.
+
+## Génération asynchrone
+
+Un évènement peut compter des milliers de badges : le rendu prend plusieurs minutes. La table
+`PrintSheetGeneration` sert elle-même de file, sans passer par `Job` (la file d'emails et
+`/platform/jobs` restent inchangés).
+
+- Formulaire : organisation → évènement → sélection (`ALL` = tous les approuvés, `CATEGORIES`,
+  `IDS` = sélection manuelle) → gabarit → recto-verso (si le template a deux pages).
+- Ordre des badges : catégorie (`number`), nom, prénom, figé à la création. Une inscription qui
+  n'est plus `APPROVED` au rendu est **écartée** et listée sur la ligne (« N badges écartés »).
+- Statuts : `PENDING` (« En attente »), `RUNNING` (« En cours »), `DONE` (« Terminée »),
+  `FAILED` (« Échec », avec le message). Pas de notification.
+- Le worker lance **au plus une génération à la fois**, en parallèle des emails. Il met à jour
+  un **battement de cœur** après chaque badge rendu. Une génération `RUNNING` sans battement
+  depuis **3 minutes** (`PRINT_SHEETS_STALE_MS`) est reprise ; au plus **3 tentatives**
+  (`PRINT_SHEETS_MAX_ATTEMPTS`), puis `FAILED`.
+- Le PDF est stocké en `print-sheets/{id}.pdf`, servi par `/api/files` aux seuls
+  `STAFF_SUPPORT`+ (réponse `403` sinon, `Cache-Control: private, no-store`).
+- L'historique (50 dernières générations) se rafraîchit toutes les **5 s** tant qu'une ligne
+  est en attente ou en cours et que l'onglet est visible. « Aperçu » ouvre le PDF dans la page ;
+  « Télécharger » le récupère.
+- Générer des planches **ne marque pas** les badges comme imprimés : « Marquer imprimés » reste
+  l'action explicite de l'organisateur.
+- Journal d'activité : `PRINT_LAYOUT_CREATED`, `PRINT_LAYOUT_UPDATED`,
+  `PRINT_LAYOUT_ARCHIVED`, `PRINT_SHEETS_GENERATED`.
+
+## Export ZIP de l'organisateur
+
+L'ancienne route `…/badges/print-zip` (200 badges au plus) est supprimée. L'organisateur
+(permission `badge.print`) demande un export depuis le panneau de lot ; la demande est une
+`PrintSheetGeneration` de sortie `ZIP` (sans gabarit), traitée par le même worker avec la même
+reprise. Le ZIP (un PDF par badge) est stocké en `badge-exports/{eventId}/{id}.zip` et se
+télécharge quand il est prêt. **Aucune limite de nombre.** Voir
+[`templates-badges.md`](templates-badges.md#export-zip-asynchrone).
+
+## Droits
+
+| Action | Rôle minimum |
+|---|---|
+| Voir les gabarits | `STAFF_OBSERVER` |
+| Créer, modifier, archiver un gabarit | `STAFF_ADMIN` |
+| Lancer une génération, voir l'historique, aperçu, téléchargement | `STAFF_SUPPORT` |
+| Télécharger un ZIP d'export | staff, ou `badge.print` sur l'évènement |
+
+## Tests
+
+- Unitaires et intégration : `src/lib/print-sheets/`, routes `src/app/api/platform/print/`.
+- E2E : `e2e/platform/print-layouts.spec.ts`, `e2e/platform/print-sheets.spec.ts` (génération
+  réelle par le worker de dev, PDF téléchargé et pages comptées, `403` hors staff) ;
+  `e2e/event/badges.spec.ts` pour le ZIP.
+
+## Limites connues
+
+- **Mémoire non bornée pour de très gros évènements** : les PDF de badge sont gardés en
+  mémoire pendant la composition de la planche. Pour un évènement de plusieurs dizaines de
+  milliers de badges, découper en plusieurs générations (par catégorie).
+- **Le recto-verso doit être validé sur papier avant la première commande.** Imprimer une
+  planche de contrôle chez l'imprimeur (ou sur une imprimante recto-verso) et vérifier à la
+  lumière que chaque verso est derrière son recto ; régler `duplexFlip` du gabarit selon le
+  résultat (`LONG_EDGE` ou `SHORT_EDGE` dépend de la presse).
+- Les planches ne portent que des badges (pas d'autres supports).

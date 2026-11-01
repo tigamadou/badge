@@ -40,6 +40,33 @@ const FULL_PROFILE = {
   idDocument: "uploads/profile/e2e/awa-cni.pdf",
 } as const;
 
+export const E2E_LAYOUT_PREFIX = "E2E gabarit ";
+
+// Cree un gabarit de planche A3 portrait (longueurs en dixiemes de mm), nom prefixe pour le cleanup.
+export async function createTestPrintLayout(opts: {
+  scope: string;
+  archived?: boolean;
+}): Promise<{ id: string; name: string }> {
+  const name = `${E2E_LAYOUT_PREFIX}${opts.scope} ${Date.now()}`;
+  const layout = await db().printSheetLayout.create({
+    data: {
+      name,
+      sheetWidth: 2970,
+      sheetHeight: 4200,
+      sheetOrientation: "PORTRAIT",
+      marginTop: 100,
+      marginRight: 100,
+      marginBottom: 100,
+      marginLeft: 100,
+      gapHorizontal: 0,
+      gapVertical: 0,
+      archived: opts.archived ?? false,
+    },
+    select: { id: true, name: true },
+  });
+  return layout;
+}
+
 export async function cleanupE2ETestData(): Promise<void> {
   const prisma = db();
 
@@ -72,6 +99,9 @@ export async function cleanupE2ETestData(): Promise<void> {
   }
   // v4 (plan 08) : motifs de rejet E2E (prefixe de libelle).
   await prisma.rejectionReason.deleteMany({ where: { label: { startsWith: "E2E motif " } } });
+  // Gabarits de planches crees par les e2e (prefixe de nom ; les generations
+  // des evenements E2E partent avec leur evenement, le layoutId des autres passe a NULL).
+  await prisma.printSheetLayout.deleteMany({ where: { name: { startsWith: E2E_LAYOUT_PREFIX } } });
   // v4 (plan 11) : templates installes par les tests (prefixe de famille).
   await prisma.installedBadgeTemplate.deleteMany({ where: { family: { startsWith: "e2e-" } } });
   if (eventIds.length > 0) {

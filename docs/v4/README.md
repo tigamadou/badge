@@ -67,6 +67,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 - [Notifications internes et email](features/notifications.md) — cloche, panneau, pages par espace, matrice des evenements, destinataires, API, retention.
 - [Loader et toast sur les actions](features/feedback-actions.md) — primitives, `apiErrorMessage`, motifs A a G, regles d'usage, helpers e2e.
 - [Resoumission avec changement de categorie](features/inscriptions-resoumission.md) — `resubmit` (corps optionnel, nouvel ID, `INVALID_CATEGORY`), `allocateRegistrationId`, rejet interdit apres impression du badge.
+- [Planches d'impression](features/impression-planches.md) — gabarits, calcul de la grille, recto-verso, génération asynchrone par le worker, export ZIP organisateur sans limite, droits, limites connues.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
 - [Spec backups hebdomadaires](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01) ; volet stockage S3/MinIO implemente et retire du document.
@@ -105,6 +106,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Lot notifications — categorie d'inscription rejetee (spec 25) | Livre (2026-10-24) — `resubmit` accepte `{ categoryId }`, nouvel ID en transaction (`allocateRegistrationId`), selecteur `RadioCards` et redirection ; rejet refuse si le badge est imprime (`BADGE_ALREADY_PRINTED`). Voir [feature](features/inscriptions-resoumission.md) |
 | Lot notifications — notifications internes et email (spec 24) | Livre (2026-10-24) — table `Notification`, service `src/lib/notifications/` (destinataires, `notify`, declencheurs), cloche + panneau (polling 30 s), pages des quatre espaces, email par la queue, retention 90 j dans le worker, `EMAIL_FAILED`. Voir [feature](features/notifications.md) |
 | Lot notifications — feedback des actions (spec 28) | Livre (2026-10-24) — loader + `disabled` + toast sur toutes les actions des quatre espaces et des pages publiques (`useAsyncAction`, `ActionButton`, `apiErrorMessage` qui filtre codes et messages anglais, erreurs de champ sous les champs). Voir [feature](features/feedback-actions.md) |
+| Gabarits et planches d'impression (spec 31) | Livre (2026-11-01) — gabarits `/platform/print/layouts`, generation asynchrone des planches `/platform/print/sheets` (worker, rognage au format, recto-verso), export ZIP organisateur asynchrone sans limite (`print-zip` supprime). **A valider sur papier (recto-verso) avant la premiere commande.** Voir [feature](features/impression-planches.md) |
 
 Pour un chantier livre, le detail task par task vit dans l'historique git du plan
 supprime ; le *pourquoi* reste dans la spec.
