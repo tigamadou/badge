@@ -80,7 +80,7 @@ export default async function OrgSubscriptionPage({
       <Card>
         <CardHead title="Historique des paiements" />
         <CardBody>
-          <PaymentHistory payments={payments.map(({ plan, ...p }) => ({ ...p, planName: plan.name }))} />
+          <PaymentHistory payments={payments.map(({ plan, ...p }) => ({ ...p, planName: plan?.name ?? "—" }))} />
         </CardBody>
       </Card>
     </div>

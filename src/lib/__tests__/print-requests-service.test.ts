@@ -366,6 +366,17 @@ describe("isPaymentInProgress / réexport", () => {
     vi.spyOn(paymentProbe, "isPaymentInProgress").mockResolvedValue(true);
     expect(await isPaymentInProgress("x")).toBe(true);
   });
+  it("isPaymentInProgress vrai avec un Payment PENDING de la demande, faux avec APPROVED, EXPIRED ou le PENDING d'une autre demande", async () => {
+    const base = { orgId: fx.org.id, purpose: "PRINT_REQUEST" as const, userId: fx.owner.id, amount: 1000 };
+    const r = await makeRequest(fx, { status: "ACCEPTED", acceptedTotal: 1000 });
+    const other = await makeRequest(fx, { status: "ACCEPTED", acceptedTotal: 1000 });
+    await prisma.payment.create({ data: { ...base, printRequestId: r.id, status: "APPROVED" } });
+    await prisma.payment.create({ data: { ...base, printRequestId: r.id, status: "EXPIRED" } });
+    await prisma.payment.create({ data: { ...base, printRequestId: other.id, status: "PENDING" } });
+    expect(await isPaymentInProgress(r.id)).toBe(false);
+    await prisma.payment.create({ data: { ...base, printRequestId: r.id, status: "PENDING" } });
+    expect(await isPaymentInProgress(r.id)).toBe(true);
+  });
   it("réexporte appendThreadEvent", () => {
     expect(typeof appendThreadEvent).toBe("function");
   });

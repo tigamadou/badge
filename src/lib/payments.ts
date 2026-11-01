@@ -140,10 +140,20 @@ export async function confirmPayment(
 ): Promise<{ status: PaymentStatus; applied: boolean } | null> {
   const payment = await prisma.payment.findUnique({
     where: { fedapayTransactionId },
-    include: { plan: { select: PLAN_LITE_SELECT } },
+    include: { plan: { select: PLAN_LITE_SELECT }, printRequest: { select: { id: true } } },
   });
   if (!payment) return null;
   if (!CONFIRMABLE.includes(payment.status)) return { status: payment.status, applied: false };
+
+  // Règle : SUBSCRIPTION <=> plan seul, PRINT_REQUEST <=> demande seule. Avant tout appel FedaPay.
+  const plan = payment.plan;
+  if (payment.purpose === "SUBSCRIPTION" ? !plan || payment.printRequest : !payment.printRequest || plan) {
+    throw new Error("Paiement incohérent");
+  }
+  // Temporaire (plan 34 Task 4 remplace par l'aiguillage vers la demande d'impression).
+  if (payment.purpose === "PRINT_REQUEST" || !plan) {
+    throw new Error("Paiement d'impression non pris en charge");
+  }
 
   const tx = await retrieveTransaction(fedapayTransactionId);
 
@@ -179,7 +189,7 @@ export async function confirmPayment(
       where: { orgId: payment.orgId },
       include: { plan: { select: PLAN_LITE_SELECT } },
     });
-    const change = planChangeFor(current, { ...payment.plan, price: payment.amount }, now);
+    const change = planChangeFor(current, { ...plan, price: payment.amount }, now);
 
     if (change.mode === "IMMEDIATE") {
       await db.subscription.upsert({

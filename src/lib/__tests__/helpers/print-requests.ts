@@ -127,3 +127,19 @@ export async function makeRequest(
     },
   });
 }
+
+// Demande ACCEPTED prête à être payée (plan 34) : montant accepté, version acceptée.
+export async function seedAcceptedPrintRequest(opts: { orgId?: string; userId?: string; total?: number } = {}) {
+  const fx = await seedPrintFixture();
+  const orgId = opts.orgId ?? fx.org.id;
+  const userId = opts.userId ?? fx.owner.id;
+  const total = opts.total ?? 5000;
+  const request = await makeRequest(
+    { org: { ...fx.org, id: orgId }, event: fx.event, owner: { ...fx.owner, id: userId } },
+    {
+      status: "ACCEPTED", orgId, quoteVersion: 1, acceptedVersion: 1, acceptedTotal: total, total,
+      acceptedAt: new Date(), acceptedById: userId,
+    },
+  );
+  return { ...fx, request, total };
+}

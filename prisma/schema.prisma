@@ -710,8 +710,12 @@ model Payment {
   id                   String                  @id @default(cuid())
   orgId                String
   org                  Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  planId               String
-  plan                 Plan                    @relation(fields: [planId], references: [id])
+  purpose              PaymentPurpose          @default(SUBSCRIPTION)
+  // SUBSCRIPTION <=> planId seul ; PRINT_REQUEST <=> printRequestId seul (plan 34)
+  planId               String?
+  plan                 Plan?                   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  printRequestId       String?
+  printRequest         PrintRequest?           @relation(fields: [printRequestId], references: [id], onDelete: Cascade)
   userId               String? // payeur
   user                 User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
   amount               Int
@@ -727,7 +731,13 @@ model Payment {
   @@index([orgId, createdAt])
   @@index([status, createdAt])
   @@index([planId])
+  @@index([printRequestId, status])
   @@index([userId])
+}
+
+enum PaymentPurpose {
+  SUBSCRIPTION
+  PRINT_REQUEST
 }
 
 enum JobType {
@@ -1106,6 +1116,7 @@ model PrintRequest {
   parentRequestId String?
   parentRequest   PrintRequest?  @relation("PrintRequestParent", fields: [parentRequestId], references: [id], onDelete: SetNull)
   childRequests   PrintRequest[] @relation("PrintRequestParent")
+  payments        Payment[]
 
   submittedAt   DateTime?
   quotedAt      DateTime?

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resolvePaymentReturn } from "@/lib/payment-return";
 import { confirmPayment } from "@/lib/payments";
+import { seedAcceptedPrintRequest } from "./helpers/print-requests";
 
 // Enveloppe transparente : permet de simuler un paiement disparu entre la lecture et la confirmation.
 vi.mock("@/lib/payments", async (importOriginal) => {
@@ -52,6 +53,22 @@ describe("resolvePaymentReturn", () => {
     const { other } = await seed();
     const res = await resolvePaymentReturn(other.id, "77");
     expect(res).toEqual({ outcome: "NOT_FOUND", planName: "", activationDate: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("paiement PRINT_REQUEST de la même org → NOT_FOUND sans confirmPayment", async () => {
+    const { org, user } = await seed();
+    const fx = await seedAcceptedPrintRequest({ orgId: org.id, userId: user.id });
+    await prisma.payment.create({
+      data: {
+        orgId: org.id, purpose: "PRINT_REQUEST", printRequestId: fx.request.id, userId: user.id,
+        amount: 5000, status: "PENDING", fedapayTransactionId: 78,
+      },
+    });
+    vi.mocked(confirmPayment).mockClear();
+    const res = await resolvePaymentReturn(org.id, "78");
+    expect(res).toEqual({ outcome: "NOT_FOUND", planName: "", activationDate: null });
+    expect(confirmPayment).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

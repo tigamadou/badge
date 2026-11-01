@@ -20,9 +20,11 @@ export async function resolvePaymentReturn(
 
   const payment = await prisma.payment.findUnique({
     where: { fedapayTransactionId: transactionId },
-    select: { orgId: true, plan: { select: { name: true } } },
+    select: { orgId: true, purpose: true, plan: { select: { name: true } } },
   });
   if (!payment || payment.orgId !== orgId) return NOT_FOUND;
+  // La page abonnement ne confirme jamais un paiement d'impression.
+  if (payment.purpose !== "SUBSCRIPTION" || !payment.plan) return NOT_FOUND;
   const planName = payment.plan.name;
 
   let status;

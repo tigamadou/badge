@@ -17,10 +17,11 @@ import { releaseTemplatePin } from "./template-lock-core";
 
 export { appendThreadEvent } from "./thread";
 
-// Sonde de paiement en cours. Objet mutable : le plan 34 remplace ce corps par un comptage des
-// Payment PENDING de la demande ; les tests la remplacent avec vi.spyOn.
+// Sonde de paiement en cours : un Payment PENDING de la demande. Objet mutable : les tests la
+// remplacent avec vi.spyOn.
 export const paymentProbe: { isPaymentInProgress(requestId: string): Promise<boolean> } = {
-  isPaymentInProgress: async () => false,
+  isPaymentInProgress: async (requestId) =>
+    (await prisma.payment.count({ where: { printRequestId: requestId, status: "PENDING" } })) > 0,
 };
 
 // Les appelants doivent tenir le verrou de la ligne de la demande (SELECT ... FOR UPDATE) avant

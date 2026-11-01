@@ -80,6 +80,8 @@ describe("payments", () => {
         fedapayTransactionId: 77,
         fedapayReference: "trx_77",
         userId: user.id,
+        purpose: "SUBSCRIPTION",
+        printRequestId: null,
       });
       const sent = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(sent.callback_url).toBe(`https://badge.local/org/${org.id}/subscription/return`);
@@ -192,6 +194,15 @@ describe("payments", () => {
   });
 
   describe("confirmPayment", () => {
+    it("un Payment SUBSCRIPTION sans plan lève « Paiement incohérent » sans appeler fetch", async () => {
+      const { user, org } = await seed();
+      await prisma.payment.create({
+        data: { orgId: org.id, planId: null, userId: user.id, amount: 15000, status: "PENDING", fedapayTransactionId: 90 },
+      });
+      await expect(confirmPayment(90)).rejects.toThrow("Paiement incohérent");
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("confirmPayment approved depuis free → plan actif, endDate +30 j, mode IMMEDIATE, 1 notification", async () => {
       const { user, org, free, pro } = await seed();
       await prisma.subscription.create({ data: { orgId: org.id, planId: free.id, endDate: null } });
