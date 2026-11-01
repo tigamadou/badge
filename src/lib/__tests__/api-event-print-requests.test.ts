@@ -27,6 +27,7 @@ import * as registrations from "@/app/api/org/[orgId]/events/[eventId]/print-req
 import * as badges from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/badges/route";
 import * as products from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/products/route";
 import * as submit from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/submit/route";
+import * as eligibility from "@/app/api/org/[orgId]/events/[eventId]/print-requests/onsite-eligibility/route";
 import * as cancel from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/cancel/route";
 import * as accept from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/accept/route";
 import * as messages from "@/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/messages/route";
@@ -328,6 +329,43 @@ describe("envoi, annulation", () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     const res = await call(submit.POST as Handler, "POST", { requestId: r.id });
     expect(res.status).toBe(409);
+  });
+
+  it("submit ONSITE avec un template hors liste : 409 ONSITE_TEMPLATE_UNSUITABLE, demande inchangée", async () => {
+    await prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: [] } });
+    const r = await makeRequest(fx, {
+      type: "ONSITE", status: "DRAFT", estimatedQuantity: 20, onsiteLocation: "Hall",
+      onsiteContactName: "M", onsiteContactPhone: "1", onsiteSchedule: [{ date: "2026-11-02", from: "09:00", to: "18:00" }],
+    });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Support", quantity: 20,
+        unitPrice: 1500, lineTotal: 30000, position: 0, addedBy: "ORGANIZER",
+      },
+    });
+    const res = await call(submit.POST as Handler, "POST", { requestId: r.id });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: "ONSITE_TEMPLATE_UNSUITABLE",
+      message: "Le modèle de badge de cet évènement n'est pas adapté à l'impression sur place.",
+    });
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("DRAFT");
+  });
+
+  it("onsite-eligibility : éligible, non éligible, sans template, accès refusé", async () => {
+    const setList = (ids: string[]) =>
+      prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: ids } });
+    const get = () => call(eligibility.GET as Handler, "GET");
+    await setList([fx.template.id]);
+    expect(await (await get()).json()).toEqual({ eligible: true, templateId: fx.template.id });
+    await setList([]);
+    expect(await (await get()).json()).toEqual({ eligible: false, templateId: fx.template.id });
+    await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: "inconnu" } });
+    await prisma.installedBadgeTemplate.deleteMany({});
+    const none = await get();
+    expect([none.status, await none.json()]).toEqual([200, { eligible: false, templateId: null }]);
+    await loginAs(null);
+    expect((await get()).status).toBe(401);
   });
 
   it("submit sur évènement archivé : 410", async () => {

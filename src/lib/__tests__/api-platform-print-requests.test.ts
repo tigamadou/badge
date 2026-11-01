@@ -421,6 +421,92 @@ describe("envoi, réouverture, refus, statut", () => {
   });
 });
 
+describe("template inadapté à l'impression sur place", () => {
+  const setList = (ids: string[]) =>
+    prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: ids } });
+  const onsiteRequest = async (status: "SUBMITTED" | "PAID" | "IN_PRODUCTION") => {
+    const r = await makeRequest(fx, { type: "ONSITE", status, total: 1000, badgeTemplateId: fx.template.id });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "SERVICE", label: "Service", quantity: 1, unitPrice: 1000,
+        lineTotal: 1000, position: 0, addedBy: "STAFF",
+      },
+    });
+    return r;
+  };
+  const advance = (id: string, to: string) =>
+    call(statusPOST, `${BASE}/${id}/status`, "POST", { requestId: id }, { to });
+
+  it("GET détail : onsiteTemplate OK / UNSUITABLE / NOT_APPLICABLE", async () => {
+    const r = await onsiteRequest("SUBMITTED");
+    await setList([fx.template.id]);
+    expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("OK");
+    await setList([]);
+    expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
+    const adv = await makeRequest(fx, { status: "SUBMITTED", badgeTemplateId: fx.template.id });
+    expect((await call(detailGET, `${BASE}/${adv.id}`, "GET", { requestId: adv.id })).json.onsiteTemplate).toBe(
+      "NOT_APPLICABLE",
+    );
+  });
+
+  it("send-quote : 409 ONSITE_TEMPLATE_UNSUITABLE, statut inchangé ; passe quand le template est coché", async () => {
+    await setList([]);
+    const r = await onsiteRequest("SUBMITTED");
+    const res = await call(sendQuotePOST, `${BASE}/${r.id}/send-quote`, "POST", { requestId: r.id });
+    expect(res).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await reload(r.id)).status).toBe("SUBMITTED");
+    await setList([fx.template.id]);
+    expect((await call(sendQuotePOST, `${BASE}/${r.id}/send-quote`, "POST", { requestId: r.id })).status).toBe(200);
+  });
+
+  it("PAID -> IN_PRODUCTION : 409 ONSITE_TEMPLATE_UNSUITABLE, statut inchangé", async () => {
+    await setList([]);
+    const r = await onsiteRequest("PAID");
+    const res = await advance(r.id, "IN_PRODUCTION");
+    expect(res).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await reload(r.id)).status).toBe("PAID");
+    await setList([fx.template.id]);
+    expect((await advance(r.id, "IN_PRODUCTION")).json.request.status).toBe("IN_PRODUCTION");
+  });
+
+  it("IN_PRODUCTION -> READY bloqué ; READY -> COMPLETED reste permis", async () => {
+    await setList([]);
+    const r = await onsiteRequest("IN_PRODUCTION");
+    const blocked = await advance(r.id, "READY");
+    expect(blocked).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await reload(r.id)).status).toBe("IN_PRODUCTION");
+    await setList([fx.template.id]);
+    expect((await advance(r.id, "READY")).json.request.status).toBe("READY");
+    await setList([]);
+    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "READY" } });
+    expect((await advance(r.id, "COMPLETED")).json.request.status).toBe("COMPLETED");
+  });
+
+  it("template courant de l'évènement coché mais copie de la demande non cochée : UNSUITABLE", async () => {
+    const other = await prisma.installedBadgeTemplate.create({
+      data: {
+        family: `copie-${Date.now()}`, version: 1, label: "Ancienne copie", description: "", pages: 1,
+        pageWidthPx: 100, pageHeightPx: 100, layout: { variables: [] }, bindings: {},
+        assetPrefix: "badge-templates/copie/", formatVersion: 3, installedById: "u1",
+      },
+    });
+    await setList([fx.template.id]);
+    const r = await onsiteRequest("PAID");
+    await prisma.printRequest.update({ where: { id: r.id }, data: { badgeTemplateId: other.id } });
+    const res = await advance(r.id, "IN_PRODUCTION");
+    expect(res).toMatchObject({ status: 409, json: { error: "ONSITE_TEMPLATE_UNSUITABLE" } });
+    expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
+  });
+
+  it("refus d'une demande SUBMITTED toujours permis", async () => {
+    await setList([]);
+    const r = await onsiteRequest("SUBMITTED");
+    const res = await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, { reason: "Motif" });
+    expect(res.status).toBe(200);
+    expect((await reload(r.id)).status).toBe("REJECTED");
+  });
+});
+
 describe("mark-paid", () => {
   const acceptedRequest = () =>
     makeRequest(fx, { status: "ACCEPTED", quoteVersion: 1, acceptedVersion: 1, acceptedTotal: 1000 });

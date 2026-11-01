@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { StaffRole } from "@prisma/client";
+import { OnsiteTemplateAlert } from "@/components/print/OnsiteTemplateAlert";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { Alert } from "@/components/ui/Feedback";
 import { Card, CardBody, CardHead } from "@/components/ui/Card";
@@ -83,7 +84,7 @@ export function RequestDetail({
     );
   }
 
-  const { request, event, template, items, lines, generations } = data;
+  const { request, event, template, items, lines, generations, onsiteTemplate } = data;
   const printed = items.filter((i) => i.badgePrinted).length;
   const canPost = staffRoleAtLeast(role, "STAFF_SUPPORT");
 
@@ -103,6 +104,8 @@ export function RequestDetail({
           {formatFcfa(request.total)}
         </p>
       </div>
+
+      {onsiteTemplate === "UNSUITABLE" && <OnsiteTemplateAlert side="STAFF" eventId={event.id} />}
 
       <RequestStatusActions
         request={request}

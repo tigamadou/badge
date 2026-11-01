@@ -9,6 +9,7 @@ import {
   type OptionChoice,
 } from "@/lib/print-catalog/pricing";
 import { PrintRequestError } from "./errors";
+import { assertOnsiteCanAdvance } from "./onsite";
 import {
   choiceFailureToError,
   isEventFileKey,
@@ -231,6 +232,8 @@ export async function sendQuote(input: {
     // Transition d'abord : un statut interdit prime sur un devis vide. Les refus qui suivent
     // annulent la transaction, donc rien n'est écrit.
     await applyTransition(tx, current, "SEND_QUOTE", "STAFF", input.now);
+    // Template devenu inadapté : le devis d'une demande sur place ne part pas (annule la transaction).
+    await assertOnsiteCanAdvance(current);
     const active = await tx.printQuoteLine.count({ where: { requestId: request.id, removedAt: null } });
     if (active === 0) throw new PrintRequestError("EMPTY_QUOTE", 400);
     const total = await recomputeChecked(tx, request.id);
@@ -287,6 +290,9 @@ export async function advanceStatus(input: {
     const current = await lockRequest(tx, request.id);
     const from: PrintRequestStatus = current.status;
     const to = await applyTransition(tx, current, action, "STAFF");
+    // Après la transition (INVALID_TRANSITION prime) ; annule la transaction. La clôture (COMPLETED)
+    // reste permise : seuls la production et la mise à disposition sont bloquées.
+    if (input.to !== "COMPLETED") await assertOnsiteCanAdvance(current);
     await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
     // Statut lu sous verrou : le journal d'activité n'utilise pas une lecture périmée.
     return { ...(await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } })), previousStatus: from };

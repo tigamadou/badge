@@ -8,6 +8,7 @@ import {
 import { lockEventRow, reservedRegistrations } from "./content";
 import { PrintRequestError } from "./errors";
 import { chunk } from "./labels";
+import { prepareOnsiteSubmission } from "./onsite";
 import {
   appendThreadEvent,
   applyTransition,
@@ -109,9 +110,12 @@ export async function submitRequest(input: {
     }
 
     const snapshot = await snapshotEventTemplate(input.eventId, tx);
+    // Demande sur place : template adapté exigé, marge par défaut figée dans la demande.
+    const onsite = await prepareOnsiteSubmission(tx, { type: request.type, badgeTemplateId: snapshot.badgeTemplateId });
     await tx.printRequest.update({
       where: { id: request.id },
       data: {
+        ...(onsite ? { marginPercent: onsite.marginPercent } : {}),
         badgeTemplateId: snapshot.badgeTemplateId,
         badgeWidthPx: snapshot.badgeWidthPx,
         badgeHeightPx: snapshot.badgeHeightPx,
