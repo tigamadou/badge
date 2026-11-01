@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { LayoutSpec } from "@/lib/print-sheets/compute-layout";
 import type { GenerationSnapshot } from "@/lib/print-sheets/generations";
 import { PRINT_SHEETS_STALE_MS } from "@/lib/jobs/constants";
+import * as thread from "@/lib/print-requests/thread";
 import { makeBadgePdf } from "./helpers/badge-pdf";
 
 const storage = vi.hoisted(() => ({ uploadFile: vi.fn(async (key: string) => key) }));
@@ -130,6 +131,62 @@ describe("runGeneration", () => {
     const row = await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } });
     expect(row.badgeCount).toBe(2);
     expect(row.skippedIds).toEqual(["r2"]);
+  });
+
+  it("ajoute l'entree REGISTRATIONS_SKIPPED au fil d'une demande liee", async () => {
+    const owner = await prisma.user.create({
+      data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
+    });
+    const org = await prisma.organization.create({ data: { name: "O2", slug: uniq("o2") } });
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-S"), eventId, orgId: org.id, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    const g = await create();
+    await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { printRequestId: request.id } });
+    const { d } = await deps({ missing: ["r2"] });
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    const entry = await prisma.printRequestMessage.findFirstOrThrow({
+      where: { requestId: request.id, eventType: "REGISTRATIONS_SKIPPED" },
+    });
+    expect(entry).toMatchObject({ side: "SYSTEM", authorId: null });
+    expect(entry.details).toEqual({ registrationIds: ["r2"] });
+    expect(entry.body).toContain("1 badge(s) écarté(s)");
+  });
+
+  it("reste DONE quand l'ecriture du fil echoue", async () => {
+    const owner = await prisma.user.create({
+      data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
+    });
+    const org = await prisma.organization.create({ data: { name: "O4", slug: uniq("o4") } });
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-S"), eventId, orgId: org.id, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    const g = await create();
+    await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { printRequestId: request.id } });
+    const spy = vi.spyOn(thread, "appendThreadEvent").mockRejectedValueOnce(new Error("fil"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { d } = await deps({ missing: ["r2"] });
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    const row = await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } });
+    expect(row).toMatchObject({ status: "DONE", fileKey: `print-sheets/${g.id}.pdf` });
+    expect(err).toHaveBeenCalled();
+    spy.mockRestore();
+    err.mockRestore();
+  });
+
+  it("n'ajoute pas d'entree quand rien n'est ecarte, meme pour une demande liee", async () => {
+    const owner = await prisma.user.create({
+      data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
+    });
+    const org = await prisma.organization.create({ data: { name: "O3", slug: uniq("o3") } });
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-S"), eventId, orgId: org.id, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    const g = await create();
+    await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { printRequestId: request.id } });
+    const { d } = await deps();
+    expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
   });
 
   it("echoue quand tous les badges sont null", async () => {
