@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestEvent,
+  createTestPrintPayment,
   createTestPrintRequest,
   createTestUser,
   disconnectDb,
@@ -18,6 +19,9 @@ const LINES = [
   { label: "Frais de dossier", quantity: 1, unitPrice: 5000, kind: "SERVICE" as const },
 ];
 
+// Devis de 150 000 FCFA : une ligne produit de 100 x 1 500.
+const PAY_LINES = [{ label: "Support badge PVC", quantity: 100, unitPrice: 1500, kind: "PRODUCT" as const }];
+
 // Du menu au détail d'une demande : « Impression », puis la référence dans la liste.
 async function openRequest(page: Page, eventId: string, request: { id: string; reference: string }) {
   await page.getByRole("link", { name: "Impression", exact: true }).first().click();
@@ -33,7 +37,8 @@ const statusBadge = (page: Page, reference: string) =>
 
 // Page Détail d'une demande d'impression — /event/[eventId]/print/[requestId]
 // Rôle : permission `print.request`. Seul le propriétaire de l'organisation (OWNER) accepte un devis.
-// Actions : échanger avec l'équipe (message + pièce jointe), accepter le devis, annuler la demande.
+// Actions : échanger avec l'équipe (message + pièce jointe), accepter le devis, le payer (bouton « Payer », FedaPay
+// n'est pas appelé en e2e), annuler la demande.
 test.describe("Event — Détail d'une demande d'impression", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
@@ -151,5 +156,44 @@ test.describe("Event — Détail d'une demande d'impression", () => {
     await expect(page.getByRole("button", { name: "Annuler la demande" })).toHaveCount(0);
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("CANCELLED");
     await expectLastActivity({ type: "PRINT_REQUEST_CANCELLED", eventId, userId: admin.id, targetId: request.id });
+  });
+
+  test("OWNER voit « Payer 150 000 FCFA » sur un devis accepté", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "print-detail-pay" });
+    const owner = await makeEventAdminUser({ scope: "print-detail-pay", eventId, orgId });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: owner.id, status: "ACCEPTED", lines: PAY_LINES });
+    await loginAndEnter(page, owner, { kind: "event", id: eventId });
+    await openRequest(page, eventId, request);
+
+    await expect(statusBadge(page, request.reference)).toHaveText("Devis accepté");
+    await expect(page.getByRole("button", { name: "Payer 150 000 FCFA" })).toBeVisible();
+    await expect(page.getByText("Un paiement est en cours. Vous pouvez le reprendre.")).toHaveCount(0);
+  });
+
+  test("OWNER peut reprendre un paiement en cours : la mention s'affiche avec le bouton", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "print-detail-pay-pending" });
+    const owner = await makeEventAdminUser({ scope: "print-detail-pay-pending", eventId, orgId });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: owner.id, status: "ACCEPTED", lines: PAY_LINES });
+    await createTestPrintPayment({ orgId, requestId: request.id, userId: owner.id, amount: 150000, status: "PENDING" });
+    await loginAndEnter(page, owner, { kind: "event", id: eventId });
+    await openRequest(page, eventId, request);
+
+    await expect(page.getByText("Un paiement est en cours. Vous pouvez le reprendre.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Payer 150 000 FCFA" })).toBeVisible();
+  });
+
+  test("MANAGER lit que seul le propriétaire peut payer le devis, sans bouton « Payer »", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "print-detail-pay-manager" });
+    const owner = await makeEventAdminUser({ scope: "print-detail-pay-manager-owner", eventId, orgId });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: owner.id, status: "ACCEPTED", lines: PAY_LINES });
+    const manager = await createTestUser({ scope: "print-detail-pay-manager", verified: true });
+    await getDb().orgMembership.create({ data: { userId: manager.id, orgId, role: "MANAGER" } });
+    await getDb().eventMembership.create({ data: { userId: manager.id, eventId, role: "ADMIN" } });
+    await loginAndEnter(page, manager, { kind: "event", id: eventId });
+    await openRequest(page, eventId, request);
+
+    await expect(page.getByText("Seul le propriétaire de l'organisation peut payer ce devis.")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Payer/ })).toHaveCount(0);
+    expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("ACCEPTED");
   });
 });

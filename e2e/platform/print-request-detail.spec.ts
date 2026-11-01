@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestEvent,
+  createTestPrintPayment,
   createTestPrintRequest,
   createTestRegistration,
   createTestStaff,
@@ -210,5 +211,45 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await openRequest(page, request);
 
     await expect(page.getByRole("link", { name: "Générer les planches" })).toHaveCount(0);
+  });
+
+  test("La carte « Paiements » liste le paiement d'impression de la demande", async ({ page }) => {
+    const { orgId, request, organizer } = await seedRequest("prd-payments", "PAID");
+    await createTestPrintPayment({
+      orgId,
+      requestId: request.id,
+      userId: organizer.id,
+      amount: 20000,
+      status: "APPROVED",
+      settle: true,
+    });
+    const support = await createTestStaff({ scope: "prd-payments", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+    await openRequest(page, request);
+
+    await expect(page.getByText("Paiements", { exact: true })).toBeVisible();
+    const row = page.getByRole("row", { name: new RegExp(`Impression ${request.reference}`) });
+    await expect(row).toContainText("20 000 FCFA");
+    await expect(row).toContainText("Payé");
+  });
+
+  test("« Marquer payée » est refusé tant qu'un paiement FedaPay est en cours", async ({ page }) => {
+    const { orgId, request, organizer } = await seedRequest("prd-paid-pending", "ACCEPTED");
+    await createTestPrintPayment({ orgId, requestId: request.id, userId: organizer.id, amount: 20000, status: "PENDING" });
+    const admin = await createTestStaff({ scope: "prd-paid-pending", role: "STAFF_ADMIN" });
+    await loginAndEnter(page, admin, { kind: "platform" });
+    await openRequest(page, request);
+
+    await page.getByRole("button", { name: "Marquer payée", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Marquer la demande payée" });
+    await dialog.getByRole("textbox").fill("virement du 30/10");
+    await dialog.getByRole("button", { name: "Marquer payée", exact: true }).click();
+
+    // Échec attendu : message de paiement en cours, la demande reste acceptée.
+    await expect(toast(page, "Un paiement FedaPay est en cours sur cette demande.")).toBeVisible();
+    await expect(statusBadge(page, request.reference)).toHaveText("Devis accepté");
+    const unchanged = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    expect(unchanged.status).toBe("ACCEPTED");
+    expect(unchanged.paidAt).toBeNull();
   });
 });
