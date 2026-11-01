@@ -21,6 +21,10 @@ const LABEL: Record<StaffAction, string> = {
   COMPLETE: "Terminer",
 };
 
+// Bornes des motifs, les mêmes que côté serveur (rejectRequest : 3 à 1000 ; markPaidManually : 3 à 500).
+const REASON_MIN = 3;
+const REASON_MAX = { REJECT: 1000, MARK_PAID: 500 } as const;
+
 const MARK_PAID_ERRORS = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette demande." };
 
 const TEXTAREA =
@@ -100,10 +104,10 @@ export function RequestStatusActions({
   async function submitReason() {
     const text = reason.trim();
     if (dialog === "REJECT") {
-      if (!text) return;
+      if (text.length < REASON_MIN) return;
       if (await run("REJECT", "/reject", { reason: text }, "Demande refusée.")) close();
     } else if (dialog === "MARK_PAID") {
-      if (text.length < 3) return;
+      if (text.length < REASON_MIN) return;
       if (await run("MARK_PAID", "/mark-paid", { reason: text }, "Demande marquée payée.", MARK_PAID_ERRORS)) close();
     }
   }
@@ -149,7 +153,7 @@ export function RequestStatusActions({
               type="button"
               variant={dialog === "REJECT" ? "danger" : "primary"}
               loading={busy === dialog}
-              disabled={reason.trim().length < (dialog === "REJECT" ? 1 : 3)}
+              disabled={reason.trim().length < REASON_MIN}
               onClick={() => void submitReason()}
             >
               {dialog === "REJECT" ? "Refuser" : "Marquer payée"}
@@ -163,14 +167,16 @@ export function RequestStatusActions({
           </p>
         )}
         <label className="block text-sm font-medium text-slate-700" htmlFor="print-request-reason">
-          {dialog === "REJECT" ? "Motif du refus (transmis à l'organisateur)" : "Motif du paiement manuel (3 caractères minimum)"}
+          {dialog === "REJECT"
+            ? "Motif du refus (transmis à l'organisateur, 3 caractères minimum)"
+            : "Motif du paiement manuel (3 caractères minimum)"}
         </label>
         <textarea
           id="print-request-reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={4}
-          maxLength={500}
+          maxLength={dialog === "REJECT" ? REASON_MAX.REJECT : REASON_MAX.MARK_PAID}
           className={`mt-1 ${TEXTAREA}`}
         />
       </Dialog>
@@ -191,8 +197,9 @@ export function RequestStatusActions({
         }
       >
         <p>
-          « Oui » marque ces badges comme imprimés (les participants sont prévenus) puis termine la demande. « Non » termine
-          seulement la demande.
+          La demande est d&apos;abord terminée, puis les badges sont marqués comme imprimés. « Oui » marque ces badges (les
+          participants sont prévenus) ; si le marquage échoue, la demande reste terminée. « Non » termine seulement la
+          demande.
         </p>
       </Dialog>
     </>

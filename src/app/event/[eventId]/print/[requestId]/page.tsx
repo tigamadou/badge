@@ -194,7 +194,7 @@ export default async function PrintRequestDetailPage({
         <h2 className="mb-3 text-sm font-semibold text-slate-900">Échanges avec l&apos;équipe Badge</h2>
         <PrintThread
           entriesUrl={`${base}/${requestId}/messages`}
-          postUrl={ctx.isStaff ? null : `${base}/${requestId}/messages`}
+          postUrl={ctx.isStaff || request.status === "DRAFT" ? null : `${base}/${requestId}/messages`}
           uploadUrl={ctx.isStaff ? null : `${base}/upload`}
         />
       </section>

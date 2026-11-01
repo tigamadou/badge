@@ -479,6 +479,30 @@ describe("messages", () => {
     expect((await call(messages.POST as Handler, "POST", { requestId: r.id, body: { nope: 1 } })).status).toBe(400);
   });
 
+  it("POST sur un brouillon : 409, aucune entrée ni notification au staff", async () => {
+    const r = await makeRequest(fx, { status: "DRAFT" });
+    const res = await call(messages.POST as Handler, "POST", { requestId: r.id, body: { body: "Bonjour" } });
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("INVALID_TRANSITION");
+    expect(await prisma.printRequestMessage.count({ where: { requestId: r.id } })).toBe(0);
+    expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_MESSAGE" } })).toBe(0);
+  });
+
+  it("GET : les détails internes du fil (paiement, génération, motif manuel) ne sont pas exposés", async () => {
+    const r = await makeRequest(fx, { status: "PAID" });
+    await prisma.printRequestMessage.create({
+      data: {
+        requestId: r.id, side: "STAFF", kind: "EVENT", eventType: "PAYMENT_RECEIVED",
+        body: "Paiement reçu : 1 000 FCFA (hors ligne : Virement interne)",
+        details: { amount: 1000, paymentId: "pay_interne", reason: "Virement interne" },
+      },
+    });
+    const { entries } = await (await call(messages.GET as Handler, "GET", { requestId: r.id })).json();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].details).toEqual({ amount: 1000 });
+    expect(JSON.stringify(entries)).not.toMatch(/pay_interne|Virement/);
+  });
+
   it("GET et POST autorisés sur évènement archivé", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     await prisma.event.update({ where: { id: fx.event.id }, data: { archived: true } });

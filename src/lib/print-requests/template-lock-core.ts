@@ -22,13 +22,15 @@ export async function findTemplateLock(
 // l'évènement retrouve l'héritage s'il porte encore le template épinglé et qu'aucune autre
 // demande ne le retient. Appelée par applyTransition : l'appelant doit avoir pris les verrous par
 // lockRequestWithEvent (Event puis PrintRequest), sans quoi l'écriture de l'évènement ici
-// inverserait l'ordre des verrous face à un changement de template.
-export async function releaseTemplatePin(tx: Prisma.TransactionClient, requestId: string): Promise<void> {
+// inverserait l'ordre des verrous face à un changement de template. Renvoie vrai quand le template
+// de l'évènement a réellement été remis à l'héritage : l'appelant (applyTransition) resynchronise
+// alors les copies des demandes en cours de l'évènement.
+export async function releaseTemplatePin(tx: Prisma.TransactionClient, requestId: string): Promise<boolean> {
   const request = await tx.printRequest.findUnique({
     where: { id: requestId },
     select: { eventId: true, badgeTemplateId: true, templatePinned: true },
   });
-  if (!request?.templatePinned) return;
+  if (!request?.templatePinned) return false;
   const other = await tx.printRequest.findFirst({
     where: {
       eventId: request.eventId,
@@ -37,11 +39,14 @@ export async function releaseTemplatePin(tx: Prisma.TransactionClient, requestId
     },
     select: { id: true },
   });
+  let reset = false;
   if (!other && request.badgeTemplateId) {
-    await tx.event.updateMany({
+    const { count } = await tx.event.updateMany({
       where: { id: request.eventId, badgeTemplateId: request.badgeTemplateId },
       data: { badgeTemplateId: null },
     });
+    reset = count > 0;
   }
   await tx.printRequest.update({ where: { id: requestId }, data: { templatePinned: false } });
+  return reset;
 }

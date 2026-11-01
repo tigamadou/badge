@@ -19,7 +19,7 @@ import { OnsiteRequestPanel } from "./OnsiteRequestPanel";
 import { RequestCreditPanel, type StaffCreditData } from "./RequestCreditPanel";
 import { QuoteEditor } from "./QuoteEditor";
 import { RequestStatusActions } from "./RequestStatusActions";
-import { StaffThread } from "./StaffThread";
+import { PrintThread } from "@/components/print/PrintThread";
 import { canEditQuote, formatBadgeSize } from "./request-actions";
 import { requestUrl } from "./request-fetch";
 import type { ProductOption, RequestDetailData } from "./request-types";
@@ -311,7 +311,18 @@ export function RequestDetail({
         </Card>
       )}
 
-      <StaffThread requestId={requestId} canPost={canPost} refreshKey={threadKey} />
+      <Card>
+        <CardHead title="Échanges" subtitle="Messages avec l'organisateur et historique de la demande" />
+        <CardBody>
+          <PrintThread
+            entriesUrl={requestUrl(requestId, "/messages")}
+            postUrl={canPost ? requestUrl(requestId, "/messages") : null}
+            uploadUrl={canPost ? `/api/platform/upload?context=print-request&requestId=${requestId}` : null}
+            placeholder="Écrire à l'organisateur…"
+            refreshKey={threadKey}
+          />
+        </CardBody>
+      </Card>
     </div>
   );
 }

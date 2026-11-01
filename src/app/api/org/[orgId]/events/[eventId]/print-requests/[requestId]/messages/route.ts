@@ -6,7 +6,7 @@ import { json, organizerRoute, parseBody } from "@/lib/print-requests/route";
 
 export const GET = organizerRoute({ allowArchived: true }, async (_req, { eventId, requestId }) => {
   await loadRequest(requestId, { eventId });
-  return json({ entries: await listThread(requestId) });
+  return json({ entries: await listThread(requestId, "ORGANIZER") });
 });
 
 const bodySchema = z.object({
@@ -25,5 +25,5 @@ export const POST = organizerRoute({ allowArchived: true }, async (req, { eventI
     attachmentKey: attachmentKey ?? null,
   });
   await notifyPrintRequestMessage(message.id, session.user.id);
-  return json({ entry: toEntryDTO(message, session.user.name) }, 201);
+  return json({ entry: toEntryDTO(message, session.user.name, "ORGANIZER") }, 201);
 });

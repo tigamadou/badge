@@ -24,10 +24,13 @@ export type SelectionState = {
 // Badges que la demande peut encore prendre : ceux déjà réservés par une autre demande sont exclus.
 export const isAvailable = (c: Candidate): boolean => c.reservedBy === null;
 
+// Comme le serveur (content.ts) : les modes ALL_AVAILABLE et CATEGORIES laissent de côté les
+// badges déjà imprimés ; seule la sélection manuelle (IDS) peut en reprendre un.
 export function selectedCandidates(candidates: Candidate[], state: SelectionState): Candidate[] {
   const available = candidates.filter(isAvailable);
-  if (state.mode === "ALL_AVAILABLE") return available;
-  if (state.mode === "CATEGORIES") return available.filter((c) => state.categoryIds.includes(c.categoryId));
+  const unprinted = available.filter((c) => !c.printed);
+  if (state.mode === "ALL_AVAILABLE") return unprinted;
+  if (state.mode === "CATEGORIES") return unprinted.filter((c) => state.categoryIds.includes(c.categoryId));
   return available.filter((c) => state.registrationIds.includes(c.id));
 }
 

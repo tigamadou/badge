@@ -208,9 +208,72 @@ export async function applyTransition(
     data,
   });
   if (count === 0) throw new PrintRequestError("INVALID_TRANSITION", 409, { from, action });
-  // Hors des statuts qui retiennent le template, l'épinglage de la demande est levé.
-  if (!PIN_HOLDING_STATUSES.includes(to)) await releaseTemplatePin(tx, request.id);
+  // Hors des statuts qui retiennent le template, l'épinglage de la demande est levé. Si
+  // l'évènement retrouve ainsi l'héritage, les copies de ses demandes en cours (dont celle-ci, si
+  // elle reste en cours) sont resynchronisées dans la même transaction : l'appelant tient déjà les
+  // verrous Event puis PrintRequest (lockRequestWithEvent), aucune autre transaction n'est ouverte.
+  if (!PIN_HOLDING_STATUSES.includes(to) && (await releaseTemplatePin(tx, request.id))) {
+    await resyncEventRequests(tx, request.id);
+  }
   return to;
+}
+
+export const SYNCED_STATUSES: PrintRequestStatus[] = ["SUBMITTED", "QUOTED", "ACCEPTED"];
+
+// Aligne la copie du template d'UNE demande sur le template effectif de son évènement. Le
+// verrou de la demande (lockRequestWithEvent) doit être tenu. Les brouillons et les demandes
+// payées ne sont pas touchés ; une demande ACCEPTED avec paiement en cours est laissée telle
+// quelle. Vrai si la demande a été repassée en SUBMITTED (entrée TEMPLATE_CHANGED au fil).
+export async function syncLockedRequest(tx: Prisma.TransactionClient, requestId: string): Promise<boolean> {
+  const request = await tx.printRequest.findUnique({ where: { id: requestId } });
+  if (!request || !SYNCED_STATUSES.includes(request.status)) return false;
+  const target = await snapshotEventTemplate(request.eventId, tx);
+  if (request.badgeTemplateId === target.badgeTemplateId) return false;
+  if (request.status === "ACCEPTED" && (await isPaymentInProgress(requestId))) return false;
+  const previous = request.badgeTemplateId
+    ? await tx.installedBadgeTemplate.findUnique({
+        where: { id: request.badgeTemplateId },
+        select: { label: true },
+      })
+    : null;
+  const acceptanceCancelled = request.status === "ACCEPTED";
+  await applyTransition(tx, request, "TEMPLATE_CHANGED", "SYSTEM");
+  await tx.printRequest.update({
+    where: { id: requestId },
+    data: {
+      badgeTemplateId: target.badgeTemplateId,
+      badgeWidthPx: target.badgeWidthPx,
+      badgeHeightPx: target.badgeHeightPx,
+      badgePages: target.badgePages,
+    },
+  });
+  await appendThreadEvent(tx, requestId, "TEMPLATE_CHANGED", {
+    fromLabel: previous?.label ?? "—",
+    toLabel: target.label,
+    acceptanceCancelled,
+  });
+  return true;
+}
+
+// Après la remise d'un évènement à l'héritage : resynchronise ses demandes en cours (l'évènement
+// et la demande `heldRequestId` sont déjà verrouillés ; les autres le sont ici, Event d'abord).
+async function resyncEventRequests(tx: Prisma.TransactionClient, heldRequestId: string): Promise<void> {
+  const { event } = await tx.printRequest.findUniqueOrThrow({
+    where: { id: heldRequestId },
+    select: { event: { select: { id: true, orgId: true, badgeTemplateId: true } } },
+  });
+  // Aucun template effectif (ni évènement, ni organisation, ni plateforme) : rien sur quoi aligner
+  // les copies, et ce n'est pas à la libération du verrou d'échouer.
+  if (!(await findEffectiveTemplateRow(await resolveEventTemplateId(event)))) return;
+  const siblings = await tx.printRequest.findMany({
+    where: { eventId: event.id, status: { in: SYNCED_STATUSES } },
+    select: { id: true },
+    orderBy: { id: "asc" },
+  });
+  for (const { id } of siblings) {
+    await lockRequestWithEvent(tx, id);
+    await syncLockedRequest(tx, id);
+  }
 }
 
 // Refuse une modification hors des statuts éditables (sans rien écrire).

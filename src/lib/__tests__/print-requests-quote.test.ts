@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { PrintRequestStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { formatFcfa } from "@/lib/print-catalog/pricing";
-import { PrintRequestError } from "@/lib/print-requests/errors";
+import { PrintRequestError, PRINT_REQUEST_ERROR_MESSAGES } from "@/lib/print-requests/errors";
 import { staffLineSchema, staffLinePatchSchema } from "@/lib/print-requests/inputs";
 import {
   addStaffLine,
@@ -307,6 +307,27 @@ describe("sendQuote", () => {
     expect(await reject(sendQuote({ requestId: r.id, userId: staff() }))).toMatchObject({ code: "NEGATIVE_TOTAL", status: 400 });
     const after = await reload(r.id);
     expect(after).toMatchObject({ status: "SUBMITTED", quoteVersion: 0, quotedAt: null });
+  });
+
+  it("exige une ligne de support de badge active : un accessoire seul, ou un badge retiré, est refusé", async () => {
+    const { r, support } = await requestWithLines();
+    await prisma.printQuoteLine.update({ where: { id: support.id }, data: { removedAt: new Date() } });
+    expect(await reject(sendQuote({ requestId: r.id, userId: staff() }))).toMatchObject({
+      code: "BADGE_PRODUCT_REQUIRED", status: 400,
+    });
+    const onlyService = await makeRequest(fx, { status: "SUBMITTED" });
+    await addStaffLine(service(onlyService.id, { kind: "SERVICE", label: "Frais", quantity: 1, unitPrice: 1000 }));
+    expect(await reject(sendQuote({ requestId: onlyService.id, userId: staff() }))).toMatchObject({ code: "BADGE_PRODUCT_REQUIRED" });
+    expect((await reload(onlyService.id)).status).toBe("SUBMITTED");
+  });
+
+  it("exige un total strictement positif : 0 -> ZERO_TOTAL avec message français, rien n'est écrit", async () => {
+    const { r } = await requestWithLines();
+    await addStaffLine(service(r.id, { kind: "DISCOUNT", label: "Remise", quantity: 1, unitPrice: -6000 }));
+    const err = await reject(sendQuote({ requestId: r.id, userId: staff() }));
+    expect(err).toMatchObject({ code: "ZERO_TOTAL", status: 400 });
+    expect(PRINT_REQUEST_ERROR_MESSAGES.ZERO_TOTAL).toBe("Le total du devis doit être supérieur à zéro.");
+    expect(await reload(r.id)).toMatchObject({ status: "SUBMITTED", quoteVersion: 0, quotedAt: null });
   });
 
   it("depuis un autre statut -> INVALID_TRANSITION ; demande inconnue -> 404", async () => {

@@ -1,9 +1,9 @@
-import type { Prisma, PrintRequestStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { findEffectiveTemplateRow, resolveEventTemplateId } from "@/lib/badge-templates/event-template-variables";
 import { PrintRequestError } from "./errors";
 import { lockEventRow } from "./content";
-import { appendThreadEvent } from "./thread";
-import { applyTransition, isPaymentInProgress, lockRequestWithEvent, snapshotEventTemplate } from "./service";
+import { SYNCED_STATUSES, isPaymentInProgress, lockRequestWithEvent, syncLockedRequest } from "./service";
 import { TEMPLATE_LOCK_STATUSES, findTemplateLock, releaseTemplatePin } from "./template-lock-core";
 
 export { TEMPLATE_LOCK_STATUSES, findTemplateLock, releaseTemplatePin };
@@ -68,7 +68,7 @@ async function pinIn(
   for (const eventId of ids) await lockEventRow(tx, eventId);
   let pinned = 0;
   for (const eventId of ids) {
-    const event = await tx.event.findUnique({ where: { id: eventId }, select: { badgeTemplateId: true } });
+    const event = await tx.event.findUnique({ where: { id: eventId }, select: { badgeTemplateId: true, orgId: true } });
     if (!event || event.badgeTemplateId !== null) continue;
     const holding = new Set(await acceptedWithPayment(tx, eventId));
     const requests = await tx.printRequest.findMany({
@@ -79,7 +79,14 @@ async function pinIn(
       (r) => r.badgeTemplateId && (r.status !== "ACCEPTED" || holding.has(r.id)),
     );
     if (holders.length === 0) continue;
-    await tx.event.update({ where: { id: eventId }, data: { badgeTemplateId: holders[0].badgeTemplateId } });
+    // On fige le template effectif courant (celui qui va changer), pas la copie d'une demande :
+    // une copie périmée ne doit pas re-figer l'évènement sur un ancien template. Sans template
+    // effectif résolvable, on retombe sur la copie de la première demande qui le retient.
+    const effective = await findEffectiveTemplateRow(await resolveEventTemplateId(event));
+    await tx.event.update({
+      where: { id: eventId },
+      data: { badgeTemplateId: effective?.id ?? holders[0].badgeTemplateId },
+    });
     await tx.printRequest.updateMany({
       where: { id: { in: holders.map((r) => r.id) } },
       data: { templatePinned: true },
@@ -88,8 +95,6 @@ async function pinIn(
   }
   return pinned;
 }
-
-const SYNCED_STATUSES: PrintRequestStatus[] = ["SUBMITTED", "QUOTED", "ACCEPTED"];
 
 // Après un changement de template : la copie des demandes en cours suit le template effectif.
 // Les brouillons sont ignorés (leur copie est prise à l'envoi). Une demande ACCEPTED avec
@@ -102,10 +107,10 @@ export async function syncRequestTemplates(scope: Scope, actorId: string): Promi
     "eventId" in scope ? { eventId: scope.eventId } : "orgId" in scope ? { orgId: scope.orgId } : {};
   const candidates = await prisma.printRequest.findMany({
     where: { ...where, status: { in: SYNCED_STATUSES } },
-    select: { id: true, eventId: true },
+    select: { id: true },
   });
   const resubmitted: string[] = [];
-  for (const { id, eventId } of candidates) {
+  for (const { id } of candidates) {
     const changed = await prisma.$transaction(async (tx) => {
       // Demande disparue depuis la liste (évènement supprimé) : rien à synchroniser.
       const locked = await lockRequestWithEvent(tx, id).then(
@@ -116,34 +121,7 @@ export async function syncRequestTemplates(scope: Scope, actorId: string): Promi
         },
       );
       if (!locked) return false;
-      const request = await tx.printRequest.findUnique({ where: { id } });
-      if (!request || !SYNCED_STATUSES.includes(request.status)) return false;
-      const target = await snapshotEventTemplate(eventId, tx);
-      if (request.badgeTemplateId === target.badgeTemplateId) return false;
-      if (request.status === "ACCEPTED" && (await isPaymentInProgress(id))) return false;
-      const previous = request.badgeTemplateId
-        ? await tx.installedBadgeTemplate.findUnique({
-            where: { id: request.badgeTemplateId },
-            select: { label: true },
-          })
-        : null;
-      const acceptanceCancelled = request.status === "ACCEPTED";
-      await applyTransition(tx, request, "TEMPLATE_CHANGED", "SYSTEM");
-      await tx.printRequest.update({
-        where: { id },
-        data: {
-          badgeTemplateId: target.badgeTemplateId,
-          badgeWidthPx: target.badgeWidthPx,
-          badgeHeightPx: target.badgeHeightPx,
-          badgePages: target.badgePages,
-        },
-      });
-      await appendThreadEvent(tx, id, "TEMPLATE_CHANGED", {
-        fromLabel: previous?.label ?? "—",
-        toLabel: target.label,
-        acceptanceCancelled,
-      });
-      return true;
+      return syncLockedRequest(tx, id);
     });
     if (changed) resubmitted.push(id);
   }

@@ -13,13 +13,14 @@ import {
   describeThreadEvent,
   listThread,
   postMessage,
+  toEntryDTO,
   type LineChange,
   type ThreadEventType,
 } from "@/lib/print-requests/thread";
 
 const uniq = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-async function seed(status: "SUBMITTED" | "COMPLETED" | "REJECTED" | "CANCELLED" = "SUBMITTED") {
+async function seed(status: "DRAFT" | "SUBMITTED" | "COMPLETED" | "REJECTED" | "CANCELLED" = "SUBMITTED") {
   const u = uniq();
   const org = await prisma.organization.create({ data: { name: "O", slug: `o-${u}` } });
   const event = await prisma.event.create({
@@ -223,8 +224,34 @@ describe("postMessage", () => {
     await expect(
       postMessage({ ...base(request, staff), side: "STAFF", attachmentKey: `print-requests/${event.id}/x.pdf` }),
     ).rejects.toMatchObject({ code: "INVALID_ATTACHMENT" });
-    const ok = await postMessage({ ...base(request, staff), side: "STAFF", attachmentKey: "print-requests/staff/x.pdf" });
+    const ok = await postMessage({
+      ...base(request, staff), side: "STAFF", attachmentKey: `print-requests/staff/${request.id}/x.pdf`,
+    });
     expect(ok.side).toBe("STAFF");
+  });
+
+  it("staff : la clé d'une autre demande (autre organisation) ou sans demande est refusée", async () => {
+    const mine = await seed();
+    const theirs = await seed();
+    const stf = (attachmentKey: string) =>
+      postMessage({ ...base(mine.request, mine.staff), side: "STAFF", attachmentKey });
+    for (const key of [
+      `print-requests/staff/${theirs.request.id}/x.pdf`,
+      "print-requests/staff/x.pdf",
+      `print-requests/staff/${mine.request.id}/a/b.pdf`,
+    ]) {
+      await expect(stf(key)).rejects.toMatchObject({ code: "INVALID_ATTACHMENT", status: 400 });
+    }
+    await expect(stf(`print-requests/staff/${mine.request.id}/ok.pdf`)).resolves.toBeTruthy();
+  });
+
+  it("refuse un message sur un brouillon (409), sans rien écrire", async () => {
+    const { request, organizer } = await seed("DRAFT");
+    await expect(postMessage(base(request, organizer))).rejects.toMatchObject({
+      code: "INVALID_TRANSITION",
+      status: 409,
+    });
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
   });
 
   it("demande absente -> 404", async () => {
@@ -295,7 +322,8 @@ describe("postMessage : forme des clés de pièces jointes", () => {
     ]) {
       await expect(org(k)).rejects.toMatchObject({ code: "INVALID_ATTACHMENT" });
     }
-    for (const k of ["print-requests/staff/../x", "/print-requests/staff/x.pdf", "print-requests/staff/a b.pdf", `print-requests/staff/${"a".repeat(300)}`]) {
+    const sp = `print-requests/staff/${request.id}`;
+    for (const k of ["print-requests/staff/../x", "/print-requests/staff/x.pdf", `${sp}/a b.pdf`, `${sp}/${"a".repeat(300)}`, `${sp}/..`, `${sp}/.`]) {
       await expect(stf(k)).rejects.toMatchObject({ code: "INVALID_ATTACHMENT" });
     }
     await expect(org(`print-requests/${event.id}/a_b-1.pdf`)).resolves.toBeTruthy();
@@ -329,13 +357,78 @@ describe("listThread", () => {
     const { request, organizer } = await seed();
     await prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "CANCELLED", {}));
     await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "Hello", attachmentKey: null });
-    const thread = await listThread(request.id);
+    const thread = await listThread(request.id, "STAFF");
     expect(thread.map((t) => [t.kind, t.authorName, t.body])).toEqual([
       ["EVENT", null, "Demande annulée"],
       ["MESSAGE", "Orga", "Hello"],
     ]);
     expect(thread[0]).toMatchObject({ eventType: "CANCELLED", attachmentKey: null, side: "SYSTEM" });
     expect(typeof thread[0].createdAt).toBe("string");
+  });
+});
+
+describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
+  async function entries(request: { id: string }, rows: { eventType: string; details?: object | null; body?: string }[]) {
+    for (const row of rows) {
+      await prisma.printRequestMessage.create({
+        data: {
+          requestId: request.id, side: "SYSTEM", kind: "EVENT", eventType: row.eventType,
+          body: row.body ?? "stocké", details: row.details ?? undefined,
+        },
+      });
+    }
+    return {
+      organizer: await listThread(request.id, "ORGANIZER"),
+      staff: await listThread(request.id, "STAFF"),
+    };
+  }
+
+  it("retire paymentId, generationId et motif manuel ; le texte est reconstruit sans le motif", async () => {
+    const { request } = await seed();
+    const { organizer, staff } = await entries(request, [
+      { eventType: "PAYMENT_RECEIVED", details: { amount: 5000, paymentId: "pay_1", reason: "Virement interne" } },
+      { eventType: "PAYMENT_FAILED", details: { amount: 5000, paymentId: "pay_2", reason: "REPLACED" } },
+      { eventType: "SHEETS_GENERATED", details: { badgeCount: 12, generationId: "gen_1" } },
+      { eventType: "SUBMITTED", details: { badgeCount: 3, total: 4500, secret: "x" } },
+    ]);
+    expect(organizer.map((e) => e.details)).toEqual([
+      { amount: 5000 }, { amount: 5000 }, { badgeCount: 12 }, { badgeCount: 3, total: 4500 },
+    ]);
+    expect(organizer[0].body).toBe(`Paiement reçu : ${formatFcfa(5000)}`);
+    expect(organizer[0].body).not.toContain("Virement");
+    expect(JSON.stringify(organizer)).not.toMatch(/pay_|gen_|secret|Virement/);
+    // Le staff voit tout.
+    expect(staff[0].details).toEqual({ amount: 5000, paymentId: "pay_1", reason: "Virement interne" });
+    expect(staff[0].body).toBe("stocké");
+  });
+
+  it("LINES_CHANGED garde de quoi afficher le texte, sans identifiant de ligne", async () => {
+    const { request } = await seed();
+    const { organizer } = await entries(request, [
+      { eventType: "LINES_CHANGED", details: { changes: [added("line_1")], extra: 1 } },
+    ]);
+    expect(organizer[0].details).toEqual({ changes: [{ op: "ADDED", label: "Cordon", to: { quantity: 100, unitPrice: 450 } }] });
+    expect(organizer[0].body).toBe(`Ligne ajoutée : Cordon (100 × ${formatFcfa(450)})`);
+  });
+
+  it("détails absents ou mal formés : objet vide ; type inconnu : aucun détail ; message intact", async () => {
+    const { request, organizer: orga } = await seed();
+    await prisma.printRequestMessage.create({
+      data: { requestId: request.id, side: "SYSTEM", kind: "EVENT", eventType: "CANCELLED", body: "x" },
+    });
+    await prisma.printRequestMessage.create({
+      data: { requestId: request.id, side: "SYSTEM", kind: "EVENT", eventType: "STATUS_CHANGED", body: "x", details: ["a"] },
+    });
+    await prisma.printRequestMessage.create({
+      data: { requestId: request.id, side: "SYSTEM", kind: "EVENT", eventType: "FUTUR", body: "texte", details: { paymentId: "p" } },
+    });
+    await postMessage({ requestId: request.id, authorId: orga.id, side: "ORGANIZER", body: "Salut", attachmentKey: null });
+    const thread = await listThread(request.id, "ORGANIZER");
+    expect(thread.map((e) => e.details)).toEqual([{}, {}, null, null]);
+    expect(thread[2].body).toBe("texte");
+    expect(thread[3]).toMatchObject({ kind: "MESSAGE", body: "Salut" });
+    const m = await prisma.printRequestMessage.findFirstOrThrow({ where: { requestId: request.id, kind: "MESSAGE" } });
+    expect(toEntryDTO(m, "Orga", "ORGANIZER").details).toBeNull();
   });
 });
 
