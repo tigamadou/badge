@@ -16,6 +16,7 @@ import {
   notifyPrintRequestPaid,
   notifySubscriptionChanged,
 } from "@/lib/notifications/triggers";
+import { spendOrgCreditForPaidRequest } from "@/lib/print-requests/org-credit";
 import { lockRequestWithEvent, markPaid } from "@/lib/print-requests/service";
 import { appendThreadEvent } from "@/lib/print-requests/thread";
 
@@ -395,7 +396,11 @@ async function applyPrintRequestPayment(
       select: { status: true, acceptedTotal: true },
     });
     const expected = request.status === "ACCEPTED" && request.acceptedTotal === payment.amount;
-    if (expected && (await markPaid(db, requestId, { paymentId: payment.id }))) return "PAID";
+    if (expected && (await markPaid(db, requestId, { paymentId: payment.id }))) {
+      // Accroche A4 : le crédit d'impression est décompté dans la même transaction.
+      await spendOrgCreditForPaidRequest(db, requestId);
+      return "PAID";
+    }
 
     await appendThreadEvent(db, requestId, "PAYMENT_UNMATCHED", { paymentId: payment.id, amount: payment.amount });
     return "UNMATCHED";

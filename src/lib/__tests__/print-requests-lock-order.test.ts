@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { lockEventRow } from "@/lib/print-requests/content";
 import { cancelRequest } from "@/lib/print-requests/lifecycle";
-import { advanceStatus, reopenQuote } from "@/lib/print-requests/quote";
+import { applyOrgCredit } from "@/lib/print-requests/org-credit";
+import { advanceStatus, markPaidManually, reopenQuote } from "@/lib/print-requests/quote";
 import { pinLockedEventTemplates } from "@/lib/print-requests/template-lock";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
 
@@ -87,6 +88,35 @@ describe("ordre des verrous Event puis PrintRequest", () => {
       expect(s.request.templatePinned).toBe(false);
       expect(s.event.badgeTemplateId).toBeNull();
       await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
+    }
+  });
+});
+
+describe("ordre des verrous Event, PrintRequest puis Organization (crédit d'impression)", () => {
+  it("applyOrgCredit face à markPaid du crédit d'une autre demande : pas d'interblocage", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 10000 } });
+      const line = (requestId: string, usesOrgCredit: boolean, amount: number) =>
+        prisma.printQuoteLine.create({
+          data: {
+            requestId, kind: usesOrgCredit ? "DISCOUNT" : "SERVICE", label: "L", quantity: 1,
+            unitPrice: amount, lineTotal: amount, position: usesOrgCredit ? 1 : 0, addedBy: "STAFF", usesOrgCredit,
+          },
+        });
+      const paying = await makeRequest(fx, {
+        status: "ACCEPTED", total: 9000, quoteVersion: 1, acceptedVersion: 1, acceptedTotal: 9000,
+      });
+      await line(paying.id, false, 10000);
+      await line(paying.id, true, -1000);
+      const applying = await makeRequest(fx, { status: "SUBMITTED", total: 5000 });
+      await line(applying.id, false, 5000);
+      const res = await Promise.allSettled([
+        markPaidManually({ requestId: paying.id, userId: fx.staffAdmin.id, reason: "Virement" }),
+        applyOrgCredit({ requestId: applying.id, amount: 1000, userId: fx.staffAdmin.id }),
+      ]);
+      expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled"]);
+      expect((await state(paying.id)).request.status).toBe("PAID");
+      await prisma.printRequest.update({ where: { id: applying.id }, data: { status: "CANCELLED" } });
     }
   });
 });

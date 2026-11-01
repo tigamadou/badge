@@ -392,6 +392,34 @@ describe("advanceStatus", () => {
   });
 });
 
+describe("ligne de crédit d'impression : modifiable par applyOrgCredit seulement", () => {
+  async function withCreditLine() {
+    const { r } = await requestWithLines("SUBMITTED");
+    const credit = await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "DISCOUNT", label: "Crédit d'impression", quantity: 1, unitPrice: -1000,
+        lineTotal: -1000, position: 2, addedBy: "STAFF", usesOrgCredit: true,
+      },
+    });
+    return { r, credit };
+  }
+
+  it("updateStaffLine : CREDIT_LINE_LOCKED, rien d'écrit", async () => {
+    const { r, credit } = await withCreditLine();
+    const err = await reject(updateStaffLine({ requestId: r.id, lineId: credit.id, userId: staff(), patch: { unitPrice: -500 } }));
+    expect(err).toMatchObject({ code: "CREDIT_LINE_LOCKED", status: 409 });
+    expect((await prisma.printQuoteLine.findUniqueOrThrow({ where: { id: credit.id } })).unitPrice).toBe(-1000);
+    expect(await thread(r.id)).toHaveLength(0);
+  });
+
+  it("removeStaffLine : CREDIT_LINE_LOCKED, la ligne reste active", async () => {
+    const { r, credit } = await withCreditLine();
+    const err = await reject(removeStaffLine({ requestId: r.id, lineId: credit.id, userId: staff() }));
+    expect(err).toMatchObject({ code: "CREDIT_LINE_LOCKED", status: 409 });
+    expect((await prisma.printQuoteLine.findUniqueOrThrow({ where: { id: credit.id } })).removedAt).toBeNull();
+  });
+});
+
 describe("markPaidManually", () => {
   const accepted = () => requestWithLines("ACCEPTED", { quoteVersion: 1, acceptedVersion: 1, acceptedTotal: 6000 });
 
