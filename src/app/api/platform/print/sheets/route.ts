@@ -21,10 +21,27 @@ export const GET = withStaffAuth(
   async (req) => {
     const eventId = new URL(req.url).searchParams.get("eventId");
     const generations = await prisma.printSheetGeneration.findMany({
-      where: eventId ? { eventId } : {},
+      // Cet ecran ne liste que les planches (les archives ZIP ont le leur).
+      where: { output: "SHEETS", ...(eventId ? { eventId } : {}) },
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: {
+      // Sans registrationIds (jusqu'a 5000 ids) ni layoutSnapshot : liste rafraichie toutes les 5 s.
+      select: {
+        id: true,
+        output: true,
+        eventId: true,
+        layoutId: true,
+        duplex: true,
+        status: true,
+        sheetCount: true,
+        badgeCount: true,
+        skippedIds: true,
+        fileKey: true,
+        error: true,
+        createdById: true,
+        createdAt: true,
+        startedAt: true,
+        completedAt: true,
         event: { select: { id: true, title: true } },
         layout: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },

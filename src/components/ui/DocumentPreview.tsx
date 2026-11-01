@@ -17,12 +17,15 @@ export function DocumentPreview({
   storageKey,
   label,
   readable = true,
+  defaultOpen = false,
 }: {
   storageKey: string | null;
   label: string;
   readable?: boolean;
+  // Ouvre l'apercu des le montage (lien direct depuis une liste).
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   if (!storageKey) {
     return <FileBox icon="file" title={label} subtitle="Non fournie" />;

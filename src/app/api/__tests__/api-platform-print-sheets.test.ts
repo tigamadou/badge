@@ -194,6 +194,27 @@ describe("GET /api/platform/print/sheets", () => {
   });
 });
 
+describe("GET /api/platform/print/sheets (liste de l'ecran)", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("returns only SHEETS rows and never the registrationIds", async () => {
+    const staff = await asStaff();
+    const { event, layout } = await fixture();
+    const base = { eventId: event.id, layoutId: layout.id, createdById: staff.id, registrationIds: ["a", "b"] };
+    const sheets = await prisma.printSheetGeneration.create({ data: { ...base, output: "SHEETS" } });
+    const zip = await prisma.printSheetGeneration.create({ data: { ...base, output: "ZIP" } });
+    const { GET } = await import("@/app/api/platform/print/sheets/route");
+    const { generations } = await (
+      await GET(req(`/api/platform/print/sheets?eventId=${event.id}`, "GET"), noParams)
+    ).json();
+    const ids = generations.map((g: { id: string }) => g.id);
+    expect(ids).toContain(sheets.id);
+    expect(ids).not.toContain(zip.id);
+    expect(generations[0]).not.toHaveProperty("registrationIds");
+    expect(generations[0]).not.toHaveProperty("layoutSnapshot");
+  });
+});
+
 describe("GET /api/platform/print/sheets/[generationId]", () => {
   beforeEach(() => vi.mocked(getServerSession).mockReset());
 
