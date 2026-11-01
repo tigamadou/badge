@@ -3,7 +3,7 @@
 > **Statut** : proposée — 2026-11-01 — en attente de relecture
 > **Type** : nouvelle fonctionnalité
 > **Périmètre** : v4 — espace `/event/[eventId]` (nouvelle entrée « Impression »), espace `/platform` (groupe « Impression », entrée « Demandes »), notifications, `src/lib/print-requests/**`
-> **Plan** : à rédiger
+> **Plan** : [`plans/2026-11-01-demandes-d-impression-et-devis.md`](../plans/2026-11-01-demandes-d-impression-et-devis.md)
 > **Chantier** : service d'impression, spec 3 sur 5 — voir aussi les specs
 > [31](2026-11-01-31-v4-gabarits-et-planches-d-impression.md),
 > [32](2026-11-01-32-v4-catalogue-produits-d-impression.md),

@@ -3,7 +3,7 @@
 > **Statut** : proposée — 2026-11-01 — en attente de relecture
 > **Type** : nouvelle fonctionnalité
 > **Périmètre** : v4 — paramètres plateforme (onglet « Impression sur place »), assistant de demande d'impression, poste d'impression staff, email d'approbation et compte participant (QR d'accueil)
-> **Plan** : à rédiger
+> **Plan** : [`plans/2026-11-01-impression-pendant-l-evenement.md`](../plans/2026-11-01-impression-pendant-l-evenement.md)
 > **Chantier** : service d'impression, spec 5 sur 5 — voir aussi les specs
 > [31](2026-11-01-31-v4-gabarits-et-planches-d-impression.md),
 > [32](2026-11-01-32-v4-catalogue-produits-d-impression.md),

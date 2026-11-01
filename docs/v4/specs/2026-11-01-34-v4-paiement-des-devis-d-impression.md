@@ -3,7 +3,7 @@
 > **Statut** : proposée — 2026-11-01 — en attente de relecture
 > **Type** : extension d'une fonctionnalité existante
 > **Périmètre** : v4 — `src/lib/payments.ts`, `src/lib/fedapay.ts`, webhook FedaPay, modèle `Payment`, page d'une demande d'impression, worker
-> **Plan** : à rédiger
+> **Plan** : [`plans/2026-11-01-paiement-des-devis-d-impression.md`](../plans/2026-11-01-paiement-des-devis-d-impression.md)
 > **Chantier** : service d'impression, spec 4 sur 5 — voir aussi les specs
 > [31](2026-11-01-31-v4-gabarits-et-planches-d-impression.md),
 > [32](2026-11-01-32-v4-catalogue-produits-d-impression.md),

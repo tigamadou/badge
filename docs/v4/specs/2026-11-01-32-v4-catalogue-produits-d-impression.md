@@ -3,7 +3,7 @@
 > **Statut** : proposée — 2026-11-01 — en attente de relecture
 > **Type** : nouvelle fonctionnalité
 > **Périmètre** : v4 — espace `/platform` (groupe « Impression »), vitrine côté évènement, `src/lib/print-catalog/**`
-> **Plan** : à rédiger
+> **Plan** : [`plans/2026-11-01-catalogue-produits-d-impression.md`](../plans/2026-11-01-catalogue-produits-d-impression.md)
 > **Chantier** : service d'impression, spec 2 sur 5 — voir aussi les specs
 > [31](2026-11-01-31-v4-gabarits-et-planches-d-impression.md),
 > [33](2026-11-01-33-v4-demandes-d-impression-et-devis.md),
