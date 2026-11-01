@@ -212,8 +212,7 @@ export function GenerationForm({
 
           {event && printRequest && (
             <p className="mb-4 text-sm text-slate-700">
-              {printRequest.registrationIds.length} badge{printRequest.registrationIds.length > 1 ? "s" : ""} de la
-              demande, dans l&apos;ordre de la demande.
+              {`${printRequest.registrationIds.length} badge${printRequest.registrationIds.length > 1 ? "s" : ""} de la demande, dans l'ordre de la demande.`}
             </p>
           )}
           {event && !printRequest && (
