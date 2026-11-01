@@ -110,6 +110,14 @@ describe("POST /api/platform/print/sheets", () => {
     const { generation } = await res.json();
     expect(generation.printRequestId).toBe(request.id);
     expect(generation.duplex).toBe(true);
+    const all = await POST(
+      req("/api/platform/print/sheets", "POST", {
+        eventId: event.id, layoutId: layout.id, printRequestId: request.id, selection: { mode: "REQUEST" },
+      }),
+      noParams,
+    );
+    expect(all.status).toBe(201);
+    expect((await all.json()).generation.registrationIds).toEqual([r.id]);
     const bad = await POST(
       req("/api/platform/print/sheets", "POST", {
         eventId: event.id, layoutId: layout.id, printRequestId: "nope", selection: { mode: "ALL" },

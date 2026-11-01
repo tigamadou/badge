@@ -411,6 +411,26 @@ describe("createGeneration depuis une demande", () => {
     expect(e.code).toBe("INVALID_SELECTION");
   });
 
+  it("selection REQUEST : tous les badges de la demande, sans liste d'ids", async () => {
+    const s = await linked();
+    const g = await createGeneration(base(s, { selection: { mode: "REQUEST" } }));
+    expect(g.registrationIds).toEqual(s.ordered);
+  });
+
+  it("selection REQUEST sans demande : INVALID_SELECTION", async () => {
+    const s = await linked();
+    const e = await code(createGeneration(base(s, { selection: { mode: "REQUEST" }, printRequestId: undefined })));
+    expect(e.code).toBe("INVALID_SELECTION");
+  });
+
+  it("demande sans item : message dedie", async () => {
+    const s = await linked();
+    await prisma.printRequestItem.deleteMany({ where: { requestId: s.request.id } });
+    const e = await code(createGeneration(base(s, { selection: { mode: "REQUEST" } })));
+    expect(e.code).toBe("EMPTY_SELECTION");
+    expect(e.message).toBe("Aucun badge à imprimer dans cette demande.");
+  });
+
   it("refuse une selection vide", async () => {
     const s = await linked();
     const e = await code(createGeneration(base(s, { selection: { mode: "IDS", registrationIds: [] } })));

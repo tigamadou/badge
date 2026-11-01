@@ -142,8 +142,9 @@ export function GenerationForm({
 
   const submit = useAsyncAction(
     async () => {
-      const selection =
-        mode === "ALL"
+      const selection = printRequest
+        ? { mode: "REQUEST" as const }
+        : mode === "ALL"
           ? { mode }
           : mode === "CATEGORIES"
             ? { mode, categoryIds }

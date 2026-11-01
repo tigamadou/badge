@@ -43,6 +43,9 @@ export class GenerationError extends Error {
   }
 }
 
+// Tous les badges de la demande, lus côté serveur (sans plafond d'identifiants).
+export type RequestSelection = { mode: "REQUEST" };
+
 export type GenerationSelection =
   | { mode: "ALL" }
   | { mode: "CATEGORIES"; categoryIds: string[] }
@@ -124,7 +127,7 @@ const GENERATION_REQUEST_STATUSES = ["PAID", "IN_PRODUCTION", "READY"];
 async function selectRequestRegistrations(
   printRequestId: string,
   eventId: string,
-  selection: GenerationSelection,
+  selection: GenerationSelection | RequestSelection,
 ) {
   const request = await prisma.printRequest.findUnique({
     where: { id: printRequestId },
@@ -140,27 +143,29 @@ async function selectRequestRegistrations(
   if (!GENERATION_REQUEST_STATUSES.includes(request.status)) {
     throw new GenerationError("PRINT_REQUEST_NOT_PAID", "La demande doit être payée pour générer les planches");
   }
-  if (selection.mode !== "IDS") {
+  if (selection.mode !== "IDS" && selection.mode !== "REQUEST") {
     throw new GenerationError("INVALID_SELECTION", "Une génération liée à une demande exige une sélection d'inscriptions");
   }
-  const wanted = new Set(selection.registrationIds);
-  if (wanted.size === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription sélectionnée");
+  const wanted = selection.mode === "IDS" ? new Set(selection.registrationIds) : null;
+  if (wanted && wanted.size === 0) {
+    throw new GenerationError("EMPTY_SELECTION", "Aucun badge à imprimer dans cette demande.");
+  }
   const items = await prisma.printRequestItem.findMany({
     where: { requestId: request.id },
     orderBy: { position: "asc" },
     select: { registrationId: true },
   });
   const inRequest = new Set(items.map((i) => i.registrationId));
-  if ([...wanted].some((id) => !inRequest.has(id))) {
+  if (wanted && [...wanted].some((id) => !inRequest.has(id))) {
     throw new GenerationError("INVALID_SELECTION", "La sélection contient une inscription absente de la demande");
   }
-  return items.filter((i) => wanted.has(i.registrationId)).map((i) => ({ id: i.registrationId }));
+  return items.filter((i) => !wanted || wanted.has(i.registrationId)).map((i) => ({ id: i.registrationId }));
 }
 
 export async function createGeneration(input: {
   eventId: string;
   layoutId: string;
-  selection: GenerationSelection;
+  selection: GenerationSelection | RequestSelection;
   duplex: boolean;
   userId: string;
   printRequestId?: string;
@@ -174,10 +179,19 @@ export async function createGeneration(input: {
   });
   if (!event) throw new GenerationError("EVENT_NOT_FOUND", "Évènement introuvable");
 
+  const { selection } = input;
+  if (selection.mode === "REQUEST" && !input.printRequestId) {
+    throw new GenerationError("INVALID_SELECTION", "La sélection « demande » exige une demande d'impression");
+  }
   const rows = input.printRequestId
-    ? await selectRequestRegistrations(input.printRequestId, event.id, input.selection)
-    : orderRegistrations(await selectRegistrations(event.id, input.selection));
-  if (rows.length === 0) throw new GenerationError("EMPTY_SELECTION", "Aucune inscription approuvée à imprimer");
+    ? await selectRequestRegistrations(input.printRequestId, event.id, selection)
+    : orderRegistrations(await selectRegistrations(event.id, selection as GenerationSelection));
+  if (rows.length === 0) {
+    throw new GenerationError(
+      "EMPTY_SELECTION",
+      input.printRequestId ? "Aucun badge à imprimer dans cette demande." : "Aucune inscription approuvée à imprimer",
+    );
+  }
 
   const template = await resolveEventTemplate(event);
   const badgePages = template.meta.pages === 2 ? 2 : 1;

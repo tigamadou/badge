@@ -12,6 +12,8 @@ const bodySchema = z.object({
   selection: z.discriminatedUnion("mode", [
     z.object({ mode: z.literal("ALL") }),
     z.object({ mode: z.literal("CATEGORIES"), categoryIds: z.array(id) }),
+    // Avec printRequestId : tous les badges de la demande, lus côté serveur.
+    z.object({ mode: z.literal("REQUEST") }),
     z.object({ mode: z.literal("IDS"), registrationIds: z.array(id).max(5000) }),
   ]),
   duplex: z.boolean().default(false),

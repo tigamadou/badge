@@ -181,9 +181,14 @@ export async function runGeneration(
     // Planches d'une demande : les badges ecartes sont signales dans son fil.
     if (generation.printRequestId && skippedIds.length > 0) {
       const requestId = generation.printRequestId;
-      await prisma.$transaction((tx) =>
-        appendThreadEvent(tx, requestId, "REGISTRATIONS_SKIPPED", { registrationIds: skippedIds }),
-      );
+      // Le fil est secondaire : la génération est DONE, son échec ne doit rien changer au résultat.
+      try {
+        await prisma.$transaction((tx) =>
+          appendThreadEvent(tx, requestId, "REGISTRATIONS_SKIPPED", { registrationIds: skippedIds }),
+        );
+      } catch (err) {
+        console.error("Entrée REGISTRATIONS_SKIPPED non écrite", err);
+      }
     }
     return "DONE";
   } catch (err) {

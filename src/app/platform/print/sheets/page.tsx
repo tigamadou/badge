@@ -27,13 +27,15 @@ export default async function PrintSheetsPage({
         select: {
           id: true,
           reference: true,
+          status: true,
           orgId: true,
           eventId: true,
           items: { orderBy: { position: "asc" }, select: { registrationId: true } },
         },
       })
     : null;
-  const printRequest = linked
+  const generable = !!linked && ["PAID", "IN_PRODUCTION", "READY"].includes(linked.status);
+  const printRequest = linked && generable
     ? {
         id: linked.id,
         reference: linked.reference,
@@ -97,6 +99,11 @@ export default async function PrintSheetsPage({
           Génération des badges en planches PDF prêtes à imprimer, et historique
         </p>
       </div>
+      {linked && !generable && (
+        <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Les planches ne peuvent être générées que pour une demande payée, en production ou prête.
+        </p>
+      )}
       <GenerationsScreen layouts={layouts} initial={initial} printRequest={printRequest} />
     </div>
   );
