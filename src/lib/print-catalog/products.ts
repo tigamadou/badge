@@ -25,15 +25,12 @@ export function catalogErrorResponse(err: CatalogError): NextResponse {
 export async function uniqueProductSlug(name: string): Promise<string> {
   const base = slugify(name, { maxLength: 100, fallback: "produit" });
   let candidate = base;
-  let i = 2;
   // Le caller traite la rare course TOCTOU via P2002.
-  while (i <= 1000) {
+  for (let i = 2; ; i++) {
     const exists = await prisma.printProduct.findUnique({ where: { slug: candidate } });
     if (!exists) return candidate;
     candidate = `${base}-${i}`;
-    i++;
   }
-  throw new Error("Slug allocation exhausted");
 }
 
 export async function createProduct(input: ProductCreateInput, userId: string): Promise<PrintProduct> {

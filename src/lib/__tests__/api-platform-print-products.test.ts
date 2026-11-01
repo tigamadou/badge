@@ -83,28 +83,20 @@ describe("POST /api/platform/print/products", () => {
   });
 });
 
-describe("GET /api/platform/print/products", () => {
+describe("POST erreurs inattendues", () => {
   beforeEach(() => vi.mocked(getServerSession).mockReset());
 
-  it("STAFF_OBSERVER liste ; filtres kind et archived", async () => {
-    await asStaff("STAFF_OBSERVER");
-    const c = await createCordonInDb();
-    const arch = await createCordonInDb({ archived: true });
+  it("P2002 -> 409 SLUG_TAKEN ; autre erreur relancée", async () => {
+    await asStaff();
     const { list } = await loadRoutes();
-    const a = await (await list.GET(req(`${LIST}?kind=ACCESSORY`, "GET"), noParams)).json();
-    const ids = a.products.map((p: { id: string }) => p.id);
-    expect(ids).toContain(c.productId);
-    expect(ids).not.toContain(arch.productId);
-    const b = await (await list.GET(req(`${LIST}?archived=true`, "GET"), noParams)).json();
-    expect(b.products.map((p: { id: string }) => p.id)).toContain(arch.productId);
-    const bad = await list.GET(req(`${LIST}?kind=NOPE`, "GET"), noParams);
-    expect(bad.status).toBe(400);
-  });
-
-  it("401 sans session", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null as never);
-    const { list } = await loadRoutes();
-    expect((await list.GET(req(LIST, "GET"), noParams)).status).toBe(401);
+    const spy = vi.spyOn(prisma.printProduct, "create");
+    spy.mockRejectedValueOnce(Object.assign(new Error("dup"), { code: "P2002" }));
+    const res = await list.POST(req(LIST, "POST", validBody()), noParams);
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("SLUG_TAKEN");
+    spy.mockRejectedValueOnce(new Error("boom"));
+    await expect(list.POST(req(LIST, "POST", validBody()), noParams)).rejects.toThrow("boom");
+    spy.mockRestore();
   });
 });
 
@@ -134,6 +126,13 @@ describe("PATCH /api/platform/print/products/[productId]", () => {
     expect((await res409.json()).error).toBe("PRODUCT_ARCHIVED");
   });
 
+  it("400 sur JSON invalide", async () => {
+    await asStaff();
+    const { one } = await loadRoutes();
+    const raw = new NextRequest(`http://localhost${LIST}/x`, { method: "PATCH", body: "{", headers: { "content-type": "application/json" } });
+    expect((await one.PATCH(raw, idParams("x"))).status).toBe(400);
+  });
+
   it("publier conserve minQuantity (50) et logue changed: [published]", async () => {
     const staff = await asStaff();
     const { one } = await loadRoutes();
@@ -154,6 +153,22 @@ describe("PATCH /api/platform/print/products/[productId]", () => {
     const res = await one.PATCH(req(`${LIST}/${c.productId}`, "PATCH", { basePrice: 500 }), idParams(c.productId));
     expect(res.status).toBe(200);
     expect(await prisma.activityLog.count({ where: { type: "PRINT_PRODUCT_UPDATED", targetId: c.productId } })).toBe(0);
+  });
+});
+
+describe("erreurs inattendues PATCH/DELETE", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("relance les erreurs qui ne sont pas des CatalogError", async () => {
+    await asStaff();
+    const { one } = await loadRoutes();
+    const c = await createCordonInDb();
+    const spy = vi.spyOn(prisma.printProduct, "findUnique");
+    spy.mockRejectedValueOnce(new Error("boom"));
+    await expect(one.PATCH(req(`${LIST}/x`, "PATCH", { basePrice: 1 }), idParams(c.productId))).rejects.toThrow("boom");
+    spy.mockRejectedValueOnce(new Error("boom"));
+    await expect(one.DELETE(req(`${LIST}/x`, "DELETE"), idParams(c.productId))).rejects.toThrow("boom");
+    spy.mockRestore();
   });
 });
 

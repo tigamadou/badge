@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import {
   CatalogError,
@@ -28,6 +28,21 @@ describe("uniqueProductSlug", () => {
   });
 });
 
+describe("uniqueProductSlug (cas limites)", () => {
+  it("accents et longueur maximale", async () => {
+    await prisma.printProduct.deleteMany({ where: { slug: "cafe-a-l-ete" } });
+    expect(await uniqueProductSlug("Café à l'été")).toBe("cafe-a-l-ete");
+    expect((await uniqueProductSlug("a".repeat(150))).length).toBe(100);
+  });
+
+  it("continue de suffixer tant que le slug est pris", async () => {
+    const spy = vi.spyOn(prisma.printProduct, "findUnique");
+    spy.mockResolvedValueOnce({} as never).mockResolvedValueOnce({} as never).mockResolvedValueOnce(null);
+    expect(await uniqueProductSlug("Zzz")).toBe("zzz-3");
+    spy.mockRestore();
+  });
+});
+
 describe("schemas", () => {
   it("minQuantity n'a pas de défaut dans le schéma partagé", () => {
     const c = productCreateSchema.parse({ kind: "BADGE", name: " A ", basePrice: 10 });
@@ -48,6 +63,16 @@ describe("createProduct", () => {
     expect(a.createdById).toBe(u.id);
     expect(b.minQuantity).toBe(20);
     expect(b.position).toBeGreaterThan(a.position);
+  });
+});
+
+describe("createProduct sans produit existant", () => {
+  it("position 0 quand le maximum est null", async () => {
+    const u = await user();
+    const spy = vi.spyOn(prisma.printProduct, "aggregate").mockResolvedValueOnce({ _max: { position: null } } as never);
+    const p = await createProduct({ kind: "BADGE", name: uniq("Premier"), basePrice: 1 }, u.id);
+    expect(p.position).toBe(0);
+    spy.mockRestore();
   });
 });
 

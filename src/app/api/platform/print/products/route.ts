@@ -2,20 +2,7 @@ import { NextResponse } from "next/server";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { productCreateSchema } from "@/lib/print-catalog/input";
-import { createProduct, listProducts } from "@/lib/print-catalog/products";
-
-export const GET = withStaffAuth(async (req) => {
-  const { searchParams } = new URL(req.url);
-  const kind = searchParams.get("kind");
-  if (kind !== null && kind !== "BADGE" && kind !== "ACCESSORY") {
-    return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
-  }
-  const products = await listProducts({
-    kind: kind ?? undefined,
-    archived: searchParams.get("archived") === "true",
-  });
-  return NextResponse.json({ products });
-});
+import { createProduct } from "@/lib/print-catalog/products";
 
 export const POST = withStaffAuth(
   async (req, { session }) => {
