@@ -367,3 +367,37 @@ export function printRequestStatusChangedMessage(a: {
     links: [],
   };
 }
+
+export function printRequestPaidMessage(a: {
+  requestId: string;
+  eventId: string;
+  reference: string;
+  eventTitle: string;
+  amount: number;
+  manual: boolean;
+  audience: "event" | "platform";
+}): NotificationContent {
+  return {
+    title: `Demande ${a.reference} payée`,
+    body: a.manual
+      ? `La demande ${a.reference} (${a.eventTitle}) a été marquée payée par l'équipe Badge.`
+      : `Le paiement de ${formatFcfa(a.amount)} de la demande ${a.reference} (${a.eventTitle}) est reçu.`,
+    href: a.audience === "platform" ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
+    primaryLabel: "Voir la demande",
+    links: [],
+  };
+}
+
+export function printPaymentUnmatchedMessage(a: {
+  requestId: string;
+  reference: string;
+  amount: number;
+}): NotificationContent {
+  return {
+    title: `Paiement à vérifier : ${a.reference}`,
+    body: `Un paiement de ${formatFcfa(a.amount)} a été approuvé alors que la demande n'attendait plus ce paiement.`,
+    href: staffPrintHref(a.requestId),
+    primaryLabel: "Voir la demande",
+    links: [],
+  };
+}

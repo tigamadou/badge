@@ -88,7 +88,7 @@ describe("describeThreadEvent", () => {
     CANCELLED: [{}, "Demande annulée"],
     PAYMENT_RECEIVED: [{ amount: 100, reason: "virement" }, `Paiement reçu : ${formatFcfa(100)} (hors ligne : virement)`],
     PAYMENT_FAILED: [{ amount: 100 }, `Paiement échoué : ${formatFcfa(100)}`],
-    PAYMENT_UNMATCHED: [{ amount: 100 }, `Paiement reçu sans correspondance avec le devis : ${formatFcfa(100)}`],
+    PAYMENT_UNMATCHED: [{ amount: 100 }, `Paiement de ${formatFcfa(100)} reçu alors que la demande n'attendait plus ce paiement : l'équipe Badge vérifie.`],
     SHEETS_GENERATED: [{ generationId: "g", badgeCount: 30 }, "Planches lancées pour 30 badges"],
     REGISTRATIONS_SKIPPED: [
       { registrationIds: ["r1", "r2"] },

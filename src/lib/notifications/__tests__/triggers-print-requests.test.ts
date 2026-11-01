@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { enqueueEmail } from "@/lib/jobs/enqueue-email";
 import {
+  notifyPrintPaymentUnmatched,
   notifyPrintRequestMessage,
+  notifyPrintRequestPaid,
   notifyPrintRequestQuoted,
   notifyPrintRequestStatusChanged,
   notifyPrintRequestSubmitted,
@@ -183,5 +185,51 @@ describe("demande supprimée", () => {
     ).resolves.toBeUndefined();
     expect(await prisma.notification.count({ where: { eventId: t.event.id } })).toBe(0);
     expect(enqueueEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("notifyPrintRequestPaid / notifyPrintPaymentUnmatched", () => {
+  it("paid : admin évènement et STAFF_ADMIN, montant accepté ; manual : texte du marquage hors ligne", async () => {
+    const t = await setup();
+    await prisma.printRequest.update({ where: { id: t.request.id }, data: { acceptedTotal: 80000 } });
+    await notifyPrintRequestPaid(t.request.id, null);
+    await notifyPrintRequestPaid(t.request.id, t.staffAdmin.id, { manual: true });
+    const staff = await prisma.notification.findMany({
+      where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.staffAdmin.id },
+    });
+    expect(staff.some((r) => r.body.includes("80"))).toBe(true);
+    const manager = await prisma.notification.findMany({
+      where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.manager.id },
+    });
+    expect(manager.some((r) => r.body.includes("marquée payée par l'équipe Badge"))).toBe(true);
+    expect(manager[0].href).toBe(`/event/${t.event.id}/print/${t.request.id}`);
+  });
+
+  it("paid : repli sur total sans acceptedTotal ; demande inconnue sans effet", async () => {
+    const t = await setup();
+    await notifyPrintRequestPaid(t.request.id, null);
+    const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.staffAdmin.id } });
+    expect(row.body).toContain("90");
+    const before = await prisma.notification.count();
+    await notifyPrintRequestPaid("inconnue", null);
+    expect(await prisma.notification.count()).toBe(before);
+  });
+
+  it("unmatched : STAFF_ADMIN seul, montant du Payment ; données absentes sans effet", async () => {
+    const t = await setup();
+    const payment = await prisma.payment.create({
+      data: {
+        orgId: t.org.id, purpose: "PRINT_REQUEST", printRequestId: t.request.id, amount: 42000, status: "APPROVED",
+      },
+    });
+    await notifyPrintPaymentUnmatched(t.request.id, payment.id);
+    const rows = await prisma.notification.findMany({ where: { type: "PRINT_REQUEST_STATUS_CHANGED" } });
+    const mine = rows.filter((r) => [t.staffAdmin.id, t.manager.id, t.owner.id].includes(r.userId));
+    expect(mine.map((r) => r.userId)).toEqual([t.staffAdmin.id]);
+    expect(mine[0].body).toContain("42");
+    const before = await prisma.notification.count();
+    await notifyPrintPaymentUnmatched(t.request.id, "inconnu");
+    await notifyPrintPaymentUnmatched("inconnue", payment.id);
+    expect(await prisma.notification.count()).toBe(before);
   });
 });
