@@ -8,6 +8,8 @@ export type BadgeFilter = (typeof BADGE_FILTERS)[number];
 
 export const BADGE_PAGE_SIZE_DEFAULT = 100;
 export const BADGE_PAGE_SIZE_MAX = 500;
+// Borne haute de `page` : evite tout debordement de skip (Prisma/MySQL) sur une valeur absurde.
+export const BADGE_PAGE_MAX = 100_000;
 
 // Tri stable (l'id departage les homonymes) : indispensable pour paginer sans doublon ni trou.
 export const BADGE_LIST_ORDER: Prisma.RegistrationOrderByWithRelationInput[] = [
@@ -23,7 +25,7 @@ function positiveInt(raw: string | null, fallback: number): number {
 
 export function parseBadgePage(params: URLSearchParams): { page: number; pageSize: number } {
   return {
-    page: positiveInt(params.get("page"), 1),
+    page: Math.min(positiveInt(params.get("page"), 1), BADGE_PAGE_MAX),
     pageSize: Math.min(positiveInt(params.get("pageSize"), BADGE_PAGE_SIZE_DEFAULT), BADGE_PAGE_SIZE_MAX),
   };
 }

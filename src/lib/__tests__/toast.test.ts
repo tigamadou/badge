@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 import { toast } from "sonner";
 import {
   toastSuccess,
   toastError,
+  toastInfo,
   toastApiError,
   apiErrorMessage,
   ActionError,
@@ -25,6 +26,11 @@ describe("toast", () => {
     toastError("Raté.");
     expect(toast.success).toHaveBeenCalledWith("Fait.");
     expect(toast.error).toHaveBeenCalledWith("Raté.");
+  });
+
+  it("toastInfo délègue à sonner", () => {
+    toastInfo("Info.");
+    expect(toast.info).toHaveBeenCalledWith("Info.");
   });
 
   it("affiche le champ error d'une réponse API", async () => {

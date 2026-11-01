@@ -219,6 +219,16 @@ describe("GET /badges", () => {
       expect(small.total).toBe(3);
     });
 
+    it("borne page : une valeur demesuree ne declenche pas d'erreur", async () => {
+      const { u, org, event } = await seedEvent("PRINTER");
+      withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+      const res = await callGet(org.id, event.id, "?page=100000000000000000000");
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.page).toBe(100000);
+      expect(json.registrations).toEqual([]);
+    });
+
     it("filtre imprime / non imprime / all-access, par categorie et par recherche", async () => {
       const { u, org, event } = await seedEvent("PRINTER");
       const cat = await prisma.category.create({ data: { eventId: event.id, name: "V1", color: "#000000", number: 1 } });

@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
 import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput, Toolbar } from "@/components/ui/Toolbar";
-import { toastError, toastSuccess } from "@/lib/toast";
+import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
 import { storeSelection } from "@/lib/badge-batch-client";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
@@ -39,6 +39,12 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
   const [selectingAll, setSelectingAll] = useState(false);
   // Numero de la derniere requete de liste : une reponse perimee (filtre change entre-temps) est ignoree.
   const latest = useRef(0);
+  // Change a chaque modification de filtre/recherche : invalide un « Tout selectionner » en vol.
+  const epoch = useRef(0);
+  const selectedCount = useRef(0);
+  useEffect(() => {
+    selectedCount.current = selected.size;
+  }, [selected]);
 
   const base = `/api/org/${orgId}/events/${eventId}/badges`;
   function filterQuery() {
@@ -66,8 +72,12 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
       }
       const json = await res.json();
       if (mine !== latest.current) return;
+      const count = typeof json.total === "number" ? json.total : 0;
       setRows(json.registrations ?? []);
-      setTotal(typeof json.total === "number" ? json.total : 0);
+      setTotal(count);
+      // La page demandee n'existe plus (ex. dernier badge marque imprime) : derniere page non vide.
+      const lastPage = Math.max(1, Math.ceil(count / pageSize));
+      if (page > lastPage) setPage(lastPage);
     } catch {
       if (mine !== latest.current) return;
       setRows([]);
@@ -77,6 +87,14 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
     }
   }
 
+  // Les filtres ont change : la selection (qui portait sur l'ancien filtre) est abandonnee.
+  function resetSelection() {
+    epoch.current++;
+    if (selectedCount.current > 0) toastInfo("La sélection a été réinitialisée.");
+    setSelected(new Set());
+    setSelectingAll(false);
+  }
+
   // La recherche n'interroge le serveur qu'une fois la frappe terminee.
   useEffect(() => {
     const t = setTimeout(() => {
@@ -84,7 +102,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
       if (next === q) return;
       setQ(next);
       setPage(1);
-      setSelected(new Set());
+      resetSelection();
     }, 300);
     return () => clearTimeout(t);
   }, [search, q]);
@@ -98,7 +116,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
   function changeFilter(next: Filter) {
     setFilter(next);
     setPage(1);
-    setSelected(new Set());
+    resetSelection();
   }
 
   function toggle(id: string) {
@@ -116,15 +134,17 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
       return;
     }
     setSelectingAll(true);
+    const mine = epoch.current;
     try {
       const res = await fetch(`${base}/ids?${filterQuery()}`);
       if (!res.ok) throw new Error();
       const json = await res.json();
+      if (mine !== epoch.current) return; // filtre change entre-temps : reponse perimee
       setSelected(new Set<string>(json.ids ?? []));
     } catch {
-      toastError("La sélection a échoué.");
+      if (mine === epoch.current) toastError("La sélection a échoué.");
     } finally {
-      setSelectingAll(false);
+      if (mine === epoch.current) setSelectingAll(false);
     }
   }
 

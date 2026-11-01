@@ -350,6 +350,11 @@ test.describe("Event — Badges", () => {
     await expect(popup.getByText("Préparation… (130 badges)")).toBeVisible({ timeout: 60_000 });
     await expect(popup.getByRole("link", { name: "Télécharger le ZIP" })).toBeVisible({ timeout: 150_000 });
     expect(await getDb().printSheetGeneration.count({ where: { eventId, output: "ZIP" } })).toBe(1);
+
+    // Changer de filtre abandonne la sélection et le dit ; la page 2 hors résultats est ramenée.
+    await page.getByLabel("Filtrer les badges").selectOption("printed");
+    await expect(toast(page, "La sélection a été réinitialisée.")).toBeVisible();
+    await expect(page.getByText(/aucun badge/i)).toBeVisible();
   });
 
   // --- Garde des pages -----------------------------------------------------
