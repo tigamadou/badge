@@ -22,6 +22,9 @@ export const paymentProbe: { isPaymentInProgress(requestId: string): Promise<boo
   isPaymentInProgress: async () => false,
 };
 
+// Les appelants doivent tenir le verrou de la ligne de la demande (SELECT ... FOR UPDATE) avant
+// de sonder : sinon un paiement PENDING peut apparaître entre la sonde et l'écriture. Cela vaut
+// pour les transitions gardées (REOPEN, CANCEL depuis ACCEPTED, MARK_PAID manuel, TEMPLATE_CHANGED).
 export function isPaymentInProgress(requestId: string): Promise<boolean> {
   return paymentProbe.isPaymentInProgress(requestId);
 }
@@ -218,6 +221,8 @@ export async function markPaid(
   requestId: string,
   opts: { paymentId?: string; manual?: { userId: string; reason: string } },
 ): Promise<boolean> {
+  // Verrou de la ligne : deux confirmations simultanées (webhook et page de retour) s'enchaînent.
+  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
   const request = await tx.printRequest.findUnique({
     where: { id: requestId },
     select: { id: true, status: true, acceptedTotal: true },

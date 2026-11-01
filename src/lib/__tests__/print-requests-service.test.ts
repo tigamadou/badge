@@ -333,6 +333,18 @@ describe("markPaid", () => {
     expect(err?.code).toBe("PAYMENT_IN_PROGRESS");
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("ACCEPTED");
   });
+  it("deux markPaid simultanés : un seul vrai, l'autre false, une seule entrée", async () => {
+    const r = await accepted();
+    const results = await Promise.all([
+      prisma.$transaction((tx) => markPaid(tx, r.id, { paymentId: "pay_a" })),
+      prisma.$transaction((tx) => markPaid(tx, r.id, { paymentId: "pay_b" })),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
+    const row = await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } });
+    expect(row.status).toBe("PAID");
+    expect(["pay_a", "pay_b"]).toContain(row.paidPaymentId);
+    expect((await thread(r.id)).filter((m) => m.eventType === "PAYMENT_RECEIVED")).toHaveLength(1);
+  });
   it("montant absent (acceptedTotal null) -> 0", async () => {
     const r = await makeRequest(fx, { status: "ACCEPTED" });
     await run((tx) => markPaid(tx, r.id, {}));
