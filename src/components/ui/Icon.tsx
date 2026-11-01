@@ -52,6 +52,7 @@ import {
   SlidersHorizontal,
   Minus,
   Bell,
+  LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
@@ -114,6 +115,7 @@ const ICONS = {
   sliders: SlidersHorizontal,
   minus: Minus,
   bell: Bell,
+  "layout-grid": LayoutGrid,
 } satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;
