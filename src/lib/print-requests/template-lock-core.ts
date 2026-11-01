@@ -20,7 +20,9 @@ export async function findTemplateLock(
 
 // Retire l'épinglage du template d'une demande qui quitte les statuts qui le retiennent :
 // l'évènement retrouve l'héritage s'il porte encore le template épinglé et qu'aucune autre
-// demande ne le retient. Appelée par applyTransition (qui tient déjà le verrou de la demande).
+// demande ne le retient. Appelée par applyTransition : l'appelant doit avoir pris les verrous par
+// lockRequestWithEvent (Event puis PrintRequest), sans quoi l'écriture de l'évènement ici
+// inverserait l'ordre des verrous face à un changement de template.
 export async function releaseTemplatePin(tx: Prisma.TransactionClient, requestId: string): Promise<void> {
   const request = await tx.printRequest.findUnique({
     where: { id: requestId },

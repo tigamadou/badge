@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "@/lib/print-requests/errors";
-import { applyTransition, paymentProbe } from "@/lib/print-requests/service";
+import { applyTransition, lockRequestWithEvent, paymentProbe } from "@/lib/print-requests/service";
 import {
   TEMPLATE_LOCK_STATUSES,
   assertTemplateChangeAllowed,
@@ -277,5 +277,60 @@ describe("syncRequestTemplates", () => {
       { id: "ghost", eventId: fx.event.id },
     ] as never);
     expect(await syncRequestTemplates({ eventId: fx.event.id }, fx.owner.id)).toEqual([]);
+  });
+});
+
+describe("erreur inattendue du verrou", () => {
+  it("syncRequestTemplates la propage", async () => {
+    await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: other.id } });
+    await makeRequest(fx, { status: "SUBMITTED", ...copyOf(fx.template) });
+    vi.spyOn(prisma.printRequest, "findUnique").mockRejectedValueOnce(new Error("boom"));
+    await expect(syncRequestTemplates({ eventId: fx.event.id }, fx.owner.id)).rejects.toThrow("boom");
+  });
+});
+
+describe("ordre des verrous (Event puis PrintRequest)", () => {
+  it("lockRequestWithEvent renvoie l'évènement ; demande inconnue : NOT_FOUND", async () => {
+    const r = await makeRequest(fx, { status: "SUBMITTED" });
+    await expect(run((tx) => lockRequestWithEvent(tx, r.id))).resolves.toEqual({ eventId: fx.event.id });
+    const err = await reject(run((tx) => lockRequestWithEvent(tx, "ghost")));
+    expect(err?.code).toBe("NOT_FOUND");
+  });
+
+  it("une demande épinglée terminée pendant un changement de template d'org ne s'interbloque pas", async () => {
+    for (let i = 0; i < 5; i++) {
+      const f = await seedPrintFixture();
+      await prisma.event.update({ where: { id: f.event.id }, data: { badgeTemplateId: null } });
+      const r = await makeRequest(f, { status: "READY", ...copyOf(f.template) });
+      const results = await Promise.allSettled([
+        run(async (tx) => {
+          await lockRequestWithEvent(tx, r.id);
+          await applyTransition(tx, { id: r.id, status: "READY" }, "COMPLETE", "STAFF");
+        }),
+        run(async (tx) => {
+          await pinLockedEventTemplates({ orgId: f.org.id }, tx);
+          await tx.organization.update({ where: { id: f.org.id }, data: { badgeTemplateId: other.id } });
+        }),
+      ]);
+      expect(results.map((x) => x.status)).toEqual(["fulfilled", "fulfilled"]);
+    }
+  });
+
+  it("pinLockedEventTemplates verrouille les évènements par identifiant croissant, avant toute lecture", async () => {
+    const mk = () =>
+      prisma.event.create({ data: { orgId: fx.org.id, title: "E", slug: uniq(), location: "X", date: new Date() } });
+    const [a, b] = [await mk(), await mk()];
+    for (const e of [a, b]) await makeRequest({ ...fx, event: e }, { status: "PAID", ...copyOf(fx.template) });
+    vi.spyOn(prisma.event, "findMany").mockResolvedValueOnce([{ id: b.id }, { id: a.id }] as never);
+    const locked: unknown[] = [];
+    await prisma.$transaction(async (tx) => {
+      const spy = vi.fn(((strings: TemplateStringsArray, ...values: unknown[]) => {
+        if (strings[0].includes("`Event`")) locked.push(values[0]);
+        return tx.$queryRaw(strings, ...values);
+      }) as never);
+      const proxied = new Proxy(tx, { get: (t, k) => (k === "$queryRaw" ? spy : Reflect.get(t, k)) });
+      expect(await pinLockedEventTemplates({ orgId: fx.org.id }, proxied as never)).toBe(2);
+    });
+    expect(locked.slice(0, 2)).toEqual([a.id, b.id].sort());
   });
 });

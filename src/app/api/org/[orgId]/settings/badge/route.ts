@@ -46,12 +46,10 @@ export async function PATCH(
     return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
   }
 
-  // Les évènements verrouillés gardent leur template : épinglés avant le changement.
-  await pinLockedEventTemplates({ orgId });
-
-  await prisma.organization.update({
-    where: { id: orgId },
-    data: { badgeTemplateId },
+  // Les évènements verrouillés gardent leur template : épinglés dans la même transaction.
+  await prisma.$transaction(async (tx) => {
+    await pinLockedEventTemplates({ orgId }, tx);
+    await tx.organization.update({ where: { id: orgId }, data: { badgeTemplateId } });
   });
 
   const resubmitted = await syncRequestTemplates({ orgId }, session.user.id);

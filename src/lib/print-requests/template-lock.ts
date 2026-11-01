@@ -3,17 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "./errors";
 import { lockEventRow } from "./content";
 import { appendThreadEvent } from "./thread";
-import { applyTransition, isPaymentInProgress, snapshotEventTemplate } from "./service";
+import { applyTransition, isPaymentInProgress, lockRequestWithEvent, snapshotEventTemplate } from "./service";
 import { TEMPLATE_LOCK_STATUSES, findTemplateLock, releaseTemplatePin } from "./template-lock-core";
 
 export { TEMPLATE_LOCK_STATUSES, findTemplateLock, releaseTemplatePin };
 
 type Scope = { eventId: string } | { orgId: string } | { platform: true };
-
-// Les appels tiennent l'ordre des verrous : Event d'abord, puis PrintRequest.
-async function lockRequestRow(tx: Prisma.TransactionClient, requestId: string): Promise<void> {
-  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
-}
 
 // Ids des demandes ACCEPTED de l'évènement dont un paiement est en cours (lignes verrouillées).
 async function acceptedWithPayment(tx: Prisma.TransactionClient, eventId: string): Promise<string[]> {
@@ -23,7 +18,7 @@ async function acceptedWithPayment(tx: Prisma.TransactionClient, eventId: string
   });
   const ids: string[] = [];
   for (const { id } of accepted) {
-    await lockRequestRow(tx, id);
+    await lockRequestWithEvent(tx, id);
     if (await isPaymentInProgress(id)) ids.push(id);
   }
   return ids;
@@ -46,6 +41,14 @@ export async function assertTemplateChangeAllowed(
 // template, épinglé sur l'évènement. Renvoie le nombre d'évènements épinglés.
 export async function pinLockedEventTemplates(
   scope: { orgId: string } | { platform: true },
+  db?: Prisma.TransactionClient,
+): Promise<number> {
+  return db ? pinIn(db, scope) : prisma.$transaction((tx) => pinIn(tx, scope));
+}
+
+async function pinIn(
+  tx: Prisma.TransactionClient,
+  scope: { orgId: string } | { platform: true },
 ): Promise<number> {
   const where =
     "orgId" in scope
@@ -58,29 +61,30 @@ export async function pinLockedEventTemplates(
     },
     select: { id: true },
   });
+  // Verrous des évènements en ordre d'identifiant croissant, tous pris avant la moindre lecture :
+  // deux changements de template simultanés ne s'interbloquent pas et aucune demande ne passe
+  // PAYÉE entre la lecture et l'écriture.
+  const ids = candidates.map((c) => c.id).sort();
+  for (const eventId of ids) await lockEventRow(tx, eventId);
   let pinned = 0;
-  for (const { id: eventId } of candidates) {
-    const done = await prisma.$transaction(async (tx) => {
-      await lockEventRow(tx, eventId);
-      const event = await tx.event.findUnique({ where: { id: eventId }, select: { badgeTemplateId: true } });
-      if (!event || event.badgeTemplateId !== null) return false;
-      const holding = new Set(await acceptedWithPayment(tx, eventId));
-      const requests = await tx.printRequest.findMany({
-        where: { eventId, status: { in: [...TEMPLATE_LOCK_STATUSES, "ACCEPTED"] } },
-        select: { id: true, status: true, badgeTemplateId: true },
-      });
-      const holders = requests.filter(
-        (r) => r.badgeTemplateId && (r.status !== "ACCEPTED" || holding.has(r.id)),
-      );
-      if (holders.length === 0) return false;
-      await tx.event.update({ where: { id: eventId }, data: { badgeTemplateId: holders[0].badgeTemplateId } });
-      await tx.printRequest.updateMany({
-        where: { id: { in: holders.map((r) => r.id) } },
-        data: { templatePinned: true },
-      });
-      return true;
+  for (const eventId of ids) {
+    const event = await tx.event.findUnique({ where: { id: eventId }, select: { badgeTemplateId: true } });
+    if (!event || event.badgeTemplateId !== null) continue;
+    const holding = new Set(await acceptedWithPayment(tx, eventId));
+    const requests = await tx.printRequest.findMany({
+      where: { eventId, status: { in: [...TEMPLATE_LOCK_STATUSES, "ACCEPTED"] } },
+      select: { id: true, status: true, badgeTemplateId: true },
     });
-    if (done) pinned += 1;
+    const holders = requests.filter(
+      (r) => r.badgeTemplateId && (r.status !== "ACCEPTED" || holding.has(r.id)),
+    );
+    if (holders.length === 0) continue;
+    await tx.event.update({ where: { id: eventId }, data: { badgeTemplateId: holders[0].badgeTemplateId } });
+    await tx.printRequest.updateMany({
+      where: { id: { in: holders.map((r) => r.id) } },
+      data: { templatePinned: true },
+    });
+    pinned += 1;
   }
   return pinned;
 }
@@ -91,7 +95,9 @@ const SYNCED_STATUSES: PrintRequestStatus[] = ["SUBMITTED", "QUOTED", "ACCEPTED"
 // Les brouillons sont ignorés (leur copie est prise à l'envoi). Une demande ACCEPTED avec
 // paiement en cours est laissée telle quelle. Renvoie les ids repassés en SUBMITTED.
 export async function syncRequestTemplates(scope: Scope, actorId: string): Promise<string[]> {
-  void actorId; // les entrées du fil sont écrites par le système ; l'acteur sert aux notifications de la route
+  // actorId n'est pas utilisé ici (conservé pour la signature) : les entrées du fil sont écrites
+  // par le système ; l'acteur ne sert qu'aux notifications faites par la route.
+  void actorId;
   const where =
     "eventId" in scope ? { eventId: scope.eventId } : "orgId" in scope ? { orgId: scope.orgId } : {};
   const candidates = await prisma.printRequest.findMany({
@@ -101,8 +107,15 @@ export async function syncRequestTemplates(scope: Scope, actorId: string): Promi
   const resubmitted: string[] = [];
   for (const { id, eventId } of candidates) {
     const changed = await prisma.$transaction(async (tx) => {
-      await lockEventRow(tx, eventId);
-      await lockRequestRow(tx, id);
+      // Demande disparue depuis la liste (évènement supprimé) : rien à synchroniser.
+      const locked = await lockRequestWithEvent(tx, id).then(
+        () => true,
+        (err) => {
+          if (err instanceof PrintRequestError) return false;
+          throw err;
+        },
+      );
+      if (!locked) return false;
       const request = await tx.printRequest.findUnique({ where: { id } });
       if (!request || !SYNCED_STATUSES.includes(request.status)) return false;
       const target = await snapshotEventTemplate(eventId, tx);

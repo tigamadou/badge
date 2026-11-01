@@ -30,6 +30,21 @@ export function isPaymentInProgress(requestId: string): Promise<boolean> {
   return paymentProbe.isPaymentInProgress(requestId);
 }
 
+// Tout appelant qui verrouille une demande passe par ce helper (Event puis PrintRequest) : l'ordre
+// est le même que celui des changements de template (verrou de l'évènement d'abord), donc pas
+// d'interblocage. L'évènement de la demande est lu hors transaction (il ne change jamais) pour ne
+// pas figer l'instantané de lecture avant d'avoir obtenu les verrous.
+export async function lockRequestWithEvent(
+  tx: Prisma.TransactionClient,
+  requestId: string,
+): Promise<{ eventId: string }> {
+  const request = await prisma.printRequest.findUnique({ where: { id: requestId }, select: { eventId: true } });
+  if (!request) throw new PrintRequestError("NOT_FOUND", 404);
+  await tx.$queryRaw`SELECT id FROM \`Event\` WHERE id = ${request.eventId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
+  return { eventId: request.eventId };
+}
+
 // Seul un propriétaire de l'organisation peut accepter un devis (le staff n'agit jamais côté organisateur).
 export async function assertOwner(userId: string, orgId: string): Promise<void> {
   const ctx = await loadUserContext(userId);
