@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { RoleBadge } from "@/components/ui/Labels";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -13,6 +14,7 @@ export type TemplateSummary = {
   pages: number;
   pageSize: { width: string; height: string };
   previewSrc: string;
+  onsite: boolean;
 };
 
 export type EffectiveLevel = "event" | "org" | "platform";
@@ -106,6 +108,11 @@ export default function BadgeTemplatePicker({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-slate-900">{tpl.label}</h3>
+                  {tpl.onsite && (
+                    <span role="img" aria-label="Impression sur place" title="Impression sur place" className="text-slate-500">
+                      <Icon name="printer" size={14} />
+                    </span>
+                  )}
                   {isCurrent && <RoleBadge tone="green">✅ Sélectionné</RoleBadge>}
                 </div>
                 <p className="mt-1 text-xs text-slate-400">

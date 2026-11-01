@@ -8,6 +8,7 @@ import {
   type Block,
   type TemplateManifest,
 } from "@tigamadou/pdf-engine";
+import { getOnsitePrintSettings } from "@/lib/settings";
 import { validateBindings, type Bindings } from "./bindings";
 
 export const CURRENT_FORMAT = 3;
@@ -19,6 +20,8 @@ export type TemplateSummary = {
   pages: number;
   pageSize: { width: string; height: string };
   previewSrc: string;
+  // Plan 35 : template propose pour l'impression sur place (reglages plateforme).
+  onsite: boolean;
 };
 
 // Famille livree avec l'application, installee par le seed. Elle sert de repli quand
@@ -187,6 +190,8 @@ export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
     if (!latestByFamily.has(row.family)) latestByFamily.set(row.family, row);
   }
 
+  const onsiteIds = new Set((await getOnsitePrintSettings()).templateIds);
+
   return [...latestByFamily.values()].map((row) => ({
     id: row.id,
     label: row.label,
@@ -194,5 +199,6 @@ export async function listAvailableTemplates(): Promise<TemplateSummary[]> {
     pages: row.pages,
     pageSize: { width: `${row.pageWidthPx}px`, height: `${row.pageHeightPx}px` },
     previewSrc: templateImageUrl(row, "preview"),
+    onsite: onsiteIds.has(row.id),
   }));
 }
