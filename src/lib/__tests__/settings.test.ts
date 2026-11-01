@@ -6,6 +6,8 @@ import {
   getPlatformSmtp,
   getPlatformRecaptcha,
   getPlatformPublicRecaptcha,
+  getOnsitePrintSettings,
+  parseOnsiteTemplateIds,
 } from "@/lib/settings";
 
 describe("resolveSettings", () => {
@@ -180,5 +182,23 @@ describe("resolvePublicSettings", () => {
     expect("recaptchaEnabled" in s).toBe(false);
     expect("recaptchaSiteKey" in s).toBe(false);
     expect("recaptchaSecretKey" in s).toBe(false);
+  });
+});
+
+describe("parseOnsiteTemplateIds", () => {
+  it("null -> [], ['a', 3, 'a', 'b'] -> ['a', 'b']", () => {
+    expect(parseOnsiteTemplateIds(null)).toEqual([]);
+    expect(parseOnsiteTemplateIds({ a: 1 })).toEqual([]);
+    expect(parseOnsiteTemplateIds(["a", 3, "a", "b"])).toEqual(["a", "b"]);
+  });
+});
+
+describe("getOnsitePrintSettings", () => {
+  it("valeurs par défaut [], null, 10 (singleton absent ou vierge)", async () => {
+    await prisma.platformSettings.deleteMany();
+    const expected = { templateIds: [], printerNote: null, defaultMarginPercent: 10 };
+    expect(await getOnsitePrintSettings()).toEqual(expected);
+    await prisma.platformSettings.create({ data: { id: "singleton" } });
+    expect(await getOnsitePrintSettings()).toEqual(expected);
   });
 });

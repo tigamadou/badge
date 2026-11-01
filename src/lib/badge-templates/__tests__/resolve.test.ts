@@ -514,6 +514,23 @@ describe("listAvailableTemplates", () => {
     expect(found?.pageSize).toEqual({ width: "1011px", height: "638px" });
   });
 
+  it("marque onsite: true pour le template coché dans les réglages, false pour l'autre", async () => {
+    const a = await install({ family: "a", label: "A" });
+    const b = await install({ family: "b", label: "B" });
+    await prisma.platformSettings.upsert({
+      where: { id: "singleton" },
+      update: { onsitePrintTemplateIds: [a.id] },
+      create: { id: "singleton", onsitePrintTemplateIds: [a.id] },
+    });
+    const list = await listAvailableTemplates();
+    expect(list.find((t) => t.id === a.id)?.onsite).toBe(true);
+    expect(list.find((t) => t.id === b.id)?.onsite).toBe(false);
+    await prisma.platformSettings.update({
+      where: { id: "singleton" },
+      data: { onsitePrintTemplateIds: [] },
+    });
+  });
+
   it("rend une chaine vide comme apercu tant qu'aucun n'est genere", async () => {
     const row = await install();
     const list = await listAvailableTemplates();

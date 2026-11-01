@@ -2,12 +2,15 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { listAvailableTemplates } from "@/lib/badge-templates/resolve";
+import { listAvailableTemplates, templateImageUrl } from "@/lib/badge-templates/resolve";
+import { getOnsitePrintSettings } from "@/lib/settings";
+import { pxToMm } from "@/lib/print-sheets/units";
 import { parseRights } from "@/lib/subscription-rights";
 import { resolveSettingsTab, visibleSettingsTabs } from "@/lib/platform-settings-tabs";
 import { PlatformSettingsForm } from "@/components/staff/PlatformSettingsForm";
 import { TestSmtpForm } from "@/components/staff/TestSmtpForm";
 import { RejectionReasonsManager } from "@/components/staff/RejectionReasonsManager";
+import { OnsitePrintSettingsForm } from "@/components/staff/OnsitePrintSettingsForm";
 import { SubscriptionRightsForm } from "@/components/staff/SubscriptionRightsForm";
 import BadgeTemplatePicker from "@/components/admin/BadgeTemplatePicker";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
@@ -135,6 +138,33 @@ export default async function StaffSettingsPage({
               effectiveLevel="platform"
               patchUrl="/api/platform/settings/badge"
               canClearToInherit={false}
+            />
+          </CardBody>
+        </Card>
+      )}
+
+      {tab === "onsite-print" && (
+        <Card>
+          <CardHead
+            title="Impression sur place"
+            subtitle="Templates que les organisations peuvent choisir pour imprimer leurs badges pendant l'évènement, et réglages par défaut du poste d'impression."
+          />
+          <CardBody>
+            <OnsitePrintSettingsForm
+              templates={(
+                await prisma.installedBadgeTemplate.findMany({
+                  where: { archived: false },
+                  orderBy: [{ family: "asc" }, { version: "desc" }],
+                })
+              ).map((t) => ({
+                id: t.id,
+                label: t.label,
+                version: t.version,
+                widthMm: Math.round(pxToMm(t.pageWidthPx)),
+                heightMm: Math.round(pxToMm(t.pageHeightPx)),
+                previewSrc: templateImageUrl(t, "preview"),
+              }))}
+              initial={await getOnsitePrintSettings()}
             />
           </CardBody>
         </Card>
