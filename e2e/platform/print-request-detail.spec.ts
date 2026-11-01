@@ -3,6 +3,7 @@ import {
   cleanupE2ETestData,
   createTestEvent,
   createTestPrintPayment,
+  createTestPrintProduct,
   createTestPrintRequest,
   createTestRegistration,
   createTestStaff,
@@ -14,8 +15,10 @@ import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
 
-const LINES = [
-  { label: "Support badge PVC", quantity: 10, unitPrice: 1500, kind: "PRODUCT" as const },
+// Le support de badge doit être un produit BADGE du catalogue : sans lui, l'envoi du devis est refusé
+// (BADGE_PRODUCT_REQUIRED).
+const lines = (badgeProductId: string) => [
+  { label: "Support badge PVC", quantity: 10, unitPrice: 1500, kind: "PRODUCT" as const, productId: badgeProductId },
   { label: "Frais de dossier", quantity: 1, unitPrice: 5000, kind: "SERVICE" as const },
 ];
 
@@ -48,12 +51,13 @@ async function seedRequest(
     const participant = await createTestUser({ scope: `${scope}-p${i}`, verified: true, profile: true });
     registrationIds.push((await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" })).id);
   }
+  const badge = await createTestPrintProduct({ name: "Support badge PVC", kind: "BADGE" });
   const request = await createTestPrintRequest({
     eventId,
     orgId,
     createdById: organizer.id,
     status,
-    lines: LINES,
+    lines: lines(badge.id),
     registrationIds,
   });
   return { orgId, eventId, request, organizer, registrationIds };
