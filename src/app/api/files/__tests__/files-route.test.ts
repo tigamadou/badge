@@ -107,4 +107,15 @@ describe("GET /api/files/print-requests/... et platform/print-products/...", () 
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
   });
+
+  it("refuse toute cle contenant un segment .. (404, sans lecture du stockage)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+    const { getFile } = await import("@/lib/storage");
+    vi.mocked(getFile).mockClear();
+    const res = await GET(new NextRequest("http://localhost/api/files/x"), {
+      params: Promise.resolve({ path: ["platform", "print-products", "..", "..", "profile", "u1", "documents", "id.pdf"] }),
+    });
+    expect(res.status).toBe(404);
+    expect(getFile).not.toHaveBeenCalled();
+  });
 });

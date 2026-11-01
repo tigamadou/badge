@@ -64,6 +64,8 @@ async function canRead(userId: string, c: SensitiveFile): Promise<boolean> {
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
+  // Durcissement : aucun segment `..` (la classification se fait sur le prefixe de la cle).
+  if (path.includes("..")) return NextResponse.json({ error: "Fichier non trouvé" }, { status: 404 });
   const key = path.join("/");
   const cls = classify(key);
 

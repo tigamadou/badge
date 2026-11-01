@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   validateChoices, snapshotChoices, choiceErrorMessage, defaultConfiguration,
-  unitPriceFor, tierPriceFor,
+  unitPriceFor, tierPriceFor, pruneChoices,
   type ChoiceErrorCode, type CatalogProduct, type OptionChoice, type PricingOption,
 } from "@/lib/print-catalog/pricing-core";
 import { CORDON, v } from "./helpers/print-products";
@@ -233,5 +233,56 @@ describe("defaultConfiguration", () => {
     expect(defaultConfiguration(q).choices).toEqual([]);
     const r = { ...CORDON, options: CORDON.options.map((o) => (o.id === "o-color" ? { ...o, values: [] } : o)) };
     expect(defaultConfiguration(r).choices).toEqual([]);
+  });
+});
+
+describe("pruneChoices", () => {
+  const product = withOption(multiOpt);
+  const withArchived = (): CatalogProduct => ({
+    ...CORDON,
+    options: [
+      ...CORDON.options.map((o) => (o.id === "o-color"
+        ? { ...o, values: o.values.map((val) => (val.id === "or" ? { ...val, archived: true } : val)) }
+        : o)),
+      { ...multiOpt, values: [v("a", "A", null, 10), { ...v("b", "B", null, 20), archived: true }] },
+      { ...splitOpt, values: [v("rouge", "Rouge", null, 0), { ...v("or", "Or", null, 100), archived: true }] },
+      { ...fileOpt, archived: true },
+    ],
+  });
+
+  it("garde tout quand rien n'a change", () => {
+    const choices: OptionChoice[] = [COLOR, TEXT, { optionId: "o-multi", valueIds: ["a", "b"] }];
+    expect(pruneChoices(product, choices)).toEqual(choices);
+  });
+
+  it("retire un choix sur une option absente", () => {
+    expect(pruneChoices(CORDON, [COLOR, { optionId: "disparue", text: "x" }])).toEqual([COLOR]);
+  });
+
+  it("retire un choix sur une option archivee", () => {
+    expect(pruneChoices(withArchived(), [{ optionId: "o-file", fileKey: "print-requests/a.pdf" }, TEXT])).toEqual([TEXT]);
+  });
+
+  it("retire les valeurs absentes ou archivees, garde les autres", () => {
+    const out = pruneChoices(withArchived(), [{ optionId: "o-multi", valueIds: ["a", "b", "zzz"] }]);
+    expect(out).toEqual([{ optionId: "o-multi", valueIds: ["a"] }]);
+  });
+
+  it("retire le choix quand toutes ses valeurs disparaissent", () => {
+    expect(pruneChoices(withArchived(), [{ optionId: "o-color", valueIds: ["or"] }])).toEqual([]);
+  });
+
+  it("retire les parts de repartition sur valeur absente ou archivee", () => {
+    const out = pruneChoices(withArchived(), [
+      { optionId: "o-split", split: [{ valueId: "rouge", quantity: 30 }, { valueId: "or", quantity: 10 }, { valueId: "x", quantity: 5 }] },
+    ]);
+    expect(out).toEqual([{ optionId: "o-split", split: [{ valueId: "rouge", quantity: 30 }] }]);
+    expect(pruneChoices(withArchived(), [{ optionId: "o-split", split: [{ valueId: "or", quantity: 10 }] }])).toEqual([]);
+  });
+
+  it("conserve texte et fichier d'une option active, retire un choix deja vide", () => {
+    const file: OptionChoice = { optionId: "o-file", fileKey: "print-requests/a.pdf" };
+    expect(pruneChoices(withOption(fileOpt), [file, TEXT])).toEqual([file, TEXT]);
+    expect(pruneChoices(CORDON, [{ optionId: "o-text" }])).toEqual([]);
   });
 });

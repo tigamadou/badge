@@ -115,19 +115,18 @@ describe("GET /api/files — controle d'acces aux documents", () => {
     expect((await GET(req(), ctx(key))).status).toBe(403);
   });
 
-  it("des segments de type traversal ne contournent pas l'ACL (403 pour un autre user)", async () => {
+  it("des segments de type traversal sont refuses avant toute classification (404)", async () => {
     const owner = await prisma.user.create({ data: { email: "own3@x", password: "x", name: "Own3" } });
     const other = await prisma.user.create({ data: { email: "oth3@x", password: "x", name: "Oth3" } });
-    // Le path est un tableau de segments (ctx.path) : ".." reste un segment opaque
-    // pour l'API route (pas d'acces filesystem direct, cle S3 seulement), mais on
-    // verifie que la regex de classification n'est pas trompee par ce segment.
+    // Le path est un tableau de segments (ctx.path) : toute cle contenant ".." est
+    // rejetee d'emblee, pour que la classification par prefixe ne soit jamais trompee.
     const key = accountProfileKey(owner.id, "document", "secret.pdf");
     await uploadFile(key, Buffer.from("pdf"), "application/pdf");
     const traversalPath = [...key.split("/").slice(0, -1), "..", "secret.pdf"].join("/");
 
     vi.mocked(getServerSession).mockResolvedValue({ user: { id: other.id } } as never);
     const res = await GET(req(), ctx(traversalPath));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 
   it("print-sheets/ : 403 sans session, pour un non-staff et pour STAFF_OBSERVER", async () => {

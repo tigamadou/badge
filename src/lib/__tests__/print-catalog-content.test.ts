@@ -133,6 +133,18 @@ const colorValue = (label: string, colorHex: string, priceDelta = 0, id?: string
 });
 
 describe("syncOptions", () => {
+  it("refuse de changer le type d'une option existante", async () => {
+    const { productId, optionIds } = await createCordonInDb();
+    const err = await codeOf(syncOptions(productId, [
+      textOpt({ id: optionIds.text, type: "CHOICE", priceDelta: 0, maxLength: null }),
+    ]));
+    expect(err.code).toBe("OPTION_TYPE_LOCKED");
+    expect(err.status).toBe(400);
+    expect(err.message).toContain("type");
+    const stored = await prisma.printProductOption.findUniqueOrThrow({ where: { id: optionIds.text } });
+    expect(stored.type).toBe("TEXT");
+  });
+
   it("crée l'option COLOR à 5 valeurs et l'option TEXT", async () => {
     const product = await prisma.printProduct.create({ data: { kind: "ACCESSORY", name: "x", slug: `s-${randomUUID()}`, basePrice: 500 } });
     await syncOptions(product.id, [
@@ -187,13 +199,13 @@ describe("syncOptions", () => {
   it("met à jour une option existante et crée une valeur au passage", async () => {
     const { productId, optionIds } = await createCordonInDb();
     await syncOptions(productId, [
-      opt({ id: optionIds.color, name: "Teinte", type: "CHOICE", required: false, help: "aide", values: [
-        { label: "Neuf", colorHex: null, imageKey: key(), priceDelta: 5 },
+      opt({ id: optionIds.color, name: "Teinte", type: "COLOR", required: false, help: "aide", values: [
+        { label: "Neuf", colorHex: "#112233", imageKey: key(), priceDelta: 5 },
       ] }),
       textOpt({ id: optionIds.text, priceDelta: 200, maxLength: 40 }),
     ]);
     const detail = (await getProductDetail(productId))!;
-    expect(detail.options[0]).toMatchObject({ id: optionIds.color, name: "Teinte", type: "CHOICE", help: "aide" });
+    expect(detail.options[0]).toMatchObject({ id: optionIds.color, name: "Teinte", type: "COLOR", help: "aide" });
     expect(detail.options[0].values.map((v) => v.label)).toEqual(["Neuf"]);
     expect(detail.options[1]).toMatchObject({ id: optionIds.text, priceDelta: 200, maxLength: 40 });
   });

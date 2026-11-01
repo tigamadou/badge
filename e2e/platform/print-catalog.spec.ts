@@ -33,13 +33,20 @@ test.describe("Platform — Catalogue d'impression", () => {
     return staff;
   }
 
-  test("L'état vide s'affiche quand aucun produit n'est archivé", async ({ page }) => {
-    await goToCatalog(page, "catalog-empty", "STAFF_ADMIN");
-    // Seuls les e2e archivent des produits (et nettoient après) : la vue « Archivés » est vide.
-    expect(await getDb().printProduct.count({ where: { archived: true } })).toBe(0);
+  test("Les vues Actifs et Archivés séparent les produits", async ({ page }) => {
+    // Hermétique : on ne s'appuie que sur les produits créés ici, jamais sur le contenu de la base.
+    const active = await createTestPrintProduct({ name: "e2e-Vue-actif" });
+    const archived = await createTestPrintProduct({ name: "e2e-Vue-archive" });
+    await getDb().printProduct.update({ where: { id: archived.id }, data: { archived: true, archivedAt: new Date() } });
+    await goToCatalog(page, "catalog-views", "STAFF_ADMIN");
+    await expect(page.getByRole("link", { name: "e2e-Vue-actif" })).toBeVisible();
+    await expect(page.getByText("e2e-Vue-archive")).toHaveCount(0);
+
     await page.getByRole("button", { name: "Archivés" }).click();
     await expect(page).toHaveURL(/\/platform\/print\/catalog\?archived=true$/);
-    await expect(page.getByText("Aucun produit dans le catalogue.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "e2e-Vue-archive" })).toBeVisible();
+    await expect(page.getByText("e2e-Vue-actif")).toHaveCount(0);
+    expect(active.id).not.toBe(archived.id);
   });
 
   test("STAFF_ADMIN crée un produit en brouillon et arrive sur sa fiche", async ({ page }) => {

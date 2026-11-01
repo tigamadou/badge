@@ -1078,7 +1078,9 @@ Les identifiants `requestId` d'un autre évènement → 404 (`loadRequest(..., {
   `uploadFile` poste sur `…/print-requests/upload` et renvoie la `storageKey` ;
   `quantityLocked` pour le produit `BADGE`, dont la quantité suit le nombre de badges),
   `GET /api/print/catalog?kind=` → `{ products: CatalogProduct[] }` (plan 32, toute
-  session) ; `Stepper`,
+  session) ; `pruneChoices(product, choices)` (plan 32, `pricing-core`) : les `choices`
+  enregistrés d'une ligne doivent y passer avant d'alimenter le configurateur et avant toute
+  re-validation (options ou valeurs archivées depuis) ; `Stepper`,
   `Timeline`/`TimelineItem`, `Table`, `StatusBadge`, `Button`, `Dialog`, `RadioCards`,
   `FileBox` (`src/components/ui/`) ; `useAsyncAction`, `toastSuccess`, `toastApiError`.
 - Produces :

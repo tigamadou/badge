@@ -68,9 +68,9 @@ export async function syncOptions(productId: string, options: OptionInput[]): Pr
     await assertEditable(tx, productId);
     const existing = await tx.printProductOption.findMany({
       where: { productId, archived: false },
-      select: { id: true },
+      select: { id: true, type: true },
     });
-    const known = new Set(existing.map((o) => o.id));
+    const known = new Map(existing.map((o) => [o.id, o.type]));
     const kept = new Set<string>();
     for (let position = 0; position < options.length; position++) {
       const o = options[position];
@@ -83,7 +83,15 @@ export async function syncOptions(productId: string, options: OptionInput[]): Pr
         await syncValues(tx, created.id, o.values, true);
         continue;
       }
-      if (!known.has(o.id)) throw new CatalogError("UNKNOWN_OPTION", 400, "Option inconnue");
+      const knownType = known.get(o.id);
+      if (knownType === undefined) throw new CatalogError("UNKNOWN_OPTION", 400, "Option inconnue");
+      // Changer le type invaliderait les choix deja enregistres : creer une nouvelle option.
+      if (knownType !== o.type) {
+        throw new CatalogError(
+          "OPTION_TYPE_LOCKED", 400,
+          "Le type d'une option enregistrée ne peut pas changer : supprimez l'option et créez-en une nouvelle.",
+        );
+      }
       kept.add(o.id);
       await tx.printProductOption.update({ where: { id: o.id }, data });
       await syncValues(tx, o.id, o.values, false);

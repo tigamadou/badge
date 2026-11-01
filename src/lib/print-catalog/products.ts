@@ -5,7 +5,8 @@ import { slugify } from "@/lib/slugify";
 import { startingPrice } from "./pricing-core";
 import type { ProductCreateInput, ProductUpdateInput } from "./input";
 
-export type CatalogErrorCode = "NOT_FOUND" | "PRODUCT_ARCHIVED" | "UNKNOWN_OPTION" | "UNKNOWN_VALUE";
+export type CatalogErrorCode = "NOT_FOUND" | "PRODUCT_ARCHIVED" | "UNKNOWN_OPTION" | "UNKNOWN_VALUE"
+  | "OPTION_TYPE_LOCKED";
 
 export class CatalogError extends Error {
   constructor(

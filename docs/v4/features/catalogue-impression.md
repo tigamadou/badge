@@ -37,7 +37,13 @@ Modèle `PrintProduct` (suppression logique : `archived`, `archivedAt`).
 
 La liste affiche l'image principale, le nom, la catégorie, le prix « à partir de » (le plus bas
 entre le prix de base et les paliers), l'état (Brouillon, Publié, Archivé) et le nombre
-d'options. Un clic sur une ligne ouvre la fiche.
+d'options. Le nom du produit est un lien vers la fiche (accessible au clavier) ; un clic sur
+la ligne l'ouvre aussi.
+
+Archiver un produit le **dépublie** d'abord, puis le **verrouille** : toute modification
+ultérieure est refusée (`409 PRODUCT_ARCHIVED`). Chaque onglet de la fiche (informations,
+galerie, tarifs, options) s'enregistre séparément, et l'onglet « Aperçu » montre la version
+**enregistrée**, pas les modifications en cours.
 
 ## Images
 
@@ -70,7 +76,8 @@ Les types à valeurs (`CHOICE`, `MULTI_CHOICE`, `COLOR`, `QUANTITY_SPLIT`) porte
 `PrintProductOptionValue` : libellé, couleur (`COLOR`), vignette facultative, supplément par
 unité, position. Options et valeurs sont remplacées d'un bloc (`PUT .../options`) ; celles qui
 disparaissent sont **archivées** (jamais supprimées), avec leur `id` conservé pour les demandes
-existantes.
+existantes. Le type d'une option enregistrée est **verrouillé** : `PUT .../options` refuse un
+changement (`400 OPTION_TYPE_LOCKED`) ; il faut retirer l'option et en créer une nouvelle.
 
 ## Règle de prix
 
@@ -82,6 +89,11 @@ Répartition (`QUANTITY_SPLIT`) : supplément unitaire = Σ (supplément de la v
 quantité, **arrondi à l'entier**. Le prix est une estimation ; la ligne du devis est
 `prix unitaire × quantité`. Une quantité ≤ 0 donne un supplément nul. Les montants sont
 affichés par `formatFcfa` (« 70 000 FCFA »).
+
+Le supplément de répartition est un supplément **unitaire arrondi** : le total de la ligne
+(`unitaire × quantité`) peut donc différer de la somme exacte des suppléments par valeur de
+jusqu'à `quantité / 2` FCFA. C'est voulu : la copie figée et le devis restent cohérents (même
+unitaire, même total). Le plan 33 ne doit pas « corriger » cet écart.
 
 ## Copie figée
 
@@ -133,6 +145,12 @@ calcul pur de `pricing-core.ts` (utilisable dans le navigateur, sans Prisma) :
 - `validateChoices(product, choices, quantity)` : `{ ok: true }` ou `{ ok: false, code, optionId? }`
   (12 codes, de `PRODUCT_UNAVAILABLE` à `SPLIT_MISMATCH`) ; à appeler avant tout chiffrage ;
 - `snapshotChoices(product, choices, quantity)` : copie figée ;
+- `pruneChoices(product, choices)` : retire des choix enregistrés les options absentes ou
+  archivées, les valeurs absentes ou archivées (`valueIds`, parts de répartition) et les choix
+  devenus vides ; à appliquer aux `choices` stockés d'une ligne avant d'alimenter
+  `ProductConfigurator` et avant toute re-validation (sinon `UNKNOWN_OPTION` sur une option que
+  le configurateur n'affiche plus). `ProductConfigurator` l'applique lui-même à son entrée et
+  prévient le parent par `onChange` ;
 - types `ProductForPricing`, `CatalogProduct`, `OptionChoice`, `ChoiceSnapshot`,
   `PricingOption`, `PricingValue` ; `loadProductForPricing(productId)` charge un produit depuis
   la base.

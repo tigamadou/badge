@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -147,7 +148,11 @@ export function CatalogList({
                       <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-50" />
                     )}
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{r.name}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    <Link href={`/platform/print/catalog/${r.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline focus:outline-none focus:ring-2 focus:ring-green-500">
+                      {r.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{r.category ?? KIND_LABEL[r.kind]}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-slate-700">{formatFcfa(r.startingPrice)}</td>
                   <td className="px-4 py-3">

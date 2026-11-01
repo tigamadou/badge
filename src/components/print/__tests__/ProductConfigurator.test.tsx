@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ProductConfigurator, nextColorChoice } from "../ProductConfigurator";
+import { ProductConfigurator, nextColorChoice, prunedConfiguration, orphanErrorMessage } from "../ProductConfigurator";
 import { ProductGallery } from "../ProductGallery";
 import { CORDON, v } from "@/lib/__tests__/helpers/print-products";
 import { choiceErrorMessage, formatFcfa, type CatalogProduct, type PricingOption } from "@/lib/print-catalog/pricing-core";
@@ -168,5 +168,32 @@ describe("ProductGallery", () => {
   it("sans image : pictogramme ; une seule image : pas de vignettes", () => {
     expect(renderToStaticMarkup(<ProductGallery images={[]} />)).not.toContain("<img");
     expect(renderToStaticMarkup(<ProductGallery images={[{ storageKey: "a.jpg", alt: "A" }]} />)).not.toContain("<button");
+  });
+});
+
+describe("choix perimes", () => {
+  const stale = { quantity: 100, choices: [
+    { optionId: "o-color", valueIds: ["rouge"] }, { optionId: "disparue", text: "x" },
+  ] };
+
+  it("prunedConfiguration : null si rien ne change, sinon la configuration nettoyee", () => {
+    expect(prunedConfiguration(CORDON, { quantity: 100, choices: [{ optionId: "o-color", valueIds: ["rouge"] }] })).toBeNull();
+    expect(prunedConfiguration(CORDON, stale)).toEqual({
+      quantity: 100, choices: [{ optionId: "o-color", valueIds: ["rouge"] }],
+    });
+  });
+
+  it("le rendu ignore les choix perimes : le prix reste affiche", () => {
+    const html = renderToStaticMarkup(<ProductConfigurator product={CORDON} value={stale} onChange={noop} />);
+    expect(html).toContain("Total estimé");
+    expect(html).not.toContain("a changé");
+  });
+
+  it("orphanErrorMessage : message general seulement pour une option non affichee", () => {
+    const msg = "Une option de ce produit a changé : vérifiez vos choix.";
+    expect(orphanErrorMessage(CORDON, { ok: false, code: "UNKNOWN_OPTION", optionId: "disparue" })).toBe(msg);
+    expect(orphanErrorMessage(CORDON, { ok: false, code: "REQUIRED_OPTION_MISSING", optionId: "o-color" })).toBeUndefined();
+    expect(orphanErrorMessage(CORDON, { ok: false, code: "QUANTITY_BELOW_MINIMUM" })).toBeUndefined();
+    expect(orphanErrorMessage(CORDON, { ok: true })).toBeUndefined();
   });
 });

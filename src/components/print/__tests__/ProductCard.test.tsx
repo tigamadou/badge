@@ -17,6 +17,13 @@ describe("ProductCard", () => {
     expect(html).not.toContain("<button");
   });
 
+  it("delai : 1 jour au singulier, 2 jours au pluriel", () => {
+    const one = renderToStaticMarkup(<ProductCard product={{ ...CORDON, leadTimeDays: 1 }} />);
+    expect(one).toContain("Fabrication : 1 jour<");
+    const two = renderToStaticMarkup(<ProductCard product={{ ...CORDON, leadTimeDays: 2 }} />);
+    expect(two).toContain("Fabrication : 2 jours");
+  });
+
   it("sans image ni delai ni categorie : pictogramme seul", () => {
     const html = renderToStaticMarkup(
       <ProductCard product={{ ...CORDON, images: [], leadTimeDays: null, category: null }} />,

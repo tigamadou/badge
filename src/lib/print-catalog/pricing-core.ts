@@ -175,6 +175,24 @@ export function validateChoices(
   return missing ? fail("REQUIRED_OPTION_MISSING", missing.id) : { ok: true };
 }
 
+// Nettoie des choix enregistres (ex. ligne de demande rouverte) : retire ce qui
+// reference une option ou une valeur absente/archivee depuis, et les choix devenus vides.
+export function pruneChoices(
+  product: CatalogProduct | ProductForPricing, choices: OptionChoice[],
+): OptionChoice[] {
+  const pruned: OptionChoice[] = [];
+  for (const choice of choices) {
+    const option = product.options.find((o) => o.id === choice.optionId);
+    if (!option || option.archived) continue;
+    const alive = (id: string) => option.values.some((val) => val.id === id && !val.archived);
+    const next: OptionChoice = { ...choice };
+    if (next.valueIds) next.valueIds = next.valueIds.filter(alive);
+    if (next.split) next.split = next.split.filter((part) => alive(part.valueId));
+    if (!isEmptyChoice(option, next)) pruned.push(next);
+  }
+  return pruned;
+}
+
 export type ChoiceSnapshot = {
   optionName: string; type: string; labels: string[]; text?: string; fileKey?: string;
   split?: { label: string; quantity: number }[]; priceDelta: number;

@@ -206,11 +206,16 @@ export function ProductOptionsEditor({
             <Select
               label="Type"
               value={o.type}
-              disabled={disabled}
+              disabled={disabled || o.id !== undefined}
               onChange={(e) => patchOption(i, { type: e.target.value as PrintOptionTypeName })}
               options={(Object.keys(TYPE_LABEL) as PrintOptionTypeName[]).map((t) => ({ value: t, label: TYPE_LABEL[t] }))}
             />
           </div>
+          {o.id !== undefined ? (
+            <p className="-mt-3 mb-4 text-xs text-slate-400">
+              {"Pour changer de type, supprimez l'option et créez-en une nouvelle."}
+            </p>
+          ) : null}
           <Input label="Aide" value={o.help} maxLength={300} disabled={disabled} onChange={(e) => patchOption(i, { help: e.target.value })} />
           <div className="mb-4 flex flex-wrap items-end gap-4">
             <Checkbox checked={o.required} onChange={(v) => !disabled && patchOption(i, { required: v })} label="Obligatoire" />

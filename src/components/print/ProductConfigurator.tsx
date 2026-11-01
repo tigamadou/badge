@@ -1,5 +1,5 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/FormControls";
@@ -7,6 +7,8 @@ import { Dropzone, FileBox } from "@/components/ui/FileBox";
 import {
   unitPriceFor,
   validateChoices,
+  pruneChoices,
+  type ChoiceResult,
   choiceErrorMessage,
   formatFcfa,
   type CatalogProduct,
@@ -24,6 +26,22 @@ const isEmpty = (c: OptionChoice) => !c.valueIds?.length && !c.text && !c.fileKe
 // Cliquer la pastille deja choisie d'une option facultative la deselectionne.
 export function nextColorChoice(option: PricingOption, selected: string[], valueId: string): OptionChoice | null {
   return !option.required && selected.includes(valueId) ? null : { optionId: option.id, valueIds: [valueId] };
+}
+
+// Choix enregistres perimes (option ou valeur archivee depuis) : renvoie la
+// configuration nettoyee, ou null quand rien ne change.
+export function prunedConfiguration(product: CatalogProduct, value: ProductConfiguration): ProductConfiguration | null {
+  const choices = pruneChoices(product, value.choices);
+  return JSON.stringify(choices) === JSON.stringify(value.choices) ? null : { ...value, choices };
+}
+
+// Erreur portant sur une option qu'aucun champ n'affiche : message general sous le prix.
+export function orphanErrorMessage(product: CatalogProduct, result: ChoiceResult): string | undefined {
+  if (result.ok || result.optionId === undefined) return undefined;
+  const id = result.optionId;
+  return product.options.some((o) => o.id === id)
+    ? undefined
+    : "Une option de ce produit a changé : vérifiez vos choix.";
 }
 
 function ErrorText({ children }: { children: string }) {
@@ -233,7 +251,7 @@ function OptionField({
 // Composant controle : l'etat (quantite + choix) vit chez le parent.
 export function ProductConfigurator({
   product,
-  value,
+  value: incoming,
   onChange,
   uploadFile,
   quantityLocked,
@@ -244,7 +262,14 @@ export function ProductConfigurator({
   uploadFile?: (file: File) => Promise<string>;
   quantityLocked?: boolean;
 }) {
+  // Les choix perimes sont ecartes au rendu et le parent est nettoye une fois.
+  const cleaned = prunedConfiguration(product, incoming);
+  const value = cleaned ?? incoming;
+  useEffect(() => {
+    if (cleaned) onChange(cleaned);
+  }, [cleaned, onChange]);
   const result = validateChoices(product, value.choices, value.quantity);
+  const orphanError = orphanErrorMessage(product, result);
   const partial = !result.ok && result.code === "REQUIRED_OPTION_MISSING";
   const showPrice = result.ok || partial;
   const unit = showPrice ? unitPriceFor(product, value.quantity, value.choices) : 0;
@@ -298,6 +323,7 @@ export function ProductConfigurator({
           {partial ? (
             <p className="mt-2 text-xs text-amber-700">{"Estimation partielle : options obligatoires manquantes."}</p>
           ) : null}
+          {orphanError ? <p className="mt-2 text-sm text-rose-600">{orphanError}</p> : null}
           <p className="mt-2 text-xs text-slate-400">{"Estimation : le prix définitif est fixé dans le devis."}</p>
         </div>
       </div>
