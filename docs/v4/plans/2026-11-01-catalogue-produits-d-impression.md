@@ -29,18 +29,18 @@ MinIO réel pour l'upload), Playwright. Aucune nouvelle dépendance.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Schéma, libellés d'activité, purge des tests | [ ] | | |
-| 2 | Prix : palier, suppléments, « à partir de » | [ ] | | |
-| 3 | Validation des choix et copie figée | [ ] | | |
-| 4 | Lecture : `loadProductForPricing`, vitrine, `GET /api/print/catalog` | [ ] | | |
-| 5 | Upload plateforme + clés `print-requests/` réservées au staff | [ ] | | |
-| 6 | API produits : création, modification, archivage | [ ] | | |
-| 7 | API galerie, paliers et options | [ ] | | |
-| 8 | Composants vitrine `ProductCard` et `ProductConfigurator` | [ ] | | |
-| 9 | Écran liste du catalogue + entrée « Catalogue » | [ ] | | dépend de la Task 8 du plan 31 (groupe « Impression ») |
-| 10 | Écran d'édition d'un produit + aperçu | [ ] | | |
-| 11 | E2E et documentation | [ ] | | |
-| — | Vérification finale (lint, typecheck, test, e2e) | [ ] | | |
+| 1 | Schéma, libellés d'activité, purge des tests | [x] | 2026-11-01 | revue validée |
+| 2 | Prix : palier, suppléments, « à partir de » | [x] | 2026-11-01 | revue validée |
+| 3 | Validation des choix et copie figée | [x] | 2026-11-01 | revue validée |
+| 4 | Lecture : `loadProductForPricing`, vitrine, `GET /api/print/catalog` | [x] | 2026-11-01 | revue validée |
+| 5 | Upload plateforme + clés `print-requests/` réservées au staff | [x] | 2026-11-01 | revue validée |
+| 6 | API produits : création, modification, archivage | [x] | 2026-11-01 | revue validée |
+| 7 | API galerie, paliers et options | [x] | 2026-11-01 | revue validée |
+| 8 | Composants vitrine `ProductCard` et `ProductConfigurator` | [x] | 2026-11-01 | revue validée |
+| 9 | Écran liste du catalogue + entrée « Catalogue » | [x] | 2026-11-01 | dépend de la Task 8 du plan 31 (groupe « Impression ») |
+| 10 | Écran d'édition d'un produit + aperçu | [x] | 2026-11-01 | revue validée |
+| 11 | E2E et documentation | [x] | 2026-11-01 | revue validée |
+| — | Vérification finale (lint, typecheck, test, e2e) | [x] | 2026-11-01 | relecture finale + correctifs validés ; e2e verts ; trous de couverture antérieurs dans render-badge.ts / types.ts ; install.test.ts lent (environnement) |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne après chaque task validée. En cas d'interruption, passez la ligne à `[~]` et notez
