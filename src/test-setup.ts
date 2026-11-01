@@ -12,7 +12,13 @@ import { fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 beforeEach(async () => {
   fakeExporter.reset();
   overrideExporter(fakeExporter);
+  await prisma.printRequestMessage.deleteMany();
+  await prisma.printQuoteLine.deleteMany();
+  await prisma.printRequestItem.deleteMany();
+  // FK auto-referente : detacher les demandes enfants avant la suppression.
+  await prisma.printRequest.updateMany({ data: { parentRequestId: null } });
   await prisma.printSheetGeneration.deleteMany();
+  await prisma.printRequest.deleteMany();
   await prisma.printSheetLayout.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.job.deleteMany();

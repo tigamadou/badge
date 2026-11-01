@@ -65,6 +65,9 @@ model User {
   printSheetLayouts     PrintSheetLayout[]
   printProducts         PrintProduct[]
   printSheetGenerations PrintSheetGeneration[]
+  printRequestsCreated  PrintRequest[]         @relation("PrintRequestCreatedBy")
+  printRequestsAccepted PrintRequest[]         @relation("PrintRequestAcceptedBy")
+  printRequestMessages  PrintRequestMessage[]
 }
 
 enum StaffRole {
@@ -118,6 +121,7 @@ model Organization {
   categoryTemplates CategoryTemplate[]
   subscription      Subscription?
   payments          Payment[]
+  printRequests     PrintRequest[]
 }
 
 model OrgMembership {
@@ -186,6 +190,7 @@ model Event {
   blockedEmails         BlockedEmail[]
   blockedDocuments      BlockedDocument[]
   printSheetGenerations PrintSheetGeneration[]
+  printRequests         PrintRequest[]
   settings              EventSettings?
 
   @@index([orgId])
@@ -298,6 +303,8 @@ model Registration {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  printRequestItems PrintRequestItem[]
 
   @@unique([userId, eventId])
   @@index([eventId])
@@ -511,6 +518,16 @@ model ActivityLog {
 }
 
 enum ActivityType {
+  // Demandes d'impression et devis
+  PRINT_REQUEST_SUBMITTED
+  PRINT_REQUEST_UPDATED
+  PRINT_REQUEST_QUOTED
+  PRINT_REQUEST_ACCEPTED
+  PRINT_REQUEST_REOPENED
+  PRINT_REQUEST_STATUS_CHANGED
+  PRINT_REQUEST_CANCELLED
+  PRINT_REQUEST_REJECTED
+  PRINT_REQUEST_MARKED_PAID
   // Gabarits d'impression et planches de badges
   PRINT_LAYOUT_CREATED
   PRINT_LAYOUT_UPDATED
@@ -772,6 +789,10 @@ enum NotificationType {
   QUOTA_EXCEEDED
   EMAIL_FAILED
   SUBSCRIPTION_EXPIRING
+  PRINT_REQUEST_SUBMITTED
+  PRINT_REQUEST_QUOTED
+  PRINT_REQUEST_MESSAGE
+  PRINT_REQUEST_STATUS_CHANGED
 }
 
 enum NotificationScope {
@@ -884,9 +905,12 @@ model PrintSheetGeneration {
   createdAt       DateTime                   @default(now())
   startedAt       DateTime?
   completedAt     DateTime?
+  printRequestId  String?
+  printRequest    PrintRequest?              @relation(fields: [printRequestId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
   @@index([eventId])
+  @@index([printRequestId])
 }
 
 enum PrintProductKind {
@@ -926,6 +950,7 @@ model PrintProduct {
   images     PrintProductImage[]
   priceTiers PrintProductPriceTier[]
   options    PrintProductOption[]
+  quoteLines PrintQuoteLine[]
 
   @@index([kind, archived, published])
 }
@@ -985,4 +1010,177 @@ model PrintProductOptionValue {
   archivedAt DateTime?
 
   @@index([optionId, position])
+}
+
+// =====================================================
+//  Demandes d'impression, devis et fil de discussion (plan 33)
+// =====================================================
+
+enum PrintRequestType {
+  ADVANCE
+  ONSITE
+}
+
+enum PrintRequestStatus {
+  DRAFT
+  SUBMITTED
+  QUOTED
+  ACCEPTED
+  PAID
+  IN_PRODUCTION
+  READY
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum PrintDelivery {
+  PICKUP
+  DELIVERY
+}
+
+enum PrintQuoteLineKind {
+  PRODUCT
+  SERVICE
+  DISCOUNT
+  CUSTOM
+}
+
+enum PrintLineAuthor {
+  ORGANIZER
+  STAFF
+}
+
+enum PrintThreadSide {
+  ORGANIZER
+  STAFF
+  SYSTEM
+}
+
+enum PrintMessageKind {
+  MESSAGE
+  EVENT
+}
+
+model PrintRequest {
+  id        String             @id @default(cuid())
+  reference String             @unique
+  eventId   String
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orgId     String
+  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  type      PrintRequestType
+  status    PrintRequestStatus @default(DRAFT)
+
+  createdById String?
+  createdBy   User?   @relation("PrintRequestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  badgeTemplateId String?
+  badgeWidthPx    Float?
+  badgeHeightPx   Float?
+  badgePages      Int?
+  templatePinned  Boolean @default(false)
+
+  delivery            PrintDelivery?
+  deliveryAddress     String?        @db.Text
+  deliveryContactName String?
+  deliveryContactPhone String?
+  wantedBy            DateTime?
+  estimatedQuantity   Int?
+
+  onsiteSchedule     Json?
+  onsiteLocation     String? @db.Text
+  onsiteContactName  String?
+  onsiteContactPhone String?
+  notes              String? @db.Text
+
+  quoteVersion    Int       @default(0)
+  acceptedVersion Int?
+  acceptedTotal   Int?
+  acceptedAt      DateTime?
+  acceptedById    String?
+  acceptedBy      User?     @relation("PrintRequestAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  total           Int       @default(0)
+  // plan 35
+  marginPercent   Int?
+  parentRequestId String?
+  parentRequest   PrintRequest?  @relation("PrintRequestParent", fields: [parentRequestId], references: [id], onDelete: SetNull)
+  childRequests   PrintRequest[] @relation("PrintRequestParent")
+
+  submittedAt   DateTime?
+  quotedAt      DateTime?
+  paidAt        DateTime?
+  // plan 34 : Payment qui a solde la demande, sans relation Prisma (ecrit par markPaid).
+  paidPaymentId String?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items       PrintRequestItem[]
+  lines       PrintQuoteLine[]
+  messages    PrintRequestMessage[]
+  generations PrintSheetGeneration[]
+
+  @@index([eventId, status])
+  @@index([status, submittedAt])
+  @@index([orgId])
+}
+
+model PrintRequestItem {
+  id             String       @id @default(cuid())
+  requestId      String
+  request        PrintRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  position       Int
+  createdAt      DateTime     @default(now())
+
+  @@unique([requestId, registrationId])
+  @@index([registrationId])
+}
+
+model PrintQuoteLine {
+  id              String             @id @default(cuid())
+  requestId       String
+  request         PrintRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  kind            PrintQuoteLineKind
+  productId       String?
+  product         PrintProduct?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  label           String
+  // ChoiceSnapshot[]
+  optionsSnapshot Json?
+  // OptionChoice[] brut, pour rouvrir le configurateur
+  choices         Json?
+  quantity        Int
+  unitPrice       Int
+  lineTotal       Int
+  position        Int
+  addedBy         PrintLineAuthor
+  priceOverridden    Boolean   @default(false)
+  quantityOverridden Boolean   @default(false)
+  removedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([requestId, removedAt])
+}
+
+model PrintRequestMessage {
+  id            String           @id @default(cuid())
+  requestId     String
+  request       PrintRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorId      String?
+  author        User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  side          PrintThreadSide
+  kind          PrintMessageKind
+  body          String           @db.Text
+  eventType     String?
+  details       Json?
+  attachmentKey String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([requestId, createdAt])
+  @@index([attachmentKey])
 }

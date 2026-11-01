@@ -138,6 +138,10 @@ describe("notify", () => {
     expect(EMAIL_BY_TYPE.EMAIL_FAILED).toBe(false);
     expect(EMAIL_BY_TYPE.BADGE_PRINTED).toBe(false);
     expect(EMAIL_BY_TYPE.PROFILE_REJECTED).toBe(false);
+    expect(EMAIL_BY_TYPE.PRINT_REQUEST_SUBMITTED).toBe(true);
+    expect(EMAIL_BY_TYPE.PRINT_REQUEST_QUOTED).toBe(true);
+    expect(EMAIL_BY_TYPE.PRINT_REQUEST_MESSAGE).toBe(true);
+    expect(EMAIL_BY_TYPE.PRINT_REQUEST_STATUS_CHANGED).toBe(true);
   });
 
   it("aucun destinataire : ni ligne ni email", async () => {

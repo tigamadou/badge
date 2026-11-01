@@ -26,6 +26,10 @@ export const EMAIL_BY_TYPE: Record<NotificationType, boolean> = {
   QUOTA_EXCEEDED: true,
   EMAIL_FAILED: false,
   SUBSCRIPTION_EXPIRING: true,
+  PRINT_REQUEST_SUBMITTED: true,
+  PRINT_REQUEST_QUOTED: true,
+  PRINT_REQUEST_MESSAGE: true,
+  PRINT_REQUEST_STATUS_CHANGED: true,
 };
 
 function buildEmailBody(content: NotificationContent): string {

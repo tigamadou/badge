@@ -68,6 +68,15 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PRINT_PRODUCT_CREATED: "Produit d'impression créé",
   PRINT_PRODUCT_UPDATED: "Produit d'impression modifié",
   PRINT_PRODUCT_ARCHIVED: "Produit d'impression archivé",
+  PRINT_REQUEST_SUBMITTED: "Demande d'impression envoyée",
+  PRINT_REQUEST_UPDATED: "Demande d'impression modifiée",
+  PRINT_REQUEST_QUOTED: "Devis d'impression envoyé",
+  PRINT_REQUEST_ACCEPTED: "Devis d'impression accepté",
+  PRINT_REQUEST_REOPENED: "Devis d'impression rouvert",
+  PRINT_REQUEST_STATUS_CHANGED: "Statut de demande d'impression changé",
+  PRINT_REQUEST_CANCELLED: "Demande d'impression annulée",
+  PRINT_REQUEST_REJECTED: "Demande d'impression refusée",
+  PRINT_REQUEST_MARKED_PAID: "Demande d'impression marquée payée",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

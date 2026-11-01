@@ -170,6 +170,33 @@ describe("types d'impression (gabarits et planches)", () => {
   });
 });
 
+describe("types des demandes d'impression", () => {
+  const REQUEST_TYPES = [
+    "PRINT_REQUEST_SUBMITTED",
+    "PRINT_REQUEST_UPDATED",
+    "PRINT_REQUEST_QUOTED",
+    "PRINT_REQUEST_ACCEPTED",
+    "PRINT_REQUEST_REOPENED",
+    "PRINT_REQUEST_STATUS_CHANGED",
+    "PRINT_REQUEST_CANCELLED",
+    "PRINT_REQUEST_REJECTED",
+    "PRINT_REQUEST_MARKED_PAID",
+  ] as const;
+
+  it("ont un libelle humain different du type brut", () => {
+    for (const t of REQUEST_TYPES) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+  });
+
+  it("sont classes par categorie visuelle", () => {
+    expect(logKind(as("PRINT_REQUEST_UPDATED"))).toBe("modification");
+    expect(logKind(as("PRINT_REQUEST_QUOTED"))).toBe("systeme");
+  });
+});
+
 describe("describeActivity", () => {
   const KNOWN: Partial<Record<string, string>> = {
     REGISTRATION_CREATED: "Inscription créée",

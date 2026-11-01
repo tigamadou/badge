@@ -35,7 +35,8 @@ export type EventPermission =
   | "event.settings.update"
   | "event.categories.manage"
   | "event.members.manage"
-  | "event.activity.read";
+  | "event.activity.read"
+  | "print.request";
 
 // Roles event qui satisfont chaque permission. Source : matrice "Niveau evenement"
 // dans docs/v2/features/multi-tenancy-rbac.md. La table est exhaustive et inclut
@@ -57,6 +58,7 @@ const EVENT_PERMISSION_ROLES: Record<EventPermission, ReadonlyArray<EventRole>> 
   "event.categories.manage":   ["ADMIN"],
   "event.members.manage":      ["ADMIN"],
   "event.activity.read":       ["ADMIN"],
+  "print.request":             ["ADMIN"],
 };
 
 export function staffRoleAtLeast(actual: StaffRole, required: StaffRole): boolean {
