@@ -1,6 +1,6 @@
 // src/lib/__tests__/qrcode.test.ts
 import { describe, it, expect } from "vitest";
-import { generateQRCodeDataURL } from "../qrcode";
+import { generateQRCodeDataURL, generateQRCodePng } from "../qrcode";
 
 describe("generateQRCodeDataURL", () => {
   it("returns a base64 PNG data URL", async () => {
@@ -18,5 +18,12 @@ describe("generateQRCodeDataURL", () => {
     const a = await generateQRCodeDataURL("AAA");
     const b = await generateQRCodeDataURL("BBB");
     expect(a).not.toBe(b);
+  });
+});
+
+describe("generateQRCodePng", () => {
+  it("returns a PNG buffer", async () => {
+    const buf = await generateQRCodePng("AAA");
+    expect([...buf.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
   });
 });

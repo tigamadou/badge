@@ -1,5 +1,6 @@
 import path from "node:path";
 import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { registrationVerifyUrl } from "@/lib/registration-qr";
 import { getFile } from "@/lib/storage";
 import { readSecurityInstructions } from "@/lib/security-instructions";
 import { readTemplateOptions } from "./template-options";
@@ -93,7 +94,7 @@ export async function buildTemplateContext(
 ): Promise<TemplateContext> {
   const uploadsRoot = resolveUploadsRoot(options?.uploadsRoot);
   const baseUrl = resolveBaseUrl(options?.baseUrl);
-  const verifyUrl = `${baseUrl}/verify/${encodeURIComponent(registration.id)}`;
+  const verifyUrl = registrationVerifyUrl(baseUrl, registration.id);
 
   const [photoDataUrl, logoDataUrl, bannerDataUrl, qrCodeDataUrl] = await Promise.all([
     internals.readFileAsDataUrl(registration.snapshotPhoto, uploadsRoot).catch(() => ""),

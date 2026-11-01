@@ -433,6 +433,9 @@ describe("sendStatusNotification", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("approuvée");
     expect(sent[0].html).toContain("approuvée");
+    expect(sent[0].html).toContain(`/api/public/qr/${encodeURIComponent(reg.id)}`);
+    expect(sent[0].html).toContain(reg.id);
+    expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
   });
 
   it("does nothing when registration not found (logs only)", async () => {
@@ -468,6 +471,7 @@ describe("sendStatusNotification", () => {
     expect(sent[0].html).toContain("Photo illisible");
     expect(sent[0].html).toContain("Veuillez fournir une photo nette");
     expect(sent[0].html).toContain(`/account/registrations/${encodeURIComponent(reg.id)}`);
+    expect(sent[0].html).not.toContain("/api/public/qr/");
   });
 
   // Couvre les branches fausses des ternaires reasonBlock/detailsBlock

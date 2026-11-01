@@ -11,6 +11,9 @@ import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import ResubmitButton from "./ResubmitButton";
+import { generateQRCodeDataURL } from "@/lib/qrcode";
+import { registrationVerifyUrl } from "@/lib/registration-qr";
+import { buildBaseUrl } from "@/lib/mail-helpers";
 import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
 
 function formatDate(d: Date): string {
@@ -70,6 +73,16 @@ export default async function RegistrationDetailPage({
     redirect("/account");
   }
 
+  const welcomeQr =
+    registration.status === "APPROVED"
+      ? await generateQRCodeDataURL(
+          registrationVerifyUrl(
+            buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL }),
+            registration.id,
+          ),
+        )
+      : null;
+
   return (
     <div className="space-y-6">
       <EventCover
@@ -109,6 +122,18 @@ export default async function RegistrationDetailPage({
         <Alert tone="success">
           <Icon name="check" size={16} /> Badge imprimé le {formatDate(registration.badgePrintedAt!)}.
         </Alert>
+      )}
+
+      {welcomeQr && (
+        <Card>
+          <CardHead title="QR d'accueil" />
+          <CardBody className="flex flex-col items-center gap-2 text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={welcomeQr} alt="QR d'accueil" width={200} height={200} />
+            <p className="font-mono text-sm text-slate-900">{registration.id}</p>
+            <p className="text-sm text-slate-600">À présenter à l&apos;accueil, sur votre téléphone ou imprimé.</p>
+          </CardBody>
+        </Card>
       )}
 
       {registration.status === "REJECTED" && (
