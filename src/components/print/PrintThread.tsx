@@ -43,10 +43,15 @@ export function PrintThread({
   entriesUrl,
   postUrl,
   uploadUrl,
+  placeholder = "Écrire un message à l'équipe Badge…",
+  refreshKey = 0,
 }: {
   entriesUrl: string;
   postUrl: string | null;
   uploadUrl: string | null;
+  placeholder?: string;
+  // Changé par l'écran après une action (ex. côté staff) : recharge le fil sans attendre le tour suivant.
+  refreshKey?: number;
 }) {
   const [entries, setEntries] = useState<ThreadEntry[] | null>(null);
   const [body, setBody] = useState("");
@@ -68,7 +73,7 @@ export function PrintThread({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
   useVisibleInterval(() => void load(), THREAD_REFRESH_MS);
 
   async function upload(file: File) {
@@ -79,8 +84,9 @@ export function PrintThread({
       form.append("file", file);
       const res = await fetch(uploadUrl, { method: "POST", body: form });
       if (!res.ok) throw res;
-      const data = (await res.json()) as { storageKey: string; originalName: string };
-      setAttachment({ key: data.storageKey, name: data.originalName });
+      // La route staff ne renvoie pas originalName : on garde alors le nom du fichier choisi.
+      const data = (await res.json()) as { storageKey: string; originalName?: string };
+      setAttachment({ key: data.storageKey, name: data.originalName ?? file.name });
     } finally {
       setUploading(false);
     }
@@ -173,7 +179,7 @@ export function PrintThread({
             onChange={(e) => setBody(e.target.value)}
             maxLength={5000}
             rows={3}
-            placeholder="Écrire un message à l'équipe Badge…"
+            placeholder={placeholder}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           {attachment ? (

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { lockEventRow } from "@/lib/print-requests/content";
+import { lockEventRow, setBadges, updateDetails } from "@/lib/print-requests/content";
 import { cancelRequest } from "@/lib/print-requests/lifecycle";
 import { applyOrgCredit } from "@/lib/print-requests/org-credit";
 import { recordOnsitePrint, setOnsiteMargin } from "@/lib/print-requests/onsite-station";
@@ -88,6 +88,20 @@ describe("ordre des verrous Event puis PrintRequest", () => {
       expect(s.request.status).toBe("SUBMITTED");
       expect(s.request.templatePinned).toBe(false);
       expect(s.event.badgeTemplateId).toBeNull();
+      await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
+    }
+  });
+
+  it("setBadges et updateDetails face à un changement de template : pas d'interblocage", async () => {
+    for (let i = 0; i < ITERATIONS; i++) {
+      const r = await makeRequest(fx, { status: "SUBMITTED" });
+      const res = await Promise.allSettled([
+        setBadges({ requestId: r.id, eventId: fx.event.id, userId: fx.owner.id, selection: { mode: "ALL_AVAILABLE" } }),
+        updateDetails({ requestId: r.id, eventId: fx.event.id, userId: fx.owner.id, patch: { notes: `n${i}` } }),
+        orgTemplateChange(),
+      ]);
+      expect(res.map((x) => x.status)).toEqual(["fulfilled", "fulfilled", "fulfilled"]);
+      await prisma.printRequestItem.deleteMany({ where: { requestId: r.id } });
       await prisma.printRequest.update({ where: { id: r.id }, data: { status: "CANCELLED" } });
     }
   });

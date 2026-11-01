@@ -195,14 +195,16 @@ export async function setBadges(input: {
   const request = await loadRequest(input.requestId, { eventId: input.eventId });
   if (request.type !== "ADVANCE") throw new PrintRequestError("TYPE_MISMATCH", 400);
 
-  // Ordre des verrous : la ligne Event d'abord, puis la ligne PrintRequest (appendThreadEvent,
-  // setOrganizerProducts). Ne jamais verrouiller l'Event après avoir verrouillé une PrintRequest.
+  // Ordre des verrous : la ligne Event d'abord, puis la ligne PrintRequest (lockRequestWithEvent,
+  // comme setOrganizerProducts). Ne jamais verrouiller l'Event après avoir verrouillé une
+  // PrintRequest. La demande est relue sous verrou : son statut peut avoir changé depuis le chargement.
   return prisma.$transaction(async (tx) => {
-    if (request.status !== "DRAFT") await lockEventRow(tx, input.eventId);
+    await lockRequestWithEvent(tx, request.id);
+    const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
 
-    const rows = orderRegistrations(await resolveSelection(tx, request, input.eventId, input.selection));
+    const rows = orderRegistrations(await resolveSelection(tx, current, input.eventId, input.selection));
     const previousItems = await tx.printRequestItem.findMany({
-      where: { requestId: request.id },
+      where: { requestId: current.id },
       select: { registrationId: true },
     });
     const previousIds = new Set(previousItems.map((item) => item.registrationId));
@@ -212,17 +214,17 @@ export async function setBadges(input: {
     // Sélection identique (l'ordre seul ne compte pas) : ni révision du devis ni entrée du fil.
     if (added === 0 && removed === 0) return { count: rows.length, revised: false };
 
-    const { from } = await applyEdit(tx, request, "ORGANIZER", input.userId);
-    await tx.printRequestItem.deleteMany({ where: { requestId: request.id } });
-    for (const part of chunk(rows.map((row, position) => ({ requestId: request.id, registrationId: row.id, position })), ID_CHUNK)) {
+    const { from } = await applyEdit(tx, current, "ORGANIZER", input.userId);
+    await tx.printRequestItem.deleteMany({ where: { requestId: current.id } });
+    for (const part of chunk(rows.map((row, position) => ({ requestId: current.id, registrationId: row.id, position })), ID_CHUNK)) {
       await tx.printRequestItem.createMany({ data: part });
     }
 
-    const { lagging } = await followBadgeCount(tx, request.id, previousIds.size, rows.length);
-    if (request.status !== "DRAFT") {
+    const { lagging } = await followBadgeCount(tx, current.id, previousIds.size, rows.length);
+    if (current.status !== "DRAFT") {
       await appendThreadEvent(
         tx,
-        request.id,
+        current.id,
         "BADGES_CHANGED",
         { added, removed, count: rows.length, lagging },
         { userId: input.userId, side: "ORGANIZER" },
@@ -282,12 +284,17 @@ export async function updateDetails(input: {
   if (forbidden.some((key) => patch[key] !== undefined)) {
     throw new PrintRequestError("TYPE_MISMATCH", 400);
   }
-  // Seules les modifications réelles comptent : sans effet, le devis n'est pas révisé.
-  const changed = FIELD_LABELS.filter(([key]) => isChanged(request, patch, key));
-  if (changed.length === 0) return { request, revised: false };
 
   return prisma.$transaction(async (tx) => {
-    const { from } = await applyEdit(tx, request, "ORGANIZER", input.userId);
+    // Ordre des verrous : Event puis PrintRequest. La demande est relue sous verrou : la décision
+    // (modification réelle ou non, statut éditable) porte sur l'état courant, pas sur celui du chargement.
+    await lockRequestWithEvent(tx, request.id);
+    const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    // Seules les modifications réelles comptent : sans effet, le devis n'est pas révisé.
+    const changed = FIELD_LABELS.filter(([key]) => isChanged(current, patch, key));
+    if (changed.length === 0) return { request: current, revised: false };
+
+    const { from } = await applyEdit(tx, current, "ORGANIZER", input.userId);
 
     const data: Record<string, unknown> = {};
     for (const [key] of changed) {
@@ -298,10 +305,10 @@ export async function updateDetails(input: {
 
     let lagging: string[] | undefined;
     if (changed.some(([key]) => key === "estimatedQuantity")) {
-      ({ lagging } = await followBadgeCount(tx, request.id, request.estimatedQuantity ?? 0, patch.estimatedQuantity as number));
+      ({ lagging } = await followBadgeCount(tx, request.id, current.estimatedQuantity ?? 0, patch.estimatedQuantity as number));
     }
 
-    if (request.status !== "DRAFT") {
+    if (current.status !== "DRAFT") {
       const fields = [...new Set(changed.map(([, label]) => label))];
       await appendThreadEvent(
         tx,

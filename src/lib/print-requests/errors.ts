@@ -26,7 +26,8 @@ export type PrintRequestErrorCode =
   | "STAFF_FORBIDDEN"
   | "INVALID_ATTACHMENT"
   | "TEMPLATE_LOCKED_BY_PRINT_REQUEST"
-  | "CREDIT_LINE_LOCKED";
+  | "CREDIT_LINE_LOCKED"
+  | "ZERO_TOTAL";
 
 export class PrintRequestError extends Error {
   constructor(
@@ -68,6 +69,7 @@ export const PRINT_REQUEST_ERROR_MESSAGES: Record<PrintRequestErrorCode, string>
   TEMPLATE_LOCKED_BY_PRINT_REQUEST:
     "Ce template est utilisé par une demande d'impression en cours et ne peut pas être modifié.",
   CREDIT_LINE_LOCKED: "Cette ligne de crédit est verrouillée et ne peut pas être modifiée.",
+  ZERO_TOTAL: "Le total du devis doit être supérieur à zéro.",
 };
 
 // `details` est envoyé au client par conception : n'y mettre aucune donnée interne.

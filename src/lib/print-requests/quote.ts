@@ -242,8 +242,14 @@ export async function sendQuote(input: {
     await assertOnsiteCanAdvance(current);
     const active = await tx.printQuoteLine.count({ where: { requestId: request.id, removedAt: null } });
     if (active === 0) throw new PrintRequestError("EMPTY_QUOTE", 400);
+    // Le devis porte toujours le support de badge (les demandes complémentaires de la clôture en ont un).
+    const badgeLines = await tx.printQuoteLine.count({
+      where: { requestId: request.id, removedAt: null, kind: "PRODUCT", product: { kind: "BADGE" } },
+    });
+    if (badgeLines === 0) throw new PrintRequestError("BADGE_PRODUCT_REQUIRED", 400);
     const total = await recomputeChecked(tx, request.id);
     if (total < 0) throw new PrintRequestError("NEGATIVE_TOTAL", 400);
+    if (total === 0) throw new PrintRequestError("ZERO_TOTAL", 400);
     const version = current.quoteVersion + 1;
     await tx.printRequest.update({ where: { id: request.id }, data: { quoteVersion: version } });
     await appendThreadEvent(tx, request.id, "QUOTE_SENT", { version, total }, { userId: input.userId, ...STAFF });

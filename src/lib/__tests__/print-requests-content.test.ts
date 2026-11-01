@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "@/lib/print-requests/errors";
@@ -21,6 +21,14 @@ let fx: PrintFixture;
 beforeEach(async () => {
   fx = await seedPrintFixture();
 });
+afterEach(() => vi.restoreAllMocks());
+
+// La demande telle que le chargement initial l'a vue, avant un changement concurrent : le premier
+// findUnique (loadRequest) renvoie cette copie périmée, les suivants (verrou, relecture) la base.
+async function staleOnFirstLoad(id: string, stale: Partial<Prisma.PrintRequestUncheckedUpdateInput>) {
+  const real = await prisma.printRequest.findUniqueOrThrow({ where: { id } });
+  vi.spyOn(prisma.printRequest, "findUnique").mockResolvedValueOnce({ ...real, ...stale } as never);
+}
 
 const reject = async (p: Promise<unknown>) =>
   p.then(() => null, (e) => e as PrintRequestError);
@@ -219,6 +227,21 @@ describe("setBadges", () => {
     expect(await thread(r.id)).toHaveLength(before);
   });
 
+  it("relit la demande sous verrou : un statut changé depuis le chargement fait foi", async () => {
+    const r = await makeRequest(fx, { status: "SUBMITTED" });
+    await staleOnFirstLoad(r.id, { status: "DRAFT" });
+    await setBadges(base({ requestId: r.id }));
+    // Chargée comme brouillon, elle est SUBMITTED sous verrou : le fil est tenu.
+    expect((await thread(r.id)).map((e) => e.eventType)).toEqual(["BADGES_CHANGED"]);
+  });
+
+  it("une demande devenue ACCEPTED depuis le chargement est refusée sous verrou", async () => {
+    const r = await makeRequest(fx, { status: "ACCEPTED" });
+    await staleOnFirstLoad(r.id, { status: "SUBMITTED" });
+    expect(await reject(setBadges(base({ requestId: r.id })))).toMatchObject({ code: "QUOTE_ACCEPTED" });
+    expect(await items(r.id)).toHaveLength(0);
+  });
+
   it("deux demandes simultanées ne se réservent pas la même inscription", async () => {
     const a = await makeRequest(fx, { status: "SUBMITTED" });
     const b = await makeRequest(fx, { status: "SUBMITTED" });
@@ -259,6 +282,26 @@ describe("followBadgeCount", () => {
 describe("updateDetails", () => {
   const upd = (requestId: string, patch: Parameters<typeof updateDetails>[0]["patch"]) =>
     updateDetails({ requestId, eventId: fx.event.id, userId: fx.owner.id, patch });
+
+  it("relit la demande sous verrou : le statut et les valeurs courants décident", async () => {
+    const accepted = await makeRequest(fx, { status: "ACCEPTED" });
+    await staleOnFirstLoad(accepted.id, { status: "SUBMITTED" });
+    expect(await reject(upd(accepted.id, { delivery: "PICKUP" }))).toMatchObject({ code: "QUOTE_ACCEPTED" });
+
+    // Chargée avec « remise : null », elle porte déjà PICKUP : aucune modification réelle.
+    const same = await makeRequest(fx, { status: "QUOTED", delivery: "PICKUP" });
+    await staleOnFirstLoad(same.id, { delivery: null });
+    const noop = await upd(same.id, { delivery: "PICKUP" });
+    expect(noop).toMatchObject({ revised: false, request: { status: "QUOTED" } });
+    expect(await thread(same.id)).toHaveLength(0);
+
+    // Chargée avec PICKUP, elle porte DELIVERY : la modification est bien appliquée.
+    const differs = await makeRequest(fx, { status: "SUBMITTED", delivery: "DELIVERY" });
+    await staleOnFirstLoad(differs.id, { delivery: "PICKUP" });
+    const applied = await upd(differs.id, { delivery: "PICKUP" });
+    expect(applied.request.delivery).toBe("PICKUP");
+    expect((await thread(differs.id)).map((e) => e.eventType)).toEqual(["REQUEST_UPDATED"]);
+  });
 
   it("livraison sur SUBMITTED : entrée « Informations modifiées »", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });

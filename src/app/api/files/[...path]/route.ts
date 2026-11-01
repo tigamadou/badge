@@ -14,8 +14,9 @@ import { getFile } from "@/lib/storage";
 // participants : lisibles par le staff STAFF_SUPPORT minimum uniquement.
 // Les pieces jointes de demandes d'impression (`print-requests/...`) sont lisibles par tout le
 // staff, STAFF_OBSERVER compris. Les detenteurs de `print.request` lisent les fichiers de leur
-// evenement : `print-requests/{eventId}/...` directement, `print-requests/staff/...` via l'evenement
-// du message qui porte la piece jointe (classe `printRequest`). Aucune ligne : staff seulement.
+// evenement : `print-requests/{eventId}/...` directement, `print-requests/staff/{requestId}/...` via
+// l'evenement de la demande nommee par la cle (le message qui la porte est verifie a l'ecriture :
+// il ne peut citer que le prefixe de sa propre demande). Autre forme de cle staff : staff seulement.
 // Les archives ZIP d'export (`badge-exports/{eventId}/...`) contiennent des badges nominatifs :
 // lisibles par le staff et par les titulaires de `badge.print` sur l'evenement.
 // Union discriminee : un fichier sensible est TOUJOURS soit un document de profil
@@ -51,13 +52,12 @@ async function canReadPrintRequestFile(
 ): Promise<boolean> {
   let eventId = scope;
   if (scope === "staff") {
-    // Cle staff : l'evenement est celui de la demande dont un message porte la piece jointe.
-    const msg = await prisma.printRequestMessage.findFirst({
-      where: { attachmentKey: key },
-      select: { request: { select: { eventId: true } } },
-    });
-    if (!msg) return false;
-    eventId = msg.request.eventId;
+    // Cle staff `print-requests/staff/{requestId}/{fichier}` : l'evenement est celui de la demande.
+    const [, , requestId, file] = key.split("/");
+    if (!requestId || !file) return false;
+    const request = await prisma.printRequest.findUnique({ where: { id: requestId }, select: { eventId: true } });
+    if (!request) return false;
+    eventId = request.eventId;
   }
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
   return !!event && hasEventPermission(ctx, eventId, event.orgId, "print.request");

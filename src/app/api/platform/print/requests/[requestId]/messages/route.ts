@@ -15,7 +15,7 @@ export const GET = withStaffAuth<Params>(async (_req, _ctx, { params }) =>
   guarded(async () => {
     const { requestId } = await params;
     await loadStaffRequest(requestId);
-    return json({ entries: await listThread(requestId) });
+    return json({ entries: await listThread(requestId, "STAFF") });
   }),
 );
 

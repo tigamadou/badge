@@ -75,6 +75,14 @@ const reload = (id: string) => prisma.printRequest.findUniqueOrThrow({ where: { 
 const logs = (targetId: string, type: string) =>
   prisma.activityLog.findMany({ where: { targetId, type: type as never } });
 
+const badgeLine = (requestId: string) =>
+  prisma.printQuoteLine.create({
+    data: {
+      requestId, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Support", quantity: 1,
+      unitPrice: 0, lineTotal: 0, position: 1, addedBy: "ORGANIZER",
+    },
+  });
+
 async function withLine(status: "SUBMITTED" | "QUOTED" = "SUBMITTED") {
   const r = await makeRequest(fx, { status, total: 1000, quoteVersion: status === "QUOTED" ? 1 : 0 });
   const line = await prisma.printQuoteLine.create({
@@ -83,6 +91,8 @@ async function withLine(status: "SUBMITTED" | "QUOTED" = "SUBMITTED") {
       lineTotal: 1000, position: 0, addedBy: "STAFF",
     },
   });
+  // Support de badge (gratuit ici) : le devis part avec une ligne BADGE.
+  await badgeLine(r.id);
   return { r, line };
 }
 const lineBody = { kind: "SERVICE", label: "Livraison", quantity: 1, unitPrice: 500 };
@@ -493,6 +503,7 @@ describe("template inadapté à l'impression sur place", () => {
         lineTotal: 1000, position: 0, addedBy: "STAFF",
       },
     });
+    await badgeLine(r.id);
     return r;
   };
   const advance = (id: string, to: string) =>
@@ -649,8 +660,11 @@ describe("messages", () => {
   it("POST avec pièce jointe valide, clé invalide -> 400, corps absent -> 400", async () => {
     const r = await makeRequest(fx);
     const url = `${BASE}/${r.id}/messages`;
-    const ok = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "", attachmentKey: "print-requests/staff/f.pdf" });
-    expect(ok.json.entry.attachmentKey).toBe("print-requests/staff/f.pdf");
+    const ok = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "", attachmentKey: `print-requests/staff/${r.id}/f.pdf` });
+    expect(ok.json.entry.attachmentKey).toBe(`print-requests/staff/${r.id}/f.pdf`);
+    // Clé d'une autre demande (autre organisation) : refusée à l'écriture.
+    const foreign = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "x", attachmentKey: "print-requests/staff/autre-demande/f.pdf" });
+    expect(foreign).toMatchObject({ status: 400, json: { error: "INVALID_ATTACHMENT" } });
     const bad = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "x", attachmentKey: "print-requests/autre/f.pdf" });
     expect(bad).toMatchObject({ status: 400, json: { error: "INVALID_ATTACHMENT" } });
     expect((await call(messagesPOST, url, "POST", { requestId: r.id }, {})).status).toBe(400);

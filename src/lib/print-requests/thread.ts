@@ -185,9 +185,13 @@ export async function postMessage(input: {
 }): Promise<PrintRequestMessage> {
   const request = await prisma.printRequest.findUnique({
     where: { id: input.requestId },
-    select: { id: true, eventId: true },
+    select: { id: true, eventId: true, status: true },
   });
   if (!request) throw new PrintRequestError("NOT_FOUND", 404);
+  // Un brouillon n'a jamais été vu du staff : pas d'échange (et donc aucune notification).
+  if (request.status === "DRAFT") {
+    throw new PrintRequestError("INVALID_TRANSITION", 409, { from: request.status, action: "MESSAGE" });
+  }
 
   const body = cleanBody(input.body);
   if (body.length > MAX_BODY_LENGTH) throw new PrintRequestError("VALIDATION", 400);
@@ -195,8 +199,10 @@ export async function postMessage(input: {
 
   if (input.attachmentKey) {
     // Forme stricte : préfixe + un seul nom de fichier (pas de sous-dossier, pas de « .. »).
+    // Le préfixe lie la pièce à la demande (staff) ou à l'évènement (organisateur) : une clé d'une
+    // autre demande ou d'une autre organisation est refusée, et /api/files en déduit l'évènement.
     const prefix =
-      input.side === "STAFF" ? "print-requests/staff/" : `print-requests/${request.eventId}/`;
+      input.side === "STAFF" ? `print-requests/staff/${request.id}/` : `print-requests/${request.eventId}/`;
     const name = input.attachmentKey.slice(prefix.length);
     if (
       input.attachmentKey.length > 300 ||
@@ -234,25 +240,87 @@ export type ThreadEntryDTO = {
   createdAt: string;
 };
 
-export function toEntryDTO(m: PrintRequestMessage, authorName: string | null): ThreadEntryDTO {
+// Détails visibles de l'organisateur, par type d'entrée (liste blanche) : tout ce qui est interne
+// (identifiants de paiement ou de génération, motif d'un passage manuel en payée…) est retiré.
+// Les clés listées suffisent à rédiger le texte de l'entrée (describeThreadEvent).
+const ORGANIZER_DETAILS: Record<ThreadEventType, string[]> = {
+  SUBMITTED: ["badgeCount", "total"],
+  LINES_CHANGED: ["changes"],
+  BADGES_CHANGED: ["added", "removed", "count", "lagging"],
+  REQUEST_UPDATED: ["fields", "lagging"],
+  QUOTE_SENT: ["version", "total"],
+  QUOTE_ACCEPTED: ["version", "total"],
+  QUOTE_REOPENED: ["version"],
+  QUOTE_REVISION: [],
+  TEMPLATE_CHANGED: ["fromLabel", "toLabel", "acceptanceCancelled"],
+  STATUS_CHANGED: ["from", "to"],
+  REJECTED: ["reason"],
+  CANCELLED: [],
+  PAYMENT_RECEIVED: ["amount"],
+  PAYMENT_FAILED: ["amount"],
+  PAYMENT_UNMATCHED: ["amount"],
+  SHEETS_GENERATED: ["badgeCount"],
+  REGISTRATIONS_SKIPPED: ["registrationIds"],
+  ORG_CREDIT_APPLIED: ["amount"],
+  ORG_CREDIT_SPENT: ["amount"],
+  ONSITE_MARGIN_CHANGED: ["from", "to", "reason"],
+  ONSITE_CREDIT_EARNED: ["quantity", "amount"],
+  ONSITE_SUPPLEMENT_CREATED: ["reference", "extraBadges"],
+};
+
+// Une ligne modifiée sans son identifiant interne.
+function publicChange(change: LineChange): Omit<LineChange, "lineId"> {
+  return { op: change.op, label: change.label, from: change.from, to: change.to };
+}
+
+function organizerDetails(eventType: ThreadEventType, raw: unknown): Record<string, unknown> {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const details: Record<string, unknown> = {};
+  for (const key of ORGANIZER_DETAILS[eventType]) {
+    if (source[key] !== undefined) details[key] = source[key];
+  }
+  if (eventType === "LINES_CHANGED") details.changes = changesOf(details.changes).map(publicChange);
+  return details;
+}
+
+export type ThreadAudience = "ORGANIZER" | "STAFF";
+
+// Pour l'organisateur, une entrée automatique n'expose que les détails de sa liste blanche et son
+// texte est reconstruit à partir d'eux (le texte stocké peut citer une donnée interne).
+// Un type d'entrée inconnu perd tous ses détails.
+export function toEntryDTO(
+  m: PrintRequestMessage,
+  authorName: string | null,
+  audience: ThreadAudience,
+): ThreadEntryDTO {
+  let { body, details } = m;
+  if (audience === "ORGANIZER" && m.kind === "EVENT") {
+    const eventType = m.eventType as ThreadEventType;
+    if (Object.hasOwn(ORGANIZER_DETAILS, eventType)) {
+      details = organizerDetails(eventType, m.details) as Prisma.JsonValue;
+      body = describeThreadEvent(eventType, details as Record<string, unknown>);
+    } else {
+      details = null;
+    }
+  }
   return {
     id: m.id,
     side: m.side,
     kind: m.kind,
-    body: m.body,
+    body,
     eventType: m.eventType,
-    details: m.details,
+    details,
     attachmentKey: m.attachmentKey,
     authorName,
     createdAt: m.createdAt.toISOString(),
   };
 }
 
-export async function listThread(requestId: string): Promise<ThreadEntryDTO[]> {
+export async function listThread(requestId: string, audience: ThreadAudience): Promise<ThreadEntryDTO[]> {
   const rows = await prisma.printRequestMessage.findMany({
     where: { requestId },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     include: { author: { select: { name: true } } },
   });
-  return rows.map((m) => toEntryDTO(m, m.author?.name ?? null));
+  return rows.map((m) => toEntryDTO(m, m.author?.name ?? null, audience));
 }

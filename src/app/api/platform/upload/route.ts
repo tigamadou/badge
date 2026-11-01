@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { withStaffAuth } from "@/lib/with-staff-auth";
+import { prisma } from "@/lib/prisma";
 import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES, type UploadKind } from "@/lib/storage";
 
 // Plan 32 : televersement plateforme (staff). `print-product` = image du catalogue (STAFF_ADMIN,
-// public) ; `print-request` = fichier joint a une demande d'impression (STAFF_SUPPORT, prive).
+// public) ; `print-request` = fichier joint a une demande d'impression (STAFF_SUPPORT, prive),
+// range sous `print-requests/staff/{requestId}/` : la cle est liee a la demande (parametre
+// `requestId` obligatoire), donc /api/files en deduit l'evenement et le message ne peut pas
+// reprendre la cle d'une autre demande.
 // Erreurs alignees sur les routes d'upload existantes : 400 / 415 BAD_TYPE / 413 TOO_LARGE.
 const EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -14,14 +18,15 @@ const EXT: Record<string, string> = {
   "application/pdf": ".pdf",
 };
 
-const CONTEXTS: Record<string, { kind: UploadKind; prefix: string; admin: boolean }> = {
+const CONTEXTS: Record<string, { kind: UploadKind; prefix: string; admin: boolean; perRequest?: boolean }> = {
   "print-product": { kind: "photo", prefix: "platform/print-products", admin: true },
-  "print-request": { kind: "document", prefix: "print-requests/staff", admin: false },
+  "print-request": { kind: "document", prefix: "print-requests/staff", admin: false, perRequest: true },
 };
 
 export const POST = withStaffAuth(
   async (req, { session }) => {
-    const name = new URL(req.url).searchParams.get("context") ?? "";
+    const params = new URL(req.url).searchParams;
+    const name = params.get("context") ?? "";
     const context = Object.hasOwn(CONTEXTS, name) ? CONTEXTS[name] : undefined;
     if (!context) {
       return NextResponse.json({ error: "Contexte invalide", code: "BAD_CONTEXT" }, { status: 400 });
@@ -35,6 +40,16 @@ export const POST = withStaffAuth(
         }
         throw err;
       }
+    }
+
+    let prefix = context.prefix;
+    if (context.perRequest) {
+      const requestId = params.get("requestId") ?? "";
+      const known = requestId ? await prisma.printRequest.findUnique({ where: { id: requestId }, select: { id: true } }) : null;
+      if (!known) {
+        return NextResponse.json({ error: "Demande introuvable", code: "BAD_REQUEST_ID" }, { status: 400 });
+      }
+      prefix = `${prefix}/${known.id}`;
     }
 
     const form = await req.formData().catch(() => null);
@@ -54,7 +69,7 @@ export const POST = withStaffAuth(
     }
     const buffer = Buffer.from(await file.arrayBuffer());
     // mime est deja restreint aux cles de EXT par isAllowedMime ci-dessus.
-    const storageKey = `${context.prefix}/${randomUUID()}${EXT[mime]}`;
+    const storageKey = `${prefix}/${randomUUID()}${EXT[mime]}`;
     await uploadFile(storageKey, buffer, mime);
     return NextResponse.json({ storageKey });
   },

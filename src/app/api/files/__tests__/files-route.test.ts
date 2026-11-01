@@ -155,40 +155,46 @@ describe("GET /api/files/print-requests/{eventId}/... (organisateur)", () => {
   });
 });
 
-describe("GET /api/files/print-requests/staff/... (pièce jointe staff)", () => {
+describe("GET /api/files/print-requests/staff/{requestId}/... (pièce jointe staff)", () => {
   beforeEach(() => vi.mocked(getServerSession).mockReset());
 
-  async function seedStaffMessage(eventId: string, orgId: string, key: string) {
-    const req = await prisma.printRequest.create({
-      data: {
-        reference: uniq("PR"),
-        eventId,
-        orgId,
-        type: "ONSITE",
-      } as never,
-    });
-    await prisma.printRequestMessage.create({
-      data: { requestId: req.id, side: "STAFF", kind: "MESSAGE", body: "b", attachmentKey: key } as never,
+  async function seedRequest(eventId: string, orgId: string) {
+    return prisma.printRequest.create({
+      data: { reference: uniq("PR"), eventId, orgId, type: "ONSITE" } as never,
     });
   }
 
-  it("lisible par l'ADMIN de l'évènement du message, 403 pour un autre évènement", async () => {
+  it("lisible par l'ADMIN de l'évènement de la demande nommée par la clé, 403 pour un autre évènement", async () => {
     const mine = await setup();
     const other = await setup();
-    const key = `print-requests/staff/${uniq("k")}.pdf`;
-    await seedStaffMessage(mine.event.id, mine.org.id, key);
+    const req = await seedRequest(mine.event.id, mine.org.id);
+    const key = `print-requests/staff/${req.id}/${uniq("k")}.pdf`;
     await login({ eventId: mine.event.id, role: "ADMIN" });
     expect((await read(key)).status).toBe(200);
     await login({ eventId: other.event.id, role: "ADMIN" });
     expect((await read(key)).status).toBe(403);
   });
 
-  it("clé orpheline : 403 non-staff, 200 staff", async () => {
-    const { event } = await setup();
-    const key = `print-requests/staff/${uniq("orph")}.pdf`;
-    await login({ eventId: event.id, role: "ADMIN" });
+  it("l'évènement vient de la clé, pas d'un message : réutiliser la clé dans une autre demande n'ouvre rien", async () => {
+    const mine = await setup();
+    const other = await setup();
+    const mineReq = await seedRequest(mine.event.id, mine.org.id);
+    const otherReq = await seedRequest(other.event.id, other.org.id);
+    const key = `print-requests/staff/${mineReq.id}/${uniq("k")}.pdf`;
+    // Un message d'une autre organisation porte (de force, sans passer par postMessage) la même clé.
+    await prisma.printRequestMessage.create({
+      data: { requestId: otherReq.id, side: "STAFF", kind: "MESSAGE", body: "b", attachmentKey: key } as never,
+    });
+    await login({ eventId: other.event.id, role: "ADMIN" });
     expect((await read(key)).status).toBe(403);
+  });
+
+  it("demande inconnue ou clé sans demande : 403 non-staff, 200 staff", async () => {
+    const { event } = await setup();
+    await login({ eventId: event.id, role: "ADMIN" });
+    expect((await read(`print-requests/staff/ghost/${uniq("orph")}.pdf`)).status).toBe(403);
+    expect((await read(`print-requests/staff/${uniq("orph")}.pdf`)).status).toBe(403);
     await loginStaff("STAFF_OBSERVER");
-    expect((await read(key)).status).toBe(200);
+    expect((await read(`print-requests/staff/ghost/${uniq("orph")}.pdf`)).status).toBe(200);
   });
 });

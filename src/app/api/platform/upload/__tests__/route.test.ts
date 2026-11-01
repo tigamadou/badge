@@ -26,14 +26,14 @@ async function login(role?: "STAFF_OBSERVER" | "STAFF_SUPPORT" | "STAFF_ADMIN") 
 }
 
 type F = { name: string; type: string; bytes: Buffer };
-function makeReq(context: string | null, file?: F): NextRequest {
+function makeReq(context: string | null, file?: F, requestId?: string): NextRequest {
   const fd = new FormData();
   if (file) {
     const ab = new ArrayBuffer(file.bytes.byteLength);
     new Uint8Array(ab).set(file.bytes);
     fd.append("file", new Blob([ab], { type: file.type }), file.name);
   }
-  const qs = context === null ? "" : `?context=${context}`;
+  const qs = context === null ? "" : `?context=${context}${requestId ? `&requestId=${requestId}` : ""}`;
   return new NextRequest(`http://localhost/api/platform/upload${qs}`, { method: "POST", body: fd });
 }
 const noParams = { params: Promise.resolve({}) };
@@ -120,16 +120,39 @@ describe("POST /api/platform/upload", () => {
     }
   });
 
-  it("print-request : PDF accepte par STAFF_SUPPORT", async () => {
+  async function aRequest() {
+    const org = await prisma.organization.create({ data: { name: "O", slug: uniq("o") } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: uniq("e"), location: "L", date: new Date() },
+    });
+    return prisma.printRequest.create({
+      data: { reference: uniq("PR"), eventId: event.id, orgId: org.id, type: "ADVANCE", status: "SUBMITTED" },
+    });
+  }
+
+  it("print-request : PDF accepte par STAFF_SUPPORT, cle rangee sous la demande", async () => {
     await login("STAFF_SUPPORT");
-    const res = await post(makeReq("print-request", pdf));
+    const r = await aRequest();
+    const res = await post(makeReq("print-request", pdf, r.id));
     expect(res.status).toBe(200);
-    expect((await res.json()).storageKey).toMatch(/^print-requests\/staff\/[0-9a-f-]{36}\.pdf$/);
+    expect((await res.json()).storageKey).toMatch(
+      new RegExp(`^print-requests/staff/${r.id}/[0-9a-f-]{36}\\.pdf$`),
+    );
+  });
+
+  it("print-request : demande absente ou inconnue -> 400 BAD_REQUEST_ID", async () => {
+    await login("STAFF_SUPPORT");
+    for (const id of [undefined, "ghost"]) {
+      const res = await post(makeReq("print-request", pdf, id));
+      expect(res.status).toBe(400);
+      expect((await res.json()).code).toBe("BAD_REQUEST_ID");
+    }
   });
 
   it("print-request : text/plain -> 415", async () => {
     await login("STAFF_SUPPORT");
-    const res = await post(makeReq("print-request", { name: "a.txt", type: "text/plain", bytes: Buffer.from("x") }));
+    const r = await aRequest();
+    const res = await post(makeReq("print-request", { name: "a.txt", type: "text/plain", bytes: Buffer.from("x") }, r.id));
     expect(res.status).toBe(415);
   });
 });
