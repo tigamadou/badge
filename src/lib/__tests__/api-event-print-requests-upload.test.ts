@@ -81,6 +81,18 @@ describe("POST …/print-requests/upload", () => {
     expect((await res.json()).code).toBe("NO_FILE");
   });
 
+  it("400 NO_FILE sur un corps qui n'est pas un formulaire", async () => {
+    const { org, event } = await seed("ADMIN");
+    const bad = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/print-requests/upload`, {
+      method: "POST",
+      body: "pas un formulaire",
+      headers: { "content-type": "text/plain" },
+    });
+    const res = await POST(bad, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("NO_FILE");
+  });
+
   it("415 BAD_TYPE hors JPEG/PNG/WebP/PDF", async () => {
     const { org, event } = await seed("ADMIN");
     const res = await call(org.id, event.id, { name: "a.txt", type: "text/plain", size: 3 });
