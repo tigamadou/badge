@@ -34,7 +34,7 @@ function missingAdvanceFields(r: PrintRequest): string[] {
 
 function missingOnsiteFields(r: PrintRequest): string[] {
   const missing: string[] = [];
-  if (!r.estimatedQuantity) missing.push("estimatedQuantity");
+  if (!r.estimatedQuantity || r.estimatedQuantity <= 0) missing.push("estimatedQuantity");
   if (!Array.isArray(r.onsiteSchedule) || r.onsiteSchedule.length === 0) missing.push("onsiteSchedule");
   if (!filled(r.onsiteLocation)) missing.push("onsiteLocation");
   if (!filled(r.onsiteContactName)) missing.push("onsiteContactName");
@@ -53,6 +53,9 @@ export async function submitRequest(input: {
   await loadRequest(input.requestId, { eventId: input.eventId });
   const result = await prisma.$transaction(async (tx) => {
     await lockEventRow(tx, input.eventId);
+    // Verrou de la demande avant toute lecture : une modification ou annulation concurrente
+    // s'enchaîne au lieu d'être validée à tort ou perdue.
+    await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${input.requestId} FOR UPDATE`;
     const request = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
     if (request.status !== "DRAFT") {
       throw new PrintRequestError("INVALID_TRANSITION", 409, { from: request.status, action: "SUBMIT" });
@@ -142,13 +145,18 @@ export async function cancelRequest(input: {
     await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${input.requestId} FOR UPDATE`;
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
     await applyTransition(tx, current, "CANCEL", "ORGANIZER");
-    await appendThreadEvent(tx, current.id, "CANCELLED", {}, { userId: input.userId, side: "ORGANIZER" });
+    // Un brouillon n'a jamais été vu du staff : ni entrée du fil ni notification.
+    if (current.status !== "DRAFT") {
+      await appendThreadEvent(tx, current.id, "CANCELLED", {}, { userId: input.userId, side: "ORGANIZER" });
+    }
     return {
       request: await tx.printRequest.findUniqueOrThrow({ where: { id: current.id } }),
       from: current.status,
     };
   });
-  await notifyPrintRequestStatusChanged(request.id, input.userId, { organizer: false, staff: true });
+  if (from !== "DRAFT") {
+    await notifyPrintRequestStatusChanged(request.id, input.userId, { organizer: false, staff: true });
+  }
   return { request, from };
 }
 
@@ -166,10 +174,13 @@ export async function acceptQuote(input: {
   const result = await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${input.requestId} FOR UPDATE`;
     const request = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
-    await applyTransition(tx, request, "ACCEPT", "ORGANIZER", now);
+    if (request.status !== "QUOTED") {
+      throw new PrintRequestError("INVALID_TRANSITION", 409, { from: request.status, action: "ACCEPT" });
+    }
     if (input.version !== request.quoteVersion) {
       throw new PrintRequestError("QUOTE_VERSION_MISMATCH", 409, { current: request.quoteVersion });
     }
+    await applyTransition(tx, request, "ACCEPT", "ORGANIZER");
     await tx.printRequest.update({
       where: { id: request.id },
       data: {

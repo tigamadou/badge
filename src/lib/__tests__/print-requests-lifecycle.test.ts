@@ -3,9 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { PrintRequestError } from "@/lib/print-requests/errors";
 import { acceptQuote, cancelRequest, submitRequest } from "@/lib/print-requests/lifecycle";
 import { paymentProbe } from "@/lib/print-requests/service";
+import * as templateVars from "@/lib/badge-templates/event-template-variables";
 import * as triggers from "@/lib/notifications/triggers";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
 
+vi.mock("@/lib/badge-templates/event-template-variables", async (orig) => {
+  const actual = await orig<typeof import("@/lib/badge-templates/event-template-variables")>();
+  return { ...actual, findEffectiveTemplateRow: vi.fn(actual.findEffectiveTemplateRow) };
+});
 vi.mock("@/lib/notifications/triggers", () => ({
   notifyPrintRequestSubmitted: vi.fn(async () => {}),
   notifyPrintRequestStatusChanged: vi.fn(async () => {}),
@@ -141,6 +146,36 @@ describe("submitRequest", () => {
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: b.id } })).status).toBe("DRAFT");
   });
 
+  it("template effectif introuvable -> VALIDATION, rien d'écrit", async () => {
+    const r = await readyDraft();
+    vi.mocked(templateVars.findEffectiveTemplateRow).mockResolvedValueOnce(null);
+    expect((await reject(submitRequest(base(r.id))))?.code).toBe("VALIDATION");
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("DRAFT");
+  });
+
+  it("ONSITE avec quantité estimée à 0 -> ONSITE_INCOMPLETE", async () => {
+    const r = await makeRequest(fx, {
+      type: "ONSITE", status: "DRAFT", estimatedQuantity: 0, onsiteLocation: "Hall",
+      onsiteContactName: "M", onsiteContactPhone: "1", onsiteSchedule: [{ date: "2026-11-02", from: "09:00", to: "18:00" }],
+    });
+    await badgeLine(r.id);
+    expect((await reject(submitRequest(base(r.id))))?.details).toEqual({ fields: ["estimatedQuantity"] });
+  });
+
+  it("une modification de brouillon concurrente à l'envoi est sérialisée, rien n'est perdu", async () => {
+    const r = await readyDraft({ delivery: "DELIVERY", deliveryAddress: "Rue 1", deliveryContactName: "A", deliveryContactPhone: "1" });
+    const edit = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${r.id} FOR UPDATE`;
+      await new Promise((res) => setTimeout(res, 150));
+      await tx.printRequest.update({ where: { id: r.id }, data: { deliveryAddress: "Rue 2" } });
+    });
+    await new Promise((res) => setTimeout(res, 30));
+    const [e, s] = await Promise.allSettled([edit, submitRequest(base(r.id))]);
+    expect([e.status, s.status]).toEqual(["fulfilled", "fulfilled"]);
+    // L'envoi a attendu la fin de la modification : sa lecture voit la valeur finale.
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).deliveryAddress).toBe("Rue 2");
+  });
+
   it("deux envois concurrents partageant une inscription : exactement un fulfilled", async () => {
     const a = await readyDraft({}, [fx.approved[0], fx.approved[1]]);
     const b = await readyDraft({}, [fx.approved[1], fx.approved[2]]);
@@ -175,6 +210,17 @@ describe("cancelRequest", () => {
     expect((await reject(cancelRequest({ ...base(r.id), eventId: "autre" })))?.code).toBe("NOT_FOUND");
     expect((await cancelRequest(base(r.id))).request.status).toBe("CANCELLED");
     expect(spy).not.toHaveBeenCalled();
+    // Brouillon : ni entrée du fil ni notification du staff.
+    expect(await thread(r.id)).toHaveLength(0);
+    expect(triggers.notifyPrintRequestStatusChanged).not.toHaveBeenCalled();
+  });
+
+  it.each(["SUBMITTED", "QUOTED"] as const)("annuler depuis %s : CANCELLED, entrée du fil, staff notifié", async (status) => {
+    const r = await makeRequest(fx, { status });
+    const out = await cancelRequest(base(r.id));
+    expect(out).toMatchObject({ from: status, request: { status: "CANCELLED" } });
+    expect((await thread(r.id)).map((e) => e.eventType)).toEqual(["CANCELLED"]);
+    expect(triggers.notifyPrintRequestStatusChanged).toHaveBeenCalledTimes(1);
   });
 
   it("annuler libère les inscriptions : un nouveau brouillon peut les envoyer", async () => {
@@ -223,6 +269,12 @@ describe("acceptQuote", () => {
     expect(err?.details).toEqual({ current: 2 });
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
     expect(await thread(r.id)).toHaveLength(0);
+  });
+
+  it("double acceptation -> INVALID_TRANSITION", async () => {
+    const r = await quoted();
+    await acceptQuote({ ...base(r.id), version: 2 });
+    expect((await reject(acceptQuote({ ...base(r.id), version: 2 })))?.code).toBe("INVALID_TRANSITION");
   });
 
   it("MANAGER -> OWNER_REQUIRED ; staff -> STAFF_FORBIDDEN ; SUBMITTED -> INVALID_TRANSITION ; autre évènement -> NOT_FOUND", async () => {
