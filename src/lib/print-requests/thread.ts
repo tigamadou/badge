@@ -30,7 +30,9 @@ export type ThreadEventType =
   | "PAYMENT_FAILED"
   | "PAYMENT_UNMATCHED"
   | "SHEETS_GENERATED"
-  | "REGISTRATIONS_SKIPPED";
+  | "REGISTRATIONS_SKIPPED"
+  | "ORG_CREDIT_APPLIED"
+  | "ORG_CREDIT_SPENT";
 
 export type ThreadActor = { userId: string | null; side: PrintThreadSide };
 
@@ -104,6 +106,10 @@ export function describeThreadEvent(
       const ids = strings(details.registrationIds);
       return `${ids.length} badge(s) écarté(s) à la génération (inscription non approuvée) : ${ids.join(", ")}`;
     }
+    case "ORG_CREDIT_APPLIED":
+      return `Crédit d'impression appliqué : ${F(details.amount)}`;
+    case "ORG_CREDIT_SPENT":
+      return `Crédit d'impression décompté : ${F(details.amount)}`;
   }
 }
 

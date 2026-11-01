@@ -96,6 +96,42 @@ describe("confirmPayment : demande d'impression", () => {
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: t.request.id } })).status).toBe("PAID");
   });
 
+  it("approved avec crédit d'impression : mouvement SPENT dans la même transaction ; webhook rejoué : un seul mouvement", async () => {
+    const t = await seed({ total: 15000, amount: 15000 });
+    await prisma.orgPrintCredit.create({ data: { orgId: t.org.id, kind: "EARNED", amount: 45000 } });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: t.request.id, kind: "DISCOUNT", label: "Crédit d'impression", quantity: 1, unitPrice: -45000,
+        lineTotal: -45000, position: 0, addedBy: "STAFF", usesOrgCredit: true,
+      },
+    });
+    fetchMock.mockResolvedValue(txResponse("approved", 15000));
+    expect(await confirmPayment(77)).toEqual({ status: "APPROVED", applied: true });
+    expect(await confirmPayment(77)).toEqual({ status: "APPROVED", applied: false });
+    const spent = await prisma.orgPrintCredit.findMany({ where: { requestId: t.request.id } });
+    expect(spent).toMatchObject([{ kind: "SPENT", amount: -45000, orgId: t.org.id }]);
+    expect(await thread(t.request.id, "ORG_CREDIT_SPENT")).toHaveLength(1);
+  });
+
+  it("approved sans crédit : aucun mouvement ; paiement non attendu (UNMATCHED) : aucun mouvement", async () => {
+    const t = await seed();
+    fetchMock.mockResolvedValue(txResponse("approved"));
+    await confirmPayment(77);
+    expect(await prisma.orgPrintCredit.count({ where: { requestId: t.request.id } })).toBe(0);
+
+    const u = await seed({ txId: 78 });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: u.request.id, kind: "DISCOUNT", label: "Crédit", quantity: 1, unitPrice: -100,
+        lineTotal: -100, position: 0, addedBy: "STAFF", usesOrgCredit: true,
+      },
+    });
+    await prisma.printRequest.update({ where: { id: u.request.id }, data: { status: "CANCELLED" } });
+    fetchMock.mockResolvedValue(txResponse("approved", 150000, 78));
+    await confirmPayment(78);
+    expect(await prisma.orgPrintCredit.count({ where: { requestId: u.request.id } })).toBe(0);
+  });
+
   it("montant FedaPay 149 000 → DECLINED, entrée PAYMENT_FAILED reason MISMATCH, demande ACCEPTED", async () => {
     const t = await seed();
     fetchMock.mockResolvedValue(txResponse("approved", 149000));

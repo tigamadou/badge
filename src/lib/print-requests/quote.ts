@@ -10,6 +10,7 @@ import {
 } from "@/lib/print-catalog/pricing";
 import { PrintRequestError } from "./errors";
 import { assertOnsiteCanAdvance } from "./onsite";
+import { spendOrgCreditForPaidRequest } from "./org-credit";
 import {
   choiceFailureToError,
   isEventFileKey,
@@ -159,6 +160,8 @@ export async function updateStaffLine(input: {
       where: { id: input.lineId, requestId: request.id, removedAt: null },
     });
     if (!line) throw new PrintRequestError("NOT_FOUND", 404);
+    // La ligne de crédit ne change que par applyOrgCredit (réservation du solde).
+    if (line.usesOrgCredit) throw new PrintRequestError("CREDIT_LINE_LOCKED", 409);
 
     const label = patch.label ?? line.label;
     const quantity = patch.quantity ?? line.quantity;
@@ -211,6 +214,8 @@ export async function removeStaffLine(input: {
       where: { id: input.lineId, requestId: request.id, removedAt: null },
     });
     if (!line) throw new PrintRequestError("NOT_FOUND", 404);
+    // La ligne de crédit ne change que par applyOrgCredit (réservation du solde).
+    if (line.usesOrgCredit) throw new PrintRequestError("CREDIT_LINE_LOCKED", 409);
 
     const { from } = await applyEdit(tx, current, "STAFF", input.userId);
     await tx.printQuoteLine.update({ where: { id: line.id }, data: { removedAt: new Date() } });
@@ -318,6 +323,7 @@ export async function markPaidManually(input: {
     if (await isPaymentInProgress(request.id)) throw new PrintRequestError("PAYMENT_IN_PROGRESS", 409);
     const done = await markPaid(tx, request.id, { manual: { userId: input.userId, reason } });
     if (!done) throw new PrintRequestError("INVALID_TRANSITION", 409);
+    await spendOrgCreditForPaidRequest(tx, request.id);
     return tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
   });
 }

@@ -94,6 +94,8 @@ describe("describeThreadEvent", () => {
       { registrationIds: ["r1", "r2"] },
       "2 badge(s) écarté(s) à la génération (inscription non approuvée) : r1, r2",
     ],
+    ORG_CREDIT_APPLIED: [{ amount: 45000 }, `Crédit d'impression appliqué : ${formatFcfa(45000)}`],
+    ORG_CREDIT_SPENT: [{ amount: 45000 }, `Crédit d'impression décompté : ${formatFcfa(45000)}`],
   };
 
   it("REQUEST_UPDATED mentionne les lignes fixées en retard", () => {
@@ -297,6 +299,7 @@ describe("describeThreadEvent : details mal formés", () => {
       "LINES_CHANGED", "SUBMITTED", "BADGES_CHANGED", "REQUEST_UPDATED", "QUOTE_SENT", "QUOTE_ACCEPTED",
       "QUOTE_REOPENED", "TEMPLATE_CHANGED", "STATUS_CHANGED", "REJECTED", "PAYMENT_RECEIVED",
       "PAYMENT_FAILED", "PAYMENT_UNMATCHED", "SHEETS_GENERATED", "REGISTRATIONS_SKIPPED",
+      "ORG_CREDIT_APPLIED", "ORG_CREDIT_SPENT",
     ];
     for (const t of malformed) {
       for (const d of [{}, { changes: "x", lagging: "x", fields: 3, registrationIds: null, amount: "abc", reason: 5, from: "ZZ" }]) {
