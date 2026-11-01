@@ -16,6 +16,7 @@ const NAV: NavEntry[] = [
   { group: "Impression" },
   { href: "/platform/print/sheets", label: "Planches", icon: "printer" },
   { href: "/platform/print/layouts", label: "Gabarits", icon: "layout-grid" },
+  { href: "/platform/print/catalog", label: "Catalogue", icon: "package" },
   { href: "/platform/jobs", label: "Emails", icon: "mail" },
   { href: "/platform/settings", label: "Paramètres", icon: "settings" },
   { href: "/platform/activity", label: "Journal", icon: "scroll-text" },
