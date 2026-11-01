@@ -79,6 +79,18 @@ describe("GET /api/platform/print/sheets/options", () => {
     expect(body.event).toBeUndefined();
   });
 
+  it("an event without any approved registration reports approvedCount 0", async () => {
+    await asStaff();
+    const org = await prisma.organization.create({ data: { name: uniq("Org"), slug: uniq("o") } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "Vide", slug: uniq("e"), location: "L", date: new Date() },
+    });
+    const { GET } = await import("@/app/api/platform/print/sheets/options/route");
+    const body = await (await GET(req("/api/platform/print/sheets/options"), noParams)).json();
+    const e = body.organizations.find((x: { id: string }) => x.id === org.id).events.find((x: { id: string }) => x.id === event.id);
+    expect(e.approvedCount).toBe(0);
+  });
+
   it("with eventId returns the effective badge format in mm, page count and approved registrations only", async () => {
     await asStaff();
     const { event, cat, ok } = await fixture();

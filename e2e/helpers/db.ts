@@ -375,6 +375,44 @@ export async function createTestRegistration(opts: {
   return { id };
 }
 
+// Cree `count` inscriptions APPROVED en masse (un utilisateur E2E par inscription) pour les
+// parcours qui depassent une page de liste. Noms ordonnes : Nom0000, Nom0001, ...
+export async function createManyTestRegistrations(opts: {
+  scope: string;
+  eventId: string;
+  categoryId: string;
+  count: number;
+}): Promise<void> {
+  const prisma = db();
+  const stamp = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const emailOf = (i: number) => `e2e-${opts.scope}-${stamp}-${i}${E2E_EMAIL_SUFFIX}`;
+  await prisma.user.createMany({
+    data: Array.from({ length: opts.count }, (_, i) => ({ email: emailOf(i), password: "x", name: "E2E User" })),
+  });
+  const users = await prisma.user.findMany({
+    where: { email: { startsWith: `e2e-${opts.scope}-${stamp}-` } },
+    select: { id: true, email: true },
+  });
+  const idOf = new Map(users.map((u) => [u.email, u.id]));
+  await prisma.registration.createMany({
+    data: Array.from({ length: opts.count }, (_, i) => ({
+      id: `E2E-${stamp}-${String(i).padStart(5, "0")}`,
+      userId: idOf.get(emailOf(i))!,
+      eventId: opts.eventId,
+      categoryId: opts.categoryId,
+      status: "APPROVED" as const,
+      snapshotFirstName: "Awa",
+      snapshotLastName: `Nom${String(i).padStart(4, "0")}`,
+      snapshotEmail: emailOf(i),
+      snapshotStructure: FULL_PROFILE.structure,
+      snapshotPhoto: FULL_PROFILE.photo,
+      snapshotIdDocumentType: FULL_PROFILE.idDocumentType,
+      snapshotIdDocumentNumber: `${FULL_PROFILE.idDocumentNumber}-${i}`,
+      snapshotIdDocument: FULL_PROFILE.idDocument,
+    })),
+  });
+}
+
 // Cree une categorie sur un event. Si `number` n'est pas fourni, on calcule
 // le prochain disponible sur l'event pour eviter une collision sur la
 // contrainte unique (eventId, number).

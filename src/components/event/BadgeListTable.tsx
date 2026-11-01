@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BatchBar, BatchButton } from "@/components/ui/BatchBar";
 import { Checkbox } from "@/components/ui/FormControls";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { Pagination } from "@/components/ui/Pagination";
+import { SearchInput, Toolbar } from "@/components/ui/Toolbar";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { storeSelection } from "@/lib/badge-batch-client";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -22,47 +24,108 @@ type Row = {
 
 type Filter = "all" | "printed" | "unprinted" | "allaccess";
 
+const PAGE_SIZES = [50, 100, 200, 500];
+
 export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: string }) {
   const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<Filter>("unprinted");
+  const [search, setSearch] = useState("");
+  const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
+  // Numero de la derniere requete de liste : une reponse perimee (filtre change entre-temps) est ignoree.
+  const latest = useRef(0);
+
+  const base = `/api/org/${orgId}/events/${eventId}/badges`;
+  function filterQuery() {
+    const p = new URLSearchParams({ filter });
+    if (q) p.set("q", q);
+    return p;
+  }
 
   async function load() {
+    const mine = ++latest.current;
     setBusy(true);
     try {
       // Endpoint badges dedie : garde par la permission badge.print (accessible au
       // PRINTER, contrairement a /registrations garde par minRole OPERATOR) et DTO
-      // minimal (pas d'email ni de structure).
-      const res = await fetch(`/api/org/${orgId}/events/${eventId}/badges`);
+      // minimal (pas d'email ni de structure). Filtres et pagination cote serveur.
+      const p = filterQuery();
+      p.set("page", String(page));
+      p.set("pageSize", String(pageSize));
+      const res = await fetch(`${base}?${p}`);
+      if (mine !== latest.current) return;
       if (!res.ok) {
         setRows([]);
+        setTotal(0);
         return;
       }
       const json = await res.json();
-      let r: Row[] = json.registrations ?? [];
-      if (filter === "printed") r = r.filter((x) => x.badgePrinted);
-      else if (filter === "unprinted") r = r.filter((x) => !x.badgePrinted);
-      else if (filter === "allaccess") r = r.filter((x) => x.allAccessGranted);
-      setRows(r);
+      if (mine !== latest.current) return;
+      setRows(json.registrations ?? []);
+      setTotal(typeof json.total === "number" ? json.total : 0);
     } catch {
+      if (mine !== latest.current) return;
       setRows([]);
+      setTotal(0);
     } finally {
-      setBusy(false);
+      if (mine === latest.current) setBusy(false);
     }
   }
+
+  // La recherche n'interroge le serveur qu'une fois la frappe terminee.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = search.trim();
+      if (next === q) return;
+      setQ(next);
+      setPage(1);
+      setSelected(new Set());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, q]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, q, page, pageSize]);
+
+  function changeFilter(next: Filter) {
+    setFilter(next);
+    setPage(1);
+    setSelected(new Set());
+  }
 
   function toggle(id: string) {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelected(next);
+  }
+
+  // « Tout selectionner » : les ids de TOUTES les inscriptions correspondant aux filtres
+  // courants (pas seulement la page affichee), sans limite.
+  async function selectAll() {
+    if (selected.size > 0 && selected.size === total) {
+      setSelected(new Set());
+      return;
+    }
+    setSelectingAll(true);
+    try {
+      const res = await fetch(`${base}/ids?${filterQuery()}`);
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      setSelected(new Set<string>(json.ids ?? []));
+    } catch {
+      toastError("La sélection a échoué.");
+    } finally {
+      setSelectingAll(false);
+    }
   }
 
   const batchPrint = useAsyncAction(
@@ -100,10 +163,12 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
+      <Toolbar>
+        <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un nom ou un identifiant…" />
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as Filter)}
+          onChange={(e) => changeFilter(e.target.value as Filter)}
+          aria-label="Filtrer les badges"
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700"
         >
           <option value="unprinted">Non imprimés</option>
@@ -111,7 +176,16 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
           <option value="allaccess">All-access</option>
           <option value="all">Tous</option>
         </select>
-      </div>
+        <button
+          type="button"
+          onClick={() => void selectAll()}
+          disabled={selectingAll || total === 0}
+          aria-busy={selectingAll || undefined}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+        >
+          {selected.size > 0 && selected.size === total ? "Tout désélectionner" : `Tout sélectionner (${total})`}
+        </button>
+      </Toolbar>
 
       <BatchBar count={selected.size}>
         <BatchButton icon="eye" onClick={openBatchPdf}>
@@ -179,6 +253,19 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
           </tbody>
         </table>
       </TableFrame>
+
+      <Pagination
+        page={page}
+        totalPages={Math.max(1, Math.ceil(total / pageSize))}
+        total={total}
+        pageSize={pageSize}
+        pageSizeOptions={PAGE_SIZES}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
     </div>
   );
 }

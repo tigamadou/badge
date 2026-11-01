@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   cleanupE2ETestData,
   createTestEvent,
+  createManyTestRegistrations,
   createTestEventMember,
   createTestRegistration,
   createTestUser,
@@ -304,6 +305,51 @@ test.describe("Event — Badges", () => {
     expect(popup.url()).not.toContain(reg.id);
     await expect(popup.getByText("1 badge(s) à imprimer")).toBeVisible();
     await expect(popup.getByRole("button", { name: new RegExp(`N° ${reg.id}`) })).toBeVisible();
+  });
+
+  test("« Tout sélectionner » prend tous les badges de la liste, au-delà d'une page, et ouvre le lot", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(240_000); // 130 PDF rendus par le service avant l'archive
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "bdg-all" });
+    const admin = await makeEventAdminUser({ scope: "bdg-all", eventId, orgId });
+    await createManyTestRegistrations({ scope: "bdg-all", eventId, categoryId, count: 130 });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+    await page.getByRole("link", { name: /badges/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
+
+    // La liste est paginee : 100 lignes affichees sur 130.
+    await expect(page.getByText("130 résultats")).toBeVisible();
+    await expect(page.getByRole("checkbox")).toHaveCount(100);
+
+    // La recherche filtre côté serveur.
+    await page.getByPlaceholder(/rechercher/i).fill("Nom0042");
+    await expect(page.getByRole("checkbox")).toHaveCount(1);
+    await page.getByPlaceholder(/rechercher/i).fill("");
+    await expect(page.getByRole("checkbox")).toHaveCount(100);
+
+    // Tout sélectionner : les 130, pas seulement la page affichée.
+    await page.getByRole("button", { name: "Tout sélectionner (130)" }).click();
+    await expect(page.getByText("130 sélectionnée(s)")).toBeVisible();
+    // La sélection traverse les pages.
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page.getByRole("checkbox")).toHaveCount(30);
+    await expect(page.getByRole("checkbox").first()).toBeChecked();
+    await expect(page.getByText("130 sélectionnée(s)")).toBeVisible();
+
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      page.getByRole("button", { name: /aperçu pdf/i }).click(),
+    ]);
+    await popup.waitForLoadState();
+    expect(popup.url()).toMatch(/\/badges\/print\?sel=[0-9a-f]{32}$/);
+    await expect(popup.getByText("130 badge(s) à imprimer")).toBeVisible();
+
+    await popup.getByRole("button", { name: "Préparer le ZIP" }).click();
+    await expect(popup.getByText("Préparation… (130 badges)")).toBeVisible({ timeout: 60_000 });
+    await expect(popup.getByRole("link", { name: "Télécharger le ZIP" })).toBeVisible({ timeout: 150_000 });
+    expect(await getDb().printSheetGeneration.count({ where: { eventId, output: "ZIP" } })).toBe(1);
   });
 
   // --- Garde des pages -----------------------------------------------------

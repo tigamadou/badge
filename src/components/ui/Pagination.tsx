@@ -7,6 +7,7 @@ interface PaginationProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  pageSizeOptions?: number[];
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50];
@@ -50,6 +51,7 @@ export function Pagination({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
 }: PaginationProps) {
   if (total === 0) return null;
 
@@ -126,7 +128,7 @@ export function Pagination({
           className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           aria-label="Nombre de résultats par page"
         >
-          {PAGE_SIZE_OPTIONS.map((size) => (
+          {pageSizeOptions.map((size) => (
             <option key={size} value={size}>
               {size} par page
             </option>
