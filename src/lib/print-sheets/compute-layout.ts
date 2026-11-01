@@ -47,13 +47,24 @@ const MARK_MIN_SPACE_MM = MARK_LENGTH_MM + MARK_OFFSET_MM;
 const EPS = 1e-9;
 
 function fit(available: number, size: number, gap: number): number {
-  return Math.floor((available + gap) / (size + gap) + EPS);
+  return Math.max(0, Math.floor((available + gap) / (size + gap) + EPS));
+}
+
+// Bords uniques (tolerance EPS) : avec un espace nul, le bord droit d'une
+// colonne et le bord gauche de la suivante sont confondus.
+function uniqueEdges(edges: number[]): number[] {
+  const out: number[] = [];
+  for (const e of edges) {
+    if (!out.some((o) => Math.abs(o - e) < EPS)) out.push(e);
+  }
+  return out;
 }
 
 export function computeSheetLayout(
   spec: LayoutSpec,
   badge: { widthMm: number; heightMm: number },
 ): SheetLayout {
+  if (!(badge.widthMm > 0) || !(badge.heightMm > 0)) throw new BadgeTooLargeError();
   const landscape = spec.sheetOrientation === "LANDSCAPE";
   const sheetW = landscape ? spec.sheetHeightMm : spec.sheetWidthMm;
   const sheetH = landscape ? spec.sheetWidthMm : spec.sheetHeightMm;
@@ -101,10 +112,10 @@ export function computeSheetLayout(
   if (spec.cropMarks) {
     const x1 = x0 + gridW;
     const y1 = y0 + gridH;
-    const colEdges = slots.slice(0, columns).flatMap((s) => [s.x, s.x + s.width]);
-    const rowEdges = slots
-      .filter((_, i) => i % columns === 0)
-      .flatMap((s) => [s.y, s.y + s.height]);
+    const colEdges = uniqueEdges(slots.slice(0, columns).flatMap((s) => [s.x, s.x + s.width]));
+    const rowEdges = uniqueEdges(
+      slots.filter((_, i) => i % columns === 0).flatMap((s) => [s.y, s.y + s.height]),
+    );
 
     if (y0 >= MARK_MIN_SPACE_MM - EPS) {
       for (const x of colEdges) {

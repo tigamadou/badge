@@ -112,4 +112,78 @@ describe("computeSheetLayout", () => {
     expect(l.cropMarks).toEqual([]);
     expect(l.warnings).toEqual([]);
   });
+
+  it("ROTATED : grille centree (x0 = 26, y0 = 34.5)", () => {
+    const l = computeSheetLayout({ ...A3, badgeOrientation: "ROTATED" }, { widthMm: 84, heightMm: 120 });
+    expect(l.slots[0].x).toBeCloseTo(26, 6);
+    expect(l.slots[0].y).toBeCloseTo(34.5, 6);
+  });
+
+  it("egalite en AUTO : l'orientation d'origine est conservee", () => {
+    const l = computeSheetLayout(A3, { widthMm: 100, heightMm: 100 });
+    expect(l.rotated).toBe(false);
+  });
+
+  it("ajustement exact : trois colonnes tiennent pile (tolerance flottante)", () => {
+    const exact = computeSheetLayout(
+      { ...A3, sheetWidthMm: 262 + 20, badgeOrientation: "ORIGINAL" },
+      { widthMm: 84, heightMm: 120 },
+    );
+    expect(exact.columns).toBe(3);
+    const fractional = computeSheetLayout(
+      { ...A3, sheetWidthMm: 3 * 33.3 + 2 * 0.1 + 20, gapHorizontalMm: 0.1, badgeOrientation: "ORIGINAL" },
+      { widthMm: 33.3, heightMm: 120 },
+    );
+    expect(fractional.columns).toBe(3);
+  });
+
+  it("limite des 7 mm : exactement 7 garde les traits, 6.9 les omet", () => {
+    const base = { ...A3, marginsMm: { top: 0, right: 10, bottom: 0, left: 10 } };
+    const keep = computeSheetLayout({ ...base, sheetHeightMm: 384 }, { widthMm: 84, heightMm: 120 });
+    expect(keep.warnings).toEqual([]);
+    expect(keep.cropMarks).toHaveLength(24);
+    const omit = computeSheetLayout({ ...base, sheetHeightMm: 383.8 }, { widthMm: 84, heightMm: 120 });
+    expect(omit.warnings).toEqual(["CROP_MARKS_TOP_OMITTED", "CROP_MARKS_BOTTOM_OMITTED"]);
+    // Les traits gauche et droite restent : 6 + 6.
+    expect(omit.cropMarks).toHaveLength(12);
+  });
+
+  it("coordonnees d'un trait du bas et d'un trait de droite", () => {
+    const l = computeSheetLayout(A3, { widthMm: 84, heightMm: 120 });
+    expect(l.cropMarks).toContainEqual({ x1: 17.5, y1: 397, x2: 17.5, y2: 402 });
+    expect(l.cropMarks).toContainEqual({ x1: 281.5, y1: 25, x2: 286.5, y2: 25 });
+  });
+
+  it("espace nul : aucun trait en double", () => {
+    const l = computeSheetLayout(
+      { ...A3, gapHorizontalMm: 0, gapVerticalMm: 0 },
+      { widthMm: 84, heightMm: 120 },
+    );
+    expect(l.perSheet).toBe(9);
+    // 4 bords distincts par axe et par cote.
+    expect(l.cropMarks).toHaveLength(16);
+  });
+
+  it("marges plus grandes que la feuille : BadgeTooLargeError", () => {
+    const big = { top: 200, right: 200, bottom: 200, left: 200 };
+    expect(() => computeSheetLayout({ ...A3, marginsMm: big }, { widthMm: 84, heightMm: 120 })).toThrow(
+      BadgeTooLargeError,
+    );
+    expect(() =>
+      computeSheetLayout(
+        { ...A3, marginsMm: { top: 10, right: 200, bottom: 10, left: 200 } },
+        { widthMm: 84, heightMm: 120 },
+      ),
+    ).toThrow(BadgeTooLargeError);
+    expect(() =>
+      computeSheetLayout(
+        { ...A3, marginsMm: { top: 300, right: 10, bottom: 300, left: 10 } },
+        { widthMm: 84, heightMm: 120 },
+      ),
+    ).toThrow(BadgeTooLargeError);
+  });
+
+  it("badge de dimension nulle : BadgeTooLargeError", () => {
+    expect(() => computeSheetLayout(A3, { widthMm: 0, heightMm: 0 })).toThrow(BadgeTooLargeError);
+  });
 });
