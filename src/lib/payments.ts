@@ -326,7 +326,11 @@ async function failPayment(
     const count = await prisma.$transaction(async (db) => {
       await lockRequestWithEvent(db, requestId);
       const res = await db.payment.updateMany({
-        where: { id: paymentId, status: { in: CONFIRMABLE_PRINT } },
+        // CANCELED n'est rattrapable que pour l'argent recu a un montant errone ; sinon rejeu = sans effet.
+        where: {
+          id: paymentId,
+          status: { in: status === "DECLINED" && reason === "MISMATCH" ? CONFIRMABLE_PRINT : CONFIRMABLE },
+        },
         data: { status },
       });
       if (res.count === 1) {

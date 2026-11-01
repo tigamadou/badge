@@ -568,6 +568,19 @@ describe("startPrintRequestCheckout", () => {
     expect(rows).toHaveLength(1);
   });
 
+  it("deux checkouts voient le même 404 → une seule entrée REPLACED et un seul journal", async () => {
+    const t = await seedAccepted();
+    const old = await pendingPayment(t, { txId: 55 });
+    routeFetch(fetchMock, { retrieve: { 55: () => jsonResponse({}, 404) } });
+    await Promise.allSettled([startPrintRequestCheckout(input(t)), startPrintRequestCheckout(input(t))]);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: old.id } })).status).toBe("CANCELED");
+    const entries = await prisma.printRequestMessage.findMany({
+      where: { requestId: t.request.id, eventType: "PAYMENT_FAILED" },
+    });
+    expect(entries.filter((e) => (e.details as { paymentId?: string }).paymentId === old.id)).toHaveLength(1);
+    expect(await prisma.activityLog.count({ where: { type: "PAYMENT_FAILED", targetId: old.id } })).toBe(1);
+  });
+
   it("PENDING sans transaction créé il y a 30 s → PAYMENT_IN_PROGRESS", async () => {
     const t = await seedAccepted();
     await pendingPayment(t, { txId: null, createdAt: new Date(Date.now() - 30_000) });
