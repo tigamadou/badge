@@ -224,6 +224,88 @@ describe("postMessage", () => {
   });
 });
 
+describe("appendThreadEvent : concurrence", () => {
+  it("deux ajouts simultanés du même auteur gardent les deux changements", async () => {
+    const { request, staff } = await seed();
+    const actor = { userId: staff.id, side: "STAFF" as const };
+    const add = (id: string) =>
+      prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor));
+    await Promise.all([add("a"), add("b")]);
+    const rows = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
+    expect(rows).toHaveLength(1);
+    const ids = (rows[0].details as { changes: { lineId: string }[] }).changes.map((c) => c.lineId).sort();
+    expect(ids).toEqual(["a", "b"]);
+  });
+
+  it("tolère un details stocké sans tableau changes", async () => {
+    const { request, staff } = await seed();
+    await prisma.printRequestMessage.create({
+      data: {
+        requestId: request.id, authorId: staff.id, side: "STAFF", kind: "EVENT",
+        eventType: "LINES_CHANGED", body: "x", details: { changes: "oops" },
+      },
+    });
+    const m = await prisma.$transaction((tx) =>
+      appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, { userId: staff.id, side: "STAFF" }),
+    );
+    expect((m.details as { changes: unknown[] }).changes).toHaveLength(1);
+    const nul = await prisma.printRequestMessage.create({
+      data: { requestId: request.id, authorId: staff.id, side: "STAFF", kind: "EVENT", eventType: "LINES_CHANGED", body: "x" },
+    });
+    const m2 = await prisma.$transaction((tx) =>
+      appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, { userId: staff.id, side: "STAFF" }),
+    );
+    expect(m2.id).toBe(nul.id);
+  });
+});
+
+describe("postMessage : forme des clés de pièces jointes", () => {
+  it("refuse les clés non strictes", async () => {
+    const { request, organizer, staff, event } = await seed();
+    const org = (attachmentKey: string) =>
+      postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "", attachmentKey });
+    const stf = (attachmentKey: string) =>
+      postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "", attachmentKey });
+    for (const k of [
+      "print-requests/staff/../x",
+      `print-requests/${event.id}/../staff/x`,
+      `print-requests/${event.id}/..`,
+      `print-requests/${event.id}/.`,
+      `print-requests/${event.id}/a/b.pdf`,
+      `print-requests/${event.id}/`,
+      `/print-requests/${event.id}/x.pdf`,
+      `print-requests/${event.id}/${"a".repeat(300)}.pdf`,
+    ]) {
+      await expect(org(k)).rejects.toMatchObject({ code: "INVALID_ATTACHMENT" });
+    }
+    for (const k of ["print-requests/staff/../x", "/print-requests/staff/x.pdf", "print-requests/staff/a b.pdf", `print-requests/staff/${"a".repeat(300)}`]) {
+      await expect(stf(k)).rejects.toMatchObject({ code: "INVALID_ATTACHMENT" });
+    }
+    await expect(org(`print-requests/${event.id}/a_b-1.pdf`)).resolves.toBeTruthy();
+  });
+});
+
+describe("describeThreadEvent : details mal formés", () => {
+  it("aucune famille ne produit undefined / NaN", () => {
+    const malformed: ThreadEventType[] = [
+      "LINES_CHANGED", "SUBMITTED", "BADGES_CHANGED", "REQUEST_UPDATED", "QUOTE_SENT", "QUOTE_ACCEPTED",
+      "QUOTE_REOPENED", "TEMPLATE_CHANGED", "STATUS_CHANGED", "REJECTED", "PAYMENT_RECEIVED",
+      "PAYMENT_FAILED", "PAYMENT_UNMATCHED", "SHEETS_GENERATED", "REGISTRATIONS_SKIPPED",
+    ];
+    for (const t of malformed) {
+      for (const d of [{}, { changes: "x", lagging: "x", fields: 3, registrationIds: null, amount: "abc", reason: 5, from: "ZZ" }]) {
+        const out = describeThreadEvent(t, d);
+        expect(out).not.toMatch(/undefined|NaN|null/);
+      }
+    }
+    expect(describeThreadEvent("LINES_CHANGED", {})).toBe("0 lignes modifiées");
+    expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 5, reason: "" })).toBe(`Paiement reçu : ${formatFcfa(5)}`);
+    expect(describeThreadEvent("STATUS_CHANGED", { from: "ZZ", to: undefined })).toBe("Statut : ZZ → —");
+    expect(describeLineChange({ op: "UPDATED", lineId: "a", label: "X" })).toBe("Ligne modifiée : X ()");
+    expect(describeLineChange({ op: "ADDED", lineId: "a", label: "X" })).toContain("0 ×");
+  });
+});
+
 describe("listThread", () => {
   it("renvoie le nom de l'auteur, null pour le système, dans l'ordre", async () => {
     const { request, organizer } = await seed();

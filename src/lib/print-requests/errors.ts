@@ -70,6 +70,7 @@ export const PRINT_REQUEST_ERROR_MESSAGES: Record<PrintRequestErrorCode, string>
   CREDIT_LINE_LOCKED: "Cette ligne de crédit est verrouillée et ne peut pas être modifiée.",
 };
 
+// `details` est envoyé au client par conception : n'y mettre aucune donnée interne.
 // `error` reste le code ; `message` est le texte français destiné à l'utilisateur.
 export function printRequestErrorResponse(err: unknown): NextResponse {
   if (err instanceof PrintRequestError) {

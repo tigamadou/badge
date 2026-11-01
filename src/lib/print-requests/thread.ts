@@ -43,23 +43,33 @@ export type LineChange = {
 const MAX_BODY_LENGTH = 5000;
 
 export function describeLineChange(c: LineChange): string {
+  const label = txt(c.label);
   if (c.op === "ADDED") {
-    const to = c.to!;
-    return `Ligne ajoutée : ${c.label} (${to.quantity} × ${formatFcfa(to.unitPrice)})`;
+    const to = qp(c.to);
+    return `Ligne ajoutée : ${label} (${to.quantity} × ${formatFcfa(to.unitPrice)})`;
   }
-  if (c.op === "REMOVED") return `Ligne retirée : ${c.label}`;
-  const { from, to } = c as Required<LineChange>;
+  if (c.op === "REMOVED") return `Ligne retirée : ${label}`;
+  const from = qp(c.from);
+  const to = qp(c.to);
   const parts: string[] = [];
   if (from.quantity !== to.quantity) parts.push(`quantité ${from.quantity} → ${to.quantity}`);
   if (from.unitPrice !== to.unitPrice) {
     parts.push(`prix unitaire ${formatFcfa(from.unitPrice)} → ${formatFcfa(to.unitPrice)}`);
   }
-  return `Ligne modifiée : ${c.label} (${parts.join(", ")})`;
+  return `Ligne modifiée : ${label} (${parts.join(", ")})`;
 }
 
-const F = (x: unknown) => formatFcfa(Number(x));
-const L = (s: unknown) => PRINT_REQUEST_STATUS_LABELS[s as PrintRequestStatus];
-const strings = (v: unknown) => (v as unknown[]).map(String);
+// Valeurs par défaut sûres : un `details` mal formé ne produit ni « NaN FCFA » ni « undefined ».
+const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const txt = (v: unknown): string => (typeof v === "string" || typeof v === "number" ? String(v) : "—");
+const qp = (v?: { quantity: number; unitPrice: number }) => ({
+  quantity: num(v?.quantity),
+  unitPrice: num(v?.unitPrice),
+});
+const F = (x: unknown) => formatFcfa(num(x));
+const L = (s: unknown) => PRINT_REQUEST_STATUS_LABELS[s as PrintRequestStatus] ?? txt(s);
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
+const changesOf = (v: unknown): LineChange[] => (Array.isArray(v) ? (v as LineChange[]) : []);
 
 export function describeThreadEvent(
   eventType: ThreadEventType,
@@ -67,16 +77,16 @@ export function describeThreadEvent(
 ): string {
   switch (eventType) {
     case "LINES_CHANGED": {
-      const changes = details.changes as LineChange[];
+      const changes = changesOf(details.changes);
       return changes.length === 1
         ? describeLineChange(changes[0])
         : `${changes.length} lignes modifiées`;
     }
     case "SUBMITTED":
-      return `Demande envoyée : ${details.badgeCount} badges, total estimé ${F(details.total)}`;
+      return `Demande envoyée : ${num(details.badgeCount)} badges, total estimé ${F(details.total)}`;
     case "BADGES_CHANGED": {
       const lagging = strings(details.lagging);
-      const base = `Badges de la demande : +${details.added}, −${details.removed} (${details.count} au total)`;
+      const base = `Badges de la demande : +${num(details.added)}, −${num(details.removed)} (${num(details.count)} au total)`;
       return lagging.length > 0
         ? `${base} — quantités fixées par l'équipe à vérifier : ${lagging.join(", ")}`
         : base;
@@ -84,35 +94,35 @@ export function describeThreadEvent(
     case "REQUEST_UPDATED":
       return `Informations modifiées : ${strings(details.fields).join(", ")}`;
     case "QUOTE_SENT":
-      return `Devis v${details.version} envoyé : ${F(details.total)}`;
+      return `Devis v${num(details.version)} envoyé : ${F(details.total)}`;
     case "QUOTE_ACCEPTED":
-      return `Devis v${details.version} accepté : ${F(details.total)}`;
+      return `Devis v${num(details.version)} accepté : ${F(details.total)}`;
     case "QUOTE_REOPENED":
-      return `Devis v${details.version} rouvert : l'acceptation est annulée`;
+      return `Devis v${num(details.version)} rouvert : l'acceptation est annulée`;
     case "QUOTE_REVISION":
       return "Devis en révision : il sera renvoyé avant acceptation";
     case "TEMPLATE_CHANGED":
       return (
-        `Template de badge changé : ${details.fromLabel} → ${details.toLabel}` +
+        `Template de badge changé : ${txt(details.fromLabel)} → ${txt(details.toLabel)}` +
         (details.acceptanceCancelled ? "; l'acceptation est annulée" : "")
       );
     case "STATUS_CHANGED":
       return `Statut : ${L(details.from)} → ${L(details.to)}`;
     case "REJECTED":
-      return `Demande refusée : ${details.reason}`;
+      return `Demande refusée : ${txt(details.reason)}`;
     case "CANCELLED":
       return "Demande annulée";
     case "PAYMENT_RECEIVED":
       return (
         `Paiement reçu : ${F(details.amount)}` +
-        (details.reason ? ` (hors ligne : ${details.reason})` : "")
+        (typeof details.reason === "string" && details.reason ? ` (hors ligne : ${details.reason})` : "")
       );
     case "PAYMENT_FAILED":
       return `Paiement échoué : ${F(details.amount)}`;
     case "PAYMENT_UNMATCHED":
       return `Paiement reçu sans correspondance avec le devis : ${F(details.amount)}`;
     case "SHEETS_GENERATED":
-      return `Planches lancées pour ${details.badgeCount} badges`;
+      return `Planches lancées pour ${num(details.badgeCount)} badges`;
     case "REGISTRATIONS_SKIPPED": {
       const ids = strings(details.registrationIds);
       return `${ids.length} badge(s) écarté(s) à la génération (inscription non approuvée) : ${ids.join(", ")}`;
@@ -121,7 +131,10 @@ export function describeThreadEvent(
 }
 
 // Ajoute une entrée automatique au fil ; les modifications de lignes consécutives du même
-// auteur sont regroupées dans la dernière entrée.
+// auteur sont regroupées dans la dernière entrée. Les ajouts sont sérialisés par demande :
+// la ligne PrintRequest est verrouillée (FOR UPDATE) avant de lire la dernière entrée, donc
+// deux modifications concurrentes ne perdent aucun changement. Les corps (messages et textes
+// d'évènement) sont stockés bruts et doivent être rendus en texte, jamais en HTML.
 export async function appendThreadEvent(
   tx: Prisma.TransactionClient,
   requestId: string,
@@ -129,6 +142,7 @@ export async function appendThreadEvent(
   details: Record<string, unknown>,
   actor: ThreadActor = SYSTEM_ACTOR,
 ): Promise<PrintRequestMessage> {
+  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
   if (eventType === "LINES_CHANGED") {
     const last = await tx.printRequestMessage.findFirst({
       where: { requestId },
@@ -141,8 +155,8 @@ export async function appendThreadEvent(
       last.side === actor.side &&
       last.authorId === actor.userId
     ) {
-      const previous = (last.details as { changes: LineChange[] }).changes;
-      const merged = { ...details, changes: [...previous, ...(details.changes as LineChange[])] };
+      const previous = changesOf((last.details as { changes?: unknown } | null)?.changes);
+      const merged = { ...details, changes: [...previous, ...changesOf(details.changes)] };
       return tx.printRequestMessage.update({
         where: { id: last.id },
         data: {
@@ -188,9 +202,17 @@ export async function postMessage(input: {
   if (body.length === 0 && !input.attachmentKey) throw new PrintRequestError("VALIDATION", 400);
 
   if (input.attachmentKey) {
+    // Forme stricte : préfixe + un seul nom de fichier (pas de sous-dossier, pas de « .. »).
     const prefix =
       input.side === "STAFF" ? "print-requests/staff/" : `print-requests/${request.eventId}/`;
-    if (!input.attachmentKey.startsWith(prefix)) {
+    const name = input.attachmentKey.slice(prefix.length);
+    if (
+      input.attachmentKey.length > 300 ||
+      !input.attachmentKey.startsWith(prefix) ||
+      !/^[A-Za-z0-9._-]+$/.test(name) ||
+      name === "." ||
+      name === ".."
+    ) {
       throw new PrintRequestError("INVALID_ATTACHMENT", 400);
     }
   }
@@ -207,6 +229,7 @@ export async function postMessage(input: {
   });
 }
 
+// Les `body` (messages et textes d'évènement) sont stockés bruts : à rendre en texte, jamais en HTML.
 export type ThreadEntryDTO = {
   id: string;
   side: PrintThreadSide;
