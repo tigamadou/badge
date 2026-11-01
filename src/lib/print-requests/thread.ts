@@ -95,6 +95,7 @@ export function describeThreadEvent(
     case "CANCELLED":
       return "Demande annulée";
     case "PAYMENT_RECEIVED":
+      if (details.byCredit === true) return "Devis réglé par le crédit d'impression : aucun paiement à effectuer";
       return (
         `Paiement reçu : ${F(details.amount)}` +
         (typeof details.reason === "string" && details.reason ? ` (hors ligne : ${details.reason})` : "")
@@ -257,7 +258,7 @@ const ORGANIZER_DETAILS: Record<ThreadEventType, string[]> = {
   STATUS_CHANGED: ["from", "to"],
   REJECTED: ["reason"],
   CANCELLED: [],
-  PAYMENT_RECEIVED: ["amount"],
+  PAYMENT_RECEIVED: ["amount", "byCredit"],
   PAYMENT_FAILED: ["amount"],
   PAYMENT_UNMATCHED: ["amount"],
   SHEETS_GENERATED: ["badgeCount"],

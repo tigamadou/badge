@@ -7,6 +7,7 @@ import { toastError } from "@/lib/toast";
 import {
   NOT_OWNER_MESSAGE,
   PENDING_NOTICE,
+  canShowPayButton,
   payButtonLabel,
   payErrorMessage,
   shouldRefreshAfterPayError,
@@ -49,6 +50,7 @@ export function PrintPayButton({
     { error: payErrorMessage(null) },
   );
 
+  if (!canShowPayButton(amount)) return null;
   if (!canPay) return <p className="text-sm text-slate-500">{NOT_OWNER_MESSAGE}</p>;
   return (
     <div className="space-y-2">

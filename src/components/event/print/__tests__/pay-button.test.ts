@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   payErrorMessage,
   payButtonLabel,
+  canShowPayButton,
   hasPendingPayment,
   shouldRefreshAfterPayError,
   NOT_OWNER_MESSAGE,
@@ -33,6 +34,14 @@ describe("shouldRefreshAfterPayError", () => {
 describe("payButtonLabel", () => {
   it("formate le montant en FCFA", () => {
     expect(payButtonLabel(150000).replace(/\s/g, " ")).toBe("Payer 150 000 FCFA");
+  });
+});
+
+describe("canShowPayButton", () => {
+  it("jamais pour un montant nul ou négatif (devis couvert par le crédit)", () => {
+    expect(canShowPayButton(0)).toBe(false);
+    expect(canShowPayButton(-500)).toBe(false);
+    expect(canShowPayButton(1)).toBe(true);
   });
 });
 

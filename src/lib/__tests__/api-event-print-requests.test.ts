@@ -439,6 +439,24 @@ describe("acceptation", () => {
     expect(await prisma.notification.count({ where: { ...mine, userId: fx.eventAdmin.id } })).toBe(1);
   });
 
+  it("OWNER : devis à 0 couvert par le crédit -> PAID, l'organisateur n'est prévenu que par la notification de paiement", async () => {
+    const r = await makeRequest(fx, { status: "QUOTED", quoteVersion: 1, total: 0 });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "DISCOUNT", label: "Crédit d'impression", quantity: 1, unitPrice: -3000,
+        lineTotal: -3000, position: 0, addedBy: "STAFF", usesOrgCredit: true,
+      },
+    });
+    await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 3000 } });
+    await loginAs(fx.owner);
+    const res = await call(accept.POST as Handler, "POST", { requestId: r.id, body: { version: 1 } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).request).toMatchObject({ status: "PAID", acceptedTotal: 0 });
+    expect(await prisma.orgPrintCredit.count({ where: { requestId: r.id, kind: "SPENT" } })).toBe(1);
+    expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: fx.eventAdmin.id } })).toBe(1);
+    expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: fx.staffAdmin.id } })).toBe(1);
+  });
+
   it("OWNER : 409 si la version a changé ; 400 sans version ; autorisé sur évènement archivé", async () => {
     const r = await makeRequest(fx, { status: "QUOTED", quoteVersion: 2 });
     await loginAs(fx.owner);

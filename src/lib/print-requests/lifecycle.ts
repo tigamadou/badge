@@ -2,6 +2,7 @@ import type { PrintRequest, PrintRequestStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { orderRegistrations } from "@/lib/print-sheets/generations";
 import {
+  notifyPrintRequestPaid,
   notifyPrintRequestStatusChanged,
   notifyPrintRequestSubmitted,
 } from "@/lib/notifications/triggers";
@@ -9,6 +10,7 @@ import { lockEventRow, reservedRegistrations } from "./content";
 import { PrintRequestError } from "./errors";
 import { chunk } from "./labels";
 import { prepareOnsiteSubmission } from "./onsite";
+import { spendOrgCreditForPaidRequest } from "./org-credit";
 import {
   appendThreadEvent,
   applyTransition,
@@ -16,6 +18,7 @@ import {
   assertOwner,
   loadRequest,
   lockRequestWithEvent,
+  markPaid,
   requestBadgeCount,
   snapshotEventTemplate,
 } from "./service";
@@ -204,8 +207,18 @@ export async function acceptQuote(input: {
       { version: request.quoteVersion, total: request.total },
       { userId: input.userId, side: "ORGANIZER" },
     );
-    return tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    // Devis entièrement couvert par le crédit d'impression : rien à payer, la demande passe PAID dans
+    // la même transaction (mouvement SPENT compris). Aucun Payment n'est créé.
+    const paid = request.total === 0;
+    if (paid) {
+      // markPaid ne renvoie jamais faux ici : la demande vient de passer ACCEPTED sous le verrou.
+      await markPaid(tx, request.id, { byCredit: true });
+      await spendOrgCreditForPaidRequest(tx, request.id);
+    }
+    return { request: await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } }), paid };
   });
-  await notifyPrintRequestStatusChanged(result.id, input.userId, { organizer: false, staff: true });
-  return result;
+  const { request: accepted, paid } = result;
+  if (paid) await notifyPrintRequestPaid(accepted.id, input.userId);
+  else await notifyPrintRequestStatusChanged(accepted.id, input.userId, { organizer: false, staff: true });
+  return accepted;
 }

@@ -128,6 +128,9 @@ describe("describeThreadEvent", () => {
       "Badges de la demande : +1, −0 (1 au total)",
     );
     expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 100 })).toBe(`Paiement reçu : ${formatFcfa(100)}`);
+    expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 0, byCredit: true })).toBe(
+      "Devis réglé par le crédit d'impression : aucun paiement à effectuer",
+    );
     expect(describeThreadEvent("TEMPLATE_CHANGED", { fromLabel: "A", toLabel: "B", acceptanceCancelled: false })).toBe(
       "Template de badge changé : A → B",
     );
@@ -390,9 +393,11 @@ describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
       { eventType: "PAYMENT_FAILED", details: { amount: 5000, paymentId: "pay_2", reason: "REPLACED" } },
       { eventType: "SHEETS_GENERATED", details: { badgeCount: 12, generationId: "gen_1" } },
       { eventType: "SUBMITTED", details: { badgeCount: 3, total: 4500, secret: "x" } },
+      { eventType: "PAYMENT_RECEIVED", details: { amount: 0, byCredit: true } },
     ]);
     expect(organizer.map((e) => e.details)).toEqual([
       { amount: 5000 }, { amount: 5000 }, { badgeCount: 12 }, { badgeCount: 3, total: 4500 },
+      { amount: 0, byCredit: true },
     ]);
     expect(organizer[0].body).toBe(`Paiement reçu : ${formatFcfa(5000)}`);
     expect(organizer[0].body).not.toContain("Virement");

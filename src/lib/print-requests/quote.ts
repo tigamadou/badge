@@ -249,7 +249,14 @@ export async function sendQuote(input: {
     if (badgeLines === 0) throw new PrintRequestError("BADGE_PRODUCT_REQUIRED", 400);
     const total = await recomputeChecked(tx, request.id);
     if (total < 0) throw new PrintRequestError("NEGATIVE_TOTAL", 400);
-    if (total === 0) throw new PrintRequestError("ZERO_TOTAL", 400);
+    // Un total nul n'est admis que s'il vient d'une ligne de crédit active (devis entièrement couvert
+    // par le crédit de l'organisation) : la demande passe alors PAID à l'acceptation, sans paiement.
+    if (total === 0) {
+      const credit = await tx.printQuoteLine.count({
+        where: { requestId: request.id, removedAt: null, usesOrgCredit: true },
+      });
+      if (credit === 0) throw new PrintRequestError("ZERO_TOTAL", 400);
+    }
     const version = current.quoteVersion + 1;
     await tx.printRequest.update({ where: { id: request.id }, data: { quoteVersion: version } });
     await appendThreadEvent(tx, request.id, "QUOTE_SENT", { version, total }, { userId: input.userId, ...STAFF });
