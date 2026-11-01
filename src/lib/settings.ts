@@ -129,3 +129,33 @@ export function resolveBadgeTemplateId(
     platformSettings.badgeTemplateId
   );
 }
+
+// Plan 35 : reglages de l'impression sur place (templates proposes, note, marge).
+export type OnsitePrintSettings = {
+  templateIds: string[];
+  printerNote: string | null;
+  defaultMarginPercent: number;
+};
+
+// Colonne Json : tolerante, tout ce qui n'est pas un tableau de chaines vaut [].
+export function parseOnsiteTemplateIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((v): v is string => typeof v === "string"))];
+}
+
+// Singleton absent : valeurs par defaut (contrairement au SMTP, rien n'est bloquant).
+export async function getOnsitePrintSettings(): Promise<OnsitePrintSettings> {
+  const platform = await prisma.platformSettings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      onsitePrintTemplateIds: true,
+      onsitePrinterNote: true,
+      onsiteDefaultMarginPercent: true,
+    },
+  });
+  return {
+    templateIds: parseOnsiteTemplateIds(platform?.onsitePrintTemplateIds),
+    printerNote: platform?.onsitePrinterNote ?? null,
+    defaultMarginPercent: platform?.onsiteDefaultMarginPercent ?? 10,
+  };
+}
