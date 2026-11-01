@@ -13,6 +13,8 @@ import { PaymentHistory, type PaymentHistoryItem } from "@/components/admin/Paym
 import { toastApiError } from "@/lib/toast";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import type { OnsiteCounter } from "@/lib/print-requests/onsite-counter";
+import { OnsiteRequestPanel } from "./OnsiteRequestPanel";
 import { QuoteEditor } from "./QuoteEditor";
 import { RequestStatusActions } from "./RequestStatusActions";
 import { StaffThread } from "./StaffThread";
@@ -40,11 +42,13 @@ export function RequestDetail({
   role,
   products,
   payments = [],
+  onsiteCounter = null,
 }: {
   requestId: string;
   role: StaffRole;
   products: ProductOption[];
   payments?: PaymentHistoryItem[];
+  onsiteCounter?: OnsiteCounter | null;
 }) {
   const router = useRouter();
   const [data, setData] = useState<RequestDetailData | null>(null);
@@ -115,6 +119,10 @@ export function RequestDetail({
         role={role}
         onChanged={onChanged}
       />
+
+      {onsiteCounter && (
+        <OnsiteRequestPanel requestId={requestId} status={request.status} role={role} initialCounter={onsiteCounter} />
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

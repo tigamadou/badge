@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ScanResult as ScanResultPanel } from "./ScannerFrame";
@@ -8,6 +8,7 @@ import { CatPill } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { QrCamera } from "./QrCamera";
 
 type ScanResult = {
   authorized: boolean;
@@ -23,11 +24,7 @@ type ScanResult = {
   scannedAt: Date;
 };
 
-type ScannerLike = { clear: () => Promise<void> };
-
 export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const scannerRef = useRef<ScannerLike | null>(null);
   const [history, setHistory] = useState<ScanResult[]>([]);
   const [last, setLast] = useState<ScanResult | null>(null);
   const [manualMode, setManualMode] = useState(false);
@@ -56,38 +53,6 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
     },
     { error: "Vérification impossible. Réessayez." },
   );
-
-  useEffect(() => {
-    if (manualMode) return;
-    let cancelled = false;
-    (async () => {
-      const mod = await import("html5-qrcode");
-      if (cancelled || !containerRef.current) return;
-      const scanner = new mod.Html5QrcodeScanner(
-        containerRef.current.id,
-        { fps: 10, qrbox: 250 },
-        false,
-      );
-      scanner.render(
-        (decoded: string) => {
-          verifyPayload(decoded);
-        },
-        () => {
-          /* ignore frame errors */
-        },
-      );
-      scannerRef.current = scanner as unknown as ScannerLike;
-    })();
-    return () => {
-      cancelled = true;
-      try {
-        scannerRef.current?.clear();
-      } catch {
-        /* ignore */
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manualMode, orgId, eventId]);
 
   async function submitManual(e: React.FormEvent) {
     e.preventDefault();
@@ -121,9 +86,9 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
             </Button>
           </form>
         ) : (
-          <div
-            id="qr-scanner-container"
-            ref={containerRef}
+          <QrCamera
+            elementId="qr-scanner-container"
+            onDecode={verifyPayload}
             className="mx-auto max-w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 p-2"
           />
         )}
