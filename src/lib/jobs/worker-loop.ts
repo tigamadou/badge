@@ -4,6 +4,11 @@ import { purgeOldJobs, recoverStaleJobs } from "./maintenance";
 import { processBatch, type BatchSummary } from "./process-batch";
 import { runSubscriptionSweep } from "./subscription-sweep";
 import { purgeReadNotifications } from "@/lib/notifications/retention";
+import {
+  claimGeneration,
+  recoverStaleGenerations,
+  runGeneration,
+} from "@/lib/print-sheets/run-generation";
 
 export type WorkerLog = (message: string, meta?: Record<string, unknown>) => void;
 export type WorkerDeps = {
@@ -12,6 +17,11 @@ export type WorkerDeps = {
   purgeOldJobs: typeof purgeOldJobs;
   purgeReadNotifications: typeof purgeReadNotifications;
   runSubscriptionSweep: typeof runSubscriptionSweep;
+  printSheets: {
+    claim: typeof claimGeneration;
+    run: typeof runGeneration;
+    recover: typeof recoverStaleGenerations;
+  };
 };
 
 export function createWorkerLoop(opts: {
@@ -28,6 +38,7 @@ export function createWorkerLoop(opts: {
     purgeOldJobs,
     purgeReadNotifications,
     runSubscriptionSweep,
+    printSheets: { claim: claimGeneration, run: runGeneration, recover: recoverStaleGenerations },
     ...opts.deps,
   };
 
@@ -36,6 +47,38 @@ export function createWorkerLoop(opts: {
   let lastSweepAt: number | null = null;
   let current: Promise<unknown> = Promise.resolve();
   let wake: (() => void) | null = null;
+  // Generation d'impression en cours dans ce worker : une seule a la fois, jamais attendue.
+  let generation: Promise<unknown> | null = null;
+
+  // Reprise des orphelines, puis lancement (sans attente) d'une generation si le worker est libre.
+  // Une erreur ici ne doit jamais bloquer l'envoi des emails.
+  async function dispatchGeneration(now: Date): Promise<void> {
+    try {
+      const recovered = await deps.printSheets.recover(now);
+      if (recovered > 0) log("[worker] recovered stale print generations", { recovered });
+      if (generation) return;
+      const claimed = await deps.printSheets.claim({ workerId, now });
+      if (!claimed) return;
+      log("[worker] print generation started", { id: claimed.id });
+      const promise: Promise<unknown> = deps.printSheets
+        .run(claimed.id, workerId)
+        .then((outcome) => log("[worker] print generation finished", { id: claimed.id, outcome }))
+        .catch((err) =>
+          log("[worker] print generation crashed", {
+            id: claimed.id,
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        )
+        .finally(() => {
+          generation = null;
+        });
+      generation = promise;
+    } catch (err) {
+      log("[worker] print generation dispatch failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   async function runOnce(now: Date = new Date()): Promise<BatchSummary> {
     const recovered = await deps.recoverStaleJobs(now);
@@ -56,6 +99,7 @@ export function createWorkerLoop(opts: {
         log("[worker] subscription sweep", { ...sweep });
       }
     }
+    await dispatchGeneration(now);
     return deps.processBatch({ workerId, limit: config.emailConcurrency, now });
   }
 

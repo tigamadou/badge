@@ -86,6 +86,9 @@ services:
       - .env.preprod
     networks:
       - default
+      - rendu
+    environment:
+      RENDERER_URL: http://badge-renderer-preprod:3000
     depends_on:
       init:
         condition: service_completed_successfully
