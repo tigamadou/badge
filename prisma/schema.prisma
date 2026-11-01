@@ -63,6 +63,7 @@ model User {
   profileSubmissions    ProfileSubmission[]
   notifications         Notification[]
   printSheetLayouts     PrintSheetLayout[]
+  printProducts         PrintProduct[]
   printSheetGenerations PrintSheetGeneration[]
 }
 
@@ -515,6 +516,9 @@ enum ActivityType {
   PRINT_LAYOUT_UPDATED
   PRINT_LAYOUT_ARCHIVED
   PRINT_SHEETS_GENERATED
+  PRINT_PRODUCT_CREATED
+  PRINT_PRODUCT_UPDATED
+  PRINT_PRODUCT_ARCHIVED
   REGISTRATION_CREATED
   REGISTRATION_APPROVED
   REGISTRATION_REJECTED
@@ -883,4 +887,102 @@ model PrintSheetGeneration {
 
   @@index([status, createdAt])
   @@index([eventId])
+}
+
+enum PrintProductKind {
+  BADGE
+  ACCESSORY
+}
+
+enum PrintOptionType {
+  CHOICE
+  MULTI_CHOICE
+  COLOR
+  TEXT
+  FILE
+  QUANTITY_SPLIT
+}
+
+// Catalogue des produits d'impression. Prix en plus petite unite de la devise.
+model PrintProduct {
+  id           String           @id @default(cuid())
+  kind         PrintProductKind
+  name         String           @db.VarChar(120)
+  slug         String           @unique
+  category     String?          @db.VarChar(60)
+  description  String?          @db.Text
+  basePrice    Int
+  minQuantity  Int              @default(1)
+  leadTimeDays Int?
+  position     Int              @default(0)
+  published    Boolean          @default(false)
+  archived     Boolean          @default(false)
+  archivedAt   DateTime?
+  createdById  String?
+  createdBy    User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  images     PrintProductImage[]
+  priceTiers PrintProductPriceTier[]
+  options    PrintProductOption[]
+
+  @@index([kind, archived, published])
+}
+
+model PrintProductImage {
+  id         String       @id @default(cuid())
+  productId  String
+  product    PrintProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storageKey String
+  alt        String       @default("") @db.VarChar(200)
+  position   Int
+
+  @@index([productId, position])
+}
+
+model PrintProductPriceTier {
+  id          String       @id @default(cuid())
+  productId   String
+  product     PrintProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQuantity Int
+  unitPrice   Int
+
+  @@unique([productId, minQuantity])
+}
+
+model PrintProductOption {
+  id         String          @id @default(cuid())
+  productId  String
+  product    PrintProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String          @db.VarChar(80)
+  help       String?         @db.VarChar(300)
+  type       PrintOptionType
+  required   Boolean         @default(false)
+  // TEXT et FILE : supplement de prix.
+  priceDelta Int             @default(0)
+  // TEXT : longueur maximale.
+  maxLength  Int?
+  position   Int
+  archived   Boolean         @default(false)
+  archivedAt DateTime?
+
+  values PrintProductOptionValue[]
+
+  @@index([productId, position])
+}
+
+model PrintProductOptionValue {
+  id         String             @id @default(cuid())
+  optionId   String
+  option     PrintProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  label      String             @db.VarChar(80)
+  colorHex   String?            @db.VarChar(7)
+  imageKey   String?
+  priceDelta Int                @default(0)
+  position   Int
+  archived   Boolean            @default(false)
+  archivedAt DateTime?
+
+  @@index([optionId, position])
 }

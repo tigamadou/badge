@@ -65,6 +65,9 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PRINT_LAYOUT_UPDATED: "Gabarit d'impression modifié",
   PRINT_LAYOUT_ARCHIVED: "Gabarit d'impression archivé",
   PRINT_SHEETS_GENERATED: "Planches de badges générées",
+  PRINT_PRODUCT_CREATED: "Produit d'impression créé",
+  PRINT_PRODUCT_UPDATED: "Produit d'impression modifié",
+  PRINT_PRODUCT_ARCHIVED: "Produit d'impression archivé",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

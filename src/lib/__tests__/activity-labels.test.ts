@@ -157,6 +157,17 @@ describe("types d'impression (gabarits et planches)", () => {
     expect(logKind(as("PRINT_LAYOUT_ARCHIVED"))).toBe("suppression");
     expect(logKind(as("PRINT_SHEETS_GENERATED"))).toBe("acces");
   });
+
+  it("couvrent le catalogue de produits", () => {
+    for (const t of ["PRINT_PRODUCT_CREATED", "PRINT_PRODUCT_UPDATED", "PRINT_PRODUCT_ARCHIVED"] as const) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+    expect(logKind(as("PRINT_PRODUCT_CREATED"))).toBe("creation");
+    expect(logKind(as("PRINT_PRODUCT_UPDATED"))).toBe("modification");
+    expect(logKind(as("PRINT_PRODUCT_ARCHIVED"))).toBe("suppression");
+  });
 });
 
 describe("describeActivity", () => {
