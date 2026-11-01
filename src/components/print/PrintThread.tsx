@@ -132,11 +132,15 @@ export function PrintThread({
                   <>
                     {isMessage ? <span className="mr-1.5">{author}</span> : null}
                     {changes.length > 1 ? (
-                      <ul className="list-disc pl-4 font-normal text-slate-600">
-                        {changes.map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
+                      // Entrée regroupée : le résumé (« n lignes modifiées »), puis le détail.
+                      <>
+                        <span className="text-slate-600">{entry.body}</span>
+                        <ul className="list-disc pl-4 font-normal text-slate-600">
+                          {changes.map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </>
                     ) : (
                       <span className={`whitespace-pre-wrap break-words ${isMessage ? "block font-normal" : "text-slate-600"}`}>
                         {entry.body}
