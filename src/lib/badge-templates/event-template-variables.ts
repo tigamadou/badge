@@ -28,7 +28,7 @@ export async function resolveEventTemplateId(event: {
   return resolveBadgeTemplateId({ badgeTemplateId: event.badgeTemplateId }, organization, platform);
 }
 
-async function findRow(id: string): Promise<InstalledBadgeTemplate | null> {
+export async function findEffectiveTemplateRow(id: string): Promise<InstalledBadgeTemplate | null> {
   const row = await prisma.installedBadgeTemplate.findUnique({ where: { id } });
   if (row) return row;
   return prisma.installedBadgeTemplate.findFirst({
@@ -48,7 +48,7 @@ export async function resolveEventTemplateVariables(event: {
   orgId: string;
 }): Promise<{ variables: VariableDeclaration[]; bindings: Bindings }> {
   try {
-    const row = await findRow(await resolveEventTemplateId(event));
+    const row = await findEffectiveTemplateRow(await resolveEventTemplateId(event));
     if (!row) {
       console.warn(`[badge-templates] aucun template lisible pour les options (famille "${DEFAULT_FAMILY}" absente)`);
       return NONE;

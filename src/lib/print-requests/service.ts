@@ -1,0 +1,245 @@
+import { Prisma } from "@prisma/client";
+import type {
+  PrintRequest,
+  PrintRequestStatus,
+  PrintRequestType,
+} from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { loadUserContext } from "@/lib/user-context";
+import {
+  findEffectiveTemplateRow,
+  resolveEventTemplateId,
+} from "@/lib/badge-templates/event-template-variables";
+import { PrintRequestError } from "./errors";
+import { nextStatus, type PrintRequestAction, type PrintRequestActor } from "./transitions";
+import { appendThreadEvent } from "./thread";
+
+export { appendThreadEvent } from "./thread";
+
+// Sonde de paiement en cours. Objet mutable : le plan 34 remplace ce corps par un comptage des
+// Payment PENDING de la demande ; les tests la remplacent avec vi.spyOn.
+export const paymentProbe: { isPaymentInProgress(requestId: string): Promise<boolean> } = {
+  isPaymentInProgress: async () => false,
+};
+
+export function isPaymentInProgress(requestId: string): Promise<boolean> {
+  return paymentProbe.isPaymentInProgress(requestId);
+}
+
+// Seul un propriétaire de l'organisation peut accepter un devis (le staff n'agit jamais côté organisateur).
+export async function assertOwner(userId: string, orgId: string): Promise<void> {
+  const ctx = await loadUserContext(userId);
+  if (ctx?.isStaff) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
+  const isOwner = ctx?.orgMemberships.some((m) => m.orgId === orgId && m.role === "OWNER") ?? false;
+  if (!isOwner) throw new PrintRequestError("OWNER_REQUIRED", 403);
+}
+
+const REFERENCE_ATTEMPTS = 3;
+
+// IMP-{année}-{plus grand suffixe de l'année + 1, sur 4 chiffres} : un comptage entrerait en
+// collision après la suppression d'un évènement (cascade). La collision résiduelle (écritures
+// concurrentes) est rejouée par createDraft.
+export async function nextReference(tx: Prisma.TransactionClient, now: Date): Promise<string> {
+  const prefix = `IMP-${now.getUTCFullYear()}-`;
+  const rows = await tx.printRequest.findMany({
+    where: { reference: { startsWith: prefix } },
+    select: { reference: true },
+  });
+  let max = 0;
+  for (const { reference } of rows) {
+    const n = Number(reference.slice(prefix.length));
+    if (Number.isInteger(n) && n > max) max = n;
+  }
+  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+}
+
+function isReferenceCollision(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
+
+export async function createDraft(input: {
+  eventId: string;
+  orgId: string;
+  type: PrintRequestType;
+  userId: string;
+  now?: Date;
+}): Promise<PrintRequest> {
+  const now = input.now ?? new Date();
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const reference = await nextReference(tx, now);
+        return tx.printRequest.create({
+          data: {
+            reference,
+            eventId: input.eventId,
+            orgId: input.orgId,
+            type: input.type,
+            status: "DRAFT",
+            createdById: input.userId,
+          },
+        });
+      });
+    } catch (err) {
+      if (!isReferenceCollision(err) || attempt >= REFERENCE_ATTEMPTS) throw err;
+    }
+  }
+}
+
+// Copie du template effectif de l'évènement (format et nombre de pages du badge).
+export async function snapshotEventTemplate(
+  eventId: string,
+  db: Prisma.TransactionClient = prisma,
+): Promise<{
+  badgeTemplateId: string;
+  badgeWidthPx: number;
+  badgeHeightPx: number;
+  badgePages: number;
+  label: string;
+}> {
+  const event = await db.event.findUnique({
+    where: { id: eventId },
+    select: { badgeTemplateId: true, orgId: true },
+  });
+  if (!event) throw new PrintRequestError("NOT_FOUND", 404);
+  const row = await findEffectiveTemplateRow(await resolveEventTemplateId(event));
+  if (!row) throw new PrintRequestError("VALIDATION", 400);
+  return {
+    badgeTemplateId: row.id,
+    badgeWidthPx: row.pageWidthPx,
+    badgeHeightPx: row.pageHeightPx,
+    badgePages: row.pages,
+    label: row.label,
+  };
+}
+
+export async function loadRequest(
+  requestId: string,
+  scope?: { eventId: string },
+): Promise<PrintRequest> {
+  const request = await prisma.printRequest.findUnique({ where: { id: requestId } });
+  if (!request || (scope && request.eventId !== scope.eventId)) {
+    throw new PrintRequestError("NOT_FOUND", 404);
+  }
+  return request;
+}
+
+// Actions qui n'ont pas lieu pendant qu'un paiement de la demande est en cours.
+function needsPaymentGuard(
+  from: PrintRequestStatus,
+  action: PrintRequestAction,
+  actor: PrintRequestActor,
+): boolean {
+  return (
+    action === "REOPEN" ||
+    action === "TEMPLATE_CHANGED" ||
+    (action === "CANCEL" && from === "ACCEPTED") ||
+    (action === "MARK_PAID" && actor === "STAFF")
+  );
+}
+
+// Applique une transition de la table (nextStatus) sous garde de statut. N'écrit pas le fil :
+// l'appelant le fait, il connaît les détails.
+export async function applyTransition(
+  tx: Prisma.TransactionClient,
+  request: Pick<PrintRequest, "id" | "status">,
+  action: PrintRequestAction,
+  actor: PrintRequestActor,
+  now: Date = new Date(),
+): Promise<PrintRequestStatus> {
+  const from = request.status;
+  const to = nextStatus(from, action, actor);
+  if (!to) throw new PrintRequestError("INVALID_TRANSITION", 409, { from, action });
+  if (needsPaymentGuard(from, action, actor) && (await isPaymentInProgress(request.id))) {
+    throw new PrintRequestError("PAYMENT_IN_PROGRESS", 409);
+  }
+
+  const data: Prisma.PrintRequestUncheckedUpdateManyInput = { status: to };
+  if (action === "SUBMIT") data.submittedAt = now;
+  if (action === "SEND_QUOTE") data.quotedAt = now;
+  if (action === "MARK_PAID") data.paidAt = now;
+  if (action === "COMPLETE") data.completedAt = now;
+  if (action === "CANCEL") data.cancelledAt = now;
+  if (from === "ACCEPTED" && (to === "SUBMITTED" || to === "CANCELLED")) {
+    data.acceptedVersion = null;
+    data.acceptedTotal = null;
+    data.acceptedAt = null;
+    data.acceptedById = null;
+  }
+
+  const { count } = await tx.printRequest.updateMany({
+    where: { id: request.id, status: from },
+    data,
+  });
+  if (count === 0) throw new PrintRequestError("INVALID_TRANSITION", 409, { from, action });
+  return to;
+}
+
+// Modification par l'organisateur ou le staff. Depuis QUOTED, le devis repasse en révision :
+// l'entrée QUOTE_REVISION est écrite en premier (l'appelant ajoute ensuite la sienne).
+export async function applyEdit(
+  tx: Prisma.TransactionClient,
+  request: Pick<PrintRequest, "id" | "status">,
+  side: "ORGANIZER" | "STAFF",
+  userId: string,
+): Promise<{ from: PrintRequestStatus; to: PrintRequestStatus }> {
+  const from = request.status;
+  if (from === "ACCEPTED") throw new PrintRequestError("QUOTE_ACCEPTED", 409);
+  const action: PrintRequestAction = side === "STAFF" ? "STAFF_EDIT" : "ORGANIZER_EDIT";
+  if (!nextStatus(from, action, side)) throw new PrintRequestError("REQUEST_LOCKED", 409);
+  if (from === "QUOTED") await appendThreadEvent(tx, request.id, "QUOTE_REVISION", {}, { userId, side });
+  const to = await applyTransition(tx, request, action, side);
+  return { from, to };
+}
+
+export async function recomputeTotal(tx: Prisma.TransactionClient, requestId: string): Promise<number> {
+  const sum = await tx.printQuoteLine.aggregate({
+    where: { requestId, removedAt: null },
+    _sum: { lineTotal: true },
+  });
+  const total = sum._sum.lineTotal ?? 0;
+  await tx.printRequest.update({ where: { id: requestId }, data: { total } });
+  return total;
+}
+
+export async function requestBadgeCount(
+  tx: Prisma.TransactionClient,
+  request: Pick<PrintRequest, "id" | "type" | "estimatedQuantity">,
+): Promise<number> {
+  if (request.type === "ADVANCE") return tx.printRequestItem.count({ where: { requestId: request.id } });
+  return request.estimatedQuantity ?? 0;
+}
+
+// Marque la demande payée (paiement en ligne ou saisie hors ligne). Faux si elle n'est plus
+// ACCEPTED : rien n'est écrit (le plan 34 traite le paiement tardif). Ni journal ni notification :
+// l'appelant les fait après la transaction.
+export async function markPaid(
+  tx: Prisma.TransactionClient,
+  requestId: string,
+  opts: { paymentId?: string; manual?: { userId: string; reason: string } },
+): Promise<boolean> {
+  const request = await tx.printRequest.findUnique({
+    where: { id: requestId },
+    select: { id: true, status: true, acceptedTotal: true },
+  });
+  if (!request || request.status !== "ACCEPTED") return false;
+
+  const { manual } = opts;
+  await applyTransition(tx, request, "MARK_PAID", manual ? "STAFF" : "SYSTEM");
+  await tx.printRequest.update({
+    where: { id: requestId },
+    data: { paidPaymentId: opts.paymentId ?? null },
+  });
+  await appendThreadEvent(
+    tx,
+    requestId,
+    "PAYMENT_RECEIVED",
+    {
+      amount: request.acceptedTotal ?? 0,
+      ...(opts.paymentId ? { paymentId: opts.paymentId } : {}),
+      ...(manual ? { reason: manual.reason } : {}),
+    },
+    manual ? { userId: manual.userId, side: "STAFF" } : undefined,
+  );
+  return true;
+}
