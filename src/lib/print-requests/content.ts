@@ -337,7 +337,7 @@ export function choiceFailureToError(
 }
 
 // Un fichier choisi doit être une pièce de cet évènement (forme stricte, comme les pièces du fil).
-function isEventFileKey(key: string, eventId: string): boolean {
+export function isEventFileKey(key: string, eventId: string): boolean {
   const prefix = `print-requests/${eventId}/`;
   return (
     key.length <= 300 &&
@@ -357,11 +357,11 @@ function canonical(value: unknown): string {
 }
 
 // Plafond d'un montant (colonnes Int de MySQL) : au-delà, refus propre plutôt qu'une erreur 500.
-const MAX_AMOUNT = 2_000_000_000;
+export const MAX_AMOUNT = 2_000_000_000;
 
 // Ne garde que le champ pertinent pour le type de chaque option et retire les choix vides, afin
 // que deux saisies équivalentes soient égales et que seule la forme utile soit enregistrée.
-function normalizeChoices(product: ProductForPricing, choices: OptionChoice[]): OptionChoice[] {
+export function normalizeChoices(product: ProductForPricing, choices: OptionChoice[]): OptionChoice[] {
   const result: OptionChoice[] = [];
   for (const choice of choices) {
     const option = product.options.find((o) => o.id === choice.optionId);

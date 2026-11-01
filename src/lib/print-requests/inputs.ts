@@ -81,3 +81,44 @@ export type OrganizerProductInput = {
   quantity: number | null;
   choices: OptionChoice[];
 };
+
+const LINE_KINDS = ["PRODUCT", "SERVICE", "DISCOUNT", "CUSTOM"] as const;
+
+// Une remise est négative ou nulle ; toute autre ligne est positive ou nulle.
+function signMatches(kind: (typeof LINE_KINDS)[number], unitPrice: number): boolean {
+  return kind === "DISCOUNT" ? unitPrice <= 0 : unitPrice >= 0;
+}
+
+// Ligne de devis saisie par le staff.
+export const staffLineSchema = z
+  .object({
+    kind: z.enum(LINE_KINDS),
+    productId: z.string().min(1).nullable().optional(),
+    label: z.string().trim().min(1).max(200),
+    quantity: z.number().int().min(1).max(1_000_000),
+    unitPrice: z.number().int().min(-10_000_000).max(10_000_000),
+    choices: z.array(optionChoiceSchema).max(50).optional(),
+  })
+  .superRefine((line, ctx) => {
+    if (!signMatches(line.kind, line.unitPrice)) {
+      ctx.addIssue({ code: "custom", path: ["unitPrice"], message: "Signe du prix invalide" });
+    }
+    if (line.kind === "PRODUCT" && !line.productId) {
+      ctx.addIssue({ code: "custom", path: ["productId"], message: "Produit requis" });
+    }
+  });
+
+export type StaffLineInput = z.infer<typeof staffLineSchema>;
+
+// Modification d'une ligne par le staff : au moins un champ.
+export const staffLinePatchSchema = z
+  .object({
+    label: z.string().trim().min(1).max(200).optional(),
+    quantity: z.number().int().min(1).max(1_000_000).optional(),
+    unitPrice: z.number().int().min(-10_000_000).max(10_000_000).optional(),
+  })
+  .refine((patch) => Object.values(patch).some((v) => v !== undefined), {
+    message: "Aucune modification",
+  });
+
+export type StaffLinePatch = z.infer<typeof staffLinePatchSchema>;
