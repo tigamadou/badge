@@ -7,6 +7,9 @@ import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBa
 import { QuoteLinesTable } from "@/components/print/QuoteLinesTable";
 import { OnsiteTemplateAlert } from "@/components/print/OnsiteTemplateAlert";
 import { onsiteTemplateStatus } from "@/lib/print-requests/onsite";
+import { OnsiteCounterCard } from "@/components/print/OnsiteCounterCard";
+import { loadOnsiteRequest } from "@/lib/print-requests/onsite-station";
+import { showsOnsiteCounter } from "@/lib/print-requests/onsite-station-view";
 import { PrintThread } from "@/components/print/PrintThread";
 import { PrintRequestActions } from "@/components/event/print/PrintRequestActions";
 import { requirePrintAccess } from "@/components/event/print/guard";
@@ -59,6 +62,11 @@ export default async function PrintRequestDetailPage({
   ]);
   const payments = paymentRows.map(toPaymentHistoryItem);
   const onsiteTemplate = await onsiteTemplateStatus(request);
+  // Compteur de l'impression sur place (demande principale, à partir du paiement).
+  const onsiteCounter =
+    request.type === "ONSITE" && request.parentRequestId === null && showsOnsiteCounter(request.status)
+      ? (await loadOnsiteRequest(requestId)).counter
+      : null;
   const isOwner = !ctx.isStaff && owner !== null;
   const canAccept = isOwner && request.status === "QUOTED";
   const base = `/api/org/${orgId}/events/${eventId}/print-requests`;
@@ -95,6 +103,8 @@ export default async function PrintRequestDetailPage({
       </div>
 
       {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
+
+      {onsiteCounter ? <OnsiteCounterCard counter={onsiteCounter} /> : null}
 
       <PrintRequestActions
         orgId={orgId}
