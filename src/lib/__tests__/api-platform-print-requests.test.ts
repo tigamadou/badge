@@ -421,6 +421,67 @@ describe("envoi, réouverture, refus, statut", () => {
   });
 });
 
+describe("clôture d'une demande sur place (READY -> COMPLETED)", () => {
+  const onsiteReady = async (printed: number, over: Parameters<typeof makeRequest>[1] = {}) => {
+    const r = await makeRequest(fx, {
+      type: "ONSITE", status: "READY", estimatedQuantity: 200, marginPercent: 10, ...over,
+    });
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.badgeProduct.id, label: "Badge", quantity: 200,
+        unitPrice: 1500, lineTotal: 300000, position: 0, addedBy: "ORGANIZER",
+      },
+    });
+    await prisma.printRequestPrint.createMany({
+      data: Array.from({ length: printed }, () => ({ requestId: r.id, registrationId: null, reprint: false })),
+    });
+    return r;
+  };
+  const complete = (id: string) => call(statusPOST, `${BASE}/${id}/status`, "POST", { requestId: id }, { to: "COMPLETED" });
+
+  it("badges non utilisés : closure CREDIT dans la réponse, crédit créé, activité journalisée", async () => {
+    const r = await onsiteReady(170);
+    const res = await complete(r.id);
+    expect(res.status).toBe(200);
+    expect(res.json.request.status).toBe("COMPLETED");
+    expect(res.json.closure).toEqual({ outcome: "CREDIT", amount: 45000, unusedBadges: 30 });
+    expect(await prisma.orgPrintCredit.findMany({ where: { orgId: fx.org.id } })).toMatchObject([
+      { kind: "EARNED", amount: 45000, quantity: 30, unitPrice: 1500, requestId: r.id },
+    ]);
+    const [log] = await logs(r.id, "PRINT_CREDIT_EARNED");
+    expect(log.details).toEqual({ amount: 45000, unusedBadges: 30 });
+    expect(log.userId).toBe(fx.staffAdmin.id);
+    expect(await logs(r.id, "PRINT_REQUEST_STATUS_CHANGED")).toHaveLength(1);
+  });
+
+  it("badges en trop : closure SUPPLEMENT, demande complémentaire QUOTED, notification de devis, activité journalisée", async () => {
+    const r = await onsiteReady(212);
+    const res = await complete(r.id);
+    expect(res.status).toBe(200);
+    const child = await prisma.printRequest.findFirstOrThrow({ where: { parentRequestId: r.id } });
+    expect(res.json.closure).toEqual({ outcome: "SUPPLEMENT", supplementRequestId: child.id, extraBadges: 12, total: 18000 });
+    expect(child).toMatchObject({ status: "QUOTED", total: 18000 });
+    const [log] = await logs(child.id, "PRINT_REQUEST_SUPPLEMENT_CREATED");
+    expect(log.details).toEqual({ parentRequestId: r.id, extraBadges: 12, total: 18000 });
+    expect(await prisma.orgPrintCredit.count({ where: { orgId: fx.org.id } })).toBe(0);
+    const notes = await prisma.notification.findMany({ where: { type: "PRINT_REQUEST_QUOTED", userId: fx.eventAdmin.id } });
+    expect(notes).toHaveLength(1);
+    expect(notes[0].href).toContain(child.id);
+  });
+
+  it("commande exacte ou demande en amont : pas de crédit, pas de demande complémentaire", async () => {
+    const exact = await onsiteReady(200);
+    expect((await complete(exact.id)).json.closure).toEqual({ outcome: "NONE" });
+    const advance = await onsiteReady(170, { type: "ADVANCE" });
+    const res = await complete(advance.id);
+    expect(res.status).toBe(200);
+    expect(res.json.closure).toBeUndefined();
+    expect(await prisma.orgPrintCredit.count()).toBe(0);
+    expect(await prisma.printRequest.count({ where: { parentRequestId: { not: null } } })).toBe(0);
+    expect(await logs(exact.id, "PRINT_CREDIT_EARNED")).toHaveLength(0);
+  });
+});
+
 describe("template inadapté à l'impression sur place", () => {
   const setList = (ids: string[]) =>
     prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: ids } });

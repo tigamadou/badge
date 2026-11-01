@@ -17,6 +17,7 @@ import {
   paymentProbe,
   recomputeTotal,
   requestBadgeCount,
+  retryOnReferenceCollision,
   snapshotEventTemplate,
 } from "@/lib/print-requests/service";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
@@ -120,6 +121,31 @@ describe("createDraft / nextReference", () => {
       .then(() => null, (e) => e);
     expect(err).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     expect(err.code).toBe("P2002");
+  });
+
+  it("retryOnReferenceCollision : P2002 sur une autre contrainte ([requestId, kind]) n'est pas rejoué", async () => {
+    const other = new Prisma.PrismaClientKnownRequestError("dup", {
+      code: "P2002", clientVersion: "x", meta: { target: "OrgPrintCredit_requestId_kind_key" },
+    });
+    const run = vi.fn().mockRejectedValue(other);
+    await expect(retryOnReferenceCollision(run)).rejects.toBe(other);
+    expect(run).toHaveBeenCalledTimes(1);
+    const noMeta = new Prisma.PrismaClientKnownRequestError("dup", { code: "P2002", clientVersion: "x" });
+    const run2 = vi.fn().mockRejectedValue(noMeta);
+    await expect(retryOnReferenceCollision(run2)).rejects.toBe(noMeta);
+    expect(run2).toHaveBeenCalledTimes(1);
+  });
+
+  it("retryOnReferenceCollision : cible `reference` en nom d'index ou en tableau, rejoué puis abandonné après 3 essais", async () => {
+    for (const target of ["PrintRequest_reference_key", ["reference"]]) {
+      const err = new Prisma.PrismaClientKnownRequestError("dup", { code: "P2002", clientVersion: "x", meta: { target } });
+      const run = vi.fn().mockRejectedValueOnce(err).mockResolvedValueOnce("ok");
+      expect(await retryOnReferenceCollision(run)).toBe("ok");
+      expect(run).toHaveBeenCalledTimes(2);
+      const always = vi.fn().mockRejectedValue(err);
+      await expect(retryOnReferenceCollision(always)).rejects.toBe(err);
+      expect(always).toHaveBeenCalledTimes(3);
+    }
   });
 
   it("propage une erreur qui n'est pas une collision", async () => {
@@ -298,6 +324,13 @@ describe("recomputeTotal / requestBadgeCount", () => {
 });
 
 describe("markPaid", () => {
+  it("une erreur de verrou qui n'est pas NOT_FOUND est relancée telle quelle", async () => {
+    const r = await makeRequest(fx, { status: "ACCEPTED", acceptedTotal: 6000, acceptedVersion: 1 });
+    const boom = new Error("verrou en échec");
+    const tx = { $queryRaw: vi.fn().mockRejectedValue(boom) } as unknown as Prisma.TransactionClient;
+    await expect(markPaid(tx, r.id, {})).rejects.toBe(boom);
+  });
+
   const accepted = () => makeRequest(fx, { status: "ACCEPTED", acceptedTotal: 6000, acceptedVersion: 1 });
 
   it("ACCEPTED (6000) -> true, PAID, paidAt, entrée « Paiement reçu : 6 000 FCFA »", async () => {

@@ -33,7 +33,9 @@ export type ThreadEventType =
   | "REGISTRATIONS_SKIPPED"
   | "ORG_CREDIT_APPLIED"
   | "ORG_CREDIT_SPENT"
-  | "ONSITE_MARGIN_CHANGED";
+  | "ONSITE_MARGIN_CHANGED"
+  | "ONSITE_CREDIT_EARNED"
+  | "ONSITE_SUPPLEMENT_CREATED";
 
 export type ThreadActor = { userId: string | null; side: PrintThreadSide };
 
@@ -113,6 +115,10 @@ export function describeThreadEvent(
       return `Crédit d'impression décompté : ${F(details.amount)}`;
     case "ONSITE_MARGIN_CHANGED":
       return `Marge : ${num(details.from)} % → ${num(details.to)} % (${txt(details.reason)})`;
+    case "ONSITE_CREDIT_EARNED":
+      return `${num(details.quantity)} badges non utilisés : ${F(details.amount)} versés au crédit d'impression`;
+    case "ONSITE_SUPPLEMENT_CREATED":
+      return `Demande complémentaire ${txt(details.reference)} : ${num(details.extraBadges)} badges supplémentaires`;
   }
 }
 

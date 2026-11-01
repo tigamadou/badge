@@ -190,6 +190,24 @@ describe("applyOrgCredit", () => {
   });
 });
 
+describe("réservation concurrente du solde", () => {
+  it("solde 45 000, deux demandes SUBMITTED de 30 000, deux applications de 30 000 : une réussit, l'autre CREDIT_INSUFFICIENT", async () => {
+    const a = await requestOf(30000);
+    const b = await requestOf(30000);
+    const res = await Promise.allSettled([apply(a.id, 30000), apply(b.id, 30000)]);
+    const ok = res.filter((x) => x.status === "fulfilled");
+    const ko = res.filter((x): x is PromiseRejectedResult => x.status === "rejected");
+    expect(ok).toHaveLength(1);
+    expect(ko).toHaveLength(1);
+    expect(ko[0].reason).toMatchObject({ code: "CREDIT_INSUFFICIENT", httpStatus: 409, details: { available: 15000 } });
+    expect(await getAvailableOrgPrintCredit(fx.org.id)).toBe(15000);
+    expect(await getOrgPrintCreditBalance(fx.org.id)).toBe(45000);
+    const reserved = await prisma.printQuoteLine.findMany({ where: { usesOrgCredit: true, removedAt: null } });
+    expect(reserved).toHaveLength(1);
+    expect(reserved[0].lineTotal).toBe(-30000);
+  });
+});
+
 describe("spendOrgCreditForPaidRequest", () => {
   const spend = (requestId: string) => prisma.$transaction((tx) => spendOrgCreditForPaidRequest(tx, requestId));
   const movements = (requestId: string) => prisma.orgPrintCredit.findMany({ where: { requestId } });
