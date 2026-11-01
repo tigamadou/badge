@@ -1,11 +1,28 @@
 import { Prisma } from "@prisma/client";
-import type { PrintRequest } from "@prisma/client";
+import type { PrintQuoteLine, PrintRequest } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { orderRegistrations } from "@/lib/print-sheets/generations";
+import {
+  loadProductForPricing,
+  pruneChoices,
+  snapshotChoices,
+  unitPriceFor,
+  validateChoices,
+  type ChoiceResult,
+  type OptionChoice,
+  type ProductForPricing,
+} from "@/lib/print-catalog/pricing";
 import { PrintRequestError } from "./errors";
 import { chunk, RESERVING_STATUSES } from "./labels";
-import { appendThreadEvent, applyEdit, loadRequest, recomputeTotal } from "./service";
-import type { BadgeSelection, DetailsPatch } from "./inputs";
+import {
+  appendThreadEvent,
+  applyEdit,
+  loadRequest,
+  recomputeTotal,
+  requestBadgeCount,
+} from "./service";
+import type { LineChange } from "./thread";
+import type { BadgeSelection, DetailsPatch, OrganizerProductInput } from "./inputs";
 
 // Taille des paquets pour les lectures et écritures par identifiants (borne les paramètres SQL).
 const ID_CHUNK = 5000;
@@ -266,5 +283,207 @@ export async function updateDetails(input: {
     }
     const fresh = await tx.printRequest.findUniqueOrThrow({ where: { id: updated.id } });
     return { request: fresh, revised: from === "QUOTED" };
+  });
+}
+
+// Traduit un échec de validateChoices en erreur de demande (partagé avec la saisie du staff).
+export function choiceFailureToError(
+  product: Pick<ProductForPricing, "id" | "minQuantity">,
+  result: Extract<ChoiceResult, { ok: false }>,
+): PrintRequestError {
+  if (result.code === "PRODUCT_UNAVAILABLE") {
+    return new PrintRequestError("PRODUCT_UNAVAILABLE", 400, { productId: product.id });
+  }
+  if (result.code === "QUANTITY_BELOW_MINIMUM") {
+    return new PrintRequestError("BELOW_MIN_QUANTITY", 400, {
+      productId: product.id,
+      minQuantity: product.minQuantity,
+    });
+  }
+  return new PrintRequestError("INVALID_CHOICES", 400, {
+    productId: product.id,
+    code: result.code,
+    optionId: result.optionId,
+  });
+}
+
+// Un fichier choisi doit être une pièce de cet évènement (forme stricte, comme les pièces du fil).
+function isEventFileKey(key: string, eventId: string): boolean {
+  const prefix = `print-requests/${eventId}/`;
+  return (
+    key.length <= 300 &&
+    key.startsWith(prefix) &&
+    /^[A-Za-z0-9._-]+$/.test(key.slice(prefix.length)) &&
+    !key.includes("..")
+  );
+}
+
+// Forme canonique (clés triées) pour comparer deux listes de choix, quel que soit l'ordre des clés.
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map((key) => [key, v[key]]))
+      : v,
+  );
+}
+
+function priced(product: ProductForPricing, choices: OptionChoice[], quantity: number): number {
+  const result = validateChoices(product, choices, quantity);
+  if (!result.ok) throw choiceFailureToError(product, result);
+  return unitPriceFor(product, quantity, choices);
+}
+
+function lineData(
+  product: ProductForPricing,
+  choices: OptionChoice[],
+  quantity: number,
+  unitPrice: number,
+  position: number,
+) {
+  return {
+    label: product.name,
+    optionsSnapshot: snapshotChoices(product, choices, quantity) as unknown as Prisma.InputJsonValue,
+    choices: choices as unknown as Prisma.InputJsonValue,
+    quantity,
+    unitPrice,
+    lineTotal: unitPrice * quantity,
+    position,
+  };
+}
+
+// Remplace les produits choisis par l'organisateur : un support BADGE (quantité = nombre de
+// badges) et des accessoires. Les lignes du staff ne sont pas touchées.
+export async function setOrganizerProducts(input: {
+  requestId: string;
+  eventId: string;
+  userId: string;
+  products: OrganizerProductInput[];
+}): Promise<{ lines: PrintQuoteLine[]; total: number; revised: boolean }> {
+  const request = await loadRequest(input.requestId, { eventId: input.eventId });
+  const { products } = input;
+
+  const ids = products.map((p) => p.productId);
+  if (new Set(ids).size !== ids.length) throw new PrintRequestError("VALIDATION", 400);
+  for (const entry of products) {
+    for (const choice of entry.choices) {
+      if (choice.fileKey !== undefined && !isEventFileKey(choice.fileKey, input.eventId)) {
+        throw new PrintRequestError("INVALID_CHOICES", 400, {
+          productId: entry.productId,
+          code: "INVALID_FILE",
+          optionId: choice.optionId,
+        });
+      }
+    }
+  }
+
+  const loaded = await Promise.all(ids.map((id) => loadProductForPricing(id)));
+  const resolved = loaded.map((product, index) => {
+    if (!product) throw new PrintRequestError("PRODUCT_UNAVAILABLE", 400, { productId: ids[index] });
+    return { product, entry: products[index] };
+  });
+  const badges = resolved.filter((r) => r.product.kind === "BADGE");
+  if (badges.length !== 1) throw new PrintRequestError("BADGE_PRODUCT_REQUIRED", 400);
+  const ordered = [...badges, ...resolved.filter((r) => r.product.kind !== "BADGE")];
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${request.id} FOR UPDATE`;
+    const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    const { from } = await applyEdit(tx, current, "ORGANIZER", input.userId);
+
+    const badgeCount = await requestBadgeCount(tx, current);
+    if (badgeCount === 0) throw new PrintRequestError("BADGE_COUNT_REQUIRED", 409);
+
+    const existing = await tx.printQuoteLine.findMany({
+      where: { requestId: request.id, kind: "PRODUCT", addedBy: "ORGANIZER", removedAt: null },
+      orderBy: { position: "asc" },
+    });
+    const byProduct = new Map(existing.map((line) => [line.productId, line]));
+    const changes: LineChange[] = [];
+    const keptIds = new Set<string>();
+
+    for (const [position, { product, entry }] of ordered.entries()) {
+      const derivedQuantity = product.kind === "BADGE" || entry.quantity === null;
+      const line = byProduct.get(product.id);
+      const quantity = product.kind === "BADGE" ? badgeCount : (entry.quantity ?? badgeCount);
+      let choices = entry.choices;
+
+      if (line) {
+        keptIds.add(line.id);
+        const sameChoices = canonical(line.choices ?? []) === canonical(choices);
+        // Quantité non saisie sur une ligne fixée par le staff : l'organisateur ne la conteste pas.
+        const effectiveQuantity = derivedQuantity && line.quantityOverridden ? line.quantity : quantity;
+        if (sameChoices && effectiveQuantity === line.quantity) {
+          if (line.position !== position) {
+            await tx.printQuoteLine.update({ where: { id: line.id }, data: { position } });
+          }
+          continue;
+        }
+        if (line.priceOverridden || line.quantityOverridden) {
+          throw new PrintRequestError("LINE_LOCKED_BY_STAFF", 409, { productId: product.id });
+        }
+        // Mêmes choix : on rouvre la configuration enregistrée, sans ce qui a disparu du catalogue.
+        if (sameChoices) choices = pruneChoices(product, choices);
+        const unitPrice = priced(product, choices, effectiveQuantity);
+        await tx.printQuoteLine.update({
+          where: { id: line.id },
+          data: lineData(product, choices, effectiveQuantity, unitPrice, position),
+        });
+        changes.push({
+          op: "UPDATED",
+          lineId: line.id,
+          label: product.name,
+          from: { quantity: line.quantity, unitPrice: line.unitPrice },
+          to: { quantity: effectiveQuantity, unitPrice },
+        });
+        continue;
+      }
+
+      const unitPrice = priced(product, choices, quantity);
+      const created = await tx.printQuoteLine.create({
+        data: {
+          requestId: request.id,
+          kind: "PRODUCT",
+          productId: product.id,
+          addedBy: "ORGANIZER",
+          ...lineData(product, choices, quantity, unitPrice, position),
+        },
+      });
+      changes.push({
+        op: "ADDED",
+        lineId: created.id,
+        label: product.name,
+        to: { quantity, unitPrice },
+      });
+    }
+
+    for (const line of existing.filter((l) => !keptIds.has(l.id))) {
+      if (current.status === "DRAFT") {
+        await tx.printQuoteLine.delete({ where: { id: line.id } });
+      } else {
+        await tx.printQuoteLine.update({ where: { id: line.id }, data: { removedAt: new Date() } });
+        changes.push({
+          op: "REMOVED",
+          lineId: line.id,
+          label: line.label,
+          from: { quantity: line.quantity, unitPrice: line.unitPrice },
+        });
+      }
+    }
+
+    if (current.status !== "DRAFT" && changes.length > 0) {
+      await appendThreadEvent(
+        tx,
+        request.id,
+        "LINES_CHANGED",
+        { changes },
+        { userId: input.userId, side: "ORGANIZER" },
+      );
+    }
+    const total = await recomputeTotal(tx, request.id);
+    const lines = await tx.printQuoteLine.findMany({
+      where: { requestId: request.id, removedAt: null },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+    });
+    return { lines, total, revised: from === "QUOTED" };
   });
 }
