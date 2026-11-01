@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { CatPill } from "@/components/ui/Labels";
-import { MARK_PRINTED_CHUNK, chunk } from "@/lib/badge-batch";
-import { toastSuccess } from "@/lib/toast";
+import { markInChunks, pollExport } from "@/lib/badge-batch-client";
+import { ActionError, apiErrorMessage, toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { BadgeDocumentView } from "@/components/badge/BadgeDocumentView";
 import { badgeDocumentUrl } from "@/lib/badge-document-client";
@@ -26,7 +26,7 @@ type ExportState =
   | { kind: "idle" }
   | { kind: "pending"; id: string; count: number }
   | { kind: "done"; fileKey: string }
-  | { kind: "failed" };
+  | { kind: "failed"; message: string };
 
 // Impression par lot : liste des badges selectionnes, apercu HTML du badge choisi,
 // export ZIP asynchrone (un PDF par badge, prepare par le worker, sans plafond),
@@ -70,43 +70,55 @@ export function BadgeBatchPanel({
     },
   );
 
-  // Interroge l'export toutes les 3 s tant qu'il est en préparation.
+  // Interroge l'export toutes les 3 s (requêtes jamais simultanées) tant qu'il est en préparation.
   const pendingId = exportState.kind === "pending" ? exportState.id : null;
   useEffect(() => {
     if (!pendingId) return;
-    const timer = setInterval(async () => {
-      try {
-        const res = await fetch(`${base}/badges/exports/${pendingId}`);
-        if (!res.ok) return;
-        const { export: exp } = (await res.json()) as { export: { status: string; fileKey: string | null } };
-        if (exp.status === "DONE" && exp.fileKey) setExportState({ kind: "done", fileKey: exp.fileKey });
-        else if (exp.status === "FAILED") setExportState({ kind: "failed" });
-      } catch {
-        // Réseau instable : on réessaie au prochain tour.
-      }
-    }, EXPORT_POLL_MS);
-    return () => clearInterval(timer);
+    let cancelled = false;
+    void pollExport({
+      fetchStatus: () => fetch(`${base}/badges/exports/${pendingId}`),
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+      cancelled: () => cancelled,
+      intervalMs: EXPORT_POLL_MS,
+    }).then((outcome) => {
+      if (outcome.kind === "done") setExportState({ kind: "done", fileKey: outcome.fileKey });
+      else if (outcome.kind === "failed") setExportState({ kind: "failed", message: outcome.message });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [base, pendingId]);
 
-  // Le marquage part par paquets : la route en accepte 500 au plus.
+  // Identifiants déjà marqués pendant cette session : un nouvel essai n'envoie que le reste
+  // (la route renvoie les mails et notifications à chaque appel, elle n'est pas idempotente).
+  const markedRef = useRef<Set<string>>(new Set());
   const markPrinted = useAsyncAction(
     async () => {
-      let printed = 0;
-      for (const part of chunk(ids, MARK_PRINTED_CHUNK)) {
-        const res = await fetch(`${base}/registrations/print`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ids: part }),
-        });
-        if (!res.ok) throw res;
-        printed += ((await res.json()) as { printed: number }).printed;
+      const todo = ids.filter((id) => !markedRef.current.has(id));
+      const result = await markInChunks(
+        todo,
+        (part) =>
+          fetch(`${base}/registrations/print`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ids: part }),
+          }),
+        (part) => {
+          part.forEach((id) => markedRef.current.add(id));
+          setPrintedIds((prev) => new Set([...prev, ...part]));
+        },
+      );
+      if (result.failure !== undefined) {
+        const detail = await apiErrorMessage(result.failure, "erreur inattendue");
+        throw new ActionError(
+          `${result.markedIds.length} badge(s) marqué(s) imprimé(s) sur ${todo.length} ; le marquage s'est arrêté : ${detail}`,
+        );
       }
-      return printed;
+      return result.printed;
     },
     {
       error: "Le marquage a échoué.",
       onSuccess: (count) => {
-        setPrintedIds(new Set(ids));
         toastSuccess(`${count} badge(s) marqué(s) imprimé(s).`);
       },
     },
@@ -185,7 +197,7 @@ export function BadgeBatchPanel({
               </div>
               {exportState.kind === "failed" && (
                 <p role="alert" className="text-[13px] text-red-700">
-                  La préparation du ZIP a échoué. Réessayez.
+                  {exportState.message}
                 </p>
               )}
               {archived && (
