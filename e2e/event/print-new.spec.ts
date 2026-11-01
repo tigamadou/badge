@@ -10,6 +10,9 @@ import {
   getDb,
   makeEventAdminUser,
   pinTestEventTemplate,
+  readOnsiteSettings,
+  writeOnsiteSettings,
+  type TestOnsiteSettings,
 } from "../helpers/db";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
@@ -40,7 +43,15 @@ async function startAdvanceDraft(page: Page, eventId: string) {
 // sur /print/[requestId]/edit (type, badges, support, accessoires, remise, récapitulatif).
 // Rôle : permission `print.request` (ADMIN de l'évènement ou OWNER/MANAGER de l'organisation).
 test.describe("Event — Nouvelle demande d'impression", () => {
+  // Les templates adaptés à l'impression sur place et la marge par défaut sont des réglages globaux.
+  let onsiteSnapshot: TestOnsiteSettings | null = null;
+
+  test.beforeAll(async () => {
+    onsiteSnapshot = await readOnsiteSettings();
+  });
+
   test.afterAll(async () => {
+    if (onsiteSnapshot) await writeOnsiteSettings(onsiteSnapshot);
     await cleanupE2ETestData();
     await disconnectDb();
   });
@@ -157,5 +168,102 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     await expect
       .poll(async () => (await getDb().printRequestItem.findMany({ where: { requestId } })).map((i) => i.registrationId))
       .toEqual([free]);
+  });
+
+  // --- Impression pendant l'évènement (plan 35) -----------------------------
+
+  test("Template non adapté : l'option « Pendant l'évènement » est désactivée, avec message et lien", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "print-new-onsite-no" });
+    const admin = await makeEventAdminUser({ scope: "print-new-onsite-no", eventId, orgId });
+    await pinTestEventTemplate({ eventId, installedById: admin.id });
+    await writeOnsiteSettings({ onsitePrintTemplateIds: [] });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    await page.getByRole("link", { name: "Impression", exact: true }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
+    await page.getByRole("link", { name: "Nouvelle demande" }).click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
+
+    // L'option est grisée et le message explique pourquoi ; « En amont » reste disponible.
+    await expect(page.getByRole("radio", { name: /Pendant l'évènement/ })).toBeDisabled();
+    await expect(page.getByRole("radio", { name: /En amont/ })).toBeEnabled();
+    await expect(
+      page.getByText("Le modèle de badge de cet évènement n'est pas adapté à l'impression sur place."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continuer" })).toBeDisabled();
+
+    // Le lien mène au choix du modèle de badge de l'évènement.
+    await page.getByRole("link", { name: "Changer le modèle de badge" }).click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/settings/badge$`));
+
+    // Aucune demande n'a été créée.
+    expect(await getDb().printRequest.count({ where: { eventId } })).toBe(0);
+  });
+
+  test("Template adapté : une demande sur place s'envoie avec la marge par défaut (15 %)", async ({ page }) => {
+    const stamp = Date.now();
+    const badgeName = `Support PVC sur place E2E ${stamp}`;
+    const { orgId, eventId } = await createTestEvent({ scope: "print-new-onsite-ok" });
+    const admin = await makeEventAdminUser({ scope: "print-new-onsite-ok", eventId, orgId });
+    const template = await pinTestEventTemplate({ eventId, installedById: admin.id });
+    await writeOnsiteSettings({ onsitePrintTemplateIds: [template.id], onsiteDefaultMarginPercent: 15 });
+    await createTestPrintProduct({ name: badgeName, kind: "BADGE", published: true });
+    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+    // Étape « Type » : l'option est disponible, sans message d'avertissement.
+    await page.getByRole("link", { name: "Impression", exact: true }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
+    await page.getByRole("link", { name: "Nouvelle demande" }).click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
+    await expect(page.getByRole("radio", { name: /Pendant l'évènement/ })).toBeEnabled();
+    await expect(page.getByText("n'est pas adapté à l'impression sur place")).toHaveCount(0);
+    await page.getByRole("radio", { name: /Pendant l'évènement/ }).click();
+    await page.getByRole("button", { name: "Continuer" }).click();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/[^/]+/edit$`));
+    const requestId = page.url().match(/\/print\/([^/]+)\/edit$/)![1];
+    const draft = await getDb().printRequest.findUniqueOrThrow({ where: { id: requestId } });
+    expect(draft.type).toBe("ONSITE");
+    expect(draft.status).toBe("DRAFT");
+
+    // Étape « Badges » : le nombre de badges à imprimer sur place.
+    await page.getByLabel("Nombre de badges à imprimer sur place").fill("120");
+    await page.getByRole("button", { name: "Suivant" }).click();
+    await expect
+      .poll(async () => (await getDb().printRequest.findUniqueOrThrow({ where: { id: requestId } })).estimatedQuantity)
+      .toBe(120);
+
+    // Étape « Support » puis « Accessoires » (aucun).
+    await page.getByRole("button", { name: new RegExp(badgeName) }).click();
+    await page.getByRole("button", { name: "Suivant" }).click();
+    await expect
+      .poll(() => getDb().printQuoteLine.count({ where: { requestId, label: badgeName, removedAt: null } }))
+      .toBe(1);
+    await page.getByRole("button", { name: "Suivant" }).click();
+
+    // Étape « Remise » : lieu, contact et créneau de présence.
+    await page.getByLabel("Lieu d'impression").fill("Palais des congrès, hall B");
+    await page.getByLabel("Nom du contact sur place").fill("Awa Traoré");
+    await page.getByLabel("Téléphone du contact").fill("+22500000000");
+    await page.getByLabel("Date du créneau").fill("2030-01-15");
+    await page.getByLabel("Heure de début").fill("08:00");
+    await page.getByLabel("Heure de fin").fill("18:00");
+    await page.getByRole("button", { name: "Suivant" }).click();
+    await expect
+      .poll(async () => (await getDb().printRequest.findUniqueOrThrow({ where: { id: requestId } })).onsiteLocation)
+      .toBe("Palais des congrès, hall B");
+
+    // Récapitulatif puis envoi.
+    await expect(page.getByRole("cell", { name: badgeName })).toBeVisible();
+    await page.getByRole("button", { name: "Envoyer la demande" }).click();
+    await expect(toast(page, "Demande envoyée.")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/${requestId}$`));
+
+    // Effet persistant : demande envoyée, marge par défaut du moment copiée, template figé.
+    const sent = await getDb().printRequest.findUniqueOrThrow({ where: { id: requestId } });
+    expect(sent.status).toBe("SUBMITTED");
+    expect(sent.type).toBe("ONSITE");
+    expect(sent.marginPercent).toBe(15);
+    expect(sent.badgeTemplateId).toBe(template.id);
+    await expectLastActivity({ type: "PRINT_REQUEST_SUBMITTED", eventId, userId: admin.id, targetId: requestId });
   });
 });

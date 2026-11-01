@@ -233,10 +233,15 @@ test.describe("Event — Detail d'inscription", () => {
     await expect(page.getByText(/^validé$/i)).toBeVisible();
 
     const saved = await getDb().registration.findUnique({ where: { id: reg.id } });
-    await mailpit.expectMail({
+    const mail = await mailpit.expectMail({
       to: saved!.snapshotEmail,
       subjectPattern: /(approuvée|inscription|validée)/i,
     });
+
+    // QR d'accueil (plan 35) : image hébergée (les clients mail bloquent les images data:) et ID lisible.
+    const body = await mailpit.getBody(mail.ID);
+    expect(body.HTML).toContain(`/api/public/qr/${encodeURIComponent(reg.id)}`);
+    expect(body.HTML).toContain("Votre QR d'accueil");
   });
 
   test("Le rejet envoie un mail mentionnant le motif", async ({ page }) => {

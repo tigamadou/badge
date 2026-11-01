@@ -1,4 +1,4 @@
-import { PrismaClient, RegistrationStatus } from "@prisma/client";
+import { Prisma, PrismaClient, RegistrationStatus } from "@prisma/client";
 import { hashSync } from "bcryptjs";
 import { hashToken } from "@/lib/auth-tokens";
 
@@ -107,6 +107,10 @@ const PAID_OR_LATER: TestPrintRequestStatus[] = ["PAID", "IN_PRODUCTION", "READY
 // (IMP-{annee}-NNNN). Items, lignes et messages partent avec l'evenement (cascade) dans le cleanup.
 // Les lignes PRODUCT sont ajoutees par l'organisateur, les autres par le staff ; le total est la somme
 // des lignes. Un devis QUOTED ou plus avance porte la version `quoteVersion` (1 par defaut).
+// Impression sur place (plan 35) : `marginPercent` fixe la marge de la demande ; une ligne PRODUCT peut
+// porter un `productId` (un produit BADGE fait de cette ligne la commande qui compte pour le compteur) ;
+// `prints` pose des impressions au journal (les inscriptions concernees passent « badge imprime », comme
+// le fait le poste ; `reprint: true` journalise une reimpression, qui ne compte pas).
 export async function createTestPrintRequest(opts: {
   eventId: string;
   orgId: string;
@@ -115,7 +119,15 @@ export async function createTestPrintRequest(opts: {
   type?: "ADVANCE" | "ONSITE";
   quoteVersion?: number;
   registrationIds?: string[];
-  lines?: { label: string; quantity: number; unitPrice: number; kind?: "PRODUCT" | "SERVICE" | "DISCOUNT" | "CUSTOM" }[];
+  marginPercent?: number;
+  lines?: {
+    label: string;
+    quantity: number;
+    unitPrice: number;
+    kind?: "PRODUCT" | "SERVICE" | "DISCOUNT" | "CUSTOM";
+    productId?: string;
+  }[];
+  prints?: { registrationId: string; reprint?: boolean }[];
 }): Promise<{ id: string; reference: string }> {
   const prisma = db();
   const type = opts.type ?? "ADVANCE";
@@ -144,6 +156,7 @@ export async function createTestPrintRequest(opts: {
             onsiteSchedule: [{ date: "2030-01-15", from: "08:00", to: "18:00" }],
           }),
       total,
+      marginPercent: opts.marginPercent ?? null,
       quoteVersion,
       submittedAt: opts.status === "DRAFT" ? null : now,
       quotedAt: quoted ? now : null,
@@ -169,6 +182,7 @@ export async function createTestPrintRequest(opts: {
         return {
           requestId: request.id,
           kind,
+          productId: l.productId ?? null,
           label: l.label,
           quantity: l.quantity,
           unitPrice: l.unitPrice,
@@ -177,6 +191,21 @@ export async function createTestPrintRequest(opts: {
           addedBy: kind === "PRODUCT" ? ("ORGANIZER" as const) : ("STAFF" as const),
         };
       }),
+    });
+  }
+  const prints = opts.prints ?? [];
+  if (prints.length > 0) {
+    await prisma.printRequestPrint.createMany({
+      data: prints.map((p) => ({
+        requestId: request.id,
+        registrationId: p.registrationId,
+        printedById: opts.createdById,
+        reprint: p.reprint ?? false,
+      })),
+    });
+    await prisma.registration.updateMany({
+      where: { id: { in: prints.map((p) => p.registrationId) } },
+      data: { badgePrinted: true, badgePrintedAt: now },
     });
   }
   return request;
@@ -217,15 +246,18 @@ export async function createTestPrintPayment(opts: {
   return { id: payment.id, fedapayTransactionId };
 }
 
-// Epingle sur l'evenement un template installe jetable (famille `e2e-`, nettoye par cleanupE2ETestData),
-// pour que l'envoi d'une demande ne depende pas du template par defaut de la base de dev.
-export async function pinTestEventTemplate(opts: { eventId: string; installedById: string }): Promise<{ id: string }> {
-  const prisma = db();
-  const row = await prisma.installedBadgeTemplate.create({
+// Cree un template installe jetable (famille `e2e-`, nettoye par cleanupE2ETestData). `label` permet de le
+// retrouver dans une liste partagee avec les templates de la base de dev.
+export async function createTestInstalledTemplate(opts: {
+  installedById: string;
+  label?: string;
+}): Promise<{ id: string; label: string }> {
+  const label = opts.label ?? "Badge E2E impression";
+  return db().installedBadgeTemplate.create({
     data: {
       family: `e2e-print-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
       version: 1,
-      label: "Badge E2E impression",
+      label,
       description: "",
       pages: 1,
       pageWidthPx: 320,
@@ -233,7 +265,7 @@ export async function pinTestEventTemplate(opts: { eventId: string; installedByI
       layout: {
         formatVersion: 3,
         family: "e2e-print",
-        label: "Badge E2E impression",
+        label,
         description: "",
         category: "badge",
         page: { widthPx: 320, heightPx: 460, count: 1 },
@@ -245,10 +277,46 @@ export async function pinTestEventTemplate(opts: { eventId: string; installedByI
       formatVersion: 3,
       installedById: opts.installedById,
     },
-    select: { id: true },
+    select: { id: true, label: true },
   });
-  await prisma.event.update({ where: { id: opts.eventId }, data: { badgeTemplateId: row.id } });
-  return row;
+}
+
+// Epingle sur l'evenement un template installe jetable, pour que l'envoi d'une demande ne depende pas
+// du template par defaut de la base de dev.
+export async function pinTestEventTemplate(opts: { eventId: string; installedById: string }): Promise<{ id: string }> {
+  const row = await createTestInstalledTemplate({ installedById: opts.installedById });
+  await db().event.update({ where: { id: opts.eventId }, data: { badgeTemplateId: row.id } });
+  return { id: row.id };
+}
+
+export type TestOnsiteSettings = {
+  onsitePrintTemplateIds: string[] | null;
+  onsitePrinterNote: string | null;
+  onsiteDefaultMarginPercent: number;
+};
+
+// Lit les reglages « impression sur place » de la plateforme (etat GLOBAL partage : a restaurer en afterAll).
+export async function readOnsiteSettings(): Promise<TestOnsiteSettings> {
+  const row = await db().platformSettings.findUnique({ where: { id: "singleton" } });
+  return {
+    onsitePrintTemplateIds: (row?.onsitePrintTemplateIds as string[] | null | undefined) ?? null,
+    onsitePrinterNote: row?.onsitePrinterNote ?? null,
+    onsiteDefaultMarginPercent: row?.onsiteDefaultMarginPercent ?? 10,
+  };
+}
+
+// Ecrit les reglages « impression sur place » (cree le singleton au besoin). Sert au seed et a la restauration.
+export async function writeOnsiteSettings(settings: Partial<TestOnsiteSettings>): Promise<void> {
+  const data = {
+    ...(settings.onsitePrintTemplateIds !== undefined
+      ? { onsitePrintTemplateIds: settings.onsitePrintTemplateIds ?? Prisma.JsonNull }
+      : {}),
+    ...(settings.onsitePrinterNote !== undefined ? { onsitePrinterNote: settings.onsitePrinterNote } : {}),
+    ...(settings.onsiteDefaultMarginPercent !== undefined
+      ? { onsiteDefaultMarginPercent: settings.onsiteDefaultMarginPercent }
+      : {}),
+  };
+  await db().platformSettings.upsert({ where: { id: "singleton" }, create: { id: "singleton", ...data }, update: data });
 }
 
 export async function cleanupE2ETestData(): Promise<void> {
