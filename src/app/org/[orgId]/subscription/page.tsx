@@ -94,10 +94,11 @@ export default async function OrgSubscriptionPage({
 
       {!limits.active && (
         <Alert tone="warn">
-          <Icon name="alert-triangle" size={16} /> Votre abonnement n&apos;est pas actif. La création
-          d&apos;événements et les inscriptions sont bloquées.{" "}
+          <Icon name="alert-triangle" size={16} /> Votre abonnement n&apos;est pas actif : la création
+          d&apos;événements et l&apos;accès à certaines pages sont limités. Les événements en cours
+          restent ouverts. Vous pouvez renouveler ci-dessous. En cas de difficulté,{" "}
           <a href="mailto:contact@badge.app" className="font-medium underline">
-            Contactez le support
+            contactez le support
           </a>
           .
         </Alert>
@@ -142,7 +143,7 @@ export default async function OrgSubscriptionPage({
             orgId={orgId}
             plans={catalog.map((p) => ({ ...p, price: p.price as number }))}
             currentPlanId={sub?.planId ?? null}
-            currentPrice={sub?.plan.price ?? 0}
+            currentPrice={limits.active ? (sub?.plan.price ?? 0) : 0}
             scheduledPlanId={sub?.scheduledPlanId ?? null}
             canPay={canPay}
           />

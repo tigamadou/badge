@@ -1,15 +1,14 @@
 import { redirect, notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { getApprovedPhotoUrl } from "@/lib/approved-photo";
 import { hasOrgRole } from "@/lib/auth-helpers";
-import { resolveOrgLimits } from "@/lib/subscription";
+import { getOrgAccess } from "@/lib/org-access";
+import { can } from "@/lib/subscription-rights";
 import { OrgShell } from "@/components/admin/OrgShell";
-import { isSubscriptionPath } from "@/lib/subscription-path";
-import { SubscriptionBlockedNotice } from "@/components/admin/SubscriptionBlockedNotice";
+import { OrgAccessGate } from "@/components/admin/OrgAccessGate";
 
 export default async function OrgLayout({
   params,
@@ -58,14 +57,12 @@ export default async function OrgLayout({
   // atteignent ce point (staff redirige plus haut), donc la membership existe.
   const orgRole = ctx.orgMemberships.find((m) => m.orgId === orgId)?.role ?? "AUDITOR";
 
-  // Sans abonnement actif, l'organisation ne peut rien faire : tout l'espace est
-  // remplace par un ecran bloquant, SAUF l'onglet Abonnement (lecture seule) pour
-  // que l'org puisse consulter son statut et ses dates.
-  const { active } = await resolveOrgLimits(orgId);
-  const pathname = (await headers()).get("x-pathname") ?? "";
-  const onSubscriptionTab = isSubscriptionPath(pathname, orgId);
-  const content =
-    active || onSubscriptionTab ? children : <SubscriptionBlockedNotice orgId={orgId} />;
+  // Selon les droits de l'abonnement (réglage plateforme), l'espace peut être remplacé
+  // par un écran bloquant. Ce layout n'est pas re-rendu lors d'une navigation douce :
+  // il ne calcule que le droit, et OrgAccessGate (client) décide d'après le pathname
+  // courant. L'onglet Abonnement et la liste des évènements restent toujours accessibles.
+  // La redirection de /events/new reste dans sa page, rendue à chaque navigation.
+  const canAccessOrgSpace = can(await getOrgAccess(orgId), "ACCESS_ORG_SPACE");
 
   return (
     <OrgShell
@@ -75,7 +72,9 @@ export default async function OrgLayout({
       orgRole={orgRole}
       photoUrl={photoUrl}
     >
-      {content}
+      <OrgAccessGate orgId={orgId} canAccessOrgSpace={canAccessOrgSpace}>
+        {children}
+      </OrgAccessGate>
     </OrgShell>
   );
 }

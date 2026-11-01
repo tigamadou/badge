@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Tag } from "@/components/ui/Labels";
+import { RoleBadge } from "@/components/ui/Labels";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
@@ -73,7 +73,7 @@ export default function BadgeTemplatePicker({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {templates.map((tpl) => {
           const isCurrent = currentValue === tpl.id;
           const isEffective = effectiveId === tpl.id;
@@ -92,7 +92,7 @@ export default function BadgeTemplatePicker({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-slate-900">{tpl.label}</h3>
-                  {isCurrent && <Tag icon="check">Sélectionné</Tag>}
+                  {isCurrent && <RoleBadge tone="green">✅ Sélectionné</RoleBadge>}
                 </div>
                 <p className="mt-1 text-xs text-slate-400">
                   Format {tpl.pageSize.width} × {tpl.pageSize.height} · {tpl.pages} page{tpl.pages > 1 ? "s" : ""}
@@ -104,6 +104,7 @@ export default function BadgeTemplatePicker({
                   onClick={() => save.run(tpl.id)}
                   disabled={pending || isCurrent}
                   data-testid={`select-${tpl.id}`}
+                  hidden={isCurrent}
                 >
                   {isCurrent ? "Sélectionné" : "Sélectionner"}
                 </Button>

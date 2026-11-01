@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
-import { subscriptionDatesForPlan, DEFAULT_PLAN_NAME } from "@/lib/subscription";
+import { computeSubscriptionDates, DEFAULT_PLAN_NAME } from "@/lib/subscription";
 import { sendUserInvitation } from "@/lib/mail";
 import { notifyOrgCreated, notifyOrgMembershipAdded } from "@/lib/notifications/triggers";
 
@@ -180,7 +180,7 @@ export const POST = withStaffAuth(
               orgId: org.id,
               planId: defaultPlan.id,
               status: "ACTIVE",
-              ...subscriptionDatesForPlan(defaultPlan),
+              ...computeSubscriptionDates(defaultPlan.period),
             },
           })
         : null;

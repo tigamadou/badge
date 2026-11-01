@@ -4,9 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
 import { hasOrgRole } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { Icon } from "@/components/ui/Icon";
+import { CreateEventButton } from "@/components/admin/CreateEventButton";
 import { formatEventPeriod } from "@/lib/format-date";
 import { EventArchiveActions } from "./EventArchiveActions";
+import { getOrgAccess } from "@/lib/org-access";
+import { can } from "@/lib/subscription-rights";
 import { TableFrame } from "@/components/ui/TableFrame";
 
 export default async function EventsListPage({
@@ -19,6 +21,8 @@ export default async function EventsListPage({
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
   const canManage = ctx ? hasOrgRole(ctx, orgId, "MANAGER") : false;
+  const access = await getOrgAccess(orgId);
+  const canCreate = can(access, "CREATE_EVENT");
   const events = await prisma.event.findMany({
     where: { orgId },
     orderBy: { date: "desc" },
@@ -42,12 +46,7 @@ export default async function EventsListPage({
           <h1 className="text-xl font-semibold text-slate-900">Événements</h1>
           <p className="mt-0.5 text-sm text-slate-400">Les événements de votre organisation</p>
         </div>
-        <Link
-          href={`/org/${orgId}/events/new`}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
-        >
-          <Icon name="plus" size={16} /> Créer un événement
-        </Link>
+        <CreateEventButton orgId={orgId} canCreate={canCreate} subscriptionActive={access.active} />
       </div>
 
       <TableFrame>

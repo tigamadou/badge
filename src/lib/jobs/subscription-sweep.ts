@@ -20,7 +20,7 @@ function logError(step: string, err: unknown): void {
   console.error(`[subscription-sweep] ${step}`, err);
 }
 
-// Échéances : un abonnement ACTIVE échu est réglé (bascule vers le plan programmé ou free).
+// Échéances : un abonnement ACTIVE échu passe à EXPIRED ou bascule vers le plan programmé.
 async function settleDue(now: Date): Promise<number> {
   const due = await prisma.subscription.findMany({
     where: { status: "ACTIVE", endDate: { lte: now } },

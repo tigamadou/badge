@@ -1,11 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   resolveOrgLimits,
   assertCanCreateEvent,
   assertCanRegister,
-  subscriptionDatesForPlan,
-  DEFAULT_PLAN_NAME,
 } from "@/lib/subscription";
 
 async function makeOrgWithPlan(opts: {
@@ -165,7 +164,7 @@ describe("assertCanRegister", () => {
       maxParticipantsPerEvent: 5,
     });
     const event = await prisma.event.create({
-      data: { orgId: org.id, title: "E", slug: "r3-evt", location: "x", date: new Date() },
+      data: { orgId: org.id, title: "E", slug: "r3-evt", location: "x", date: new Date(Date.now() - 10 * 86_400_000) },
     });
     await expect(assertCanRegister(event.id)).rejects.toMatchObject({
       code: "SUBSCRIPTION_INACTIVE",
@@ -185,22 +184,91 @@ describe("assertCanRegister", () => {
   });
 });
 
+// --- Droits selon l'abonnement (matrice de la plateforme) ---
 
-describe("subscriptionDatesForPlan", () => {
-  const from = new Date("2026-01-01T00:00:00.000Z");
+async function setRights(value: unknown) {
+  await prisma.platformSettings.upsert({
+    where: { id: "singleton" },
+    update: { subscriptionRights: value as never },
+    create: { id: "singleton", subscriptionRights: value as never },
+  });
+}
 
-  it("plan free : sans echeance (endDate null), startDate = from", () => {
-    const { startDate, endDate } = subscriptionDatesForPlan(
-      { name: DEFAULT_PLAN_NAME, period: "MONTHLY" },
-      from,
-    );
-    expect(startDate).toEqual(from);
-    expect(endDate).toBeNull();
+const DAY = 86_400_000;
+
+// PlatformSettings n'est pas vidé entre les tests : on remet les droits à neutre (la ligne reste).
+afterEach(async () => {
+  await prisma.platformSettings.upsert({
+    where: { id: "singleton" },
+    update: { subscriptionRights: Prisma.DbNull },
+    create: { id: "singleton" },
+  });
+});
+
+async function makeEvent(orgId: string, slug: string, date: Date, endDate: Date | null = null) {
+  return prisma.event.create({
+    data: { orgId, title: "E", slug, location: "x", date, endDate },
+  });
+}
+
+describe("assertCanRegister : droits selon l'abonnement", () => {
+  it("expiré + évènement en cours : passe", async () => {
+    const org = await makeOrgWithPlan({ slug: "ra1", status: "EXPIRED", maxEvents: 5 });
+    const event = await makeEvent(org.id, "ra1-evt", new Date(Date.now() + DAY));
+    await expect(assertCanRegister(event.id)).resolves.toBeUndefined();
   });
 
-  it("plan payant mensuel : endDate = from + 30 jours", () => {
-    const { startDate, endDate } = subscriptionDatesForPlan({ name: "Pro", period: "MONTHLY" }, from);
-    expect(startDate).toEqual(from);
-    expect(endDate).toEqual(new Date("2026-01-31T00:00:00.000Z"));
+  it("expiré + évènement terminé : SUBSCRIPTION_INACTIVE", async () => {
+    const org = await makeOrgWithPlan({ slug: "ra2", status: "EXPIRED", maxEvents: 5 });
+    const event = await makeEvent(org.id, "ra2-evt", new Date(Date.now() - 10 * DAY));
+    await expect(assertCanRegister(event.id)).rejects.toMatchObject({ code: "SUBSCRIPTION_INACTIVE" });
+  });
+
+  it("expiré + évènement archivé : SUBSCRIPTION_INACTIVE", async () => {
+    const org = await makeOrgWithPlan({ slug: "ra2b", status: "EXPIRED", maxEvents: 5 });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "E", slug: "ra2b-evt", location: "x", date: new Date(Date.now() + DAY), archived: true },
+    });
+    await expect(assertCanRegister(event.id)).rejects.toMatchObject({ code: "SUBSCRIPTION_INACTIVE" });
+  });
+
+  it("expiré + RECEIVE_REGISTRATIONS.inactive = false : refus même en cours", async () => {
+    await setRights({ RECEIVE_REGISTRATIONS: { inactive: false } });
+    const org = await makeOrgWithPlan({ slug: "ra3", status: "EXPIRED", maxEvents: 5 });
+    const event = await makeEvent(org.id, "ra3-evt", new Date(Date.now() + DAY));
+    await expect(assertCanRegister(event.id)).rejects.toMatchObject({ code: "SUBSCRIPTION_INACTIVE" });
+  });
+
+  it("actif + RECEIVE_REGISTRATIONS.active = false : refus", async () => {
+    await setRights({ RECEIVE_REGISTRATIONS: { active: false } });
+    const org = await makeOrgWithPlan({ slug: "ra4", maxEvents: 5 });
+    const event = await makeEvent(org.id, "ra4-evt", new Date(Date.now() + DAY));
+    await expect(assertCanRegister(event.id)).rejects.toMatchObject({ code: "SUBSCRIPTION_INACTIVE" });
+  });
+});
+
+describe("assertCanCreateEvent : droits selon l'abonnement", () => {
+  it("expiré : refus par défaut", async () => {
+    const org = await makeOrgWithPlan({ slug: "ca1", status: "EXPIRED", maxEvents: 5 });
+    await expect(assertCanCreateEvent(org.id)).rejects.toMatchObject({ code: "SUBSCRIPTION_INACTIVE" });
+  });
+
+  it("expiré + CREATE_EVENT.inactive = true : accepté", async () => {
+    await setRights({ CREATE_EVENT: { inactive: true } });
+    const org = await makeOrgWithPlan({ slug: "ca2", status: "EXPIRED", maxEvents: 5 });
+    await expect(assertCanCreateEvent(org.id)).resolves.toBeUndefined();
+  });
+
+  it("expiré + CREATE_EVENT.inactive = true : le quota maxEvents s'applique toujours", async () => {
+    await setRights({ CREATE_EVENT: { inactive: true } });
+    const org = await makeOrgWithPlan({ slug: "ca3", status: "EXPIRED", maxEvents: 1 });
+    await makeEvent(org.id, "ca3-evt", new Date(Date.now() + DAY));
+    await expect(assertCanCreateEvent(org.id)).rejects.toMatchObject({ code: "EVENT_LIMIT" });
+  });
+
+  it("actif + CREATE_EVENT.active = false : refus", async () => {
+    await setRights({ CREATE_EVENT: { active: false } });
+    const org = await makeOrgWithPlan({ slug: "ca4", maxEvents: 5 });
+    await expect(assertCanCreateEvent(org.id)).rejects.toMatchObject({ code: "SUBSCRIPTION_INACTIVE" });
   });
 });

@@ -37,10 +37,20 @@ async function withSession(user: {
   vi.mocked(getServerSession).mockResolvedValue({ user } as never);
 }
 
-async function seedEventBundle(slug: string) {
+// Par defaut l'organisation a un abonnement ACTIF : la garde de resoumission ne depend pas
+// de la date (en dur) de l'evenement. `withSubscription: false` laisse le test en creer un.
+async function seedEventBundle(slug: string, opts: { withSubscription?: boolean } = {}) {
   const org = await prisma.organization.create({
     data: { name: "Org", slug: `org-${slug}` },
   });
+  if (opts.withSubscription !== false) {
+    const plan = await prisma.plan.create({
+      data: { name: `plan-seed-${slug}`, maxEvents: null, maxParticipantsPerEvent: null },
+    });
+    await prisma.subscription.create({
+      data: { orgId: org.id, planId: plan.id, status: "ACTIVE", endDate: new Date(Date.now() + 365 * 86_400_000) },
+    });
+  }
   const event = await prisma.event.create({
     data: {
       orgId: org.id,
@@ -365,6 +375,96 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
     // La registration reste inchangee (toujours REJECTED).
     const untouched = await prisma.registration.findUnique({ where: { id: reg.id } });
     expect(untouched?.status).toBe("REJECTED");
+  });
+
+  describe("garde d'abonnement a la resoumission", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    async function setupRejected(slug: string, eventDate: Date, maxParticipantsPerEvent: number | null) {
+      const me = await createCompleteUser(`${slug}@v2-11-acctreg-resub.test`);
+      const { org, event, category } = await seedEventBundle(slug, { withSubscription: false });
+      await prisma.event.update({ where: { id: event.id }, data: { date: eventDate } });
+      const plan = await prisma.plan.create({
+        data: { name: `plan-${slug}`, maxEvents: null, maxParticipantsPerEvent },
+      });
+      // Abonnement echu : droits « inactif » (RECEIVE_REGISTRATIONS valable si evenement en cours).
+      await prisma.subscription.create({
+        data: { orgId: org.id, planId: plan.id, status: "EXPIRED", endDate: new Date(Date.now() - 86_400_000) },
+      });
+      const reg = await createRegistration({
+        id: `REG-${slug}`,
+        userId: me.id,
+        eventId: event.id,
+        categoryId: category.id,
+        status: "REJECTED",
+        email: me.email,
+      });
+      await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
+      return { me, event, category, reg };
+    }
+
+    async function callResubmit(id: string) {
+      const { POST } = await import("@/app/api/account/registrations/[id]/resubmit/route");
+      return POST(
+        new NextRequest(`http://localhost/api/account/registrations/${id}/resubmit`, { method: "POST" }),
+        { params: Promise.resolve({ id }) },
+      );
+    }
+
+    it("returns 403 SUBSCRIPTION_INACTIVE when expired and the event is over", async () => {
+      const { reg } = await setupRejected("acctreg-resub-over", new Date("2020-01-01"), null);
+      const res = await callResubmit(reg.id);
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.code).toBe("SUBSCRIPTION_INACTIVE");
+      expect(json.error).toBe("Inscriptions fermées.");
+      const untouched = await prisma.registration.findUnique({ where: { id: reg.id } });
+      expect(untouched?.status).toBe("REJECTED");
+    });
+
+    it("resubmits when expired but the event is still ongoing", async () => {
+      const { reg } = await setupRejected("acctreg-resub-ongoing", new Date(Date.now() + 86_400_000), null);
+      const res = await callResubmit(reg.id);
+      expect(res.status).toBe(200);
+      const updated = await prisma.registration.findUnique({ where: { id: reg.id } });
+      expect(updated?.status).toBe("PENDING");
+    });
+
+    it("returns 429 PARTICIPANT_LIMIT when the event is full (the rejected registration is not counted)", async () => {
+      const { reg, event, category } = await setupRejected(
+        "acctreg-resub-full",
+        new Date(Date.now() + 86_400_000),
+        1,
+      );
+      const other = await createCompleteUser("other@v2-11-acctreg-resub.test");
+      await createRegistration({
+        id: "REG-acctreg-resub-full-other",
+        userId: other.id,
+        eventId: event.id,
+        categoryId: category.id,
+        status: "PENDING",
+        email: other.email,
+      });
+      const res = await callResubmit(reg.id);
+      expect(res.status).toBe(429);
+      const json = await res.json();
+      expect(json.code).toBe("PARTICIPANT_LIMIT");
+      expect(json.error).toBe("Inscriptions complètes.");
+    });
+
+    it("rethrows an unexpected error raised by the subscription check", async () => {
+      const { reg } = await setupRejected("acctreg-resub-boom", new Date(Date.now() + 86_400_000), null);
+      const original = prisma.event.findUnique.bind(prisma.event);
+      const spy = vi.spyOn(prisma.event, "findUnique");
+      spy.mockImplementation(((args: never) => {
+        const a = args as { select?: { orgId?: boolean; archived?: boolean } };
+        if (a.select?.archived) return Promise.reject(new Error("boom-subscription"));
+        return original(args);
+      }) as never);
+      await expect(callResubmit(reg.id)).rejects.toThrow("boom-subscription");
+    });
   });
 
   describe("unexpected prisma / defensive failures", () => {

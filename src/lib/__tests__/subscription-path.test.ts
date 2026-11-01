@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSubscriptionPath } from "@/lib/subscription-path";
+import { isAlwaysAllowedOrgPath, isSubscriptionPath } from "@/lib/subscription-path";
 
 describe("isSubscriptionPath", () => {
   it("accepte le chemin exact", () => {
@@ -16,5 +16,27 @@ describe("isSubscriptionPath", () => {
   });
   it("refuse une chaîne vide", () => {
     expect(isSubscriptionPath("", "o1")).toBe(false);
+  });
+});
+
+describe("isAlwaysAllowedOrgPath", () => {
+  it("accepte l'onglet abonnement et sa page de retour", () => {
+    expect(isAlwaysAllowedOrgPath("/org/o1/subscription", "o1")).toBe(true);
+    expect(isAlwaysAllowedOrgPath("/org/o1/subscription/return", "o1")).toBe(true);
+  });
+  it("accepte la liste des évènements, avec ou sans slash final", () => {
+    expect(isAlwaysAllowedOrgPath("/org/o1/events", "o1")).toBe(true);
+    expect(isAlwaysAllowedOrgPath("/org/o1/events/", "o1")).toBe(true);
+  });
+  it("refuse la création d'évènement et les autres pages", () => {
+    expect(isAlwaysAllowedOrgPath("/org/o1/events/new", "o1")).toBe(false);
+    expect(isAlwaysAllowedOrgPath("/org/o1/members", "o1")).toBe(false);
+  });
+  it("refuse la liste d'une autre organisation et un préfixe collé", () => {
+    expect(isAlwaysAllowedOrgPath("/org/o2/events", "o1")).toBe(false);
+    expect(isAlwaysAllowedOrgPath("/org/o1/eventsX", "o1")).toBe(false);
+  });
+  it("refuse une chaîne vide", () => {
+    expect(isAlwaysAllowedOrgPath("", "o1")).toBe(false);
   });
 });

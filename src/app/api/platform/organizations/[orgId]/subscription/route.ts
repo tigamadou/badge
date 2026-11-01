@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
-import { subscriptionDatesForPlan } from "@/lib/subscription";
+import { computeSubscriptionDates } from "@/lib/subscription";
 import { notifySubscriptionChanged } from "@/lib/notifications/triggers";
 
 // La periode est portee par le PLAN : elle pilote les dates de l'abonnement
@@ -42,8 +42,8 @@ export const PUT = withStaffAuth<{ orgId: string }>(
     }
 
     const existing = await prisma.subscription.findUnique({ where: { orgId } });
-    // Les dates derivent du plan choisi (free : sans echeance).
-    const { startDate, endDate } = subscriptionDatesForPlan(plan);
+    // Les dates derivent de la periode du plan choisi (free : essai de 30 jours).
+    const { startDate, endDate } = computeSubscriptionDates(plan.period);
     const values = {
       planId: data.planId,
       status: data.status,

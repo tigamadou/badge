@@ -22,9 +22,14 @@ intervention du staff. Il n'y a **pas de renouvellement automatique** : Badge en
 
 ## Décisions (validées par l'utilisateur le 2026-10-28)
 
-1. **Plan `free` sans échéance** : l'abonnement free n'expire jamais (`endDate = null`).
+> La décision 1 a été remplacée le 2026-11-01 ; les mentions de retour sur `free` plus bas relèvent
+> de l'historique de cette décision.
+
+1. ~~**Plan `free` sans échéance** : l'abonnement free n'expire jamais (`endDate = null`).
    Un plan payant non renouvelé **redescend sur `free`** à l'échéance au lieu de bloquer
-   l'espace.
+   l'espace.~~ **Remplacée le 2026-11-01** : `free` est un essai de 30 jours, une seule fois, et
+   l'échéance fait passer l'abonnement à `EXPIRED` (aucun repli sur `free`). Voir
+   [`2026-11-01-30-v4-abonnement-essai-droits.md`](2026-11-01-30-v4-abonnement-essai-droits.md).
 2. **Calcul de la période** : payer le **même plan** prolonge l'abonnement à partir de la fin
    de la période en cours ; payer un **autre plan** (supérieur) bascule **immédiatement**,
    nouvelle période à partir du jour du paiement, **sans prorata**.
@@ -61,15 +66,15 @@ intervention du staff. Il n'y a **pas de renouvellement automatique** : Badge en
   nouveau paiement est refusé (`409 CHANGE_ALREADY_SCHEDULED`).
 - **Overrides staff** (`overrideMax*`) conservés lors des changements automatiques.
 - **Statuts manuels du staff** : un abonnement que le staff a passé en `EXPIRED` ou
-  `CANCELLED` reste bloqué comme aujourd'hui ; seul un abonnement `ACTIVE` arrivé à échéance
-  redescend sur `free`.
+  `CANCELLED` reste bloqué comme aujourd'hui ; ~~seul un abonnement `ACTIVE` arrivé à échéance
+  redescend sur `free`~~ (remplacé le 2026-11-01, voir spec 30) : un abonnement `ACTIVE` arrivé à échéance passe à `EXPIRED`.
 - **Échéance appliquée sans délai** : `resolveOrgLimits` règle l'abonnement échu à la
   lecture (`settleSubscription`), le worker le fait aussi en tâche périodique ; l'espace
-  n'est jamais bloqué entre deux passages.
+  n'est jamais bloqué entre deux passages (remplacé le 2026-11-01, voir spec 30).
 - **Rappels** : J-7 et J-1 avant `endDate`, pour un abonnement `ACTIVE` avec échéance et
   sans changement programmé ; un email au plus par (abonnement, échéance, rappel). À
-  l'échéance, la notification `SUBSCRIPTION_CHANGED` existante prévient du retour sur `free`
-  (ou de l'activation du plan programmé).
+  l'échéance, la notification `SUBSCRIPTION_CHANGED` existante prévient ~~du retour sur `free`~~ (remplacé le 2026-11-01, voir spec 30)
+  de l'expiration (ou de l'activation du plan programmé).
 - **Paiements orphelins** : le worker relit auprès de FedaPay les paiements `PENDING` de
   plus de 15 min (webhook manqué) et passe en `EXPIRED` ceux de plus de 24 h, sauf ceux dont
   la relecture a échoué (hors 404 : transaction disparue). Un paiement `EXPIRED` reste
@@ -99,9 +104,9 @@ intervention du staff. Il n'y a **pas de renouvellement automatique** : Badge en
 - Autre devise que XOF, autre prestataire que FedaPay.
 - Création d'organisation en libre-service (reste une action staff).
 - Mise à jour de la page marketing `PricingCards` (prix codés en dur).
-- Migration de la base de production (les plans ne déploient pas) : le passage des
-  abonnements `free` existants à `endDate = null` est fait par le seed en dev ; une migration
-  versionnée sera nécessaire avant déploiement.
+- Migration de la base de production (les plans ne déploient pas) : ~~le passage des
+  abonnements `free` existants à `endDate = null` est fait par le seed en dev~~ (remplacé le 2026-11-01, voir spec 30) ;
+  une migration versionnée sera nécessaire avant déploiement.
 
 ## Critères d'acceptation
 
@@ -109,7 +114,10 @@ intervention du staff. Il n'y a **pas de renouvellement automatique** : Badge en
 - Un paiement refusé ou abandonné ne change rien.
 - Un webhook rejoué, ou webhook + page de retour, n'applique le paiement qu'une fois.
 - Un webhook à signature invalide est rejeté (400) ; une transaction inconnue répond 200.
-- Une org dont le plan payant arrive à échéance repasse sur `free` et n'est pas bloquée.
+- ~~Une org dont le plan payant arrive à échéance repasse sur `free` et n'est pas bloquée.~~ (remplacé le 2026-11-01, voir spec 30) :
+  à l'échéance d'un plan payant non renouvelé, l'abonnement passe à `EXPIRED` ; la création d'évènement
+  est bloquée, l'espace org est restreint (hors onglet Abonnement et liste des évènements) et les
+  évènements en cours restent exploitables.
 - Les rappels J-7 / J-1 partent une seule fois chacun.
 - Aucune réponse API n'expose la clé secrète ni le secret de webhook FedaPay.
 - Couverture 100 % maintenue sur `src/lib/**` et `src/app/api/**`.

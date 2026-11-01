@@ -86,7 +86,7 @@ Toutes les décisions sont journalisées (`PROFILE_APPROVED`, `PROFILE_REJECTED`
 ## Écrans
 
 - **Plateforme** : `/platform/profiles` (file), `/platform/profiles/[userId]`
-  (décision + historique), onglet « Motifs de rejet » dans `/platform/settings`.
+  (décision + historique), onglet « Motifs de rejet » de `/platform/settings` (`?tab=reasons`).
 - **Participant** : `/account/profile` (bandeau de statut, historique),
   détail d'inscription (alerte de gel).
 - **Organisation** : détail d'inscription (photo, ligne « Identité » portant l'état de

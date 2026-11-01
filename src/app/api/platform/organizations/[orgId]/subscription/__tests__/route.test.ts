@@ -85,7 +85,7 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(365);
   });
 
-  it("assigne le plan free : sans echeance (endDate null)", async () => {
+  it("assigne le plan free : essai de 30 jours (endDate = startDate + 30 j)", async () => {
     const staff = await seedStaff();
     const org = await seedOrg();
     const plan = await prisma.plan.create({
@@ -97,7 +97,7 @@ describe("PUT /api/platform/organizations/[orgId]/subscription", () => {
     expect(res.status).toBe(200);
 
     const sub = await prisma.subscription.findUnique({ where: { orgId: org.id } });
-    expect(sub?.endDate).toBeNull();
+    expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / DAY_MS)).toBe(30);
   });
 
   it("refuse un planId manquant (400)", async () => {

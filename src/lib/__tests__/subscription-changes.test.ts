@@ -105,19 +105,23 @@ describe("expiryTransition", () => {
   const past = new Date("2026-10-31T00:00:00.000Z");
 
   it("non échu → null", () => {
-    expect(expiryTransition(state(std), null, free, now)).toBeNull();
+    expect(expiryTransition(state(std), null, now)).toBeNull();
   });
 
   it("sans échéance → null", () => {
-    expect(expiryTransition(state(free, { endDate: null }), null, free, now)).toBeNull();
+    expect(expiryTransition(state(free, { endDate: null }), null, now)).toBeNull();
   });
 
   it("CANCELLED échu → null", () => {
-    expect(expiryTransition(state(std, { status: "CANCELLED", endDate: past }), null, free, now)).toBeNull();
+    expect(expiryTransition(state(std, { status: "CANCELLED", endDate: past }), null, now)).toBeNull();
+  });
+
+  it("EXPIRED manuel échu → null", () => {
+    expect(expiryTransition(state(std, { status: "EXPIRED", endDate: past }), null, now)).toBeNull();
   });
 
   it("échu + programmé → SCHEDULED depuis l'ancienne endDate", () => {
-    const r = expiryTransition(state(pro, { endDate: past }), std, free, now);
+    const r = expiryTransition(state(pro, { endDate: past }), std, now);
     expect(r).toEqual({
       reason: "SCHEDULED",
       data: {
@@ -129,34 +133,21 @@ describe("expiryTransition", () => {
     });
   });
 
-  it("échu sans programmé → EXPIRED vers free", () => {
-    expect(expiryTransition(state(std, { endDate: past }), null, free, now)).toEqual({
+  it("échu sans programmé → EXPIRED, plan inchangé", () => {
+    const r = expiryTransition(state(std, { endDate: past }), null, now);
+    expect(r).toEqual({
       reason: "EXPIRED",
-      data: { planId: "p-free", startDate: now, endDate: null, scheduledPlanId: null },
+      data: { status: "EXPIRED", scheduledPlanId: null },
     });
-  });
-
-  it("échu sans free → null", () => {
-    expect(expiryTransition(state(std, { endDate: past }), null, null, now)).toBeNull();
+    expect(r!.data).not.toHaveProperty("planId");
   });
 });
 
 describe("settleSubscription", () => {
-  async function setup(
-    slug: string,
-    opts: { withFree?: boolean; scheduled?: boolean; daysAgo?: number } = {},
-  ) {
-    const withFree = opts.withFree ?? true;
+  async function setup(slug: string, opts: { scheduled?: boolean; daysAgo?: number } = {}) {
     const org = await prisma.organization.create({ data: { name: slug, slug } });
     const owner = await prisma.user.create({ data: { email: `${slug}@x.test`, password: "x", name: "O" } });
     await prisma.orgMembership.create({ data: { orgId: org.id, userId: owner.id, role: "OWNER" } });
-    const freePlan = withFree
-      ? await prisma.plan.upsert({
-          where: { name: "free" },
-          update: {},
-          create: { name: "free", maxEvents: 1, maxParticipantsPerEvent: 10 },
-        })
-      : null;
     const paid = await prisma.plan.create({
       data: { name: `Standard-${slug}`, price: 15000, maxEvents: 50, maxParticipantsPerEvent: 500 },
     });
@@ -173,29 +164,40 @@ describe("settleSubscription", () => {
         scheduledPlanId: sched?.id ?? null,
       },
     });
-    return { org, owner, freePlan, paid, sched, sub };
+    return { org, owner, paid, sched, sub };
   }
 
-  it("org échue → free, 1 log auto, 1 notification pour l'OWNER", async () => {
-    const { org, owner, freePlan, sub } = await setup("st1");
-    expect(await settleSubscription(org.id)).toBe(true);
+  it("org échue sans programmation → EXPIRED, plan inchangé, 1 log auto, 1 notification pour l'OWNER", async () => {
+    const { org, owner, paid, sub } = await setup("st1");
+    const findFirst = vi.spyOn(prisma.plan, "findFirst");
+    try {
+      expect(await settleSubscription(org.id)).toBe(true);
+      expect(findFirst).not.toHaveBeenCalled();
+    } finally {
+      findFirst.mockRestore();
+    }
     const after = await prisma.subscription.findUniqueOrThrow({ where: { id: sub.id } });
-    expect(after.planId).toBe(freePlan!.id);
-    expect(after.endDate).toBeNull();
+    expect(after.status).toBe("EXPIRED");
+    expect(after.planId).toBe(paid.id);
+    expect(after.scheduledPlanId).toBeNull();
     const logs = await prisma.activityLog.findMany({ where: { orgId: org.id, type: "SUBSCRIPTION_UPDATED" } });
     expect(logs).toHaveLength(1);
     expect(JSON.stringify(logs[0].details)).toContain('"auto":true');
+    expect(JSON.stringify(logs[0].details)).toContain('"reason":"EXPIRED"');
     const notifs = await prisma.notification.findMany({
       where: { type: "SUBSCRIPTION_CHANGED", userId: owner.id },
     });
     expect(notifs).toHaveLength(1);
+    expect(notifs[0].body).toContain("expiré");
+    expect(notifs[0].body).not.toContain("free");
   });
 
-  it("plan programmé → bascule dessus", async () => {
+  it("plan programmé → bascule dessus, status inchangé", async () => {
     const { org, sched, sub } = await setup("st2", { scheduled: true });
     expect(await settleSubscription(org.id)).toBe(true);
     const after = await prisma.subscription.findUniqueOrThrow({ where: { id: sub.id } });
     expect(after.planId).toBe(sched!.id);
+    expect(after.status).toBe("ACTIVE");
     expect(after.scheduledPlanId).toBeNull();
     expect(after.endDate!.getTime()).toBeGreaterThan(Date.now() - 12 * 86400000);
   });
@@ -212,49 +214,67 @@ describe("settleSubscription", () => {
     expect(await settleSubscription(org.id)).toBe(false);
   });
 
-  it("échu sans plan free → inchangé (bloqué)", async () => {
-    const { org } = await setup("st5", { withFree: false });
-    expect(await settleSubscription(org.id)).toBe(false);
+  it("EXPIRED ou CANCELLED manuel → aucune écriture", async () => {
+    for (const status of ["EXPIRED", "CANCELLED"] as const) {
+      const { org, sub } = await setup(`st5-${status}`);
+      await prisma.subscription.update({ where: { id: sub.id }, data: { status } });
+      const updateMany = vi.spyOn(prisma.subscription, "updateMany");
+      try {
+        expect(await settleSubscription(org.id)).toBe(false);
+        expect(updateMany).not.toHaveBeenCalled();
+      } finally {
+        updateMany.mockRestore();
+      }
+      const after = await prisma.subscription.findUniqueOrThrow({ where: { id: sub.id } });
+      expect(after.status).toBe(status);
+    }
   });
 
-  it("programmé mais aussi échu → enchaîne vers free, deux transitions loggées", async () => {
-    const { org, freePlan, sub } = await setup("st7", { scheduled: true, daysAgo: 40 });
-    expect(await settleSubscription(org.id)).toBe(true);
+  it("programmé mais aussi échu → bascule puis EXPIRED, deux écritures loggées", async () => {
+    const { org, sched, sub } = await setup("st7", { scheduled: true, daysAgo: 40 });
+    const updateMany = vi.spyOn(prisma.subscription, "updateMany");
+    try {
+      expect(await settleSubscription(org.id)).toBe(true);
+      expect(updateMany).toHaveBeenCalledTimes(2);
+    } finally {
+      updateMany.mockRestore();
+    }
     const after = await prisma.subscription.findUniqueOrThrow({ where: { id: sub.id } });
-    expect(after.planId).toBe(freePlan!.id);
+    expect(after.planId).toBe(sched!.id);
+    expect(after.status).toBe("EXPIRED");
     const logs = await prisma.activityLog.findMany({ where: { orgId: org.id, type: "SUBSCRIPTION_UPDATED" } });
     expect(logs).toHaveLength(2);
   });
 
-  it("resolveOrgLimits : programmé + échu depuis longtemps → active sur free", async () => {
-    const { org, freePlan } = await setup("st8", { scheduled: true, daysAgo: 40 });
+  it("resolveOrgLimits : programmé + échu depuis longtemps → inactif, plan programmé conservé", async () => {
+    const { org, sched } = await setup("st8", { scheduled: true, daysAgo: 40 });
     expect(await resolveOrgLimits(org.id)).toMatchObject({
-      maxEvents: freePlan!.maxEvents,
-      active: true,
+      maxEvents: sched!.maxEvents,
+      active: false,
     });
   });
 
   it("un log en échec ne fait pas échouer settleSubscription (transition appliquée)", async () => {
-    const { org, freePlan, sub } = await setup("st9");
+    const { org, sub } = await setup("st9");
     const spy = vi.spyOn(activityLog, "logActivity").mockRejectedValueOnce(new Error("boom"));
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      await expect(resolveOrgLimits(org.id)).resolves.toMatchObject({ active: true });
+      await expect(resolveOrgLimits(org.id)).resolves.toMatchObject({ active: false });
       expect(err).toHaveBeenCalled();
     } finally {
       spy.mockRestore();
       err.mockRestore();
     }
     const after = await prisma.subscription.findUniqueOrThrow({ where: { id: sub.id } });
-    expect(after.planId).toBe(freePlan!.id);
+    expect(after.status).toBe("EXPIRED");
   });
 
-  it("resolveOrgLimits d'une org échue → active et limites de free", async () => {
-    const { org, freePlan } = await setup("st6");
+  it("resolveOrgLimits d'une org échue → inactive, limites du plan conservé", async () => {
+    const { org, paid } = await setup("st6");
     expect(await resolveOrgLimits(org.id)).toEqual({
-      maxEvents: freePlan!.maxEvents,
-      maxParticipantsPerEvent: freePlan!.maxParticipantsPerEvent,
-      active: true,
+      maxEvents: paid.maxEvents,
+      maxParticipantsPerEvent: paid.maxParticipantsPerEvent,
+      active: false,
     });
   });
 });

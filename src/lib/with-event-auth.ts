@@ -10,6 +10,8 @@ import {
   requireEventPermission,
   getEffectiveEventRole,
 } from "@/lib/auth-guards";
+import { loadOrgAccess } from "@/lib/subscription-access";
+import { can } from "@/lib/subscription-rights";
 import type { EventPermission } from "@/lib/auth-helpers";
 import type { EffectiveEventRole } from "@/types/auth";
 
@@ -34,6 +36,8 @@ export type WithEventAuthOptions = {
   requireRegistrationOpen?: boolean;
 };
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 export function withEventAuth(
   options: WithEventAuthOptions,
   handler: (req: NextRequest, ctx: EventAuthCtx, extra: RouteParams) => Promise<Response>,
@@ -52,7 +56,14 @@ export function withEventAuth(
     // Verifie la coherence URL : orgId du path doit matcher l'orgId reel de l'event.
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, orgId: true, archived: true, registrationOpen: true },
+      select: {
+        id: true,
+        orgId: true,
+        archived: true,
+        registrationOpen: true,
+        date: true,
+        endDate: true,
+      },
     });
     if (!event || event.orgId !== orgId) {
       // 404 plutot que 403 pour ne pas leaker l'existence d'un event sur une autre org.
@@ -86,6 +97,18 @@ export function withEventAuth(
         return NextResponse.json({ error: err.code }, { status: err.httpStatus });
       }
       throw err;
+    }
+
+    // Écriture sur un évènement : soumise au droit MANAGE_ONGOING_EVENTS (le staff n'est pas concerné).
+    // Les lectures (GET/HEAD/OPTIONS) ne sont jamais refusées.
+    if (!session.user.isStaff && !SAFE_METHODS.has(req.method.toUpperCase())) {
+      const access = await loadOrgAccess(orgId);
+      if (!can(access, "MANAGE_ONGOING_EVENTS", event)) {
+        return NextResponse.json(
+          { error: "SUBSCRIPTION_INACTIVE", code: "SUBSCRIPTION_INACTIVE" },
+          { status: 403 },
+        );
+      }
     }
 
     const effectiveRole = await getEffectiveEventRole(session.user.id, eventId);

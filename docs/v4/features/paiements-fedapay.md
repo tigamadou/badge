@@ -39,6 +39,11 @@ Voir « Changements de plan » dans [`abonnements.md`](abonnements.md) : meme pl
 plan plus cher = bascule immediate sans prorata, plan moins cher = programme a l'echeance.
 Montants : entiers en FCFA (`Plan.price` de 100 a 10 000 000), devise `XOF` uniquement.
 
+> **Decision 1 remplacee le 2026-11-01** : le plan `free` n'est plus sans echeance. C'est un essai de
+> 30 jours, une seule fois ; a l'echeance l'abonnement passe a `EXPIRED` (plus de repli sur `free`), sauf
+> plan programme. Voir [`abonnements.md`](abonnements.md) et la
+> [spec du 2026-11-01](../specs/2026-11-01-30-v4-abonnement-essai-droits.md).
+
 ## Statuts d'un `Payment`
 
 `PENDING` → `APPROVED` | `DECLINED` | `CANCELED` | `EXPIRED`. Une fois sorti de `PENDING`, un
@@ -87,7 +92,7 @@ URL du webhook a declarer dans FedaPay : `${NEXTAUTH_URL}/api/webhooks/fedapay`.
 `runSubscriptionSweep` (`src/lib/jobs/subscription-sweep.ts`), toutes les heures
 (`SUBSCRIPTION_SWEEP_INTERVAL_MS`) dans `worker-loop.ts`, a cote des purges :
 
-1. regle les abonnements `ACTIVE` echus (plan programme, sinon `free`) ;
+1. regle les abonnements `ACTIVE` echus (plan programme, sinon passage a `EXPIRED`). Les abonnements de production deja echus mais restes `ACTIVE` passent a `EXPIRED` au premier passage ;
 2. envoie les rappels J-7 et J-1 (un seul palier par passage, une seule fois par echeance) ;
 3. relit aupres de FedaPay les paiements `PENDING` de plus de 15 min ;
 4. passe en `EXPIRED` les paiements `PENDING` de plus de 24 h, sauf ceux dont la relecture FedaPay
@@ -102,7 +107,7 @@ URL du webhook a declarer dans FedaPay : `${NEXTAUTH_URL}/api/webhooks/fedapay`.
    confirmation, limites `Standard` appliquees.
 3. Numero de test en echec : aucun changement. Renouvellement : `endDate` + une periode.
 4. Webhook : via tunnel, ou rejeu manuel depuis le tableau de bord FedaPay → `200`, aucun double effet.
-5. Echeance : `endDate` dans le passe en BDD de dev → plan `free`, espace non bloque.
+5. Echeance : `endDate` dans le passe en BDD de dev → abonnement `EXPIRED` (ou plan programme active), espace org bloque hors onglet Abonnement et liste des evenements.
 6. Rappel : `endDate` a +6 j, redemarrer `worker` → un email J-7 dans Mailpit.
 
 ## Validation sandbox (2026-10-28)
@@ -127,10 +132,8 @@ URL du webhook a declarer dans FedaPay : `${NEXTAUTH_URL}/api/webhooks/fedapay`.
 - **Formes de reponse** : resolues en sandbox (voir « Validation sandbox »). Reste a valider le
   corps du webhook (`entity.id`) une fois l'URL de webhook de preprod disponible.
 - **Migration Prisma versionnee** obligatoire avant tout deploiement de production (le plan ne
-  deploie pas ; en dev `make db-push` + seed). Elle doit aussi executer
-  `UPDATE Subscription SET endDate = NULL` pour les abonnements du plan `free` : sinon chaque
-  organisation free existante est « reglee » free→free a la premiere lecture, avec une entree
-  d'audit et des notifications.
+  deploie pas ; en dev `make db-push` + seed). Aucune migration de donnees : les abonnements `free`
+  gardent leur echeance de 30 jours.
 - **Ne pas changer `FEDAPAY_ENVIRONMENT` tant que des paiements sont `PENDING`** : leurs
   transactions n'existent pas dans l'autre environnement (relecture 404).
 

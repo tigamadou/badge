@@ -170,10 +170,13 @@ echu ; existant consultable ; bypass staff audite.
 de `startDate`/`endDate` a l'assignation (`computeSubscriptionDates`) ; le staff
 ne saisit plus de dates.
 
-**Blocage** : sans abonnement actif, le layout `org/[orgId]` remplace tout le
-contenu par un ecran bloquant, sauf l'onglet `/subscription` (lecture seule). Le
-pathname arrive via le header `x-pathname` pose par le middleware (Edge, sans
-acces Prisma). Voir [features/abonnements.md](features/abonnements.md).
+**Blocage** : le layout `org/[orgId]` lit les droits de l'abonnement. L'onglet
+`/subscription` et la liste des evenements restent toujours accessibles ; le reste
+de l'espace org suit le droit `ACCESS_ORG_SPACE` (sinon un ecran bloquant le remplace),
+et les evenements en cours restent exploitables (`MANAGE_ONGOING_EVENTS`). Le
+layout ne calcule que `canAccessOrgSpace` ; le composant client `OrgAccessGate`
+(`usePathname`) decide d'apres le pathname courant d'afficher la page ou l'ecran
+bloquant, y compris en navigation douce. Voir [features/abonnements.md](features/abonnements.md).
 
 > Migration : le retrait des colonnes `quota*` est destructif. En dev via
 > `make db-push` ; une migration Prisma versionnee est requise avant tout

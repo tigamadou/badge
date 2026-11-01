@@ -173,7 +173,9 @@ describe("messages", () => {
     const endDate = new Date("2026-11-04T12:00:00.000Z");
     const j7 = subscriptionExpiringMessage({ orgId: "o1", orgName: "Acme", planName: "Pro", daysBefore: 7, endDate });
     expect(j7.title).toBe("Votre abonnement Pro expire dans 7 jours");
-    expect(j7.body).toContain("plan gratuit");
+    expect(j7.body).toContain("l'abonnement expire");
+    expect(j7.body).toContain("onglet Abonnement");
+    expect(j7.body).not.toContain("gratuit");
     expect(j7.body).toContain("04/11/2026");
     expect(j7.href).toBe("/org/o1/subscription");
     expect(j7.primaryLabel).toBe("Renouveler");

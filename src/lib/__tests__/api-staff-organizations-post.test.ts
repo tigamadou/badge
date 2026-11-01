@@ -365,7 +365,7 @@ describe("POST /api/platform/organizations", () => {
       return { res, json: (await res.json()) as { org: { id: string } } };
     }
 
-    it("rattache la nouvelle organisation au plan par defaut, sans echeance", async () => {
+    it("rattache la nouvelle organisation au plan par defaut, avec une echeance a 30 jours", async () => {
       const staff = await makeStaff("STAFF_ADMIN");
       const plan = await prisma.plan.upsert({
         where: { name: DEFAULT_PLAN_NAME },
@@ -380,7 +380,8 @@ describe("POST /api/platform/organizations", () => {
       expect(sub?.planId).toBe(plan.id);
       expect(sub?.status).toBe("ACTIVE");
       expect(sub?.overrideMaxEvents).toBeNull();
-      expect(sub?.endDate).toBeNull();
+      expect(sub?.endDate).not.toBeNull();
+      expect(Math.round((sub!.endDate!.getTime() - sub!.startDate.getTime()) / 86_400_000)).toBe(30);
 
       const { resolveOrgLimits } = await import("@/lib/subscription");
       expect((await resolveOrgLimits(json.org.id)).active).toBe(true);

@@ -495,7 +495,7 @@ describe("POST /api/events/[slug]/register", () => {
     });
     await prisma.subscription.create({ data: { orgId: org.id, planId: plan.id, status: "CANCELLED" } });
     const event = await prisma.event.create({
-      data: { orgId: org.id, title: "Event", slug: "re-inactive", location: "Paris", date: new Date("2026-12-15"), registrationOpen: true },
+      data: { orgId: org.id, title: "Event", slug: "re-inactive", location: "Paris", date: new Date("2026-01-15"), registrationOpen: true },
     });
     const category = await prisma.category.create({ data: { eventId: event.id, name: "Cat", color: "#000000", number: 1 } });
 

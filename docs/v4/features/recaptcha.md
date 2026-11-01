@@ -7,7 +7,7 @@ oublié** (`/forgot-password`), **réinitialisation du mot de passe** (`/reset-p
 
 ## Configuration
 
-Dans les **paramètres de la plateforme** (`/platform/settings`, section reCAPTCHA) : interrupteur
+Dans les **paramètres de la plateforme** (`/platform/settings?tab=security`, onglet « Sécurité ») : interrupteur
 `recaptchaEnabled`, clé du site (`recaptchaSiteKey`) et clé secrète (`recaptchaSecretKey`, SUPER_ADMIN
 uniquement, jamais renvoyée par l'API). Ce sont des clés **v3** créées dans la console Google, avec le
 domaine de l'environnement dans la liste des domaines autorisés.

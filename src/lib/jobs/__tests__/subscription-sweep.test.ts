@@ -41,15 +41,16 @@ describe("runSubscriptionSweep", () => {
     expect(REMINDER_DAYS).toEqual([7, 1]);
   });
 
-  it("abonnement échu → repasse sur free", async () => {
-    const { org, free, pro } = await seed();
+  it("abonnement échu → passe à EXPIRED, plan inchangé", async () => {
+    const { org, pro } = await seed();
     await prisma.subscription.create({
       data: { orgId: org.id, planId: pro.id, status: "ACTIVE", endDate: new Date(now.getTime() - H) },
     });
     const res = await runSubscriptionSweep(now);
     expect(res.settled).toBe(1);
     const sub = await prisma.subscription.findUniqueOrThrow({ where: { orgId: org.id } });
-    expect(sub.planId).toBe(free.id);
+    expect(sub.status).toBe("EXPIRED");
+    expect(sub.planId).toBe(pro.id);
   });
 
   it("endDate à 6 j → rappel J-7 une seule fois sur deux passages", async () => {

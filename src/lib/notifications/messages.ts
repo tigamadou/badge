@@ -238,7 +238,7 @@ export function subscriptionExpiringMessage(a: {
   const delay = a.daysBefore === 1 ? "demain" : `dans ${a.daysBefore} jours`;
   return {
     title: `Votre abonnement ${a.planName} expire ${delay}`,
-    body: `L'abonnement ${a.planName} de ${a.orgName} arrive à échéance le ${a.endDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })}. À l'échéance, l'organisation repasse sur le plan gratuit.`,
+    body: `L'abonnement ${a.planName} de ${a.orgName} arrive à échéance le ${a.endDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })}. À l'échéance, l'abonnement expire et il n'est plus possible de créer de nouvel évènement. Pour le renouveler, rendez-vous dans l'onglet Abonnement.`,
     href: subscriptionHref(a.orgId, "org"),
     primaryLabel: "Renouveler",
     links: [],

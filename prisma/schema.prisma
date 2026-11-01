@@ -461,6 +461,9 @@ model PlatformSettings {
   // vide signifie « aucune racine definie » : resolveTemplate retombe alors sur la
   // famille `default`, dont le seed garantit l'existence.
   badgeTemplateId    String  @default("")
+  // v4 : droits selon l'etat de l'abonnement (actif / inactif), `{ [droit]: { active, inactive } }`.
+  // Null = valeurs par defaut ; lecture tolerante via parseRights (src/lib/subscription-rights.ts).
+  subscriptionRights Json?
 }
 
 // Note (2026-05-31) : le modele OrgSettings a ete supprime. Ses champs

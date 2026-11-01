@@ -262,11 +262,6 @@ async function main() {
   });
   // Prix de demo pour un Standard existant sans prix (ne touche pas un prix ajuste par le staff).
   await prisma.plan.updateMany({ where: { name: "Standard", price: null }, data: { price: 15000 } });
-  // Rattrapage : les organisations free existantes n'ont plus d'echeance (idempotent).
-  await prisma.subscription.updateMany({
-    where: { plan: { name: DEFAULT_PLAN_NAME }, endDate: { not: null }, status: { not: "CANCELLED" } },
-    data: { endDate: null, status: "ACTIVE" },
-  });
   console.log(`Plans par defaut (${DEFAULT_PLAN_NAME}, Standard) prets.`);
 
   // 1b. Catalogue de motifs de rejet (v4 plan 08). Idempotent via findFirst sur le libelle.

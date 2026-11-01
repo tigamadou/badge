@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { notifySubscriptionChanged } from "@/lib/notifications/triggers";
-import {
-  DEFAULT_PLAN_NAME,
-  PERIOD_DAYS,
-  subscriptionDatesForPlan,
-} from "@/lib/subscription";
+import { PERIOD_DAYS, computeSubscriptionDates } from "@/lib/subscription";
 import type { SubscriptionPeriod, SubscriptionStatus } from "@prisma/client";
 
 export type PlanLite = {
@@ -57,7 +53,7 @@ export function planChangeFor(
     data: {
       planId: target.id,
       status: "ACTIVE",
-      ...subscriptionDatesForPlan(target, now),
+      ...computeSubscriptionDates(target.period, now),
       scheduledPlanId: null,
     },
   });
@@ -76,22 +72,25 @@ export function planChangeFor(
   return immediate();
 }
 
-// Transition a appliquer quand l'echeance est depassee : plan programme, sinon
-// retour sur free, sinon rien (abonnement bloque, comportement historique).
+// Transition a appliquer quand l'echeance est depassee : bascule vers le plan
+// programme, sinon passage a EXPIRED (le plan reste inchange, pas de repli sur free).
 export function expiryTransition(
   sub: SubscriptionState,
   scheduled: PlanLite | null,
-  free: PlanLite | null,
   now: Date,
 ):
   | {
-      reason: "SCHEDULED" | "EXPIRED";
+      reason: "SCHEDULED";
       data: {
         planId: string;
         startDate: Date;
-        endDate: Date | null;
+        endDate: Date;
         scheduledPlanId: null;
       };
+    }
+  | {
+      reason: "EXPIRED";
+      data: { status: "EXPIRED"; scheduledPlanId: null };
     }
   | null {
   if (sub.status !== "ACTIVE" || sub.endDate === null || sub.endDate > now) {
@@ -102,18 +101,12 @@ export function expiryTransition(
       reason: "SCHEDULED",
       data: {
         planId: scheduled.id,
-        ...subscriptionDatesForPlan(scheduled, sub.endDate),
+        ...computeSubscriptionDates(scheduled.period, sub.endDate),
         scheduledPlanId: null,
       },
     };
   }
-  if (free) {
-    return {
-      reason: "EXPIRED",
-      data: { planId: free.id, startDate: now, endDate: null, scheduledPlanId: null },
-    };
-  }
-  return null;
+  return { reason: "EXPIRED", data: { status: "EXPIRED", scheduledPlanId: null } };
 }
 
 const PLAN_LITE_SELECT = { id: true, name: true, period: true, price: true } as const;
@@ -142,19 +135,12 @@ export async function settleSubscription(
   });
   let state: SubscriptionState = sub;
   let scheduled: PlanLite | null = sub.scheduledPlan;
-  let free: PlanLite | null | undefined;
   let applied = false;
 
   // Un plan programme peut etre lui-meme echu (abonnement perime de longue date) :
-  // on enchaine, au plus 3 transitions.
+  // on enchaine, au plus 3 transitions ; la boucle s'arrete apres EXPIRED.
   for (let i = 0; i < 3; i += 1) {
-    if (!scheduled && free === undefined) {
-      free = await prisma.plan.findFirst({
-        where: { name: DEFAULT_PLAN_NAME, archived: false },
-        select: PLAN_LITE_SELECT,
-      });
-    }
-    const transition = expiryTransition(state, scheduled, free ?? null, now);
+    const transition = expiryTransition(state, scheduled, now);
     if (!transition) break;
 
     const { count } = await prisma.subscription.updateMany({
@@ -169,15 +155,19 @@ export async function settleSubscription(
         type: "SUBSCRIPTION_UPDATED",
         orgId,
         targetId: sub.id,
-        details: { auto: true, reason: transition.reason, planId: transition.data.planId },
+        details: {
+          auto: true,
+          reason: transition.reason,
+          planId: transition.reason === "SCHEDULED" ? transition.data.planId : state.planId,
+        },
       });
       await notifySubscriptionChanged(orgId, null);
     } catch (error) {
       console.error("[subscription] journal/notification de transition en echec", error);
     }
 
-    const next = scheduled ?? free;
-    state = { ...state, ...transition.data, plan: next!, status: "ACTIVE" };
+    if (transition.reason === "EXPIRED") break;
+    state = { ...state, ...transition.data, plan: scheduled!, status: "ACTIVE" };
     scheduled = null;
   }
   return applied;
