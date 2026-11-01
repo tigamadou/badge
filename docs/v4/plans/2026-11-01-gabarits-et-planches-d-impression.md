@@ -24,18 +24,19 @@ dépendance), Vitest 4 (BDD réelle), Playwright.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Schéma, dépendance `pdf-lib`, libellés d'activité | [ ] | | |
-| 2 | Géométrie : `computeSheetLayout` | [ ] | | |
-| 3 | Placements et recto-verso : `planPlacements` | [ ] | | |
-| 4 | Composition PDF : `composeSheets` | [ ] | | |
-| 5 | API des gabarits | [ ] | | |
-| 6 | Création d'une génération + API + fichiers sensibles | [ ] | | |
-| 7 | Exécution d'une génération dans le worker | [ ] | | |
-| 8 | Écran des gabarits + aperçu SVG + menu « Impression » | [ ] | | |
-| 9 | Écran des générations | [ ] | | |
-| 11 | Export ZIP asynchrone sans limite (organisateur) | [ ] | | exécutée avant la 10 |
-| 10 | E2E et documentation | [ ] | | |
-| — | Vérification finale (lint, typecheck, test, e2e, PDF réel, impression papier) | [ ] | | |
+| 1 | Schéma, dépendance `pdf-lib`, libellés d'activité | [x] | 2026-11-01 | revue validée |
+| 2 | Géométrie : `computeSheetLayout` | [x] | 2026-11-01 | revue validée |
+| 3 | Placements et recto-verso : `planPlacements` | [x] | 2026-11-01 | revue validée |
+| 4 | Composition PDF : `composeSheets` | [x] | 2026-11-01 | revue validée |
+| 5 | API des gabarits | [x] | 2026-11-01 | revue validée |
+| 6 | Création d'une génération + API + fichiers sensibles | [x] | 2026-11-01 | revue validée |
+| 7 | Exécution d'une génération dans le worker | [x] | 2026-11-01 | revue validée |
+| 8 | Écran des gabarits + aperçu SVG + menu « Impression » | [x] | 2026-11-01 | revue validée |
+| 9 | Écran des générations | [x] | 2026-11-01 | revue validée |
+| 11 | Export ZIP asynchrone sans limite (organisateur) | [x] | 2026-11-01 | exécutée avant la 10 |
+| 10 | E2E et documentation | [x] | 2026-11-01 | revue validée |
+| 12 | Sélection de tous les badges sans limite (après relecture finale) | [x] | 2026-11-01 | revue validée |
+| — | Vérification finale (lint, typecheck, test, e2e, PDF réel, impression papier) | [~] | 2026-11-01 | relecture finale + correctifs validés ; lint/typecheck/test/e2e verts ; planche réelle contrôlée à l'écran ; reste le test papier recto-verso (utilisateur) ; trous de couverture antérieurs dans render-badge.ts / types.ts |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Mettez à jour la
 ligne après chaque task validée. En cas d'interruption, passez la ligne à `[~]` et notez
@@ -588,6 +589,44 @@ Modèle d'écran : `src/components/staff/PlanManager.tsx` ; composants `Card`, `
 - [ ] **Step 6 : adapter les e2e existants** du panneau de lot (`e2e/event/…badges…`) qui
   utilisaient le lien `print-zip`.
 - [ ] **Step 7 : commit** — `feat(badges): export zip asynchrone sans limite`.
+
+## Task 12 — Sélection de tous les badges, sans limite (ajoutée après la relecture finale)
+
+> Ajoutée le 2026-11-01 : la relecture finale a montré que la liste des badges de
+> l'organisateur (`GET …/badges`, `take: 200`) n'affiche que 200 inscriptions et n'offre pas de
+> « tout sélectionner » ; la décision 13 (export sans limite) reste donc inatteignable depuis
+> l'écran. Corrige aussi le trou de couverture de `src/app/api/platform/print/sheets/options/route.ts`.
+
+**Files :**
+- Modify : `src/app/api/org/[orgId]/events/[eventId]/badges/route.ts`, la page
+  `/event/[eventId]/badges` et `src/components/event/BadgeListTable.tsx`,
+  `src/app/api/platform/print/sheets/options/route.ts` (tests seulement si possible)
+- Test : tests de la route `badges` (existants, compléter), test de la route `options`, e2e
+  `e2e/event/badges.spec.ts`
+
+**Interfaces :**
+- Produces :
+  - `GET …/badges?filter=all|unprinted|printed&q=&categoryId=&page=&pageSize=` → `{ registrations,
+    total, page, pageSize }` (pageSize 100 par défaut, 500 au plus) ; tri inchangé.
+  - `GET …/badges/ids?filter=…&q=&categoryId=` → `{ ids: string[] }` : **tous** les ids
+    correspondant aux filtres, sans limite (pour « tout sélectionner »), `badge.print`.
+  - `BadgeListTable` : pagination ; case « Tout sélectionner (N) » qui sélectionne les N
+    inscriptions correspondant aux filtres courants via `…/badges/ids` (pas seulement la page
+    affichée) ; compteur de sélection exact ; la sélection traverse les pages ; l'ouverture du lot
+    passe par le transport `?sel=` existant.
+
+- [ ] **Step 1 : tests** — route `badges` : `total` exact avec 250 inscriptions approuvées,
+  pages 1 à 3 de 100, filtres ; route `ids` : 1 200 ids renvoyés sans troncature, filtres
+  respectés, 403 hors `badge.print`, rien d'un autre évènement ; route `options` : couvrir les
+  lignes non couvertes (voir `make test-coverage`).
+- [ ] **Step 2 : lancer** — attendu : FAIL.
+- [ ] **Step 3 : implémenter** routes et écran.
+- [ ] **Step 4 : lancer** — PASS ; `make lint && make typecheck && make test-coverage` : le seuil
+  de 100 % ne doit plus échouer que sur des fichiers non modifiés par la branche
+  (`render-badge.ts`, `types.ts`, trous antérieurs).
+- [ ] **Step 5 : e2e** — « Tout sélectionner » sur un évènement de plus de 100 badges (créé par
+  le helper e2e), ouvrir le lot, le compteur annonce le total, préparer le ZIP.
+- [ ] **Step 6 : commit** — `feat(badges): selection de tous les badges sans limite`.
 
 ## Task 10 — E2E et documentation
 
