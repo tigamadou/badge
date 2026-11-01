@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
 import { PrintRequestWizard } from "@/components/event/print/PrintRequestWizard";
+import { getAvailableOrgPrintCredit } from "@/lib/print-requests/org-credit";
 import { requirePrintAccess } from "@/components/event/print/guard";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function EditPrintRequestPage({
   if (!EDITABLE.includes(request.status) || event.archived || ctx.isStaff) {
     redirect(`/event/${eventId}/print/${requestId}`);
   }
+  const availableCredit = await getAvailableOrgPrintCredit(orgId, requestId);
   return (
     <div className="space-y-4">
       <Link
@@ -34,7 +36,7 @@ export default async function EditPrintRequestPage({
         <Icon name="arrow-left" size={14} /> {request.reference}
       </Link>
       <h1 className="text-xl font-semibold text-slate-900">{`Modifier la demande ${request.reference}`}</h1>
-      <PrintRequestWizard orgId={orgId} eventId={eventId} requestId={requestId} />
+      <PrintRequestWizard orgId={orgId} eventId={eventId} requestId={requestId} availableCredit={availableCredit} />
     </div>
   );
 }

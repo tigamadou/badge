@@ -4,13 +4,19 @@ import { Table } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/Feedback";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { requirePrintAccess } from "@/components/event/print/guard";
+import { OrgPrintCreditCard } from "@/components/print/OrgPrintCreditCard";
+import { getOrgPrintCreditBalance, listOrgPrintCreditMovements } from "@/lib/print-requests/org-credit";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrintRequestsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
-  const { event, ctx } = await requirePrintAccess(eventId, "/print");
+  const { event, ctx, orgId } = await requirePrintAccess(eventId, "/print");
+  const [creditBalance, creditMovements] = await Promise.all([
+    getOrgPrintCreditBalance(orgId),
+    listOrgPrintCreditMovements(orgId),
+  ]);
   const rows = await prisma.printRequest.findMany({
     where: { eventId },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -42,6 +48,7 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
           </Link>
         ) : null}
       </div>
+      <OrgPrintCreditCard balance={creditBalance} movements={creditMovements} />
       {data.length === 0 ? (
         <EmptyState icon="printer" title="Aucune demande d'impression pour cet évènement." />
       ) : (

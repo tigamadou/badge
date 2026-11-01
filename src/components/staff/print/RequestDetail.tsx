@@ -14,7 +14,9 @@ import { toastApiError } from "@/lib/toast";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import type { OnsiteCounter } from "@/lib/print-requests/onsite-counter";
+import { RelatedRequestLinks } from "@/components/print/RelatedRequestLinks";
 import { OnsiteRequestPanel } from "./OnsiteRequestPanel";
+import { RequestCreditPanel, type StaffCreditData } from "./RequestCreditPanel";
 import { QuoteEditor } from "./QuoteEditor";
 import { RequestStatusActions } from "./RequestStatusActions";
 import { StaffThread } from "./StaffThread";
@@ -43,12 +45,18 @@ export function RequestDetail({
   products,
   payments = [],
   onsiteCounter = null,
+  credit = null,
+  parentRequest = null,
+  supplements = [],
 }: {
   requestId: string;
   role: StaffRole;
   products: ProductOption[];
   payments?: PaymentHistoryItem[];
   onsiteCounter?: OnsiteCounter | null;
+  credit?: StaffCreditData | null;
+  parentRequest?: { id: string; reference: string } | null;
+  supplements?: { id: string; reference: string }[];
 }) {
   const router = useRouter();
   const [data, setData] = useState<RequestDetailData | null>(null);
@@ -109,6 +117,12 @@ export function RequestDetail({
         </p>
       </div>
 
+      <RelatedRequestLinks
+        parent={parentRequest}
+        supplements={supplements}
+        hrefOf={(id) => `/platform/print/requests/${id}`}
+      />
+
       {onsiteTemplate === "UNSUITABLE" && <OnsiteTemplateAlert side="STAFF" eventId={event.id} />}
 
       <RequestStatusActions
@@ -119,6 +133,10 @@ export function RequestDetail({
         role={role}
         onChanged={onChanged}
       />
+
+      {credit && (
+        <RequestCreditPanel requestId={requestId} status={request.status} role={role} credit={credit} onChanged={onChanged} />
+      )}
 
       {onsiteCounter && (
         <OnsiteRequestPanel requestId={requestId} status={request.status} role={role} initialCounter={onsiteCounter} />
