@@ -5,6 +5,8 @@ import { Icon } from "@/components/ui/Icon";
 import { Card, CardBody, CardHead } from "@/components/ui/Card";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { QuoteLinesTable } from "@/components/print/QuoteLinesTable";
+import { OnsiteTemplateAlert } from "@/components/print/OnsiteTemplateAlert";
+import { onsiteTemplateStatus } from "@/lib/print-requests/onsite";
 import { PrintThread } from "@/components/print/PrintThread";
 import { PrintRequestActions } from "@/components/event/print/PrintRequestActions";
 import { requirePrintAccess } from "@/components/event/print/guard";
@@ -46,6 +48,7 @@ export default async function PrintRequestDetailPage({
       select: { userId: true },
     }),
   ]);
+  const onsiteTemplate = await onsiteTemplateStatus(request);
   const canAccept = !ctx.isStaff && owner !== null && request.status === "QUOTED";
   const base = `/api/org/${orgId}/events/${eventId}/print-requests`;
   const schedule = Array.isArray(request.onsiteSchedule)
@@ -79,6 +82,8 @@ export default async function PrintRequestDetailPage({
           <div className="text-lg font-semibold tabular-nums text-slate-900">{formatFcfa(request.total)}</div>
         </div>
       </div>
+
+      {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
 
       <PrintRequestActions
         orgId={orgId}

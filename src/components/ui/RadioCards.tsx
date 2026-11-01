@@ -9,7 +9,7 @@ export function RadioCards({
   onChange,
 }: {
   name: string;
-  options: { value: string; title: ReactNode; description?: ReactNode; color?: string }[];
+  options: { value: string; title: ReactNode; description?: ReactNode; color?: string; disabled?: boolean }[];
   value: string | null;
   onChange: (v: string) => void;
 }) {
@@ -23,9 +23,14 @@ export function RadioCards({
             role="radio"
             aria-checked={sel}
             key={o.value}
+            disabled={o.disabled}
             onClick={() => onChange(o.value)}
             className={`relative flex items-start gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors ${
-              sel ? "border-green-600 bg-emerald-50" : "border-slate-200 bg-white hover:border-slate-300"
+              o.disabled
+                ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+                : sel
+                  ? "border-green-600 bg-emerald-50"
+                  : "border-slate-200 bg-white hover:border-slate-300"
             }`}
           >
             {o.color ? <span className="mt-0.5 h-3.5 w-3.5 flex-none rounded" style={{ background: o.color }} /> : null}

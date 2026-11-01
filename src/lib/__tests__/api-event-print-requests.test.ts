@@ -223,6 +223,19 @@ describe("détail et modification", () => {
     expect(body.request.id).toBe(r.id);
   });
 
+  it("GET : onsiteTemplate NOT_APPLICABLE (en amont), OK puis UNSUITABLE (sur place)", async () => {
+    const advance = await makeRequest(fx, { status: "DRAFT" });
+    const get = async (id: string) => (await (await call(detail.GET as Handler, "GET", { requestId: id })).json()).request.onsiteTemplate;
+    expect(await get(advance.id)).toBe("NOT_APPLICABLE");
+    const onsite = await makeRequest(fx, { status: "SUBMITTED", type: "ONSITE", badgeTemplateId: fx.template.id });
+    const setList = (ids: string[]) =>
+      prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: ids } });
+    await setList([fx.template.id]);
+    expect(await get(onsite.id)).toBe("OK");
+    await setList([]);
+    expect(await get(onsite.id)).toBe("UNSUITABLE");
+  });
+
   it("GET : canAccept vrai pour l'OWNER sur QUOTED, faux pour un MANAGER, faux pour le staff", async () => {
     const r = await makeRequest(fx, { status: "QUOTED", quoteVersion: 1 });
     await loginAs(fx.owner);
