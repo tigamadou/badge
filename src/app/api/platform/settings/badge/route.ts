@@ -6,6 +6,8 @@ import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
+import { pinLockedEventTemplates, syncRequestTemplates } from "@/lib/print-requests/template-lock";
+import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
 
 // v2-12 : PATCH platformSettings.badgeTemplateId.
 // Racine de la cascade : NOT NULL en BDD, on refuse null cote validation.
@@ -38,10 +40,16 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "UNKNOWN_TEMPLATE" }, { status: 400 });
   }
 
-  await prisma.platformSettings.update({
-    where: { id: "singleton" },
-    data: { badgeTemplateId },
+  // Les évènements verrouillés gardent leur template : épinglés dans la même transaction.
+  await prisma.$transaction(async (tx) => {
+    await pinLockedEventTemplates({ platform: true }, tx);
+    await tx.platformSettings.update({ where: { id: "singleton" }, data: { badgeTemplateId } });
   });
+
+  const resubmitted = await syncRequestTemplates({ platform: true }, session.user.id);
+  for (const id of resubmitted) {
+    await notifyPrintRequestStatusChanged(id, session.user.id, { organizer: true, staff: true });
+  }
 
   await logActivity({
     type: "PLATFORM_SETTINGS_UPDATED",
