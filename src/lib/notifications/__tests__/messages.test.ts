@@ -18,8 +18,13 @@ import {
   subscriptionExpiringMessage,
   quotaExceededMessage,
   emailFailedMessage,
+  printRequestSubmittedMessage,
+  printRequestQuotedMessage,
+  printRequestMessageMessage,
+  printRequestStatusChangedMessage,
 } from "../messages";
 import type { NotificationContent } from "../types";
+import { formatFcfa } from "@/lib/print-requests/labels";
 
 describe("messages", () => {
   it("registrationCreated", () => {
@@ -235,10 +240,64 @@ describe("messages", () => {
       subscriptionExpiringMessage({ orgId: "o", orgName: "n", planName: "p", daysBefore: 7, endDate: new Date() }),
       quotaExceededMessage({ orgId: "o", orgName: "n", eventId: "e", audience: "platform" }),
       emailFailedMessage({ jobId: "j", kind: "k", recipient: null, attempts: 1 }),
+      printRequestSubmittedMessage({ requestId: "p", reference: "IMP-1", eventTitle: "t", orgName: "o", type: "ADVANCE", badgeCount: 1 }),
+      printRequestQuotedMessage({ requestId: "p", eventId: "e", reference: "IMP-1", eventTitle: "t", version: 1, total: 1 }),
+      printRequestMessageMessage({ requestId: "p", eventId: "e", reference: "IMP-1", authorName: "n", body: "b", toStaff: true }),
+      printRequestStatusChangedMessage({ requestId: "p", eventId: "e", reference: "IMP-1", eventTitle: "t", status: "PAID", toStaff: false }),
     ];
     for (const m of all) {
       expect(m.href).toMatch(/^\/(?!\/)/);
       for (const l of m.links) expect(l.href).toMatch(/^\/(?!\/)/);
     }
+  });
+
+  describe("demandes d'impression", () => {
+    it("printRequestSubmitted", () => {
+      const m = printRequestSubmittedMessage({
+        requestId: "p1", reference: "IMP-2026-0001", eventTitle: "Forum", orgName: "Acme", type: "ONSITE", badgeCount: 12,
+      });
+      expect(m.title).toBe("Nouvelle demande d'impression");
+      expect(m.body).toBe("Acme a envoyé la demande IMP-2026-0001 (pendant l'évènement, 12 badges) pour Forum.");
+      expect(m.href).toBe("/platform/print/requests/p1");
+      expect(m.primaryLabel).toBe("Voir la demande");
+      expect(m.links).toEqual([]);
+    });
+
+    it("printRequestQuoted", () => {
+      const m = printRequestQuotedMessage({
+        requestId: "p1", eventId: "e1", reference: "IMP-2026-0001", eventTitle: "Forum", version: 2, total: 150000,
+      });
+      expect(m.title).toBe("Devis d'impression disponible");
+      expect(m.body).toBe(
+        `Le devis v2 de la demande IMP-2026-0001 (Forum) s'élève à ${formatFcfa(150000)}. Le propriétaire de l'organisation peut l'accepter.`,
+      );
+      expect(m.href).toBe("/event/e1/print/p1");
+      expect(m.primaryLabel).toBe("Voir le devis");
+      expect(m.links).toEqual([]);
+    });
+
+    it("printRequestMessage : lien selon le destinataire, extrait tronqué à 140", () => {
+      const base = { requestId: "p1", eventId: "e1", reference: "IMP-2026-0001", authorName: "Awa" };
+      const long = printRequestMessageMessage({ ...base, body: "x".repeat(200), toStaff: true });
+      expect(long.title).toBe("Nouveau message — IMP-2026-0001");
+      expect(long.body).toBe(`Awa : ${"x".repeat(140)}…`);
+      expect(long.href).toBe("/platform/print/requests/p1");
+      expect(long.primaryLabel).toBe("Répondre");
+      expect(long.links).toEqual([]);
+      const exact = printRequestMessageMessage({ ...base, body: "y".repeat(140), toStaff: false });
+      expect(exact.body).toBe(`Awa : ${"y".repeat(140)}`);
+      expect(exact.href).toBe("/event/e1/print/p1");
+    });
+
+    it("printRequestStatusChanged : lien selon le destinataire", () => {
+      const base = { requestId: "p1", eventId: "e1", reference: "IMP-2026-0001", eventTitle: "Forum", status: "IN_PRODUCTION" as const };
+      const org = printRequestStatusChangedMessage({ ...base, toStaff: false });
+      expect(org.title).toBe("Demande IMP-2026-0001 : en production");
+      expect(org.body).toBe("La demande d'impression IMP-2026-0001 (Forum) est maintenant « En production ».");
+      expect(org.href).toBe("/event/e1/print/p1");
+      expect(org.primaryLabel).toBe("Voir la demande");
+      expect(org.links).toEqual([]);
+      expect(printRequestStatusChangedMessage({ ...base, toStaff: true }).href).toBe("/platform/print/requests/p1");
+    });
   });
 });

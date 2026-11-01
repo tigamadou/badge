@@ -12,6 +12,10 @@ import {
   quotaExceededMessage,
   subscriptionChangedMessage,
   subscriptionExpiringMessage,
+  printRequestMessageMessage,
+  printRequestQuotedMessage,
+  printRequestStatusChangedMessage,
+  printRequestSubmittedMessage,
   profileApprovedMessage,
   profileRejectedMessage,
   profileSubmittedMessage,
@@ -434,5 +438,149 @@ export async function notifyEmailFailed(job: {
         }),
       },
     ]);
+  });
+}
+
+// --- Demandes d'impression (spec 33) ---
+
+const PRINT_REQUEST_SELECT = {
+  id: true,
+  reference: true,
+  type: true,
+  status: true,
+  orgId: true,
+  eventId: true,
+  quoteVersion: true,
+  total: true,
+  estimatedQuantity: true,
+  event: { select: { title: true } },
+  org: { select: { name: true } },
+  _count: { select: { items: true } },
+} as const;
+
+export async function notifyPrintRequestSubmitted(requestId: string, actorId: string): Promise<void> {
+  await withNotificationGuard("print-request-submitted", async () => {
+    const r = await prisma.printRequest.findUnique({ where: { id: requestId }, select: PRINT_REQUEST_SELECT });
+    if (!r) return;
+    await notifyAll([
+      {
+        type: "PRINT_REQUEST_SUBMITTED",
+        scope: "PLATFORM",
+        recipients: { staffMinRole: "STAFF_ADMIN" },
+        actorId,
+        orgId: r.orgId,
+        eventId: r.eventId,
+        content: printRequestSubmittedMessage({
+          requestId: r.id,
+          reference: r.reference,
+          eventTitle: r.event.title,
+          orgName: r.org.name,
+          type: r.type,
+          // Une demande sur place n'a pas d'items : on retombe sur la quantité estimée.
+          badgeCount: r._count.items || r.estimatedQuantity || 0,
+        }),
+      },
+    ]);
+  });
+}
+
+// Le propriétaire (seul à pouvoir accepter) est couvert : OWNER et MANAGER valent ADMIN.
+export async function notifyPrintRequestQuoted(requestId: string, actorId: string): Promise<void> {
+  await withNotificationGuard("print-request-quoted", async () => {
+    const r = await prisma.printRequest.findUnique({ where: { id: requestId }, select: PRINT_REQUEST_SELECT });
+    if (!r) return;
+    await notifyAll([
+      {
+        type: "PRINT_REQUEST_QUOTED",
+        scope: "EVENT",
+        recipients: { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        actorId,
+        orgId: r.orgId,
+        eventId: r.eventId,
+        content: printRequestQuotedMessage({
+          requestId: r.id,
+          eventId: r.eventId,
+          reference: r.reference,
+          eventTitle: r.event.title,
+          version: r.quoteVersion,
+          total: r.total,
+        }),
+      },
+    ]);
+  });
+}
+
+export async function notifyPrintRequestMessage(messageId: string, actorId: string): Promise<void> {
+  await withNotificationGuard("print-request-message", async () => {
+    const m = await prisma.printRequestMessage.findUnique({
+      where: { id: messageId },
+      select: {
+        body: true,
+        side: true,
+        author: { select: { name: true } },
+        request: { select: PRINT_REQUEST_SELECT },
+      },
+    });
+    // Les messages SYSTEM (journal) ne notifient pas.
+    if (!m || m.side === "SYSTEM") return;
+    const r = m.request;
+    const toStaff = m.side === "ORGANIZER";
+    await notifyAll([
+      {
+        type: "PRINT_REQUEST_MESSAGE",
+        scope: toStaff ? "PLATFORM" : "EVENT",
+        recipients: toStaff
+          ? { staffMinRole: "STAFF_SUPPORT" }
+          : { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        actorId,
+        orgId: r.orgId,
+        eventId: r.eventId,
+        content: printRequestMessageMessage({
+          requestId: r.id,
+          eventId: r.eventId,
+          reference: r.reference,
+          authorName: m.author?.name ?? (toStaff ? "L'organisateur" : "Le staff"),
+          body: m.body,
+          toStaff,
+        }),
+      },
+    ]);
+  });
+}
+
+export async function notifyPrintRequestStatusChanged(
+  requestId: string,
+  actorId: string | null,
+  to: { organizer: boolean; staff: boolean },
+): Promise<void> {
+  await withNotificationGuard("print-request-status-changed", async () => {
+    const r = await prisma.printRequest.findUnique({ where: { id: requestId }, select: PRINT_REQUEST_SELECT });
+    if (!r) return;
+    const base = { type: "PRINT_REQUEST_STATUS_CHANGED", actorId, orgId: r.orgId, eventId: r.eventId } as const;
+    const args = {
+      requestId: r.id,
+      eventId: r.eventId,
+      reference: r.reference,
+      eventTitle: r.event.title,
+      status: r.status,
+    };
+    const inputs: NotifyInput[] = [];
+    if (to.organizer) {
+      inputs.push({
+        ...base,
+        scope: "EVENT",
+        recipients: { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        content: printRequestStatusChangedMessage({ ...args, toStaff: false }),
+      });
+    }
+    if (to.staff) {
+      inputs.push({
+        ...base,
+        scope: "PLATFORM",
+        recipients: { staffMinRole: "STAFF_ADMIN" },
+        content: printRequestStatusChangedMessage({ ...args, toStaff: true }),
+      });
+    }
+    await notifyAll(inputs);
   });
 }
