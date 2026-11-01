@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { resolvePaymentReturn, resolvePrintPaymentReturn } from "@/lib/payment-return";
+import { appendThreadEvent } from "@/lib/print-requests/thread";
 import { confirmPayment } from "@/lib/payments";
 import { seedAcceptedPrintRequest } from "./helpers/print-requests";
 
@@ -190,13 +191,18 @@ describe("resolvePrintPaymentReturn", () => {
     });
     return { ...fx, payment };
   }
+  // Contexte de la page : évènement et organisation de la demande.
+  const call = (requestId: string, rawId: string | undefined, over: { eventId?: string; orgId?: string } = {}) =>
+    prisma.printRequest
+      .findUniqueOrThrow({ where: { id: requestId }, select: { eventId: true, orgId: true } })
+      .then((r) => resolvePrintPaymentReturn({ requestId, eventId: r.eventId, orgId: r.orgId, rawId, ...over }));
   const notFound = { outcome: "NOT_FOUND", reference: "", amount: 0 };
 
   it("approuvé → PAID avec la référence et le montant", async () => {
     const t = await seedPrint();
     await prisma.printRequest.update({ where: { id: t.request.id }, data: { reference: "IMP-2026-0042" } });
     fetchMock.mockResolvedValue(txResponse("approved", 150000));
-    expect(await resolvePrintPaymentReturn(t.request.id, "77")).toEqual({
+    expect(await call(t.request.id, "77")).toEqual({
       outcome: "PAID", reference: "IMP-2026-0042", amount: 150000,
     });
   });
@@ -206,14 +212,14 @@ describe("resolvePrintPaymentReturn", () => {
     fetchMock.mockResolvedValue(txResponse("approved", 150000));
     await confirmPayment(77);
     await prisma.printRequest.update({ where: { id: t.request.id }, data: { status: "IN_PRODUCTION" } });
-    expect((await resolvePrintPaymentReturn(t.request.id, "77")).outcome).toBe("PAID");
+    expect((await call(t.request.id, "77")).outcome).toBe("PAID");
   });
 
   it("approuvé tardivement sur une demande QUOTED → UNMATCHED", async () => {
     const t = await seedPrint();
     await prisma.printRequest.update({ where: { id: t.request.id }, data: { status: "QUOTED" } });
     fetchMock.mockResolvedValue(txResponse("approved", 150000));
-    const res = await resolvePrintPaymentReturn(t.request.id, "77");
+    const res = await call(t.request.id, "77");
     expect(res).toMatchObject({ outcome: "UNMATCHED", amount: 150000 });
   });
 
@@ -223,69 +229,112 @@ describe("resolvePrintPaymentReturn", () => {
       where: { id: t.request.id }, data: { status: "PAID", paidAt: new Date(), paidPaymentId: null },
     });
     fetchMock.mockResolvedValue(txResponse("approved", 150000));
-    expect((await resolvePrintPaymentReturn(t.request.id, "77")).outcome).toBe("UNMATCHED");
+    expect((await call(t.request.id, "77")).outcome).toBe("UNMATCHED");
   });
 
   it("refusé → FAILED", async () => {
     const t = await seedPrint();
     fetchMock.mockResolvedValue(txResponse("declined", 150000));
-    expect((await resolvePrintPaymentReturn(t.request.id, "77")).outcome).toBe("FAILED");
+    expect((await call(t.request.id, "77")).outcome).toBe("FAILED");
   });
 
   it("en attente chez FedaPay → PENDING", async () => {
     const t = await seedPrint();
     fetchMock.mockResolvedValue(txResponse("pending", 150000));
-    expect((await resolvePrintPaymentReturn(t.request.id, "77")).outcome).toBe("PENDING");
+    expect((await call(t.request.id, "77")).outcome).toBe("PENDING");
   });
 
   it("paiement EXPIRED encore en attente chez FedaPay → PENDING", async () => {
     const t = await seedPrint();
     await prisma.payment.update({ where: { id: t.payment.id }, data: { status: "EXPIRED" } });
     fetchMock.mockResolvedValue(txResponse("pending", 150000));
-    expect((await resolvePrintPaymentReturn(t.request.id, "77")).outcome).toBe("PENDING");
+    expect((await call(t.request.id, "77")).outcome).toBe("PENDING");
   });
 
   it("retrieveTransaction en erreur → PENDING, erreur journalisée", async () => {
     const t = await seedPrint();
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     fetchMock.mockResolvedValue(new Response("{}", { status: 500 }));
-    const res = await resolvePrintPaymentReturn(t.request.id, "77");
+    const res = await call(t.request.id, "77");
     expect(res).toMatchObject({ outcome: "PENDING", amount: 150000 });
     expect(err).toHaveBeenCalledWith("[return fedapay]", expect.anything());
   });
 
   it("paiement d'une autre demande → NOT_FOUND sans confirmPayment", async () => {
-    const t = await seedPrint();
+    await seedPrint();
     const other = await seedPrint(78);
-    expect(await resolvePrintPaymentReturn(other.request.id, "77")).toEqual(notFound);
-    expect(t.payment.id).toBeTruthy();
+    expect(await call(other.request.id, "77")).toEqual(notFound);
     expect(confirmPayment).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("demande d'un autre évènement ou d'une autre organisation → NOT_FOUND sans appel", async () => {
+    const t = await seedPrint();
+    const o = await seedPrint(80);
+    expect(await call(t.request.id, "77", { eventId: o.event.id })).toEqual(notFound);
+    expect(await call(t.request.id, "77", { orgId: o.org.id })).toEqual(notFound);
+    expect(confirmPayment).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("montant inattendu (DECLINED, raison MISMATCH) → MISMATCH", async () => {
+    const t = await seedPrint();
+    fetchMock.mockResolvedValue(txResponse("approved", 149000));
+    expect(await call(t.request.id, "77")).toMatchObject({ outcome: "MISMATCH", amount: 150000 });
+  });
+
+  it("refus avec une entrée d'un autre paiement ou d'une autre raison → FAILED", async () => {
+    const t = await seedPrint();
+    await appendThreadEvent(prisma, t.request.id, "PAYMENT_FAILED", { paymentId: "autre", reason: "MISMATCH" });
+    fetchMock.mockResolvedValue(txResponse("declined", 150000));
+    expect((await call(t.request.id, "77")).outcome).toBe("FAILED");
+  });
+
+  it("en attente chez FedaPay → PENDING", async () => {
+    const t = await seedPrint();
+    fetchMock.mockResolvedValue(txResponse("pending", 150000));
+    expect((await call(t.request.id, "77")).outcome).toBe("PENDING");
+  });
+
+  it("paiement EXPIRED encore en attente chez FedaPay → PENDING", async () => {
+    const t = await seedPrint();
+    await prisma.payment.update({ where: { id: t.payment.id }, data: { status: "EXPIRED" } });
+    fetchMock.mockResolvedValue(txResponse("pending", 150000));
+    expect((await call(t.request.id, "77")).outcome).toBe("PENDING");
+  });
+
+  it("retrieveTransaction en erreur → PENDING, erreur journalisée", async () => {
+    const t = await seedPrint();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchMock.mockResolvedValue(new Response("{}", { status: 500 }));
+    const res = await call(t.request.id, "77");
+    expect(res).toMatchObject({ outcome: "PENDING", amount: 150000 });
+    expect(err).toHaveBeenCalledWith("[return fedapay]", expect.anything());
   });
 
   it("paiement SUBSCRIPTION → NOT_FOUND sans confirmPayment", async () => {
     const { payment } = await seed();
     const t = await seedPrint(79);
     expect(payment.fedapayTransactionId).toBe(77);
-    expect(await resolvePrintPaymentReturn(t.request.id, "77")).toEqual(notFound);
+    expect(await call(t.request.id, "77")).toEqual(notFound);
     expect(confirmPayment).not.toHaveBeenCalled();
   });
 
   it("paiement inconnu → NOT_FOUND", async () => {
     const t = await seedPrint();
-    expect(await resolvePrintPaymentReturn(t.request.id, "999")).toEqual(notFound);
+    expect(await call(t.request.id, "999")).toEqual(notFound);
   });
 
   it("id absent ou non entier → NOT_FOUND", async () => {
     const t = await seedPrint();
-    expect(await resolvePrintPaymentReturn(t.request.id, undefined)).toEqual(notFound);
-    expect(await resolvePrintPaymentReturn(t.request.id, "abc")).toEqual(notFound);
+    expect(await call(t.request.id, undefined)).toEqual(notFound);
+    expect(await call(t.request.id, "abc")).toEqual(notFound);
     expect(confirmPayment).not.toHaveBeenCalled();
   });
 
   it("paiement disparu pendant la confirmation → NOT_FOUND", async () => {
     const t = await seedPrint();
     vi.mocked(confirmPayment).mockResolvedValueOnce(null);
-    expect(await resolvePrintPaymentReturn(t.request.id, "77")).toEqual(notFound);
+    expect(await call(t.request.id, "77")).toEqual(notFound);
   });
 });

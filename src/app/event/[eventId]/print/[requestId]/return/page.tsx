@@ -16,9 +16,10 @@ export default async function PrintPaymentReturnPage({
   const { eventId, requestId } = await params;
   const { id } = await searchParams;
   // Session, évènement et droit « print.request » : redirection sinon.
-  await requirePrintAccess(eventId, `/print/${requestId}/return`);
+  const query = id ? `?id=${encodeURIComponent(id)}` : "";
+  const { orgId } = await requirePrintAccess(eventId, `/print/${requestId}/return${query}`);
 
-  const { outcome, reference } = await resolvePrintPaymentReturn(requestId, id);
+  const { outcome, reference } = await resolvePrintPaymentReturn({ requestId, eventId, orgId, rawId: id });
 
   return (
     <div className="mx-auto max-w-xl p-6">
@@ -33,6 +34,11 @@ export default async function PrintPaymentReturnPage({
             {outcome === "UNMATCHED" && (
               <Alert tone="info">
                 Paiement reçu. L&apos;équipe Badge vérifie votre demande et revient vers vous.
+              </Alert>
+            )}
+            {outcome === "MISMATCH" && (
+              <Alert tone="info">
+                Paiement reçu pour un montant inattendu. L&apos;équipe Badge vérifie et vous recontacte.
               </Alert>
             )}
             {outcome === "PENDING" && (

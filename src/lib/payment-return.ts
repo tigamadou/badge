@@ -57,7 +57,7 @@ export async function resolvePaymentReturn(
 }
 
 export type PrintPaymentReturn = {
-  outcome: "PAID" | "UNMATCHED" | "PENDING" | "FAILED" | "NOT_FOUND";
+  outcome: "PAID" | "UNMATCHED" | "MISMATCH" | "PENDING" | "FAILED" | "NOT_FOUND";
   reference: string;
   amount: number;
 };
@@ -66,15 +66,25 @@ const PRINT_NOT_FOUND: PrintPaymentReturn = { outcome: "NOT_FOUND", reference: "
 
 // Retour FedaPay d'un devis d'impression : même méthode que l'abonnement. Le paiement doit
 // appartenir à la demande avant tout appel à FedaPay, puis seul l'état confirmé fait foi.
-export async function resolvePrintPaymentReturn(
-  requestId: string,
-  rawId: string | undefined,
-): Promise<PrintPaymentReturn> {
+// La demande doit appartenir à l'évènement et à l'organisation de la page (anti-IDOR).
+export async function resolvePrintPaymentReturn(args: {
+  requestId: string;
+  eventId: string;
+  orgId: string;
+  rawId: string | undefined;
+}): Promise<PrintPaymentReturn> {
+  const { requestId, eventId, orgId, rawId } = args;
   const transactionId = Number(rawId);
   if (!rawId || !Number.isInteger(transactionId)) return PRINT_NOT_FOUND;
 
   const payment = await prisma.payment.findFirst({
-    where: { fedapayTransactionId: transactionId, purpose: "PRINT_REQUEST", printRequestId: requestId },
+    where: {
+      fedapayTransactionId: transactionId,
+      purpose: "PRINT_REQUEST",
+      orgId,
+      printRequestId: requestId,
+      printRequest: { id: requestId, eventId, orgId },
+    },
     select: { id: true, amount: true },
   });
   if (!payment) return PRINT_NOT_FOUND;
@@ -95,6 +105,19 @@ export async function resolvePrintPaymentReturn(
   }
 
   if (status === "PENDING" || status === "EXPIRED") return { outcome: "PENDING", ...base };
+  if (status === "DECLINED") {
+    // Un écart de montant ou de devise est refusé par confirmPayment (raison MISMATCH) : l'argent
+    // est reçu, il ne faut pas inviter à payer une seconde fois.
+    const failures = await prisma.printRequestMessage.findMany({
+      where: { requestId, eventType: "PAYMENT_FAILED" },
+      orderBy: { createdAt: "desc" },
+      select: { details: true },
+    });
+    const last = failures.find((f) => (f.details as { paymentId?: string } | null)?.paymentId === payment.id);
+    if ((last?.details as { reason?: string } | undefined)?.reason === "MISMATCH") {
+      return { outcome: "MISMATCH", ...base };
+    }
+  }
   if (status !== "APPROVED") return { outcome: "FAILED", ...base };
 
   // Relecture après confirmation : seul le paiement qui a soldé la demande (paidPaymentId, posé
