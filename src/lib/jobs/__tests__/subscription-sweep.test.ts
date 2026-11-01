@@ -214,6 +214,21 @@ describe("runSubscriptionSweep", () => {
       expect(rows).toHaveLength(1);
     });
 
+    it("CANCELED enregistré lors d'un checkout remplacé, approuvé chez FedaPay, demande déjà PAID → APPROVED, UNMATCHED et alerte staff", async () => {
+      const { fx, payment } = await closedPrint("CANCELED", 2 * H);
+      await prisma.printRequest.update({ where: { id: fx.request.id }, data: { status: "PAID", paidAt: now } });
+      vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
+      expect((await runSubscriptionSweep(now)).reconciled).toBe(1);
+      expect(await statusOf(payment.id)).toBe("APPROVED");
+      expect(
+        await prisma.printRequestMessage.count({ where: { requestId: fx.request.id, eventType: "PAYMENT_UNMATCHED" } }),
+      ).toBe(1);
+      const rows = await prisma.notification.findMany({
+        where: { userId: fx.staffAdmin.id, title: { startsWith: "Paiement à vérifier" } },
+      });
+      expect(rows).toHaveLength(1);
+    });
+
     it("EXPIRED d'impression approuvé chez FedaPay → APPROVED, demande PAID", async () => {
       const { fx, payment } = await closedPrint("EXPIRED", 3 * DAY);
       vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));

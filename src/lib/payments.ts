@@ -57,8 +57,8 @@ const PLAN_LITE_SELECT = { id: true, name: true, period: true, price: true } as 
 
 // Ouvre la transaction FedaPay d'un Payment deja cree et renvoie l'URL de paiement.
 // En cas d'echec, le Payment passe CANCELED et PROVIDER_ERROR est levee. Si le Payment n'est plus
-// PENDING quand la transaction est creee (remplace par un autre checkout), l'identifiant n'est pas
-// enregistre et PAYMENT_IN_PROGRESS est levee : aucune URL n'est renvoyee.
+// PENDING quand la transaction est creee (remplace par un autre checkout), la transaction est quand
+// meme enregistree sur la ligne, mais PAYMENT_IN_PROGRESS est levee : aucune URL n'est renvoyee.
 async function openTransaction(
   paymentId: string,
   tx: {
@@ -78,11 +78,14 @@ async function openTransaction(
       customer: tx.customer,
       metadata: tx.metadata,
     });
-    const { count } = await prisma.payment.updateMany({
-      where: { id: paymentId, status: "PENDING" },
+    // La transaction est toujours enregistree (meme sur un paiement remplace) : un paiement tardif
+    // reste ainsi retrouvable par le webhook et le sweep.
+    await prisma.payment.updateMany({
+      where: { id: paymentId, fedapayTransactionId: null },
       data: { fedapayTransactionId: created.id, fedapayReference: created.reference },
     });
-    if (count === 0) throw new PaymentError("PAYMENT_IN_PROGRESS");
+    const row = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, select: { status: true } });
+    if (row.status !== "PENDING") throw new PaymentError("PAYMENT_IN_PROGRESS");
     return await createPaymentUrl(created.id);
   } catch (error) {
     if (error instanceof PaymentError) throw error;

@@ -397,7 +397,7 @@ const TOKEN_URL = "https://pay.fedapay.com/t88";
 // Routeur de fetch : GET/POST par chemin, avec temporisation optionnelle de la création.
 function routeFetch(
   fetchMock: ReturnType<typeof vi.fn>,
-  routes: { create?: () => Response | Promise<Response>; retrieve?: Record<number, () => Response>; token?: () => Response },
+  routes: { create?: () => Response | Promise<Response>; retrieve?: Record<number, () => Response>; token?: () => Response | Promise<Response> },
 ) {
   fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
     const path = new URL(url).pathname.replace(/^\/v1/, "");
@@ -739,7 +739,7 @@ describe("startPrintRequestCheckout", () => {
     expect(console.error).toHaveBeenCalledWith("[payment] journal du checkout en echec", expect.any(Error));
   });
 
-  it("paiement plus PENDING quand la transaction est créée → PAYMENT_IN_PROGRESS, identifiant non écrit, pas d'URL", async () => {
+  it("paiement remplacé pendant la création de la transaction → PAYMENT_IN_PROGRESS, transaction enregistrée sur la ligne CANCELED, pas d'URL", async () => {
     const t = await seedAccepted();
     routeFetch(fetchMock, {
       create: async () => {
@@ -751,21 +751,17 @@ describe("startPrintRequestCheckout", () => {
     await rejects(startPrintRequestCheckout(input(t)), "PAYMENT_IN_PROGRESS", 409);
     const payments = await paymentsOf(t.request.id);
     expect(payments).toHaveLength(1);
-    expect(payments[0]).toMatchObject({ status: "CANCELED", fedapayTransactionId: null, fedapayReference: null });
+    expect(payments[0]).toMatchObject({ status: "CANCELED", fedapayTransactionId: 88, fedapayReference: "trx_88" });
     expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/token"))).toBe(false);
   });
 
   it("échec FedaPay après création : le Payment déjà approuvé n'est pas écrasé par CANCELED", async () => {
     const t = await seedAccepted();
     routeFetch(fetchMock, {
-      token: () => jsonResponse({}, 500),
-    });
-    const original = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
-      if (new URL(url).pathname.endsWith("/token")) {
+      token: async () => {
         await prisma.payment.updateMany({ where: { printRequestId: t.request.id }, data: { status: "APPROVED" } });
-      }
-      return original(url, init);
+        return jsonResponse({}, 500);
+      },
     });
     await rejects(startPrintRequestCheckout(input(t)), "PROVIDER_ERROR", 502);
     expect((await paymentsOf(t.request.id))[0].status).toBe("APPROVED");
