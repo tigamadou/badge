@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { PrintQuoteLine, PrintRequest } from "@prisma/client";
 import type { z } from "zod";
 import { PrintRequestError, printRequestErrorResponse } from "./errors";
+import { prisma } from "@/lib/prisma";
 import { loadRequest } from "./service";
 
 // Corps JSON validé par un schéma zod ; tout écart devient une erreur VALIDATION (400).
@@ -83,4 +84,9 @@ export function lineDTO(l: PrintQuoteLine) {
     priceOverridden: l.priceOverridden,
     quantityOverridden: l.quantityOverridden,
   };
+}
+
+// Demandes en attente de traitement : pastille du menu staff.
+export function getSubmittedPrintRequestCount(): Promise<number> {
+  return prisma.printRequest.count({ where: { status: "SUBMITTED" } });
 }

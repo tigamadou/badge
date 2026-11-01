@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getSubmittedPrintRequestCount } from "@/lib/print-requests/staff-api";
 import { paymentProbe } from "@/lib/print-requests/service";
 import * as templateVars from "@/lib/badge-templates/event-template-variables";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
@@ -57,6 +58,16 @@ beforeEach(async () => {
   vi.mocked(getServerSession).mockReset();
   fx = await seedPrintFixture();
   as(fx.staffAdmin);
+  // Évite l'échec (journalisé) de l'envoi d'e-mail des notifications.
+  await prisma.platformSettings.upsert({
+    where: { id: "singleton" },
+    create: {
+      id: "singleton", smtpHost: "localhost", smtpPort: 587, smtpFrom: "noreply@print.test",
+      smtpUser: "", smtpPassword: "", smtpSecure: false, recaptchaEnabled: false,
+      recaptchaSiteKey: "", recaptchaSecretKey: "",
+    },
+    update: {},
+  });
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -89,7 +100,7 @@ async function routes(): Promise<Route[]> {
     { name: "messages POST", min: "SUPPORT", run: () => call(messagesPOST, `${u}/messages`, "POST", { requestId: id }, { body: "x" }) },
     { name: "status", min: "SUPPORT", run: () => call(statusPOST, `${u}/status`, "POST", { requestId: id }, { to: "READY" }) },
     { name: "reject", min: "SUPPORT", run: () => call(rejectPOST, `${u}/reject`, "POST", { requestId: id }, { reason: "Motif" }) },
-    { name: "reopen", min: "SUPPORT", run: () => call(reopenPOST, `${u}/reopen`, "POST", { requestId: id }) },
+    { name: "reopen", min: "ADMIN", run: () => call(reopenPOST, `${u}/reopen`, "POST", { requestId: id }) },
     { name: "lines POST", min: "ADMIN", run: () => call(linesPOST, `${u}/lines`, "POST", { requestId: id }, lineBody) },
     { name: "line PATCH", min: "ADMIN", run: () => call(linePATCH, `${u}/lines/${line.id}`, "PATCH", { requestId: id, lineId: line.id }, { unitPrice: 5 }) },
     { name: "line DELETE", min: "ADMIN", run: () => call(lineDELETE, `${u}/lines/${line.id}`, "DELETE", { requestId: id, lineId: line.id }) },
@@ -353,8 +364,7 @@ describe("envoi, réouverture, refus, statut", () => {
     expect(res).toMatchObject({ status: 400, json: { error: "EMPTY_QUOTE", message: "Le devis ne contient aucune ligne." } });
   });
 
-  it("reopen (STAFF_SUPPORT) : ACCEPTED -> SUBMITTED, journal et notification", async () => {
-    as(fx.staffSupport);
+  it("reopen (STAFF_ADMIN) : ACCEPTED -> SUBMITTED, journal et notification", async () => {
     const r = await makeRequest(fx, { status: "ACCEPTED", quoteVersion: 1, acceptedVersion: 1, acceptedTotal: 10 });
     const res = await call(reopenPOST, `${BASE}/${r.id}/reopen`, "POST", { requestId: r.id });
     expect(res.json.request.status).toBe("SUBMITTED");
@@ -374,6 +384,10 @@ describe("envoi, réouverture, refus, statut", () => {
     const r = await makeRequest(fx);
     const bad = await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, {});
     expect(bad.status).toBe(400);
+    for (const reason of ["", "   ", "x".repeat(1001)]) {
+      expect((await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, { reason })).status, reason.length.toString()).toBe(400);
+    }
+    expect((await reload(r.id)).status).toBe("SUBMITTED");
     const short = await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, { reason: "x" });
     expect(short.status).toBe(400);
     const res = await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, { reason: "  Hors périmètre  " });
@@ -392,6 +406,16 @@ describe("envoi, réouverture, refus, statut", () => {
     expect(log.details).toEqual({ from: "PAID", to: "IN_PRODUCTION" });
     expect(await prisma.notification.count({ where: { userId: fx.owner.id, type: "PRINT_REQUEST_STATUS_CHANGED" } })).toBe(1);
     expect((await call(statusPOST, `${BASE}/${r.id}/status`, "POST", { requestId: r.id }, { to: "PAID" })).status).toBe(400);
+    // Le « from » du journal est le statut lu sous verrou, pas celui d'une lecture antérieure.
+    const r2 = await makeRequest(fx, { status: "PAID" });
+    await prisma.printRequest.update({ where: { id: r2.id }, data: { status: "IN_PRODUCTION" } });
+    // Deux lectures périmées (route puis service) précèdent la lecture sous verrou.
+    vi.spyOn(prisma.printRequest, "findUnique")
+      .mockResolvedValueOnce({ ...r2 } as never)
+      .mockResolvedValueOnce({ ...r2 } as never);
+    await call(statusPOST, `${BASE}/${r2.id}/status`, "POST", { requestId: r2.id }, { to: "READY" });
+    expect((await logs(r2.id, "PRINT_REQUEST_STATUS_CHANGED"))[0].details).toEqual({ from: "IN_PRODUCTION", to: "READY" });
+    vi.restoreAllMocks();
     const invalid = await call(statusPOST, `${BASE}/${r.id}/status`, "POST", { requestId: r.id }, { to: "COMPLETED" });
     expect(invalid).toMatchObject({ status: 409, json: { error: "INVALID_TRANSITION" } });
   });
@@ -507,5 +531,15 @@ describe("suppression d'une ligne d'un devis envoyé", () => {
     expect(res.status).toBe(200);
     expect((await reload(r.id)).status).toBe("SUBMITTED");
     expect(await prisma.notification.count({ where: { userId: fx.owner.id, type: "PRINT_REQUEST_STATUS_CHANGED" } })).toBe(1);
+  });
+});
+
+describe("getSubmittedPrintRequestCount", () => {
+  it("compte les demandes SUBMITTED, pas les autres statuts", async () => {
+    const before = await getSubmittedPrintRequestCount();
+    await makeRequest(fx);
+    await makeRequest(fx, { status: "QUOTED" });
+    await makeRequest(fx, { status: "DRAFT" });
+    expect(await getSubmittedPrintRequestCount()).toBe(before + 1);
   });
 });

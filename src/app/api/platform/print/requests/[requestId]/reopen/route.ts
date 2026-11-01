@@ -22,5 +22,5 @@ export const POST = withStaffAuth<{ requestId: string }>(
       await notifyPrintRequestStatusChanged(requestId, userId, { organizer: true, staff: false });
       return json({ request: requestDTO(request) });
     }),
-  { minRole: "STAFF_SUPPORT" },
+  { minRole: "STAFF_ADMIN" },
 );

@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import {
   findEffectiveTemplateRow,
   resolveEventTemplateId,
 } from "@/lib/badge-templates/event-template-variables";
-import { guarded, lineDTO, loadStaffRequest, requestDTO } from "@/lib/print-requests/staff-api";
+import { guarded, json, lineDTO, loadStaffRequest, requestDTO } from "@/lib/print-requests/staff-api";
 
 type Params = { requestId: string };
 
@@ -68,7 +67,7 @@ export const GET = withStaffAuth<Params>(async (_req, _ctx, { params }) =>
         }
       : null;
 
-    return NextResponse.json({
+    return json({
       request: requestDTO(request),
       event: {
         id: event.id,
