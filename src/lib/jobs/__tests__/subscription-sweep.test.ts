@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { runSubscriptionSweep } from "@/lib/jobs/subscription-sweep";
 import { notifySubscriptionExpiring } from "@/lib/notifications/triggers";
+import { seedAcceptedPrintRequest } from "@/lib/__tests__/helpers/print-requests";
 import { REMINDER_DAYS, SUBSCRIPTION_SWEEP_INTERVAL_MS } from "@/lib/jobs/constants";
 
 const now = new Date("2026-10-28T12:00:00.000Z");
@@ -135,6 +136,36 @@ describe("runSubscriptionSweep", () => {
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(res.reconciled).toBe(1);
       expect((await prisma.payment.findUniqueOrThrow({ where: { id: p.id } })).status).toBe("APPROVED");
+    });
+
+    async function pendingPrint(ageMs: number) {
+      const fx = await seedAcceptedPrintRequest({ total: 150000 });
+      const payment = await prisma.payment.create({
+        data: {
+          orgId: fx.org.id, purpose: "PRINT_REQUEST", printRequestId: fx.request.id, userId: fx.owner.id,
+          amount: 150000, status: "PENDING", fedapayTransactionId: 77,
+          createdAt: new Date(now.getTime() - ageMs),
+        },
+      });
+      return { fx, payment };
+    }
+
+    it("PENDING d'impression de 20 min approuvé chez FedaPay → demande PAID, reconciled 1", async () => {
+      const { fx, payment } = await pendingPrint(20 * MIN);
+      vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
+      const res = await runSubscriptionSweep(now);
+      expect(res.reconciled).toBe(1);
+      expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe("APPROVED");
+      expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: fx.request.id } })).status).toBe("PAID");
+    });
+
+    it("PENDING d'impression de 25 h → EXPIRED, la demande reste ACCEPTED", async () => {
+      const { fx, payment } = await pendingPrint(25 * H);
+      vi.mocked(fetch).mockResolvedValue(txResponse("pending", 150000));
+      const res = await runSubscriptionSweep(now);
+      expect(res.expired).toBe(1);
+      expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe("EXPIRED");
+      expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: fx.request.id } })).status).toBe("ACCEPTED");
     });
 
     it("transaction toujours pending chez FedaPay → non comptée", async () => {
