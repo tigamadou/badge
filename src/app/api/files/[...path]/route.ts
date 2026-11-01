@@ -13,8 +13,9 @@ import { getFile } from "@/lib/storage";
 // Les planches d'impression (`print-sheets/...`) contiennent des donnees de
 // participants : lisibles par le staff STAFF_SUPPORT minimum uniquement.
 // Les pieces jointes de demandes d'impression (`print-requests/...`) sont lisibles par tout le
-// staff, STAFF_OBSERVER compris (classe `staffAny`). Le plan 33 ajoutera ici la lecture par les
-// detenteurs de `print.request` de l'evenement (branche supplementaire dans canRead).
+// staff, STAFF_OBSERVER compris. Les detenteurs de `print.request` lisent les fichiers de leur
+// evenement : `print-requests/{eventId}/...` directement, `print-requests/staff/...` via l'evenement
+// du message qui porte la piece jointe (classe `printRequest`). Aucune ligne : staff seulement.
 // Les archives ZIP d'export (`badge-exports/{eventId}/...`) contiennent des badges nominatifs :
 // lisibles par le staff et par les titulaires de `badge.print` sur l'evenement.
 // Union discriminee : un fichier sensible est TOUJOURS soit un document de profil
@@ -24,12 +25,15 @@ type SensitiveFile =
   | { sensitive: true; profileUserId: string; eventId?: undefined }
   | { sensitive: true; eventId: string; profileUserId?: undefined }
   | { sensitive: true; staffOnly: true; eventId?: undefined; profileUserId?: undefined }
+  | { sensitive: true; printRequestScope: string; eventId?: undefined; profileUserId?: undefined }
   | { sensitive: true; staffAny: true; eventId?: undefined; profileUserId?: undefined }
   | { sensitive: true; printEventId: string; eventId?: undefined; profileUserId?: undefined };
 type FileClass = { sensitive: false } | SensitiveFile;
 
 function classify(key: string): FileClass {
   if (key.startsWith("print-sheets/")) return { sensitive: true, staffOnly: true };
+  const printRequest = key.match(/^print-requests\/([^/]+)\//);
+  if (printRequest) return { sensitive: true, printRequestScope: printRequest[1] };
   if (key.startsWith("print-requests/")) return { sensitive: true, staffAny: true };
   const exportFile = key.match(/^badge-exports\/([^/]+)\//);
   if (exportFile) return { sensitive: true, printEventId: exportFile[1] };
@@ -40,13 +44,37 @@ function classify(key: string): FileClass {
   return { sensitive: false };
 }
 
-async function canRead(userId: string, c: SensitiveFile): Promise<boolean> {
+async function canReadPrintRequestFile(
+  ctx: NonNullable<Awaited<ReturnType<typeof loadUserContext>>>,
+  scope: string,
+  key: string,
+): Promise<boolean> {
+  let eventId = scope;
+  if (scope === "staff") {
+    // Cle staff : l'evenement est celui de la demande dont un message porte la piece jointe.
+    const msg = await prisma.printRequestMessage.findFirst({
+      where: { attachmentKey: key },
+      select: { request: { select: { eventId: true } } },
+    });
+    if (!msg) return false;
+    eventId = msg.request.eventId;
+  }
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
+  return !!event && hasEventPermission(ctx, eventId, event.orgId, "print.request");
+}
+
+async function canRead(userId: string, c: SensitiveFile, key: string): Promise<boolean> {
   const ctx = await loadUserContext(userId);
   if (!ctx) return false;
   if ("staffOnly" in c) {
     return ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT");
   }
   if ("staffAny" in c) return ctx.isStaff && !!ctx.staffRole;
+  if ("printRequestScope" in c) {
+    // Tout le staff lit ; sinon il faut `print.request` sur l'evenement de la cle.
+    if (ctx.isStaff && !!ctx.staffRole) return true;
+    return canReadPrintRequestFile(ctx, c.printRequestScope, key);
+  }
   if (ctx.isStaff) return true;
   if ("printEventId" in c) {
     const event = await prisma.event.findUnique({ where: { id: c.printEventId }, select: { orgId: true } });
@@ -71,7 +99,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
 
   if (cls.sensitive) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !(await canRead(session.user.id, cls))) {
+    if (!session?.user?.id || !(await canRead(session.user.id, cls, key))) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
   }
