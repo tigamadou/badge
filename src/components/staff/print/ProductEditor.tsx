@@ -133,7 +133,7 @@ export function ProductEditor({ product, canWrite }: { product: CatalogProduct; 
 
   const publish = useAsyncAction(
     async (next: boolean) => sendJson(`${PRODUCTS_API}/${product.id}`, "PATCH", { published: next }),
-    { error: VALIDATION_MESSAGE, onSuccess: refresh },
+    { success: "Statut mis à jour.", error: VALIDATION_MESSAGE, onSuccess: refresh },
   );
   const archive = useAsyncAction(() => sendJson(`${PRODUCTS_API}/${product.id}`, "DELETE"), {
     success: "Produit archivé.",
