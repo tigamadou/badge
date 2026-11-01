@@ -6,6 +6,7 @@ import { parseRegistrationQr } from "@/lib/registration-qr";
 import { OnsiteError } from "./onsite";
 import { computeOnsiteCounter, orderedBadgeLine, type OnsiteCounter } from "./onsite-counter";
 import { lockRequestWithEvent } from "./service";
+import { appendThreadEvent } from "./thread";
 
 // Poste d'impression sur place : recherche, lecture du QR et impression journalisée.
 
@@ -39,6 +40,9 @@ const CARD_SELECT = {
 } satisfies Prisma.RegistrationSelect;
 
 type Db = Prisma.TransactionClient;
+
+// `%` et `_` sont des jokers de LIKE : on les neutralise pour qu'ils soient cherchés tels quels.
+const escapeLike = (term: string) => term.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 function toCard(reg: Prisma.RegistrationGetPayload<{ select: typeof CARD_SELECT }>): OnsiteRegistrationCard {
   return {
@@ -99,8 +103,9 @@ export async function lookupOnsiteRegistration(requestId: string, payload: strin
 
 export async function searchOnsiteRegistrations(requestId: string, q: string): Promise<OnsiteRegistrationCard[]> {
   const { eventId } = await loadOnsiteRequest(requestId);
-  const term = q.trim();
-  if (term.length < SEARCH_MIN_LENGTH) return [];
+  const trimmed = q.trim();
+  if (trimmed.length < SEARCH_MIN_LENGTH) return [];
+  const term = escapeLike(trimmed);
   const regs = await prisma.registration.findMany({
     where: {
       eventId,
@@ -162,4 +167,30 @@ export async function recordOnsitePrint(input: {
     }
   }
   return { print: result.print, counter: result.counter };
+}
+
+// Réglage de la marge (hausse comme baisse) : la seule limite est le nombre déjà imprimé.
+export async function setOnsiteMargin(input: {
+  requestId: string;
+  marginPercent: number;
+  reason: string;
+  userId: string;
+}): Promise<OnsiteCounter> {
+  const { requestId, marginPercent, reason, userId } = input;
+  return prisma.$transaction(async (tx) => {
+    // Ordre des verrous : Event puis PrintRequest (jamais la demande seule).
+    await lockRequestWithEvent(tx, requestId);
+    const { counter } = await loadWith(tx, requestId);
+    const next = computeOnsiteCounter({ ordered: counter.ordered, marginPercent, printed: counter.printed });
+    if (next.cap < counter.printed) throw new OnsiteError("MARGIN_BELOW_PRINTED", 409);
+    await tx.printRequest.update({ where: { id: requestId }, data: { marginPercent } });
+    await appendThreadEvent(
+      tx,
+      requestId,
+      "ONSITE_MARGIN_CHANGED",
+      { from: counter.marginPercent, to: marginPercent, reason },
+      { userId, side: "STAFF" },
+    );
+    return next;
+  });
 }

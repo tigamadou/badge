@@ -94,6 +94,7 @@ describe("describeThreadEvent", () => {
       { registrationIds: ["r1", "r2"] },
       "2 badge(s) écarté(s) à la génération (inscription non approuvée) : r1, r2",
     ],
+    ONSITE_MARGIN_CHANGED: [{ from: 10, to: 15, reason: "Badges perdus" }, "Marge : 10 % → 15 % (Badges perdus)"],
   };
 
   it("REQUEST_UPDATED mentionne les lignes fixées en retard", () => {

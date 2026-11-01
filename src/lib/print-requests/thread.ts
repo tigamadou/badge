@@ -30,7 +30,8 @@ export type ThreadEventType =
   | "PAYMENT_FAILED"
   | "PAYMENT_UNMATCHED"
   | "SHEETS_GENERATED"
-  | "REGISTRATIONS_SKIPPED";
+  | "REGISTRATIONS_SKIPPED"
+  | "ONSITE_MARGIN_CHANGED";
 
 export type ThreadActor = { userId: string | null; side: PrintThreadSide };
 
@@ -104,6 +105,8 @@ export function describeThreadEvent(
       const ids = strings(details.registrationIds);
       return `${ids.length} badge(s) écarté(s) à la génération (inscription non approuvée) : ${ids.join(", ")}`;
     }
+    case "ONSITE_MARGIN_CHANGED":
+      return `Marge : ${num(details.from)} % → ${num(details.to)} % (${txt(details.reason)})`;
   }
 }
 

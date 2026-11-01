@@ -80,7 +80,7 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PRINT_REQUEST_CANCELLED: "Demande d'impression annulée",
   PRINT_REQUEST_REJECTED: "Demande d'impression refusée",
   PRINT_REQUEST_MARKED_PAID: "Demande d'impression marquée payée",
-  PRINT_REQUEST_MARGIN_RAISED: "Marge d'impression sur place relevée",
+  PRINT_REQUEST_MARGIN_RAISED: "Marge d'impression sur place modifiée",
   PRINT_CREDIT_APPLIED: "Crédit d'impression appliqué",
   PRINT_CREDIT_EARNED: "Crédit d'impression acquis",
   PRINT_REQUEST_SUPPLEMENT_CREATED: "Demande d'impression complémentaire créée",
