@@ -197,6 +197,30 @@ describe("types des demandes d'impression", () => {
   });
 });
 
+describe("types de l'impression sur place et du credit", () => {
+  const TYPES = [
+    "PRINT_REQUEST_MARGIN_RAISED",
+    "PRINT_CREDIT_APPLIED",
+    "PRINT_CREDIT_EARNED",
+    "PRINT_REQUEST_SUPPLEMENT_CREATED",
+  ] as const;
+
+  it("ont un libelle humain different du type brut", () => {
+    for (const t of TYPES) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+  });
+
+  it("sont classes par categorie visuelle", () => {
+    expect(logKind(as("PRINT_REQUEST_MARGIN_RAISED"))).toBe("modification");
+    expect(logKind(as("PRINT_CREDIT_APPLIED"))).toBe("modification");
+    expect(logKind(as("PRINT_CREDIT_EARNED"))).toBe("creation");
+    expect(logKind(as("PRINT_REQUEST_SUPPLEMENT_CREATED"))).toBe("creation");
+  });
+});
+
 describe("describeActivity", () => {
   const KNOWN: Partial<Record<string, string>> = {
     REGISTRATION_CREATED: "Inscription créée",

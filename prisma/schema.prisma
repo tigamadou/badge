@@ -68,6 +68,8 @@ model User {
   printRequestsCreated  PrintRequest[]         @relation("PrintRequestCreatedBy")
   printRequestsAccepted PrintRequest[]         @relation("PrintRequestAcceptedBy")
   printRequestMessages  PrintRequestMessage[]
+  printRequestPrints    PrintRequestPrint[]   @relation("PrintRequestPrintPrintedBy")
+  orgPrintCredits       OrgPrintCredit[]      @relation("OrgPrintCreditCreatedBy")
 }
 
 enum StaffRole {
@@ -122,6 +124,7 @@ model Organization {
   subscription      Subscription?
   payments          Payment[]
   printRequests     PrintRequest[]
+  printCredits      OrgPrintCredit[]
 }
 
 model OrgMembership {
@@ -305,6 +308,7 @@ model Registration {
   updatedAt DateTime @updatedAt
 
   printRequestItems PrintRequestItem[]
+  printRequestPrints PrintRequestPrint[]
 
   @@unique([userId, eventId])
   @@index([eventId])
@@ -472,6 +476,10 @@ model PlatformSettings {
   // vide signifie « aucune racine definie » : resolveTemplate retombe alors sur la
   // famille `default`, dont le seed garantit l'existence.
   badgeTemplateId    String  @default("")
+  // plan 35 : impression sur place
+  onsitePrintTemplateIds     Json?
+  onsitePrinterNote          String? @db.Text
+  onsiteDefaultMarginPercent Int     @default(10)
   // v4 : droits selon l'etat de l'abonnement (actif / inactif), `{ [droit]: { active, inactive } }`.
   // Null = valeurs par defaut ; lecture tolerante via parseRights (src/lib/subscription-rights.ts).
   subscriptionRights Json?
@@ -528,6 +536,10 @@ enum ActivityType {
   PRINT_REQUEST_CANCELLED
   PRINT_REQUEST_REJECTED
   PRINT_REQUEST_MARKED_PAID
+  PRINT_REQUEST_MARGIN_RAISED
+  PRINT_CREDIT_APPLIED
+  PRINT_CREDIT_EARNED
+  PRINT_REQUEST_SUPPLEMENT_CREATED
   // Gabarits d'impression et planches de badges
   PRINT_LAYOUT_CREATED
   PRINT_LAYOUT_UPDATED
@@ -1132,10 +1144,13 @@ model PrintRequest {
   lines       PrintQuoteLine[]
   messages    PrintRequestMessage[]
   generations PrintSheetGeneration[]
+  prints      PrintRequestPrint[]
+  credits     OrgPrintCredit[]
 
   @@index([eventId, status])
   @@index([status, submittedAt])
   @@index([orgId])
+  @@index([parentRequestId])
 }
 
 model PrintRequestItem {
@@ -1149,6 +1164,47 @@ model PrintRequestItem {
 
   @@unique([requestId, registrationId])
   @@index([registrationId])
+}
+
+model PrintRequestPrint {
+  id             String        @id @default(cuid())
+  requestId      String
+  request        PrintRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  registrationId String?
+  registration   Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  printedById    String?
+  printedBy      User?         @relation("PrintRequestPrintPrintedBy", fields: [printedById], references: [id], onDelete: SetNull)
+  printedAt      DateTime      @default(now())
+  reprint        Boolean       @default(false)
+
+  @@index([requestId, reprint])
+  @@index([registrationId])
+}
+
+enum OrgPrintCreditKind {
+  EARNED
+  SPENT
+}
+
+model OrgPrintCredit {
+  id          String             @id @default(cuid())
+  orgId       String
+  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind        OrgPrintCreditKind
+  // FCFA : > 0 pour EARNED, < 0 pour SPENT
+  amount      Int
+  // C1 : nullable, SetNull (la liste des mouvements doit gerer une demande absente)
+  requestId   String?
+  request     PrintRequest?      @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  // badges non utilises (EARNED)
+  quantity    Int?
+  unitPrice   Int?
+  createdById String?
+  createdBy   User?              @relation("OrgPrintCreditCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime           @default(now())
+
+  @@unique([requestId, kind])
+  @@index([orgId, createdAt])
 }
 
 model PrintQuoteLine {
@@ -1170,6 +1226,7 @@ model PrintQuoteLine {
   addedBy         PrintLineAuthor
   priceOverridden    Boolean   @default(false)
   quantityOverridden Boolean   @default(false)
+  usesOrgCredit   Boolean            @default(false)
   removedAt       DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt

@@ -14,6 +14,8 @@ beforeEach(async () => {
   overrideExporter(fakeExporter);
   await prisma.payment.deleteMany();
   await prisma.printRequestMessage.deleteMany();
+  await prisma.printRequestPrint.deleteMany();
+  await prisma.orgPrintCredit.deleteMany();
   await prisma.printQuoteLine.deleteMany();
   await prisma.printRequestItem.deleteMany();
   // FK auto-referente : detacher les demandes enfants avant la suppression.
