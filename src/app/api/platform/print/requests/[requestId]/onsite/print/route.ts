@@ -19,15 +19,20 @@ export const POST = withStaffAuth<{ requestId: string }>(
         userId,
         confirmReprint: confirmReprint ?? false,
       });
-      await logActivity({
-        type: "BADGE_PRINTED",
-        userId,
-        orgId,
-        eventId,
-        targetId: registrationId,
-        details: { printRequestId: requestId, onsite: true, reprint: print.reprint },
-        req,
-      });
+      try {
+        await logActivity({
+          type: "BADGE_PRINTED",
+          userId,
+          orgId,
+          eventId,
+          targetId: registrationId,
+          details: { printRequestId: requestId, onsite: true, reprint: print.reprint },
+          req,
+        });
+      } catch (e) {
+        // L'impression est enregistrée : l'échec du journal ne doit pas la transformer en erreur.
+        console.error("[activity] BADGE_PRINTED log failed", e);
+      }
       return json({ print, counter, pdfUrl: `/api/org/${orgId}/events/${eventId}/badges/${registrationId}` }, 201);
     }),
   { minRole: "STAFF_SUPPORT" },

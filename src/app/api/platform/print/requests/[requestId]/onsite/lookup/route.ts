@@ -3,7 +3,7 @@ import { withStaffAuth } from "@/lib/with-staff-auth";
 import { lookupOnsiteRegistration } from "@/lib/print-requests/onsite-station";
 import { guarded, json, parseBody } from "@/lib/print-requests/staff-api";
 
-const bodySchema = z.object({ payload: z.string().min(1).max(2000) });
+const bodySchema = z.object({ payload: z.string().min(1).max(200) });
 
 export const POST = withStaffAuth<{ requestId: string }>(
   async (req, _ctx, { params }) =>

@@ -90,6 +90,7 @@ describe("POST lookup", () => {
     expect(ok.status).toBe(200);
     expect(ok.json.registration).toMatchObject({ id: fx.approved[0].id, status: "APPROVED" });
     expect((await call(lookupPOST, r.id, "lookup", "POST", { payload: "" })).status).toBe(400);
+    expect((await call(lookupPOST, r.id, "lookup", "POST", { payload: "a".repeat(201) })).status).toBe(400);
     expect((await call(lookupPOST, r.id, "lookup", "POST", undefined, "pas du json")).status).toBe(400);
     expect((await call(lookupPOST, "inconnue", "lookup", "POST", { payload: "x" })).status).toBe(404);
   });
@@ -113,6 +114,7 @@ describe("GET search", () => {
     expect((await call(searchGET, r.id, "search?q=%25%25", "GET")).json.registrations).toEqual([]);
     expect((await call(searchGET, r.id, "search?q=Al_h", "GET")).json.registrations).toEqual([]);
     expect((await call(searchGET, r.id, "search?q=Al%25", "GET")).json.registrations).toEqual([]);
+    expect((await call(searchGET, r.id, "search?q=a%5C", "GET")).json.registrations).toEqual([]);
   });
 });
 
@@ -141,6 +143,16 @@ describe("POST print", () => {
     expect(re.status).toBe(201);
     expect(re.json.print.reprint).toBe(true);
     expect((await logs("BADGE_PRINTED")).map((l) => (l.details as { reprint: boolean }).reprint)).toEqual([false, true]);
+  });
+
+  it("l'échec du journal ne change pas la réponse : 201", async () => {
+    const r = await onsite();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(prisma.activityLog, "create").mockRejectedValueOnce(new Error("boom"));
+    const res = await call(printPOST, r.id, "print", "POST", { registrationId: fx.approved[0].id });
+    expect(res.status).toBe(201);
+    expect(err).toHaveBeenCalled();
+    vi.restoreAllMocks();
   });
 
   it("400 corps invalide, 404 demande inconnue, 409 CAP_REACHED relayé", async () => {
@@ -201,6 +213,45 @@ describe("PATCH margin", () => {
     ]) {
       expect((await patch(r.id, body)).status).toBe(400);
     }
+  });
+
+  it("même marge : 200, ni fil ni journal", async () => {
+    const r = await onsite();
+    const res = await patch(r.id, { marginPercent: 10, reason: "Motif" });
+    expect(res.status).toBe(200);
+    expect(res.json.counter).toMatchObject({ marginPercent: 10, cap: 220 });
+    expect(await prisma.printRequestMessage.count({ where: { requestId: r.id, eventType: "ONSITE_MARGIN_CHANGED" } })).toBe(0);
+    expect(await logs("PRINT_REQUEST_MARGIN_RAISED")).toHaveLength(0);
+  });
+
+  it("marge nulle en base : from vaut 0", async () => {
+    const r = await onsite(0, { marginPercent: null });
+    expect((await patch(r.id, { marginPercent: 5, reason: "Motif" })).status).toBe(200);
+    expect((await logs("PRINT_REQUEST_MARGIN_RAISED"))[0].details).toMatchObject({ from: 0, to: 5 });
+  });
+
+  it("l'échec du journal ne change pas la réponse : 200", async () => {
+    const r = await onsite();
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(prisma.activityLog, "create").mockRejectedValueOnce(new Error("boom"));
+    expect((await patch(r.id, { marginPercent: 15, reason: "Motif" })).status).toBe(200);
+    expect(err).toHaveBeenCalled();
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).marginPercent).toBe(15);
+    vi.restoreAllMocks();
+  });
+
+  it.each([["COMPLETED", 409, "REQUEST_LOCKED"], ["CANCELLED", 409, "REQUEST_LOCKED"], ["REJECTED", 409, "REQUEST_LOCKED"], ["DRAFT", 404, "NOT_FOUND"]] as const)(
+    "statut %s refusé", async (status, http, code) => {
+      const r = await onsite(0, { status });
+      const res = await patch(r.id, { marginPercent: 15, reason: "Motif" });
+      expect([res.status, res.json.code]).toEqual([http, code]);
+      expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).marginPercent).toBe(10);
+    },
+  );
+
+  it.each(["QUOTED", "ACCEPTED", "PAID", "IN_PRODUCTION", "READY"] as const)("statut %s autorisé", async (status) => {
+    const r = await onsite(0, { status });
+    expect((await patch(r.id, { marginPercent: 15, reason: "Motif" })).status).toBe(200);
   });
 
   it("404 demande inconnue, 409 NOT_ONSITE pour une demande en amont", async () => {

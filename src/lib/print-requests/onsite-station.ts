@@ -24,6 +24,7 @@ export type OnsiteRegistrationCard = {
 
 const SEARCH_MIN_LENGTH = 2;
 const SEARCH_LIMIT = 20;
+const LOCKED_STATUSES: string[] = ["COMPLETED", "CANCELLED", "REJECTED"];
 const PRINTABLE_STATUSES = ["PAID", "IN_PRODUCTION", "READY"];
 
 const CARD_SELECT = {
@@ -175,12 +176,19 @@ export async function setOnsiteMargin(input: {
   marginPercent: number;
   reason: string;
   userId: string;
-}): Promise<OnsiteCounter> {
+}): Promise<{ counter: OnsiteCounter; from: number }> {
   const { requestId, marginPercent, reason, userId } = input;
   return prisma.$transaction(async (tx) => {
     // Ordre des verrous : Event puis PrintRequest (jamais la demande seule).
     await lockRequestWithEvent(tx, requestId);
-    const { counter } = await loadWith(tx, requestId);
+    const { request, counter } = await loadWith(tx, requestId);
+    // Un brouillon est invisible du staff ; une demande terminée ne se règle plus.
+    if (request.status === "DRAFT") throw new OnsiteError("NOT_FOUND", 404);
+    if (LOCKED_STATUSES.includes(request.status)) throw new OnsiteError("REQUEST_LOCKED", 409);
+    // `counter.marginPercent` vaut 0 pour une marge nulle en base (marge nulle en base -> from: 0).
+    const from = counter.marginPercent;
+    // Même marge : rien à écrire, ni fil ni journal.
+    if (from === marginPercent) return { counter, from };
     const next = computeOnsiteCounter({ ordered: counter.ordered, marginPercent, printed: counter.printed });
     if (next.cap < counter.printed) throw new OnsiteError("MARGIN_BELOW_PRINTED", 409);
     await tx.printRequest.update({ where: { id: requestId }, data: { marginPercent } });
@@ -188,9 +196,9 @@ export async function setOnsiteMargin(input: {
       tx,
       requestId,
       "ONSITE_MARGIN_CHANGED",
-      { from: counter.marginPercent, to: marginPercent, reason },
+      { from, to: marginPercent, reason },
       { userId, side: "STAFF" },
     );
-    return next;
+    return { counter: next, from };
   });
 }
