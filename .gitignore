@@ -60,3 +60,6 @@ next-env.d.ts
 
 # racine CA Caddy extraite temporairement par `make dev-https`
 .caddy-root.crt
+
+# Worktrees de developpement parallele (voir chore(dev))
+/.worktrees/

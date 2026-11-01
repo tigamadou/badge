@@ -17,7 +17,7 @@ export default defineConfig({
     // Reset global de la BDD avant chaque test (ordre FK strict).
     setupFiles: ["./src/test-setup.ts"],
     // E2E Playwright vivent dans e2e/ et ne doivent pas etre executes par Vitest.
-    exclude: ["node_modules", "dist", ".next", "e2e/**"],
+    exclude: ["node_modules", "dist", ".next", "e2e/**", ".worktrees/**"],
     coverage: {
       provider: "v8",
       // Perimetre v4-02 : lib (unitaire) + routes API (integration).
