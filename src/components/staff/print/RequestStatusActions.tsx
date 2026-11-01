@@ -21,6 +21,8 @@ const LABEL: Record<StaffAction, string> = {
   COMPLETE: "Terminer",
 };
 
+const MARK_PAID_ERRORS = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette demande." };
+
 const TEXTAREA =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
 
@@ -51,9 +53,15 @@ export function RequestStatusActions({
     setReason("");
   }
 
-  async function run(action: StaffAction, path: string, body?: unknown, success?: string): Promise<boolean> {
+  async function run(
+    action: StaffAction,
+    path: string,
+    body?: unknown,
+    success?: string,
+    codeMessages?: Record<string, string>,
+  ): Promise<boolean> {
     setBusy(action);
-    const res = await staffRequest(requestUrl(request.id, path), "POST", body);
+    const res = await staffRequest(requestUrl(request.id, path), "POST", body, codeMessages);
     setBusy(null);
     if (!res) return false;
     if (success) toastSuccess(success);
@@ -96,7 +104,7 @@ export function RequestStatusActions({
       if (await run("REJECT", "/reject", { reason: text }, "Demande refusée.")) close();
     } else if (dialog === "MARK_PAID") {
       if (text.length < 3) return;
-      if (await run("MARK_PAID", "/mark-paid", { reason: text }, "Demande marquée payée.")) close();
+      if (await run("MARK_PAID", "/mark-paid", { reason: text }, "Demande marquée payée.", MARK_PAID_ERRORS)) close();
     }
   }
 
@@ -149,6 +157,11 @@ export function RequestStatusActions({
           </>
         }
       >
+        {dialog === "MARK_PAID" && (
+          <p className="mb-3 text-sm text-slate-500">
+            À utiliser pour un paiement reçu hors FedaPay (virement, espèces).
+          </p>
+        )}
         <label className="block text-sm font-medium text-slate-700" htmlFor="print-request-reason">
           {dialog === "REJECT" ? "Motif du refus (transmis à l'organisateur)" : "Motif du paiement manuel (3 caractères minimum)"}
         </label>
