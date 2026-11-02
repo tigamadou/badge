@@ -12,21 +12,13 @@ export type BadgeWitness = {
   setFreeH: (v: string) => void;
   selected: TemplateOption | null;
   badgeMm: { width: number; height: number } | null;
-  // Paramètres d'URL qui transmettent le témoin d'une page à l'autre.
-  query: string;
 };
 
 // Badge témoin : "free" = taille libre, sinon id de template installé.
-export function useBadgeWitness(
-  templates: TemplateOption[],
-  initial?: { templateId?: string; w?: string; h?: string },
-): BadgeWitness {
-  const known = initial?.templateId === "free" || templates.some((t) => t.id === initial?.templateId);
-  const [templateId, setTemplateId] = useState(
-    known ? (initial?.templateId as string) : (templates[0]?.id ?? "free"),
-  );
-  const [freeW, setFreeW] = useState(initial?.w ?? "84");
-  const [freeH, setFreeH] = useState(initial?.h ?? "120");
+export function useBadgeWitness(templates: TemplateOption[]): BadgeWitness {
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "free");
+  const [freeW, setFreeW] = useState("84");
+  const [freeH, setFreeH] = useState("120");
 
   const selected = templates.find((t) => t.id === templateId) ?? null;
   let badgeMm: BadgeWitness["badgeMm"] = null;
@@ -37,12 +29,7 @@ export function useBadgeWitness(
   } else if (selected) {
     badgeMm = { width: selected.widthMm, height: selected.heightMm };
   }
-  const query =
-    templateId === "free"
-      ? `badge=free&w=${encodeURIComponent(freeW)}&h=${encodeURIComponent(freeH)}`
-      : `badge=${encodeURIComponent(templateId)}`;
-
-  return { templateId, setTemplateId, freeW, setFreeW, freeH, setFreeH, selected, badgeMm, query };
+  return { templateId, setTemplateId, freeW, setFreeW, freeH, setFreeH, selected, badgeMm };
 }
 
 const TONE = {

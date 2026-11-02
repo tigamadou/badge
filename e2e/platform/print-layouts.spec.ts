@@ -18,7 +18,7 @@ function selectByLabel(page: Page, label: string) {
 
 // Gabarits d'impression : liste /platform/print/layouts, editeur /new et /[layoutId].
 // Ecriture : STAFF_ADMIN ; lecture seule : STAFF_OBSERVER (lien « Voir »). Le badge temoin
-// choisi sur la liste suit l'utilisateur dans l'editeur et au retour (parametres d'URL).
+// n'existe que dans l'editeur ; la liste n'affiche que les gabarits.
 // Le badge temoin « Taille libre » 84 x 120 mm donne 9 badges par feuille sur un A3
 // (marges 10 mm, sans espace).
 test.describe("Platform — Gabarits d'impression", () => {
@@ -43,11 +43,11 @@ test.describe("Platform — Gabarits d'impression", () => {
 
   test("STAFF_ADMIN crée un gabarit A3, modifie une marge puis l'archive", async ({ page }) => {
     const staff = await goToLayouts(page, "layouts-admin", "STAFF_ADMIN");
-    await useFreeBadge(page);
     const name = `${E2E_LAYOUT_PREFIX}A3 ${Date.now()}`;
 
     await page.getByRole("link", { name: "Nouveau gabarit" }).click();
     await expect(page).toHaveURL(/\/platform\/print\/layouts\/new/);
+    await useFreeBadge(page);
     await page.getByLabel("Nom", { exact: true }).fill(name);
     await page.getByRole("radio", { name: /^A3/ }).click();
     await expect(page.getByRole("radio", { name: /^A3/ })).toHaveAttribute("aria-checked", "true");
@@ -55,10 +55,11 @@ test.describe("Platform — Gabarits d'impression", () => {
 
     await page.getByRole("button", { name: "Enregistrer" }).click();
     await expect(toast(page, "Gabarit créé.")).toBeVisible();
-    await expect(page).toHaveURL(/\/platform\/print\/layouts\?badge=free/);
+    await expect(page).toHaveURL(/\/platform\/print\/layouts$/);
     const row = page.locator("li", { hasText: name });
     await expect(row).toContainText("297 × 420 mm");
-    await expect(row).toContainText("9 badges par feuille");
+    await expect(row).toContainText("Marges 10 mm");
+    await expect(page.getByText("badges par feuille")).toHaveCount(0);
 
     const created = await getDb().printSheetLayout.findUnique({ where: { name } });
     expect(created).toMatchObject({
@@ -118,7 +119,8 @@ test.describe("Platform — Gabarits d'impression", () => {
       installedById: staff.id,
       label: `E2E recto seul ${stamp}`,
     });
-    await page.reload();
+    await page.getByRole("link", { name: "Nouveau gabarit" }).click();
+    await expect(page).toHaveURL(/\/platform\/print\/layouts\/new/);
 
     await selectByLabel(page, "Template installé").selectOption(duplex.id);
     await expect(page.getByText("Recto-verso", { exact: true })).toBeVisible();
@@ -135,7 +137,7 @@ test.describe("Platform — Gabarits d'impression", () => {
 
   test("STAFF_OBSERVER voit la liste sans bouton d'écriture", async ({ page }) => {
     await goToLayouts(page, "layouts-observer", "STAFF_OBSERVER");
-    await expect(page.getByText("Badge témoin")).toBeVisible();
+    await expect(page.getByText("Badge témoin")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Nouveau gabarit" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Archiver" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Modifier" })).toHaveCount(0);

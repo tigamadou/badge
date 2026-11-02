@@ -2,17 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { LayoutList } from "@/components/staff/print/LayoutList";
 import {
   canWriteLayouts,
-  loadTemplateOptions,
   toLayoutRow,
-  witnessFromParams,
-  type WitnessParams,
 } from "@/lib/print-sheets/layout-page-data";
 
-export default async function PrintLayoutsPage({ searchParams }: { searchParams: Promise<WitnessParams> }) {
-  const [canWrite, layouts, templates] = await Promise.all([
+export default async function PrintLayoutsPage() {
+  const [canWrite, layouts] = await Promise.all([
     canWriteLayouts(),
     prisma.printSheetLayout.findMany({ where: { archived: false }, orderBy: { createdAt: "asc" } }),
-    loadTemplateOptions(),
   ]);
 
   return (
@@ -25,9 +21,7 @@ export default async function PrintLayoutsPage({ searchParams }: { searchParams:
       </div>
       <LayoutList
         layouts={layouts.map(toLayoutRow)}
-        templates={templates}
         canWrite={canWrite}
-        initialWitness={witnessFromParams(await searchParams)}
       />
     </div>
   );

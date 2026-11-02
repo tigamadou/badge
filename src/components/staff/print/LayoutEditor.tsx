@@ -164,12 +164,10 @@ export function LayoutEditor({
   layout,
   templates,
   canWrite,
-  initialWitness,
 }: {
   layout: LayoutRow | null;
   templates: TemplateOption[];
   canWrite: boolean;
-  initialWitness?: { templateId?: string; w?: string; h?: string };
 }) {
   const router = useRouter();
   const isNew = layout === null;
@@ -181,8 +179,7 @@ export function LayoutEditor({
     const f = layout ? toForm(layout) : EMPTY_FORM;
     return new Set([f.marginTop, f.marginRight, f.marginBottom, f.marginLeft]).size === 1;
   });
-  const witness = useBadgeWitness(templates, initialWitness);
-  const listHref = `${LIST_HREF}?${witness.query}`;
+  const witness = useBadgeWitness(templates);
 
   const set = <K extends keyof LayoutForm>(k: K, v: LayoutForm[K]) => setForm((f) => ({ ...f, [k]: v }));
   const spec = formToSpec(form);
@@ -230,7 +227,7 @@ export function LayoutEditor({
         if (r.nameError) return setNameError(r.nameError);
         if (r.sizeError) return setSizeError(r.sizeError);
         toastSuccess(isNew ? "Gabarit créé." : "Gabarit mis à jour.");
-        router.push(listHref);
+        router.push(LIST_HREF);
         router.refresh();
       },
     },
@@ -248,7 +245,7 @@ export function LayoutEditor({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
-          <Link href={listHref} className="inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 hover:text-slate-900">
+          <Link href={LIST_HREF} className="inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 hover:text-slate-900">
             <Icon name="arrow-left" size={14} /> Gabarits d&apos;impression
           </Link>
           <h1 className="mt-1 truncate text-xl font-semibold text-slate-900">
@@ -264,14 +261,14 @@ export function LayoutEditor({
               success="Gabarit archivé."
               error="Échec de l'archivage."
               onSuccess={() => {
-                router.push(listHref);
+                router.push(LIST_HREF);
                 router.refresh();
               }}
             >
               Archiver
             </ActionButton>
           )}
-          <Link href={listHref} className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200">
+          <Link href={LIST_HREF} className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200">
             {canWrite ? "Annuler" : "Retour"}
           </Link>
           {canWrite && (

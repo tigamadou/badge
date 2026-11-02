@@ -7,7 +7,6 @@ import {
   canWriteLayouts,
   loadTemplateOptions,
   toLayoutRow,
-  witnessFromParams,
 } from "@/lib/print-sheets/layout-page-data";
 
 const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -106,12 +105,5 @@ describe("toLayoutRow", () => {
       duplexFlip: "SHORT_EDGE",
       cropMarks: false,
     });
-  });
-});
-
-describe("witnessFromParams", () => {
-  it("traduit les paramètres d'URL en badge témoin initial", () => {
-    expect(witnessFromParams({ badge: "free", w: "84", h: "120" })).toEqual({ templateId: "free", w: "84", h: "120" });
-    expect(witnessFromParams({})).toEqual({ templateId: undefined, w: undefined, h: undefined });
   });
 });

@@ -47,9 +47,3 @@ export function toLayoutRow(l: PrintSheetLayout): LayoutRow {
     cropMarks: l.cropMarks,
   };
 }
-
-// Badge temoin transmis par l'URL (?badge=<id>|free&w=&h=).
-export type WitnessParams = { badge?: string; w?: string; h?: string };
-export function witnessFromParams(sp: WitnessParams) {
-  return { templateId: sp.badge, w: sp.w, h: sp.h };
-}

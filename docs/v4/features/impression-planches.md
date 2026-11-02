@@ -13,7 +13,7 @@ rastérisation, et **jamais mis à l'échelle** (100 %).
 
 | Écran | Rôle | Droits |
 |---|---|---|
-| `/platform/print/layouts` (« Gabarits ») | Liste des gabarits en cartes (miniature, badges par feuille), archivage | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
+| `/platform/print/layouts` (« Gabarits ») | Liste des gabarits en cartes (miniature de la zone utile sans emplacements, format, marges et espacements), archivage | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
 | `/platform/print/layouts/new`, `/platform/print/layouts/[layoutId]` | Éditeur d'un gabarit avec aperçu en direct ; lecture seule sous `STAFF_ADMIN`, `/new` redirige vers la liste | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
 | `/platform/print/sheets` (« Planches ») | Lancer une génération, historique, aperçu et téléchargement | `STAFF_SUPPORT` minimum (`STAFF_OBSERVER` est redirigé vers `/platform`) |
 
@@ -36,9 +36,9 @@ millimètre** (entiers) ; l'interface saisit des millimètres.
 | Retournement recto-verso | `LONG_EDGE` (défaut) ou `SHORT_EDGE` |
 | Traits de coupe | oui par défaut |
 
-La liste et l'éditeur affichent un **badge témoin** (template installé ou taille libre) qui
-sert à annoncer « N badges par feuille ». Il suit l'utilisateur de la liste à l'éditeur et au
-retour par les paramètres d'URL (`?badge=<id>` ou `?badge=free&w=&h=`). Pour un template
+Seul l'éditeur affiche un **badge témoin** (template installé ou taille libre, premier
+template par défaut) qui sert à annoncer « N badges par feuille » ; la liste n'en a pas et
+aucun paramètre d'URL ne le transmet. Pour un template
 installé, l'écran indique s'il est **recto-verso** (deux pages) ou **recto seul** ; la liste
 déroulante le signale aussi (« · recto-verso »).
 
