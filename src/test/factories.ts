@@ -180,3 +180,20 @@ export function makePrintMessage(input: {
     },
   });
 }
+
+export function makePrintGeneration(input: {
+  eventId: string;
+  printRequestId?: string | null;
+  layoutId?: string | null;
+  data?: Partial<Prisma.PrintSheetGenerationUncheckedCreateInput>;
+}) {
+  return prisma.printSheetGeneration.create({
+    data: {
+      eventId: input.eventId,
+      printRequestId: input.printRequestId ?? null,
+      layoutId: input.layoutId ?? null,
+      registrationIds: [],
+      ...input.data,
+    },
+  });
+}
