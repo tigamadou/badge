@@ -1,5 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
-import { cleanupE2ETestData, createTestStaff, disconnectDb, E2E_LAYOUT_PREFIX, getDb } from "../helpers/db";
+import {
+  cleanupE2ETestData,
+  createTestInstalledTemplate,
+  createTestStaff,
+  disconnectDb,
+  E2E_LAYOUT_PREFIX,
+  getDb,
+} from "../helpers/db";
 import { loginAndEnter } from "../helpers/nav";
 import { toast } from "../helpers/feedback";
 
@@ -9,8 +16,9 @@ function selectByLabel(page: Page, label: string) {
   return page.locator("label", { hasText: label }).locator("xpath=following-sibling::select").first();
 }
 
-// Page Gabarits d'impression — /platform/print/layouts
-// Ecriture : STAFF_ADMIN ; lecture seule : STAFF_OBSERVER (bouton « Voir »).
+// Gabarits d'impression : liste /platform/print/layouts, editeur /new et /[layoutId].
+// Ecriture : STAFF_ADMIN ; lecture seule : STAFF_OBSERVER (lien « Voir »). Le badge temoin
+// choisi sur la liste suit l'utilisateur dans l'editeur et au retour (parametres d'URL).
 // Le badge temoin « Taille libre » 84 x 120 mm donne 9 badges par feuille sur un A3
 // (marges 10 mm, sans espace).
 test.describe("Platform — Gabarits d'impression", () => {
@@ -38,13 +46,16 @@ test.describe("Platform — Gabarits d'impression", () => {
     await useFreeBadge(page);
     const name = `${E2E_LAYOUT_PREFIX}A3 ${Date.now()}`;
 
-    await page.getByRole("button", { name: "Nouveau gabarit" }).click();
+    await page.getByRole("link", { name: "Nouveau gabarit" }).click();
+    await expect(page).toHaveURL(/\/platform\/print\/layouts\/new/);
     await page.getByLabel("Nom", { exact: true }).fill(name);
-    await selectByLabel(page, "Format").selectOption("A3");
+    await page.getByRole("radio", { name: /^A3/ }).click();
+    await expect(page.getByRole("radio", { name: /^A3/ })).toHaveAttribute("aria-checked", "true");
     await expect(page.getByText("9 badges par feuille").first()).toBeVisible();
 
     await page.getByRole("button", { name: "Enregistrer" }).click();
     await expect(toast(page, "Gabarit créé.")).toBeVisible();
+    await expect(page).toHaveURL(/\/platform\/print\/layouts\?badge=free/);
     const row = page.locator("li", { hasText: name });
     await expect(row).toContainText("297 × 420 mm");
     await expect(row).toContainText("9 badges par feuille");
@@ -58,12 +69,15 @@ test.describe("Platform — Gabarits d'impression", () => {
       createdById: staff.id,
     });
 
-    // Modification d'une marge : 25 mm a gauche et a droite -> 8 mm de zone utile en moins.
-    await row.getByRole("button", { name: "Modifier" }).click();
+    // Modification d'une marge, marges dissociees : seule la marge gauche change.
+    await row.getByRole("link", { name: "Modifier" }).click();
+    await expect(page).toHaveURL(new RegExp(`/platform/print/layouts/${created?.id}`));
+    await page.getByRole("switch", { name: "Marges identiques" }).click();
     await page.getByLabel("Marge gauche (mm)").fill("25");
     await page.getByRole("button", { name: "Enregistrer" }).click();
     await expect(toast(page, "Gabarit mis à jour.")).toBeVisible();
-    expect((await getDb().printSheetLayout.findUnique({ where: { name } }))?.marginLeft).toBe(250);
+    const updated = await getDb().printSheetLayout.findUnique({ where: { name } });
+    expect(updated).toMatchObject({ marginLeft: 250, marginRight: 100 });
 
     await row.getByRole("button", { name: "Archiver" }).click();
     await expect(toast(page, "Gabarit archivé.")).toBeVisible();
@@ -85,18 +99,48 @@ test.describe("Platform — Gabarits d'impression", () => {
     });
 
     await page.reload();
-    await page.getByRole("button", { name: "Nouveau gabarit" }).click();
+    await page.getByRole("link", { name: "Nouveau gabarit" }).click();
     await page.getByLabel("Nom", { exact: true }).fill(name);
     await page.getByRole("button", { name: "Enregistrer" }).click();
     await expect(page.getByText("Ce nom de gabarit existe déjà.")).toBeVisible();
     expect(await getDb().printSheetLayout.count({ where: { name } })).toBe(1);
   });
 
+  test("Le badge témoin indique si le template est recto-verso", async ({ page }) => {
+    const staff = await goToLayouts(page, "layouts-duplex", "STAFF_ADMIN");
+    const stamp = Date.now();
+    const duplex = await createTestInstalledTemplate({
+      installedById: staff.id,
+      label: `E2E recto-verso ${stamp}`,
+      pages: 2,
+    });
+    const single = await createTestInstalledTemplate({
+      installedById: staff.id,
+      label: `E2E recto seul ${stamp}`,
+    });
+    await page.reload();
+
+    await selectByLabel(page, "Template installé").selectOption(duplex.id);
+    await expect(page.getByText("Recto-verso", { exact: true })).toBeVisible();
+    await expect(page.getByText(/chaque verso est placé derrière son recto/i)).toBeVisible();
+
+    await selectByLabel(page, "Template installé").selectOption(single.id);
+    await expect(page.getByText("Recto seul", { exact: true })).toBeVisible();
+    await expect(page.getByText("Recto-verso", { exact: true })).toHaveCount(0);
+
+    // Taille libre : pas de template, donc rien a annoncer.
+    await selectByLabel(page, "Template installé").selectOption("free");
+    await expect(page.getByText("Recto seul", { exact: true })).toHaveCount(0);
+  });
+
   test("STAFF_OBSERVER voit la liste sans bouton d'écriture", async ({ page }) => {
     await goToLayouts(page, "layouts-observer", "STAFF_OBSERVER");
     await expect(page.getByText("Badge témoin")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Nouveau gabarit" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Nouveau gabarit" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Archiver" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Modifier" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Modifier" })).toHaveCount(0);
+    // L'acces direct a la creation renvoie a la liste.
+    await page.goto("/platform/print/layouts/new");
+    await expect(page).toHaveURL(/\/platform\/print\/layouts$/);
   });
 });

@@ -251,15 +251,17 @@ export async function createTestPrintPayment(opts: {
 export async function createTestInstalledTemplate(opts: {
   installedById: string;
   label?: string;
+  pages?: 1 | 2;
 }): Promise<{ id: string; label: string }> {
   const label = opts.label ?? "Badge E2E impression";
+  const pages = opts.pages ?? 1;
   return db().installedBadgeTemplate.create({
     data: {
       family: `e2e-print-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
       version: 1,
       label,
       description: "",
-      pages: 1,
+      pages,
       pageWidthPx: 320,
       pageHeightPx: 460,
       layout: {
@@ -268,7 +270,7 @@ export async function createTestInstalledTemplate(opts: {
         label,
         description: "",
         category: "badge",
-        page: { widthPx: 320, heightPx: 460, count: 1 },
+        page: { widthPx: 320, heightPx: 460, count: pages },
         variables: [],
         blocks: [],
       },

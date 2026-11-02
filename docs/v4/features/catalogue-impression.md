@@ -21,6 +21,11 @@ L'entrée « Catalogue » est dans le groupe « Impression » de la navigation s
 modifiable. Les organisateurs n'ont pas d'écran ici : ils verront la vitrine dans l'assistant
 du plan 33.
 
+Le seed (minimal comme démo) publie cinq **accessoires** : porte-badge souple, porte-badge
+rigide, cordon tour de cou (couleur, marquage texte, logo), pince crocodile et enrouleur de
+badge, avec prix dégressifs. Ils sont créés une seule fois (par slug) : un produit déjà présent
+n'est pas modifié. Aucun support de badge n'est seedé.
+
 ## Familles et produits
 
 Modèle `PrintProduct` (suppression logique : `archived`, `archivedAt`).

@@ -13,7 +13,8 @@ rastérisation, et **jamais mis à l'échelle** (100 %).
 
 | Écran | Rôle | Droits |
 |---|---|---|
-| `/platform/print/layouts` (« Gabarits ») | Liste, création, modification, archivage des gabarits, avec aperçu en schéma | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
+| `/platform/print/layouts` (« Gabarits ») | Liste des gabarits en cartes (miniature, badges par feuille), archivage | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
+| `/platform/print/layouts/new`, `/platform/print/layouts/[layoutId]` | Éditeur d'un gabarit avec aperçu en direct ; lecture seule sous `STAFF_ADMIN`, `/new` redirige vers la liste | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
 | `/platform/print/sheets` (« Planches ») | Lancer une génération, historique, aperçu et téléchargement | `STAFF_SUPPORT` minimum (`STAFF_OBSERVER` est redirigé vers `/platform`) |
 
 Les deux entrées sont dans le groupe « Impression » de la navigation staff (`StaffShell`).
@@ -35,10 +36,24 @@ millimètre** (entiers) ; l'interface saisit des millimètres.
 | Retournement recto-verso | `LONG_EDGE` (défaut) ou `SHORT_EDGE` |
 | Traits de coupe | oui par défaut |
 
-L'écran affiche un **badge témoin** (template installé ou taille libre) qui sert à annoncer
-« N badges par feuille » dans la liste et dans l'aperçu. Modifier un gabarit ne change pas les
+La liste et l'éditeur affichent un **badge témoin** (template installé ou taille libre) qui
+sert à annoncer « N badges par feuille ». Il suit l'utilisateur de la liste à l'éditeur et au
+retour par les paramètres d'URL (`?badge=<id>` ou `?badge=free&w=&h=`). Pour un template
+installé, l'écran indique s'il est **recto-verso** (deux pages) ou **recto seul** ; la liste
+déroulante le signale aussi (« · recto-verso »).
+
+L'éditeur regroupe les réglages par section (identité, feuille, marges et espacements,
+disposition, impression) : format et orientations se choisissent par tuiles, les quatre marges
+s'éditent autour d'un schéma de la zone utile et peuvent être liées (« Marges identiques »).
+L'aperçu en direct, en grande colonne collante à gauche (les réglages sont à droite), dessine la planche sur un fond sombre (`#1D2128`) ; les
+cartes de la liste en reprennent une miniature. Modifier un gabarit ne change pas les
 générations passées : leurs réglages sont **figés à la création** (`layoutSnapshot`). Un
 gabarit archivé ne peut plus servir à générer.
+
+Le seed (minimal comme démo) crée un gabarit par défaut, **« A3 standard »** : A3 portrait,
+marges de 10 mm, **5 mm** d'espace horizontal et vertical entre les badges, orientation
+automatique, retournement sur le bord long, traits de coupe. Il est créé une seule fois (par
+nom) : un gabarit déjà présent, même retouché par le staff, n'est pas modifié.
 
 ## Calcul de la grille
 

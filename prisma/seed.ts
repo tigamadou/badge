@@ -18,6 +18,146 @@ const prisma = new PrismaClient();
 const DEMO_PASSWORD = "123456";
 const DEMO_DOMAIN = "@demo.local";
 
+// Gabarit d'impression cree par defaut (seed minimal).
+const DEFAULT_LAYOUT_NAME = "A3 standard";
+
+// Accessoires de la boutique d'impression (seed minimal). Prix en FCFA ; paliers
+// [quantite minimale, prix unitaire]. Le porte-badge est un accessoire : le support de
+// badge (PVC, carton) est le badge imprime lui-meme, produit de famille BADGE.
+type AccessoryOptionSeed = {
+  name: string;
+  help?: string;
+  type: "CHOICE" | "COLOR" | "TEXT" | "FILE";
+  required?: boolean;
+  priceDelta?: number;
+  maxLength?: number;
+  values?: Array<{ label: string; colorHex?: string; priceDelta?: number }>;
+};
+const ACCESSORY_SEEDS: Array<{
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  basePrice: number;
+  minQuantity: number;
+  leadTimeDays: number;
+  tiers: Array<[number, number]>;
+  options: AccessoryOptionSeed[];
+}> = [
+  {
+    slug: "porte-badge-souple",
+    name: "Porte-badge souple",
+    category: "Porte-badges",
+    description: "Pochette transparente en PVC souple, fermeture zip, pour badge format carte.",
+    basePrice: 200,
+    minQuantity: 10,
+    leadTimeDays: 2,
+    tiers: [[100, 170], [500, 150]],
+    options: [
+      {
+        name: "Format",
+        type: "CHOICE",
+        required: true,
+        values: [{ label: "Carte (86 × 54 mm)" }, { label: "A6 (105 × 148 mm)", priceDelta: 50 }],
+      },
+      {
+        name: "Sens",
+        type: "CHOICE",
+        required: true,
+        values: [{ label: "Vertical" }, { label: "Horizontal" }],
+      },
+    ],
+  },
+  {
+    slug: "porte-badge-rigide",
+    name: "Porte-badge rigide",
+    category: "Porte-badges",
+    description: "Étui rigide transparent, protège le badge des plis et des projections.",
+    basePrice: 500,
+    minQuantity: 10,
+    leadTimeDays: 3,
+    tiers: [[100, 450], [500, 400]],
+    options: [
+      {
+        name: "Sens",
+        type: "CHOICE",
+        required: true,
+        values: [{ label: "Vertical" }, { label: "Horizontal" }],
+      },
+    ],
+  },
+  {
+    slug: "cordon-tour-de-cou",
+    name: "Cordon tour de cou",
+    category: "Cordons",
+    description: "Cordon polyester 15 mm avec mousqueton, attache de sécurité au niveau de la nuque.",
+    basePrice: 500,
+    minQuantity: 20,
+    leadTimeDays: 7,
+    tiers: [[100, 450], [500, 380]],
+    options: [
+      {
+        name: "Couleur",
+        type: "COLOR",
+        required: true,
+        values: [
+          { label: "Noir", colorHex: "#111827" },
+          { label: "Bleu", colorHex: "#1D4ED8" },
+          { label: "Rouge", colorHex: "#DC2626" },
+          { label: "Vert", colorHex: "#16A34A" },
+          { label: "Blanc", colorHex: "#FFFFFF" },
+        ],
+      },
+      {
+        name: "Marquage",
+        help: "Texte imprimé sur toute la longueur du cordon.",
+        type: "TEXT",
+        priceDelta: 150,
+        maxLength: 40,
+      },
+      {
+        name: "Logo",
+        help: "Logo vectoriel (PDF ou PNG haute définition) imprimé sur le cordon.",
+        type: "FILE",
+        priceDelta: 200,
+      },
+    ],
+  },
+  {
+    slug: "pince-crocodile",
+    name: "Pince crocodile",
+    category: "Fixations",
+    description: "Pince métallique avec languette transparente, à fixer au vêtement.",
+    basePrice: 150,
+    minQuantity: 10,
+    leadTimeDays: 2,
+    tiers: [[100, 120]],
+    options: [],
+  },
+  {
+    slug: "enrouleur-de-badge",
+    name: "Enrouleur de badge",
+    category: "Fixations",
+    description: "Enrouleur rétractable avec cordon de 60 cm et clip ceinture.",
+    basePrice: 800,
+    minQuantity: 10,
+    leadTimeDays: 5,
+    tiers: [[100, 700]],
+    options: [
+      {
+        name: "Couleur",
+        type: "COLOR",
+        required: true,
+        values: [
+          { label: "Noir", colorHex: "#111827" },
+          { label: "Blanc", colorHex: "#FFFFFF" },
+          { label: "Bleu", colorHex: "#1D4ED8" },
+        ],
+      },
+    ],
+  },
+];
+
 // Reproductible : meme seed donne le meme jeu de donnees.
 let rngState = 42;
 function rand(): number {
@@ -287,6 +427,69 @@ async function main() {
     }
   }
   console.log(`Motifs de rejet seedes : ${rejectionReasonSeeds.length}`);
+
+  // 1c. Gabarit d'impression par defaut : A3 portrait, marges 10 mm, 5 mm entre les badges.
+  // Longueurs en dixiemes de mm. Idempotent par nom ; un gabarit modifie par le staff est garde.
+  await prisma.printSheetLayout.upsert({
+    where: { name: DEFAULT_LAYOUT_NAME },
+    create: {
+      name: DEFAULT_LAYOUT_NAME,
+      sheetWidth: 2970,
+      sheetHeight: 4200,
+      sheetOrientation: "PORTRAIT",
+      marginTop: 100,
+      marginRight: 100,
+      marginBottom: 100,
+      marginLeft: 100,
+      gapHorizontal: 50,
+      gapVertical: 50,
+    },
+    update: {},
+  });
+  console.log(`Gabarit d'impression par defaut (${DEFAULT_LAYOUT_NAME}) pret.`);
+
+  // 1d. Accessoires de la boutique d'impression, publies. Idempotent par slug : un produit
+  // deja present (eventuellement retouche par le staff) n'est pas modifie.
+  let accessoriesCreated = 0;
+  for (const [position, a] of ACCESSORY_SEEDS.entries()) {
+    if (await prisma.printProduct.findUnique({ where: { slug: a.slug } })) continue;
+    await prisma.printProduct.create({
+      data: {
+        kind: "ACCESSORY",
+        slug: a.slug,
+        name: a.name,
+        category: a.category,
+        description: a.description,
+        basePrice: a.basePrice,
+        minQuantity: a.minQuantity,
+        leadTimeDays: a.leadTimeDays,
+        position,
+        published: true,
+        priceTiers: { create: a.tiers.map(([minQuantity, unitPrice]) => ({ minQuantity, unitPrice })) },
+        options: {
+          create: a.options.map((o, i) => ({
+            name: o.name,
+            help: o.help,
+            type: o.type,
+            required: o.required ?? false,
+            priceDelta: o.priceDelta ?? 0,
+            maxLength: o.maxLength,
+            position: i,
+            values: {
+              create: (o.values ?? []).map((v, j) => ({
+                label: v.label,
+                colorHex: v.colorHex,
+                priceDelta: v.priceDelta ?? 0,
+                position: j,
+              })),
+            },
+          })),
+        },
+      },
+    });
+    accessoriesCreated++;
+  }
+  console.log(`Accessoires de la boutique : ${accessoriesCreated} crees, ${ACCESSORY_SEEDS.length} au catalogue.`);
 
   // 2. Pre-hash unique du password demo (gain ~60s sur 240 hashes).
   const passwordHash = await hash(DEMO_PASSWORD, 12);
