@@ -20,7 +20,7 @@ regénération.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | File des commandes : `order-queue.ts` | [ ] | | |
+| 1 | File des commandes : `order-queue.ts` | [x] | 2026-11-02 | order-queue.ts ; 7 tests |
 | 2 | Génération par commande avec écrasement | [ ] | | |
 | 3 | Worker : clé stable et suppression de l'ancien fichier | [ ] | | |
 | 4 | Sous-pages À traiter / Générées / Génération libre | [ ] | | |
