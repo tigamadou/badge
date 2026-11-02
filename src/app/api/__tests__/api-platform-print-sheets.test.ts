@@ -110,9 +110,13 @@ describe("POST /api/platform/print/sheets", () => {
     const { generation } = await res.json();
     expect(generation.printRequestId).toBe(request.id);
     expect(generation.duplex).toBe(true);
+    const second = await prisma.printRequest.create({
+      data: { reference: uniq("PR-B"), eventId: event.id, orgId: event.orgId, type: "ADVANCE", status: "PAID", createdById: owner.id },
+    });
+    await prisma.printRequestItem.create({ data: { requestId: second.id, registrationId: r.id, position: 0 } });
     const all = await POST(
       req("/api/platform/print/sheets", "POST", {
-        eventId: event.id, layoutId: layout.id, printRequestId: request.id, selection: { mode: "REQUEST" },
+        eventId: event.id, layoutId: layout.id, printRequestId: second.id, selection: { mode: "REQUEST" },
       }),
       noParams,
     );
