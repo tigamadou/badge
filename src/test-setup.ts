@@ -1,7 +1,12 @@
 import { beforeEach } from "vitest";
+import { assertTestDatabase } from "@/test-guard";
 import { prisma } from "@/lib/prisma";
 import { overrideExporter } from "@/lib/renderer";
 import { fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
+
+// Avant toute requete (le client Prisma ne se connecte qu'a la premiere) : refuser
+// une base qui n'est pas une base de test.
+assertTestDatabase(process.env.DATABASE_URL);
 
 // Reset global DB avant chaque test. L'ordre suit les contraintes FK :
 // tout ce qui depend de Event/Organization/User est efface en premier,

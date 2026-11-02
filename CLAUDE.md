@@ -106,6 +106,31 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
 ---
 
+## Règles de test (tous les tests, présents et futurs)
+
+Ces règles s'appliquent à **tout nouveau test** écrit dans le projet, quel que soit le plan ou
+la tâche. Leur outillage est livré par la vague 0 (`docs/v4/plans/2026-11-02-0-stacks-agents.md`) ;
+tant qu'elle n'est pas terminée, appliquer ce qui existe déjà et ne rien écrire qui les
+contredise.
+
+- **Base de test dédiée** : Vitest tourne sur une base dont le nom finit par `_test`
+  (`badge_test` ; `badge_<lot>_test` pour un agent), jamais sur une base de dev. `make test`
+  crée et met au schéma cette base (`make test-db`). Un garde-fou dans `src/test-setup.ts` refuse
+  toute autre base.
+- **Pas de mock de la base ni de Prisma** : les tests d'intégration utilisent le vrai MySQL
+  (verrous, `SKIP LOCKED`, contraintes d'unicité, transactions, cascades). Seuls les services
+  externes se mockent (FedaPay, SMTP réel, renderer via `fakeExporter`, session NextAuth).
+- **Fabriques de données** : préparer les données avec `src/test/factories.ts`
+  (`@faker-js/faker`, écriture dans la vraie base de test, graine fixée par fichier). Ajouter une
+  fabrique plutôt que dupliquer des `prisma.*.create` dans les tests.
+- **Ne jamais modifier le code de production pour faire passer un test** ou atteindre la
+  couverture : s'arrêter et demander.
+- **Couverture** : 100 % sur `src/lib/**` et `src/app/api/**` (gate dans `vitest.config.ts`).
+- **e2e** (Playwright) : contre l'app en cours d'exécution, avec leurs propres fixtures
+  préfixées et nettoyées (`e2e/helpers/db.ts`).
+
+---
+
 ## Workflow Git — valeurs projet
 
 - **Branche principale** : `development`
