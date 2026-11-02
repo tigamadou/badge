@@ -16,8 +16,8 @@ des gabarits — pour qu'en vague 2 aucun lot ne touche `schema.prisma` ni un fi
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Branche d'intégration | [ ] | | |
-| 2 | Schéma : notes internes, lectures, une planche par commande | [ ] | | |
+| 1 | Branche d'intégration | [x] | 2026-11-02 | créée en vague 0 |
+| 2 | Schéma : notes internes, lectures, une planche par commande | [x] | 2026-11-02 | db-push dev OK (--accept-data-loss : seule alerte = contrainte unique). Requête ponctuelle (0 ligne supprimée) : `DELETE g FROM PrintSheetGeneration g JOIN PrintSheetGeneration n ON n.printRequestId = g.printRequestId AND (n.createdAt > g.createdAt OR (n.createdAt = g.createdAt AND n.id > g.id)) WHERE g.printRequestId IS NOT NULL`. Relation `PrintRequest.generations` devient `generation` (1-1). Test `api-platform-print-sheets` « transmet printRequestId » échoue (2 générations pour une commande) : à traiter en Task 5. |
 | 3 | Fil : messages internes et lecture incrémentale | [ ] | | |
 | 4 | Non-lus : `read-state.ts` | [ ] | | |
 | 5 | Planche d'une commande : `getOrderSheet` + `OrderSheetPanel` | [ ] | | |
