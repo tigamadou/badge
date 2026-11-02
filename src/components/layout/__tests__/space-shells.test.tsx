@@ -56,6 +56,19 @@ describe("StaffShell", () => {
     expect(html).toContain("Emails");
   });
 
+  it("ordonne les groupes Impression puis Plateforme", () => {
+    const at = (t: string) => html.indexOf(t);
+    expect(at("Impression")).toBeGreaterThan(-1);
+    expect(at("Impression")).toBeLessThan(at("Commandes"));
+    expect(at("Commandes")).toBeLessThan(at("Planches"));
+    expect(at("Planches")).toBeLessThan(at("Gabarits"));
+    expect(at("Gabarits")).toBeLessThan(at("Catalogue"));
+    expect(at("Catalogue")).toBeLessThan(at(">Plateforme<"));
+    expect(at(">Plateforme<")).toBeLessThan(at("Emails"));
+    expect(at("Emails")).toBeLessThan(at("Paramètres"));
+    expect(at("Paramètres")).toBeLessThan(at("Journal"));
+  });
+
   it("affiche l'avatar à initiales", () => {
     expect(html).toContain(">AD</span>");
     expect(html).toContain("width:30px");
