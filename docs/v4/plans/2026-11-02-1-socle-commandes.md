@@ -19,7 +19,7 @@ des gabarits — pour qu'en vague 2 aucun lot ne touche `schema.prisma` ni un fi
 | 1 | Branche d'intégration | [x] | 2026-11-02 | créée en vague 0 |
 | 2 | Schéma : notes internes, lectures, une planche par commande | [x] | 2026-11-02 | db-push dev OK (--accept-data-loss : seule alerte = contrainte unique). Requête ponctuelle (0 ligne supprimée) : `DELETE g FROM PrintSheetGeneration g JOIN PrintSheetGeneration n ON n.printRequestId = g.printRequestId AND (n.createdAt > g.createdAt OR (n.createdAt = g.createdAt AND n.id > g.id)) WHERE g.printRequestId IS NOT NULL`. Relation `PrintRequest.generations` devient `generation` (1-1). Test `api-platform-print-sheets` « transmet printRequestId » échoue (2 générations pour une commande) : à traiter en Task 5. |
 | 3 | Fil : messages internes et lecture incrémentale | [x] | 2026-11-02 | `internal` sur `postMessage` / `appendThreadEvent` (4e arg `opts`), `listThread(…, { after })`, `ThreadEntryDTO.internal`, pas de notification pour une note interne. |
-| 4 | Non-lus : `read-state.ts` | [ ] | | |
+| 4 | Non-lus : `read-state.ts` | [x] | 2026-11-02 | `markRead` (upsert + updateMany, ne recule pas), `unreadByRequest`, `countOrdersWithUnread`; entrées sans auteur (système) comptées pour tous ; fabrique `makePrintMessage`. |
 | 5 | Planche d'une commande : `getOrderSheet` + `OrderSheetPanel` | [ ] | | |
 | 6 | Renommage « commande » et URL `/platform/print/orders` | [ ] | | |
 | 7 | Menu staff | [ ] | | |

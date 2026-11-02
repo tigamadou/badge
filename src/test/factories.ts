@@ -4,8 +4,10 @@
 // (noms, villes...) sont reproductibles avec `seedFactories(n)`, pas les identifiants.
 import { faker } from "@faker-js/faker";
 import type {
+  PrintMessageKind,
   PrintRequestStatus,
   PrintRequestType,
+  PrintThreadSide,
   Prisma,
   RegistrationStatus,
   StaffRole,
@@ -151,6 +153,30 @@ export function makePrintOrder(input: {
       type: input.type ?? "ADVANCE",
       status: input.status ?? "SUBMITTED",
       ...input.data,
+    },
+  });
+}
+
+export function makePrintMessage(input: {
+  requestId: string;
+  authorId?: string | null;
+  side?: PrintThreadSide;
+  kind?: PrintMessageKind;
+  internal?: boolean;
+  createdAt?: Date;
+  body?: string;
+}) {
+  const kind = input.kind ?? "MESSAGE";
+  return prisma.printRequestMessage.create({
+    data: {
+      requestId: input.requestId,
+      authorId: input.authorId ?? null,
+      side: input.side ?? (input.authorId ? "ORGANIZER" : "SYSTEM"),
+      kind,
+      body: input.body ?? faker.lorem.sentence(),
+      eventType: kind === "EVENT" ? "STATUS_CHANGED" : null,
+      internal: input.internal ?? false,
+      ...(input.createdAt ? { createdAt: input.createdAt } : {}),
     },
   });
 }
