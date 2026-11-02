@@ -60,7 +60,8 @@ toucher → s'arrêter (NEEDS_CONTEXT).
 
 **Files:** Modify `src/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/messages/route.ts` ; Test associé
 
-- [ ] `GET ?after=<ISO>` → `listThread(…, "ORGANIZER", { after })` puis `markRead`.
+- [ ] `GET ?after=<ISO>` → capturer `const at = new Date()` **avant** `listThread(…, "ORGANIZER", { after })`, puis `markRead(requestId, userId, at)`.
+- [ ] Le client envoie `after` avec un chevauchement (plus grand `createdAt` reçu moins 2 s) et dédoublonne les entrées par `id`.
 - [ ] Un `POST` avec `internal` est refusé (`400 VALIDATION`) — garde déjà dans `postMessage`,
   à couvrir par un test de route.
 

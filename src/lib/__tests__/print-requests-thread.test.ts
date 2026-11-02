@@ -192,6 +192,25 @@ describe("appendThreadEvent", () => {
     });
     expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(4);
   });
+
+  it("interne et public ne fusionnent pas, dans les deux sens", async () => {
+    const { request, staff } = await seed();
+    const actor = { userId: staff.id, side: "STAFF" as const };
+    await prisma.$transaction(async (tx) => {
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, actor, { internal: true });
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, actor);
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("c")] }, actor, { internal: true });
+    });
+    const rows = await prisma.printRequestMessage.findMany({
+      where: { requestId: request.id },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    expect(rows.map((r) => r.internal)).toEqual([true, false, true]);
+    expect(rows.every((r) => (r.details as { changes: unknown[] }).changes.length === 1)).toBe(true);
+    const organizerView = await listThread(request.id, "ORGANIZER");
+    expect(organizerView).toHaveLength(1);
+    expect(organizerView[0].id).toBe(rows[1].id);
+  });
 });
 
 describe("postMessage", () => {

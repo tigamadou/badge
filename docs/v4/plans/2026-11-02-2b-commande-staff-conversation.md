@@ -65,7 +65,10 @@ tout `src/app/event/**` et `src/components/event/**`. Besoin d'y toucher → s'a
 
 **Files:** Modify `src/app/api/platform/print/requests/[requestId]/messages/route.ts` ; Test associé
 
-- [ ] `GET ?after=<ISO>` → `listThread(…, "STAFF", { after })` puis `markRead(requestId, userId)`.
+- [ ] `GET ?after=<ISO>` → capturer `const at = new Date()` **avant** `listThread(…, "STAFF", { after })`, puis `markRead(requestId, userId, at)` (un message arrivé pendant la lecture n'est pas marqué lu).
+- [ ] Le client envoie `after` avec un chevauchement (plus grand `createdAt` reçu moins 2 s) et dédoublonne les entrées par `id` (aucune entrée perdue entre deux polls).
+- [ ] `POST` : le schéma zod accepte `internal?: boolean` et la réponse est construite par `toEntryDTO` (comme la route organisateur), donc `entry.internal` est renseigné.
+- [ ] Le lien de téléchargement de la planche est masqué pour `STAFF_OBSERVER` (`/api/files` lui répond 403 sur `print-sheets/`).
 - [ ] `POST` accepte `internal: boolean` (défaut `false`) ; notification organisateur seulement
   si non interne (garde déjà posée par le socle dans les triggers, à vérifier par test).
 

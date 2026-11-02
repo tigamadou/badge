@@ -148,7 +148,8 @@ export async function appendThreadEvent(
       last.kind === "EVENT" &&
       last.eventType === "LINES_CHANGED" &&
       last.side === actor.side &&
-      last.authorId === actor.userId
+      last.authorId === actor.userId &&
+      last.internal === (opts.internal ?? false)
     ) {
       const previous = changesOf((last.details as { changes?: unknown } | null)?.changes);
       const merged = { ...details, changes: [...previous, ...changesOf(details.changes)] };
