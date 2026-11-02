@@ -24,7 +24,7 @@ des gabarits — pour qu'en vague 2 aucun lot ne touche `schema.prisma` ni un fi
 | 6 | Renommage « commande » et URL `/platform/print/orders` | [x] | 2026-11-02 | `git mv` des pages staff vers `orders/`, redirection 308 dans `next.config.ts`, libellés et docs en « commande » (identifiants, routes API et fichiers `impression-demandes.md` inchangés), e2e de redirection ajouté. |
 | 7 | Menu staff | [x] | 2026-11-02 | Groupes Impression (Commandes, Planches, Gabarits, Catalogue) et Plateforme (Emails, Paramètres, Journal) |
 | 8 | Liste des gabarits simplifiée | [x] | 2026-11-02 | Liste sans badge témoin ni `?badge` ; témoin conservé dans l'éditeur ; `witnessFromParams` supprimé |
-| 9 | Vérification et commit (sur demande) | [ ] | | |
+| 9 | Vérification et commit (sur demande) | [x] | 2026-11-02 | lint 0 erreur, typecheck OK, make test-coverage 292 fichiers / 3658 tests sans erreur de seuil (trou render-badge comblé par test) ; e2e impression plateforme 38 ok (1 flaky print-sheets, rendu >120 s, passé au retry) + évènement 19 ok ; menu, 308, gabarits, libellé « commande » vérifiés |
 
 ## Global Constraints
 
