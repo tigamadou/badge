@@ -520,12 +520,13 @@ export async function notifyPrintRequestMessage(messageId: string, actorId: stri
       select: {
         body: true,
         side: true,
+        internal: true,
         author: { select: { name: true } },
         request: { select: PRINT_REQUEST_SELECT },
       },
     });
-    // Les messages SYSTEM (journal) ne notifient pas.
-    if (!m || m.side === "SYSTEM") return;
+    // Les messages SYSTEM (journal) ne notifient pas, ni les notes internes (jamais vues de l'organisateur).
+    if (!m || m.side === "SYSTEM" || m.internal) return;
     const r = m.request;
     const toStaff = m.side === "ORGANIZER";
     await notifyAll([

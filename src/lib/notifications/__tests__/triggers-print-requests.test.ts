@@ -124,6 +124,16 @@ describe("notifyPrintRequestMessage", () => {
     expect(rows[0]).toMatchObject({ scope: "EVENT", href: `/event/${t.event.id}/print/${t.request.id}` });
   });
 
+  it("note interne du staff : aucune notification vers l'organisateur", async () => {
+    const t = await setup();
+    const m = await prisma.printRequestMessage.create({
+      data: { requestId: t.request.id, authorId: t.staffAdmin.id, side: "STAFF", kind: "MESSAGE", body: "Note", internal: true },
+    });
+    await notifyPrintRequestMessage(m.id, t.staffAdmin.id);
+    expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_MESSAGE" } })).toBe(0);
+    expect(vi.mocked(enqueueEmail)).not.toHaveBeenCalled();
+  });
+
   it("message staff sans auteur connu : libellé générique", async () => {
     const t = await setup();
     const m = await message(t.request.id, "STAFF", null);

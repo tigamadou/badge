@@ -135,6 +135,7 @@ export async function appendThreadEvent(
   eventType: ThreadEventType,
   details: Record<string, unknown>,
   actor: ThreadActor = SYSTEM_ACTOR,
+  opts: { internal?: boolean } = {},
 ): Promise<PrintRequestMessage> {
   await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
   if (eventType === "LINES_CHANGED") {
@@ -169,6 +170,7 @@ export async function appendThreadEvent(
       body: describeThreadEvent(eventType, details),
       eventType,
       details: details as Prisma.InputJsonValue,
+      internal: opts.internal ?? false,
     },
   });
 }
@@ -184,7 +186,10 @@ export async function postMessage(input: {
   side: "ORGANIZER" | "STAFF";
   body: string;
   attachmentKey: string | null;
+  internal?: boolean;
 }): Promise<PrintRequestMessage> {
+  // Une note interne n'existe que côté staff.
+  if (input.internal && input.side !== "STAFF") throw new PrintRequestError("VALIDATION", 400);
   const request = await prisma.printRequest.findUnique({
     where: { id: input.requestId },
     select: { id: true, eventId: true, status: true },
@@ -225,6 +230,7 @@ export async function postMessage(input: {
       kind: "MESSAGE",
       body,
       attachmentKey: input.attachmentKey,
+      internal: input.internal ?? false,
     },
   });
 }
@@ -238,6 +244,7 @@ export type ThreadEntryDTO = {
   eventType: string | null;
   details: unknown;
   attachmentKey: string | null;
+  internal: boolean;
   authorName: string | null;
   createdAt: string;
 };
@@ -314,14 +321,23 @@ export function toEntryDTO(
     eventType: m.eventType,
     details,
     attachmentKey: m.attachmentKey,
+    internal: m.internal,
     authorName,
     createdAt: m.createdAt.toISOString(),
   };
 }
 
-export async function listThread(requestId: string, audience: ThreadAudience): Promise<ThreadEntryDTO[]> {
+export async function listThread(
+  requestId: string,
+  audience: ThreadAudience,
+  opts: { after?: Date } = {},
+): Promise<ThreadEntryDTO[]> {
   const rows = await prisma.printRequestMessage.findMany({
-    where: { requestId },
+    where: {
+      requestId,
+      ...(audience === "ORGANIZER" ? { internal: false } : {}),
+      ...(opts.after ? { createdAt: { gt: opts.after } } : {}),
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     include: { author: { select: { name: true } } },
   });

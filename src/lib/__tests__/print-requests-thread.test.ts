@@ -448,6 +448,50 @@ describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
   });
 });
 
+describe("notes internes et lecture incrémentale", () => {
+  it("postMessage refuse internal côté organisateur (VALIDATION)", async () => {
+    const { request, organizer } = await seed();
+    await expect(
+      postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "x", attachmentKey: null, internal: true }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
+  });
+
+  it("une note interne du staff est stockée et absente du fil organisateur", async () => {
+    const { request, staff, organizer } = await seed();
+    await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "public", attachmentKey: null });
+    const note = await postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "secret", attachmentKey: null, internal: true });
+    expect(note.internal).toBe(true);
+    const orga = await listThread(request.id, "ORGANIZER");
+    expect(orga.map((e) => e.body)).toEqual(["public"]);
+    expect(orga[0].internal).toBe(false);
+    const staffView = await listThread(request.id, "STAFF");
+    expect(staffView.map((e) => [e.body, e.internal])).toEqual([["public", false], ["secret", true]]);
+  });
+
+  it("appendThreadEvent accepte internal ; l'évènement interne est masqué à l'organisateur", async () => {
+    const { request } = await seed();
+    const m = await prisma.$transaction((tx) =>
+      appendThreadEvent(tx, request.id, "CANCELLED", {}, undefined, { internal: true }),
+    );
+    expect(m.internal).toBe(true);
+    expect(await listThread(request.id, "ORGANIZER")).toEqual([]);
+    expect(await listThread(request.id, "STAFF")).toHaveLength(1);
+    const plain = await prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "CANCELLED", {}));
+    expect(plain.internal).toBe(false);
+  });
+
+  it("after ne renvoie que les entrées strictement postérieures", async () => {
+    const { request, organizer } = await seed();
+    const a = await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "a", attachmentKey: null });
+    await new Promise((r) => setTimeout(r, 15));
+    await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "b", attachmentKey: null });
+    const after = await listThread(request.id, "ORGANIZER", { after: a.createdAt });
+    expect(after.map((e) => e.body)).toEqual(["b"]);
+    expect(await listThread(request.id, "ORGANIZER", {})).toHaveLength(2);
+  });
+});
+
 describe("printRequestErrorResponse", () => {
   it("PrintRequestError -> statut, { error, message, ...details }", async () => {
     const res = printRequestErrorResponse(new PrintRequestError("REGISTRATIONS_TAKEN", 409, { ids: ["a"] }));
