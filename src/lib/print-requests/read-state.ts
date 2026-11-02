@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { ThreadAudience } from "./thread";
 
@@ -16,6 +17,7 @@ export async function markRead(requestId: string, userId: string, at: Date = new
 
 // Entrées visibles de l'audience, postérieures à la dernière lecture, dont l'auteur n'est pas
 // l'utilisateur (une entrée automatique sans auteur compte pour tout le monde).
+// Agrégation côté base : le coût ne dépend pas de la taille des fils.
 export async function unreadByRequest(
   userId: string,
   audience: ThreadAudience,
@@ -24,24 +26,17 @@ export async function unreadByRequest(
   const counts: Record<string, number> = Object.fromEntries(requestIds.map((id) => [id, 0]));
   if (requestIds.length === 0) return counts;
 
-  const reads = await prisma.printRequestRead.findMany({
-    where: { userId, requestId: { in: requestIds } },
-    select: { requestId: true, lastReadAt: true },
-  });
-  const lastRead = new Map(reads.map((r) => [r.requestId, r.lastReadAt]));
-
-  const rows = await prisma.printRequestMessage.findMany({
-    where: {
-      requestId: { in: requestIds },
-      ...(audience === "ORGANIZER" ? { internal: false } : {}),
-      OR: [{ authorId: null }, { authorId: { not: userId } }],
-    },
-    select: { requestId: true, createdAt: true },
-  });
-  for (const row of rows) {
-    const read = lastRead.get(row.requestId);
-    if (!read || row.createdAt > read) counts[row.requestId] += 1;
-  }
+  const rows = await prisma.$queryRaw<{ requestId: string; n: bigint }[]>(Prisma.sql`
+    SELECT m.requestId AS requestId, COUNT(*) AS n
+    FROM PrintRequestMessage m
+    LEFT JOIN PrintRequestRead r ON r.requestId = m.requestId AND r.userId = ${userId}
+    WHERE m.requestId IN (${Prisma.join(requestIds)})
+      ${audience === "ORGANIZER" ? Prisma.sql`AND m.internal = false` : Prisma.empty}
+      AND (m.authorId IS NULL OR m.authorId <> ${userId})
+      AND (r.lastReadAt IS NULL OR m.createdAt > r.lastReadAt)
+    GROUP BY m.requestId
+  `);
+  for (const row of rows) counts[row.requestId] = Number(row.n);
   return counts;
 }
 
@@ -50,10 +45,20 @@ export async function countOrdersWithUnread(
   audience: ThreadAudience,
   scope: { eventId?: string },
 ): Promise<number> {
-  const orders = await prisma.printRequest.findMany({
-    where: { status: { not: "DRAFT" }, ...(scope.eventId ? { eventId: scope.eventId } : {}) },
-    select: { id: true },
-  });
-  const counts = await unreadByRequest(userId, audience, orders.map((o) => o.id));
-  return Object.values(counts).filter((n) => n > 0).length;
+  const rows = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    SELECT COUNT(*) AS n
+    FROM PrintRequest o
+    WHERE o.status <> 'DRAFT'
+      ${scope.eventId ? Prisma.sql`AND o.eventId = ${scope.eventId}` : Prisma.empty}
+      AND EXISTS (
+        SELECT 1
+        FROM PrintRequestMessage m
+        LEFT JOIN PrintRequestRead r ON r.requestId = m.requestId AND r.userId = ${userId}
+        WHERE m.requestId = o.id
+          ${audience === "ORGANIZER" ? Prisma.sql`AND m.internal = false` : Prisma.empty}
+          AND (m.authorId IS NULL OR m.authorId <> ${userId})
+          AND (r.lastReadAt IS NULL OR m.createdAt > r.lastReadAt)
+      )
+  `);
+  return Number(rows[0].n);
 }
