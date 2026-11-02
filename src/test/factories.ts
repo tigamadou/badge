@@ -1,7 +1,7 @@
 // Fabriques de donnees de test : ecrivent dans la vraie base de test (jamais de mock
 // de Prisma). Chaque fabrique accepte des surcharges ; les valeurs uniques portent un
-// suffixe pour eviter les collisions. Fixer la graine par fichier (`seedFactories(n)`)
-// rend les donnees reproductibles.
+// suffixe (horodatage + compteur) pour eviter les collisions : seules les valeurs faker
+// (noms, villes...) sont reproductibles avec `seedFactories(n)`, pas les identifiants.
 import { faker } from "@faker-js/faker";
 import type {
   PrintRequestStatus,

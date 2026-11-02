@@ -109,9 +109,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 ## Règles de test (tous les tests, présents et futurs)
 
 Ces règles s'appliquent à **tout nouveau test** écrit dans le projet, quel que soit le plan ou
-la tâche. Leur outillage est livré par la vague 0 (`docs/v4/plans/2026-11-02-0-stacks-agents.md`) ;
-tant qu'elle n'est pas terminée, appliquer ce qui existe déjà et ne rien écrire qui les
-contredise.
+la tâche.
 
 - **Base de test dédiée** : Vitest tourne sur une base dont le nom finit par `_test`
   (`badge_test` ; `badge_<lot>_test` pour un agent), jamais sur une base de dev. `make test`
@@ -169,6 +167,8 @@ Commandes principales :
 |----------|-------------|
 | `make init` | Initialisation d'un poste neuf : prérequis, `NPM_TOKEN`, build, schéma, seed, HTTPS local |
 | `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
+| `make test-db` | Crée et met au schéma la base de test (`badge_test`) ; appelé par `make test` |
+| `scripts/agent-stack.sh up\|down\|status` | Stack légère d'un sous-agent (worktree, app, worker, Mailpit) ; voir `docs/v4/installation.md` |
 | `make dev` / `make dev-down` / `make logs` | Cycle dev local |
 | `make dev-https` / `make dev-https-check` | HTTPS local : `/etc/hosts` + confiance CA Caddy (idempotent) |
 | `make db-push` / `make db-seed` / `make db-studio` | Schéma Prisma + seed + Prisma Studio |
@@ -180,7 +180,7 @@ Voir `docs/<version>/installation.md` pour la liste complète.
 
 ## Actions à risque — toujours demander avant
 
-- `make prod-db-reset`, `make db-reset`, toute commande avec `--force-reset`
+- `make prod-db-reset`, `make db-reset`, `make db-drop-agent`, toute commande avec `--force-reset`
 - Suppression de fichiers dans `uploads/`
 - Modification de `.env`, `.env.production`, `Caddyfile`, `docker-compose*.yml`, `Dockerfile*`
 - Déploiement : publication d'une release ou pre-release GitHub (déclenche `.github/workflows/deploy.yml`)

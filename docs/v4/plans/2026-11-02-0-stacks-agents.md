@@ -26,13 +26,13 @@ de l'hôte, renderer par le réseau externe `badge_rendu`) et remplace Mailpit p
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | `DEV_COMPOSE` et `.agent.env` dans le Makefile | [ ] | | |
-| 2 | Base de test dédiée + garde-fou (tout le projet) | [ ] | | |
-| 3 | Fabriques de données de test | [ ] | | |
-| 4 | Surcouche `docker-compose.agent.yml` | [ ] | | |
-| 5 | Script `scripts/agent-stack.sh` | [ ] | | |
-| 6 | Preuve : stack principale + 2 stacks d'agents | [ ] | | |
-| 7 | Documentation et règles (CLAUDE.md, installation) | [ ] | | |
+| 1 | `DEV_COMPOSE` et `.agent.env` dans le Makefile | [x] | 2026-11-02 | DEV_COMPOSE (37 remplacements), .agent.env ignoré |
+| 2 | Base de test dédiée + garde-fou (tout le projet) | [x] | 2026-11-02 | badge_test + bucket badge-test, garde-fou src/test-guard.ts, CI unit-integration sur badge_test |
+| 3 | Fabriques de données de test | [x] | 2026-11-02 | src/test/factories.ts (@faker-js/faker) |
+| 4 | Surcouche `docker-compose.agent.yml` | [x] | 2026-11-02 | 3 services agent, 1 port, renderer via badge_rendu |
+| 5 | Script `scripts/agent-stack.sh` | [x] | 2026-11-02 | scripts/agent-stack.sh + make db-drop-agent |
+| 6 | Preuve : stack principale + 2 stacks d'agents | [x] | 2026-11-02 | 3 suites en parallèle 3627/3627, e2e Mailpit 11/11 ×2, base de dev intacte, ≈1,5 Go/agent ; stacks demo à nettoyer |
+| 7 | Documentation et règles (CLAUDE.md, installation) | [x] | 2026-11-02 | CLAUDE.md, installation.md |
 
 ## Global Constraints
 

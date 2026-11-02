@@ -14,4 +14,9 @@ describe("assertTestDatabase", () => {
     expect(() => assertTestDatabase(undefined)).toThrow();
     expect(() => assertTestDatabase("pas-une-url")).toThrow();
   });
+
+  it("n'affiche jamais l'URL, qui peut contenir un mot de passe", () => {
+    expect(() => assertTestDatabase("mysql://root:s3cret@mysql:3306/badge")).toThrow(/^(?![\s\S]*s3cret)/);
+    expect(() => assertTestDatabase("s3cret-pas-une-url")).toThrow(/^(?![\s\S]*s3cret)/);
+  });
 });

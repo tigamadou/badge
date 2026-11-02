@@ -23,11 +23,12 @@ MAIN_COMPOSE=(docker compose -f "$REPO/docker-compose.dev.yml")
 die() { echo "✗ $*" >&2; exit 1; }
 
 agent_projects() {
-  docker compose ls --all --format '{{.Name}}' 2>/dev/null | grep -E '^badge-ag-' || true
+  docker compose ls --all 2>/dev/null | awk 'NR > 1 && $1 ~ /^badge-ag-/ { print $1 }'
 }
 
 check_lot() {
   [[ "${1:-}" =~ ^[a-z0-9]+$ ]] || die "lot invalide : « ${1:-} » (minuscules et chiffres seulement)"
+  [[ "$1" != "test" ]] || die "lot « test » réservé (badge_test est la base de test principale)"
 }
 
 worktree_of() { echo "$(dirname "$REPO")/badge-wt-$1"; }
@@ -56,7 +57,7 @@ cmd_up() {
 
   # Prealables.
   local running
-  running="$("${MAIN_COMPOSE[@]}" ps --status running --services 2>/dev/null)"
+  running="$("${MAIN_COMPOSE[@]}" ps --status running --services 2>/dev/null || true)"
   for s in mysql rustfs renderer; do
     grep -qx "$s" <<<"$running" || die "stack principale : service « $s » arrete (lancer « make dev » dans $REPO)"
   done
@@ -71,7 +72,10 @@ cmd_up() {
   local port
   port="$(free_port)"
 
+  git -C "$REPO" rev-parse --verify --quiet "refs/heads/$branch" >/dev/null && die "la branche $branch existe déjà (git branch -d $branch)"
   git -C "$REPO" worktree add -b "$branch" "$wt" "$base"
+  # Echec apres creation du worktree : indiquer comment reprendre ou nettoyer.
+  trap 'echo "✗ échec de « up $lot ». Reprendre : make -C $wt dev db-push db-seed test-db ; ou nettoyer : $0 down $lot ; git worktree remove --force $wt ; git branch -D $branch" >&2' ERR
   cp "$REPO/.env" "$wt/.env"
   cat >"$wt/.agent.env" <<EOF
 # Stack d'agent « $lot » (scripts/agent-stack.sh) — ne pas versionner.

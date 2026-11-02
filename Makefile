@@ -11,7 +11,7 @@
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates migrate-installed-templates-preprod migrate-installed-templates-prod \
         validate-badge-templates-preprod validate-badge-templates-prod \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
-        net-create \
+        net-create db-drop-agent \
         download-uploads download-db logs-prod
 
 # Meme compte et meme cle que le workflow GitHub Actions : les stacks vivent
@@ -400,6 +400,7 @@ FILE ?=
 # Base de test : creee au besoin par `prisma db push` et mise au schema, comme en CI
 # (pas de seed : la suite prepare ses propres donnees).
 test-db:
+	@case "$(TEST_DATABASE_URL)" in *_test) ;; *) echo "TEST_DATABASE_URL doit viser une base en _test"; exit 1;; esac
 	$(DEV_COMPOSE) exec -e DATABASE_URL=$(TEST_DATABASE_URL) app npx prisma db push --skip-generate --accept-data-loss
 
 test: test-db
@@ -573,5 +574,5 @@ logs-prod:
 # Supprime les bases d'une stack d'agent (destructif, apres fusion de son lot).
 # Usage : make db-drop-agent LOT=2a
 db-drop-agent:
-	@test -n "$(LOT)" || { echo "LOT=<lot> requis"; exit 1; }
+	@echo "$(LOT)" | grep -Eq '^[a-z0-9]+$$' || { echo "LOT=<lot> requis (minuscules et chiffres)"; exit 1; }
 	docker compose -f docker-compose.dev.yml exec mysql mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS badge_$(LOT); DROP DATABASE IF EXISTS badge_$(LOT)_test;"

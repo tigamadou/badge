@@ -9,7 +9,7 @@ export function assertTestDatabase(url: string | undefined): void {
   }
   if (!name.endsWith("_test")) {
     throw new Error(
-      `Tests refusés : la base « ${name || url || "(non définie)"} » n'est pas une base de test (nom attendu en _test). Lancez-les avec \`make test\`.`,
+      `Tests refusés : la base « ${name || "(URL absente ou invalide)"} » n'est pas une base de test (nom attendu en _test). Lancez-les avec \`make test\`.`,
     );
   }
 }
