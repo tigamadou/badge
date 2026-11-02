@@ -21,7 +21,7 @@ des gabarits — pour qu'en vague 2 aucun lot ne touche `schema.prisma` ni un fi
 | 3 | Fil : messages internes et lecture incrémentale | [x] | 2026-11-02 | `internal` sur `postMessage` / `appendThreadEvent` (4e arg `opts`), `listThread(…, { after })`, `ThreadEntryDTO.internal`, pas de notification pour une note interne. |
 | 4 | Non-lus : `read-state.ts` | [x] | 2026-11-02 | `markRead` (upsert + updateMany, ne recule pas), `unreadByRequest`, `countOrdersWithUnread`; entrées sans auteur (système) comptées pour tous ; fabrique `makePrintMessage`. |
 | 5 | Planche d'une commande : `getOrderSheet` + `OrderSheetPanel` | [x] | 2026-11-02 | Panneau : rendu statique des 4 états (Dialog pour l aperçu iframe) ; fabrique makePrintGeneration. Test API planches déjà vert. Correctif : lien PDF via /api/files (et non l endpoint JSON de statut). |
-| 6 | Renommage « commande » et URL `/platform/print/orders` | [ ] | | |
+| 6 | Renommage « commande » et URL `/platform/print/orders` | [x] | 2026-11-02 | `git mv` des pages staff vers `orders/`, redirection 308 dans `next.config.ts`, libellés et docs en « commande » (identifiants, routes API et fichiers `impression-demandes.md` inchangés), e2e de redirection ajouté. |
 | 7 | Menu staff | [ ] | | |
 | 8 | Liste des gabarits simplifiée | [ ] | | |
 | 9 | Vérification et commit (sur demande) | [ ] | | |

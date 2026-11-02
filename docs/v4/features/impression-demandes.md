@@ -1,29 +1,29 @@
-# Demandes d'impression et devis
+# Commandes d'impression et devis
 
 > Ce document décrit le *quoi* et le *comment* actuels. Le *pourquoi* vit dans
 > [`../specs/2026-11-01-33-v4-demandes-d-impression-et-devis.md`](../specs/2026-11-01-33-v4-demandes-d-impression-et-devis.md).
 
 ## État actuel
 
-Un organisateur demande l'impression de ses badges à l'équipe Badge : il choisit les badges, un
+Un organisateur commande l'impression de ses badges à l'équipe Badge : il choisit les badges, un
 support et des accessoires du catalogue ([catalogue des produits](catalogue-impression.md)), puis
-envoie la demande. Le staff chiffre un **devis**, l'organisateur l'accepte, la demande est payée,
-fabriquée, remise, puis terminée. Un fil de discussion accompagne la demande du début à la fin.
+envoie la commande. Le staff chiffre un **devis**, l'organisateur l'accepte, la commande est payée,
+fabriquée, remise, puis terminée. Un fil de discussion accompagne la commande du début à la fin.
 
 | Écran | Rôle | Droits |
 |---|---|---|
-| `/event/[eventId]/print` (« Impression ») | Liste des demandes de l'évènement, bouton « Nouvelle demande » | Permission `print.request` |
-| `/event/[eventId]/print/new` | Choix du type de demande, création du brouillon | `print.request`, évènement non archivé |
-| `/event/[eventId]/print/[requestId]/edit` | Assistant en six étapes (type, badges, support, accessoires, remise, récapitulatif) | `print.request`, demande `DRAFT`, `SUBMITTED` ou `QUOTED` |
+| `/event/[eventId]/print` (« Impression ») | Liste des commandes de l'évènement, bouton « Nouvelle commande » | Permission `print.request` |
+| `/event/[eventId]/print/new` | Choix du type de commande, création du brouillon | `print.request`, évènement non archivé |
+| `/event/[eventId]/print/[requestId]/edit` | Assistant en six étapes (type, badges, support, accessoires, remise, récapitulatif) | `print.request`, commande `DRAFT`, `SUBMITTED` ou `QUOTED` |
 | `/event/[eventId]/print/[requestId]` | Détail : lignes, informations, actions, fil | `print.request` ; accepter le devis : OWNER de l'organisation seul |
-| `/platform/print/requests` (« Demandes ») | Liste filtrable (statut, organisation, type, dates souhaitées), pastille du menu | Tout le staff, `STAFF_OBSERVER` compris |
-| `/platform/print/requests/[requestId]` | Détail complet : devis éditable, actions de statut, badges, planches, fil | Lecture : tout le staff ; actions : voir « Droits » |
+| `/platform/print/orders` (« Commandes ») | Liste filtrable (statut, organisation, type, dates souhaitées), pastille du menu | Tout le staff, `STAFF_OBSERVER` compris |
+| `/platform/print/orders/[requestId]` | Détail complet : devis éditable, actions de statut, badges, planches, fil | Lecture : tout le staff ; actions : voir « Droits » |
 
 L'entrée « Impression » du menu de l'évènement n'apparaît que pour les détenteurs de
 `print.request` (ADMIN de l'évènement, OWNER et MANAGER de l'organisation). Un `OPERATOR`, un
 `PRINTER` ou un `VIEWER` ne la voit pas et revient au tableau de bord s'il ouvre l'adresse. Le
-groupe « Impression » du menu staff reçoit l'entrée « Demandes », dont la pastille compte les
-demandes `SUBMITTED` en attente de traitement.
+groupe « Impression » du menu staff reçoit l'entrée « Commandes », dont la pastille compte les
+commandes `SUBMITTED` en attente de traitement.
 
 ## Cycle de vie
 
@@ -49,11 +49,11 @@ toute combinaison absente est refusée (`409 INVALID_TRANSITION`).
 Libellés affichés : Brouillon, Envoyée, Devis envoyé, Devis accepté, Payée, En production, Prête,
 Terminée, Refusée, Annulée (`PRINT_REQUEST_STATUS_LABELS`).
 
-Toute modification après `QUOTED` (par l'organisateur ou le staff) **remet la demande en
+Toute modification après `QUOTED` (par l'organisateur ou le staff) **remet la commande en
 `SUBMITTED`** et écrit l'entrée « Devis en révision » : le devis est renvoyé avant d'être accepté.
 Depuis `ACCEPTED`, le devis est figé (`409 QUOTE_ACCEPTED`) ; seul le staff peut le rouvrir, ce qui
 annule l'acceptation. Tant qu'un paiement est en cours (`isPaymentInProgress`), la réouverture,
-l'annulation d'une demande acceptée, le marquage manuel et le changement de template sont refusés
+l'annulation d'une commande acceptée, le marquage manuel et le changement de template sont refusés
 (`409 PAYMENT_IN_PROGRESS`).
 
 L'acceptation porte sur une **version précise** du devis (`quoteVersion`) : si le devis a changé
@@ -62,19 +62,19 @@ entre-temps, elle est refusée (`409 QUOTE_VERSION_MISMATCH`). La version et le 
 
 ## Lots et réservation
 
-Une demande en amont (`ADVANCE`) porte un **lot figé** de badges : les lignes `PrintRequestItem`
-(une par inscription, rangées par catégorie, nom puis prénom). Une demande sur place (`ONSITE`) n'a
+Une commande en amont (`ADVANCE`) porte un **lot figé** de badges : les lignes `PrintRequestItem`
+(une par inscription, rangées par catégorie, nom puis prénom). Une commande sur place (`ONSITE`) n'a
 pas de lot, seulement une quantité estimée (`estimatedQuantity`).
 
 - Un **brouillon ne réserve rien**. La réservation prend effet à l'envoi, pour les statuts
   `SUBMITTED`, `QUOTED`, `ACCEPTED`, `PAID`, `IN_PRODUCTION`, `READY` et `COMPLETED`
-  (`RESERVING_STATUSES`) ; une demande refusée ou annulée libère ses badges.
-- Une inscription réservée par une autre demande n'est plus proposée : l'assistant l'affiche grisée
+  (`RESERVING_STATUSES`) ; une commande refusée ou annulée libère ses badges.
+- Une inscription réservée par une autre commande n'est plus proposée : l'assistant l'affiche grisée
   avec « Déjà dans IMP-… ». À l'envoi, si un badge a été pris entre-temps, l'envoi échoue
   (`409 REGISTRATIONS_TAKEN`).
 - Les réservations d'un évènement sont sérialisées par un verrou sur la ligne de l'évènement
-  (`lockEventRow`), puis sur la ligne de la demande (`lockRequestWithEvent`). **Ordre des verrous :
-  évènement d'abord, demande ensuite**, partout, y compris pour le changement de template.
+  (`lockEventRow`), puis sur la ligne de la commande (`lockRequestWithEvent`). **Ordre des verrous :
+  évènement d'abord, commande ensuite**, partout, y compris pour le changement de template.
 - Le choix des badges se fait par « Tous les badges disponibles », par catégorie ou à la main. Les
   badges déjà imprimés sont signalés « Déjà imprimé ».
 - Les références suivent `IMP-{année}-{numéro sur 4 chiffres}` ; le numéro est le plus grand
@@ -82,20 +82,20 @@ pas de lot, seulement une quantité estimée (`estimatedQuantity`).
 
 ## Suivi des quantités
 
-La ligne du support de badge suit le nombre de badges de la demande : l'organisateur ne saisit pas
+La ligne du support de badge suit le nombre de badges de la commande : l'organisateur ne saisit pas
 cette quantité. Quand le lot change, `followBadgeCount` aligne les quantités des lignes produit et
 écrit l'écart dans le fil. Une quantité **fixée** (à la main par le staff, ou par une répartition
 `QUANTITY_SPLIT`) ne bouge pas : elle est signalée comme « quantité fixée par l'équipe à vérifier ».
 Une ligne dont le prix ou la quantité a été modifiée par le staff est protégée
 (`409 LINE_LOCKED_BY_STAFF` pour l'organisateur). Les lignes sont une **copie figée** des produits
-et des options choisis : une modification ultérieure du catalogue ne change pas une demande
+et des options choisis : une modification ultérieure du catalogue ne change pas une commande
 existante.
 
 ## Devis
 
 Les lignes (`PrintQuoteLine`) ont un type : produit, service, remise ou ligne libre. Le staff
 (`STAFF_ADMIN`) change les prix et les quantités, ajoute des frais, retire des lignes, tant que la
-demande est `SUBMITTED` ou `QUOTED`. Une remise est saisie en montant positif et stockée en prix
+commande est `SUBMITTED` ou `QUOTED`. Une remise est saisie en montant positif et stockée en prix
 unitaire négatif. Un devis vide (`EMPTY_QUOTE`) ou de total négatif (`NEGATIVE_TOTAL`) ne s'envoie
 pas. Le total se recalcule après chaque modification.
 
@@ -128,7 +128,7 @@ créer ni modifier, mais peut annuler, lire et écrire dans le fil.
 
 ## Paiement hors ligne
 
-Un `STAFF_ADMIN` marque une demande `ACCEPTED` comme payée en saisissant un **motif** (3 à 500
+Un `STAFF_ADMIN` marque une commande `ACCEPTED` comme payée en saisissant un **motif** (3 à 500
 caractères) : statut `PAID`, entrée du fil, journal `PRINT_REQUEST_MARKED_PAID` et notification.
 Le bouton « Marquer payée » reste inactif tant que le motif est trop court. Le passage en `PAID` est
 réalisé par `markPaid(tx, requestId, { paymentId?, manual? })`, appelée aussi par le paiement en
@@ -139,17 +139,17 @@ ligne (plan 34).
 De `PAID` à `READY` (`TEMPLATE_LOCK_STATUSES`), le template de badge de l'évènement **ne change
 plus**, à tous les niveaux (évènement, organisation, plateforme) : le changement est refusé
 (`409 TEMPLATE_LOCKED_BY_PRINT_REQUEST`) pour l'évènement, et pour un changement d'organisation ou
-de plateforme les évènements concernés gardent l'ancien template, **épinglé** sur la demande
+de plateforme les évènements concernés gardent l'ancien template, **épinglé** sur la commande
 (`templatePinned`) puis sur l'évènement. Avant le paiement, un changement de template met la copie
-de la demande à jour et la remet en révision (`TEMPLATE_CHANGED`, acceptation annulée). Quand la
-demande quitte `ACCEPTED`/`PAID`/`IN_PRODUCTION`/`READY`, l'épinglage est levé.
+de la commande à jour et la remet en révision (`TEMPLATE_CHANGED`, acceptation annulée). Quand la
+commande quitte `ACCEPTED`/`PAID`/`IN_PRODUCTION`/`READY`, l'épinglage est levé.
 
 ## Production et planches
 
-Depuis une demande `PAID`, `IN_PRODUCTION` ou `READY` en amont, « Générer les planches » ouvre
+Depuis une commande `PAID`, `IN_PRODUCTION` ou `READY` en amont, « Générer les planches » ouvre
 `/platform/print/sheets?printRequestId=…` : organisation, évènement et badges sont ceux de la
-demande, dans son ordre ([planches](impression-planches.md)). À la terminaison, le staff peut
-marquer les badges comme imprimés (route `registrations/print`, par paquets de 500). La demande
+commande, dans son ordre ([planches](impression-planches.md)). À la terminaison, le staff peut
+marquer les badges comme imprimés (route `registrations/print`, par paquets de 500). La commande
 passe d'abord en `COMPLETED` ; l'échec du marquage n'annule pas la clôture et prévient seulement.
 
 ## Fichiers
@@ -166,13 +166,13 @@ passe d'abord en `COMPLETED` ; l'échec du marquage n'annule pas la clôture et 
 
 | Évènement | Destinataires |
 |---|---|
-| Demande envoyée | Staff `STAFF_ADMIN` et au-dessus |
+| Commande envoyée | Staff `STAFF_ADMIN` et au-dessus |
 | Devis envoyé | ADMIN de l'évènement (le propriétaire, seul à pouvoir accepter, est couvert : OWNER et MANAGER valent ADMIN) |
 | Message de l'organisateur | Staff `STAFF_SUPPORT` et au-dessus |
 | Message du staff | ADMIN de l'évènement |
 | Changement de statut | Selon le cas, l'organisateur (ADMIN de l'évènement), le staff (`STAFF_ADMIN`), ou les deux |
 | Passage en `PAID` | ADMIN de l'évènement et `STAFF_ADMIN` ; texte propre au marquage hors ligne |
-| Paiement reçu alors que la demande ne l'attendait plus | `STAFF_ADMIN` |
+| Paiement reçu alors que la commande ne l'attendait plus | `STAFF_ADMIN` |
 
 L'auteur de l'action est exclu des destinataires. Chaque notification est aussi envoyée par email (queue d'emails) et ne bloque jamais l'action en
 cas d'échec. Les entrées du journal d'activité sont `PRINT_REQUEST_SUBMITTED`, `_UPDATED`, `_QUOTED`,
@@ -198,17 +198,17 @@ cas d'échec. Les entrées du journal d'activité sont `PRINT_REQUEST_SUBMITTED`
 ## Points d'extension
 
 - **Plan 34 (paiement en ligne)** : `paymentProbe` (sonde des paiements en cours, aujourd'hui sur
-  les `Payment` `PENDING` de la demande) ; `markPaid`, qui accepte un `paymentId` et le range dans
+  les `Payment` `PENDING` de la commande) ; `markPaid`, qui accepte un `paymentId` et le range dans
   `paidPaymentId` ; le bouton « Payer » de l'organisateur, prévu après « Accepter le devis ».
 - **Plan 35 (impression sur place)** : `marginPercent` (marge d'impression sur place),
-  `parentRequestId` (demande complémentaire rattachée), `PrintQuoteLine.usesOrgCredit` (ligne payée
+  `parentRequestId` (commande complémentaire rattachée), `PrintQuoteLine.usesOrgCredit` (ligne payée
   par le crédit de l'organisation, `CREDIT_LINE_LOCKED`), compteur et plafond
   (`onsite-counter.ts`). Livré : voir [impression pendant l'évènement](impression-sur-place.md).
 
 ## Limites connues
 
-- La suppression d'une inscription retire son badge de la demande sans trace dans le fil.
-- Les verrous sont pris par transaction : toute nouvelle écriture sur une demande doit passer par
-  `lockRequestWithEvent` (évènement d'abord, demande ensuite).
-- Les tests de bout en bout créent les demandes directement en base (`createTestPrintRequest`) et
+- La suppression d'une inscription retire son badge de la commande sans trace dans le fil.
+- Les verrous sont pris par transaction : toute nouvelle écriture sur une commande doit passer par
+  `lockRequestWithEvent` (évènement d'abord, commande ensuite).
+- Les tests de bout en bout créent les commandes directement en base (`createTestPrintRequest`) et
   épinglent un template jetable sur l'évènement : ils ne dépendent pas du template par défaut.

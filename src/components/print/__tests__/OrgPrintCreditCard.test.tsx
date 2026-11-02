@@ -56,6 +56,6 @@ describe("RelatedRequestLinks", () => {
     expect(html).toContain('href="/r/p"');
     expect(html).toContain("Complément de IMP-P");
     expect(html).toContain('href="/r/c"');
-    expect(html).toContain("Demande complémentaire IMP-C");
+    expect(html).toContain("Commande complémentaire IMP-C");
   });
 });

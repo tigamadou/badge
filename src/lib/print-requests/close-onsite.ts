@@ -6,8 +6,8 @@ import { computeOnsiteCounter, findOrderedBadgeLine } from "./onsite-counter";
 import { lockRequestWithEvent, nextReference, retryOnReferenceCollision } from "./service";
 import { appendThreadEvent } from "./thread";
 
-// Clôture d'une demande sur place : les badges commandés mais non imprimés deviennent un crédit
-// d'impression, les badges imprimés en trop une demande complémentaire. Les deux s'excluent.
+// Clôture d'une commande sur place : les badges commandés mais non imprimés deviennent un crédit
+// d'impression, les badges imprimés en trop une commande complémentaire. Les deux s'excluent.
 
 export type OnsiteClosure =
   | { outcome: "CREDIT"; amount: number; unusedBadges: number }
@@ -46,7 +46,7 @@ export async function closeOnsiteInTx(
   requestId: string,
   userId?: string,
 ): Promise<OnsiteClosure> {
-  // La demande est verrouillée par l'appelant : elle existe.
+  // La commande est verrouillée par l'appelant : elle existe.
   const request = await tx.printRequest.findUniqueOrThrow({ where: { id: requestId } });
   if (request.type !== "ONSITE" || request.parentRequestId !== null || request.status !== "COMPLETED") {
     throw new OnsiteError("NOT_CLOSABLE", 409);
@@ -171,7 +171,7 @@ export async function closeOnsiteInTx(
 }
 
 // Clôture hors d'`advanceStatus` (rejeu, reprise) : prend les verrous elle-même et rejoue la
-// transaction si la référence de la demande complémentaire entre en collision.
+// transaction si la référence de la commande complémentaire entre en collision.
 export function closeOnsiteRequest(requestId: string, userId?: string): Promise<OnsiteClosure> {
   return retryOnReferenceCollision(() =>
     prisma.$transaction(async (tx) => {

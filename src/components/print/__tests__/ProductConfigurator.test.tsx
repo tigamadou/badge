@@ -111,7 +111,7 @@ describe("ProductConfigurator", () => {
     const html = renderToStaticMarkup(
       <ProductConfigurator product={product} value={{ quantity: 50, choices: [] }} onChange={noop} />,
     );
-    expect(html).toContain(esc("Téléversement disponible dans la demande d'impression"));
+    expect(html).toContain(esc("Téléversement disponible dans la commande d'impression"));
     expect(html).not.toContain('type="file"');
   });
 

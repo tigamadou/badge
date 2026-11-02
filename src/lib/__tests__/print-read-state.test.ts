@@ -19,7 +19,7 @@ describe("unreadByRequest", () => {
     expect(await unreadByRequest("u", "STAFF", [])).toEqual({});
   });
 
-  it("jamais lu : tout compte, evenements systeme inclus ; une demande sans message vaut 0", async () => {
+  it("jamais lu : tout compte, evenements systeme inclus ; une commande sans message vaut 0", async () => {
     const { request, org, event, organizer, staff } = await seed();
     const empty = await makePrintOrder({ eventId: event.id, orgId: org.id });
     await makePrintMessage({ requestId: request.id, authorId: staff.id, side: "STAFF" });

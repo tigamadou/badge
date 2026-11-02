@@ -45,8 +45,8 @@ describe("StaffShell", () => {
     expect(bellScope(html)).toEqual({ kind: "platform" });
   });
 
-  it("affiche l'entrée Demandes avec son compteur", () => {
-    expect(html).toContain("Demandes");
+  it("affiche l'entrée Commandes avec son compteur", () => {
+    expect(html).toContain("Commandes");
     expect(html).toContain('aria-label="2 en attente"');
   });
 

@@ -27,7 +27,7 @@ const ID_CHUNK = 5000;
 
 const filled = (value: string | null): boolean => (value ?? "").trim() !== "";
 
-// Champs manquants pour une demande en amont (hors sélection de badges).
+// Champs manquants pour une commande en amont (hors sélection de badges).
 function missingAdvanceFields(r: PrintRequest): string[] {
   if (!r.delivery) return ["delivery"];
   if (r.delivery !== "DELIVERY") return [];
@@ -59,7 +59,7 @@ export async function submitRequest(input: {
   await loadRequest(input.requestId, { eventId: input.eventId });
   const result = await prisma.$transaction(async (tx) => {
     await lockEventRow(tx, input.eventId);
-    // Verrou de la demande avant toute lecture : une modification ou annulation concurrente
+    // Verrou de la commande avant toute lecture : une modification ou annulation concurrente
     // s'enchaîne au lieu d'être validée à tort ou perdue.
     await lockRequestWithEvent(tx, input.requestId);
     const request = await tx.printRequest.findUniqueOrThrow({ where: { id: input.requestId } });
@@ -114,7 +114,7 @@ export async function submitRequest(input: {
     }
 
     const snapshot = await snapshotEventTemplate(input.eventId, tx);
-    // Demande sur place : template adapté exigé, marge par défaut figée dans la demande.
+    // Commande sur place : template adapté exigé, marge par défaut figée dans la commande.
     const onsite = await prepareOnsiteSubmission(tx, { type: request.type, badgeTemplateId: snapshot.badgeTemplateId });
     await tx.printRequest.update({
       where: { id: request.id },
@@ -142,8 +142,8 @@ export async function submitRequest(input: {
   return result;
 }
 
-// Annule une demande (tout statut jusqu'à ACCEPTED). Les items restent en base : la réservation
-// tombe avec le statut. La ligne de la demande est verrouillée avant la sonde de paiement.
+// Annule une commande (tout statut jusqu'à ACCEPTED). Les items restent en base : la réservation
+// tombe avec le statut. La ligne de la commande est verrouillée avant la sonde de paiement.
 export async function cancelRequest(input: {
   requestId: string;
   eventId: string;
@@ -207,11 +207,11 @@ export async function acceptQuote(input: {
       { version: request.quoteVersion, total: request.total },
       { userId: input.userId, side: "ORGANIZER" },
     );
-    // Devis entièrement couvert par le crédit d'impression : rien à payer, la demande passe PAID dans
+    // Devis entièrement couvert par le crédit d'impression : rien à payer, la commande passe PAID dans
     // la même transaction (mouvement SPENT compris). Aucun Payment n'est créé.
     const paid = request.total === 0;
     if (paid) {
-      // markPaid ne renvoie jamais faux ici : la demande vient de passer ACCEPTED sous le verrou.
+      // markPaid ne renvoie jamais faux ici : la commande vient de passer ACCEPTED sous le verrou.
       await markPaid(tx, request.id, { byCredit: true });
       await spendOrgCreditForPaidRequest(tx, request.id);
     }

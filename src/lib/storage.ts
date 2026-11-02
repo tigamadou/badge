@@ -58,7 +58,7 @@ export function eventIdDocumentKey(eventId: string, filename: string): string {
   return `events/${eventId}/idDocuments/${safeFilename(filename)}`;
 }
 
-// Plan 33 : pieces jointes des demandes d'impression (fichier d'un organisateur).
+// Plan 33 : pieces jointes des commandes d'impression (fichier d'un organisateur).
 export function printRequestFileKey(eventId: string, filename: string): string {
   return `print-requests/${eventId}/${safeFilename(filename)}`;
 }

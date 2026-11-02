@@ -35,7 +35,7 @@ export default async function EditPrintRequestPage({
       >
         <Icon name="arrow-left" size={14} /> {request.reference}
       </Link>
-      <h1 className="text-xl font-semibold text-slate-900">{`Modifier la demande ${request.reference}`}</h1>
+      <h1 className="text-xl font-semibold text-slate-900">{`Modifier la commande ${request.reference}`}</h1>
       <PrintRequestWizard orgId={orgId} eventId={eventId} requestId={requestId} availableCredit={availableCredit} />
     </div>
   );

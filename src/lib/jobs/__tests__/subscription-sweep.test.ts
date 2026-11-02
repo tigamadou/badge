@@ -150,7 +150,7 @@ describe("runSubscriptionSweep", () => {
       return { fx, payment };
     }
 
-    it("PENDING d'impression de 20 min approuvé chez FedaPay → demande PAID, reconciled 1", async () => {
+    it("PENDING d'impression de 20 min approuvé chez FedaPay → commande PAID, reconciled 1", async () => {
       const { fx, payment } = await pendingPrint(20 * MIN);
       vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
       const res = await runSubscriptionSweep(now);
@@ -159,7 +159,7 @@ describe("runSubscriptionSweep", () => {
       expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: fx.request.id } })).status).toBe("PAID");
     });
 
-    it("PENDING d'impression de 25 h → EXPIRED, la demande reste ACCEPTED", async () => {
+    it("PENDING d'impression de 25 h → EXPIRED, la commande reste ACCEPTED", async () => {
       const { fx, payment } = await pendingPrint(25 * H);
       vi.mocked(fetch).mockResolvedValue(txResponse("pending", 150000));
       const res = await runSubscriptionSweep(now);
@@ -189,7 +189,7 @@ describe("runSubscriptionSweep", () => {
     const requestStatus = async (id: string) =>
       (await prisma.printRequest.findUniqueOrThrow({ where: { id } })).status;
 
-    it("CANCELED (REPLACED) d'impression approuvé chez FedaPay → APPROVED, demande PAID, reconciled 1", async () => {
+    it("CANCELED (REPLACED) d'impression approuvé chez FedaPay → APPROVED, commande PAID, reconciled 1", async () => {
       const { fx, payment } = await closedPrint("CANCELED", 2 * DAY);
       vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
       const res = await runSubscriptionSweep(now);
@@ -198,7 +198,7 @@ describe("runSubscriptionSweep", () => {
       expect(await requestStatus(fx.request.id)).toBe("PAID");
     });
 
-    it("CANCELED approuvé alors que la demande n'attend plus ce paiement → APPROVED, PAYMENT_UNMATCHED et alerte staff", async () => {
+    it("CANCELED approuvé alors que la commande n'attend plus ce paiement → APPROVED, PAYMENT_UNMATCHED et alerte staff", async () => {
       const { fx, payment } = await closedPrint("CANCELED", 2 * DAY);
       await prisma.printRequest.update({ where: { id: fx.request.id }, data: { status: "QUOTED", acceptedTotal: null } });
       vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
@@ -214,7 +214,7 @@ describe("runSubscriptionSweep", () => {
       expect(rows).toHaveLength(1);
     });
 
-    it("CANCELED enregistré lors d'un checkout remplacé, approuvé chez FedaPay, demande déjà PAID → APPROVED, UNMATCHED et alerte staff", async () => {
+    it("CANCELED enregistré lors d'un checkout remplacé, approuvé chez FedaPay, commande déjà PAID → APPROVED, UNMATCHED et alerte staff", async () => {
       const { fx, payment } = await closedPrint("CANCELED", 2 * H);
       await prisma.printRequest.update({ where: { id: fx.request.id }, data: { status: "PAID", paidAt: now } });
       vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
@@ -229,7 +229,7 @@ describe("runSubscriptionSweep", () => {
       expect(rows).toHaveLength(1);
     });
 
-    it("EXPIRED d'impression approuvé chez FedaPay → APPROVED, demande PAID", async () => {
+    it("EXPIRED d'impression approuvé chez FedaPay → APPROVED, commande PAID", async () => {
       const { fx, payment } = await closedPrint("EXPIRED", 3 * DAY);
       vi.mocked(fetch).mockResolvedValue(txResponse("approved", 150000));
       expect((await runSubscriptionSweep(now)).reconciled).toBe(1);

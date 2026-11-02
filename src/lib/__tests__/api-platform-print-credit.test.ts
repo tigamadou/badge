@@ -69,7 +69,7 @@ describe("POST /api/platform/print/requests/[requestId]/credit", () => {
     const { status, json } = await post(r.id, { amount: 20000 });
     expect(status).toBe(201);
     expect(json.line).toMatchObject({ kind: "DISCOUNT", unitPrice: -20000, lineTotal: -20000, addedBy: "STAFF" });
-    // Chiffre de la page : la réservation de CETTE demande n'est pas retirée (excludeRequestId).
+    // Chiffre de la page : la réservation de CETTE commande n'est pas retirée (excludeRequestId).
     expect(json.available).toBe(45000);
     const logs = await prisma.activityLog.findMany({ where: { targetId: r.id, type: "PRINT_CREDIT_APPLIED" } });
     expect(logs).toHaveLength(1);
@@ -77,7 +77,7 @@ describe("POST /api/platform/print/requests/[requestId]/credit", () => {
     expect(logs[0].details).toEqual({ amount: 20000 });
   });
 
-  it("available exclut la réservation de la demande elle-même mais retire celle d'une autre demande", async () => {
+  it("available exclut la réservation de la commande elle-même mais retire celle d'une autre commande", async () => {
     const r = await requestOf();
     const other = await requestOf();
     await prisma.printQuoteLine.create({
@@ -87,11 +87,11 @@ describe("POST /api/platform/print/requests/[requestId]/credit", () => {
       },
     });
     expect((await post(r.id, { amount: 20000 })).json.available).toBe(40000);
-    // Rejouer remplace la ligne de cette demande : le chiffre ne dépend pas de sa propre réservation.
+    // Rejouer remplace la ligne de cette commande : le chiffre ne dépend pas de sa propre réservation.
     expect((await post(r.id, { amount: 30000 })).json.available).toBe(40000);
   });
 
-  it("demande QUOTED : repasse SUBMITTED et prévient l'organisateur", async () => {
+  it("commande QUOTED : repasse SUBMITTED et prévient l'organisateur", async () => {
     const r = await requestOf("QUOTED");
     expect((await post(r.id, { amount: 1000 })).status).toBe(201);
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("SUBMITTED");

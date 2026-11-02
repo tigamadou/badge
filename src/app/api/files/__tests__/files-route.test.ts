@@ -164,7 +164,7 @@ describe("GET /api/files/print-requests/staff/{requestId}/... (pièce jointe sta
     });
   }
 
-  it("lisible par l'ADMIN de l'évènement de la demande nommée par la clé, 403 pour un autre évènement", async () => {
+  it("lisible par l'ADMIN de l'évènement de la commande nommée par la clé, 403 pour un autre évènement", async () => {
     const mine = await setup();
     const other = await setup();
     const req = await seedRequest(mine.event.id, mine.org.id);
@@ -175,7 +175,7 @@ describe("GET /api/files/print-requests/staff/{requestId}/... (pièce jointe sta
     expect((await read(key)).status).toBe(403);
   });
 
-  it("l'évènement vient de la clé, pas d'un message : réutiliser la clé dans une autre demande n'ouvre rien", async () => {
+  it("l'évènement vient de la clé, pas d'un message : réutiliser la clé dans une autre commande n'ouvre rien", async () => {
     const mine = await setup();
     const other = await setup();
     const mineReq = await seedRequest(mine.event.id, mine.org.id);
@@ -189,7 +189,7 @@ describe("GET /api/files/print-requests/staff/{requestId}/... (pièce jointe sta
     expect((await read(key)).status).toBe(403);
   });
 
-  it("demande inconnue ou clé sans demande : 403 non-staff, 200 staff", async () => {
+  it("commande inconnue ou clé sans commande : 403 non-staff, 200 staff", async () => {
     const { event } = await setup();
     await login({ eventId: event.id, role: "ADMIN" });
     expect((await read(`print-requests/staff/ghost/${uniq("orph")}.pdf`)).status).toBe(403);

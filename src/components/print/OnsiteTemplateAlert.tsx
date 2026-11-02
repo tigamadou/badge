@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Alert } from "@/components/ui/Feedback";
 
-// Template devenu inadapté à l'impression sur place : l'avancement de la demande est bloqué.
+// Template devenu inadapté à l'impression sur place : l'avancement de la commande est bloqué.
 export function OnsiteTemplateAlert({ side, eventId }: { side: "ORGANIZER" | "STAFF"; eventId: string }) {
   if (side === "STAFF") {
     return (
@@ -14,7 +14,7 @@ export function OnsiteTemplateAlert({ side, eventId }: { side: "ORGANIZER" | "ST
     <Alert tone="warn">
       <span>
         Le modèle de badge choisi n&apos;est pas adapté à l&apos;impression sur place. L&apos;équipe Badge ne peut pas
-        avancer cette demande.{" "}
+        avancer cette commande.{" "}
         <Link href={`/event/${eventId}/settings/badge`} className="font-medium underline">
           Changer le modèle de badge
         </Link>

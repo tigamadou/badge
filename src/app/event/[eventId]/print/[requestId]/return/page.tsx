@@ -29,12 +29,12 @@ export default async function PrintPaymentReturnPage({
             {outcome === "PAID" && (
               <Alert tone="success">
                 {/* Texte d'un seul tenant : l'espace qui suit {reference} disparaissait au rendu. */}
-                {`Paiement confirmé. La demande ${reference} est payée ; l'équipe Badge lance la production.`}
+                {`Paiement confirmé. La commande ${reference} est payée ; l'équipe Badge lance la production.`}
               </Alert>
             )}
             {outcome === "UNMATCHED" && (
               <Alert tone="info">
-                Paiement reçu. L&apos;équipe Badge vérifie votre demande et revient vers vous.
+                Paiement reçu. L&apos;équipe Badge vérifie votre commande et revient vers vous.
               </Alert>
             )}
             {outcome === "MISMATCH" && (
@@ -60,7 +60,7 @@ export default async function PrintPaymentReturnPage({
             )}
             {outcome === "NOT_FOUND" && <Alert tone="err">Paiement introuvable.</Alert>}
             <Link href={`/event/${eventId}/print/${requestId}`} className="font-medium underline">
-              Retour à la demande
+              Retour à la commande
             </Link>
           </div>
         </CardBody>

@@ -70,10 +70,10 @@ describe("describeLineChange", () => {
 describe("describeThreadEvent", () => {
   const cases: Record<ThreadEventType, [Record<string, unknown>, string]> = {
     LINES_CHANGED: [{ changes: [added("a"), added("b")] }, "2 lignes modifiées"],
-    SUBMITTED: [{ badgeCount: 10, total: 5000 }, `Demande envoyée : 10 badges, total estimé ${formatFcfa(5000)}`],
+    SUBMITTED: [{ badgeCount: 10, total: 5000 }, `Commande envoyée : 10 badges, total estimé ${formatFcfa(5000)}`],
     BADGES_CHANGED: [
       { added: 2, removed: 1, count: 9, lagging: ["Cordon", "PVC"] },
-      "Badges de la demande : +2, −1 (9 au total) — quantités fixées par l'équipe à vérifier : Cordon, PVC",
+      "Badges de la commande : +2, −1 (9 au total) — quantités fixées par l'équipe à vérifier : Cordon, PVC",
     ],
     REQUEST_UPDATED: [{ fields: ["livraison", "notes"] }, "Informations modifiées : livraison, notes"],
     QUOTE_SENT: [{ version: 2, total: 900 }, `Devis v2 envoyé : ${formatFcfa(900)}`],
@@ -85,11 +85,11 @@ describe("describeThreadEvent", () => {
       { from: "PAID", to: "READY" },
       `Statut : ${PRINT_REQUEST_STATUS_LABELS.PAID} → ${PRINT_REQUEST_STATUS_LABELS.READY}`,
     ],
-    REJECTED: [{ reason: "Hors délai" }, "Demande refusée : Hors délai"],
-    CANCELLED: [{}, "Demande annulée"],
+    REJECTED: [{ reason: "Hors délai" }, "Commande refusée : Hors délai"],
+    CANCELLED: [{}, "Commande annulée"],
     PAYMENT_RECEIVED: [{ amount: 100, reason: "virement" }, `Paiement reçu : ${formatFcfa(100)} (hors ligne : virement)`],
     PAYMENT_FAILED: [{ amount: 100 }, `Paiement échoué : ${formatFcfa(100)}`],
-    PAYMENT_UNMATCHED: [{ amount: 100 }, `Paiement de ${formatFcfa(100)} reçu alors que la demande n'attendait plus ce paiement : l'équipe Badge vérifie.`],
+    PAYMENT_UNMATCHED: [{ amount: 100 }, `Paiement de ${formatFcfa(100)} reçu alors que la commande n'attendait plus ce paiement : l'équipe Badge vérifie.`],
     SHEETS_GENERATED: [{ generationId: "g", badgeCount: 30 }, "Planches lancées pour 30 badges"],
     REGISTRATIONS_SKIPPED: [
       { registrationIds: ["r1", "r2"] },
@@ -104,7 +104,7 @@ describe("describeThreadEvent", () => {
     ],
     ONSITE_SUPPLEMENT_CREATED: [
       { reference: "IMP-2026-0002", extraBadges: 12 },
-      "Demande complémentaire IMP-2026-0002 : 12 badges supplémentaires",
+      "Commande complémentaire IMP-2026-0002 : 12 badges supplémentaires",
     ],
   };
 
@@ -125,7 +125,7 @@ describe("describeThreadEvent", () => {
   it("variantes : une seule ligne, sans retard, sans motif, template sans annulation", () => {
     expect(describeThreadEvent("LINES_CHANGED", { changes: [added("a")] })).toBe(describeLineChange(added("a")));
     expect(describeThreadEvent("BADGES_CHANGED", { added: 1, removed: 0, count: 1, lagging: [] })).toBe(
-      "Badges de la demande : +1, −0 (1 au total)",
+      "Badges de la commande : +1, −0 (1 au total)",
     );
     expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 100 })).toBe(`Paiement reçu : ${formatFcfa(100)}`);
     expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 0, byCredit: true })).toBe(
@@ -141,7 +141,7 @@ describe("appendThreadEvent", () => {
   it("crée une entrée EVENT système par défaut", async () => {
     const { request } = await seed();
     const m = await prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "CANCELLED", {}));
-    expect(m).toMatchObject({ kind: "EVENT", side: "SYSTEM", authorId: null, eventType: "CANCELLED", body: "Demande annulée" });
+    expect(m).toMatchObject({ kind: "EVENT", side: "SYSTEM", authorId: null, eventType: "CANCELLED", body: "Commande annulée" });
   });
 
   it("trois modifications de lignes du même staff donnent une seule entrée « 3 lignes modifiées »", async () => {
@@ -233,7 +233,7 @@ describe("postMessage", () => {
     expect(ok.side).toBe("STAFF");
   });
 
-  it("staff : la clé d'une autre demande (autre organisation) ou sans demande est refusée", async () => {
+  it("staff : la clé d'une autre commande (autre organisation) ou sans commande est refusée", async () => {
     const mine = await seed();
     const theirs = await seed();
     const stf = (attachmentKey: string) =>
@@ -257,12 +257,12 @@ describe("postMessage", () => {
     expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
   });
 
-  it("demande absente -> 404", async () => {
+  it("commande absente -> 404", async () => {
     const { organizer } = await seed();
     await expect(postMessage({ ...base({ id: "nope" }, organizer) })).rejects.toMatchObject({ code: "NOT_FOUND", status: 404 });
   });
 
-  it("reste permis sur une demande COMPLETED, REJECTED et CANCELLED", async () => {
+  it("reste permis sur une commande COMPLETED, REJECTED et CANCELLED", async () => {
     for (const status of ["COMPLETED", "REJECTED", "CANCELLED"] as const) {
       const { request, organizer } = await seed(status);
       const m = await postMessage(base(request, organizer));
@@ -362,7 +362,7 @@ describe("listThread", () => {
     await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "Hello", attachmentKey: null });
     const thread = await listThread(request.id, "STAFF");
     expect(thread.map((t) => [t.kind, t.authorName, t.body])).toEqual([
-      ["EVENT", null, "Demande annulée"],
+      ["EVENT", null, "Commande annulée"],
       ["MESSAGE", "Orga", "Hello"],
     ]);
     expect(thread[0]).toMatchObject({ eventType: "CANCELLED", attachmentKey: null, side: "SYSTEM" });

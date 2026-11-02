@@ -170,7 +170,7 @@ describe("types d'impression (gabarits et planches)", () => {
   });
 });
 
-describe("types des demandes d'impression", () => {
+describe("types des commandes d'impression", () => {
   const REQUEST_TYPES = [
     "PRINT_REQUEST_SUBMITTED",
     "PRINT_REQUEST_UPDATED",

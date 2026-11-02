@@ -17,23 +17,23 @@ import { releaseTemplatePin } from "./template-lock-core";
 
 export { appendThreadEvent } from "./thread";
 
-// Sonde de paiement en cours : un Payment PENDING de la demande. Objet mutable : les tests la
+// Sonde de paiement en cours : un Payment PENDING de la commande. Objet mutable : les tests la
 // remplacent avec vi.spyOn.
 export const paymentProbe: { isPaymentInProgress(requestId: string): Promise<boolean> } = {
   isPaymentInProgress: async (requestId) =>
     (await prisma.payment.count({ where: { printRequestId: requestId, status: "PENDING" } })) > 0,
 };
 
-// Les appelants doivent tenir le verrou de la ligne de la demande (SELECT ... FOR UPDATE) avant
+// Les appelants doivent tenir le verrou de la ligne de la commande (SELECT ... FOR UPDATE) avant
 // de sonder : sinon un paiement PENDING peut apparaître entre la sonde et l'écriture. Cela vaut
 // pour les transitions gardées (REOPEN, CANCEL depuis ACCEPTED, MARK_PAID manuel, TEMPLATE_CHANGED).
 export function isPaymentInProgress(requestId: string): Promise<boolean> {
   return paymentProbe.isPaymentInProgress(requestId);
 }
 
-// Tout appelant qui verrouille une demande passe par ce helper (Event puis PrintRequest) : l'ordre
+// Tout appelant qui verrouille une commande passe par ce helper (Event puis PrintRequest) : l'ordre
 // est le même que celui des changements de template (verrou de l'évènement d'abord), donc pas
-// d'interblocage. L'évènement de la demande est lu hors transaction (il ne change jamais) pour ne
+// d'interblocage. L'évènement de la commande est lu hors transaction (il ne change jamais) pour ne
 // pas figer l'instantané de lecture avant d'avoir obtenu les verrous.
 export async function lockRequestWithEvent(
   tx: Prisma.TransactionClient,
@@ -158,7 +158,7 @@ export async function loadRequest(
   return request;
 }
 
-// Actions qui n'ont pas lieu pendant qu'un paiement de la demande est en cours.
+// Actions qui n'ont pas lieu pendant qu'un paiement de la commande est en cours.
 function needsPaymentGuard(
   from: PrintRequestStatus,
   action: PrintRequestAction,
@@ -208,8 +208,8 @@ export async function applyTransition(
     data,
   });
   if (count === 0) throw new PrintRequestError("INVALID_TRANSITION", 409, { from, action });
-  // Hors des statuts qui retiennent le template, l'épinglage de la demande est levé. Si
-  // l'évènement retrouve ainsi l'héritage, les copies de ses demandes en cours (dont celle-ci, si
+  // Hors des statuts qui retiennent le template, l'épinglage de la commande est levé. Si
+  // l'évènement retrouve ainsi l'héritage, les copies de ses commandes en cours (dont celle-ci, si
   // elle reste en cours) sont resynchronisées dans la même transaction : l'appelant tient déjà les
   // verrous Event puis PrintRequest (lockRequestWithEvent), aucune autre transaction n'est ouverte.
   if (!PIN_HOLDING_STATUSES.includes(to) && (await releaseTemplatePin(tx, request.id))) {
@@ -220,10 +220,10 @@ export async function applyTransition(
 
 export const SYNCED_STATUSES: PrintRequestStatus[] = ["SUBMITTED", "QUOTED", "ACCEPTED"];
 
-// Aligne la copie du template d'UNE demande sur le template effectif de son évènement. Le
-// verrou de la demande (lockRequestWithEvent) doit être tenu. Les brouillons et les demandes
-// payées ne sont pas touchés ; une demande ACCEPTED avec paiement en cours est laissée telle
-// quelle. Vrai si la demande a été repassée en SUBMITTED (entrée TEMPLATE_CHANGED au fil).
+// Aligne la copie du template d'UNE commande sur le template effectif de son évènement. Le
+// verrou de la commande (lockRequestWithEvent) doit être tenu. Les brouillons et les commandes
+// payées ne sont pas touchés ; une commande ACCEPTED avec paiement en cours est laissée telle
+// quelle. Vrai si la commande a été repassée en SUBMITTED (entrée TEMPLATE_CHANGED au fil).
 export async function syncLockedRequest(tx: Prisma.TransactionClient, requestId: string): Promise<boolean> {
   const request = await tx.printRequest.findUnique({ where: { id: requestId } });
   if (!request || !SYNCED_STATUSES.includes(request.status)) return false;
@@ -255,8 +255,8 @@ export async function syncLockedRequest(tx: Prisma.TransactionClient, requestId:
   return true;
 }
 
-// Après la remise d'un évènement à l'héritage : resynchronise ses demandes en cours (l'évènement
-// et la demande `heldRequestId` sont déjà verrouillés ; les autres le sont ici, Event d'abord).
+// Après la remise d'un évènement à l'héritage : resynchronise ses commandes en cours (l'évènement
+// et la commande `heldRequestId` sont déjà verrouillés ; les autres le sont ici, Event d'abord).
 async function resyncEventRequests(tx: Prisma.TransactionClient, heldRequestId: string): Promise<void> {
   const { event } = await tx.printRequest.findUniqueOrThrow({
     where: { id: heldRequestId },
@@ -276,7 +276,7 @@ async function resyncEventRequests(tx: Prisma.TransactionClient, heldRequestId: 
   }
 }
 
-// Une demande complémentaire (surplus facturé à la clôture) est une quantité ferme fixée par le
+// Une commande complémentaire (surplus facturé à la clôture) est une quantité ferme fixée par le
 // poste : l'organisateur ne la modifie ni ne l'annule, il l'accepte ou la laisse au staff.
 export function assertOrganizerMayChange(
   request: { parentRequestId?: string | null },
@@ -327,7 +327,7 @@ export async function requestBadgeCount(
   return request.estimatedQuantity ?? 0;
 }
 
-// Marque la demande payée (paiement en ligne ou saisie hors ligne). Faux si elle n'est plus
+// Marque la commande payée (paiement en ligne ou saisie hors ligne). Faux si elle n'est plus
 // ACCEPTED : rien n'est écrit (le plan 34 traite le paiement tardif). Ni journal ni notification :
 // l'appelant les fait après la transaction.
 export async function markPaid(
@@ -336,7 +336,7 @@ export async function markPaid(
   opts: { paymentId?: string; manual?: { userId: string; reason: string }; byCredit?: boolean },
 ): Promise<boolean> {
   // Verrou de la ligne : deux confirmations simultanées (webhook et page de retour) s'enchaînent.
-  // Demande inconnue : faux, comme avant (le helper lève NOT_FOUND).
+  // Commande inconnue : faux, comme avant (le helper lève NOT_FOUND).
   try {
     await lockRequestWithEvent(tx, requestId);
   } catch (e) {

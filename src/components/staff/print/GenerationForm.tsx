@@ -33,7 +33,7 @@ const MAX_RENDERED = 200;
 
 const collator = new Intl.Collator("fr", { sensitivity: "base" });
 
-// Demande d'impression dont on génère les planches : organisation, évènement et badges
+// Commande d'impression dont on génère les planches : organisation, évènement et badges
 // (dans l'ordre des positions) sont imposés.
 export type LinkedPrintRequest = {
   id: string;
@@ -177,10 +177,10 @@ export function GenerationForm({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]">
       <Card>
         <CardHead
-          title={printRequest ? `Planches de la demande ${printRequest.reference}` : "Nouvelle génération"}
+          title={printRequest ? `Planches de la commande ${printRequest.reference}` : "Nouvelle génération"}
           subtitle={
             printRequest
-              ? "Organisation, évènement et badges sont ceux de la demande ; choisissez le gabarit de planche."
+              ? "Organisation, évènement et badges sont ceux de la commande ; choisissez le gabarit de planche."
               : "Choisissez les badges à imprimer et le gabarit de planche."
           }
         />
@@ -212,7 +212,7 @@ export function GenerationForm({
 
           {event && printRequest && (
             <p className="mb-4 text-sm text-slate-700">
-              {`${printRequest.registrationIds.length} badge${printRequest.registrationIds.length > 1 ? "s" : ""} de la demande, dans l'ordre de la demande.`}
+              {`${printRequest.registrationIds.length} badge${printRequest.registrationIds.length > 1 ? "s" : ""} de la commande, dans l'ordre de la commande.`}
             </p>
           )}
           {event && !printRequest && (

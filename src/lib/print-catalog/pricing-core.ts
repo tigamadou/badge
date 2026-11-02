@@ -175,7 +175,7 @@ export function validateChoices(
   return missing ? fail("REQUIRED_OPTION_MISSING", missing.id) : { ok: true };
 }
 
-// Nettoie des choix enregistres (ex. ligne de demande rouverte) : retire ce qui
+// Nettoie des choix enregistres (ex. ligne de commande rouverte) : retire ce qui
 // reference une option ou une valeur absente/archivee depuis, et les choix devenus vides.
 export function pruneChoices(
   product: CatalogProduct | ProductForPricing, choices: OptionChoice[],
@@ -198,7 +198,7 @@ export type ChoiceSnapshot = {
   split?: { label: string; quantity: number }[]; priceDelta: number;
 };
 
-// Copie figee des choix : libelles et supplements au moment de la demande.
+// Copie figee des choix : libelles et supplements au moment de la commande.
 export function snapshotChoices(
   product: ProductForPricing, choices: OptionChoice[], quantity: number,
 ): ChoiceSnapshot[] {

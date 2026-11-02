@@ -443,7 +443,7 @@ export async function notifyEmailFailed(job: {
   });
 }
 
-// --- Demandes d'impression (spec 33) ---
+// --- Commandes d'impression (spec 33) ---
 
 const PRINT_REQUEST_SELECT = {
   id: true,
@@ -479,7 +479,7 @@ export async function notifyPrintRequestSubmitted(requestId: string, actorId: st
           eventTitle: r.event.title,
           orgName: r.org.name,
           type: r.type,
-          // Une demande sur place n'a pas d'items : on retombe sur la quantité estimée.
+          // Une commande sur place n'a pas d'items : on retombe sur la quantité estimée.
           badgeCount: r._count.items || r.estimatedQuantity || 0,
         }),
       },
@@ -625,7 +625,7 @@ export async function notifyPrintRequestPaid(
   });
 }
 
-// Paiement approuvé que la demande n'attendait plus : le staff vérifie (montant lu sur le Payment).
+// Paiement approuvé que la commande n'attendait plus : le staff vérifie (montant lu sur le Payment).
 export async function notifyPrintPaymentUnmatched(requestId: string, paymentId: string): Promise<void> {
   await withNotificationGuard("print-payment-unmatched", async () => {
     const [r, payment] = await Promise.all([

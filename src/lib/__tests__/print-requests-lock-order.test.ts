@@ -46,7 +46,7 @@ beforeEach(async () => {
 });
 
 describe("ordre des verrous Event puis PrintRequest", () => {
-  it("COMPLETE d'une demande READY épinglée face à un changement de template", async () => {
+  it("COMPLETE d'une commande READY épinglée face à un changement de template", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       const r = await pinned("READY");
       const res = await Promise.allSettled([
@@ -61,7 +61,7 @@ describe("ordre des verrous Event puis PrintRequest", () => {
     }
   });
 
-  it("CANCEL d'une demande ACCEPTED épinglée face à un changement de template", async () => {
+  it("CANCEL d'une commande ACCEPTED épinglée face à un changement de template", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       const r = await pinned("ACCEPTED");
       const res = await Promise.allSettled([
@@ -76,7 +76,7 @@ describe("ordre des verrous Event puis PrintRequest", () => {
     }
   });
 
-  it("REOPEN d'une demande ACCEPTED épinglée face à un changement de template", async () => {
+  it("REOPEN d'une commande ACCEPTED épinglée face à un changement de template", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       const r = await pinned("ACCEPTED");
       const res = await Promise.allSettled([
@@ -142,7 +142,7 @@ describe("ordre des verrous Event puis PrintRequest", () => {
 });
 
 describe("ordre des verrous Event, PrintRequest puis Organization (crédit d'impression)", () => {
-  it("applyOrgCredit face à markPaid du crédit d'une autre demande : pas d'interblocage", async () => {
+  it("applyOrgCredit face à markPaid du crédit d'une autre commande : pas d'interblocage", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 10000 } });
       const line = (requestId: string, usesOrgCredit: boolean, amount: number) =>
@@ -169,7 +169,7 @@ describe("ordre des verrous Event, PrintRequest puis Organization (crédit d'imp
     }
   });
 
-  it("clôture sur place (crédit gagné) face à applyOrgCredit d'une autre demande et à un changement de template : pas d'interblocage", async () => {
+  it("clôture sur place (crédit gagné) face à applyOrgCredit d'une autre commande et à un changement de template : pas d'interblocage", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 10000 } });
       const closing = await makeRequest(fx, {
@@ -202,7 +202,7 @@ describe("ordre des verrous Event, PrintRequest puis Organization (crédit d'imp
     }
   });
 
-  it("acceptation d'un devis à 0 (PAID + SPENT) face à applyOrgCredit d'une autre demande et à un changement de template : pas d'interblocage", async () => {
+  it("acceptation d'un devis à 0 (PAID + SPENT) face à applyOrgCredit d'une autre commande et à un changement de template : pas d'interblocage", async () => {
     for (let i = 0; i < ITERATIONS; i++) {
       await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 10000 } });
       const accepting = await makeRequest(fx, { status: "QUOTED", total: 0, quoteVersion: 1 });

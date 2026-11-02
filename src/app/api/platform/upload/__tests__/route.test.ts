@@ -130,7 +130,7 @@ describe("POST /api/platform/upload", () => {
     });
   }
 
-  it("print-request : PDF accepte par STAFF_SUPPORT, cle rangee sous la demande", async () => {
+  it("print-request : PDF accepte par STAFF_SUPPORT, cle rangee sous la commande", async () => {
     await login("STAFF_SUPPORT");
     const r = await aRequest();
     const res = await post(makeReq("print-request", pdf, r.id));
@@ -140,7 +140,7 @@ describe("POST /api/platform/upload", () => {
     );
   });
 
-  it("print-request : demande absente ou inconnue -> 400 BAD_REQUEST_ID", async () => {
+  it("print-request : commande absente ou inconnue -> 400 BAD_REQUEST_ID", async () => {
     await login("STAFF_SUPPORT");
     for (const id of [undefined, "ghost"]) {
       const res = await post(makeReq("print-request", pdf, id));

@@ -32,7 +32,7 @@ type StationCard = {
   category: { name: string; color: string };
   badgePrinted: boolean;
   badgePrintedAt: string | null;
-  /** Déjà imprimé AU POSTE pour cette demande : seule cette impression est une réimpression non comptée. */
+  /** Déjà imprimé AU POSTE pour cette commande : seule cette impression est une réimpression non comptée. */
   printedOnsite: boolean;
 };
 
@@ -147,10 +147,10 @@ export function OnsiteStation(props: OnsiteStationProps) {
     <div className="space-y-4">
       <div>
         <Link
-          href={`/platform/print/requests/${requestId}`}
+          href={`/platform/print/orders/${requestId}`}
           className="text-[13px] text-slate-500 hover:text-slate-800"
         >
-          ← Demande {reference}
+          ← Commande {reference}
         </Link>
         <h1 className="mt-1 text-xl font-semibold text-slate-900">Poste d&apos;impression · {reference}</h1>
         <p className="text-sm text-slate-500">

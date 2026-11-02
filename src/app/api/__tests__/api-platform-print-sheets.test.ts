@@ -90,7 +90,7 @@ describe("POST /api/platform/print/sheets", () => {
     expect(logs).toHaveLength(1);
   });
 
-  it("transmet printRequestId et lie la generation a la demande", async () => {
+  it("transmet printRequestId et lie la generation a la commande", async () => {
     await asStaff();
     const { event, layout, r } = await fixture();
     const owner = await prisma.user.create({ data: { email: `${uniq("ow")}@x`, password: "x", name: "O" } });

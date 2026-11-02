@@ -32,7 +32,7 @@ async function call(handler: unknown, id: string, path: string, method: string, 
   return { status: res.status, json: await res.json() };
 }
 
-// Demande IN_PRODUCTION de 200 badges, marge 10 %.
+// Commande IN_PRODUCTION de 200 badges, marge 10 %.
 async function onsite(printed = 0, over: Parameters<typeof makeRequest>[1] = {}) {
   const r = await makeRequest(fx, {
     type: "ONSITE", status: "IN_PRODUCTION", estimatedQuantity: 200, marginPercent: 10, ...over,
@@ -84,7 +84,7 @@ describe("gardes de rôle", () => {
 });
 
 describe("POST lookup", () => {
-  it("200 avec la fiche, 400 corps invalide, 404 demande inconnue", async () => {
+  it("200 avec la fiche, 400 corps invalide, 404 commande inconnue", async () => {
     const r = await onsite();
     const ok = await call(lookupPOST, r.id, "lookup", "POST", { payload: `https://x.org/verify/${fx.approved[0].id}` });
     expect(ok.status).toBe(200);
@@ -155,7 +155,7 @@ describe("POST print", () => {
     vi.restoreAllMocks();
   });
 
-  it("400 corps invalide, 404 demande inconnue, 409 CAP_REACHED relayé", async () => {
+  it("400 corps invalide, 404 commande inconnue, 409 CAP_REACHED relayé", async () => {
     const r = await onsite(220);
     expect((await call(printPOST, r.id, "print", "POST", {})).status).toBe(400);
     expect((await call(printPOST, "inconnue", "print", "POST", { registrationId: fx.approved[0].id })).status).toBe(404);
@@ -254,7 +254,7 @@ describe("PATCH margin", () => {
     expect((await patch(r.id, { marginPercent: 15, reason: "Motif" })).status).toBe(200);
   });
 
-  it("404 demande inconnue, 409 NOT_ONSITE pour une demande en amont", async () => {
+  it("404 commande inconnue, 409 NOT_ONSITE pour une commande en amont", async () => {
     expect((await patch("inconnue", { marginPercent: 15, reason: "Motif" })).status).toBe(404);
     const adv = await makeRequest(fx, { type: "ADVANCE", status: "IN_PRODUCTION" });
     const res = await patch(adv.id, { marginPercent: 15, reason: "Motif" });

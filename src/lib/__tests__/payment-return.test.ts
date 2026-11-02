@@ -191,7 +191,7 @@ describe("resolvePrintPaymentReturn", () => {
     });
     return { ...fx, payment };
   }
-  // Contexte de la page : évènement et organisation de la demande.
+  // Contexte de la page : évènement et organisation de la commande.
   const call = (requestId: string, rawId: string | undefined, over: { eventId?: string; orgId?: string } = {}) =>
     prisma.printRequest
       .findUniqueOrThrow({ where: { id: requestId }, select: { eventId: true, orgId: true } })
@@ -207,7 +207,7 @@ describe("resolvePrintPaymentReturn", () => {
     });
   });
 
-  it("demande déjà avancée après le paiement (paidPaymentId posé) → PAID", async () => {
+  it("commande déjà avancée après le paiement (paidPaymentId posé) → PAID", async () => {
     const t = await seedPrint();
     fetchMock.mockResolvedValue(txResponse("approved", 150000));
     await confirmPayment(77);
@@ -215,7 +215,7 @@ describe("resolvePrintPaymentReturn", () => {
     expect((await call(t.request.id, "77")).outcome).toBe("PAID");
   });
 
-  it("approuvé tardivement sur une demande QUOTED → UNMATCHED", async () => {
+  it("approuvé tardivement sur une commande QUOTED → UNMATCHED", async () => {
     const t = await seedPrint();
     await prisma.printRequest.update({ where: { id: t.request.id }, data: { status: "QUOTED" } });
     fetchMock.mockResolvedValue(txResponse("approved", 150000));
@@ -223,7 +223,7 @@ describe("resolvePrintPaymentReturn", () => {
     expect(res).toMatchObject({ outcome: "UNMATCHED", amount: 150000 });
   });
 
-  it("approuvé sur une demande PAID à la main (paidPaymentId nul) → UNMATCHED", async () => {
+  it("approuvé sur une commande PAID à la main (paidPaymentId nul) → UNMATCHED", async () => {
     const t = await seedPrint();
     await prisma.printRequest.update({
       where: { id: t.request.id }, data: { status: "PAID", paidAt: new Date(), paidPaymentId: null },
@@ -260,7 +260,7 @@ describe("resolvePrintPaymentReturn", () => {
     expect(err).toHaveBeenCalledWith("[return fedapay]", expect.anything());
   });
 
-  it("paiement d'une autre demande → NOT_FOUND sans confirmPayment", async () => {
+  it("paiement d'une autre commande → NOT_FOUND sans confirmPayment", async () => {
     await seedPrint();
     const other = await seedPrint(78);
     expect(await call(other.request.id, "77")).toEqual(notFound);
@@ -268,7 +268,7 @@ describe("resolvePrintPaymentReturn", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("demande d'un autre évènement ou d'une autre organisation → NOT_FOUND sans appel", async () => {
+  it("commande d'un autre évènement ou d'une autre organisation → NOT_FOUND sans appel", async () => {
     const t = await seedPrint();
     const o = await seedPrint(80);
     expect(await call(t.request.id, "77", { eventId: o.event.id })).toEqual(notFound);

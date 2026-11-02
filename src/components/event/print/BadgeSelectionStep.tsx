@@ -24,7 +24,7 @@ const MAX_ROWS = 200;
 const toggle = (list: string[], id: string): string[] =>
   list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
-// Étape « Badges » d'une demande en amont. Composant contrôlé : l'état vit dans l'assistant.
+// Étape « Badges » d'une commande en amont. Composant contrôlé : l'état vit dans l'assistant.
 export function BadgeSelectionStep({
   candidates,
   state,

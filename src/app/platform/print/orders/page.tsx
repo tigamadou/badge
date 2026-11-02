@@ -72,13 +72,13 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Demandes d&apos;impression</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Commandes d&apos;impression</h1>
         <p className="mt-0.5 text-sm text-slate-400">Devis, paiements et production des badges demandés par les organisateurs</p>
       </div>
       <RequestList
         rows={rows.map(({ _count, estimatedQuantity, ...r }) => ({
           ...r,
-          // Une demande sur place n'a pas d'items : on retombe sur la quantité estimée.
+          // Une commande sur place n'a pas d'items : on retombe sur la quantité estimée.
           badgeCount: r.type === "ADVANCE" ? _count.items : (estimatedQuantity ?? 0),
         }))}
         total={total}

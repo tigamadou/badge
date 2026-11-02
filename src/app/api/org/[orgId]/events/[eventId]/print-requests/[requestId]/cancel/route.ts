@@ -2,7 +2,7 @@ import { logActivity } from "@/lib/activity-log";
 import { cancelRequest } from "@/lib/print-requests/lifecycle";
 import { json, organizerRoute, toOrganizerDTO } from "@/lib/print-requests/route";
 
-// Le statut est notifié au staff par cancelRequest quand la demande n'était pas un brouillon.
+// Le statut est notifié au staff par cancelRequest quand la commande n'était pas un brouillon.
 export const POST = organizerRoute({ allowArchived: true }, async (req, ctx) => {
   const { request, from } = await cancelRequest({
     requestId: ctx.requestId,

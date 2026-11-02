@@ -2,7 +2,7 @@ import type { PrintRequestStatus, PrintRequestType, StaffRole } from "@prisma/cl
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { pxToMm } from "@/lib/print-sheets/units";
 
-// Fonctions pures de l'écran staff d'une demande d'impression (testées sans rendu).
+// Fonctions pures de l'écran staff d'une commande d'impression (testées sans rendu).
 
 export type StaffAction =
   | "SEND_QUOTE"
@@ -38,12 +38,12 @@ export function availableActions(status: PrintRequestStatus, role: StaffRole): S
   return (ACTIONS_BY_STATUS[status] ?? []).filter((a) => staffRoleAtLeast(role, ACTION_ROLE[a]));
 }
 
-// Lignes éditables : STAFF_ADMIN, tant que la demande est envoyée ou en devis.
+// Lignes éditables : STAFF_ADMIN, tant que la commande est envoyée ou en devis.
 export function canEditQuote(status: PrintRequestStatus, role: StaffRole): boolean {
   return (status === "SUBMITTED" || status === "QUOTED") && staffRoleAtLeast(role, "STAFF_ADMIN");
 }
 
-// Lien « Générer les planches » : demande en amont payée (ruling C7 : PAID à READY), STAFF_SUPPORT.
+// Lien « Générer les planches » : commande en amont payée (ruling C7 : PAID à READY), STAFF_SUPPORT.
 export function canGenerateSheets(
   status: PrintRequestStatus,
   type: PrintRequestType,
@@ -56,7 +56,7 @@ export function canGenerateSheets(
   );
 }
 
-// Badges de la demande pas encore marqués imprimés (identifiants à envoyer à la route d'impression).
+// Badges de la commande pas encore marqués imprimés (identifiants à envoyer à la route d'impression).
 export function unprintedIds(items: { registrationId: string; badgePrinted: boolean }[]): string[] {
   return items.filter((i) => !i.badgePrinted).map((i) => i.registrationId);
 }

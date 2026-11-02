@@ -131,7 +131,7 @@ export function PrintRequestWizard({
     return ((await res.json()) as { storageKey: string }).storageKey;
   }
 
-  // Chargement initial : demande, catalogues et (en amont) badges candidats.
+  // Chargement initial : commande, catalogues et (en amont) badges candidats.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -314,14 +314,14 @@ export function PrintRequestWizard({
     },
     {
       onSuccess: () => {
-        toastSuccess(isDraft ? "Demande envoyée." : "Modifications enregistrées.");
+        toastSuccess(isDraft ? "Commande envoyée." : "Modifications enregistrées.");
         router.push(detailUrl);
         router.refresh();
       },
     },
   );
 
-  if (loadFailed) return <Alert tone="err">Impossible de charger la demande. Rechargez la page.</Alert>;
+  if (loadFailed) return <Alert tone="err">Impossible de charger la commande. Rechargez la page.</Alert>;
   if (!loaded) {
     return (
       <div className="flex justify-center py-16">
@@ -341,11 +341,11 @@ export function PrintRequestWizard({
   return (
     <div>
       <Stepper steps={steps} current={step} />
-      <div className="mb-4 text-sm text-slate-500">{`Type de demande : ${PRINT_REQUEST_TYPE_LABELS[type]}`}</div>
+      <div className="mb-4 text-sm text-slate-500">{`Type de commande : ${PRINT_REQUEST_TYPE_LABELS[type]}`}</div>
 
       {orphans.length > 0 && (step === 2 || step === 3) ? (
         <div className="mb-4">
-          <Alert tone="warn">{`Ces produits ne sont plus proposés et seront retirés de la demande : ${orphans.join(", ")}.`}</Alert>
+          <Alert tone="warn">{`Ces produits ne sont plus proposés et seront retirés de la commande : ${orphans.join(", ")}.`}</Alert>
         </div>
       ) : null}
 
@@ -402,7 +402,7 @@ export function PrintRequestWizard({
 
       {step === 3 ? (
         <div className="space-y-6">
-          <p className="text-sm text-slate-500">Cordons, porte-badges… Choisissez les accessoires de votre demande (facultatif).</p>
+          <p className="text-sm text-slate-500">Cordons, porte-badges… Choisissez les accessoires de votre commande (facultatif).</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {accessoryCatalog.map((product) => (
               <ProductCard
@@ -540,7 +540,7 @@ export function PrintRequestWizard({
           </Button>
         ) : (
           <Button type="button" loading={finishing} onClick={() => void finish()}>
-            {isDraft ? "Envoyer la demande" : "Enregistrer les modifications"}
+            {isDraft ? "Envoyer la commande" : "Enregistrer les modifications"}
           </Button>
         )}
       </div>

@@ -37,20 +37,20 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Impression</h1>
-          <p className="mt-0.5 text-sm text-slate-400">Demandes d&apos;impression de badges et devis</p>
+          <p className="mt-0.5 text-sm text-slate-400">Commandes d&apos;impression de badges et devis</p>
         </div>
         {!event.archived && !ctx.isStaff ? (
           <Link
             href={`/event/${eventId}/print/new`}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
           >
-            Nouvelle demande
+            Nouvelle commande
           </Link>
         ) : null}
       </div>
       <OrgPrintCreditCard balance={creditBalance} movements={creditMovements} />
       {data.length === 0 ? (
-        <EmptyState icon="printer" title="Aucune demande d'impression pour cet évènement." />
+        <EmptyState icon="printer" title="Aucune commande d'impression pour cet évènement." />
       ) : (
         <Table
           data={data}

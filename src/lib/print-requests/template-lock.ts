@@ -10,7 +10,7 @@ export { TEMPLATE_LOCK_STATUSES, findTemplateLock, releaseTemplatePin };
 
 type Scope = { eventId: string } | { orgId: string } | { platform: true };
 
-// Ids des demandes ACCEPTED de l'évènement dont un paiement est en cours (lignes verrouillées).
+// Ids des commandes ACCEPTED de l'évènement dont un paiement est en cours (lignes verrouillées).
 async function acceptedWithPayment(tx: Prisma.TransactionClient, eventId: string): Promise<string[]> {
   const accepted = await tx.printRequest.findMany({
     where: { eventId, status: "ACCEPTED" },
@@ -25,7 +25,7 @@ async function acceptedWithPayment(tx: Prisma.TransactionClient, eventId: string
 }
 
 // Refuse le changement de template d'un évènement : verrou (409 TEMPLATE_LOCKED_BY_PRINT_REQUEST)
-// ou demande acceptée avec paiement en cours (409 PAYMENT_IN_PROGRESS). À appeler dans la
+// ou commande acceptée avec paiement en cours (409 PAYMENT_IN_PROGRESS). À appeler dans la
 // transaction qui écrit, après lockEventRow, pour que le contrôle et l'écriture ne s'écartent pas.
 export async function assertTemplateChangeAllowed(
   eventId: string,
@@ -62,7 +62,7 @@ async function pinIn(
     select: { id: true },
   });
   // Verrous des évènements en ordre d'identifiant croissant, tous pris avant la moindre lecture :
-  // deux changements de template simultanés ne s'interbloquent pas et aucune demande ne passe
+  // deux changements de template simultanés ne s'interbloquent pas et aucune commande ne passe
   // PAYÉE entre la lecture et l'écriture.
   const ids = candidates.map((c) => c.id).sort();
   for (const eventId of ids) await lockEventRow(tx, eventId);
@@ -79,9 +79,9 @@ async function pinIn(
       (r) => r.badgeTemplateId && (r.status !== "ACCEPTED" || holding.has(r.id)),
     );
     if (holders.length === 0) continue;
-    // On fige le template effectif courant (celui qui va changer), pas la copie d'une demande :
+    // On fige le template effectif courant (celui qui va changer), pas la copie d'une commande :
     // une copie périmée ne doit pas re-figer l'évènement sur un ancien template. Sans template
-    // effectif résolvable, on retombe sur la copie de la première demande qui le retient.
+    // effectif résolvable, on retombe sur la copie de la première commande qui le retient.
     const effective = await findEffectiveTemplateRow(await resolveEventTemplateId(event));
     await tx.event.update({
       where: { id: eventId },
@@ -96,8 +96,8 @@ async function pinIn(
   return pinned;
 }
 
-// Après un changement de template : la copie des demandes en cours suit le template effectif.
-// Les brouillons sont ignorés (leur copie est prise à l'envoi). Une demande ACCEPTED avec
+// Après un changement de template : la copie des commandes en cours suit le template effectif.
+// Les brouillons sont ignorés (leur copie est prise à l'envoi). Une commande ACCEPTED avec
 // paiement en cours est laissée telle quelle. Renvoie les ids repassés en SUBMITTED.
 export async function syncRequestTemplates(scope: Scope, actorId: string): Promise<string[]> {
   // actorId n'est pas utilisé ici (conservé pour la signature) : les entrées du fil sont écrites
@@ -112,7 +112,7 @@ export async function syncRequestTemplates(scope: Scope, actorId: string): Promi
   const resubmitted: string[] = [];
   for (const { id } of candidates) {
     const changed = await prisma.$transaction(async (tx) => {
-      // Demande disparue depuis la liste (évènement supprimé) : rien à synchroniser.
+      // Commande disparue depuis la liste (évènement supprimé) : rien à synchroniser.
       const locked = await lockRequestWithEvent(tx, id).then(
         () => true,
         (err) => {

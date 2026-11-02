@@ -6,10 +6,10 @@ import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES, type UploadKind } from "@/lib/storage";
 
 // Plan 32 : televersement plateforme (staff). `print-product` = image du catalogue (STAFF_ADMIN,
-// public) ; `print-request` = fichier joint a une demande d'impression (STAFF_SUPPORT, prive),
-// range sous `print-requests/staff/{requestId}/` : la cle est liee a la demande (parametre
+// public) ; `print-request` = fichier joint a une commande d'impression (STAFF_SUPPORT, prive),
+// range sous `print-requests/staff/{requestId}/` : la cle est liee a la commande (parametre
 // `requestId` obligatoire), donc /api/files en deduit l'evenement et le message ne peut pas
-// reprendre la cle d'une autre demande.
+// reprendre la cle d'une autre commande.
 // Erreurs alignees sur les routes d'upload existantes : 400 / 415 BAD_TYPE / 413 TOO_LARGE.
 const EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -47,7 +47,7 @@ export const POST = withStaffAuth(
       const requestId = params.get("requestId") ?? "";
       const known = requestId ? await prisma.printRequest.findUnique({ where: { id: requestId }, select: { id: true } }) : null;
       if (!known) {
-        return NextResponse.json({ error: "Demande introuvable", code: "BAD_REQUEST_ID" }, { status: 400 });
+        return NextResponse.json({ error: "Commande introuvable", code: "BAD_REQUEST_ID" }, { status: 400 });
       }
       prefix = `${prefix}/${known.id}`;
     }

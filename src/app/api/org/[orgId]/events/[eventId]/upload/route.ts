@@ -11,7 +11,7 @@ import {
 
 // v4 Task 5.4 : upload photo/piece d'identite lors d'une inscription creee par un
 // admin d'evenement. Fonctionne meme si les inscriptions publiques sont fermees
-// (requireRegistrationOpen non demande). Reserve au role ADMIN de l'evenement.
+// (requireRegistrationOpen non commande). Reserve au role ADMIN de l'evenement.
 const EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",

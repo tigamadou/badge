@@ -16,7 +16,7 @@ describe("OnsiteTemplateAlert", () => {
   it("organisateur : message et lien vers le réglage du template", () => {
     const html = renderToStaticMarkup(<OnsiteTemplateAlert side="ORGANIZER" eventId="e1" />);
     expect(html).toContain(
-      esc("Le modèle de badge choisi n'est pas adapté à l'impression sur place. L'équipe Badge ne peut pas avancer cette demande."),
+      esc("Le modèle de badge choisi n'est pas adapté à l'impression sur place. L'équipe Badge ne peut pas avancer cette commande."),
     );
     expect(html).toContain('href="/event/e1/settings/badge"');
   });

@@ -25,7 +25,7 @@ const thread = (id: string, eventType?: string) =>
 const movements = (orgId = fx.org.id) => prisma.orgPrintCredit.findMany({ where: { orgId } });
 const children = (parentId: string) => prisma.printRequest.findMany({ where: { parentRequestId: parentId } });
 
-// Demande sur place avec une ligne BADGE (ordered à unitPrice) et `printed` premières impressions.
+// Commande sur place avec une ligne BADGE (ordered à unitPrice) et `printed` premières impressions.
 async function onsite(opts: {
   ordered?: number;
   unitPrice?: number;
@@ -120,7 +120,7 @@ describe("closeOnsiteRequest : crédit", () => {
   });
 });
 
-describe("closeOnsiteRequest : demande complémentaire", () => {
+describe("closeOnsiteRequest : commande complémentaire", () => {
   it("200 commandés, marge 10 %, 212 imprimés : SUPPLEMENT de 12 badges, 18 000 FCFA, en QUOTED", async () => {
     const r = await onsite({ printed: 212, reprints: 3 });
     const closure = await closeOnsiteRequest(r.id);
@@ -146,7 +146,7 @@ describe("closeOnsiteRequest : demande complémentaire", () => {
     });
     // Le surplus et le crédit s'excluent.
     expect(await movements()).toHaveLength(0);
-    const text = `Demande complémentaire ${child.reference} : 12 badges supplémentaires`;
+    const text = `Commande complémentaire ${child.reference} : 12 badges supplémentaires`;
     for (const id of [r.id, child.id]) {
       const entries = await thread(id, "ONSITE_SUPPLEMENT_CREATED");
       expect(entries).toHaveLength(1);
@@ -169,7 +169,7 @@ describe("closeOnsiteRequest : demande complémentaire", () => {
     expect(line.choices).toBeNull();
   });
 
-  it("rejouée : aucune seconde demande complémentaire, même résultat", async () => {
+  it("rejouée : aucune seconde commande complémentaire, même résultat", async () => {
     const r = await onsite({ printed: 212 });
     const first = await closeOnsiteRequest(r.id);
     expect(await closeOnsiteRequest(r.id)).toEqual(first);
@@ -177,7 +177,7 @@ describe("closeOnsiteRequest : demande complémentaire", () => {
     expect(await thread(r.id, "ONSITE_SUPPLEMENT_CREATED")).toHaveLength(1);
   });
 
-  it("deux clôtures concurrentes : une seule demande complémentaire", async () => {
+  it("deux clôtures concurrentes : une seule commande complémentaire", async () => {
     const r = await onsite({ printed: 212 });
     const [a, b] = await Promise.all([closeOnsiteRequest(r.id), closeOnsiteRequest(r.id)]);
     expect(b).toEqual(a);
@@ -206,7 +206,7 @@ describe("règles de la ligne BADGE et plafond", () => {
     expect(await closeOnsiteRequest(r.id)).toMatchObject({ outcome: "SUPPLEMENT", extraBadges: 12, total: 18000 });
   });
 
-  it("badge à 0 FCFA avec surplus : NONE, aucune demande à 0 FCFA", async () => {
+  it("badge à 0 FCFA avec surplus : NONE, aucune commande à 0 FCFA", async () => {
     const r = await onsite({ printed: 212, unitPrice: 0 });
     expect(await closeOnsiteRequest(r.id)).toEqual({ outcome: "NONE" });
     expect(await children(r.id)).toHaveLength(0);
@@ -254,7 +254,7 @@ describe("closeOnsiteRequest : rien à faire et refus", () => {
     expect(await movements()).toHaveLength(0);
   });
 
-  it("demande READY, demande complémentaire, demande en amont : NOT_CLOSABLE 409 ; inconnue : NOT_FOUND", async () => {
+  it("commande READY, commande complémentaire, commande en amont : NOT_CLOSABLE 409 ; inconnue : NOT_FOUND", async () => {
     const ready = await onsite({ printed: 170, status: "READY" });
     expect(await fail(closeOnsiteRequest(ready.id))).toMatchObject({ code: "NOT_CLOSABLE", httpStatus: 409 });
 
@@ -270,8 +270,8 @@ describe("closeOnsiteRequest : rien à faire et refus", () => {
   });
 });
 
-// Provoque des collisions de référence : avant le create de la demande complémentaire, une
-// demande de la même référence est insérée (sur un autre évènement, dont le verrou n'est pas tenu).
+// Provoque des collisions de référence : avant le create de la commande complémentaire, une
+// commande de la même référence est insérée (sur un autre évènement, dont le verrou n'est pas tenu).
 function collideOnCreate(times: number, otherEventId: string) {
   const original = prisma.$transaction.bind(prisma) as (fn: unknown, opts?: unknown) => Promise<unknown>;
   let left = times;
@@ -306,7 +306,7 @@ async function otherEvent() {
   });
 }
 
-describe("référence de la demande complémentaire", () => {
+describe("référence de la commande complémentaire", () => {
   it("collision de référence : la clôture est rejouée et aboutit avec la référence suivante", async () => {
     const other = await otherEvent();
     const r = await onsite({ printed: 212 });
@@ -409,7 +409,7 @@ describe("prix unitaire effectif (remise staff, crédit dépensé)", () => {
 describe("clôture dans advanceStatus (READY -> COMPLETED)", () => {
   const to = (id: string) => advanceStatus({ requestId: id, userId: fx.staffAdmin.id, to: "COMPLETED" });
 
-  it("demande sur place : closure CREDIT renvoyée, mouvement créé dans la même transaction", async () => {
+  it("commande sur place : closure CREDIT renvoyée, mouvement créé dans la même transaction", async () => {
     const r = await onsite({ printed: 170, status: "READY", over: { completedAt: null } });
     const done = await to(r.id);
     expect(done.status).toBe("COMPLETED");
@@ -419,7 +419,7 @@ describe("clôture dans advanceStatus (READY -> COMPLETED)", () => {
     expect((await thread(r.id)).map((m) => m.eventType)).toEqual(["STATUS_CHANGED", "ONSITE_CREDIT_EARNED"]);
   });
 
-  it("surplus : closure SUPPLEMENT, demande complémentaire QUOTED", async () => {
+  it("surplus : closure SUPPLEMENT, commande complémentaire QUOTED", async () => {
     const r = await onsite({ printed: 212, status: "READY", over: { completedAt: null } });
     const done = await to(r.id);
     const [child] = await children(r.id);
@@ -432,7 +432,7 @@ describe("clôture dans advanceStatus (READY -> COMPLETED)", () => {
     expect((await to(r.id)).closure).toEqual({ outcome: "NONE" });
   });
 
-  it("demande en amont ou demande complémentaire : pas de clôture", async () => {
+  it("commande en amont ou commande complémentaire : pas de clôture", async () => {
     const advance = await onsite({ printed: 170, status: "READY", over: { type: "ADVANCE", completedAt: null } });
     expect((await to(advance.id)).closure).toBeUndefined();
     const parent = await onsite({ printed: 200 });
@@ -456,7 +456,7 @@ describe("clôture dans advanceStatus (READY -> COMPLETED)", () => {
     expect(await thread(r.id, "ONSITE_CREDIT_EARNED")).toHaveLength(1);
   });
 
-  it("collision de référence : toute la transaction est rejouée (statut, fil et demande complémentaire une seule fois)", async () => {
+  it("collision de référence : toute la transaction est rejouée (statut, fil et commande complémentaire une seule fois)", async () => {
     const other = await otherEvent();
     const r = await onsite({ printed: 212, status: "READY", over: { completedAt: null } });
     collideOnCreate(1, other.id);
@@ -467,7 +467,7 @@ describe("clôture dans advanceStatus (READY -> COMPLETED)", () => {
     expect(await thread(r.id, "ONSITE_SUPPLEMENT_CREATED")).toHaveLength(1);
   });
 
-  it("échec de la clôture : la demande reste READY, rien n'est écrit", async () => {
+  it("échec de la clôture : la commande reste READY, rien n'est écrit", async () => {
     const other = await otherEvent();
     const r = await onsite({ printed: 212, status: "READY", over: { completedAt: null } });
     collideOnCreate(3, other.id);

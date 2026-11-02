@@ -117,7 +117,7 @@ describe("composeSheets", () => {
     expect([err.badgeIndex, err.pageIndex]).toEqual([0, 1]);
   });
 
-  it("recto-verso demande avec un badge d'une seule page leve BadgeSizeMismatchError(index, 1)", async () => {
+  it("recto-verso commande avec un badge d'une seule page leve BadgeSizeMismatchError(index, 1)", async () => {
     const layout = computeSheetLayout(spec, { widthMm: 84, heightMm: 120 });
     const err = await composeSheets({
       layout, spec, duplex: true, badgeMm: BADGE, badges: await badges(2, 1),
@@ -138,7 +138,7 @@ describe("composeSheets", () => {
     for (const [o] of line.mock.calls) expect(o.thickness).toBe(0.25);
   });
 
-  it("sans traits de coupe demandes, aucune ligne n'est tracee", async () => {
+  it("sans traits de coupe commandes, aucune ligne n'est tracee", async () => {
     const s = { ...spec, cropMarks: false };
     const layout = computeSheetLayout(s, { widthMm: 84, heightMm: 120 });
     const line = vi.spyOn(PDFPage.prototype, "drawLine");

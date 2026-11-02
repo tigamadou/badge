@@ -41,7 +41,7 @@ import type { PrintRequestAction } from "./transitions";
 
 const STAFF = { side: "STAFF" } as const;
 
-// Verrouille la ligne de la demande (sérialise les écritures et la sonde de paiement) puis la
+// Verrouille la ligne de la commande (sérialise les écritures et la sonde de paiement) puis la
 // relit. Ordre des verrous du chantier : Event d'abord, PrintRequest ensuite ; le staff ne
 // touche jamais aux réservations, il ne prend donc que celui-ci.
 async function lockRequest(tx: Prisma.TransactionClient, requestId: string): Promise<PrintRequest> {
@@ -238,11 +238,11 @@ export async function sendQuote(input: {
     // Transition d'abord : un statut interdit prime sur un devis vide. Les refus qui suivent
     // annulent la transaction, donc rien n'est écrit.
     await applyTransition(tx, current, "SEND_QUOTE", "STAFF", input.now);
-    // Template devenu inadapté : le devis d'une demande sur place ne part pas (annule la transaction).
+    // Template devenu inadapté : le devis d'une commande sur place ne part pas (annule la transaction).
     await assertOnsiteCanAdvance(current);
     const active = await tx.printQuoteLine.count({ where: { requestId: request.id, removedAt: null } });
     if (active === 0) throw new PrintRequestError("EMPTY_QUOTE", 400);
-    // Le devis porte toujours le support de badge (les demandes complémentaires de la clôture en ont un).
+    // Le devis porte toujours le support de badge (les commandes complémentaires de la clôture en ont un).
     const badgeLines = await tx.printQuoteLine.count({
       where: { requestId: request.id, removedAt: null, kind: "PRODUCT", product: { kind: "BADGE" } },
     });
@@ -250,7 +250,7 @@ export async function sendQuote(input: {
     const total = await recomputeChecked(tx, request.id);
     if (total < 0) throw new PrintRequestError("NEGATIVE_TOTAL", 400);
     // Un total nul n'est admis que s'il vient d'une ligne de crédit active (devis entièrement couvert
-    // par le crédit de l'organisation) : la demande passe alors PAID à l'acceptation, sans paiement.
+    // par le crédit de l'organisation) : la commande passe alors PAID à l'acceptation, sans paiement.
     if (total === 0) {
       const credit = await tx.printQuoteLine.count({
         where: { requestId: request.id, removedAt: null, usesOrgCredit: true },
@@ -305,18 +305,18 @@ export async function advanceStatus(input: {
   const action = Object.hasOwn(ADVANCE_ACTIONS, input.to) ? ADVANCE_ACTIONS[input.to] : null;
   if (!action) throw new PrintRequestError("VALIDATION", 400);
   const request = await loadRequest(input.requestId);
-  // La clôture d'une demande sur place (crédit ou demande complémentaire) fait partie de la
-  // transaction : si elle échoue, la demande reste READY et peut être clôturée de nouveau. Une
-  // collision de référence (demande complémentaire) rejoue toute la transaction.
+  // La clôture d'une commande sur place (crédit ou commande complémentaire) fait partie de la
+  // transaction : si elle échoue, la commande reste READY et peut être clôturée de nouveau. Une
+  // collision de référence (commande complémentaire) rejoue toute la transaction.
   return retryOnReferenceCollision(() =>
     prisma.$transaction(async (tx) => {
       const current = await lockRequest(tx, request.id);
       const from: PrintRequestStatus = current.status;
       const to = await applyTransition(tx, current, action, "STAFF");
       // Aucun contrôle du template ici : il est figé au paiement (PAID et au-delà), un changement
-      // ultérieur de l'organisateur ne doit pas bloquer une demande déjà payée. Le contrôle se fait à l'envoi du devis.
+      // ultérieur de l'organisateur ne doit pas bloquer une commande déjà payée. Le contrôle se fait à l'envoi du devis.
       await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
-      // Seule une demande sur place sans parent se clôture (une complémentaire ne produit ni crédit ni surplus).
+      // Seule une commande sur place sans parent se clôture (une complémentaire ne produit ni crédit ni surplus).
       const closure =
         input.to === "COMPLETED" && current.type === "ONSITE" && current.parentRequestId === null
           ? await closeOnsiteInTx(tx, request.id, input.userId)
@@ -344,7 +344,7 @@ export async function markPaidManually(input: {
   const request = await loadRequest(input.requestId);
 
   return prisma.$transaction(async (tx) => {
-    // Verrou de la demande avant la sonde : sans lui, un paiement PENDING pourrait apparaître
+    // Verrou de la commande avant la sonde : sans lui, un paiement PENDING pourrait apparaître
     // entre la sonde et l'écriture.
     await lockRequest(tx, request.id);
     if (await isPaymentInProgress(request.id)) throw new PrintRequestError("PAYMENT_IN_PROGRESS", 409);

@@ -11,7 +11,7 @@ export type CreditMovementView = {
   /** Positif pour EARNED, négatif pour SPENT. */
   amount: number;
   quantity: number | null;
-  /** Null quand la demande a été supprimée (le mouvement est conservé). */
+  /** Null quand la commande a été supprimée (le mouvement est conservé). */
   request: { reference: string } | null;
 };
 
@@ -33,11 +33,11 @@ export const showsCreditCard = (balance: number, movementCount: number): boolean
 
 const OPEN: PrintRequestStatus[] = ["SUBMITTED", "QUOTED"];
 
-// Le crédit est proposé sur toute demande envoyée ou en devis dont l'organisation a du crédit libre.
+// Le crédit est proposé sur toute commande envoyée ou en devis dont l'organisation a du crédit libre.
 export const showsCreditOffer = (status: PrintRequestStatus, available: number): boolean =>
   OPEN.includes(status) && available > 0;
 
-// Bouton « Appliquer le crédit » : STAFF_ADMIN, demande ouverte, et quelque chose à appliquer
+// Bouton « Appliquer le crédit » : STAFF_ADMIN, commande ouverte, et quelque chose à appliquer
 // (crédit libre et lignes à couvrir).
 export function canApplyCredit(
   status: PrintRequestStatus,
@@ -48,7 +48,7 @@ export function canApplyCredit(
   return OPEN.includes(status) && staffRoleAtLeast(role, "STAFF_ADMIN") && available > 0 && grossTotal > 0;
 }
 
-// Montant pré-rempli : le plus grand crédit applicable à la demande.
+// Montant pré-rempli : le plus grand crédit applicable à la commande.
 export const defaultCreditAmount = (available: number, grossTotal: number): number => Math.min(available, grossTotal);
 
 // Si l'organisateur baisse ses quantités après l'application, le crédit peut dépasser les autres

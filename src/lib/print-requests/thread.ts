@@ -60,10 +60,10 @@ export function describeThreadEvent(
         : `${changes.length} lignes modifiées`;
     }
     case "SUBMITTED":
-      return `Demande envoyée : ${num(details.badgeCount)} badges, total estimé ${F(details.total)}`;
+      return `Commande envoyée : ${num(details.badgeCount)} badges, total estimé ${F(details.total)}`;
     case "BADGES_CHANGED": {
       const lagging = strings(details.lagging);
-      const base = `Badges de la demande : +${num(details.added)}, −${num(details.removed)} (${num(details.count)} au total)`;
+      const base = `Badges de la commande : +${num(details.added)}, −${num(details.removed)} (${num(details.count)} au total)`;
       return lagging.length > 0
         ? `${base} — quantités fixées par l'équipe à vérifier : ${lagging.join(", ")}`
         : base;
@@ -91,9 +91,9 @@ export function describeThreadEvent(
     case "STATUS_CHANGED":
       return `Statut : ${L(details.from)} → ${L(details.to)}`;
     case "REJECTED":
-      return `Demande refusée : ${txt(details.reason)}`;
+      return `Commande refusée : ${txt(details.reason)}`;
     case "CANCELLED":
-      return "Demande annulée";
+      return "Commande annulée";
     case "PAYMENT_RECEIVED":
       if (details.byCredit === true) return "Devis réglé par le crédit d'impression : aucun paiement à effectuer";
       return (
@@ -103,7 +103,7 @@ export function describeThreadEvent(
     case "PAYMENT_FAILED":
       return `Paiement échoué : ${F(details.amount)}`;
     case "PAYMENT_UNMATCHED":
-      return `Paiement de ${F(details.amount)} reçu alors que la demande n'attendait plus ce paiement : l'équipe Badge vérifie.`;
+      return `Paiement de ${F(details.amount)} reçu alors que la commande n'attendait plus ce paiement : l'équipe Badge vérifie.`;
     case "SHEETS_GENERATED":
       return `Planches lancées pour ${num(details.badgeCount)} badges`;
     case "REGISTRATIONS_SKIPPED": {
@@ -120,12 +120,12 @@ export function describeThreadEvent(
     case "ONSITE_CREDIT_EARNED":
       return `${num(details.quantity)} badges non utilisés : ${F(details.amount)} versés au crédit d'impression`;
     case "ONSITE_SUPPLEMENT_CREATED":
-      return `Demande complémentaire ${txt(details.reference)} : ${num(details.extraBadges)} badges supplémentaires`;
+      return `Commande complémentaire ${txt(details.reference)} : ${num(details.extraBadges)} badges supplémentaires`;
   }
 }
 
 // Ajoute une entrée automatique au fil ; les modifications de lignes consécutives du même
-// auteur sont regroupées dans la dernière entrée. Les ajouts sont sérialisés par demande :
+// auteur sont regroupées dans la dernière entrée. Les ajouts sont sérialisés par commande :
 // la ligne PrintRequest est verrouillée (FOR UPDATE) avant de lire la dernière entrée, donc
 // deux modifications concurrentes ne perdent aucun changement. Les corps (messages et textes
 // d'évènement) sont stockés bruts et doivent être rendus en texte, jamais en HTML.
@@ -206,8 +206,8 @@ export async function postMessage(input: {
 
   if (input.attachmentKey) {
     // Forme stricte : préfixe + un seul nom de fichier (pas de sous-dossier, pas de « .. »).
-    // Le préfixe lie la pièce à la demande (staff) ou à l'évènement (organisateur) : une clé d'une
-    // autre demande ou d'une autre organisation est refusée, et /api/files en déduit l'évènement.
+    // Le préfixe lie la pièce à la commande (staff) ou à l'évènement (organisateur) : une clé d'une
+    // autre commande ou d'une autre organisation est refusée, et /api/files en déduit l'évènement.
     const prefix =
       input.side === "STAFF" ? `print-requests/staff/${request.id}/` : `print-requests/${request.eventId}/`;
     const name = input.attachmentKey.slice(prefix.length);

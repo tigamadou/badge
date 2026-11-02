@@ -42,17 +42,17 @@ export class PrintRequestError extends Error {
 
 // Messages en français affichés par toastApiError (qui lit `message`).
 export const PRINT_REQUEST_ERROR_MESSAGES: Record<PrintRequestErrorCode, string> = {
-  NOT_FOUND: "Demande introuvable.",
+  NOT_FOUND: "Commande introuvable.",
   VALIDATION: "Les informations saisies sont invalides.",
-  INVALID_TRANSITION: "Cette action n'est pas possible dans l'état actuel de la demande.",
-  PAYMENT_IN_PROGRESS: "Un paiement est en cours pour cette demande. Réessayez dans quelques instants.",
+  INVALID_TRANSITION: "Cette action n'est pas possible dans l'état actuel de la commande.",
+  PAYMENT_IN_PROGRESS: "Un paiement est en cours pour cette commande. Réessayez dans quelques instants.",
   QUOTE_ACCEPTED: "Le devis est déjà accepté : il ne peut plus être modifié.",
-  REQUEST_LOCKED: "Cette demande ne peut plus être modifiée.",
-  REGISTRATIONS_TAKEN: "Certains badges sont déjà inclus dans une autre demande d'impression.",
+  REQUEST_LOCKED: "Cette commande ne peut plus être modifiée.",
+  REGISTRATIONS_TAKEN: "Certains badges sont déjà inclus dans une autre commande d'impression.",
   INVALID_SELECTION: "La sélection de badges est invalide.",
   EMPTY_SELECTION: "Sélectionnez au moins un badge.",
-  TYPE_MISMATCH: "Ce produit ne correspond pas au type de la demande.",
-  BADGE_PRODUCT_REQUIRED: "Choisissez un support de badge pour cette demande.",
+  TYPE_MISMATCH: "Ce produit ne correspond pas au type de la commande.",
+  BADGE_PRODUCT_REQUIRED: "Choisissez un support de badge pour cette commande.",
   BADGE_COUNT_REQUIRED: "Indiquez le nombre de badges à imprimer.",
   PRODUCT_UNAVAILABLE: "Ce produit n'est plus disponible.",
   INVALID_CHOICES: "Les options choisies pour ce produit sont invalides.",
@@ -67,7 +67,7 @@ export const PRINT_REQUEST_ERROR_MESSAGES: Record<PrintRequestErrorCode, string>
   STAFF_FORBIDDEN: "Cette action n'est pas disponible pour l'équipe.",
   INVALID_ATTACHMENT: "La pièce jointe est invalide.",
   TEMPLATE_LOCKED_BY_PRINT_REQUEST:
-    "Ce template est utilisé par une demande d'impression en cours et ne peut pas être modifié.",
+    "Ce template est utilisé par une commande d'impression en cours et ne peut pas être modifié.",
   CREDIT_LINE_LOCKED: "Cette ligne de crédit est verrouillée et ne peut pas être modifiée.",
   ZERO_TOTAL: "Le total du devis doit être supérieur à zéro.",
 };

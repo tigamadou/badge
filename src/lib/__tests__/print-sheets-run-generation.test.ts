@@ -133,7 +133,7 @@ describe("runGeneration", () => {
     expect(row.skippedIds).toEqual(["r2"]);
   });
 
-  it("ajoute l'entree REGISTRATIONS_SKIPPED au fil d'une demande liee", async () => {
+  it("ajoute l'entree REGISTRATIONS_SKIPPED au fil d'une commande liee", async () => {
     const owner = await prisma.user.create({
       data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
     });
@@ -174,7 +174,7 @@ describe("runGeneration", () => {
     err.mockRestore();
   });
 
-  it("n'ajoute pas d'entree quand rien n'est ecarte, meme pour une demande liee", async () => {
+  it("n'ajoute pas d'entree quand rien n'est ecarte, meme pour une commande liee", async () => {
     const owner = await prisma.user.create({
       data: { email: `${uniq("ow")}@x`, password: "x", name: "O" },
     });

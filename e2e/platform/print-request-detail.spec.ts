@@ -22,12 +22,12 @@ const lines = (badgeProductId: string) => [
   { label: "Frais de dossier", quantity: 1, unitPrice: 5000, kind: "SERVICE" as const },
 ];
 
-// Du menu au détail d'une demande : « Demandes », puis la référence dans la liste.
+// Du menu au détail d'une commande : « Commandes », puis la référence dans la liste.
 async function openRequest(page: Page, request: { id: string; reference: string }) {
-  await page.getByRole("link", { name: /^Demandes/ }).click();
-  await expect(page).toHaveURL(/\/platform\/print\/requests$/);
+  await page.getByRole("link", { name: /^Commandes/ }).click();
+  await expect(page).toHaveURL(/\/platform\/print\/orders$/);
   await page.getByRole("link", { name: request.reference }).click();
-  await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${request.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${request.id}$`));
   await expect(page.getByRole("heading", { name: request.reference })).toBeVisible();
 }
 
@@ -63,10 +63,10 @@ async function seedRequest(
   return { orgId, eventId, request, organizer, registrationIds };
 }
 
-// Page Détail d'une demande d'impression (staff) — /platform/print/requests/[requestId]
+// Page Détail d'une commande d'impression (staff) — /platform/print/orders/[requestId]
 // Rôles : STAFF_ADMIN modifie le devis, l'envoie, rouvre et marque payée ; STAFF_SUPPORT refuse,
 // écrit et fait avancer la production ; STAFF_OBSERVER lit.
-test.describe("Platform — Détail d'une demande d'impression", () => {
+test.describe("Platform — Détail d'une commande d'impression", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -118,7 +118,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await openRequest(page, request);
 
     await page.getByRole("button", { name: "Refuser", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Refuser la demande" });
+    const dialog = page.getByRole("dialog", { name: "Refuser la commande" });
     await expect(dialog).toBeVisible();
 
     // Échec attendu : motif vide ou blanc, la confirmation reste impossible et rien ne change.
@@ -128,18 +128,18 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(confirm).toBeDisabled();
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("SUBMITTED");
 
-    // Succès : avec un motif, la demande est refusée et le motif apparaît dans le fil.
+    // Succès : avec un motif, la commande est refusée et le motif apparaît dans le fil.
     await dialog.getByRole("textbox").fill("Maquette illisible");
     await expect(confirm).toBeEnabled();
     await confirm.click();
-    await expect(toast(page, "Demande refusée.")).toBeVisible();
+    await expect(toast(page, "Commande refusée.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Refusée");
-    await expect(page.getByText("Demande refusée : Maquette illisible")).toBeVisible();
+    await expect(page.getByText("Commande refusée : Maquette illisible")).toBeVisible();
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("REJECTED");
     await expectLastActivity({ type: "PRINT_REQUEST_REJECTED", eventId, userId: support.id, targetId: request.id });
   });
 
-  test("STAFF_ADMIN marque payée une demande acceptée avec un motif de paiement hors ligne", async ({ page }) => {
+  test("STAFF_ADMIN marque payée une commande acceptée avec un motif de paiement hors ligne", async ({ page }) => {
     const { eventId, request } = await seedRequest("prd-paid", "ACCEPTED");
     const admin = await createTestStaff({ scope: "prd-paid", role: "STAFF_ADMIN" });
     await loginAndEnter(page, admin, { kind: "platform" });
@@ -147,7 +147,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(statusBadge(page, request.reference)).toHaveText("Devis accepté");
 
     await page.getByRole("button", { name: "Marquer payée", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Marquer la demande payée" });
+    const dialog = page.getByRole("dialog", { name: "Marquer la commande payée" });
     const confirm = dialog.getByRole("button", { name: "Marquer payée", exact: true });
     // Motif de moins de 3 caractères : confirmation impossible.
     await dialog.getByRole("textbox").fill("ab");
@@ -156,7 +156,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await confirm.click();
 
     // Succès : statut « Payée », entrée du fil « (hors ligne : …) », effet en base et audit.
-    await expect(toast(page, "Demande marquée payée.")).toBeVisible();
+    await expect(toast(page, "Commande marquée payée.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Payée");
     await expect(page.getByText(/Paiement reçu : .* \(hors ligne : virement du 30\/10\)/)).toBeVisible();
     const paid = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
@@ -171,7 +171,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     const support = await createTestStaff({ scope: "prd-support", role: "STAFF_SUPPORT" });
     await loginAndEnter(page, support, { kind: "platform" });
 
-    // Demande envoyée : devis en lecture seule, ni ajout de ligne ni envoi du devis.
+    // Commande envoyée : devis en lecture seule, ni ajout de ligne ni envoi du devis.
     await openRequest(page, submitted.request);
     await expect(page.getByText("Lecture seule dans cet état.")).toBeVisible();
     await expect(page.getByText("Ajouter une ligne")).toHaveCount(0);
@@ -181,17 +181,17 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(page.getByLabel("Votre message")).toBeVisible();
     await expect(page.getByRole("button", { name: "Refuser", exact: true })).toBeVisible();
 
-    // Demande acceptée : ni « Marquer payée » ni « Rouvrir le devis ».
-    await page.getByRole("link", { name: "Demandes" }).first().click();
-    await expect(page).toHaveURL(/\/platform\/print\/requests$/);
+    // Commande acceptée : ni « Marquer payée » ni « Rouvrir le devis ».
+    await page.getByRole("link", { name: "Commandes" }).first().click();
+    await expect(page).toHaveURL(/\/platform\/print\/orders$/);
     await page.getByRole("link", { name: accepted.request.reference }).click();
-    await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${accepted.request.id}$`));
+    await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${accepted.request.id}$`));
     await expect(statusBadge(page, accepted.request.reference)).toHaveText("Devis accepté");
     await expect(page.getByRole("button", { name: "Marquer payée" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Rouvrir le devis" })).toHaveCount(0);
   });
 
-  test("« Générer les planches » ouvre la génération pré-remplie par la demande payée", async ({ page }) => {
+  test("« Générer les planches » ouvre la génération pré-remplie par la commande payée", async ({ page }) => {
     const { orgId, eventId, request } = await seedRequest("prd-sheets", "PAID", { registrations: 2 });
     const support = await createTestStaff({ scope: "prd-sheets", role: "STAFF_SUPPORT" });
     await loginAndEnter(page, support, { kind: "platform" });
@@ -199,13 +199,13 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
 
     await page.getByRole("link", { name: "Générer les planches" }).click();
     await expect(page).toHaveURL(new RegExp(`/platform/print/sheets\\?printRequestId=${request.id}$`));
-    await expect(page.getByText(`Planches de la demande ${request.reference}`)).toBeVisible();
-    // Organisation et évènement sont ceux de la demande et ne se changent plus.
+    await expect(page.getByText(`Planches de la commande ${request.reference}`)).toBeVisible();
+    // Organisation et évènement sont ceux de la commande et ne se changent plus.
     await expect(selectByLabel(page, "Organisation")).toHaveValue(orgId);
     await expect(selectByLabel(page, "Organisation")).toBeDisabled();
     await expect(selectByLabel(page, "Évènement")).toHaveValue(eventId);
     await expect(selectByLabel(page, "Évènement")).toBeDisabled();
-    await expect(page.getByText("2 badges de la demande, dans l'ordre de la demande.")).toBeVisible();
+    await expect(page.getByText("2 badges de la commande, dans l'ordre de la commande.")).toBeVisible();
   });
 
   test("Le lien « Générer les planches » n'existe pas avant le paiement", async ({ page }) => {
@@ -217,7 +217,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(page.getByRole("link", { name: "Générer les planches" })).toHaveCount(0);
   });
 
-  test("La carte « Paiements » liste le paiement d'impression de la demande", async ({ page }) => {
+  test("La carte « Paiements » liste le paiement d'impression de la commande", async ({ page }) => {
     const { orgId, request, organizer } = await seedRequest("prd-payments", "PAID");
     await createTestPrintPayment({
       orgId,
@@ -245,12 +245,12 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await openRequest(page, request);
 
     await page.getByRole("button", { name: "Marquer payée", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Marquer la demande payée" });
+    const dialog = page.getByRole("dialog", { name: "Marquer la commande payée" });
     await dialog.getByRole("textbox").fill("virement du 30/10");
     await dialog.getByRole("button", { name: "Marquer payée", exact: true }).click();
 
-    // Échec attendu : message de paiement en cours, la demande reste acceptée.
-    await expect(toast(page, "Un paiement FedaPay est en cours sur cette demande.")).toBeVisible();
+    // Échec attendu : message de paiement en cours, la commande reste acceptée.
+    await expect(toast(page, "Un paiement FedaPay est en cours sur cette commande.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Devis accepté");
     const unchanged = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(unchanged.status).toBe("ACCEPTED");

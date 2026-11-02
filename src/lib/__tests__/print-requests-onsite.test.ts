@@ -107,8 +107,8 @@ describe("prepareOnsiteSubmission", () => {
   });
 });
 
-describe("envoi d'une demande sur place", () => {
-  it("template hors liste : 409 ONSITE_TEMPLATE_UNSUITABLE, la demande reste DRAFT", async () => {
+describe("envoi d'une commande sur place", () => {
+  it("template hors liste : 409 ONSITE_TEMPLATE_UNSUITABLE, la commande reste DRAFT", async () => {
     await setList([]);
     const r = await onsiteDraft();
     const err = (await reject(submitRequest(base(r.id)))) as OnsiteError;
@@ -119,7 +119,7 @@ describe("envoi d'une demande sur place", () => {
     expect(after.marginPercent).toBeNull();
   });
 
-  it("ONSITE : marginPercent = 10 ; passer la marge par défaut à 15 ne change pas la demande envoyée", async () => {
+  it("ONSITE : marginPercent = 10 ; passer la marge par défaut à 15 ne change pas la commande envoyée", async () => {
     await setList([fx.template.id]);
     const r = await onsiteDraft();
     const out = await submitRequest(base(r.id));
@@ -150,7 +150,7 @@ describe("traduction des erreurs", () => {
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({
       cap: 11, error: "CAP_REACHED", code: "CAP_REACHED",
-      message: "Le plafond d'impression de cette demande est atteint.",
+      message: "Le plafond d'impression de cette commande est atteint.",
     });
   });
 
@@ -172,7 +172,7 @@ describe("onsiteTemplateStatus / assertOnsiteCanAdvance", () => {
     await expect(assertOnsiteCanAdvance(onsite())).resolves.toBeUndefined();
   });
 
-  it("NOT_APPLICABLE : demande en amont, demande complémentaire, brouillon sans copie", async () => {
+  it("NOT_APPLICABLE : commande en amont, commande complémentaire, brouillon sans copie", async () => {
     await setList([]);
     expect(await onsiteTemplateStatus(onsite({ type: "ADVANCE" }))).toBe("NOT_APPLICABLE");
     expect(await onsiteTemplateStatus(onsite({ parentRequestId: "parent" }))).toBe("NOT_APPLICABLE");

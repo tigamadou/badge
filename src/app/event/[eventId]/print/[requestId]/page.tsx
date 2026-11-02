@@ -53,7 +53,7 @@ export default async function PrintRequestDetailPage({
     },
   });
   if (!request) notFound();
-  // Crédit encore libre pour cette demande (hors sa propre réservation) : proposé tant qu'elle est ouverte.
+  // Crédit encore libre pour cette commande (hors sa propre réservation) : proposé tant qu'elle est ouverte.
   const availableCredit = await getAvailableOrgPrintCredit(orgId, requestId);
 
   const [lines, badgeCount, owner, paymentRows] = await Promise.all([
@@ -74,7 +74,7 @@ export default async function PrintRequestDetailPage({
   ]);
   const payments = paymentRows.map(toPaymentHistoryItem);
   const onsiteTemplate = await onsiteTemplateStatus(request);
-  // Compteur de l'impression sur place (demande principale, à partir du paiement).
+  // Compteur de l'impression sur place (commande principale, à partir du paiement).
   const onsiteCounter =
     request.type === "ONSITE" && request.parentRequestId === null && showsOnsiteCounter(request.status)
       ? (await loadOnsiteOverview(requestId)).counter
@@ -151,7 +151,7 @@ export default async function PrintRequestDetailPage({
       ) : null}
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">Lignes de la demande</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-900">Lignes de la commande</h2>
         <QuoteLinesTable lines={lines} total={request.total} badgeCount={badgeCount} />
         <p className="mt-2 text-xs text-slate-400">Le prix définitif est fixé par l&apos;équipe Badge dans le devis.</p>
       </section>

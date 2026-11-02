@@ -214,7 +214,7 @@ describe("PATCH platform badge template : évènements verrouillés", () => {
     expect((await rq(freeReq.id)).badgeTemplateId).toBe(rvId);
   });
 
-  it("demande ACCEPTED avec paiement en cours : épinglée, ni déplacée ni modifiée", async () => {
+  it("commande ACCEPTED avec paiement en cours : épinglée, ni déplacée ni modifiée", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     const defId = await installedDefaultId();
     const org = await prisma.organization.create({ data: { name: "Op", slug: `op-${Date.now()}-${Math.random()}` } });

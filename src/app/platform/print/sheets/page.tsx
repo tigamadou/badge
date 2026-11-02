@@ -20,7 +20,7 @@ export default async function PrintSheetsPage({
     redirect("/platform");
   }
 
-  // Demande à l'avance dont on génère les planches : préremplit le formulaire.
+  // Commande à l'avance dont on génère les planches : préremplit le formulaire.
   const linked = printRequestId
     ? await prisma.printRequest.findFirst({
         where: { id: printRequestId, type: "ADVANCE" },
@@ -101,7 +101,7 @@ export default async function PrintSheetsPage({
       </div>
       {linked && !generable && (
         <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Les planches ne peuvent être générées que pour une demande payée, en production ou prête.
+          Les planches ne peuvent être générées que pour une commande payée, en production ou prête.
         </p>
       )}
       <GenerationsScreen layouts={layouts} initial={initial} printRequest={printRequest} />

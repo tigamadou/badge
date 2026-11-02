@@ -81,7 +81,7 @@ export function RequestDetail({
     void load();
   }, [load]);
 
-  // Après une action : recharge la demande et le fil, et le compteur du menu (layout serveur).
+  // Après une action : recharge la commande et le fil, et le compteur du menu (layout serveur).
   const onChanged = useCallback(() => {
     void load();
     setThreadKey((k) => k + 1);
@@ -90,7 +90,7 @@ export function RequestDetail({
 
   if (!data) {
     return failed ? (
-      <Alert tone="err">Cette demande est introuvable ou inaccessible.</Alert>
+      <Alert tone="err">Cette commande est introuvable ou inaccessible.</Alert>
     ) : (
       <p className="text-sm text-slate-400">Chargement…</p>
     );
@@ -103,8 +103,8 @@ export function RequestDetail({
   return (
     <div className="space-y-4">
       <div>
-        <Link href="/platform/print/requests" className="inline-flex items-center gap-1 text-[13px] text-slate-500 hover:text-slate-800">
-          <Icon name="arrow-left" size={14} /> Demandes
+        <Link href="/platform/print/orders" className="inline-flex items-center gap-1 text-[13px] text-slate-500 hover:text-slate-800">
+          <Icon name="arrow-left" size={14} /> Commandes
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-slate-900">{request.reference}</h1>
@@ -120,7 +120,7 @@ export function RequestDetail({
       <RelatedRequestLinks
         parent={parentRequest}
         supplements={supplements}
-        hrefOf={(id) => `/platform/print/requests/${id}`}
+        hrefOf={(id) => `/platform/print/orders/${id}`}
       />
 
       {onsiteTemplate === "UNSUITABLE" && <OnsiteTemplateAlert side="STAFF" eventId={event.id} />}
@@ -312,7 +312,7 @@ export function RequestDetail({
       )}
 
       <Card>
-        <CardHead title="Échanges" subtitle="Messages avec l'organisateur et historique de la demande" />
+        <CardHead title="Échanges" subtitle="Messages avec l'organisateur et historique de la commande" />
         <CardBody>
           <PrintThread
             entriesUrl={requestUrl(requestId, "/messages")}

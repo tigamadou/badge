@@ -123,7 +123,7 @@ Un évènement peut compter des milliers de badges : le rendu prend plusieurs mi
 ## Export ZIP de l'organisateur
 
 L'ancienne route `…/badges/print-zip` (200 badges au plus) est supprimée. L'organisateur
-(permission `badge.print`) demande un export depuis le panneau de lot ; la demande est une
+(permission `badge.print`) commande un export depuis le panneau de lot ; la commande est une
 `PrintSheetGeneration` de sortie `ZIP` (sans gabarit), traitée par le même worker avec la même
 reprise. Le ZIP (un PDF par badge) est stocké en `badge-exports/{eventId}/{id}.zip` et se
 télécharge quand il est prêt. **Aucune limite de nombre.** Voir

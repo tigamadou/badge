@@ -42,7 +42,7 @@ async function registration(
   });
 }
 
-// Jeu de données commun aux tests des demandes d'impression : une organisation, un évènement
+// Jeu de données commun aux tests des commandes d'impression : une organisation, un évènement
 // (template 320 x 460 px, 2 pages), des membres de chaque rôle, des inscriptions et des produits.
 export async function seedPrintFixture() {
   // Singleton requis par l'envoi de courriels (déclencheurs de notification).
@@ -112,7 +112,7 @@ export async function seedPrintFixture() {
 
 export type PrintFixture = Awaited<ReturnType<typeof seedPrintFixture>>;
 
-// Crée une demande directement en base (sans passer par le service).
+// Crée une commande directement en base (sans passer par le service).
 export async function makeRequest(
   fx: Pick<PrintFixture, "org" | "event" | "owner">,
   over: Partial<Prisma.PrintRequestUncheckedCreateInput> = {},
@@ -130,7 +130,7 @@ export async function makeRequest(
   });
 }
 
-// Demande ACCEPTED prête à être payée (plan 34) : montant accepté, version acceptée.
+// Commande ACCEPTED prête à être payée (plan 34) : montant accepté, version acceptée.
 export async function seedAcceptedPrintRequest(opts: { orgId?: string; userId?: string; total?: number } = {}) {
   const fx = await seedPrintFixture();
   const orgId = opts.orgId ?? fx.org.id;

@@ -102,12 +102,12 @@ const QUOTED_OR_LATER: TestPrintRequestStatus[] = ["QUOTED", "ACCEPTED", "PAID",
 const ACCEPTED_OR_LATER: TestPrintRequestStatus[] = ["ACCEPTED", "PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
 const PAID_OR_LATER: TestPrintRequestStatus[] = ["PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
 
-// Cree une demande d'impression directement en base (sans passer par le service), dans l'etat voulu.
+// Cree une commande d'impression directement en base (sans passer par le service), dans l'etat voulu.
 // La reference porte le prefixe IMP-E2E- : elle n'entre jamais en collision avec la numerotation reelle
 // (IMP-{annee}-NNNN). Items, lignes et messages partent avec l'evenement (cascade) dans le cleanup.
 // Les lignes PRODUCT sont ajoutees par l'organisateur, les autres par le staff ; le total est la somme
 // des lignes. Un devis QUOTED ou plus avance porte la version `quoteVersion` (1 par defaut).
-// Impression sur place (plan 35) : `marginPercent` fixe la marge de la demande ; une ligne PRODUCT peut
+// Impression sur place (plan 35) : `marginPercent` fixe la marge de la commande ; une ligne PRODUCT peut
 // porter un `productId` (un produit BADGE fait de cette ligne la commande qui compte pour le compteur) ;
 // `prints` pose des impressions au journal (les inscriptions concernees passent « badge imprime », comme
 // le fait le poste ; `reprint: true` journalise une reimpression, qui ne compte pas).
@@ -213,7 +213,7 @@ export async function createTestPrintRequest(opts: {
 
 // Cree un paiement FedaPay d'impression directement en base (aucun appel FedaPay). L'identifiant de
 // transaction est aleatoire (colonne unique) ; il sert de `?id=` a la page de retour. Un paiement
-// `APPROVED` qui solde la demande (`settle: true`) devient son `paidPaymentId` : c'est ce que fait
+// `APPROVED` qui solde la commande (`settle: true`) devient son `paidPaymentId` : c'est ce que fait
 // markPaid en production. Le paiement part avec l'organisation (cascade) dans le cleanup.
 export async function createTestPrintPayment(opts: {
   orgId: string;
@@ -283,7 +283,7 @@ export async function createTestInstalledTemplate(opts: {
   });
 }
 
-// Epingle sur l'evenement un template installe jetable, pour que l'envoi d'une demande ne depende pas
+// Epingle sur l'evenement un template installe jetable, pour que l'envoi d'une commande ne depende pas
 // du template par defaut de la base de dev.
 export async function pinTestEventTemplate(opts: { eventId: string; installedById: string }): Promise<{ id: string }> {
   const row = await createTestInstalledTemplate({ installedById: opts.installedById });

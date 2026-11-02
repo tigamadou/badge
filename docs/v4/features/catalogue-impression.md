@@ -104,7 +104,7 @@ unitaire, même total). Le plan 33 ne doit pas « corriger » cet écart.
 
 `snapshotChoices(product, choices, quantity)` produit une copie des choix avec **les libellés
 et les suppléments au moment de la demande** (`ChoiceSnapshot`). Modifier ou archiver ensuite
-le produit ne change pas les demandes déjà passées. Les demandes d'impression (plan 33) la
+le produit ne change pas les demandes déjà passées. Les commandes d'impression (plan 33) la
 stockeront telle quelle.
 
 ## Téléversement et clés

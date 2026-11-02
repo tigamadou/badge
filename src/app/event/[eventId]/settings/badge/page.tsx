@@ -82,7 +82,7 @@ export default async function EventBadgeSettingsPage({
         canClearToInherit
         lockedReason={
           lock
-            ? `Le template est verrouillé : la demande d'impression ${lock.reference} a été payée. Il redeviendra modifiable quand elle sera terminée.`
+            ? `Le template est verrouillé : la commande d'impression ${lock.reference} a été payée. Il redeviendra modifiable quand elle sera terminée.`
             : undefined
         }
       />

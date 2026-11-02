@@ -21,7 +21,7 @@ export type SelectionState = {
   registrationIds: string[];
 };
 
-// Badges que la demande peut encore prendre : ceux déjà réservés par une autre demande sont exclus.
+// Badges que la commande peut encore prendre : ceux déjà réservés par une autre commande sont exclus.
 export const isAvailable = (c: Candidate): boolean => c.reservedBy === null;
 
 // Comme le serveur (content.ts) : les modes ALL_AVAILABLE et CATEGORIES laissent de côté les
@@ -53,7 +53,7 @@ export function filterCandidates(candidates: Candidate[], query: string): Candid
   return candidates.filter((c) => fold(`${c.firstName} ${c.lastName} ${c.categoryName}`).includes(q));
 }
 
-// État de départ : la demande a déjà des badges (sélection manuelle) ou non (tous les disponibles).
+// État de départ : la commande a déjà des badges (sélection manuelle) ou non (tous les disponibles).
 export function initialSelectionState(candidates: Candidate[]): SelectionState {
   const ids = candidates.filter((c) => c.selected).map((c) => c.id);
   return {

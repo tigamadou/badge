@@ -37,7 +37,7 @@ export const attachmentName = (key: string): string => key.split("/").pop() ?? k
 const formatDateTime = (iso: string): string =>
   new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
 
-// Fil de discussion d'une demande. Tous les textes (corps, noms de fichiers) sont rendus en texte
+// Fil de discussion d'une commande. Tous les textes (corps, noms de fichiers) sont rendus en texte
 // par React : jamais de HTML injecté.
 export function PrintThread({
   entriesUrl,

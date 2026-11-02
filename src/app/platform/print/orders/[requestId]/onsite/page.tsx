@@ -16,17 +16,17 @@ export default async function OnsiteStationPage({ params }: { params: Promise<{ 
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
   if (!ctx || !ctx.isStaff || !ctx.staffRole) notFound();
-  const detail = `/platform/print/requests/${requestId}`;
-  // Le poste imprime : STAFF_SUPPORT au minimum, sinon retour à la fiche de la demande.
+  const detail = `/platform/print/orders/${requestId}`;
+  // Le poste imprime : STAFF_SUPPORT au minimum, sinon retour à la fiche de la commande.
   if (!staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT")) redirect(detail);
 
   let loaded;
   try {
     loaded = await loadOnsiteRequest(requestId);
   } catch (err) {
-    // Statut qui n'ouvre pas le poste : retour à la fiche de la demande.
+    // Statut qui n'ouvre pas le poste : retour à la fiche de la commande.
     if (err instanceof OnsiteError && err.code === "REQUEST_NOT_PRINTABLE") redirect(detail);
-    // Demande introuvable, brouillon ou qui n'est pas une impression sur place.
+    // Commande introuvable, brouillon ou qui n'est pas une impression sur place.
     if (err instanceof OnsiteError) notFound();
     throw err;
   }

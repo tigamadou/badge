@@ -27,19 +27,19 @@ export type OnsiteErrorCode =
 // Messages en français affichés par toastApiError (qui lit `message`).
 export const ONSITE_ERROR_MESSAGES: Record<OnsiteErrorCode, string> = {
   ONSITE_TEMPLATE_UNSUITABLE: "Le modèle de badge de cet évènement n'est pas adapté à l'impression sur place.",
-  NOT_FOUND: "Demande introuvable.",
-  NOT_ONSITE: "Cette demande n'est pas une demande d'impression sur place.",
-  REQUEST_NOT_PRINTABLE: "Cette demande n'est pas ouverte à l'impression.",
+  NOT_FOUND: "Commande introuvable.",
+  NOT_ONSITE: "Cette commande n'est pas une commande d'impression sur place.",
+  REQUEST_NOT_PRINTABLE: "Cette commande n'est pas ouverte à l'impression.",
   REGISTRATION_NOT_FOUND: "Inscription introuvable.",
   FOREIGN_EVENT: "Ce QR ne correspond pas à cet évènement.",
   NOT_APPROVED: "Cette inscription n'est pas approuvée.",
   ALREADY_PRINTED: "Le badge de cette inscription a déjà été imprimé.",
-  CAP_REACHED: "Le plafond d'impression de cette demande est atteint.",
+  CAP_REACHED: "Le plafond d'impression de cette commande est atteint.",
   MARGIN_BELOW_PRINTED: "La marge ne peut pas être inférieure au nombre de badges déjà imprimés.",
-  NOT_CLOSABLE: "Cette demande ne peut pas être clôturée.",
-  REQUEST_LOCKED: "Cette demande ne peut plus être modifiée.",
+  NOT_CLOSABLE: "Cette commande ne peut pas être clôturée.",
+  REQUEST_LOCKED: "Cette commande ne peut plus être modifiée.",
   CREDIT_INSUFFICIENT: "Le crédit disponible est insuffisant.",
-  CREDIT_EXCEEDS_TOTAL: "Le crédit ne peut pas dépasser le total de la demande.",
+  CREDIT_EXCEEDS_TOTAL: "Le crédit ne peut pas dépasser le total de la commande.",
 };
 
 export class OnsiteError extends Error {
@@ -67,7 +67,7 @@ export function onsiteOrPrintErrorResponse(err: unknown): NextResponse {
   return printRequestErrorResponse(err);
 }
 
-// Éligibilité : le template effectif de l'évènement (celui que copie la demande à l'envoi,
+// Éligibilité : le template effectif de l'évènement (celui que copie la commande à l'envoi,
 // repli compris) figure dans la liste des templates adaptés à l'impression sur place.
 export async function getOnsiteEligibility(eventId: string): Promise<{ eligible: boolean; templateId: string | null }> {
   const event = await prisma.event.findUnique({
@@ -84,8 +84,8 @@ export async function getOnsiteEligibility(eventId: string): Promise<{ eligible:
   return { eligible: settings.templateIds.includes(row.id), templateId: row.id };
 }
 
-// Accroche de l'envoi, sur la copie du template prise par l'envoi : `null` pour une demande en
-// amont ; sinon refuse un template inadapté et rend la marge par défaut du moment (figée dans la demande).
+// Accroche de l'envoi, sur la copie du template prise par l'envoi : `null` pour une commande en
+// amont ; sinon refuse un template inadapté et rend la marge par défaut du moment (figée dans la commande).
 export async function prepareOnsiteSubmission(
   _tx: Prisma.TransactionClient,
   request: { type: PrintRequestType; badgeTemplateId: string },
@@ -101,8 +101,8 @@ export async function prepareOnsiteSubmission(
 export type OnsiteTemplateStatus = "OK" | "UNSUITABLE" | "NOT_APPLICABLE";
 type StatusInput = { type: PrintRequestType; parentRequestId: string | null; badgeTemplateId: string | null };
 
-// Lit la copie du template de la demande (tenue à jour par syncRequestTemplates). Les demandes
-// en amont, les demandes complémentaires et les brouillons (pas de copie) ne sont pas concernés.
+// Lit la copie du template de la commande (tenue à jour par syncRequestTemplates). Les commandes
+// en amont, les commandes complémentaires et les brouillons (pas de copie) ne sont pas concernés.
 export async function onsiteTemplateStatus(request: StatusInput): Promise<OnsiteTemplateStatus> {
   if (request.type !== "ONSITE" || request.parentRequestId !== null || request.badgeTemplateId === null) {
     return "NOT_APPLICABLE";

@@ -20,7 +20,7 @@ test.describe("Event — Retour de paiement d'un devis d'impression", () => {
     await disconnectDb();
   });
 
-  test("Un paiement approuvé qui a soldé la demande affiche « Paiement confirmé »", async ({ page }) => {
+  test("Un paiement approuvé qui a soldé la commande affiche « Paiement confirmé »", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "print-return-paid" });
     const owner = await makeEventAdminUser({ scope: "print-return-paid", eventId, orgId });
     const request = await createTestPrintRequest({ eventId, orgId, createdById: owner.id, status: "PAID", lines: LINES });
@@ -35,9 +35,9 @@ test.describe("Event — Retour de paiement d'un devis d'impression", () => {
     await loginAndEnter(page, owner, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}/print/${request.id}/return?id=${payment.fedapayTransactionId}`);
 
-    await expect(page.getByText(`Paiement confirmé. La demande ${request.reference} est payée`)).toBeVisible();
-    // Le lien de retour ramène au détail de la demande.
-    await page.getByRole("link", { name: "Retour à la demande" }).click();
+    await expect(page.getByText(`Paiement confirmé. La commande ${request.reference} est payée`)).toBeVisible();
+    // Le lien de retour ramène au détail de la commande.
+    await page.getByRole("link", { name: "Retour à la commande" }).click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/${request.id}$`));
     await expect(page.getByRole("heading", { name: request.reference })).toBeVisible();
   });

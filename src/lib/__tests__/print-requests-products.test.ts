@@ -22,7 +22,7 @@ const thread = (id: string) =>
 const lines = (id: string) =>
   prisma.printQuoteLine.findMany({ where: { requestId: id }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
 
-// Demande ADVANCE avec 3 badges réservés.
+// Commande ADVANCE avec 3 badges réservés.
 async function requestWithBadges(status: PrintRequestStatus = "DRAFT", count = 3) {
   const r = await makeRequest(fx, { status });
   for (let i = 0; i < count; i++) {
@@ -147,12 +147,12 @@ describe("setOrganizerProducts — refus", () => {
     expect(choiceFailureToError(product, { ok: false, code: "SPLIT_MISMATCH", optionId: "o" }).details).toEqual({ productId: "p", code: "SPLIT_MISMATCH", optionId: "o" });
   });
 
-  it("statut verrouillé : demande ACCEPTED -> QUOTE_ACCEPTED", async () => {
+  it("statut verrouillé : commande ACCEPTED -> QUOTE_ACCEPTED", async () => {
     const r = await requestWithBadges("ACCEPTED");
     expect(await reject(set(r.id, [badge()]))).toMatchObject({ code: "QUOTE_ACCEPTED" });
   });
 
-  it("demande d'un autre évènement -> NOT_FOUND", async () => {
+  it("commande d'un autre évènement -> NOT_FOUND", async () => {
     const r = await requestWithBadges();
     const err = await reject(setOrganizerProducts({ requestId: r.id, eventId: "autre", userId: fx.owner.id, products: [badge()] }));
     expect(err).toMatchObject({ code: "NOT_FOUND" });
@@ -311,7 +311,7 @@ describe("setOrganizerProducts — comparaison avec les lignes existantes", () =
     expect(res.lines).toHaveLength(2);
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");
     expect(await thread(r.id)).toHaveLength(before.length);
-    // Ordre inversé côté demande : le support reste en tête, rien ne change.
+    // Ordre inversé côté commande : le support reste en tête, rien ne change.
     const swapped = await set(r.id, [lanyard(), badge()]);
     expect(swapped.revised).toBe(false);
     expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).status).toBe("QUOTED");

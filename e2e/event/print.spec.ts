@@ -19,7 +19,7 @@ test.describe("Event — Impression", () => {
     await disconnectDb();
   });
 
-  test("ADMIN ouvre la liste via le menu et voit ses demandes avec leur statut", async ({ page }) => {
+  test("ADMIN ouvre la liste via le menu et voit ses commandes avec leur statut", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "print-list" });
     const admin = await makeEventAdminUser({ scope: "print-list", eventId, orgId });
     const sent = await createTestPrintRequest({
@@ -41,7 +41,7 @@ test.describe("Event — Impression", () => {
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
     await expect(page.getByRole("heading", { name: "Impression", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Nouvelle demande" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Nouvelle commande" })).toBeVisible();
 
     const sentRow = page.locator("tr", { hasText: sent.reference });
     await expect(sentRow).toContainText("Envoyée");
@@ -55,26 +55,26 @@ test.describe("Event — Impression", () => {
     await expect(page.getByRole("heading", { name: sent.reference })).toBeVisible();
   });
 
-  test("« Nouvelle demande » ouvre l'assistant", async ({ page }) => {
+  test("« Nouvelle commande » ouvre l'assistant", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "print-new-link" });
     const admin = await makeEventAdminUser({ scope: "print-new-link", eventId, orgId });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
-    await page.getByRole("link", { name: "Nouvelle demande" }).click();
+    await page.getByRole("link", { name: "Nouvelle commande" }).click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
-    await expect(page.getByRole("heading", { name: "Nouvelle demande d'impression" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Nouvelle commande d'impression" })).toBeVisible();
   });
 
-  test("Sans demande, la liste affiche l'état vide", async ({ page }) => {
+  test("Sans commande, la liste affiche l'état vide", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "print-empty" });
     const admin = await makeEventAdminUser({ scope: "print-empty", eventId, orgId });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
-    await expect(page.getByText("Aucune demande d'impression pour cet évènement.")).toBeVisible();
+    await expect(page.getByText("Aucune commande d'impression pour cet évènement.")).toBeVisible();
     await expect(page.locator("table")).toHaveCount(0);
   });
 

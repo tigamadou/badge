@@ -32,7 +32,7 @@ const reload = (id: string) => prisma.printRequest.findUniqueOrThrow({ where: { 
 const activeLines = (id: string) =>
   prisma.printQuoteLine.findMany({ where: { requestId: id, removedAt: null }, orderBy: { position: "asc" } });
 
-// Demande avec un support (3 x 1500) et un cordon (3 x 500) : total 6000.
+// Commande avec un support (3 x 1500) et un cordon (3 x 500) : total 6000.
 async function requestWithLines(status: PrintRequestStatus = "SUBMITTED", extra = {}) {
   const r = await makeRequest(fx, { status, total: 6000, ...extra });
   const support = await prisma.printQuoteLine.create({
@@ -149,7 +149,7 @@ describe("modifications du staff regroupées (critère 2)", () => {
     expect(entry.body).toBe("Ligne retirée : Cordon");
   });
 
-  it("ligne retirée ou d'une autre demande -> 404 ; demande inconnue -> 404", async () => {
+  it("ligne retirée ou d'une autre commande -> 404 ; commande inconnue -> 404", async () => {
     const { r, cordon } = await requestWithLines();
     const other = await requestWithLines();
     await removeStaffLine({ requestId: r.id, lineId: cordon.id, userId: staff() });
@@ -160,7 +160,7 @@ describe("modifications du staff regroupées (critère 2)", () => {
   });
 });
 
-describe("demande sans ligne", () => {
+describe("commande sans ligne", () => {
   it("première ligne en position 0 ; retrait de la dernière ligne -> total 0", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     const { line } = await addStaffLine(service(r.id));
@@ -355,7 +355,7 @@ describe("sendQuote", () => {
     expect((await thread(r.id)).map((e) => e.eventType)).toContain("QUOTE_SENT");
   });
 
-  it("depuis un autre statut -> INVALID_TRANSITION ; demande inconnue -> 404", async () => {
+  it("depuis un autre statut -> INVALID_TRANSITION ; commande inconnue -> 404", async () => {
     const { r } = await requestWithLines("QUOTED");
     expect(await reject(sendQuote({ requestId: r.id, userId: staff() }))).toMatchObject({ code: "INVALID_TRANSITION" });
     expect(await reject(sendQuote({ requestId: "inconnue", userId: staff() }))).toMatchObject({ code: "NOT_FOUND" });
@@ -378,7 +378,7 @@ describe("réouverture (critère 3)", () => {
     expect(v3).toMatchObject({ status: "QUOTED", quoteVersion: 3, total: 4500 + 2000 });
   });
 
-  it("paiement en cours -> PAYMENT_IN_PROGRESS, demande inchangée ; sonde appelée sous verrou", async () => {
+  it("paiement en cours -> PAYMENT_IN_PROGRESS, commande inchangée ; sonde appelée sous verrou", async () => {
     const { r } = await requestWithLines("ACCEPTED", { quoteVersion: 1, acceptedVersion: 1, acceptedTotal: 6000 });
     vi.spyOn(paymentProbe, "isPaymentInProgress").mockResolvedValue(true);
     expect(await reject(reopenQuote({ requestId: r.id, userId: staff() }))).toMatchObject({ code: "PAYMENT_IN_PROGRESS", status: 409 });
@@ -401,7 +401,7 @@ describe("rejectRequest", () => {
     const res = await rejectRequest({ requestId: r.id, userId: staff(), reason: "  Format non pris en charge\u0000 " });
     expect(res.status).toBe("REJECTED");
     const last = (await thread(r.id)).at(-1)!;
-    expect(last).toMatchObject({ eventType: "REJECTED", side: "STAFF", body: "Demande refusée : Format non pris en charge" });
+    expect(last).toMatchObject({ eventType: "REJECTED", side: "STAFF", body: "Commande refusée : Format non pris en charge" });
     expect(last.details).toEqual({ reason: "Format non pris en charge" });
   });
 
@@ -505,14 +505,14 @@ describe("markPaidManually", () => {
     expect(await reject(markPaidManually({ requestId: "inconnue", userId: staff(), reason: "Virement" }))).toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("paiement en cours (sonde) -> PAYMENT_IN_PROGRESS, demande inchangée", async () => {
+  it("paiement en cours (sonde) -> PAYMENT_IN_PROGRESS, commande inchangée", async () => {
     const { r } = await accepted();
     vi.spyOn(paymentProbe, "isPaymentInProgress").mockResolvedValue(true);
     expect(await reject(markPaidManually({ requestId: r.id, userId: staff(), reason: "Virement" }))).toMatchObject({ code: "PAYMENT_IN_PROGRESS", status: 409 });
     expect((await reload(r.id)).status).toBe("ACCEPTED");
   });
 
-  it("la sonde est appelée alors que la ligne de la demande est verrouillée", async () => {
+  it("la sonde est appelée alors que la ligne de la commande est verrouillée", async () => {
     const { r } = await accepted();
     let blocked: boolean | null = null;
     vi.spyOn(paymentProbe, "isPaymentInProgress").mockImplementation(async () => {

@@ -44,7 +44,7 @@ describe("findTemplateLock / assertTemplateChangeAllowed", () => {
     expect(TEMPLATE_LOCK_STATUSES).toEqual(["PAID", "IN_PRODUCTION", "READY"]);
   });
 
-  it("rien ne verrouille sans demande payée", async () => {
+  it("rien ne verrouille sans commande payée", async () => {
     await makeRequest(fx, { status: "QUOTED" });
     expect(await findTemplateLock(fx.event.id)).toBeNull();
     await expect(assertTemplateChangeAllowed(fx.event.id)).resolves.toBeUndefined();
@@ -103,7 +103,7 @@ describe("pinLockedEventTemplates", () => {
     expect((await prisma.event.findUnique({ where: { id: noCopy.id } }))?.badgeTemplateId).toBeNull();
   });
 
-  it("épingle aussi la demande ACCEPTED avec paiement en cours, pas sans paiement", async () => {
+  it("épingle aussi la commande ACCEPTED avec paiement en cours, pas sans paiement", async () => {
     await prisma.organization.update({ where: { id: fx.org.id }, data: { badgeTemplateId: fx.template.id } });
     await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: null } });
     const other2 = await inheritingEvent(fx.org.id);
@@ -132,17 +132,17 @@ describe("pinLockedEventTemplates", () => {
     expect((await prisma.event.findUnique({ where: { id: ev2.id } }))?.badgeTemplateId).toBeNull();
   });
 
-  it("fige le template effectif courant, pas la copie périmée d'une demande", async () => {
+  it("fige le template effectif courant, pas la copie périmée d'une commande", async () => {
     await prisma.organization.update({ where: { id: fx.org.id }, data: { badgeTemplateId: other.id } });
     await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: null } });
-    // La copie de la demande payée porte l'ancien template ; l'évènement hérite de `other`.
+    // La copie de la commande payée porte l'ancien template ; l'évènement hérite de `other`.
     const stale = await makeRequest(fx, { status: "PAID", ...copyOf(fx.template) });
     expect(await pinLockedEventTemplates({ orgId: fx.org.id })).toBe(1);
     expect((await prisma.event.findUnique({ where: { id: fx.event.id } }))?.badgeTemplateId).toBe(other.id);
     expect((await prisma.printRequest.findUnique({ where: { id: stale.id } }))?.templatePinned).toBe(true);
   });
 
-  it("sans template effectif résolvable : fige la copie de la demande qui le retient", async () => {
+  it("sans template effectif résolvable : fige la copie de la commande qui le retient", async () => {
     // Template de l'organisation inconnu et aucun template de repli « default » installé.
     await prisma.organization.update({ where: { id: fx.org.id }, data: { badgeTemplateId: "inconnu" } });
     await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: null } });
@@ -162,7 +162,7 @@ describe("pinLockedEventTemplates", () => {
     expect((await prisma.event.findUnique({ where: { id: own.id } }))?.badgeTemplateId).toBe(other.id);
   });
 
-  it("ignore un évènement dont plus aucune demande ne retient le template", async () => {
+  it("ignore un évènement dont plus aucune commande ne retient le template", async () => {
     const free = await inheritingEvent(fx.org.id);
     await makeRequest({ ...fx, event: free }, { status: "QUOTED", ...copyOf(fx.template) });
     vi.spyOn(prisma.event, "findMany").mockResolvedValueOnce([{ id: free.id }] as never);
@@ -196,14 +196,14 @@ describe("releaseTemplatePin (via applyTransition)", () => {
     expect((await prisma.printRequest.findUnique({ where: { id: r.id } }))?.templatePinned).toBe(false);
   });
 
-  it("conserve le template si une autre demande payée le verrouille", async () => {
+  it("conserve le template si une autre commande payée le verrouille", async () => {
     const r = await pinned();
     await makeRequest(fx, { status: "PAID", ...copyOf(fx.template) });
     await complete(r.id);
     expect(await eventTemplate()).toBe(fx.template.id);
   });
 
-  it("conserve le template si une autre demande ACCEPTED l'a épinglé", async () => {
+  it("conserve le template si une autre commande ACCEPTED l'a épinglé", async () => {
     const r = await pinned();
     await makeRequest(fx, { status: "ACCEPTED", templatePinned: true, ...copyOf(fx.template) });
     await complete(r.id);
@@ -223,7 +223,7 @@ describe("releaseTemplatePin (via applyTransition)", () => {
     expect((await prisma.printRequest.findUnique({ where: { id: r.id } }))?.templatePinned).toBe(false);
   });
 
-  it("demande inconnue : sans effet", async () => {
+  it("commande inconnue : sans effet", async () => {
     await expect(run((tx) => releaseTemplatePin(tx, "ghost"))).resolves.toBe(false);
   });
 
@@ -238,12 +238,12 @@ describe("releaseTemplatePin (via applyTransition)", () => {
   });
 });
 
-describe("resynchronisation des demandes quand le verrou est libéré", () => {
+describe("resynchronisation des commandes quand le verrou est libéré", () => {
   const get = (id: string) => prisma.printRequest.findUnique({ where: { id } });
   const bodies = async (id: string) => (await thread(id)).map((m) => m.body);
   const changed = "Template de badge changé : Badge test → Autre badge";
 
-  // Évènement épinglé sur fx.template par une demande READY ; l'héritage (organisation) donne `other`.
+  // Évènement épinglé sur fx.template par une commande READY ; l'héritage (organisation) donne `other`.
   async function pinnedEvent(status: "READY" | "ACCEPTED" = "READY") {
     await prisma.organization.update({ where: { id: fx.org.id }, data: { badgeTemplateId: other.id } });
     await prisma.event.update({ where: { id: fx.event.id }, data: { badgeTemplateId: fx.template.id } });
@@ -251,7 +251,7 @@ describe("resynchronisation des demandes quand le verrou est libéré", () => {
   }
   const complete = (id: string) => run((tx) => applyTransition(tx, { id, status: "READY" }, "COMPLETE", "STAFF"));
 
-  it("COMPLETE : les demandes sœurs SUBMITTED, QUOTED et ACCEPTED sont révisées avec TEMPLATE_CHANGED", async () => {
+  it("COMPLETE : les commandes sœurs SUBMITTED, QUOTED et ACCEPTED sont révisées avec TEMPLATE_CHANGED", async () => {
     const r = await pinnedEvent();
     const submitted = await makeRequest(fx, { status: "SUBMITTED", ...copyOf(fx.template) });
     const quoted = await makeRequest(fx, { status: "QUOTED", ...copyOf(fx.template) });
@@ -274,7 +274,7 @@ describe("resynchronisation des demandes quand le verrou est libéré", () => {
     expect(await bodies(r.id)).toEqual([]);
   });
 
-  it("REOPEN d'une demande ACCEPTED épinglée : elle-même et ses sœurs suivent le template hérité", async () => {
+  it("REOPEN d'une commande ACCEPTED épinglée : elle-même et ses sœurs suivent le template hérité", async () => {
     const r = await pinnedEvent("ACCEPTED");
     const sibling = await makeRequest(fx, { status: "QUOTED", ...copyOf(fx.template) });
     await run((tx) => applyTransition(tx, { id: r.id, status: "ACCEPTED" }, "REOPEN", "STAFF"));
@@ -297,7 +297,7 @@ describe("resynchronisation des demandes quand le verrou est libéré", () => {
     const r = await pinnedEvent();
     const sibling = await makeRequest(fx, { status: "SUBMITTED", ...copyOf(fx.template) });
     await makeRequest(fx, { status: "PAID", ...copyOf(fx.template) });
-    await complete(r.id); // une autre demande payée retient encore le template
+    await complete(r.id); // une autre commande payée retient encore le template
     expect(await get(sibling.id)).toMatchObject({ status: "SUBMITTED", badgeTemplateId: fx.template.id });
     expect(await bodies(sibling.id)).toEqual([]);
   });
@@ -342,7 +342,7 @@ describe("syncRequestTemplates", () => {
     );
   });
 
-  it("ignore brouillons, demandes payées, copies déjà à jour et ACCEPTED avec paiement", async () => {
+  it("ignore brouillons, commandes payées, copies déjà à jour et ACCEPTED avec paiement", async () => {
     const draft = await makeRequest(fx, { status: "DRAFT" });
     const paid = await makeRequest(fx, { status: "PAID", ...copyOf(fx.template) });
     const same = await makeRequest(fx, { status: "SUBMITTED", ...copyOf(other) });
@@ -369,7 +369,7 @@ describe("syncRequestTemplates", () => {
     expect(await syncRequestTemplates({ platform: true }, fx.owner.id)).toContain(r.id);
   });
 
-  it("ignore une demande qui a changé de statut ou disparu entre la liste et le verrou", async () => {
+  it("ignore une commande qui a changé de statut ou disparu entre la liste et le verrou", async () => {
     const paid = await makeRequest(fx, { status: "PAID", ...copyOf(fx.template) });
     vi.spyOn(prisma.printRequest, "findMany").mockResolvedValueOnce([
       { id: paid.id, eventId: fx.event.id },
@@ -389,14 +389,14 @@ describe("erreur inattendue du verrou", () => {
 });
 
 describe("ordre des verrous (Event puis PrintRequest)", () => {
-  it("lockRequestWithEvent renvoie l'évènement ; demande inconnue : NOT_FOUND", async () => {
+  it("lockRequestWithEvent renvoie l'évènement ; commande inconnue : NOT_FOUND", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     await expect(run((tx) => lockRequestWithEvent(tx, r.id))).resolves.toEqual({ eventId: fx.event.id });
     const err = await reject(run((tx) => lockRequestWithEvent(tx, "ghost")));
     expect(err?.code).toBe("NOT_FOUND");
   });
 
-  it("une demande épinglée terminée pendant un changement de template d'org ne s'interbloque pas", async () => {
+  it("une commande épinglée terminée pendant un changement de template d'org ne s'interbloque pas", async () => {
     for (let i = 0; i < 5; i++) {
       const f = await seedPrintFixture();
       await prisma.event.update({ where: { id: f.event.id }, data: { badgeTemplateId: null } });

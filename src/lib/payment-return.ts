@@ -65,8 +65,8 @@ export type PrintPaymentReturn = {
 const PRINT_NOT_FOUND: PrintPaymentReturn = { outcome: "NOT_FOUND", reference: "", amount: 0 };
 
 // Retour FedaPay d'un devis d'impression : même méthode que l'abonnement. Le paiement doit
-// appartenir à la demande avant tout appel à FedaPay, puis seul l'état confirmé fait foi.
-// La demande doit appartenir à l'évènement et à l'organisation de la page (anti-IDOR).
+// appartenir à la commande avant tout appel à FedaPay, puis seul l'état confirmé fait foi.
+// La commande doit appartenir à l'évènement et à l'organisation de la page (anti-IDOR).
 export async function resolvePrintPaymentReturn(args: {
   requestId: string;
   eventId: string;
@@ -120,8 +120,8 @@ export async function resolvePrintPaymentReturn(args: {
   }
   if (status !== "APPROVED") return { outcome: "FAILED", ...base };
 
-  // Relecture après confirmation : seul le paiement qui a soldé la demande (paidPaymentId, posé
-  // par markPaid) donne PAID, même si la demande a avancé depuis. Sinon l'équipe Badge tranche.
+  // Relecture après confirmation : seul le paiement qui a soldé la commande (paidPaymentId, posé
+  // par markPaid) donne PAID, même si la commande a avancé depuis. Sinon l'équipe Badge tranche.
   const request = await prisma.printRequest.findUniqueOrThrow({
     where: { id: requestId },
     select: { paidPaymentId: true },

@@ -30,7 +30,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
         })
       : [];
 
-  // Paiements de cette demande (FedaPay), du plus récent au plus ancien.
+  // Paiements de cette commande (FedaPay), du plus récent au plus ancien.
   const payments = (
     await prisma.payment.findMany({
       where: { printRequestId: requestId },
@@ -39,7 +39,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
     })
   ).map(toPaymentHistoryItem);
 
-  // Demande, crédit de l'organisation et liens vers la demande principale / les compléments.
+  // Commande, crédit de l'organisation et liens vers la commande principale / les compléments.
   const request = await prisma.printRequest.findUnique({
     where: { id: requestId },
     select: {
@@ -63,7 +63,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
   const applied = -lines.filter((l) => l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
   const grossTotal = lines.filter((l) => !l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
 
-  // Compteur de l'impression sur place ; absent pour une demande en amont, complémentaire ou inexistante.
+  // Compteur de l'impression sur place ; absent pour une commande en amont, complémentaire ou inexistante.
   const onsiteCounter =
     request.parentRequestId !== null
       ? null

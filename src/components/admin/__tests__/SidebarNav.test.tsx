@@ -7,13 +7,13 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/platform" }));
 import { SidebarNav, type NavEntry } from "../SidebarNav";
 
 const link = (count?: number): NavEntry[] => [
-  { href: "/platform/print/requests", label: "Demandes", icon: "inbox", count },
+  { href: "/platform/print/orders", label: "Commandes", icon: "inbox", count },
 ];
 
 describe("SidebarNav", () => {
   it("affiche une pastille avec le compteur et un libellé accessible", () => {
     const html = renderToString(<SidebarNav items={link(3)} />);
-    expect(html).toContain("Demandes");
+    expect(html).toContain("Commandes");
     expect(html).toContain('aria-label="3 en attente"');
     expect(html).toMatch(/aria-label="3 en attente"[^>]*>3</);
   });

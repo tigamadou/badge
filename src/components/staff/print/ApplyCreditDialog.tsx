@@ -9,7 +9,7 @@ import { formatFcfa } from "@/lib/print-requests/labels";
 import { defaultCreditAmount } from "@/lib/print-requests/credit-view";
 import { requestUrl, staffRequest } from "./request-fetch";
 
-// Application du crédit d'impression de l'organisation à une demande (STAFF_ADMIN).
+// Application du crédit d'impression de l'organisation à une commande (STAFF_ADMIN).
 // Les refus (REQUEST_LOCKED, CREDIT_INSUFFICIENT, CREDIT_EXCEEDS_TOTAL) arrivent déjà en français.
 export function ApplyCreditDialog({
   open,
@@ -60,7 +60,7 @@ export function ApplyCreditDialog({
       }
     >
       <p className="mb-3 text-sm text-slate-500">
-        {`Crédit disponible : ${formatFcfa(available)}. Montant maximal applicable à cette demande : ${formatFcfa(max)}.`}
+        {`Crédit disponible : ${formatFcfa(available)}. Montant maximal applicable à cette commande : ${formatFcfa(max)}.`}
       </p>
       <Input
         label="Montant (FCFA)"

@@ -178,7 +178,7 @@ export async function runGeneration(
       completedAt: deps.now(),
     });
     if (!done) return "LOCK_LOST";
-    // Planches d'une demande : les badges ecartes sont signales dans son fil.
+    // Planches d'une commande : les badges ecartes sont signales dans son fil.
     if (generation.printRequestId && skippedIds.length > 0) {
       const requestId = generation.printRequestId;
       // Le fil est secondaire : la génération est DONE, son échec ne doit rien changer au résultat.

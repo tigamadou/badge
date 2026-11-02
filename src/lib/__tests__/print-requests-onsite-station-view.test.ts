@@ -97,7 +97,7 @@ describe("statuts", () => {
     for (const s of ["PAID", "IN_PRODUCTION", "READY"]) expect(canOpenOnsiteStation(s)).toBe(true);
     expect(canOpenOnsiteStation("COMPLETED")).toBe(false);
   });
-  it("marge réglable par STAFF_ADMIN sur une demande ouverte", () => {
+  it("marge réglable par STAFF_ADMIN sur une commande ouverte", () => {
     expect(canSetOnsiteMargin("READY", "STAFF_ADMIN")).toBe(true);
     expect(canSetOnsiteMargin("READY", "SUPER_ADMIN")).toBe(true);
     expect(canSetOnsiteMargin("READY", "STAFF_SUPPORT")).toBe(false);

@@ -248,7 +248,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/settings/badge", () => {
   });
 });
 
-describe("PATCH event badge template : verrou des demandes d'impression", () => {
+describe("PATCH event badge template : verrou des commandes d'impression", () => {
   beforeEach(async () => {
     vi.mocked(getServerSession).mockReset();
     await setupPlatform();
@@ -270,7 +270,7 @@ describe("PATCH event badge template : verrou des demandes d'impression", () => 
     return { org, event, request, def };
   }
 
-  it("demande PAID : 409 TEMPLATE_LOCKED_BY_PRINT_REQUEST, template inchangé", async () => {
+  it("commande PAID : 409 TEMPLATE_LOCKED_BY_PRINT_REQUEST, template inchangé", async () => {
     const { org, event, request } = await setup("PAID");
     const res = await patch(org, event, await installedRectoVersoId());
     expect(res.status).toBe(409);
@@ -281,12 +281,12 @@ describe("PATCH event badge template : verrou des demandes d'impression", () => 
     expect((await prisma.event.findUnique({ where: { id: event.id } }))?.badgeTemplateId).toBeNull();
   });
 
-  it("demande COMPLETED : 200", async () => {
+  it("commande COMPLETED : 200", async () => {
     const { org, event } = await setup("COMPLETED");
     expect((await patch(org, event, await installedRectoVersoId())).status).toBe(200);
   });
 
-  it("demande ACCEPTED avec paiement en cours : 409 PAYMENT_IN_PROGRESS", async () => {
+  it("commande ACCEPTED avec paiement en cours : 409 PAYMENT_IN_PROGRESS", async () => {
     const { org, event } = await setup("ACCEPTED");
     const spy = vi.spyOn(paymentProbe, "isPaymentInProgress").mockResolvedValue(true);
     const res = await patch(org, event, await installedRectoVersoId());
@@ -296,7 +296,7 @@ describe("PATCH event badge template : verrou des demandes d'impression", () => 
     expect((await prisma.event.findUnique({ where: { id: event.id } }))?.badgeTemplateId).toBeNull();
   });
 
-  it("demande QUOTED : 200, repasse SUBMITTED, copie et fil mis à jour", async () => {
+  it("commande QUOTED : 200, repasse SUBMITTED, copie et fil mis à jour", async () => {
     const { org, event, request, def } = await setup("QUOTED");
     const rv = await prisma.installedBadgeTemplate.findUniqueOrThrow({ where: { id: await installedRectoVersoId() } });
     expect((await patch(org, event, rv.id)).status).toBe(200);
@@ -308,7 +308,7 @@ describe("PATCH event badge template : verrou des demandes d'impression", () => 
     expect(msgs.map((m) => m.body)).toEqual([`Template de badge changé : ${def.label} → ${rv.label}`]);
   });
 
-  it("demande ACCEPTED sans paiement : acceptation annulée, entrée suffixée", async () => {
+  it("commande ACCEPTED sans paiement : acceptation annulée, entrée suffixée", async () => {
     const { org, event, request, def } = await setup("ACCEPTED", {
       acceptedVersion: 1, acceptedTotal: 100, acceptedAt: new Date(),
     });

@@ -13,7 +13,7 @@ import type { OnsiteCounter } from "@/lib/print-requests/onsite-counter";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { OnsiteMarginForm } from "./OnsiteMarginForm";
 
-// Bloc « impression sur place » de la page staff de la demande : compteur, accès au poste, marge.
+// Bloc « impression sur place » de la page staff de la commande : compteur, accès au poste, marge.
 export function OnsiteRequestPanel({
   requestId,
   status,
@@ -32,7 +32,7 @@ export function OnsiteRequestPanel({
       <OnsiteCounterCard counter={counter} />
       {canOpenOnsiteStation(status) && staffRoleAtLeast(role, "STAFF_SUPPORT") ? (
         <Link
-          href={`/platform/print/requests/${requestId}/onsite`}
+          href={`/platform/print/orders/${requestId}/onsite`}
           className="inline-flex rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
         >
           Ouvrir le poste d&apos;impression

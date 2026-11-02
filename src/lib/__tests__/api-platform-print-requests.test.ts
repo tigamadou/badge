@@ -145,7 +145,7 @@ describe("gardes de rôle, une par frontière de route", () => {
 });
 
 describe("brouillon invisible", () => {
-  it("404 sur chaque route de demande", async () => {
+  it("404 sur chaque route de commande", async () => {
     const draft = await makeRequest(fx, { status: "DRAFT" });
     const id = draft.id;
     const u = `${BASE}/${id}`;
@@ -236,7 +236,7 @@ describe("GET liste", () => {
 });
 
 describe("GET détail", () => {
-  it("renvoie demande, évènement, template, items triés, lignes, planches", async () => {
+  it("renvoie commande, évènement, template, items triés, lignes, planches", async () => {
     const r = await makeRequest(fx, { status: "PAID", paidPaymentId: "pay_1", marginPercent: 10 });
     // Positions inversées par rapport à l'ordre de création.
     await prisma.printRequestItem.createMany({
@@ -291,7 +291,7 @@ describe("GET détail", () => {
     ]);
   });
 
-  it("copie du template de la demande prioritaire ; template introuvable -> null", async () => {
+  it("copie du template de la commande prioritaire ; template introuvable -> null", async () => {
     const r = await makeRequest(fx, {
       badgeTemplateId: fx.template.id, badgeWidthPx: 300, badgeHeightPx: 400, badgePages: 1,
     });
@@ -431,7 +431,7 @@ describe("envoi, réouverture, refus, statut", () => {
   });
 });
 
-describe("clôture d'une demande sur place (READY -> COMPLETED)", () => {
+describe("clôture d'une commande sur place (READY -> COMPLETED)", () => {
   const onsiteReady = async (printed: number, over: Parameters<typeof makeRequest>[1] = {}) => {
     const r = await makeRequest(fx, {
       type: "ONSITE", status: "READY", estimatedQuantity: 200, marginPercent: 10, ...over,
@@ -464,7 +464,7 @@ describe("clôture d'une demande sur place (READY -> COMPLETED)", () => {
     expect(await logs(r.id, "PRINT_REQUEST_STATUS_CHANGED")).toHaveLength(1);
   });
 
-  it("badges en trop : closure SUPPLEMENT, demande complémentaire QUOTED, notification de devis, activité journalisée", async () => {
+  it("badges en trop : closure SUPPLEMENT, commande complémentaire QUOTED, notification de devis, activité journalisée", async () => {
     const r = await onsiteReady(212);
     const res = await complete(r.id);
     expect(res.status).toBe(200);
@@ -479,7 +479,7 @@ describe("clôture d'une demande sur place (READY -> COMPLETED)", () => {
     expect(notes[0].href).toContain(child.id);
   });
 
-  it("commande exacte ou demande en amont : pas de crédit, pas de demande complémentaire", async () => {
+  it("commande exacte ou commande en amont : pas de crédit, pas de commande complémentaire", async () => {
     const exact = await onsiteReady(200);
     expect((await complete(exact.id)).json.closure).toEqual({ outcome: "NONE" });
     const advance = await onsiteReady(170, { type: "ADVANCE" });
@@ -508,7 +508,7 @@ describe("clôture sur place : STAFF_ADMIN et suites d'après commit", () => {
   };
   const complete = (id: string) => call(statusPOST, `${BASE}/${id}/status`, "POST", { requestId: id }, { to: "COMPLETED" });
 
-  it("COMPLETED sur une demande sur place : 403 STAFF_FORBIDDEN pour STAFF_SUPPORT, rien n'est écrit ; 200 pour STAFF_ADMIN", async () => {
+  it("COMPLETED sur une commande sur place : 403 STAFF_FORBIDDEN pour STAFF_SUPPORT, rien n'est écrit ; 200 pour STAFF_ADMIN", async () => {
     const r = await onsiteReady(170);
     as(fx.staffSupport);
     expect(await complete(r.id)).toMatchObject({ status: 403, json: { error: "STAFF_FORBIDDEN" } });
@@ -599,7 +599,7 @@ describe("template inadapté à l'impression sur place", () => {
     expect((await call(sendQuotePOST, `${BASE}/${r.id}/send-quote`, "POST", { requestId: r.id })).status).toBe(200);
   });
 
-  it("après le paiement, un template devenu inadapté ne bloque plus la demande (PAID -> IN_PRODUCTION -> READY -> COMPLETED)", async () => {
+  it("après le paiement, un template devenu inadapté ne bloque plus la commande (PAID -> IN_PRODUCTION -> READY -> COMPLETED)", async () => {
     await setList([]);
     const r = await onsiteRequest("PAID");
     expect((await advance(r.id, "IN_PRODUCTION")).json.request.status).toBe("IN_PRODUCTION");
@@ -609,7 +609,7 @@ describe("template inadapté à l'impression sur place", () => {
     expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
   });
 
-  it("template courant de l'évènement coché mais copie de la demande non cochée : UNSUITABLE", async () => {
+  it("template courant de l'évènement coché mais copie de la commande non cochée : UNSUITABLE", async () => {
     const other = await prisma.installedBadgeTemplate.create({
       data: {
         family: `copie-${Date.now()}`, version: 1, label: "Ancienne copie", description: "", pages: 1,
@@ -624,7 +624,7 @@ describe("template inadapté à l'impression sur place", () => {
     expect((await call(detailGET, `${BASE}/${r.id}`, "GET", { requestId: r.id })).json.onsiteTemplate).toBe("UNSUITABLE");
   });
 
-  it("refus d'une demande SUBMITTED toujours permis", async () => {
+  it("refus d'une commande SUBMITTED toujours permis", async () => {
     await setList([]);
     const r = await onsiteRequest("SUBMITTED");
     const res = await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, { reason: "Motif" });
@@ -655,7 +655,7 @@ describe("mark-paid", () => {
     expect(log.details).toEqual({ reason: "Virement reçu" });
     expect((await reload(r.id)).paidPaymentId).toBeNull();
     // Message du marquage hors ligne (plan 34), pas la notification de changement de statut.
-    const manualBody = `La demande ${r.reference} (${fx.event.title}) a été marquée payée par l'équipe Badge.`;
+    const manualBody = `La commande ${r.reference} (${fx.event.title}) a été marquée payée par l'équipe Badge.`;
     const ownerNotifs = await prisma.notification.findMany({ where: { userId: fx.eventAdmin.id, type: "PRINT_REQUEST_STATUS_CHANGED" } });
     expect(ownerNotifs.map((n) => n.body)).toEqual([manualBody]);
     // Le staff est notifié, sauf l'acteur lui-même : un autre STAFF_ADMIN la reçoit.
@@ -669,7 +669,7 @@ describe("mark-paid", () => {
     expect(staffNotifs[0].body).toContain("a été marquée payée par l'équipe Badge.");
   });
 
-  it("échec du journal : réponse 200, demande PAID, notification organisateur envoyée quand même", async () => {
+  it("échec du journal : réponse 200, commande PAID, notification organisateur envoyée quand même", async () => {
     const r = await acceptedRequest();
     const actLog = await import("@/lib/activity-log");
     vi.spyOn(actLog, "logActivity").mockRejectedValue(new Error("boom"));
@@ -684,7 +684,7 @@ describe("mark-paid", () => {
     expect(ownerNotifs[0].body).toContain("a été marquée payée par l'équipe Badge.");
   });
 
-  it("paiement réel en cours (Payment PENDING, sonde non espionnée) : 409 et demande inchangée", async () => {
+  it("paiement réel en cours (Payment PENDING, sonde non espionnée) : 409 et commande inchangée", async () => {
     const r = await acceptedRequest();
     await prisma.payment.create({
       data: { orgId: fx.org.id, purpose: "PRINT_REQUEST", printRequestId: r.id, amount: 1000, status: "PENDING" },
@@ -731,8 +731,8 @@ describe("messages", () => {
     const url = `${BASE}/${r.id}/messages`;
     const ok = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "", attachmentKey: `print-requests/staff/${r.id}/f.pdf` });
     expect(ok.json.entry.attachmentKey).toBe(`print-requests/staff/${r.id}/f.pdf`);
-    // Clé d'une autre demande (autre organisation) : refusée à l'écriture.
-    const foreign = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "x", attachmentKey: "print-requests/staff/autre-demande/f.pdf" });
+    // Clé d'une autre commande (autre organisation) : refusée à l'écriture.
+    const foreign = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "x", attachmentKey: "print-requests/staff/autre-commande/f.pdf" });
     expect(foreign).toMatchObject({ status: 400, json: { error: "INVALID_ATTACHMENT" } });
     const bad = await call(messagesPOST, url, "POST", { requestId: r.id }, { body: "x", attachmentKey: "print-requests/autre/f.pdf" });
     expect(bad).toMatchObject({ status: 400, json: { error: "INVALID_ATTACHMENT" } });
@@ -783,7 +783,7 @@ describe("suppression d'une ligne d'un devis envoyé", () => {
 });
 
 describe("getSubmittedPrintRequestCount", () => {
-  it("compte les demandes SUBMITTED, pas les autres statuts", async () => {
+  it("compte les commandes SUBMITTED, pas les autres statuts", async () => {
     const before = await getSubmittedPrintRequestCount();
     await makeRequest(fx);
     await makeRequest(fx, { status: "QUOTED" });

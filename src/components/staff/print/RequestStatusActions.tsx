@@ -25,7 +25,7 @@ const LABEL: Record<StaffAction, string> = {
 const REASON_MIN = 3;
 const REASON_MAX = { REJECT: 1000, MARK_PAID: 500 } as const;
 
-const MARK_PAID_ERRORS = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette demande." };
+const MARK_PAID_ERRORS = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette commande." };
 
 const TEXTAREA =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
@@ -73,16 +73,16 @@ export function RequestStatusActions({
     return true;
   }
 
-  // Ruling C17 : la demande passe d'abord en COMPLETED, puis le marquage est tenté ; son échec
+  // Ruling C17 : la commande passe d'abord en COMPLETED, puis le marquage est tenté ; son échec
   // (évènement archivé, droits) n'annule pas la clôture et prévient seulement.
   async function complete(markPrinted: boolean) {
     close();
-    if (!(await run("COMPLETE", "/status", { to: "COMPLETED" }, "Demande terminée."))) return;
+    if (!(await run("COMPLETE", "/status", { to: "COMPLETED" }, "Commande terminée."))) return;
     if (!markPrinted || toPrint.length === 0) return;
     for (const ids of chunk(toPrint, MARK_PRINTED_CHUNK)) {
       const ok = await staffRequest(`/api/org/${orgId}/events/${eventId}/registrations/print`, "POST", { ids });
       if (!ok) {
-        toastError("La demande est terminée, mais les badges n'ont pas pu être marqués comme imprimés.");
+        toastError("La commande est terminée, mais les badges n'ont pas pu être marqués comme imprimés.");
         return;
       }
     }
@@ -105,10 +105,10 @@ export function RequestStatusActions({
     const text = reason.trim();
     if (dialog === "REJECT") {
       if (text.length < REASON_MIN) return;
-      if (await run("REJECT", "/reject", { reason: text }, "Demande refusée.")) close();
+      if (await run("REJECT", "/reject", { reason: text }, "Commande refusée.")) close();
     } else if (dialog === "MARK_PAID") {
       if (text.length < REASON_MIN) return;
-      if (await run("MARK_PAID", "/mark-paid", { reason: text }, "Demande marquée payée.", MARK_PAID_ERRORS)) close();
+      if (await run("MARK_PAID", "/mark-paid", { reason: text }, "Commande marquée payée.", MARK_PAID_ERRORS)) close();
     }
   }
 
@@ -142,7 +142,7 @@ export function RequestStatusActions({
 
       <Dialog
         open={reasonDialog}
-        title={dialog === "REJECT" ? "Refuser la demande" : "Marquer la demande payée"}
+        title={dialog === "REJECT" ? "Refuser la commande" : "Marquer la commande payée"}
         onClose={close}
         footer={
           <>
@@ -197,9 +197,9 @@ export function RequestStatusActions({
         }
       >
         <p>
-          La demande est d&apos;abord terminée, puis les badges sont marqués comme imprimés. « Oui » marque ces badges (les
-          participants sont prévenus) ; si le marquage échoue, la demande reste terminée. « Non » termine seulement la
-          demande.
+          La commande est d&apos;abord terminée, puis les badges sont marqués comme imprimés. « Oui » marque ces badges (les
+          participants sont prévenus) ; si le marquage échoue, la commande reste terminée. « Non » termine seulement la
+          commande.
         </p>
       </Dialog>
     </>

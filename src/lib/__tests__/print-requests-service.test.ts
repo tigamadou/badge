@@ -383,7 +383,7 @@ describe("markPaid", () => {
     await run((tx) => markPaid(tx, r.id, {}));
     expect((await thread(r.id))[0].details).toEqual({ amount: 0 });
   });
-  it("QUOTED ou demande inconnue -> false, demande inchangée, aucune entrée", async () => {
+  it("QUOTED ou commande inconnue -> false, commande inchangée, aucune entrée", async () => {
     const r = await makeRequest(fx, { status: "QUOTED" });
     expect(await run((tx) => markPaid(tx, r.id, {}))).toBe(false);
     const row = await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } });
@@ -399,7 +399,7 @@ describe("isPaymentInProgress / réexport", () => {
     vi.spyOn(paymentProbe, "isPaymentInProgress").mockResolvedValue(true);
     expect(await isPaymentInProgress("x")).toBe(true);
   });
-  it("isPaymentInProgress vrai avec un Payment PENDING de la demande, faux avec APPROVED, EXPIRED ou le PENDING d'une autre demande", async () => {
+  it("isPaymentInProgress vrai avec un Payment PENDING de la commande, faux avec APPROVED, EXPIRED ou le PENDING d'une autre commande", async () => {
     const base = { orgId: fx.org.id, purpose: "PRINT_REQUEST" as const, userId: fx.owner.id, amount: 1000 };
     const r = await makeRequest(fx, { status: "ACCEPTED", acceptedTotal: 1000 });
     const other = await makeRequest(fx, { status: "ACCEPTED", acceptedTotal: 1000 });
