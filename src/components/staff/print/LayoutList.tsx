@@ -43,14 +43,6 @@ export function LayoutList({
 
   return (
     <div className="space-y-6">
-      {canWrite && (
-        <div className="flex justify-end">
-          <Link href={NEW_HREF} className={NEW_BUTTON}>
-            <Icon name="plus" size={16} /> Nouveau gabarit
-          </Link>
-        </div>
-      )}
-
       {layouts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white">
           <EmptyState
