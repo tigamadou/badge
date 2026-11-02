@@ -31,6 +31,6 @@ export async function getOrderSheet(requestId: string): Promise<OrderSheetView |
     pageCount: gen.sheetCount === null ? null : gen.sheetCount * (gen.duplex ? 2 : 1),
     completedAt: gen.completedAt?.toISOString() ?? null,
     error: gen.error,
-    downloadUrl: gen.status === "DONE" ? `/api/platform/print/sheets/${gen.id}` : null,
+    downloadUrl: gen.status === "DONE" ? `/api/files/${gen.fileKey ?? `print-sheets/${gen.id}.pdf`}` : null,
   };
 }

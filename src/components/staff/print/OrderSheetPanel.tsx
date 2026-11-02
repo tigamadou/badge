@@ -35,7 +35,7 @@ export function OrderSheetPanel({ sheet, sheetsHref }: { sheet: OrderSheetView |
           {sheet.layoutName ? ` · ${sheet.layoutName}` : ""}
         </p>
       ) : null}
-      {sheet && state === "FAILED" && sheet.error ? <p className="text-sm text-rose-600">{sheet.error}</p> : null}
+      {state === "FAILED" ? <p className="text-sm text-rose-600">{sheet?.error ?? "La génération a échoué."}</p> : null}
       {state === "NONE" ? <p className="text-sm text-slate-500">Aucune planche générée pour cette commande.</p> : null}
 
       <div className="flex flex-wrap items-center gap-3">

@@ -56,8 +56,18 @@ describe("getOrderSheet", () => {
       pageCount: 3,
       completedAt: completedAt.toISOString(),
       error: null,
-      downloadUrl: `/api/platform/print/sheets/${gen.id}`,
+      downloadUrl: `/api/files/print-sheets/${gen.id}.pdf`,
     });
+  });
+
+  it("prête avec fileKey : le lien suit la clé de fichier", async () => {
+    const order = await makePrintOrder({ eventId, orgId });
+    await makePrintGeneration({
+      eventId,
+      printRequestId: order.id,
+      data: { status: "DONE", sheetCount: 1, fileKey: "print-sheets/custom.pdf" },
+    });
+    expect((await getOrderSheet(order.id))?.downloadUrl).toBe("/api/files/print-sheets/custom.pdf");
   });
 
   it("planche prête recto-verso : pages = 2 x feuilles", async () => {

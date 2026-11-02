@@ -13,7 +13,7 @@ const base: OrderSheetView = {
   pageCount: 3,
   completedAt: "2026-11-02T10:00:00.000Z",
   error: null,
-  downloadUrl: "/api/platform/print/sheets/g1",
+  downloadUrl: "/api/files/print-sheets/g1.pdf",
 };
 const render = (sheet: OrderSheetView | null) =>
   renderToStaticMarkup(<OrderSheetPanel sheet={sheet} sheetsHref="/platform/print/sheets" />);
@@ -39,7 +39,7 @@ describe("OrderSheetPanel", () => {
     expect(html).toContain("3 feuilles");
     expect(html).toContain("6 pages");
     expect(html).toContain("recto-verso");
-    expect(html).toContain('href="/api/platform/print/sheets/g1"');
+    expect(html).toContain('href="/api/files/print-sheets/g1.pdf"');
     expect(html).toContain("Télécharger");
     expect(html).toContain("Voir la planche");
     expect(html).toContain("Gérer dans Planches");
@@ -47,6 +47,10 @@ describe("OrderSheetPanel", () => {
 
   it("prête recto seul", () => {
     expect(render(base)).toContain("recto seul");
+  });
+
+  it("échec sans message : texte générique", () => {
+    expect(render({ ...base, status: "FAILED", error: null, downloadUrl: null })).toContain("La génération a échoué.");
   });
 
   it("échec : message d'erreur, pas de téléchargement", () => {
