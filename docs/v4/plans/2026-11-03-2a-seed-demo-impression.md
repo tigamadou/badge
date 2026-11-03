@@ -56,7 +56,7 @@ sur les hypothèses de ce plan :
 |---|---|---|---|---|
 | 1 | Contrat du socle, helpers, nettoyage et catalogue | [x] | 2026-11-03 | `DemoContext` reel : OrgSize = `huge` (pas `large`), `ctx.dates.*`, `ctx.storage.putAt`. `PrintState` local (cles suivies par le manifeste du socle). `cleanupPrint` supprime aussi notifications, jobs et journaux du domaine. Test = un seul `it` par fichier (reset global avant chaque test). |
 | 2 | Commandes vitrine : cycle de vie et devis multi-versions | [x] | 2026-11-03 | 25 scenarios (`scenarios.ts`), horodatages ramenes par `timeline.ts` (`retimeRequest`, fenetre bornee par l'evenement). Hooks de cycle (`ScenarioHooks`) pour la conversation et les planches. Proprietaire manquant cree (`owner.<slug>@demo.local`). `payments.ts` et `onsite.ts` livres des cette tache (necessaires au cycle). |
-| 3 | Conversation, pièces jointes, notes internes et non-lus | [ ] | | |
+| 3 | Conversation, pièces jointes, notes internes et non-lus | [x] | 2026-11-03 | `conversationHooks` (fil ecrit pendant le cycle, notifications reelles) + `seedReadStates` (apres recalage des dates ; la note interne posterieure est ajoutee la). Plan modifie : `seedConversations` remplace par ces deux fonctions. |
 | 4 | Paiements, crédits et impression sur place | [ ] | | |
 | 5 | Planches : gabarits, générations et PDF | [ ] | | |
 | 6 | Volume, notifications, journal d'activité et orchestration | [ ] | | |

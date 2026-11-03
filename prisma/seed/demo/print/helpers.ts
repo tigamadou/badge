@@ -47,6 +47,8 @@ export type PrintState = {
   orders: Map<string, string>;
   /** Commandes vitrine : informations utiles aux etapes suivantes. */
   showcase: Map<string, ShowcaseOrder>;
+  /** Numero du prochain fichier joint (nom `demo-<n>.<ext>`). */
+  attachmentSeq: number;
 };
 
 export type ShowcaseOrder = {
@@ -79,6 +81,7 @@ export function createPrintState(ctx: DemoContext): PrintState {
     fedapaySeq: FEDAPAY_ID_START,
     orders: new Map(),
     showcase: new Map(),
+    attachmentSeq: 1,
   };
 }
 
