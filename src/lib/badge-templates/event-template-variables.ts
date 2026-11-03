@@ -1,4 +1,4 @@
-import type { InstalledBadgeTemplate } from "@prisma/client";
+import type { InstalledBadgeTemplate, Prisma } from "@prisma/client";
 import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 import { prisma } from "@/lib/prisma";
 import { resolveBadgeTemplateId } from "@/lib/settings";
@@ -8,8 +8,8 @@ import type { Bindings } from "./bindings";
 // Lit le badgeTemplateId de PlatformSettings (singleton). En son absence, on rend une
 // chaine vide : l'identifiant sera traite comme inconnu et on retombera sur la
 // famille `default`.
-async function getPlatformBadgeTemplateId(): Promise<{ badgeTemplateId: string }> {
-  const platform = await prisma.platformSettings.findUnique({
+async function getPlatformBadgeTemplateId(db: Prisma.TransactionClient): Promise<{ badgeTemplateId: string }> {
+  const platform = await db.platformSettings.findUnique({
     where: { id: "singleton" },
     select: { badgeTemplateId: true },
   });
@@ -20,18 +20,21 @@ async function getPlatformBadgeTemplateId(): Promise<{ badgeTemplateId: string }
 export async function resolveEventTemplateId(event: {
   badgeTemplateId: string | null;
   orgId: string;
-}): Promise<string> {
+}, db: Prisma.TransactionClient = prisma): Promise<string> {
   const [organization, platform] = await Promise.all([
-    prisma.organization.findUnique({ where: { id: event.orgId }, select: { badgeTemplateId: true } }),
-    getPlatformBadgeTemplateId(),
+    db.organization.findUnique({ where: { id: event.orgId }, select: { badgeTemplateId: true } }),
+    getPlatformBadgeTemplateId(db),
   ]);
   return resolveBadgeTemplateId({ badgeTemplateId: event.badgeTemplateId }, organization, platform);
 }
 
-export async function findEffectiveTemplateRow(id: string): Promise<InstalledBadgeTemplate | null> {
-  const row = await prisma.installedBadgeTemplate.findUnique({ where: { id } });
+export async function findEffectiveTemplateRow(
+  id: string,
+  db: Prisma.TransactionClient = prisma,
+): Promise<InstalledBadgeTemplate | null> {
+  const row = await db.installedBadgeTemplate.findUnique({ where: { id } });
   if (row) return row;
-  return prisma.installedBadgeTemplate.findFirst({
+  return db.installedBadgeTemplate.findFirst({
     where: { family: DEFAULT_FAMILY },
     orderBy: { version: "desc" },
   });

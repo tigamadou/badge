@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "NODE_ENV=production next build",
-    "build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node22 --format=cjs --external:@prisma/client --outfile=build/worker.cjs",
+    "build:worker": "esbuild src/worker/index.ts --bundle --platform=node --target=node22 --format=cjs --external:@prisma/client --external:@tigamadou/pdf-engine --outfile=build/worker.cjs",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

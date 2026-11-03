@@ -82,7 +82,7 @@ async function pinIn(
     // On fige le template effectif courant (celui qui va changer), pas la copie d'une commande :
     // une copie périmée ne doit pas re-figer l'évènement sur un ancien template. Sans template
     // effectif résolvable, on retombe sur la copie de la première commande qui le retient.
-    const effective = await findEffectiveTemplateRow(await resolveEventTemplateId(event));
+    const effective = await findEffectiveTemplateRow(await resolveEventTemplateId(event, tx), tx);
     await tx.event.update({
       where: { id: eventId },
       data: { badgeTemplateId: effective?.id ?? holders[0].badgeTemplateId },
