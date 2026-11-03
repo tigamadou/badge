@@ -17,9 +17,9 @@ de celle du staff.
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | API messages organisateur : polling et lecture | [x] | 2026-11-02 | GET ?after (400 si date invalide), markRead(at capture avant lecture) sauf staff en consultation ; POST au schéma strict (internal -> 400). Chevauchement 2 s + dédoublonnage : côté client (tâche 2). |
-| 2 | Page conversation 3 colonnes | [~] | 2026-11-03 | Code écrit (page, order/*, thread-sync + test unitaire), typecheck OK ; commité ; e2e print-request-detail/print-conversation bloqués : le serveur dev de la stack 2c renvoie 404 HTML sur toutes les routes /api/org/* authentifiées (routes Turbopack perdues, restarts sans effet ; cache .next/dev à purger par l'utilisateur). 7/12 specs passent (celles sans API). À rejouer. |
-| 3 | Non-lus : liste et menu de l'évènement | [~] | 2026-11-03 | Code écrit (liste, EventShell, layout, router.refresh à l'ouverture) ; commité ; e2e print-conversation.spec.ts écrit, non concluant (même 404 API). |
-| 4 | e2e, doc, vérification | [ ] | | |
+| 2 | Page conversation 3 colonnes | [x] | 2026-11-03 | Page, order/*, thread-sync ; e2e print-request-detail + print-conversation : 12/12. |
+| 3 | Non-lus : liste et menu de l'évènement | [x] | 2026-11-03 | Pastille liste, compteur menu (layout), router.refresh à l'ouverture. |
+| 4 | e2e, doc, vérification | [x] | 2026-11-03 | Doc organisateur, e2e 12/12, lint/typecheck/couverture. |
 
 ## Fichiers du lot (exclusifs)
 
