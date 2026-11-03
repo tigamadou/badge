@@ -49,6 +49,10 @@ export type DemoRegistry = {
   eventsByPhase: Record<EventPhase, DemoEvent[]>;
   eventsByOrg: Map<string /* orgId */, DemoEvent[]>;
   registrations: Map<string /* eventId */, Record<RegistrationStatus, DemoRegistrationRef[]>>;
+  /** Rattachements d'organisation à créer par la Task 6 (organisations connues par leur slug complet). */
+  pendingOrgMembers: Array<{ user: DemoUser; role: OrgRole; orgSlug: string }>;
+  /** Rattachements d'évènement à créer par la Task 6 (évènement de l'organisation, choisi par phase). */
+  pendingEventMembers: Array<{ user: DemoUser; role: EventRole; orgSlug: string; phase: EventPhase | "any" }>;
 };
 
 export type DemoSeedOptions = {
@@ -119,6 +123,8 @@ function emptyRegistry(): DemoRegistry {
     eventsByPhase: { past: [], ongoing: [], upcoming: [] },
     eventsByOrg: new Map(),
     registrations: new Map(),
+    pendingOrgMembers: [],
+    pendingEventMembers: [],
   };
 }
 
