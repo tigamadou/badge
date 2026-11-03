@@ -42,7 +42,7 @@ sur les hypothèses de ce plan :
 | 3 | `deploy.sh` : chemin préprod + test shell | [x] | 2026-11-03 | 4 cas verts (rouge constate avant : cas 3 et 4). Diff deploy.sh = ajout du bloc seul. |
 | 4 | Tests de fumée selon `BADGE_ENV` | [x] | 2026-11-03 | `dataChecks(prisma, env)` exporte ; `runChecks(envVars)` exporte, leve SmokeError nommant BADGE_ENV si absent/inconnu. 14 tests verts, lint/typecheck sans nouvelle alerte. |
 | 5 | Documentation | [x] | 2026-11-03 | DEPLOYMENT.md (section + correction init) et installation.md (section preprod). Cibles citees verifiees dans le Makefile. |
-| 6 | Vérification | [ ] | | |
+| 6 | Vérification | [~] | 2026-11-03 | lint 0 erreur (29 alertes preexistantes), typecheck OK, test-coverage 305 fichiers / 3788 tests verts, gates 100 % OK, `sh -n` OK, compose config OK, docker-compose.yml intact. Smoke tests sans BADGE_ENV : erreur explicite constatee. NON FAIT : rejeu local de la sequence de reset (db push --force-reset sur badge_2c) refuse par le classificateur d'autorisation ; a rejouer par l'utilisateur. |
 
 ## Fichiers du lot (exclusifs)
 
