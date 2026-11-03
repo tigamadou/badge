@@ -54,6 +54,14 @@ describe("cadre du seed de demo", () => {
   });
 
   describe("contexte", () => {
+    it("laisse la reserve d'images presente en stockage apres le nettoyage", async () => {
+      const ctx = await runDemoSeed({ env: DEV, scale: 0.02, accountsFile: null, storagePrefix: TEST_PREFIX });
+      const stored = new Set((await listPrefix(TEST_PREFIX)).map((o) => o.key));
+      const reserved = [...ctx.images.photos, ...ctx.images.logos, ...ctx.images.banners];
+      expect(reserved.length).toBeGreaterThan(0);
+      for (const key of reserved) expect(stored.has(key)).toBe(true);
+    });
+
     it("fournit echelle, dates et stockage", async () => {
       const ctx = await runDemoSeed({ env: DEV, scale: 0.02, accountsFile: null, storagePrefix: TEST_PREFIX });
       expect(ctx.scaled(1000, 1)).toBeGreaterThanOrEqual(1);

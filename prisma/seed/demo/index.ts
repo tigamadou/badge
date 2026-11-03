@@ -1,6 +1,7 @@
 import { assertDemoSeedAllowed } from "../../../src/lib/badge-env";
 import { createDemoContext, type DemoContext, type DemoSeedOptions } from "./context";
 import { cleanupDemoCore } from "./cleanup";
+import { buildImageReserve } from "./images";
 import { writeAccountsFile } from "./accounts-file";
 import { seedAccounts } from "./accounts";
 import { seedOrganizationsAndEvents } from "./organizations";
@@ -30,6 +31,8 @@ export async function runDemoSeed(options: DemoSeedOptions = {}): Promise<DemoCo
     await cleanupBilling(ctx);
     await cleanupPrint(ctx);
     await cleanupDemoCore(ctx);
+    // Le nettoyage vide le prefixe `demo/` : la reserve d'images construite avec le contexte y est effacee.
+    Object.assign(ctx.images, await buildImageReserve(ctx));
   });
 
   try {
