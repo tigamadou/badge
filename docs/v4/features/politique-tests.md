@@ -35,7 +35,7 @@ outil, un perimetre et un objectif de couverture propres.
 - **Perimetre** : les 76 routes `src/app/api/**/route.ts(x)` (+ `route.tsx` badges).
 - **Seuils = gate** : **100%** lignes / branches / fonctions / statements.
 - **Pas de mock de Prisma ni des regles metier** : les tests utilisent la **vraie
-  MySQL de dev** et seedent leurs fixtures via Prisma. Le reset global
+  MySQL de test** (`badge_test`) et seedent leurs fixtures via Prisma. Le reset global
   (`src/test-setup.ts`, `deleteMany` en `beforeEach`) garantit l'isolation.
   Exception ciblee toleree : `vi.spyOn(prisma.<model>, "<method>").mockRejectedValueOnce(...)`
   **mono-appel** (restaure aussitot) pour exercer les branches d'erreur defensives
@@ -52,7 +52,8 @@ outil, un perimetre et un objectif de couverture propres.
 une **base MySQL unique** avec reset en `beforeEach`. Consequences :
 
 - Ne **jamais** lancer deux runs Vitest en parallele.
-- Chaque `make test` **vide la base de dev** -> relancer `make db-seed` pour l'app manuelle.
+- `make test` tourne sur la base `badge_test` : la base de dev (et son seed, `make db-seed` /
+  `make db-seed-demo`) n'est pas touchee.
 
 ## 3. E2E (Playwright) — pages et interactions
 

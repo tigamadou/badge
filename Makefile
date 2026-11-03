@@ -72,7 +72,7 @@ init:
 	@echo "  phpMyAdmin : https://pma.badge.local"
 	@echo "  Mailpit    : https://mail.badge.local"
 	@echo "  RustFS     : https://s3.badge.local (rustfsadmin / rustfsadmin)"
-	@echo "  Comptes    : admin@badge.local (SUPER_ADMIN), mot de passe 123456 (cf. prisma/seed/minimal.ts)"
+	@echo "  Compte     : admin@badge.local (SUPER_ADMIN), mot de passe 123456 ; donnees de demo : make db-seed-demo"
 	@echo "Types Prisma dans l'IDE : lancer 'yarn install' sur l'hote puis 'make db-generate'."
 
 init-check:
@@ -531,12 +531,15 @@ db-push:
 	@$(DEV_COMPOSE) restart worker >/dev/null 2>&1 || true
 	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
 
+# Seed minimal : plans, motifs, templates de badge, gabarits et catalogue d'impression,
+# plus admin@badge.local (dev uniquement, mot de passe 123456).
 db-seed:
 	$(DEV_COMPOSE) exec app npx prisma db seed
 
-# Seed de demonstration (dev uniquement, refuse hors BADGE_ENV=dev|preprod) :
-# organisations, evenements et inscrits fictifs. Relancer sans reset redonne le
-# meme etat. Ecrit la liste des comptes dans .demo/comptes-demo.md.
+# Seed de demonstration (refuse hors BADGE_ENV=dev|preprod) : organisations, evenements,
+# profils et inscriptions fictifs, comptes @demo.local au mot de passe commun 123456.
+# Idempotent (nettoie ses propres donnees puis recree, sans db-reset). Options :
+# DEMO_SCALE (volumes) et DEMO_ACCOUNTS_FILE (defaut .demo/comptes-demo.md).
 db-seed-demo:
 	$(DEV_COMPOSE) exec -e SEED_MODE=demo app npx prisma db seed
 

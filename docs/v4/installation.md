@@ -22,8 +22,27 @@ make init
 | 5 | `db-push` puis `db-seed` | Schema Prisma et donnees de dev (dont les templates de badge). |
 | 6 | `dev-https` puis `dev-https-check` | `/etc/hosts` + CA Caddy (mot de passe admin demande), puis verification. |
 
-Comptes crees par le seed : `admin@badge.local` (SUPER_ADMIN), `admin2@`, `support@`,
-`observer@`, `participant@badge.local`, mot de passe `123456` (cf. `prisma/seed.ts`).
+Compte cree par le seed minimal (`make db-seed`) : `admin@badge.local` (SUPER_ADMIN, dev
+uniquement), mot de passe `123456` (cf. `prisma/seed/minimal.ts`).
+
+### Seed de demonstration (dev)
+
+`make db-seed-demo` (apres `make db-seed`) remplit la base de dev avec des organisations,
+evenements, profils et inscriptions fictifs a tous les statuts. Il est idempotent : il
+supprime d'abord ses propres donnees (organisations `demo-*`, utilisateurs `@demo.local`,
+objets sous `demo/` du stockage) puis les recree, sans `make db-reset`.
+
+- **Garde-fou** : refuse de tourner si `BADGE_ENV` ne vaut pas `dev` ou `preprod`.
+- **Comptes** : tous en `@demo.local` (`owner.grosse-org@`, `manager.moyenne-1@`,
+  `event-operator@`, `participant.blocked@`, `invitation.pending@`...) plus les comptes
+  staff `admin2@`, `support@`, `observer@badge.local` ; **mot de passe commun `123456`**.
+  La liste complete (email, role, cas) est ecrite dans `.demo/comptes-demo.md`.
+- **`DEMO_SCALE`** (defaut `1`) : multiplie les volumes (ex. `DEMO_SCALE=0.1` pour un jeu reduit).
+- **`DEMO_ACCOUNTS_FILE`** : chemin du fichier de comptes (defaut `.demo/comptes-demo.md`).
+- **Volumes et duree (`DEMO_SCALE=1`)** : 12 organisations, 28 evenements, 7 510 inscriptions (dont 3 200 sur l'evenement de la
+  grosse organisation), 4 892 utilisateurs, 5 116 envois de profil ; duree mesuree d'environ
+  9 s (nettoyage inclus), identique a la relance. Les etapes impression, facturation et
+  notifications/journal sont completees par les lots suivants.
 
 > Un port deja pris (autre stack Docker exposant 80/443, MySQL local sur 33060...) fait
 > echouer `init-check` avec la liste des ports : arreter le service concerne et relancer.
