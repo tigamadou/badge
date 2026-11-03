@@ -97,8 +97,8 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     expect(added.unitPrice).toBe(2500);
     expect(added.addedBy).toBe("STAFF");
 
-    // Les deux modifications consécutives du même auteur forment une seule entrée du fil.
-    await expect(page.getByText("2 lignes modifiées")).toHaveCount(1);
+    // Chaque modification de ligne crée sa propre entrée du fil.
+    await expect(page.getByText(/Ligne ajoutée : Frais de livraison/)).toHaveCount(1);
 
     // Envoi du devis.
     await page.getByRole("button", { name: "Envoyer le devis" }).click();

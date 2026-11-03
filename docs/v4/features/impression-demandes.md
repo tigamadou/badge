@@ -107,8 +107,9 @@ automatiques (`kind = EVENT`) : envoi, modifications de lignes, badges, informat
 accepté, rouvert ou en révision, changement de template, changement de statut, refus, annulation,
 paiement reçu ou échoué, planches lancées, inscriptions écartées.
 
-- Les modifications de lignes consécutives du même auteur sont **regroupées dans une seule entrée**
-  (« 2 lignes modifiées » côté staff, une liste détaillée côté organisateur).
+- Chaque modification de lignes crée **sa propre entrée** (aucun regroupement) : une entrée n'est
+  jamais modifiée après coup, ce qui garantit que le rafraîchissement par date de création
+  (`?after=`) la retrouve.
 - Les corps sont stockés bruts et **rendus en texte seulement**, jamais en HTML.
 - Le paiement hors ligne écrit « Paiement reçu : … (hors ligne : motif) ».
 - L'écran de l'organisateur se rafraîchit toutes les 30 secondes quand l'onglet est visible.
@@ -187,7 +188,7 @@ cas d'échec. Les entrées du journal d'activité sont `PRINT_REQUEST_SUBMITTED`
 | `src/lib/print-requests/lifecycle.ts` | Création, envoi, annulation, acceptation |
 | `src/lib/print-requests/content.ts` | Badges, produits, quantités, validation des fichiers |
 | `src/lib/print-requests/quote.ts` | Lignes du devis côté staff, envoi, réouverture, refus, paiement manuel |
-| `src/lib/print-requests/thread.ts` | Fil : entrées automatiques et regroupement |
+| `src/lib/print-requests/thread.ts` | Fil : entrées automatiques |
 | `src/lib/print-requests/template-lock*.ts` | Verrou et épinglage du template |
 | `src/app/api/org/[orgId]/events/[eventId]/print-requests/**` | Routes organisateur |
 | `src/app/api/platform/print/requests/**` | Routes staff |

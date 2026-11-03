@@ -161,3 +161,9 @@ classique, peu adapté à une négociation suivie.
 - Planche visible de l'organisateur.
 - Correction du nettoyage du seed de démo (`Registration.category` sans cascade) — signalé à
   part.
+
+## Amendement du 2026-11-03
+
+- Le fil ne regroupe plus les modifications de lignes consécutives : chaque modification crée une
+  entrée. La mise à jour sur place d'une entrée existante n'était jamais revue par les écrans, qui
+  interrogent le fil par date de création (`?after=`) et dédoublonnent par id.

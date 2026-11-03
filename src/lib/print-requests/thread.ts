@@ -124,10 +124,9 @@ export function describeThreadEvent(
   }
 }
 
-// Ajoute une entrée automatique au fil ; les modifications de lignes consécutives du même
-// auteur sont regroupées dans la dernière entrée. Les ajouts sont sérialisés par commande :
-// la ligne PrintRequest est verrouillée (FOR UPDATE) avant de lire la dernière entrée, donc
-// deux modifications concurrentes ne perdent aucun changement. Les corps (messages et textes
+// Ajoute une entrée automatique au fil : une entrée par appel, sans regroupement. Une entrée
+// n'est jamais modifiée après coup, car les écrans interrogent le fil par date de création
+// (?after=) et ne reverraient pas une entrée mise à jour sur place. Les corps (messages et textes
 // d'évènement) sont stockés bruts et doivent être rendus en texte, jamais en HTML.
 export async function appendThreadEvent(
   tx: Prisma.TransactionClient,
@@ -137,31 +136,6 @@ export async function appendThreadEvent(
   actor: ThreadActor = SYSTEM_ACTOR,
   opts: { internal?: boolean } = {},
 ): Promise<PrintRequestMessage> {
-  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
-  if (eventType === "LINES_CHANGED") {
-    const last = await tx.printRequestMessage.findFirst({
-      where: { requestId },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    });
-    if (
-      last &&
-      last.kind === "EVENT" &&
-      last.eventType === "LINES_CHANGED" &&
-      last.side === actor.side &&
-      last.authorId === actor.userId &&
-      last.internal === (opts.internal ?? false)
-    ) {
-      const previous = changesOf((last.details as { changes?: unknown } | null)?.changes);
-      const merged = { ...details, changes: [...previous, ...changesOf(details.changes)] };
-      return tx.printRequestMessage.update({
-        where: { id: last.id },
-        data: {
-          details: merged as unknown as Prisma.InputJsonValue,
-          body: describeThreadEvent("LINES_CHANGED", merged),
-        },
-      });
-    }
-  }
   return tx.printRequestMessage.create({
     data: {
       requestId,

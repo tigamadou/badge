@@ -144,56 +144,40 @@ describe("appendThreadEvent", () => {
     expect(m).toMatchObject({ kind: "EVENT", side: "SYSTEM", authorId: null, eventType: "CANCELLED", body: "Commande annulée" });
   });
 
-  it("trois modifications de lignes du même staff donnent une seule entrée « 3 lignes modifiées »", async () => {
+  it("trois modifications de lignes du même staff donnent trois entrées distinctes", async () => {
     const { request, staff } = await seed();
     const actor = { userId: staff.id, side: "STAFF" as const };
-    let last;
+    const ids: string[] = [];
     for (const id of ["a", "b", "c"]) {
-      last = await prisma.$transaction((tx) =>
+      const m = await prisma.$transaction((tx) =>
         appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor),
       );
+      ids.push(m.id);
     }
-    const rows = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
-    expect(rows).toHaveLength(1);
-    expect((rows[0].details as { changes: unknown[] }).changes).toHaveLength(3);
-    expect(rows[0].body).toBe("3 lignes modifiées");
-    expect(last!.id).toBe(rows[0].id);
-  });
-
-  it("un message intercalé coupe le regroupement", async () => {
-    const { request, staff } = await seed();
-    const actor = { userId: staff.id, side: "STAFF" as const };
-    const add = (id: string) =>
-      prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor));
-    await add("a");
-    await postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "Bonjour", attachmentKey: null });
-    await add("b");
-    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(3);
-  });
-
-  it("un autre type d'entrée intercalé coupe le regroupement", async () => {
-    const { request, staff } = await seed();
-    const actor = { userId: staff.id, side: "STAFF" as const };
-    await prisma.$transaction(async (tx) => {
-      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, actor);
-      await appendThreadEvent(tx, request.id, "QUOTE_REVISION", {}, actor);
-      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, actor);
+    const rows = await prisma.printRequestMessage.findMany({
+      where: { requestId: request.id },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
-    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(3);
+    expect(rows.map((r) => r.id).sort()).toEqual([...ids].sort());
+    expect(rows.every((r) => (r.details as { changes: unknown[] }).changes.length === 1)).toBe(true);
+    expect(rows.map((r) => (r.details as { changes: { lineId: string }[] }).changes[0].lineId)).toEqual(["a", "b", "c"]);
   });
 
-  it("auteur différent ou côté différent : pas de regroupement", async () => {
+  it("une entrée par appel, quel que soit l'auteur, le côté ou l'entrée intercalée", async () => {
     const { request, staff, staff2, organizer } = await seed();
     await prisma.$transaction(async (tx) => {
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, { userId: staff.id, side: "STAFF" });
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, { userId: staff2.id, side: "STAFF" });
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("c")] }, { userId: staff2.id, side: "ORGANIZER" });
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("d")] }, { userId: organizer.id, side: "ORGANIZER" });
+      await appendThreadEvent(tx, request.id, "QUOTE_REVISION", {}, { userId: staff.id, side: "STAFF" });
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("e")] }, { userId: staff.id, side: "STAFF" });
     });
-    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(4);
+    await postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "Bonjour", attachmentKey: null });
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(7);
   });
 
-  it("interne et public ne fusionnent pas, dans les deux sens", async () => {
+  it("interne et public restent des entrées séparées", async () => {
     const { request, staff } = await seed();
     const actor = { userId: staff.id, side: "STAFF" as const };
     await prisma.$transaction(async (tx) => {
@@ -291,37 +275,16 @@ describe("postMessage", () => {
 });
 
 describe("appendThreadEvent : concurrence", () => {
-  it("deux ajouts simultanés du même auteur gardent les deux changements", async () => {
+  it("deux ajouts simultanés du même auteur créent deux entrées", async () => {
     const { request, staff } = await seed();
     const actor = { userId: staff.id, side: "STAFF" as const };
     const add = (id: string) =>
       prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor));
     await Promise.all([add("a"), add("b")]);
     const rows = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
-    expect(rows).toHaveLength(1);
-    const ids = (rows[0].details as { changes: { lineId: string }[] }).changes.map((c) => c.lineId).sort();
+    expect(rows).toHaveLength(2);
+    const ids = rows.flatMap((r) => (r.details as { changes: { lineId: string }[] }).changes.map((c) => c.lineId)).sort();
     expect(ids).toEqual(["a", "b"]);
-  });
-
-  it("tolère un details stocké sans tableau changes", async () => {
-    const { request, staff } = await seed();
-    await prisma.printRequestMessage.create({
-      data: {
-        requestId: request.id, authorId: staff.id, side: "STAFF", kind: "EVENT",
-        eventType: "LINES_CHANGED", body: "x", details: { changes: "oops" },
-      },
-    });
-    const m = await prisma.$transaction((tx) =>
-      appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, { userId: staff.id, side: "STAFF" }),
-    );
-    expect((m.details as { changes: unknown[] }).changes).toHaveLength(1);
-    const nul = await prisma.printRequestMessage.create({
-      data: { requestId: request.id, authorId: staff.id, side: "STAFF", kind: "EVENT", eventType: "LINES_CHANGED", body: "x" },
-    });
-    const m2 = await prisma.$transaction((tx) =>
-      appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, { userId: staff.id, side: "STAFF" }),
-    );
-    expect(m2.id).toBe(nul.id);
   });
 });
 

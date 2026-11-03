@@ -7,6 +7,7 @@ import {
   choiceFailureToError,
   setOrganizerProducts,
 } from "@/lib/print-requests/content";
+import { listThread } from "@/lib/print-requests/thread";
 import { optionChoiceSchema, organizerProductsSchema } from "@/lib/print-requests/inputs";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
 
@@ -210,8 +211,7 @@ describe("setOrganizerProducts — comparaison avec les lignes existantes", () =
 
   it("SUBMITTED : retirer le cordon pose removedAt et écrit « Ligne retirée : Cordon »", async () => {
     const r = await requestWithBadges("SUBMITTED");
-    // Autre auteur pour la première saisie : le fil ne regroupe pas les deux entrées.
-    await set(r.id, [badge(), lanyard()], fx.manager.id);
+    await set(r.id, [badge(), lanyard()]);
     const res = await set(r.id, [badge()]);
     expect(res.total).toBe(4500);
     const all = await lines(r.id);
@@ -223,6 +223,21 @@ describe("setOrganizerProducts — comparaison avec les lignes existantes", () =
     expect(events[1].side).toBe("ORGANIZER");
   });
 
+
+  it("deux modifications successives de l'organisateur : deux entrées, la seconde visible par ?after", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    await set(r.id, [badge(), lanyard()]);
+    const [first] = await thread(r.id);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await set(r.id, [badge()]);
+    const all = await thread(r.id);
+    expect(all.map((e) => e.eventType)).toEqual(["LINES_CHANGED", "LINES_CHANGED"]);
+    expect(all[0].id).toBe(first.id);
+    expect(all[0].createdAt).toEqual(first.createdAt);
+    const fresh = await listThread(r.id, "ORGANIZER", { after: first.createdAt });
+    expect(fresh.map((e) => e.id)).toEqual([all[1].id]);
+    expect(fresh[0].body).toBe("Ligne retirée : Cordon");
+  });
   it("SUBMITTED : ajout tracé, renvoi à l'identique -> aucune nouvelle entrée", async () => {
     const r = await requestWithBadges("SUBMITTED");
     await set(r.id, [badge()]);

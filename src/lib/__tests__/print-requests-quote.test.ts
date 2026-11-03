@@ -87,8 +87,8 @@ describe("describeLineChange — intitulé seul", () => {
   });
 });
 
-describe("modifications du staff regroupées (critère 2)", () => {
-  it("prix du support 1500 -> 1200 puis ligne de service : une entrée, total recalculé, statut SUBMITTED", async () => {
+describe("modifications du staff : une entrée par modification (critère 2)", () => {
+  it("prix du support 1500 -> 1200 puis ligne de service : deux entrées, total recalculé, statut SUBMITTED", async () => {
     const { r, support } = await requestWithLines();
     const upd = await updateStaffLine({ requestId: r.id, lineId: support.id, userId: staff(), patch: { unitPrice: 1200 } });
     expect(upd.revised).toBe(false);
@@ -102,10 +102,11 @@ describe("modifications du staff regroupées (critère 2)", () => {
     expect(after.total).toBe(3600 + 1500 + 5000);
     expect(after.status).toBe("SUBMITTED");
     const entries = (await thread(r.id)).filter((m) => m.kind === "EVENT");
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ eventType: "LINES_CHANGED", side: "STAFF", authorId: staff(), body: "2 lignes modifiées" });
-    const changes = (entries[0].details as { changes: { op: string }[] }).changes;
-    expect(changes.map((c) => c.op)).toEqual(["UPDATED", "ADDED"]);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({ eventType: "LINES_CHANGED", side: "STAFF", authorId: staff() });
+    expect(entries[1]).toMatchObject({ eventType: "LINES_CHANGED", side: "STAFF", authorId: staff() });
+    const ops = entries.map((e) => (e.details as { changes: { op: string }[] }).changes.map((c) => c.op));
+    expect(ops).toEqual([["UPDATED"], ["ADDED"]]);
     expect(await reject(prisma.$transaction((tx) => applyTransition(tx, r, "ACCEPT", "ORGANIZER")))).toMatchObject({ code: "INVALID_TRANSITION" });
   });
 
@@ -115,9 +116,9 @@ describe("modifications du staff regroupées (critère 2)", () => {
     expect(res.line).toMatchObject({ quantity: 5, lineTotal: 2500, quantityOverridden: true, priceOverridden: false });
     const res2 = await updateStaffLine({ requestId: r.id, lineId: cordon.id, userId: staff(), patch: { label: "Cordon bleu" } });
     expect(res2.line).toMatchObject({ label: "Cordon bleu", quantityOverridden: true, priceOverridden: false });
-    const [entry] = (await thread(r.id)).filter((m) => m.kind === "EVENT");
-    expect((entry.details as { changes: unknown[] }).changes).toHaveLength(2);
-    expect((entry.details as { changes: { from: unknown; to: unknown }[] }).changes[0]).toMatchObject({
+    const entries = (await thread(r.id)).filter((m) => m.kind === "EVENT");
+    expect(entries).toHaveLength(2);
+    expect((entries[0].details as { changes: { from: unknown; to: unknown }[] }).changes[0]).toMatchObject({
       from: { quantity: 3, unitPrice: 500 }, to: { quantity: 5, unitPrice: 500 },
     });
   });
