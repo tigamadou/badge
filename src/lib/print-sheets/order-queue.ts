@@ -74,3 +74,8 @@ export async function listOrdersWithSheet(): Promise<OrderQueueRow[]> {
   });
   return Promise.all(orders.map(toRow));
 }
+
+// Compteur de l'onglet « À traiter ».
+export function countOrdersToGenerate(): Promise<number> {
+  return prisma.printRequest.count({ where: queueWhere({ is: null }) });
+}

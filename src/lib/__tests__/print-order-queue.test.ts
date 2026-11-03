@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { listOrdersToGenerate, listOrdersWithSheet } from "@/lib/print-sheets/order-queue";
+import { countOrdersToGenerate, listOrdersToGenerate, listOrdersWithSheet } from "@/lib/print-sheets/order-queue";
 import {
   makeCategory,
   makeEvent,
@@ -115,5 +115,16 @@ describe("listOrdersWithSheet", () => {
     await makePrintGeneration({ eventId, printRequestId: onsite.id, data: { status: "DONE" } });
     await makePrintGeneration({ eventId, printRequestId: ready.id, data: { status: "DONE" } });
     expect(await listOrdersWithSheet()).toEqual([]);
+  });
+});
+
+describe("countOrdersToGenerate", () => {
+  it("compte les commandes à traiter, comme la liste", async () => {
+    await makePrintOrder({ eventId, orgId, status: "PAID" });
+    await makePrintOrder({ eventId, orgId, status: "IN_PRODUCTION" });
+    await makePrintOrder({ eventId, orgId, status: "PAID", type: "ONSITE" });
+    const done = await makePrintOrder({ eventId, orgId, status: "PAID" });
+    await makePrintGeneration({ eventId, printRequestId: done.id, data: { status: "DONE" } });
+    expect(await countOrdersToGenerate()).toBe(2);
   });
 });
