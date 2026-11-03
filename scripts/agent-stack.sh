@@ -8,7 +8,7 @@
 #   scripts/agent-stack.sh down <lot>                # arrete la stack (worktree, branche, bases gardes)
 #   scripts/agent-stack.sh status
 #
-# Le lot donne : worktree ../badge-wt-<lot>, branche feat/commandes-impression-<lot>,
+# Le lot donne : worktree ../badge-wt-<lot>, branche <branche-base>-<lot>,
 # projet Compose badge-ag-<lot>, bases badge_<lot> et badge_<lot>_test, buckets
 # badge-<lot> et badge-<lot>-test, port de l'app 3790-3799 (127.0.0.1 seulement).
 
@@ -53,7 +53,7 @@ cmd_up() {
   [[ -n "$base" ]] || die "usage : up <lot> <branche-base>"
   local wt branch
   wt="$(worktree_of "$lot")"
-  branch="feat/commandes-impression-$lot"
+  branch="$base-$lot"
 
   # Prealables.
   local running
@@ -114,8 +114,8 @@ cmd_down() {
   port="$(awk -F' = ' '/^AGENT_APP_PORT/{print $2}' "$wt/.agent.env")"
   agent_compose "$lot" "$port" down -v
   echo "✓ Stack badge-ag-$lot arrêtée (conteneurs et volumes de l'agent supprimés)."
-  echo "  Conservés : worktree $wt, branche feat/commandes-impression-$lot, bases badge_$lot*, buckets badge-$lot*."
-  echo "  Après fusion : git worktree remove $wt && git branch -d feat/commandes-impression-$lot"
+  echo "  Conservés : worktree $wt, branche du lot, bases badge_$lot*, buckets badge-$lot*."
+  echo "  Après fusion : git worktree remove $wt && git branch -d <branche-du-lot>"
   echo "                 make db-drop-agent LOT=$lot   (bases de l'agent)"
 }
 
