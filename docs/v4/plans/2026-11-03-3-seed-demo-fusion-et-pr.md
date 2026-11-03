@@ -13,12 +13,12 @@ démo de bout en bout), pousser la branche et ouvrir une PR.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Fusion 2a | [ ] | | |
-| 2 | Fusion 2b | [ ] | | |
-| 3 | Fusion 2c | [ ] | | |
-| 4 | Vérification complète | [ ] | | |
-| 5 | Push et PR | [ ] | | |
-| 6 | Nettoyage des stacks d'agents | [ ] | | |
+| 1 | Fusion 2a | [x] | 2026-11-03 | sans conflit |
+| 2 | Fusion 2b | [x] | 2026-11-03 | sans conflit |
+| 3 | Fusion 2c | [x] | 2026-11-03 | sans conflit |
+| 4 | Vérification complète | [x] | 2026-11-03 | lint, typecheck, couverture 100 % (3829 tests), seed 22 s idempotent, e2e 451/452 (1 échec préexistant), navigateur 375/1280 OK ; rejeu db push --force-reset du lot 2c non fait |
+| 5 | Push et PR | [x] | 2026-11-03 | |
+| 6 | Nettoyage des stacks d'agents | [x] | 2026-11-03 | stacks arrêtées, worktrees et branches conservés |
 
 ## Global Constraints
 
