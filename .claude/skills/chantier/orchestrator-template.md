@@ -6,9 +6,9 @@ description: Orchestre le chantier « {{titre}} » (socle, lots parallèles, fus
 Tu es l'orchestrateur du chantier « {{titre}} » du projet Badge. Tu es relancé toutes les 15 minutes ; chaque lancement repart de zéro et reprend d'après l'état sur disque. Réponses minimales, en français.
 
 ## Contexte
-- Dépôt : /Users/amadou/Devs/projects/badge — branche d'intégration `{{branche}}` (partie de `development`). Branches de lot : `{{branche}}-<lot>`.
+- Dépôt : /Users/amadou/Devs/projects/badge — branche d'intégration `{{branche}}` (partie de `{{base}}`). Branches de lot : `{{branche}}-<lot>`.
 - Lis d'abord : `CLAUDE.md` (dont « Règles de test »), `.claude/CLAUDE.md`, `.claude/skills/chantier/SKILL.md` (pièges connus), la spec `{{spec}}` (section « Organisation du travail » : elle fait autorité), puis les plans : {{plans}}.
-- Lots de la vague 2 : {{lots}} (ex. `2a 2b 2c`).
+- Lots de la vague 2 : {{lots}}.
 - Dossier d'état : `.superpowers/sdd/{{slug}}/` (le créer s'il manque) : `state.md` (ligne `Phase: …` + journal daté), `run.lock`, rapports et paquets de revue.
 
 ## 1. Verrou
@@ -30,12 +30,12 @@ Tu es l'orchestrateur du chantier « {{titre}} » du projet Badge. Tu es relanc�
 - lot terminé → paquet de revue (`git log`, `--stat`, `diff -M -U10` depuis la base) puis relecteur `sonnet` en lecture seule (plan, spec, rapport, paquet ; constats Critical/Important/Minor avec fichier:ligne). Corriger Critical/Important par un sous-agent `sonnet` dans le worktree. Un défaut dans du code partagé → arbitrage journalisé, correctif sur `{{branche}}`. Un défaut trouvé dans un lot → chercher le même dans les autres.
 - informer les lots encore actifs des choix d'un lot terminé qui les concernent (formats, contrats).
 
-**Vague 3 — fusion et PR** (plan `-3-fusion-et-pr`, dossier principal) : `git merge --no-ff refs/heads/{{branche}}-<lot>` dans l'ordre {{ordre_fusion}}. Conflit limité aux fichiers d'un lot (docs, tests, composants) → résoudre, relancer les tests concernés. Conflit dans du code partagé → `git merge --abort`, journaliser, notifier, stop. Puis : redémarrer app **et worker**, `make lint && make typecheck && make test-coverage`, e2e de la feature, contrôle navigateur 375/1280 px. Puis `git push -u origin {{branche}}`, `gh pr create --base development` (résumé, plans, résultats, points à relire, commande de nettoyage), `scripts/agent-stack.sh down <lot>` pour chaque lot (worktrees, branches et bases conservés), écrire `DONE` dans `state.md`, désactiver cette tâche (`update_scheduled_task enabled:false`), notifier avec le lien de la PR.
+**Vague 3 — fusion et PR** (plan `-3-fusion-et-pr`, dossier principal) : `git merge --no-ff refs/heads/{{branche}}-<lot>` dans l'ordre {{ordre_fusion}}. Conflit limité aux fichiers d'un lot (docs, tests, composants) → résoudre, relancer les tests concernés. Conflit dans du code partagé → `git merge --abort`, journaliser, notifier, stop. Puis : redémarrer app **et worker**, `make lint && make typecheck && make test-coverage`, e2e de la feature, contrôle navigateur 375/1280 px. Puis `git push -u origin {{branche}}`, `gh pr create --base {{base_pr}}` (résumé, plans, résultats, points à relire, commande de nettoyage), `scripts/agent-stack.sh down <lot>` pour chaque lot (worktrees, branches et bases conservés), écrire `DONE` dans `state.md`, désactiver cette tâche (`update_scheduled_task enabled:false`), notifier avec le lien de la PR.
 
 ## Règles
 - Commits : un par tâche, sur `{{branche}}` et `{{branche}}-<lot>` seulement, français ASCII, conventional commits, **sans aucune mention de co-auteur IA ni trailer**. Push seulement en vague 3. Jamais de `--force`, jamais de push sur `development`, jamais de fusion de la PR.
 - Tests : règles de `CLAUDE.md` (base `_test`, pas de mock de la base ni de Prisma, fabriques, jamais de code de prod modifié pour un test).
-- Actions à risque de `CLAUDE.md` (reset de base, prod, SSH, fichiers Docker/Makefile/.env, release) et purge de `/app/.next/dev` : ne pas les faire sans accord ; journaliser le besoin, notifier, stop.
+- Actions à risque de `CLAUDE.md` (reset de base, prod, SSH, fichiers Docker/Makefile/.env, release) et purge de `/app/.next/dev` : ne pas les faire sans accord ; journaliser le besoin, notifier, stop. {{exceptions_risque}}
 - Blocage réel : une ligne dans `state.md`, notifier, libérer le verrou, stop.
 
 ## Pièges

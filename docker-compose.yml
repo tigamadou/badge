@@ -31,11 +31,12 @@ services:
     env_file:
       - .env.production
     environment:
+      BADGE_ENV: prod
       RENDERER_URL: http://badge-renderer:3000
     networks:
       - default
       - rendu
-    command: ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx prisma/seed-super-admin.ts"]
+    command: ["sh", "-c", "npx prisma db push --accept-data-loss && SEED_MODE=super-admin npx tsx prisma/seed.ts"]
     restart: "no"
     depends_on:
       mysql:
@@ -65,6 +66,7 @@ services:
     env_file:
       - .env.production
     environment:
+      BADGE_ENV: prod
       RENDERER_URL: http://badge-renderer:3000
     volumes:
       - uploads_data:/app/uploads
@@ -90,6 +92,7 @@ services:
     env_file:
       - .env.production
     environment:
+      BADGE_ENV: prod
       RENDERER_URL: http://badge-renderer:3000
     networks:
       - default
@@ -170,6 +173,7 @@ services:
     env_file:
       - .env.production
     environment:
+      BADGE_ENV: prod
       RENDERER_URL: http://badge-renderer:3000
     volumes:
       - uploads_data:/app/uploads
