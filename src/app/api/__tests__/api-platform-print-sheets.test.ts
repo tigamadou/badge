@@ -90,6 +90,28 @@ describe("POST /api/platform/print/sheets", () => {
     expect(logs).toHaveLength(1);
   });
 
+  it("regenere la planche d'une commande (meme ligne) et refuse tant qu'elle est en cours (409)", async () => {
+    await asStaff();
+    const { event, layout, r } = await fixture();
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-R"), eventId: event.id, orgId: event.orgId, type: "ADVANCE", status: "PAID" },
+    });
+    await prisma.printRequestItem.create({ data: { requestId: request.id, registrationId: r.id, position: 0 } });
+    const { POST } = await import("@/app/api/platform/print/sheets/route");
+    const body = { eventId: event.id, layoutId: layout.id, printRequestId: request.id, selection: { mode: "REQUEST" } };
+    const first = await POST(req("/api/platform/print/sheets", "POST", body), noParams);
+    expect(first.status).toBe(201);
+    const { generation } = await first.json();
+    const busy = await POST(req("/api/platform/print/sheets", "POST", body), noParams);
+    expect(busy.status).toBe(409);
+    expect((await busy.json()).error).toBe("GENERATION_IN_PROGRESS");
+    await prisma.printSheetGeneration.update({ where: { id: generation.id }, data: { status: "DONE" } });
+    const again = await POST(req("/api/platform/print/sheets", "POST", body), noParams);
+    expect(again.status).toBe(201);
+    expect((await again.json()).generation.id).toBe(generation.id);
+    expect(await prisma.printSheetGeneration.count({ where: { printRequestId: request.id } })).toBe(1);
+  });
+
   it("transmet printRequestId et lie la generation a la commande", async () => {
     await asStaff();
     const { event, layout, r } = await fixture();
@@ -253,6 +275,48 @@ describe("GET /api/platform/print/sheets (liste de l'ecran)", () => {
     expect(ids).not.toContain(zip.id);
     expect(generations[0]).not.toHaveProperty("registrationIds");
     expect(generations[0]).not.toHaveProperty("layoutSnapshot");
+  });
+
+  it("n'inclut pas les planches rattachees a une commande", async () => {
+    await asStaff();
+    const { event } = await fixture();
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-L"), eventId: event.id, orgId: event.orgId, type: "ADVANCE", status: "PAID" },
+    });
+    const linked = await prisma.printSheetGeneration.create({
+      data: { eventId: event.id, registrationIds: [], printRequestId: request.id },
+    });
+    const free = await prisma.printSheetGeneration.create({ data: { eventId: event.id, registrationIds: [] } });
+    const { GET } = await import("@/app/api/platform/print/sheets/route");
+    const { generations } = await (await GET(req("/api/platform/print/sheets", "GET"), noParams)).json();
+    const ids = generations.map((g: { id: string }) => g.id);
+    expect(ids).toContain(free.id);
+    expect(ids).not.toContain(linked.id);
+  });
+});
+
+describe("GET /api/platform/print/sheets/orders", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("401, 403 pour STAFF_OBSERVER, puis la liste des commandes avec planche", async () => {
+    const { GET } = await import("@/app/api/platform/print/sheets/orders/route");
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+    expect((await GET(req("/x", "GET"), noParams)).status).toBe(401);
+    await asStaff("STAFF_OBSERVER");
+    expect((await GET(req("/x", "GET"), noParams)).status).toBe(403);
+    await asStaff();
+    const { event } = await fixture();
+    const request = await prisma.printRequest.create({
+      data: { reference: uniq("PR-O"), eventId: event.id, orgId: event.orgId, type: "ADVANCE", status: "PAID" },
+    });
+    await prisma.printSheetGeneration.create({
+      data: { eventId: event.id, registrationIds: [], printRequestId: request.id, status: "DONE", sheetCount: 1 },
+    });
+    const res = await GET(req("/x", "GET"), noParams);
+    expect(res.status).toBe(200);
+    const { orders } = await res.json();
+    expect(orders).toHaveLength(1);
+    expect(orders[0]).toMatchObject({ requestId: request.id, sheet: { status: "DONE" } });
   });
 });
 

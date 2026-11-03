@@ -469,4 +469,88 @@ describe("createGeneration depuis une commande", () => {
     vi.doUnmock("@/lib/print-requests/thread");
     vi.resetModules();
   });
+
+  it("ecrase la planche existante : meme ligne, gabarit change, compteurs et verrous remis a zero", async () => {
+    const s = await linked();
+    const first = await createGeneration(base(s));
+    const other = await prisma.printSheetLayout.create({ data: layoutData(uniq("lay2")) });
+    await prisma.printSheetGeneration.update({
+      where: { id: first.id },
+      data: {
+        status: "DONE",
+        attempts: 2,
+        lockedBy: "w1",
+        heartbeatAt: new Date(),
+        sheetCount: 4,
+        skippedIds: ["x"],
+        fileKey: "print-sheets/orders/old.pdf",
+        error: "ancienne erreur",
+        startedAt: new Date(),
+        completedAt: new Date(),
+        createdAt: new Date("2026-01-01T00:00:00Z"),
+      },
+    });
+    const again = await createGeneration(base(s, { layoutId: other.id, selection: { mode: "REQUEST" } }));
+    expect(again.id).toBe(first.id);
+    expect(await prisma.printSheetGeneration.count({ where: { printRequestId: s.request.id } })).toBe(1);
+    expect(again).toMatchObject({
+      layoutId: other.id,
+      status: "PENDING",
+      attempts: 0,
+      lockedBy: null,
+      heartbeatAt: null,
+      sheetCount: null,
+      skippedIds: null,
+      error: null,
+      startedAt: null,
+      completedAt: null,
+      badgeCount: 3,
+      duplex: true,
+      fileKey: "print-sheets/orders/old.pdf",
+    });
+    expect(again.registrationIds).toEqual(s.ordered);
+    expect(again.createdAt.getTime()).toBeGreaterThan(new Date("2026-06-01T00:00:00Z").getTime());
+    expect((again.layoutSnapshot as unknown as GenerationSnapshot).spec).toEqual(toLayoutSpec(other));
+    const events = await prisma.printRequestMessage.findMany({
+      where: { requestId: s.request.id, eventType: "SHEETS_GENERATED" },
+    });
+    expect(events).toHaveLength(2);
+    const logs = await prisma.activityLog.findMany({ where: { type: "PRINT_SHEETS_GENERATED" }, orderBy: { createdAt: "asc" } });
+    expect(logs.map((l) => (l.details as { regenerated: boolean }).regenerated)).toEqual([false, true]);
+  });
+
+  it("ecrase aussi une planche en echec", async () => {
+    const s = await linked();
+    const first = await createGeneration(base(s));
+    await prisma.printSheetGeneration.update({ where: { id: first.id }, data: { status: "FAILED", error: "boom" } });
+    const again = await createGeneration(base(s));
+    expect(again).toMatchObject({ id: first.id, status: "PENDING", error: null });
+  });
+
+  it("refuse la regeneration d'une planche PENDING ou RUNNING (GENERATION_IN_PROGRESS 409)", async () => {
+    const s = await linked();
+    const first = await createGeneration(base(s));
+    for (const status of ["PENDING", "RUNNING"] as const) {
+      await prisma.printSheetGeneration.update({ where: { id: first.id }, data: { status } });
+      const e = await code(createGeneration(base(s)));
+      expect(e.code).toBe("GENERATION_IN_PROGRESS");
+      expect(e.httpStatus).toBe(409);
+    }
+    expect(await prisma.printRequestMessage.count({ where: { requestId: s.request.id, eventType: "SHEETS_GENERATED" } })).toBe(1);
+  });
+
+  it("deux creations simultanees pour la meme commande : une seule planche, l'autre est refusee", async () => {
+    const s = await linked();
+    const results = await Promise.allSettled([createGeneration(base(s)), createGeneration(base(s))]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect((rejected.reason as GenerationError).code).toBe("GENERATION_IN_PROGRESS");
+    expect(await prisma.printSheetGeneration.count({ where: { printRequestId: s.request.id } })).toBe(1);
+  });
+
+  it("relance les erreurs inattendues de la creation (utilisateur inconnu)", async () => {
+    const s = await linked();
+    await expect(createGeneration(base(s, { userId: "inconnu" }))).rejects.not.toBeInstanceOf(GenerationError);
+    expect(await prisma.printSheetGeneration.count({ where: { printRequestId: s.request.id } })).toBe(0);
+  });
 });

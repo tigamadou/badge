@@ -8,8 +8,11 @@ import { PRINT_SHEETS_STALE_MS } from "@/lib/jobs/constants";
 import * as thread from "@/lib/print-requests/thread";
 import { makeBadgePdf } from "./helpers/badge-pdf";
 
-const storage = vi.hoisted(() => ({ uploadFile: vi.fn(async (key: string) => key) }));
-vi.mock("@/lib/storage", () => ({ uploadFile: storage.uploadFile }));
+const storage = vi.hoisted(() => ({
+  uploadFile: vi.fn(async (key: string) => key),
+  deleteFile: vi.fn(async () => {}),
+}));
+vi.mock("@/lib/storage", () => ({ uploadFile: storage.uploadFile, deleteFile: storage.deleteFile }));
 const render = vi.hoisted(() => ({
   loadBadgeRegistration: vi.fn(),
   renderBadgePdf: vi.fn(),
@@ -83,6 +86,7 @@ async function deps(
   over: Partial<RunDeps> & { sizes?: Record<string, { w: number; h: number }>; missing?: string[] } = {},
 ) {
   const upload = vi.fn(async () => {});
+  const remove = vi.fn(async (_key: string) => {});
   const d: RunDeps = {
     renderBadge: async (id) =>
       over.missing?.includes(id)
@@ -96,10 +100,11 @@ async function deps(
             fileName: `${id}.pdf`,
           },
     upload,
+    remove,
     now: () => t0,
     ...over,
   };
-  return { d, upload };
+  return { d, upload, remove };
 }
 
 describe("runGeneration", () => {
@@ -122,6 +127,69 @@ describe("runGeneration", () => {
     expect(key).toBe(`print-sheets/${g.id}.pdf`);
     expect(type).toBe("application/pdf");
     expect((await PDFDocument.load(body)).getPageCount()).toBe(1);
+  });
+
+  describe("planche d'une commande", () => {
+    async function orderGeneration(fileKey: string | null) {
+      const org = await prisma.organization.create({ data: { name: "O3", slug: uniq("o3") } });
+      const request = await prisma.printRequest.create({
+        data: { reference: uniq("PR-K"), eventId, orgId: org.id, type: "ADVANCE", status: "PAID" },
+      });
+      const g = await create();
+      await prisma.printSheetGeneration.update({ where: { id: g.id }, data: { printRequestId: request.id, fileKey } });
+      return { g, request };
+    }
+
+    it("ecrit sous la cle stable de la commande, sans rien supprimer si la cle est inchangee", async () => {
+      const { g, request } = await orderGeneration(null);
+      await prisma.printSheetGeneration.update({
+        where: { id: g.id },
+        data: { fileKey: `print-sheets/orders/${request.id}.pdf` },
+      });
+      const { d, upload, remove } = await deps();
+      expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+      expect((upload.mock.calls[0] as unknown as [string])[0]).toBe(`print-sheets/orders/${request.id}.pdf`);
+      expect(remove).not.toHaveBeenCalled();
+      const row = await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } });
+      expect(row.fileKey).toBe(`print-sheets/orders/${request.id}.pdf`);
+    });
+
+    it("premiere generation : cle stable, aucun ancien fichier a supprimer", async () => {
+      const { g, request } = await orderGeneration(null);
+      const { d, upload, remove } = await deps();
+      expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+      expect((upload.mock.calls[0] as unknown as [string])[0]).toBe(`print-sheets/orders/${request.id}.pdf`);
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it("supprime l'ancien fichier (autre cle) apres le succes", async () => {
+      const { g, request } = await orderGeneration("print-sheets/ancien.pdf");
+      const { d, upload, remove } = await deps();
+      expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+      expect((upload.mock.calls[0] as unknown as [string])[0]).toBe(`print-sheets/orders/${request.id}.pdf`);
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(remove).toHaveBeenCalledWith("print-sheets/ancien.pdf");
+    });
+
+    it("un echec de suppression de l'ancien fichier ne change pas le resultat", async () => {
+      const { g } = await orderGeneration("print-sheets/ancien.pdf");
+      const { d, remove } = await deps();
+      remove.mockRejectedValueOnce(new Error("S3 HS"));
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
+      expect(log).toHaveBeenCalledWith("Ancien fichier de planche non supprimé", expect.any(Error));
+      log.mockRestore();
+      expect((await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } })).status).toBe("DONE");
+    });
+
+    it("echec de la generation : l'ancien fichier est conserve", async () => {
+      const { g } = await orderGeneration("print-sheets/ancien.pdf");
+      const { d, remove } = await deps({ renderBadge: async () => Promise.reject(new Error("rendu HS")) });
+      expect(await runGeneration(g.id, "w1", d)).toBe("FAILED");
+      expect(remove).not.toHaveBeenCalled();
+      const row = await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } });
+      expect(row).toMatchObject({ status: "FAILED", fileKey: "print-sheets/ancien.pdf" });
+    });
   });
 
   it("ecarte les badges null et les liste dans skippedIds", async () => {
@@ -168,7 +236,7 @@ describe("runGeneration", () => {
     const { d } = await deps({ missing: ["r2"] });
     expect(await runGeneration(g.id, "w1", d)).toBe("DONE");
     const row = await prisma.printSheetGeneration.findUniqueOrThrow({ where: { id: g.id } });
-    expect(row).toMatchObject({ status: "DONE", fileKey: `print-sheets/${g.id}.pdf` });
+    expect(row).toMatchObject({ status: "DONE", fileKey: `print-sheets/orders/${request.id}.pdf` });
     expect(err).toHaveBeenCalled();
     spy.mockRestore();
     err.mockRestore();
@@ -484,6 +552,11 @@ describe("defaultRunDeps", () => {
       pdf,
       fileName: "REG-1-ada-lovelace.pdf",
     });
+  });
+
+  it("remove : delegue la suppression au stockage", async () => {
+    await defaultRunDeps.remove("k");
+    expect(storage.deleteFile).toHaveBeenCalledWith("k");
   });
 
   it("upload : delegue au stockage, now donne la date courante", async () => {

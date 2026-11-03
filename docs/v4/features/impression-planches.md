@@ -120,6 +120,30 @@ Un évènement peut compter des milliers de badges : le rendu prend plusieurs mi
 - Journal d'activité : `PRINT_LAYOUT_CREATED`, `PRINT_LAYOUT_UPDATED`,
   `PRINT_LAYOUT_ARCHIVED`, `PRINT_SHEETS_GENERATED`.
 
+## Planches par commande
+
+`/platform/print/sheets` est un groupe de sous-pages (onglets) :
+
+- **À traiter** (`/pending`, avec compteur) : commandes `ADVANCE` en `PAID` ou `IN_PRODUCTION`
+  sans planche. « Générer » ouvre une modale de choix du gabarit (aperçu de la disposition) ;
+  le recto-verso est imposé par le template.
+- **Générées** (`/generated`) : commandes de la file avec une planche, quel que soit son état
+  (`PENDING`, `RUNNING`, `DONE`, `FAILED`), la plus récente d'abord. « Télécharger », « Voir »
+  (PDF en modale) et « Regénérer ». Rafraîchie toutes les 5 s (`GET /api/platform/print/sheets/orders`)
+  tant qu'une planche est en attente ou en cours.
+- **Génération libre** (`/free`) : le formulaire historique ; son historique exclut les planches
+  de commande.
+- `?printRequestId=` (lien « Générer les planches » de la page d'une commande) garde le
+  formulaire prérempli à la racine, puis renvoie vers « Générées ».
+
+Une commande n'a qu'**une planche** (`PrintSheetGeneration.printRequestId` unique). Regénérer
+remet la même ligne en `PENDING` (gabarit, sélection, compteurs, erreur et tentatives remis à
+zéro) et le worker écrase le PDF sous la clé stable `print-sheets/orders/{requestId}.pdf` ; un
+ancien fichier d'une autre clé est supprimé après le succès (conservé en cas d'échec). Regénérer
+une planche `PENDING` ou `RUNNING` est refusé : `409 GENERATION_IN_PROGRESS`. L'évènement de fil
+`SHEETS_GENERATED` (interne) est ajouté à chaque génération ; `PRINT_SHEETS_GENERATED` porte
+`details.regenerated` à `true` lors d'un écrasement. Le statut de la commande n'est pas modifié.
+
 ## Export ZIP de l'organisateur
 
 L'ancienne route `…/badges/print-zip` (200 badges au plus) est supprimée. L'organisateur
@@ -173,7 +197,7 @@ laisser une à moitié faite.
 |---|---|
 | Voir les gabarits | `STAFF_OBSERVER` |
 | Créer, modifier, archiver un gabarit | `STAFF_ADMIN` |
-| Lancer une génération, voir l'historique, aperçu, téléchargement | `STAFF_SUPPORT` |
+| Lancer ou regénérer une génération (libre ou par commande), voir les sous-pages, aperçu, téléchargement | `STAFF_SUPPORT` |
 | Télécharger un ZIP d'export | staff, ou `badge.print` sur l'évènement |
 
 ## Tests
