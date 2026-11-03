@@ -68,7 +68,7 @@ const pickText = (ctx: DemoContext, list: string[]) => ctx.faker.helpers.arrayEl
 
 /** Hooks de cycle : le fil est ecrit en meme temps que la commande, donc dans l'ordre naturel. */
 export function conversationHooks(ctx: DemoContext, state: PrintState): ScenarioHooks {
-  const post = (ref: ScenarioRef, side: Side, body: string, opts?: Parameters<typeof postDemoMessage>[4]) =>
+  const post = (ref: ScenarioRef, side: Side, body: string, opts?: Parameters<typeof postDemoMessage>[5]) =>
     postDemoMessage(ctx, state, ref, side, body, opts);
 
   return {
