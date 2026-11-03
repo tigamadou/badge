@@ -1,6 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- stub : la signature du contrat est figee */
 import type { DemoContext } from "./context";
+import { loadWorld } from "./billing/world";
+import { cleanupActivity, seedActivity } from "./notifications/activity";
+import { cleanupJobs, seedJobs } from "./notifications/jobs";
+import { cleanupNotifications, seedNotifications } from "./notifications/notifications";
 
-// Stub du socle : implemente par le lot 2b (notifications et journal d'activite).
-export async function seedNotificationsAndActivity(_ctx: DemoContext): Promise<void> {}
-export async function cleanupNotificationsAndActivity(_ctx: DemoContext): Promise<void> {}
+export async function seedNotificationsAndActivity(ctx: DemoContext): Promise<void> {
+  const world = await loadWorld();
+  await cleanupNotifications();
+  await cleanupActivity({ keepBilling: true });
+  const jobs = await seedJobs(ctx, world);
+  await seedNotifications(ctx, world, jobs);
+  await seedActivity(ctx, world, jobs);
+}
+
+/** Notifications et jobs de demo (aucune cascade ne les atteint) puis journal hors impression. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature figee par le socle
+export async function cleanupNotificationsAndActivity(_ctx: DemoContext): Promise<void> {
+  await cleanupNotifications();
+  await cleanupJobs();
+  await cleanupActivity();
+}

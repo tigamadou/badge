@@ -1,6 +1,30 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- stub : la signature du contrat est figee */
+import { prisma } from "../../../src/lib/prisma";
+import { DEMO_SLUG_PREFIX } from "../constants";
 import type { DemoContext } from "./context";
+import { ensurePlans } from "./billing/plans";
+import { seedSubscriptions } from "./billing/subscriptions";
+import { loadWorld } from "./billing/world";
+import { seedSubscriptionPayments } from "./billing/payments";
+import { writeBillingActivity } from "./billing/activity";
+import { cleanupActivity } from "./notifications/activity";
 
-// Stub du socle : implemente par le lot 2b (facturation).
-export async function seedBilling(_ctx: DemoContext): Promise<void> {}
-export async function cleanupBilling(_ctx: DemoContext): Promise<void> {}
+export async function seedBilling(ctx: DemoContext): Promise<void> {
+  const plans = await ensurePlans(ctx.dates.now);
+  const world = await loadWorld();
+  const subs = await seedSubscriptions(ctx, world, plans);
+  const payments = await seedSubscriptionPayments(ctx, world, plans, subs);
+  // Le journal de demo (hors impression) est reecrit en entier : celui de la facturation en premier.
+  await cleanupActivity();
+  await writeBillingActivity(ctx, world, plans, subs, payments);
+}
+
+/**
+ * Supprime paiements et abonnements des organisations `demo-` (rappels en cascade). Les plans
+ * `demo-*` restent : ils sont recrees par `upsert` et `Payment.planId` est RESTRICT.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature figee par le socle
+export async function cleanupBilling(_ctx: DemoContext): Promise<void> {
+  const orgs = { org: { slug: { startsWith: DEMO_SLUG_PREFIX } } };
+  await prisma.payment.deleteMany({ where: { ...orgs, purpose: "SUBSCRIPTION" } });
+  await prisma.subscription.deleteMany({ where: orgs });
+}

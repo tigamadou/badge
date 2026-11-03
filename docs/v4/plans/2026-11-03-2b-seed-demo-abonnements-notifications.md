@@ -51,13 +51,13 @@ sur les hypothèses de ce plan :
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Contrat du socle, monde relu en base, plans de démo | [ ] | | |
-| 2 | Abonnements, rappels, quotas | [ ] | | |
-| 3 | Paiements d'abonnement | [ ] | | |
-| 4 | Jobs email de chaque statut | [ ] | | |
-| 5 | Notifications de chaque type hors impression | [ ] | | |
-| 6 | Journal d'activité | [ ] | | |
-| 7 | Vérification | [ ] | | |
+| 1 | Contrat du socle, monde relu en base, plans de démo | [x] | 2026-11-03 | Ecarts : dates via ctx.dates (pas daysAgo), loadWorld() sans ctx, WorldUser/WorldEvent etendus; seulement 4 orgs sur 12 ont un OWNER (repli membre/null); cleanupBilling(_ctx). |
+| 2 | Abonnements, rappels, quotas | [x] | 2026-11-03 | near-limit: ratio >= 85 % verifie seulement si plus gros evenement >= 9 (a petite echelle +1 suffit); echeance verifiee contre endInDays (garde-fou). |
+| 3 | Paiements d'abonnement | [x] | 2026-11-03 | Payeur = owner, sinon membre, sinon null (8 orgs sur 12 sans owner). PENDING/EXPIRED/DECLINED/CANCELED visent Standard (plan avec prix). cleanupActivity() (notifications/activity.ts) appelee en tete du journal de seedBilling; modes verifies par planChangeFor (erreur si ecart). |
+| 4 | Jobs email de chaque statut | [x] | 2026-11-03 | SeededJobs etendu (completedAt, retried). PENDING/RUNNING crees directement avec runAt/lockedAt +3650 j (createdAt = maintenant, jamais antedates). |
+| 5 | Notifications de chaque type hors impression | [x] | 2026-11-03 | Ecart: assignScenarios donne les scenarios preferOwner (big-annual, monthly-renewed, expiring-7, expiring-1) aux orgs ayant un OWNER (sinon aucun rappel/notification ORG possible). Destinataires: staff demo uniquement (admin@badge.local exclu). cleanupNotifications dans notifications/notifications.ts. |
+| 6 | Journal d'activité | [x] | 2026-11-03 | Types non seedes: USER_DELETED, ORG_DELETED, REGISTRATION_DELETED. Plafond des dates = horloge reelle (comptes/membres crees apres ctx.dates.now). seedJobs renvoie un resultat vide si le monde est vide (framework.test). PLAN_UPDATED ajoute cote facturation; plans crees a now-175 j (fenetre de 180 j). cleanupActivity({keepBilling}). |
+| 7 | Vérification | [x] | 2026-11-03 | lot2b.test.ts; make test-coverage vert (312 fichiers, 3800 tests, 403 s); seed reel facturation 0,4 s + notifications/journal 4,4 s; navigateur 375/1280 OK. typecheck: seules erreurs dans .next/dev/types/routes.d.ts (fichier corrompu par le serveur dev, hors lot). |
 
 ## Fichiers du lot (exclusifs)
 
