@@ -30,7 +30,7 @@ describe("cleanupPrint seul", () => {
 
     const prints = await prisma.printRequestPrint.findMany({ where: { requestId: order!.requestId, reprint: false } });
     expect(prints.length).toBeGreaterThan(0);
-    const ids = prints.map((p) => p.registrationId);
+    const ids = prints.map((p) => p.registrationId).filter((id): id is string => id !== null);
     expect(await prisma.registration.count({ where: { id: { in: ids }, badgePrinted: true } })).toBe(ids.length);
 
     const foreignProduct = await prisma.printProduct.create({

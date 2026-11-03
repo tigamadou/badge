@@ -41,7 +41,7 @@ const lite = (p: { id: string; name: string; period: PlanLite["period"]; price: 
 /** Rejoue les paiements APPROVED d'un abonnement dans l'ordre et deduit leur mode avec `planChangeFor`. */
 function resolveModes(planned: Planned[], sub: SeededSubscription): Map<Planned, SubscriptionChangeMode> {
   const modes = new Map<Planned, SubscriptionChangeMode>();
-  let state: SubscriptionState | null = null;
+  let state = null as SubscriptionState | null;
   const approved = planned.filter((p) => p.status === "APPROVED").sort((a, b) => a.at.getTime() - b.at.getTime());
   for (const p of approved) {
     const change = planChangeFor(state, lite(p.plan), p.at);
@@ -50,7 +50,7 @@ function resolveModes(planned: Planned[], sub: SeededSubscription): Map<Planned,
     }
     modes.set(p, change.mode);
     if (change.mode === "IMMEDIATE") {
-      state = { planId: p.plan.id, plan: lite(p.plan), status: "ACTIVE", ...change.data };
+      state = { plan: lite(p.plan), ...change.data };
     } else if (change.mode === "EXTENSION" && state) {
       state = { ...state, ...change.data };
     } else if (change.mode === "SCHEDULED" && state) {

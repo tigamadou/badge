@@ -164,7 +164,9 @@ async function resetOnsiteBadges(orgIds: string[]): Promise<void> {
     select: { registrationId: true, printedAt: true },
   });
   if (prints.length === 0) return;
-  const printedAt = new Map(prints.map((p) => [p.registrationId, p.printedAt.getTime()]));
+  const printedAt = new Map(
+    prints.flatMap((p): [string, number][] => (p.registrationId === null ? [] : [[p.registrationId, p.printedAt.getTime()]])),
+  );
   const registrations = await prisma.registration.findMany({
     where: { id: { in: [...printedAt.keys()] }, badgePrinted: true },
     select: { id: true, badgePrintedAt: true },
