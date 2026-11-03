@@ -40,7 +40,7 @@ sur les hypothèses de ce plan :
 | 1 | Aligner sur le contrat du socle, vérifier l'image `tools` | [x] | 2026-11-03 | (a) `yarn tsx prisma/seed.ts` (minimal, defaut) puis `SEED_MODE=demo yarn tsx prisma/seed.ts` ; (b) staff de demo : `admin2@badge.local` (`DEMO_BADGE_LOCAL_EMAILS[0]`) ; (c) organisation de demo : slug commencant par `DEMO_SLUG_PREFIX` (`demo-`) ; (d) le seed de demo vide lui-meme `demo/` (`cleanup.ts` -> `clearTracked`) : pas d'etape de nettoyage dans `seed-demo`. Image `tools` : `COPY . .` sans exclusion de `prisma/` ni `scripts/` (.dockerignore OK), install complet. |
 | 2 | Service `seed-demo`, cible `make preprod-reload-demo`, commentaires du Makefile | [x] | 2026-11-03 | `compose config` OK (.env.preprod factice supprime), `make -n` OK. Pas d'etape de nettoyage `demo/` (fait par le seed de demo). SMTP ecrase par le seed minimal (PLATFORM_SMTP_* ou mailpit:1025), note dans le compose. |
 | 3 | `deploy.sh` : chemin préprod + test shell | [x] | 2026-11-03 | 4 cas verts (rouge constate avant : cas 3 et 4). Diff deploy.sh = ajout du bloc seul. |
-| 4 | Tests de fumée selon `BADGE_ENV` | [ ] | | |
+| 4 | Tests de fumée selon `BADGE_ENV` | [x] | 2026-11-03 | `dataChecks(prisma, env)` exporte ; `runChecks(envVars)` exporte, leve SmokeError nommant BADGE_ENV si absent/inconnu. 14 tests verts, lint/typecheck sans nouvelle alerte. |
 | 5 | Documentation | [ ] | | |
 | 6 | Vérification | [ ] | | |
 
