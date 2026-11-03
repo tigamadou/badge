@@ -114,8 +114,11 @@ paiement reçu ou échoué, planches lancées, inscriptions écartées.
 
 ### Page de la commande côté organisateur
 
-`/event/[eventId]/print/[requestId]` est une page de conversation à trois colonnes
-(`lg:grid-cols-[280px_minmax(0,1fr)_340px]`, empilées sous 1024 px, fil en premier et saisie sous le fil) :
+`/event/[eventId]/print/[requestId]` est une page de conversation : une colonne sous 1024 px (fil en premier et saisie sous le fil),
+deux colonnes de `lg` à `2xl` (fil à gauche ; résumé puis devis empilés à droite,
+`lg:grid-cols-[minmax(0,1fr)_300px]`), trois colonnes à partir de `2xl` (1536 px,
+`2xl:grid-cols-[280px_minmax(0,1fr)_340px]`) : la barre latérale de l'EventShell prend ~224 px dès `lg`,
+trois colonnes plus tôt écraseraient le fil sous ~400 px. En trois colonnes :
 
 - **gauche** : référence, statut, type, nombre de badges, remise ou créneaux sur place, total
   (`OrganizerOrderSummary`) ;

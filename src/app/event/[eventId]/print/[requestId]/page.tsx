@@ -96,14 +96,14 @@ export default async function PrintRequestDetailPage({
 
       {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)_340px]">
-        <div className="order-2 lg:order-1">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[280px_minmax(0,1fr)_340px]">
+        <div className="order-2 lg:col-start-2 lg:row-start-1 2xl:col-start-1">
           <OrganizerOrderSummary request={request} badgeCount={badgeCount}>
             {onsiteCounter ? <OnsiteCounterCard counter={onsiteCounter} /> : null}
           </OrganizerOrderSummary>
         </div>
 
-        <section className="order-1 min-w-0 lg:order-2" aria-label="Échanges avec l'équipe Badge">
+        <section className="order-1 min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1 2xl:col-start-2 2xl:row-span-1" aria-label="Échanges avec l'équipe Badge">
           <OrganizerConversation
             entriesUrl={`${base}/${requestId}/messages`}
             postUrl={ctx.isStaff || request.status === "DRAFT" ? null : `${base}/${requestId}/messages`}
@@ -112,7 +112,7 @@ export default async function PrintRequestDetailPage({
           />
         </section>
 
-        <div className="order-3">
+        <div className="order-3 lg:col-start-2 lg:row-start-2 2xl:col-start-3 2xl:row-start-1">
           <OrganizerQuoteColumn
             lines={lines}
             total={request.total}
