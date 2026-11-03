@@ -82,12 +82,12 @@ Les anciennes variables `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` ne servent plu
 
 ## Initialisation : service `init`
 
-Chaque stack (`docker-compose.yml`, `docker-compose.preprod.yml`) contient un service ponctuel `init`, basé sur l'image `tools`. À chaque `up`, il :
+Chaque stack (`docker-compose.yml`, `docker-compose.preprod.yml`) contient un service ponctuel `init`, basé sur l'image `tools`. En préprod, la base est en plus remise à zéro et remplie avant ce `init` : voir « Préprod rechargée à chaque déploiement » ci-dessous. À chaque `up`, il :
 
 1. pousse le schéma Prisma (`prisma db push --accept-data-loss`) — **seul endroit** où le schéma est synchronisé : ni `deploy.sh` ni `docker-entrypoint.sh` ne le font plus ;
-2. lance `prisma/seed-super-admin.ts`, qui crée le SUPER_ADMIN initial **si la base n'en contient aucun** (aucun SUPER_ADMIN non archivé).
+2. lance `SEED_MODE=super-admin npx tsx prisma/seed.ts`, qui crée le SUPER_ADMIN initial **si la base n'en contient aucun** (aucun SUPER_ADMIN non archivé).
 
-`app` dépend de `init` (`service_completed_successfully`) : si `init` échoue, l'app n'est pas relancée et `deploy.sh` s'arrête en erreur. `deploy.sh` nomme explicitement le service (`up -d --no-deps init app`), sinon `--no-deps` ne le démarrerait pas.
+`app` dépend de `init` (`service_completed_successfully`) : si `init` échoue, l'app n'est pas relancée et `deploy.sh` s'arrête en erreur. `deploy.sh` nomme explicitement le service (`up -d --no-deps renderer init app worker`), sinon `--no-deps` ne le démarrerait pas.
 
 Variables lues dans `.env.production` / `.env.preprod` :
 
@@ -107,6 +107,25 @@ Changer le mot de passe après le premier login ; `SEED_SUPER_ADMIN_PASSWORD` pe
 Pousser le schéma ou rejouer l'initialisation à la main : `make prod-db-push` / `make preprod-db-push` (équivalent à `docker compose up init`).
 
 Fichiers à recopier sur le serveur après ce changement : `deploy.sh`, `docker-compose.yml` (prod) et `docker-compose.preprod.yml` (preprod). L'entrypoint et le seeder sont dans les images.
+
+## Préprod rechargée à chaque déploiement
+
+**Destructif : toute donnée saisie à la main en préprod est perdue à chaque déploiement.** La prod n'est pas concernée : `deploy.sh` ne change rien pour `ENV=prod`, et le seed de démo refuse de tourner si `BADGE_ENV` ne vaut pas `dev` ou `preprod`.
+
+Séquence de `deploy.sh preprod <tag>` :
+
+1. `pull` des images (`renderer app tools`) ;
+2. arrêt de `app` et `worker` ;
+3. `docker compose -f docker-compose.preprod.yml run --rm seed-demo` : `prisma db push --force-reset --accept-data-loss` (base vide), seed minimal (`yarn tsx prisma/seed.ts`), puis seed de démo (`SEED_MODE=demo yarn tsx prisma/seed.ts`), qui vide lui-même le préfixe `demo/` du stockage S3 (jamais `orgs/`, `print-sheets/`…) avant de recréer ses données ;
+4. relance habituelle (`up -d --no-deps renderer init app worker`).
+
+Un échec du reset ou d'un seed arrête `deploy.sh` (`set -e`) : `app` et `worker` ne sont pas relancés sur une base à moitié remplie.
+
+- **À la main** : `make preprod-reload-demo` (confirmation `yes`), même service, projet compose `badge-preprod` uniquement.
+- **Comptes** : comptes de démo `*@demo.local` et staff `admin2@badge.local` (SUPER_ADMIN), tous au **mot de passe commun de démo** (`123456`) ; le SUPER_ADMIN de `SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_PASSWORD` (`.env.preprod`) est créé aussi. `admin@badge.local` n'existe pas en préprod. Le mot de passe de démo est public : ne mettre aucune donnée réelle en préprod.
+- **SMTP** : le seed minimal réécrit le SMTP de `PlatformSettings` sur `PLATFORM_SMTP_*` (`.env.preprod`) ou, à défaut, sur `mailpit:1025`.
+- **Fichiers à recopier** : `deploy.sh`, `docker-compose.preprod.yml`.
+- **Tests de fumée** : `make smoke-tests-preprod` choisit ses contrôles d'après `BADGE_ENV` : en `preprod` (et `dev`), au moins une organisation `demo-*` et le staff `admin2@badge.local` ; en `prod`, 0 organisation et 0 évènement. `BADGE_ENV` absent ou inconnu : erreur explicite.
 
 ## Worker d'emails : service `worker`
 

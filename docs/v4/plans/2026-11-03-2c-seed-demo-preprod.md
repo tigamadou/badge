@@ -41,7 +41,7 @@ sur les hypothèses de ce plan :
 | 2 | Service `seed-demo`, cible `make preprod-reload-demo`, commentaires du Makefile | [x] | 2026-11-03 | `compose config` OK (.env.preprod factice supprime), `make -n` OK. Pas d'etape de nettoyage `demo/` (fait par le seed de demo). SMTP ecrase par le seed minimal (PLATFORM_SMTP_* ou mailpit:1025), note dans le compose. |
 | 3 | `deploy.sh` : chemin préprod + test shell | [x] | 2026-11-03 | 4 cas verts (rouge constate avant : cas 3 et 4). Diff deploy.sh = ajout du bloc seul. |
 | 4 | Tests de fumée selon `BADGE_ENV` | [x] | 2026-11-03 | `dataChecks(prisma, env)` exporte ; `runChecks(envVars)` exporte, leve SmokeError nommant BADGE_ENV si absent/inconnu. 14 tests verts, lint/typecheck sans nouvelle alerte. |
-| 5 | Documentation | [ ] | | |
+| 5 | Documentation | [x] | 2026-11-03 | DEPLOYMENT.md (section + correction init) et installation.md (section preprod). Cibles citees verifiees dans le Makefile. |
 | 6 | Vérification | [ ] | | |
 
 ## Fichiers du lot (exclusifs)
