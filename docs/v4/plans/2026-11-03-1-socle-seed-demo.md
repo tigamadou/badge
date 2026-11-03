@@ -29,7 +29,7 @@ SUPER_ADMIN, cadre démo (contexte, orchestration, stubs de lots), puis comptes,
 |---|---|---|---|---|
 | 1 | `badge-env.ts` et `BADGE_ENV` dans les compose | [x] | 2026-11-03 | 16 tests verts, badge-env.ts 100 %; BADGE_ENV posee dans init/app/worker/tools (prod, preprod) et app/worker (dev); overlay agent herite du dev |
 | 2 | Seed minimal réduit, fusion du SUPER_ADMIN, service `init` | [x] | 2026-11-03 | 4 tests verts (minimal.test.ts); seed.ts = point d'entrée SEED_MODE; init prod/preprod -> SEED_MODE=super-admin; seed-super-admin.ts supprimé; démo (`demo`) lève une erreur tant que la Task 3 n'est pas faite; conteneur app dev à recréer pour porter BADGE_ENV=dev |
-| 3 | Cadre démo : contexte, orchestration, stubs, nettoyage, fichier de comptes | [ ] | | |
+| 3 | Cadre démo : contexte, orchestration, stubs, nettoyage, fichier de comptes | [x] | 2026-11-03 | 23 tests verts (framework.test.ts); lint/typecheck OK; runDemoSeed + garde-fou, contexte, backdate/parkJobs, putAt + manifeste, cleanupDemoCore (supprime aussi les inscriptions avant la cascade org : Registration->Category RESTRICT), stubs de lots, Makefile/.gitignore; `make db-seed-demo` OK en dev |
 | 4 | Réserve d'images et stockage `demo/` | [ ] | | |
 | 5 | Comptes de tous types | [ ] | | |
 | 6 | Organisations, évènements, catégories, templates de badge | [ ] | | |
