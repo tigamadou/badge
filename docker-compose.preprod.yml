@@ -30,7 +30,7 @@ services:
     networks:
       - default
       - rendu
-    command: ["sh", "-c", "npx prisma db push --accept-data-loss && npx tsx prisma/seed-super-admin.ts"]
+    command: ["sh", "-c", "npx prisma db push --accept-data-loss && SEED_MODE=super-admin npx tsx prisma/seed.ts"]
     restart: "no"
     depends_on:
       mysql:
