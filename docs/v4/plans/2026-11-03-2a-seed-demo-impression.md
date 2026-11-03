@@ -54,7 +54,7 @@ sur les hypothèses de ce plan :
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Contrat du socle, helpers, nettoyage et catalogue | [ ] | | |
+| 1 | Contrat du socle, helpers, nettoyage et catalogue | [x] | 2026-11-03 | `DemoContext` reel : OrgSize = `huge` (pas `large`), `ctx.dates.*`, `ctx.storage.putAt`. `PrintState` local (cles suivies par le manifeste du socle). `cleanupPrint` supprime aussi notifications, jobs et journaux du domaine. Test = un seul `it` par fichier (reset global avant chaque test). |
 | 2 | Commandes vitrine : cycle de vie et devis multi-versions | [ ] | | |
 | 3 | Conversation, pièces jointes, notes internes et non-lus | [ ] | | |
 | 4 | Paiements, crédits et impression sur place | [ ] | | |
