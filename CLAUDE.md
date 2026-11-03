@@ -129,6 +129,17 @@ la tâche.
 
 ---
 
+## Chantiers (features multi-zones)
+
+Tout chantier non trivial (plusieurs zones du code ou plus d'une session) suit le skill projet
+**`chantier`** (`.claude/skills/chantier/SKILL.md`) : une fois la spec validée, découpage en socle,
+lots parallèles à fichiers exclusifs (3 au maximum) et fusion ; plans rédigés en parallèle par des
+sous-agents ; puis, après accord de l'utilisateur, une tâche planifiée d'orchestration
+(`.claude/skills/chantier/orchestrator-template.md`) qui fait tourner chaque lot dans son propre
+environnement d'agent (`scripts/agent-stack.sh`), en respectant les règles de test ci-dessus.
+
+---
+
 ## Workflow Git — valeurs projet
 
 - **Branche principale** : `development`
