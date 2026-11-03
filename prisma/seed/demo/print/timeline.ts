@@ -130,6 +130,16 @@ export async function retimeRequest(ctx: DemoContext, order: ShowcaseOrder, wind
   if (generation) {
     const t = at((m) => m.eventType === "SHEETS_GENERATED", true) ?? new Date(endMs);
     await ctx.backdate("printSheetGeneration", generation.id, t);
+    const started = new Date(t.getTime() + 20_000);
+    const completed = new Date(t.getTime() + 2 * MINUTE_MS);
+    await prisma.printSheetGeneration.updateMany({
+      where: { id: generation.id },
+      data: {
+        startedAt: generation.status === "PENDING" ? null : started,
+        completedAt: generation.status === "DONE" || generation.status === "FAILED" ? completed : null,
+      },
+    });
+    await prisma.activityLog.updateMany({ where: { type: "PRINT_SHEETS_GENERATED", targetId: generation.id }, data: { createdAt: t } });
   }
 
   // Notifications liees a la commande (groupees par lot d'envoi), puis commande suivante : meme repartition.
