@@ -27,7 +27,7 @@ SUPER_ADMIN, cadre démo (contexte, orchestration, stubs de lots), puis comptes,
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | `badge-env.ts` et `BADGE_ENV` dans les compose | [ ] | | |
+| 1 | `badge-env.ts` et `BADGE_ENV` dans les compose | [x] | 2026-11-03 | 16 tests verts, badge-env.ts 100 %; BADGE_ENV posee dans init/app/worker/tools (prod, preprod) et app/worker (dev); overlay agent herite du dev |
 | 2 | Seed minimal réduit, fusion du SUPER_ADMIN, service `init` | [ ] | | |
 | 3 | Cadre démo : contexte, orchestration, stubs, nettoyage, fichier de comptes | [ ] | | |
 | 4 | Réserve d'images et stockage `demo/` | [ ] | | |
