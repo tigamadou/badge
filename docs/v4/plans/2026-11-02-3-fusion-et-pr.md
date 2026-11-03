@@ -13,11 +13,11 @@ pousser la branche et ouvrir une PR vers `development`.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Fusion 2a | [ ] | | |
-| 2 | Fusion 2b | [ ] | | |
-| 3 | Fusion 2c | [ ] | | |
-| 4 | Vérification complète | [ ] | | |
-| 5 | Push et PR | [ ] | | |
+| 1 | Fusion 2a | [x] | 2026-11-03 | eb95ae9, sans conflit |
+| 2 | Fusion 2b | [x] | 2026-11-03 | 5e92069 ; conflits tests et doc (fil sans regroupement) résolus |
+| 3 | Fusion 2c | [x] | 2026-11-03 | sans conflit ; impression-demandes.md relu |
+| 4 | Vérification complète | [x] | 2026-11-03 | lint 0 erreur, typecheck OK, 3700 tests à 100 %, e2e impression 63/63 (après purge du cache Turbopack et redémarrage du worker), contrôle navigateur 375/1280 |
+| 5 | Push et PR | [x] | 2026-11-03 | |
 | 6 | Nettoyage des stacks d'agents | [ ] | | |
 
 ## Global Constraints
