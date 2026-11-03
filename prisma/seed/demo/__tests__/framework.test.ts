@@ -180,6 +180,7 @@ describe("cadre du seed de demo", () => {
         vi.spyOn(accounts, "seedAccounts").mockImplementation(async (ctx: DemoContext) => {
           ctx.recordAccount("x@demo.local", "OWNER", "cas X");
         });
+        vi.spyOn(organizations, "seedOrganizationsAndEvents").mockImplementation(async () => {});
         await runDemoSeed({ env: DEV, scale: 0.02, accountsFile: file, storagePrefix: TEST_PREFIX });
         expect(await readFile(file, "utf8")).toContain("x@demo.local");
       } finally {
