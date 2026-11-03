@@ -46,7 +46,7 @@ test.describe("Platform — Commandes d'impression", () => {
     await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${sent.id}$`));
   });
 
-  test("La pastille « Commandes » compte les commandes envoyées en attente", async ({ page }) => {
+  test("La pastille « Commandes » compte les commandes à traiter et celles avec des non-lus", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "prq-counter" });
     const organizer = await createTestUser({ scope: "prq-counter-org", verified: true });
     for (let i = 0; i < 2; i++) {
@@ -54,9 +54,19 @@ test.describe("Platform — Commandes d'impression", () => {
     }
     // Les commandes déjà devisées ne comptent pas.
     await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "QUOTED", lines: LINES });
-    const expected = await getDb().printRequest.count({ where: { status: "SUBMITTED" } });
-    expect(expected).toBeGreaterThanOrEqual(2);
     const support = await createTestStaff({ scope: "prq-counter", role: "STAFF_SUPPORT" });
+    // À traiter (envoyées) + commandes ayant des échanges non lus de la part de quelqu'un d'autre,
+    // sans double compte.
+    const expected = await getDb().printRequest.count({
+      where: {
+        status: { not: "DRAFT" },
+        OR: [
+          { status: "SUBMITTED" },
+          { messages: { some: { OR: [{ authorId: null }, { authorId: { not: support.id } }] } } },
+        ],
+      },
+    });
+    expect(expected).toBeGreaterThanOrEqual(2);
     await loginAndEnter(page, support, { kind: "platform" });
 
     const badge = page.locator('a[href="/platform/print/orders"] [aria-label$="en attente"]').first();
@@ -101,6 +111,40 @@ test.describe("Platform — Commandes d'impression", () => {
     await expect(page).toHaveURL(/status=PAID/);
     await expect(page.getByText("Aucune commande ne correspond à ces filtres.")).toBeVisible();
     await expect(page.locator("table")).toHaveCount(0);
+  });
+});
+
+test.describe("Platform — Non-lus dans la liste des commandes", () => {
+  test.afterAll(async () => {
+    await cleanupE2ETestData();
+    await disconnectDb();
+  });
+
+  test("La pastille de non-lus d'une commande disparaît à son ouverture", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "prq-unread" });
+    const organizer = await createTestUser({ scope: "prq-unread-org", verified: true });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "SUBMITTED", lines: LINES });
+    await getDb().printRequestMessage.createMany({
+      data: [
+        { requestId: request.id, side: "ORGANIZER", kind: "MESSAGE", body: "Premier message", authorId: organizer.id },
+        { requestId: request.id, side: "ORGANIZER", kind: "MESSAGE", body: "Second message", authorId: organizer.id },
+      ],
+    });
+    const support = await createTestStaff({ scope: "prq-unread", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+
+    await page.getByRole("link", { name: /^Commandes/ }).click();
+    await expect(page).toHaveURL(/\/platform\/print\/orders$/);
+    const row = page.locator("tr", { hasText: request.reference });
+    await expect(row.getByTestId("unread-badge")).toHaveText("2");
+
+    // Ouvrir la commande la marque lue : plus de pastille au retour sur la liste.
+    await row.getByRole("link", { name: request.reference }).click();
+    await expect(page.getByText("Second message")).toBeVisible();
+    await page.getByRole("link", { name: "Commandes" }).first().click();
+    await expect(page).toHaveURL(/\/platform\/print\/orders$/);
+    await expect(page.locator("tr", { hasText: request.reference })).toBeVisible();
+    await expect(page.locator("tr", { hasText: request.reference }).getByTestId("unread-badge")).toHaveCount(0);
   });
 });
 

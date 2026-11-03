@@ -10,8 +10,10 @@ import {
   createTestUser,
   disconnectDb,
   getDb,
+  makeEventAdminUser,
 } from "../helpers/db";
 import { loginAndEnter } from "../helpers/nav";
+import { loginAs } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
 
@@ -97,18 +99,113 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     expect(added.unitPrice).toBe(2500);
     expect(added.addedBy).toBe("STAFF");
 
-    // Les deux modifications consécutives du même auteur forment une seule entrée du fil.
-    await expect(page.getByText("2 lignes modifiées")).toHaveCount(1);
+    // Chaque modification de ligne est une entrée interne du fil (jamais regroupée).
+    const internalEvents = page.locator('[data-entry-kind="internal-event"]');
+    await expect(internalEvents).toHaveCount(2);
+    await expect(internalEvents.nth(0)).toContainText("Ligne modifiée : Frais de dossier");
+    await expect(internalEvents.nth(1)).toContainText("Ligne ajoutée : Frais de livraison");
 
     // Envoi du devis.
     await page.getByRole("button", { name: "Envoyer le devis" }).click();
     await expect(toast(page, "Devis envoyé.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Devis envoyé");
     await expect(page.getByText(/Devis v1 envoyé/)).toBeVisible();
+    // Récapitulatif du devis dans le fil, avec le nouveau total.
+    await expect(page.getByText(/Devis v1 : 3 ligne\(s\)/)).toBeVisible();
     const quoted = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(quoted.status).toBe("QUOTED");
     expect(quoted.quoteVersion).toBe(1);
     await expectLastActivity({ type: "PRINT_REQUEST_QUOTED", eventId, userId: admin.id, targetId: request.id });
+  });
+
+  // Lit le fil côté organisateur par l'API de son espace (session distincte du staff).
+  async function organizerThread(
+    browser: import("@playwright/test").Browser,
+    organizer: { email: string; password: string },
+    ids: { orgId: string; eventId: string; requestId: string },
+  ): Promise<{ body: string; eventType: string | null; kind: string }[]> {
+    const context = await browser.newContext();
+    try {
+      const orgPage = await context.newPage();
+      await loginAs(orgPage, organizer);
+      const res = await context.request.get(
+        `/api/org/${ids.orgId}/events/${ids.eventId}/print-requests/${ids.requestId}/messages`,
+      );
+      expect(res.ok()).toBe(true);
+      return ((await res.json()) as { entries: { body: string; eventType: string | null; kind: string }[] }).entries;
+    } finally {
+      await context.close();
+    }
+  }
+
+  test("Une note interne est visible du staff seulement, un message simple l'est de l'organisateur", async ({ page, browser }) => {
+    const { orgId, eventId, request } = await seedRequest("prd-note", "SUBMITTED");
+    const organizer = await makeEventAdminUser({ scope: "prd-note-org", eventId, orgId });
+    const support = await createTestStaff({ scope: "prd-note", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+    await openRequest(page, request);
+
+    await page.getByLabel("Votre message").fill("Visible de tous");
+    await page.getByRole("button", { name: "Envoyer", exact: true }).click();
+    await expect(page.locator('[data-entry-kind="message"]', { hasText: "Visible de tous" })).toBeVisible();
+    const countNotified = () => getDb().notification.count({ where: { userId: organizer.id, type: "PRINT_REQUEST_MESSAGE" } });
+    const notifiedBefore = await countNotified();
+    expect(notifiedBefore).toBeGreaterThan(0);
+
+    await page.getByLabel("Note interne").check();
+    await page.getByLabel("Votre message").fill("Client difficile, prudence");
+    await page.getByRole("button", { name: "Ajouter la note" }).click();
+    const note = page.locator('[data-entry-kind="internal-note"]', { hasText: "Client difficile, prudence" });
+    await expect(note).toBeVisible();
+    await expect(note).toContainText("Note interne");
+    const stored = await getDb().printRequestMessage.findFirstOrThrow({ where: { requestId: request.id, body: "Client difficile, prudence" } });
+    expect(stored.internal).toBe(true);
+
+    const seen = await organizerThread(browser, organizer, { orgId, eventId, requestId: request.id });
+    expect(seen.map((e) => e.body)).toContain("Visible de tous");
+    expect(seen.map((e) => e.body)).not.toContain("Client difficile, prudence");
+    // Aucune notification pour l'organisateur à la suite de la note.
+    expect(await countNotified()).toBe(notifiedBefore);
+  });
+
+  test("Un message de l'organisateur apparaît par polling, sans doublon ni rechargement", async ({ page }) => {
+    const { request, organizer } = await seedRequest("prd-poll", "SUBMITTED");
+    const support = await createTestStaff({ scope: "prd-poll", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+    await openRequest(page, request);
+    await expect(page.getByText("Aucun échange pour le moment.")).toBeVisible();
+
+    await getDb().printRequestMessage.create({
+      data: { requestId: request.id, side: "ORGANIZER", kind: "MESSAGE", body: "Bonjour, une question", authorId: organizer.id },
+    });
+    // Polling toutes les 10 s.
+    await expect(page.getByText("Bonjour, une question")).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByText("Bonjour, une question")).toHaveCount(1);
+    // Un second tour de polling ne duplique pas l'entrée.
+    await page.waitForTimeout(11_000);
+    await expect(page.getByText("Bonjour, une question")).toHaveCount(1);
+  });
+
+  test("L'envoi du devis publie un récapitulatif visible de l'organisateur, les modifications de prix restent internes", async ({ page, browser }) => {
+    const { orgId, eventId, request } = await seedRequest("prd-recap", "SUBMITTED");
+    const organizer = await makeEventAdminUser({ scope: "prd-recap-org", eventId, orgId });
+    const admin = await createTestStaff({ scope: "prd-recap", role: "STAFF_ADMIN" });
+    await loginAndEnter(page, admin, { kind: "platform" });
+    await openRequest(page, request);
+
+    const price = page.getByLabel("Prix unitaire de Frais de dossier");
+    await price.fill("6000");
+    await price.press("Tab");
+    await expect(page.locator('[data-entry-kind="internal-event"]')).toHaveCount(1);
+    await page.getByRole("button", { name: "Envoyer le devis" }).click();
+    await expect(toast(page, "Devis envoyé.")).toBeVisible();
+    await expect(page.getByText(/Devis v1 : 2 ligne\(s\)/)).toBeVisible();
+
+    const seen = await organizerThread(browser, organizer, { orgId, eventId, requestId: request.id });
+    const recap = seen.find((e) => e.kind === "MESSAGE");
+    expect(recap?.body).toContain("Devis v1 : 2 ligne(s)");
+    expect(recap?.body).toContain("Total :");
+    expect(seen.some((e) => e.eventType === "LINES_CHANGED")).toBe(false);
   });
 
   test("Le refus exige un motif : bouton désactivé tant qu'il est vide, puis refus transmis", async ({ page }) => {
