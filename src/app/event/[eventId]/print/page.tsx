@@ -6,6 +6,7 @@ import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBa
 import { requirePrintAccess } from "@/components/event/print/guard";
 import { OrgPrintCreditCard } from "@/components/print/OrgPrintCreditCard";
 import { getOrgPrintCreditBalance, listOrgPrintCreditMovements } from "@/lib/print-requests/org-credit";
+import { unreadByRequest } from "@/lib/print-requests/read-state";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,10 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: { _count: { select: { items: true } } },
   });
+  // Le staff en consultation n'enregistre pas de lecture : pas de non-lus pour lui.
+  const unread = ctx.isStaff ? {} : await unreadByRequest(ctx.user.id, "ORGANIZER", rows.map((r) => r.id));
   const data = rows.map((r) => ({
+    unread: unread[r.id] ?? 0,
     id: r.id,
     reference: r.reference,
     type: r.type,
@@ -60,9 +64,20 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
               key: "reference",
               header: "Référence",
               render: (r) => (
-                <Link href={`/event/${eventId}/print/${r.id}`} className="font-medium text-green-700 hover:underline">
-                  {r.reference}
-                </Link>
+                <span className="inline-flex items-center gap-2">
+                  <Link href={`/event/${eventId}/print/${r.id}`} className="font-medium text-green-700 hover:underline">
+                    {r.reference}
+                  </Link>
+                  {r.unread > 0 ? (
+                    <span
+                      data-testid="unread-badge"
+                      aria-label={`${r.unread} message${r.unread > 1 ? "s" : ""} non lu${r.unread > 1 ? "s" : ""}`}
+                      className="inline-flex min-w-5 items-center justify-center rounded-full bg-green-600 px-1.5 text-[11px] font-semibold leading-5 text-white"
+                    >
+                      {r.unread}
+                    </span>
+                  ) : null}
+                </span>
               ),
             },
             { key: "type", header: "Type", render: (r) => PRINT_REQUEST_TYPE_LABELS[r.type] },

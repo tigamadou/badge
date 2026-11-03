@@ -113,7 +113,36 @@ paiement reçu ou échoué, planches lancées, inscriptions écartées.
   côté staff »).
 - Les corps sont stockés bruts et **rendus en texte seulement**, jamais en HTML.
 - Le paiement hors ligne écrit « Paiement reçu : … (hors ligne : motif) ».
-- L'écran de l'organisateur se rafraîchit toutes les 30 secondes quand l'onglet est visible.
+
+### Page de la commande côté organisateur
+
+`/event/[eventId]/print/[requestId]` est une page de conversation : une colonne sous 1024 px (fil en premier et saisie sous le fil),
+deux colonnes de `lg` à `2xl` (fil à gauche ; résumé puis devis empilés à droite,
+`lg:grid-cols-[minmax(0,1fr)_300px]`), trois colonnes à partir de `2xl` (1536 px,
+`2xl:grid-cols-[280px_minmax(0,1fr)_340px]`) : la barre latérale de l'EventShell prend ~224 px dès `lg`,
+trois colonnes plus tôt écraseraient le fil sous ~400 px. En trois colonnes :
+
+- **gauche** : référence, statut, type, nombre de badges, remise ou créneaux sur place, total
+  (`OrganizerOrderSummary`) ;
+- **centre** : fil (bulles de l'organisateur à droite, de l'équipe à gauche, évènements centrés,
+  pièces jointes) et saisie (`OrganizerConversation`, `OrganizerComposer`). Pas de bascule « note interne » ;
+- **droite** : devis en lecture, total, actions selon le statut et le rôle (accepter pour le OWNER,
+  payer, annuler, modifier), historique des paiements (`OrganizerQuoteColumn`).
+
+L'organisateur ne voit **jamais** une note interne : ni dans le fil, ni dans le relevé, ni dans les
+non-lus.
+
+**Relevé** : `GET …/messages?after=<ISO>` toutes les 10 secondes, suspendu onglet caché. Le client
+envoie `after` avec un chevauchement de 2 s (plus grand `createdAt` reçu moins 2 s) et dédoublonne
+par `id`. Chaque lecture enregistre `markRead` (horodatage pris avant la lecture), sauf pour le staff
+en consultation. Une date `after` invalide donne `400 VALIDATION`. Le `POST` est strict : tout champ
+en plus (dont `internal`) donne `400 VALIDATION`. Un défilement automatique a lieu si le lecteur est en bas,
+sinon un indicateur « Nouveaux messages » apparaît.
+
+**Non-lus** : une pastille par commande dans la liste (`unreadByRequest`) et un compteur sur l'entrée
+de menu « Impression » (`countOrdersWithUnread`, limité à l'évènement courant, masqué à 0, absent sans
+la permission `print.request`). La page conversation rafraîchit le layout à l'ouverture pour mettre
+le compteur à jour.
 
 ## Page de commande côté staff
 
