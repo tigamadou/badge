@@ -37,7 +37,7 @@ sur les hypothèses de ce plan :
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Aligner sur le contrat du socle, vérifier l'image `tools` | [ ] | | |
+| 1 | Aligner sur le contrat du socle, vérifier l'image `tools` | [x] | 2026-11-03 | (a) `yarn tsx prisma/seed.ts` (minimal, defaut) puis `SEED_MODE=demo yarn tsx prisma/seed.ts` ; (b) staff de demo : `admin2@badge.local` (`DEMO_BADGE_LOCAL_EMAILS[0]`) ; (c) organisation de demo : slug commencant par `DEMO_SLUG_PREFIX` (`demo-`) ; (d) le seed de demo vide lui-meme `demo/` (`cleanup.ts` -> `clearTracked`) : pas d'etape de nettoyage dans `seed-demo`. Image `tools` : `COPY . .` sans exclusion de `prisma/` ni `scripts/` (.dockerignore OK), install complet. |
 | 2 | Service `seed-demo`, cible `make preprod-reload-demo`, commentaires du Makefile | [ ] | | |
 | 3 | `deploy.sh` : chemin préprod + test shell | [ ] | | |
 | 4 | Tests de fumée selon `BADGE_ENV` | [ ] | | |
