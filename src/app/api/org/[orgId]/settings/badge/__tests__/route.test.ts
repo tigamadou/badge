@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeRequest } from "@/lib/__tests__/helpers/print-requests";
 import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@/lib/badge-templates/install";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
@@ -188,5 +189,39 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
     const req = makeReq(org.id, { badgeTemplateId: await installedDefaultId() });
     await expect(PATCH(req, { params: Promise.resolve({ orgId: org.id }) })).rejects.toThrow("db boom");
     spy.mockRestore();
+  });
+});
+
+describe("PATCH org badge template : évènements verrouillés", () => {
+  beforeEach(async () => {
+    vi.mocked(getServerSession).mockReset();
+    await setupPlatform();
+  });
+
+  it("épingle l'évènement verrouillé, suit pour les autres, ignore celui qui a son template", async () => {
+    const { user, org } = await makeOrgWithMember("OWNER");
+    const defId = await installedDefaultId();
+    const rvId = await installedRectoVersoId();
+    const mk = (title: string, badgeTemplateId: string | null = null) =>
+      prisma.event.create({
+        data: { orgId: org.id, title, slug: `${title}-${Date.now()}-${Math.random()}`, location: "X", date: new Date(), badgeTemplateId },
+      });
+    const [locked, free, own] = [await mk("locked"), await mk("free"), await mk("own", defId)];
+    const paid = await makeRequest({ org, event: locked, owner: user }, { status: "PAID", badgeTemplateId: defId });
+    const ownPaid = await makeRequest({ org, event: own, owner: user }, { status: "PAID", badgeTemplateId: defId });
+    const freeReq = await makeRequest({ org, event: free, owner: user }, { status: "QUOTED", badgeTemplateId: defId });
+
+    const { PATCH } = await import("../route");
+    const res = await PATCH(makeReq(org.id, { badgeTemplateId: rvId }), { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(200);
+
+    const ev = (id: string) => prisma.event.findUniqueOrThrow({ where: { id } });
+    expect((await ev(locked.id)).badgeTemplateId).toBe(defId);
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: paid.id } })).templatePinned).toBe(true);
+    expect((await ev(free.id)).badgeTemplateId).toBeNull();
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: freeReq.id } })).status).toBe("SUBMITTED");
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: freeReq.id } })).badgeTemplateId).toBe(rvId);
+    expect((await ev(own.id)).badgeTemplateId).toBe(defId);
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: ownPaid.id } })).templatePinned).toBe(false);
   });
 });

@@ -1,8 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { cleanupE2ETestData, disconnectDb, getDb } from "../helpers/db";
+import {
+  cleanupE2ETestData,
+  createTestInstalledTemplate,
+  disconnectDb,
+  getDb,
+  readOnsiteSettings,
+  writeOnsiteSettings,
+  type TestOnsiteSettings,
+} from "../helpers/db";
 import { loginAsStaff } from "../helpers/auth";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity } from "../helpers/audit";
+import { toast } from "../helpers/feedback";
 
 // Page Parametres plateforme — /platform/settings, en onglets pilotes par ?tab=
 // (email, security, subscriptions, reasons, badge). /platform/settings/badge redirige
@@ -14,13 +23,18 @@ test.describe("Platform — Parametres", () => {
   // Ces specs mutent un etat GLOBAL partage (PlatformSettings). Sans restauration,
   // elles cassent l'envoi de mails des autres specs (ex. TLS active vers Mailpit).
   let snapshot: Record<string, unknown> | null = null;
+  // Les reglages « impression sur place » contiennent un JSON nullable que la restauration ci-dessous
+  // ne sait pas reecrire : ils ont leur propre sauvegarde.
+  let onsiteSnapshot: TestOnsiteSettings | null = null;
 
   test.beforeAll(async () => {
     const current = await getDb().platformSettings.findFirst();
     snapshot = current ? { ...current } : null;
+    onsiteSnapshot = await readOnsiteSettings();
   });
 
   test.afterAll(async () => {
+    if (onsiteSnapshot) await writeOnsiteSettings(onsiteSnapshot);
     if (snapshot) {
       const { id, ...data } = snapshot as { id: string } & Record<string, unknown>;
       await getDb()
@@ -189,5 +203,69 @@ test.describe("Platform — Parametres", () => {
     await page.goto("/platform/settings?tab=reasons");
     await expect(page.getByText(/catalogue partagé par la validation/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /^ajouter$/i })).toHaveCount(0);
+  });
+
+  // --- Onglet « Impression sur place » (plan 35) ----------------------------
+
+  test("STAFF_ADMIN coche un template, règle la marge à 15 % et enregistre", async ({ page }) => {
+    const admin = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-onsite" });
+    const label = `Badge E2E sur place ${Date.now()}`;
+    const template = await createTestInstalledTemplate({ installedById: admin.id, label });
+
+    await page.goto("/platform/settings");
+    await expect(page).toHaveURL(/\/platform\/settings$/);
+    const tabs = page.getByRole("navigation", { name: "Sections des paramètres" });
+    await tabs.getByRole("link", { name: "Impression sur place" }).click();
+    await expect(page).toHaveURL(/\?tab=onsite-print$/);
+    await expect(page.getByText("Templates proposés")).toBeVisible();
+
+    const checkbox = page.getByRole("checkbox", { name: new RegExp(label) });
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+    await page.getByLabel("Imprimante (note)").fill("Zebra E2E, cartes CR80");
+    await page.getByLabel("Marge par défaut (%)").fill("15");
+    await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+
+    // Succès : message affiché, puis la base reflète le choix.
+    await expect(toast(page, "Réglages enregistrés.")).toBeVisible();
+    await expect(async () => {
+      const settings = await readOnsiteSettings();
+      expect(settings.onsitePrintTemplateIds).toContain(template.id);
+      expect(settings.onsiteDefaultMarginPercent).toBe(15);
+      expect(settings.onsitePrinterNote).toBe("Zebra E2E, cartes CR80");
+    }).toPass();
+
+    // Après rechargement, la case reste cochée.
+    await page.reload();
+    await expect(page.getByRole("checkbox", { name: new RegExp(label) })).toBeChecked();
+  });
+
+  test("Une marge hors 0-100 est refusée dans le formulaire et rien n'est enregistré", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-onsite-margin" });
+    await writeOnsiteSettings({ onsiteDefaultMarginPercent: 10 });
+
+    await page.goto("/platform/settings?tab=onsite-print");
+    await expect(page).toHaveURL(/\?tab=onsite-print$/);
+    await page.getByLabel("Marge par défaut (%)").fill("101");
+
+    // Échec attendu : message d'erreur, bouton désactivé, base inchangée.
+    await expect(page.getByText("Saisir un entier entre 0 et 100.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Enregistrer", exact: true })).toBeDisabled();
+    expect((await readOnsiteSettings()).onsiteDefaultMarginPercent).toBe(10);
+  });
+
+  test("STAFF_SUPPORT ne voit pas l'onglet « Impression sur place »", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "pset-onsite-support" });
+
+    await page.goto("/platform/settings");
+    await expect(page).toHaveURL(/\/platform\/settings$/);
+    const tabs = page.getByRole("navigation", { name: "Sections des paramètres" });
+    await expect(tabs.getByRole("link", { name: "E-mails" })).toBeVisible();
+    await expect(tabs.getByRole("link", { name: "Impression sur place" })).toHaveCount(0);
+
+    // Accès direct à l'onglet : retour sur le premier onglet, sans le formulaire.
+    await page.goto("/platform/settings?tab=onsite-print");
+    await expect(page.getByLabel("Utilisateur SMTP")).toBeVisible();
+    await expect(page.getByText("Templates proposés")).toHaveCount(0);
   });
 });

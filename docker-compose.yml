@@ -89,10 +89,17 @@ services:
     entrypoint: ["node", "worker.cjs"]
     env_file:
       - .env.production
+    environment:
+      RENDERER_URL: http://badge-renderer:3000
+    networks:
+      - default
+      - rendu
     depends_on:
       init:
         condition: service_completed_successfully
       mysql:
+        condition: service_healthy
+      renderer:
         condition: service_healthy
     # Laisse le temps de finir les envois en cours (SEND_TIMEOUT_MS = 2 min au pire).
     stop_grace_period: 150s

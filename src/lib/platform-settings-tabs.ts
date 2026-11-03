@@ -5,6 +5,7 @@ export const PLATFORM_SETTINGS_TABS = [
   { value: "subscriptions", label: "Abonnements", adminOnly: false },
   { value: "reasons", label: "Motifs de rejet", adminOnly: false },
   { value: "badge", label: "Badge", adminOnly: true },
+  { value: "onsite-print", label: "Impression sur place", adminOnly: true },
 ] as const;
 
 export type PlatformSettingsTab = (typeof PLATFORM_SETTINGS_TABS)[number]["value"];

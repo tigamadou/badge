@@ -15,6 +15,14 @@ const MIN = 60_000;
 beforeEach(() => fakeTransport().install());
 afterEach(() => __mailTesting.reset());
 
+const noRelease = async () => false;
+const noGen = {
+  release: noRelease,
+  claim: async () => null,
+  run: async () => "DONE" as const,
+  recover: async () => 0,
+};
+
 describe("createWorkerLoop", () => {
   it("runOnce sends due jobs and returns the summary", async () => {
     await createEmailJob({ to: "a@x.test" });
@@ -163,5 +171,206 @@ describe("createWorkerLoop", () => {
     await sleep(20);
     await loop.stop();
     await running;
+  });
+
+  describe("planches d'impression", () => {
+    const row = { id: "g1" } as never;
+
+    it("recover à chaque tour, claim puis run sans attendre ; emails traités", async () => {
+      let finish!: () => void;
+      const run = vi.fn(() => new Promise<"DONE">((r) => (finish = () => r("DONE"))));
+      const claim = vi.fn().mockResolvedValueOnce(row).mockResolvedValue(null);
+      const recover = vi.fn(async () => 0);
+      const processBatch = vi.fn(async () => empty);
+      const log = vi.fn();
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch, printSheets: { release: noRelease, claim, run, recover } },
+      });
+      await loop.runOnce(t0);
+      expect(run).toHaveBeenCalledWith("g1", "w");
+      expect(processBatch).toHaveBeenCalledTimes(1);
+      // run ne se termine pas : le tour suivant traite les emails sans nouveau claim
+      await loop.runOnce(t0);
+      expect(processBatch).toHaveBeenCalledTimes(2);
+      expect(recover).toHaveBeenCalledTimes(2);
+      expect(claim).toHaveBeenCalledTimes(1);
+      finish();
+      await sleep(5);
+      expect(log).toHaveBeenCalledWith("[worker] print generation finished", { id: "g1", outcome: "DONE" });
+      await loop.runOnce(t0);
+      expect(claim).toHaveBeenCalledTimes(2);
+    });
+
+    it("stop() n'attend pas la génération", async () => {
+      const run = vi.fn(() => new Promise<"DONE">(() => {}));
+      const claim = vi.fn().mockResolvedValueOnce(row).mockResolvedValue(null);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch: async () => empty, printSheets: { release: noRelease, claim, run, recover: async () => 0 } },
+      });
+      const running = loop.start();
+      await sleep(30);
+      await Promise.race([loop.stop(), sleep(500).then(() => Promise.reject(new Error("bloque")))]);
+      await running;
+    });
+
+    it("stop() libere la generation en cours pour qu'un autre worker la reprenne", async () => {
+      const run = vi.fn(() => new Promise<"DONE">(() => {}));
+      const claim = vi.fn().mockResolvedValueOnce(row).mockResolvedValue(null);
+      const release = vi.fn(async () => true);
+      const log = vi.fn();
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch: async () => empty, printSheets: { release, claim, run, recover: async () => 0 } },
+      });
+      const running = loop.start();
+      await sleep(30);
+      await loop.stop();
+      await running;
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(release).toHaveBeenCalledWith("g1", "w");
+      expect(log).toHaveBeenCalledWith("[worker] print generation released", { id: "g1", released: true });
+    });
+
+    it("stop() sans generation en cours, ou deja terminee, ne libere rien", async () => {
+      const release = vi.fn(async () => true);
+      const claim = vi.fn().mockResolvedValueOnce(row).mockResolvedValue(null);
+      const run = vi.fn(async () => "DONE" as const);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch: async () => empty, printSheets: { release, claim, run, recover: async () => 0 } },
+      });
+      await loop.runOnce(t0);
+      await sleep(10); // la generation est terminee
+      await loop.stop();
+      expect(release).not.toHaveBeenCalled();
+      const idle = createWorkerLoop({ workerId: "w", config, deps: { processBatch: async () => empty, printSheets: { ...noGen, release } } });
+      await idle.stop();
+      expect(release).not.toHaveBeenCalled();
+    });
+
+    it("un echec de liberation est journalise sans empecher l'arret", async () => {
+      const run = vi.fn(() => new Promise<"DONE">(() => {}));
+      const claim = vi.fn().mockResolvedValue(row);
+      const release = vi.fn().mockRejectedValueOnce(new Error("db")).mockRejectedValueOnce("x");
+      const log = vi.fn();
+      const mk = () =>
+        createWorkerLoop({
+          workerId: "w",
+          config,
+          log,
+          deps: { processBatch: async () => empty, printSheets: { release, claim, run, recover: async () => 0 } },
+        });
+      for (const error of ["db", "x"]) {
+        const loop = mk();
+        await loop.runOnce(t0);
+        await loop.stop();
+        expect(log).toHaveBeenCalledWith("[worker] print generation release failed", { id: "g1", error });
+      }
+    });
+
+    it("apres stop(), plus aucune generation n'est reservee", async () => {
+      const claim = vi.fn().mockResolvedValue(row);
+      const recover = vi.fn(async () => 0);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch: async () => empty, printSheets: { ...noGen, claim, recover } },
+      });
+      await loop.stop();
+      await loop.runOnce(t0);
+      expect(claim).not.toHaveBeenCalled();
+    });
+
+    it("runOnce sans planches (mode --once) ne reprend ni ne reserve de generation, mais envoie les emails", async () => {
+      const claim = vi.fn().mockResolvedValue(row);
+      const recover = vi.fn(async () => 0);
+      const processBatch = vi.fn(async () => empty);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        deps: { processBatch, printSheets: { ...noGen, claim, recover } },
+      });
+      await loop.runOnce(t0, { printSheets: false });
+      expect(claim).not.toHaveBeenCalled();
+      expect(recover).not.toHaveBeenCalled();
+      expect(processBatch).toHaveBeenCalledTimes(1);
+    });
+
+    it("journalise un run qui plante, puis libère le worker", async () => {
+      const log = vi.fn();
+      const run = vi.fn().mockRejectedValueOnce(new Error("kaboom")).mockRejectedValueOnce("str");
+      const claim = vi.fn().mockResolvedValue(row);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch: async () => empty, printSheets: { release: noRelease, claim, run, recover: async () => 0 } },
+      });
+      await loop.runOnce(t0);
+      await sleep(5);
+      expect(log).toHaveBeenCalledWith("[worker] print generation crashed", { id: "g1", error: "kaboom" });
+      await loop.runOnce(t0);
+      await sleep(5);
+      expect(log).toHaveBeenCalledWith("[worker] print generation crashed", { id: "g1", error: "str" });
+      expect(run).toHaveBeenCalledTimes(2);
+    });
+
+    it("un journal qui jette ne provoque ni rejet non gere ni blocage", async () => {
+      const unhandled = vi.fn();
+      process.on("unhandledRejection", unhandled);
+      const log = vi.fn(() => {
+        throw new Error("log HS");
+      });
+      const run = vi.fn().mockResolvedValueOnce("DONE").mockRejectedValueOnce(new Error("x"));
+      const claim = vi.fn().mockResolvedValue(row);
+      const processBatch = vi.fn(async () => empty);
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch, printSheets: { release: noRelease, claim, run, recover: async () => 1 } },
+      });
+      await loop.runOnce(t0);
+      await sleep(10);
+      await loop.runOnce(t0);
+      await sleep(10);
+      // le worker est libere malgre le journal defaillant : un 3e claim a lieu
+      await loop.runOnce(t0);
+      expect(run).toHaveBeenCalledTimes(3);
+      expect(processBatch).toHaveBeenCalledTimes(3);
+      process.off("unhandledRejection", unhandled);
+      expect(unhandled).not.toHaveBeenCalled();
+    });
+
+    it("une erreur de claim/recover ne bloque pas les emails et est journalisée", async () => {
+      const log = vi.fn();
+      const processBatch = vi.fn(async () => empty);
+      const recover = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("db"))
+        .mockResolvedValueOnce(2)
+        .mockRejectedValueOnce("x");
+      const loop = createWorkerLoop({
+        workerId: "w",
+        config,
+        log,
+        deps: { processBatch, printSheets: { ...noGen, recover } },
+      });
+      await loop.runOnce(t0);
+      expect(log).toHaveBeenCalledWith("[worker] print generation dispatch failed", { error: "db" });
+      await loop.runOnce(t0);
+      expect(log).toHaveBeenCalledWith("[worker] recovered stale print generations", { recovered: 2 });
+      await loop.runOnce(t0);
+      expect(log).toHaveBeenCalledWith("[worker] print generation dispatch failed", { error: "x" });
+      expect(processBatch).toHaveBeenCalledTimes(3);
+    });
   });
 });

@@ -11,18 +11,21 @@ export function logKind(t: ActivityType): LogKind {
     s === "MEMBERSHIP_ADDED" ||
     s === "USER_REGISTERED" ||
     s === "ORG_RESTORED" ||
-    s === "EVENT_RESTORED"
+    s === "EVENT_RESTORED" ||
+    s === "PRINT_CREDIT_EARNED"
   )
     return "creation";
   if (s.endsWith("_DELETED") || s.endsWith("_ARCHIVED") || s === "MEMBERSHIP_REMOVED" || s === "USER_BLOCKED")
     return "suppression";
-  if (s === "BADGE_SCANNED" || s.endsWith("_PRINTED") || s.endsWith("_EXPORTED")) return "acces";
+  if (s === "BADGE_SCANNED" || s === "PRINT_SHEETS_GENERATED" || s.endsWith("_PRINTED") || s.endsWith("_EXPORTED")) return "acces";
   if (
     s.endsWith("_UPDATED") ||
     s === "REGISTRATION_SNAPSHOT_REFRESHED" ||
     s === "MEMBERSHIP_ROLE_CHANGED" ||
     s.endsWith("SETTINGS_UPDATED") ||
-    s === "USER_PASSWORD_SET"
+    s === "USER_PASSWORD_SET" ||
+    s === "PRINT_REQUEST_MARGIN_RAISED" ||
+    s === "PRINT_CREDIT_APPLIED"
   )
     return "modification";
   return "systeme";
@@ -61,6 +64,26 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PAYMENT_INITIATED: "Paiement initié",
   PAYMENT_APPROVED: "Paiement approuvé",
   PAYMENT_FAILED: "Paiement échoué",
+  PRINT_LAYOUT_CREATED: "Gabarit d'impression créé",
+  PRINT_LAYOUT_UPDATED: "Gabarit d'impression modifié",
+  PRINT_LAYOUT_ARCHIVED: "Gabarit d'impression archivé",
+  PRINT_SHEETS_GENERATED: "Planches de badges générées",
+  PRINT_PRODUCT_CREATED: "Produit d'impression créé",
+  PRINT_PRODUCT_UPDATED: "Produit d'impression modifié",
+  PRINT_PRODUCT_ARCHIVED: "Produit d'impression archivé",
+  PRINT_REQUEST_SUBMITTED: "Demande d'impression envoyée",
+  PRINT_REQUEST_UPDATED: "Demande d'impression modifiée",
+  PRINT_REQUEST_QUOTED: "Devis d'impression envoyé",
+  PRINT_REQUEST_ACCEPTED: "Devis d'impression accepté",
+  PRINT_REQUEST_REOPENED: "Devis d'impression rouvert",
+  PRINT_REQUEST_STATUS_CHANGED: "Statut de demande d'impression changé",
+  PRINT_REQUEST_CANCELLED: "Demande d'impression annulée",
+  PRINT_REQUEST_REJECTED: "Demande d'impression refusée",
+  PRINT_REQUEST_MARKED_PAID: "Demande d'impression marquée payée",
+  PRINT_REQUEST_MARGIN_RAISED: "Marge d'impression sur place modifiée",
+  PRINT_CREDIT_APPLIED: "Crédit d'impression appliqué",
+  PRINT_CREDIT_EARNED: "Crédit d'impression acquis",
+  PRINT_REQUEST_SUPPLEMENT_CREATED: "Demande d'impression complémentaire créée",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

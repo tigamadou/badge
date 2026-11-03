@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { RoleBadge } from "@/components/ui/Labels";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -13,6 +14,7 @@ export type TemplateSummary = {
   pages: number;
   pageSize: { width: string; height: string };
   previewSrc: string;
+  onsite: boolean;
 };
 
 export type EffectiveLevel = "event" | "org" | "platform";
@@ -30,6 +32,8 @@ type Props = {
   effectiveLevel: EffectiveLevel;
   patchUrl: string;
   canClearToInherit: boolean;
+  // Motif de verrouillage : encadré d'avertissement et boutons désactivés.
+  lockedReason?: string;
 };
 
 export default function BadgeTemplatePicker({
@@ -39,6 +43,7 @@ export default function BadgeTemplatePicker({
   effectiveLevel,
   patchUrl,
   canClearToInherit,
+  lockedReason,
 }: Props) {
   const router = useRouter();
   const save = useAsyncAction(
@@ -52,10 +57,20 @@ export default function BadgeTemplatePicker({
     },
     { success: "Template enregistré.", error: "Échec de la sauvegarde.", onSuccess: () => router.refresh() },
   );
+  const locked = lockedReason !== undefined;
   const { pending } = save;
 
   return (
     <div className="space-y-5">
+      {locked && (
+        <div
+          role="alert"
+          data-testid="template-locked"
+          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          {lockedReason}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         <p className="text-slate-600">
           Template effectif : <span className="font-mono text-slate-900">{effectiveId}</span>{" "}
@@ -67,6 +82,7 @@ export default function BadgeTemplatePicker({
             className="text-green-600"
             onClick={() => save.run(null)}
             loading={pending}
+            disabled={locked}
           >
             Utiliser le défaut hérité
           </Button>
@@ -92,6 +108,11 @@ export default function BadgeTemplatePicker({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-slate-900">{tpl.label}</h3>
+                  {tpl.onsite && (
+                    <span role="img" aria-label="Impression sur place" title="Impression sur place" className="text-slate-500">
+                      <Icon name="printer" size={14} />
+                    </span>
+                  )}
                   {isCurrent && <RoleBadge tone="green">✅ Sélectionné</RoleBadge>}
                 </div>
                 <p className="mt-1 text-xs text-slate-400">
@@ -102,7 +123,7 @@ export default function BadgeTemplatePicker({
               <div className="flex items-center gap-3">
                 <Button
                   onClick={() => save.run(tpl.id)}
-                  disabled={pending || isCurrent}
+                  disabled={pending || isCurrent || locked}
                   data-testid={`select-${tpl.id}`}
                   hidden={isCurrent}
                 >

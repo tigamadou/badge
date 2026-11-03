@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeRequest } from "@/lib/__tests__/helpers/print-requests";
+import { paymentProbe } from "@/lib/print-requests/service";
 import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@/lib/badge-templates/install";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
@@ -243,5 +245,78 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/settings/badge", () => {
 
     const reloaded = await prisma.event.findUnique({ where: { id: event.id } });
     expect(reloaded?.badgeTemplateId).toBeNull();
+  });
+});
+
+describe("PATCH event badge template : verrou des demandes d'impression", () => {
+  beforeEach(async () => {
+    vi.mocked(getServerSession).mockReset();
+    await setupPlatform();
+  });
+
+  async function patch(org: { id: string }, event: { id: string }, badgeTemplateId: string | null) {
+    const { PATCH } = await import("../route");
+    return PATCH(makeReq(org.id, event.id, { badgeTemplateId }), {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id }),
+    });
+  }
+  async function setup(status: "QUOTED" | "ACCEPTED" | "PAID" | "COMPLETED", extra: Record<string, unknown> = {}) {
+    const { user, org, event } = await makeEventWithMember("OWNER", "ADMIN");
+    const def = await prisma.installedBadgeTemplate.findUniqueOrThrow({ where: { id: await installedDefaultId() } });
+    const request = await makeRequest(
+      { org, event, owner: user },
+      { status, badgeTemplateId: def.id, badgeWidthPx: def.pageWidthPx, badgeHeightPx: def.pageHeightPx, badgePages: def.pages, ...extra },
+    );
+    return { org, event, request, def };
+  }
+
+  it("demande PAID : 409 TEMPLATE_LOCKED_BY_PRINT_REQUEST, template inchangé", async () => {
+    const { org, event, request } = await setup("PAID");
+    const res = await patch(org, event, await installedRectoVersoId());
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({
+      error: "TEMPLATE_LOCKED_BY_PRINT_REQUEST",
+      reference: request.reference,
+    });
+    expect((await prisma.event.findUnique({ where: { id: event.id } }))?.badgeTemplateId).toBeNull();
+  });
+
+  it("demande COMPLETED : 200", async () => {
+    const { org, event } = await setup("COMPLETED");
+    expect((await patch(org, event, await installedRectoVersoId())).status).toBe(200);
+  });
+
+  it("demande ACCEPTED avec paiement en cours : 409 PAYMENT_IN_PROGRESS", async () => {
+    const { org, event } = await setup("ACCEPTED");
+    const spy = vi.spyOn(paymentProbe, "isPaymentInProgress").mockResolvedValue(true);
+    const res = await patch(org, event, await installedRectoVersoId());
+    spy.mockRestore();
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("PAYMENT_IN_PROGRESS");
+    expect((await prisma.event.findUnique({ where: { id: event.id } }))?.badgeTemplateId).toBeNull();
+  });
+
+  it("demande QUOTED : 200, repasse SUBMITTED, copie et fil mis à jour", async () => {
+    const { org, event, request, def } = await setup("QUOTED");
+    const rv = await prisma.installedBadgeTemplate.findUniqueOrThrow({ where: { id: await installedRectoVersoId() } });
+    expect((await patch(org, event, rv.id)).status).toBe(200);
+    const after = await prisma.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    expect(after).toMatchObject({
+      status: "SUBMITTED", badgeTemplateId: rv.id, badgeWidthPx: rv.pageWidthPx, badgeHeightPx: rv.pageHeightPx, badgePages: rv.pages,
+    });
+    const msgs = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
+    expect(msgs.map((m) => m.body)).toEqual([`Template de badge changé : ${def.label} → ${rv.label}`]);
+  });
+
+  it("demande ACCEPTED sans paiement : acceptation annulée, entrée suffixée", async () => {
+    const { org, event, request, def } = await setup("ACCEPTED", {
+      acceptedVersion: 1, acceptedTotal: 100, acceptedAt: new Date(),
+    });
+    const rv = await prisma.installedBadgeTemplate.findUniqueOrThrow({ where: { id: await installedRectoVersoId() } });
+    expect((await patch(org, event, rv.id)).status).toBe(200);
+    const after = await prisma.printRequest.findUniqueOrThrow({ where: { id: request.id } });
+    expect(after).toMatchObject({ status: "SUBMITTED", acceptedVersion: null, acceptedTotal: null });
+    const msgs = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
+    expect(msgs[0].body).toBe(`Template de badge changé : ${def.label} → ${rv.label}; l'acceptation est annulée`);
   });
 });

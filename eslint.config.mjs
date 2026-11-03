@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Worktrees de developpement parallele : lintes depuis leur propre racine.
+    ".worktrees/**",
   ]),
 ]);
 

@@ -4,7 +4,8 @@ import {
   parseBadgeIds,
   mapWithConcurrency,
   BATCH_RENDER_CONCURRENCY,
-  MAX_BADGES_PER_BATCH,
+  chunk,
+  MARK_PRINTED_CHUNK,
 } from "../badge-batch";
 
 const base = {
@@ -53,8 +54,21 @@ describe("parseBadgeIds", () => {
     expect(parseBadgeIds(" b, a,,b ,c")).toEqual(["b", "a", "c"]);
   });
 
-  it("limite de lot a 200", () => {
-    expect(MAX_BADGES_PER_BATCH).toBe(200);
+  it("marquage par paquets de 500", () => {
+    expect(MARK_PRINTED_CHUNK).toBe(500);
+  });
+});
+
+describe("chunk", () => {
+  it("decoupe en paquets consecutifs, ordre conserve", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([1, 2], 2)).toEqual([[1, 2]]);
+    expect(chunk([], 2)).toEqual([]);
+  });
+
+  it("1200 elements en 3 paquets de 500, 500, 200", () => {
+    const sizes = chunk(Array.from({ length: 1200 }, (_, i) => i), MARK_PRINTED_CHUNK).map((c) => c.length);
+    expect(sizes).toEqual([500, 500, 200]);
   });
 });
 

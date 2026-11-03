@@ -18,7 +18,8 @@ async function shutdown() {
 async function main() {
   log("[worker] started", { workerId, ...config });
   if (process.argv.includes("--once")) {
-    await loop.runOnce();
+    // Pas de generation d'impression en --once : le processus s'arrete aussitot et la laisserait a moitie faite.
+    await loop.runOnce(undefined, { printSheets: false });
     await shutdown();
     return;
   }

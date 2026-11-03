@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { CatPill } from "@/components/ui/Labels";
-import { MAX_BADGES_PER_BATCH } from "@/lib/badge-batch";
-import { toastSuccess } from "@/lib/toast";
+import {
+  forgetExport,
+  markInChunks,
+  pollExport,
+  recallExport,
+  rememberExport,
+} from "@/lib/badge-batch-client";
+import { ActionError, apiErrorMessage, toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { BadgeDocumentView } from "@/components/badge/BadgeDocumentView";
 import { badgeDocumentUrl } from "@/lib/badge-document-client";
@@ -19,20 +25,33 @@ export type BatchBadge = {
   printed: boolean;
 };
 
-// Impression par lot : liste des badges selectionnes, apercu HTML du
-// badge choisi, ZIP d'un PDF par badge pour l'imprimante a badges, marquage explicite.
+// Rafraichissement de l'etat de l'export ZIP en cours.
+const EXPORT_POLL_MS = 3000;
+
+type ExportState =
+  | { kind: "idle" }
+  | { kind: "pending"; id: string; count: number }
+  | { kind: "done"; fileKey: string }
+  | { kind: "failed"; message: string };
+
+// Impression par lot : liste des badges selectionnes, apercu HTML du badge choisi,
+// export ZIP asynchrone (un PDF par badge, prepare par le worker, sans plafond),
+// marquage explicite par paquets.
 export function BadgeBatchPanel({
   orgId,
   eventId,
   archived,
   badges,
   ignored,
+  selectionKey,
 }: {
   orgId: string;
   eventId: string;
   archived: boolean;
   badges: BatchBadge[];
   ignored: number;
+  // Clé de la sélection (sessionStorage) : sert à retrouver l'export en cours après un rechargement.
+  selectionKey: string;
 }) {
   const [currentId, setCurrentId] = useState<string | null>(badges[0]?.id ?? null);
   const [printedIds, setPrintedIds] = useState<Set<string>>(
@@ -41,24 +60,96 @@ export function BadgeBatchPanel({
 
   const base = `/api/org/${orgId}/events/${eventId}`;
   const ids = badges.map((b) => b.id);
-  const tooMany = badges.length > MAX_BADGES_PER_BATCH;
+  const [exportState, setExportState] = useState<ExportState>({ kind: "idle" });
+  // Vrai quand l'export reste PENDING depuis plus de 5 minutes (worker absent ou saturé).
+  const [pendingLong, setPendingLong] = useState(false);
 
-  // Motif G : le ZIP et l'aperçu ne changent pas ; seul le marquage passe par le hook.
-  const markPrinted = useAsyncAction(
+  const prepareZip = useAsyncAction(
     async () => {
-      const res = await fetch(`${base}/registrations/print`, {
+      const res = await fetch(`${base}/badges/exports`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ids }),
       });
       if (!res.ok) throw res;
       const json = await res.json();
-      return json.printed as number;
+      return json.export as { id: string; badgeCount: number | null };
+    },
+    {
+      error: "La préparation du ZIP a échoué.",
+      onSuccess: (exp) => {
+        rememberExport(window.sessionStorage, eventId, selectionKey, exp.id);
+        setPendingLong(false);
+        setExportState({ kind: "pending", id: exp.id, count: exp.badgeCount ?? ids.length });
+      },
+    },
+  );
+
+  // Rechargement pendant la préparation : on reprend le suivi du même export. Le serveur renvoie
+  // aussi l'export en cours pour une même sélection, un second onglet ne crée donc pas de doublon.
+  useEffect(() => {
+    const remembered = recallExport(window.sessionStorage, eventId, selectionKey);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (remembered) setExportState({ kind: "pending", id: remembered, count: badges.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, selectionKey]);
+
+  // Interroge l'export toutes les 3 s (requêtes jamais simultanées) tant qu'il est en préparation.
+  const pendingId = exportState.kind === "pending" ? exportState.id : null;
+  useEffect(() => {
+    if (!pendingId) return;
+    let cancelled = false;
+    void pollExport({
+      fetchStatus: () => fetch(`${base}/badges/exports/${pendingId}`),
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+      cancelled: () => cancelled,
+      intervalMs: EXPORT_POLL_MS,
+      onPendingLong: (long) => {
+        if (!cancelled) setPendingLong(long);
+      },
+    }).then((outcome) => {
+      if (outcome.kind === "cancelled") return;
+      // Export terminé ou perdu : inutile de le reprendre au prochain rechargement d'un échec.
+      if (outcome.kind === "failed") forgetExport(window.sessionStorage, eventId, selectionKey);
+      setPendingLong(false);
+      if (outcome.kind === "done") setExportState({ kind: "done", fileKey: outcome.fileKey });
+      else setExportState({ kind: "failed", message: outcome.message });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [base, pendingId, eventId, selectionKey]);
+
+  // Identifiants déjà marqués pendant cette session : un nouvel essai n'envoie que le reste
+  // (la route renvoie les mails et notifications à chaque appel, elle n'est pas idempotente).
+  const markedRef = useRef<Set<string>>(new Set());
+  const markPrinted = useAsyncAction(
+    async () => {
+      const todo = ids.filter((id) => !markedRef.current.has(id));
+      const result = await markInChunks(
+        todo,
+        (part) =>
+          fetch(`${base}/registrations/print`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ ids: part }),
+          }),
+        (part) => {
+          part.forEach((id) => markedRef.current.add(id));
+          setPrintedIds((prev) => new Set([...prev, ...part]));
+        },
+      );
+      if (result.failure !== undefined) {
+        const detail = await apiErrorMessage(result.failure, "erreur inattendue");
+        throw new ActionError(
+          `${result.markedIds.length} badge(s) marqué(s) imprimé(s) sur ${todo.length} ; le marquage s'est arrêté : ${detail}`,
+        );
+      }
+      return result.printed;
     },
     {
       error: "Le marquage a échoué.",
       onSuccess: (count) => {
-        setPrintedIds(new Set(ids));
         toastSuccess(`${count} badge(s) marqué(s) imprimé(s).`);
       },
     },
@@ -104,17 +195,27 @@ export function BadgeBatchPanel({
               </ul>
 
               <div className="flex flex-wrap gap-2">
-                {tooMany ? (
-                  <p className="text-[13px] text-amber-700">
-                    Un lot compte au plus {MAX_BADGES_PER_BATCH} badges : réduisez la sélection.
-                  </p>
-                ) : (
+                {exportState.kind === "pending" ? (
+                  <span role="status" className="inline-flex items-center px-3 py-2 text-[13px] text-slate-600">
+                    Préparation… ({exportState.count} badges)
+                  </span>
+                ) : exportState.kind === "done" ? (
                   <a
-                    href={`${base}/badges/print-zip?ids=${encodeURIComponent(ids.join(","))}`}
+                    href={`/api/files/${exportState.fileKey}`}
+                    download
                     className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    Télécharger le lot (.zip)
+                    Télécharger le ZIP
                   </a>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void prepareZip.run()}
+                    loading={prepareZip.pending}
+                  >
+                    Préparer le ZIP
+                  </Button>
                 )}
                 <Button
                   type="button"
@@ -125,6 +226,17 @@ export function BadgeBatchPanel({
                   Marquer imprimés
                 </Button>
               </div>
+              {exportState.kind === "pending" && pendingLong && (
+                <p role="status" className="text-[13px] text-amber-700">
+                  Toujours en attente : le traitement peut être retardé. Vous pouvez fermer cette page et revenir
+                  plus tard.
+                </p>
+              )}
+              {exportState.kind === "failed" && (
+                <p role="alert" className="text-[13px] text-red-700">
+                  {exportState.message}
+                </p>
+              )}
               {archived && (
                 <p className="text-[13px] text-slate-500">Événement archivé : le marquage est désactivé.</p>
               )}

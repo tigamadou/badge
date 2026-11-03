@@ -8,6 +8,8 @@ import { REMINDER_DAYS } from "./constants";
 const DAY_MS = 24 * 3_600_000;
 const ORPHAN_AFTER_MS = 15 * 60_000;
 const EXPIRE_AFTER_MS = 24 * 3_600_000;
+// Paiements d'impression remplaces ou expires : FedaPay peut encore les approuver tard.
+const REPLAYED_WINDOW_MS = 7 * 24 * 3_600_000;
 
 export type SubscriptionSweepSummary = {
   settled: number;
@@ -72,6 +74,31 @@ async function sendReminders(now: Date): Promise<number> {
   return reminded;
 }
 
+// Argent reçu sans trace si le webhook échoue : relit les paiements d'impression CANCELED (remplacés)
+// ou EXPIRED créés il y a moins de 7 jours. confirmPayment est idempotent et sans effet tant que
+// FedaPay ne les a pas approuvés ; les abonnements ne sont pas concernés.
+async function replayClosedPrintPayments(now: Date): Promise<number> {
+  const closed = await prisma.payment.findMany({
+    where: {
+      purpose: "PRINT_REQUEST",
+      status: { in: ["CANCELED", "EXPIRED"] },
+      fedapayTransactionId: { not: null },
+      createdAt: { gte: new Date(now.getTime() - REPLAYED_WINDOW_MS) },
+    },
+    select: { fedapayTransactionId: true, status: true },
+  });
+  let reconciled = 0;
+  for (const { fedapayTransactionId, status } of closed) {
+    try {
+      const result = await confirmPayment(fedapayTransactionId as number);
+      if (result && result.status !== status) reconciled++;
+    } catch (err) {
+      logError(`confirm ${fedapayTransactionId}`, err);
+    }
+  }
+  return reconciled;
+}
+
 // Paiements orphelins : relecture FedaPay après 15 min, expiration après 24 h.
 async function reconcileOrphans(now: Date): Promise<{ reconciled: number; expired: number }> {
   const orphans = await prisma.payment.findMany({
@@ -110,6 +137,11 @@ async function reconcileOrphans(now: Date): Promise<{ reconciled: number; expire
     expired = res.count;
   } catch (err) {
     logError("expire payments", err);
+  }
+  try {
+    reconciled += await replayClosedPrintPayments(now);
+  } catch (err) {
+    logError("replay closed print payments", err);
   }
   return { reconciled, expired };
 }

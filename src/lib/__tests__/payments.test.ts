@@ -80,6 +80,8 @@ describe("payments", () => {
         fedapayTransactionId: 77,
         fedapayReference: "trx_77",
         userId: user.id,
+        purpose: "SUBSCRIPTION",
+        printRequestId: null,
       });
       const sent = JSON.parse(fetchMock.mock.calls[0][1].body);
       expect(sent.callback_url).toBe(`https://badge.local/org/${org.id}/subscription/return`);
@@ -192,6 +194,15 @@ describe("payments", () => {
   });
 
   describe("confirmPayment", () => {
+    it("un Payment SUBSCRIPTION sans plan lève « Paiement incohérent » sans appeler fetch", async () => {
+      const { user, org } = await seed();
+      await prisma.payment.create({
+        data: { orgId: org.id, planId: null, userId: user.id, amount: 15000, status: "PENDING", fedapayTransactionId: 90 },
+      });
+      await expect(confirmPayment(90)).rejects.toThrow("Paiement incohérent");
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it("confirmPayment approved depuis free → plan actif, endDate +30 j, mode IMMEDIATE, 1 notification", async () => {
       const { user, org, free, pro } = await seed();
       await prisma.subscription.create({ data: { orgId: org.id, planId: free.id, endDate: null } });
@@ -216,6 +227,24 @@ describe("payments", () => {
       expect(
         await prisma.notification.count({ where: { userId: user.id, type: "SUBSCRIPTION_CHANGED", scope: "ORG" } }),
       ).toBe(1);
+    });
+
+    it("paiement sans utilisateur (userId null) : approuvé et refusé sans userId dans le journal", async () => {
+      const { user, org, pro } = await seed();
+      const approved = await pendingPayment(org.id, pro.id, user.id);
+      await prisma.payment.update({ where: { id: approved.id }, data: { userId: null } });
+      fetchMock.mockResolvedValue(jsonResponse(txBody({ status: "approved" })));
+      expect(await confirmPayment(77)).toEqual({ status: "APPROVED", applied: true });
+      const logs = await prisma.activityLog.findMany({ where: { type: { in: ["PAYMENT_APPROVED", "SUBSCRIPTION_UPDATED"] } } });
+      expect(logs).toHaveLength(2);
+      expect(logs.every((l) => l.userId === null)).toBe(true);
+
+      const declined = await pendingPayment(org.id, pro.id, user.id, 15000, 78);
+      await prisma.payment.update({ where: { id: declined.id }, data: { userId: null } });
+      fetchMock.mockResolvedValue(jsonResponse(txBody({ id: 78, status: "declined" })));
+      expect(await confirmPayment(78)).toEqual({ status: "DECLINED", applied: false });
+      const failed = await prisma.activityLog.findFirstOrThrow({ where: { type: "PAYMENT_FAILED", targetId: declined.id } });
+      expect(failed.userId).toBeNull();
     });
 
     it("sans abonnement existant → abonnement créé", async () => {

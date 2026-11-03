@@ -60,13 +60,17 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 ### References
 
 - [reCAPTCHA v3](features/recaptcha.md) — protection anti-spam de l'inscription et du mot de passe oublié : configuration, jeton côté navigateur, diagnostic.
-- [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox.
+- [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox, paiement des devis d'impression (`purpose`, un seul paiement en cours, paiement hors contexte, marquage manuel, URL de retour).
 - [Abonnements](features/abonnements.md) — plans, prix, essai free de 30 jours, echeance (`EXPIRED`), droits selon l'abonnement, rappels.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
 - [Lot notifications — socle commun](features/lot-notifications-socle.md) — contrats C1 a C4 (`enqueueEmail`, `NotificationBell`, `UserAvatar`, toasts) tels que livres.
 - [Notifications internes et email](features/notifications.md) — cloche, panneau, pages par espace, matrice des evenements, destinataires, API, retention.
 - [Loader et toast sur les actions](features/feedback-actions.md) — primitives, `apiErrorMessage`, motifs A a G, regles d'usage, helpers e2e.
 - [Resoumission avec changement de categorie](features/inscriptions-resoumission.md) — `resubmit` (corps optionnel, nouvel ID, `INVALID_CATEGORY`), `allocateRegistrationId`, rejet interdit apres impression du badge.
+- [Planches d'impression](features/impression-planches.md) — gabarits, calcul de la grille, recto-verso, génération asynchrone par le worker, export ZIP organisateur sans limite, droits, limites connues.
+- [Catalogue des produits d'impression](features/catalogue-impression.md) — familles, produits, images, paliers, six types d'options, règle de prix et arrondi de la répartition, copie figée, upload (415/413), droits, `GET /api/print/catalog`, contrat `pricing.ts` pour le plan 33.
+- [Demandes d'impression et devis](features/impression-demandes.md) — cycle de vie des demandes (brouillon à terminée), lots figés et réservation, suivi des quantités, devis versionné et acceptation par le propriétaire, fil de discussion groupé, paiement hors ligne, verrou du template, droits, notifications, points d'extension des plans 34 et 35.
+- [Impression pendant l'évènement](features/impression-sur-place.md) — réglages et templates adaptés, QR d'accueil, poste d'impression (refus, réimpression), compteur et marge, clôture (crédit ou demande complémentaire), crédit d'impression (application, dépense au paiement, retour à l'annulation), règles de comptage.
 - [Architecture](architecture.md) — structure des espaces, RBAC, garde-fous.
 - [Installation](installation.md) — env, services, HTTPS local, commandes de test, CI.
 - [Spec backups hebdomadaires](specs/2026-05-31-v4-stockage-s3-et-backups.md) — ADR (migre depuis v3-01) ; volet stockage S3/MinIO implemente et retire du document.
@@ -105,6 +109,9 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 | Lot notifications — categorie d'inscription rejetee (spec 25) | Livre (2026-10-24) — `resubmit` accepte `{ categoryId }`, nouvel ID en transaction (`allocateRegistrationId`), selecteur `RadioCards` et redirection ; rejet refuse si le badge est imprime (`BADGE_ALREADY_PRINTED`). Voir [feature](features/inscriptions-resoumission.md) |
 | Lot notifications — notifications internes et email (spec 24) | Livre (2026-10-24) — table `Notification`, service `src/lib/notifications/` (destinataires, `notify`, declencheurs), cloche + panneau (polling 30 s), pages des quatre espaces, email par la queue, retention 90 j dans le worker, `EMAIL_FAILED`. Voir [feature](features/notifications.md) |
 | Lot notifications — feedback des actions (spec 28) | Livre (2026-10-24) — loader + `disabled` + toast sur toutes les actions des quatre espaces et des pages publiques (`useAsyncAction`, `ActionButton`, `apiErrorMessage` qui filtre codes et messages anglais, erreurs de champ sous les champs). Voir [feature](features/feedback-actions.md) |
+| Gabarits et planches d'impression (spec 31) | Livre (2026-11-01) — gabarits `/platform/print/layouts`, generation asynchrone des planches `/platform/print/sheets` (worker, rognage au format, recto-verso), export ZIP organisateur asynchrone sans limite (`print-zip` supprime). **A valider sur papier (recto-verso) avant la premiere commande.** Voir [feature](features/impression-planches.md) |
+| Demandes d'impression et devis (spec 33) | Livré (2026-11-01) — assistant en six étapes, devis versionné, acceptation par le propriétaire, fil de discussion, paiement hors ligne par le staff, verrou du template de `PAID` à `READY`, écrans staff `/platform/print/requests`. **Paiement en ligne (plan 34) et impression sur place (plan 35) à venir.** Voir [feature](features/impression-demandes.md) |
+| Impression pendant l'évènement (spec 35) | Livré (2026-11-01) — onglet « Impression sur place » des paramètres, QR d'accueil (email et compte), poste d'impression `/platform/print/requests/[requestId]/onsite` avec journal, compteur et plafond, clôture en crédit ou en demande complémentaire, crédit d'impression en FCFA. **Recette réelle à faire** (scan depuis un téléphone, PDF sur l'imprimante de badges). Voir [feature](features/impression-sur-place.md) |
 
 Pour un chantier livre, le detail task par task vit dans l'historique git du plan
 supprime ; le *pourquoi* reste dans la spec.

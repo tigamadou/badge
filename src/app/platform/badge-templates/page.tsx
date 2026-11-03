@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getOnsitePrintSettings } from "@/lib/settings";
 import { templateImageUrl } from "@/lib/badge-templates/resolve";
 import { Icon } from "@/components/ui/Icon";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
@@ -29,6 +30,7 @@ export default async function PlatformBadgeTemplatesPage() {
   const templates = await prisma.installedBadgeTemplate.findMany({
     orderBy: [{ family: "asc" }, { version: "desc" }],
   });
+  const onsiteIds = new Set((await getOnsitePrintSettings()).templateIds);
 
   return (
     <div className="space-y-6">
@@ -70,6 +72,16 @@ export default async function PlatformBadgeTemplatesPage() {
                     <span className="text-xs font-normal text-slate-500">
                       ({t.family} · v{t.version})
                     </span>
+                    {onsiteIds.has(t.id) && (
+                      <span
+                        role="img"
+                        aria-label="Impression sur place"
+                        title="Impression sur place"
+                        className="ml-1.5 inline-block align-middle text-slate-500"
+                      >
+                        <Icon name="printer" size={14} />
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-slate-500">
                     {t.pages} page{t.pages > 1 ? "s" : ""} · {t.pageWidthPx}×{t.pageHeightPx} px ·

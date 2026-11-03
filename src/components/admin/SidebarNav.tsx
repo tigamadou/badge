@@ -11,6 +11,8 @@ export type NavLink = {
   label: string;
   icon: IconName;
   exact?: boolean;
+  // Pastille à droite du libellé quand le compteur est positif (ex. demandes en attente).
+  count?: number;
 };
 export type NavGroup = { group: string };
 export type NavEntry = NavLink | NavGroup;
@@ -48,7 +50,15 @@ export function SidebarNav({ items }: { items: NavEntry[] }) {
             }`}
           >
             <Icon name={item.icon} size={18} className="shrink-0" />
-            {item.label}
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {item.count !== undefined && item.count > 0 ? (
+              <span
+                aria-label={`${item.count} en attente`}
+                className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-green-500 px-1.5 text-[11px] font-semibold leading-5 text-white"
+              >
+                {item.count}
+              </span>
+            ) : null}
           </Link>
         );
       })}

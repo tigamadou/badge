@@ -1,4 +1,4 @@
-import { PrismaClient, RegistrationStatus } from "@prisma/client";
+import { Prisma, PrismaClient, RegistrationStatus } from "@prisma/client";
 import { hashSync } from "bcryptjs";
 import { hashToken } from "@/lib/auth-tokens";
 
@@ -40,8 +40,290 @@ const FULL_PROFILE = {
   idDocument: "uploads/profile/e2e/awa-cni.pdf",
 } as const;
 
+export const E2E_LAYOUT_PREFIX = "E2E gabarit ";
+
+// Cree un gabarit de planche A3 portrait (longueurs en dixiemes de mm), nom prefixe pour le cleanup.
+export async function createTestPrintLayout(opts: {
+  scope: string;
+  archived?: boolean;
+}): Promise<{ id: string; name: string }> {
+  const name = `${E2E_LAYOUT_PREFIX}${opts.scope} ${Date.now()}`;
+  const layout = await db().printSheetLayout.create({
+    data: {
+      name,
+      sheetWidth: 2970,
+      sheetHeight: 4200,
+      sheetOrientation: "PORTRAIT",
+      marginTop: 100,
+      marginRight: 100,
+      marginBottom: 100,
+      marginLeft: 100,
+      gapHorizontal: 0,
+      gapVertical: 0,
+      archived: opts.archived ?? false,
+    },
+    select: { id: true, name: true },
+  });
+  return layout;
+}
+
+// Cree un produit du catalogue d'impression (slug prefixe `e2e-` pour le cleanup). Le nom est libre.
+export async function createTestPrintProduct(opts: {
+  name: string;
+  kind?: "BADGE" | "ACCESSORY";
+  published?: boolean;
+}): Promise<{ id: string }> {
+  const slug = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return db().printProduct.create({
+    data: {
+      name: opts.name,
+      slug,
+      kind: opts.kind ?? "ACCESSORY",
+      basePrice: 1000,
+      published: opts.published ?? false,
+    },
+    select: { id: true },
+  });
+}
+
+export type TestPrintRequestStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "QUOTED"
+  | "ACCEPTED"
+  | "PAID"
+  | "IN_PRODUCTION"
+  | "READY"
+  | "COMPLETED"
+  | "REJECTED"
+  | "CANCELLED";
+
+const QUOTED_OR_LATER: TestPrintRequestStatus[] = ["QUOTED", "ACCEPTED", "PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
+const ACCEPTED_OR_LATER: TestPrintRequestStatus[] = ["ACCEPTED", "PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
+const PAID_OR_LATER: TestPrintRequestStatus[] = ["PAID", "IN_PRODUCTION", "READY", "COMPLETED"];
+
+// Cree une demande d'impression directement en base (sans passer par le service), dans l'etat voulu.
+// La reference porte le prefixe IMP-E2E- : elle n'entre jamais en collision avec la numerotation reelle
+// (IMP-{annee}-NNNN). Items, lignes et messages partent avec l'evenement (cascade) dans le cleanup.
+// Les lignes PRODUCT sont ajoutees par l'organisateur, les autres par le staff ; le total est la somme
+// des lignes. Un devis QUOTED ou plus avance porte la version `quoteVersion` (1 par defaut).
+// Impression sur place (plan 35) : `marginPercent` fixe la marge de la demande ; une ligne PRODUCT peut
+// porter un `productId` (un produit BADGE fait de cette ligne la commande qui compte pour le compteur) ;
+// `prints` pose des impressions au journal (les inscriptions concernees passent « badge imprime », comme
+// le fait le poste ; `reprint: true` journalise une reimpression, qui ne compte pas).
+export async function createTestPrintRequest(opts: {
+  eventId: string;
+  orgId: string;
+  createdById: string;
+  status: TestPrintRequestStatus;
+  type?: "ADVANCE" | "ONSITE";
+  quoteVersion?: number;
+  registrationIds?: string[];
+  marginPercent?: number;
+  lines?: {
+    label: string;
+    quantity: number;
+    unitPrice: number;
+    kind?: "PRODUCT" | "SERVICE" | "DISCOUNT" | "CUSTOM";
+    productId?: string;
+  }[];
+  prints?: { registrationId: string; reprint?: boolean }[];
+}): Promise<{ id: string; reference: string }> {
+  const prisma = db();
+  const type = opts.type ?? "ADVANCE";
+  const lines = opts.lines ?? [];
+  const total = lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  const quoted = QUOTED_OR_LATER.includes(opts.status);
+  const accepted = ACCEPTED_OR_LATER.includes(opts.status);
+  const quoteVersion = opts.quoteVersion ?? (quoted ? 1 : 0);
+  const now = new Date();
+  const reference = `IMP-E2E-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const request = await prisma.printRequest.create({
+    data: {
+      reference,
+      eventId: opts.eventId,
+      orgId: opts.orgId,
+      createdById: opts.createdById,
+      type,
+      status: opts.status,
+      ...(type === "ADVANCE"
+        ? { delivery: "PICKUP" as const }
+        : {
+            estimatedQuantity: 100,
+            onsiteLocation: "Palais des congres",
+            onsiteContactName: "Awa Traore",
+            onsiteContactPhone: "+22500000000",
+            onsiteSchedule: [{ date: "2030-01-15", from: "08:00", to: "18:00" }],
+          }),
+      total,
+      marginPercent: opts.marginPercent ?? null,
+      quoteVersion,
+      submittedAt: opts.status === "DRAFT" ? null : now,
+      quotedAt: quoted ? now : null,
+      ...(accepted
+        ? { acceptedVersion: quoteVersion, acceptedTotal: total, acceptedAt: now, acceptedById: opts.createdById }
+        : {}),
+      paidAt: PAID_OR_LATER.includes(opts.status) ? now : null,
+      completedAt: opts.status === "COMPLETED" ? now : null,
+      cancelledAt: opts.status === "CANCELLED" ? now : null,
+    },
+    select: { id: true, reference: true },
+  });
+  const registrationIds = opts.registrationIds ?? [];
+  if (registrationIds.length > 0) {
+    await prisma.printRequestItem.createMany({
+      data: registrationIds.map((registrationId, position) => ({ requestId: request.id, registrationId, position })),
+    });
+  }
+  if (lines.length > 0) {
+    await prisma.printQuoteLine.createMany({
+      data: lines.map((l, position) => {
+        const kind = l.kind ?? "SERVICE";
+        return {
+          requestId: request.id,
+          kind,
+          productId: l.productId ?? null,
+          label: l.label,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          lineTotal: l.quantity * l.unitPrice,
+          position,
+          addedBy: kind === "PRODUCT" ? ("ORGANIZER" as const) : ("STAFF" as const),
+        };
+      }),
+    });
+  }
+  const prints = opts.prints ?? [];
+  if (prints.length > 0) {
+    await prisma.printRequestPrint.createMany({
+      data: prints.map((p) => ({
+        requestId: request.id,
+        registrationId: p.registrationId,
+        printedById: opts.createdById,
+        reprint: p.reprint ?? false,
+      })),
+    });
+    await prisma.registration.updateMany({
+      where: { id: { in: prints.map((p) => p.registrationId) } },
+      data: { badgePrinted: true, badgePrintedAt: now },
+    });
+  }
+  return request;
+}
+
+// Cree un paiement FedaPay d'impression directement en base (aucun appel FedaPay). L'identifiant de
+// transaction est aleatoire (colonne unique) ; il sert de `?id=` a la page de retour. Un paiement
+// `APPROVED` qui solde la demande (`settle: true`) devient son `paidPaymentId` : c'est ce que fait
+// markPaid en production. Le paiement part avec l'organisation (cascade) dans le cleanup.
+export async function createTestPrintPayment(opts: {
+  orgId: string;
+  requestId: string;
+  userId?: string;
+  amount: number;
+  status: "PENDING" | "APPROVED" | "DECLINED" | "CANCELED" | "EXPIRED";
+  settle?: boolean;
+}): Promise<{ id: string; fedapayTransactionId: number }> {
+  const prisma = db();
+  const fedapayTransactionId = 900_000_000 + Math.floor(Math.random() * 99_000_000);
+  const payment = await prisma.payment.create({
+    data: {
+      orgId: opts.orgId,
+      purpose: "PRINT_REQUEST",
+      printRequestId: opts.requestId,
+      userId: opts.userId ?? null,
+      amount: opts.amount,
+      currency: "XOF",
+      status: opts.status,
+      fedapayTransactionId,
+      fedapayReference: `trx_e2e_${fedapayTransactionId}`,
+      approvedAt: opts.status === "APPROVED" ? new Date() : null,
+    },
+    select: { id: true },
+  });
+  if (opts.settle) {
+    await prisma.printRequest.update({ where: { id: opts.requestId }, data: { paidPaymentId: payment.id } });
+  }
+  return { id: payment.id, fedapayTransactionId };
+}
+
+// Cree un template installe jetable (famille `e2e-`, nettoye par cleanupE2ETestData). `label` permet de le
+// retrouver dans une liste partagee avec les templates de la base de dev.
+export async function createTestInstalledTemplate(opts: {
+  installedById: string;
+  label?: string;
+}): Promise<{ id: string; label: string }> {
+  const label = opts.label ?? "Badge E2E impression";
+  return db().installedBadgeTemplate.create({
+    data: {
+      family: `e2e-print-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      version: 1,
+      label,
+      description: "",
+      pages: 1,
+      pageWidthPx: 320,
+      pageHeightPx: 460,
+      layout: {
+        formatVersion: 3,
+        family: "e2e-print",
+        label,
+        description: "",
+        category: "badge",
+        page: { widthPx: 320, heightPx: 460, count: 1 },
+        variables: [],
+        blocks: [],
+      },
+      bindings: {},
+      assetPrefix: "badge-templates/e2e-print/",
+      formatVersion: 3,
+      installedById: opts.installedById,
+    },
+    select: { id: true, label: true },
+  });
+}
+
+// Epingle sur l'evenement un template installe jetable, pour que l'envoi d'une demande ne depende pas
+// du template par defaut de la base de dev.
+export async function pinTestEventTemplate(opts: { eventId: string; installedById: string }): Promise<{ id: string }> {
+  const row = await createTestInstalledTemplate({ installedById: opts.installedById });
+  await db().event.update({ where: { id: opts.eventId }, data: { badgeTemplateId: row.id } });
+  return { id: row.id };
+}
+
+export type TestOnsiteSettings = {
+  onsitePrintTemplateIds: string[] | null;
+  onsitePrinterNote: string | null;
+  onsiteDefaultMarginPercent: number;
+};
+
+// Lit les reglages « impression sur place » de la plateforme (etat GLOBAL partage : a restaurer en afterAll).
+export async function readOnsiteSettings(): Promise<TestOnsiteSettings> {
+  const row = await db().platformSettings.findUnique({ where: { id: "singleton" } });
+  return {
+    onsitePrintTemplateIds: (row?.onsitePrintTemplateIds as string[] | null | undefined) ?? null,
+    onsitePrinterNote: row?.onsitePrinterNote ?? null,
+    onsiteDefaultMarginPercent: row?.onsiteDefaultMarginPercent ?? 10,
+  };
+}
+
+// Ecrit les reglages « impression sur place » (cree le singleton au besoin). Sert au seed et a la restauration.
+export async function writeOnsiteSettings(settings: Partial<TestOnsiteSettings>): Promise<void> {
+  const data = {
+    ...(settings.onsitePrintTemplateIds !== undefined
+      ? { onsitePrintTemplateIds: settings.onsitePrintTemplateIds ?? Prisma.JsonNull }
+      : {}),
+    ...(settings.onsitePrinterNote !== undefined ? { onsitePrinterNote: settings.onsitePrinterNote } : {}),
+    ...(settings.onsiteDefaultMarginPercent !== undefined
+      ? { onsiteDefaultMarginPercent: settings.onsiteDefaultMarginPercent }
+      : {}),
+  };
+  await db().platformSettings.upsert({ where: { id: "singleton" }, create: { id: "singleton", ...data }, update: data });
+}
+
 export async function cleanupE2ETestData(): Promise<void> {
   const prisma = db();
+
+  // Produits du catalogue d'impression crees par les e2e (images, paliers et options en cascade).
+  await prisma.printProduct.deleteMany({ where: { slug: { startsWith: "e2e-" } } });
 
   // 1. Recuperer les users E2E (suffixe convention).
   const users = await prisma.user.findMany({
@@ -72,6 +354,9 @@ export async function cleanupE2ETestData(): Promise<void> {
   }
   // v4 (plan 08) : motifs de rejet E2E (prefixe de libelle).
   await prisma.rejectionReason.deleteMany({ where: { label: { startsWith: "E2E motif " } } });
+  // Gabarits de planches crees par les e2e (prefixe de nom ; les generations
+  // des evenements E2E partent avec leur evenement, le layoutId des autres passe a NULL).
+  await prisma.printSheetLayout.deleteMany({ where: { name: { startsWith: E2E_LAYOUT_PREFIX } } });
   // v4 (plan 11) : templates installes par les tests (prefixe de famille).
   await prisma.installedBadgeTemplate.deleteMany({ where: { family: { startsWith: "e2e-" } } });
   if (eventIds.length > 0) {
@@ -343,6 +628,44 @@ export async function createTestRegistration(opts: {
     },
   });
   return { id };
+}
+
+// Cree `count` inscriptions APPROVED en masse (un utilisateur E2E par inscription) pour les
+// parcours qui depassent une page de liste. Noms ordonnes : Nom0000, Nom0001, ...
+export async function createManyTestRegistrations(opts: {
+  scope: string;
+  eventId: string;
+  categoryId: string;
+  count: number;
+}): Promise<void> {
+  const prisma = db();
+  const stamp = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const emailOf = (i: number) => `e2e-${opts.scope}-${stamp}-${i}${E2E_EMAIL_SUFFIX}`;
+  await prisma.user.createMany({
+    data: Array.from({ length: opts.count }, (_, i) => ({ email: emailOf(i), password: "x", name: "E2E User" })),
+  });
+  const users = await prisma.user.findMany({
+    where: { email: { startsWith: `e2e-${opts.scope}-${stamp}-` } },
+    select: { id: true, email: true },
+  });
+  const idOf = new Map(users.map((u) => [u.email, u.id]));
+  await prisma.registration.createMany({
+    data: Array.from({ length: opts.count }, (_, i) => ({
+      id: `E2E-${stamp}-${String(i).padStart(5, "0")}`,
+      userId: idOf.get(emailOf(i))!,
+      eventId: opts.eventId,
+      categoryId: opts.categoryId,
+      status: "APPROVED" as const,
+      snapshotFirstName: "Awa",
+      snapshotLastName: `Nom${String(i).padStart(4, "0")}`,
+      snapshotEmail: emailOf(i),
+      snapshotStructure: FULL_PROFILE.structure,
+      snapshotPhoto: FULL_PROFILE.photo,
+      snapshotIdDocumentType: FULL_PROFILE.idDocumentType,
+      snapshotIdDocumentNumber: `${FULL_PROFILE.idDocumentNumber}-${i}`,
+      snapshotIdDocument: FULL_PROFILE.idDocument,
+    })),
+  });
 }
 
 // Cree une categorie sur un event. Si `number` n'est pas fourni, on calcule

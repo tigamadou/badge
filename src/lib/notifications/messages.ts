@@ -1,4 +1,15 @@
-import type { EventRole, OrgRole, SubscriptionStatus } from "@prisma/client";
+import type {
+  EventRole,
+  OrgRole,
+  PrintRequestStatus,
+  PrintRequestType,
+  SubscriptionStatus,
+} from "@prisma/client";
+import {
+  PRINT_REQUEST_STATUS_LABELS,
+  PRINT_REQUEST_TYPE_LABELS,
+  formatFcfa,
+} from "@/lib/print-requests/labels";
 import type { NotificationContent } from "./types";
 
 export const ROLE_LABELS: Record<OrgRole | EventRole, string> = {
@@ -276,6 +287,117 @@ export function emailFailedMessage(a: {
     body: `L'envoi de l'email ${a.kind}${to} a échoué après ${a.attempts} tentative(s).`,
     href: `/platform/jobs/${enc(a.jobId)}`,
     primaryLabel: "Voir l'envoi",
+    links: [],
+  };
+}
+
+const PRINT_EXCERPT_LENGTH = 140;
+
+const staffPrintHref = (requestId: string) => `/platform/print/requests/${enc(requestId)}`;
+const organizerPrintHref = (eventId: string, requestId: string) =>
+  `/event/${enc(eventId)}/print/${enc(requestId)}`;
+
+export function printRequestSubmittedMessage(a: {
+  requestId: string;
+  reference: string;
+  eventTitle: string;
+  orgName: string;
+  type: PrintRequestType;
+  badgeCount: number;
+}): NotificationContent {
+  return {
+    title: "Nouvelle demande d'impression",
+    body: `${a.orgName} a envoyé la demande ${a.reference} (${PRINT_REQUEST_TYPE_LABELS[a.type].toLowerCase()}, ${a.badgeCount} badges) pour ${a.eventTitle}.`,
+    href: staffPrintHref(a.requestId),
+    primaryLabel: "Voir la demande",
+    links: [],
+  };
+}
+
+export function printRequestQuotedMessage(a: {
+  requestId: string;
+  eventId: string;
+  reference: string;
+  eventTitle: string;
+  version: number;
+  total: number;
+}): NotificationContent {
+  return {
+    title: "Devis d'impression disponible",
+    body: `Le devis v${a.version} de la demande ${a.reference} (${a.eventTitle}) s'élève à ${formatFcfa(a.total)}. Le propriétaire de l'organisation peut l'accepter.`,
+    href: organizerPrintHref(a.eventId, a.requestId),
+    primaryLabel: "Voir le devis",
+    links: [],
+  };
+}
+
+export function printRequestMessageMessage(a: {
+  requestId: string;
+  eventId: string;
+  reference: string;
+  authorName: string;
+  body: string;
+  toStaff: boolean;
+}): NotificationContent {
+  const excerpt =
+    a.body.length > PRINT_EXCERPT_LENGTH ? `${a.body.slice(0, PRINT_EXCERPT_LENGTH)}…` : a.body;
+  return {
+    title: `Nouveau message — ${a.reference}`,
+    body: `${a.authorName} : ${excerpt}`,
+    href: a.toStaff ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
+    primaryLabel: "Répondre",
+    links: [],
+  };
+}
+
+export function printRequestStatusChangedMessage(a: {
+  requestId: string;
+  eventId: string;
+  reference: string;
+  eventTitle: string;
+  status: PrintRequestStatus;
+  toStaff: boolean;
+}): NotificationContent {
+  const label = PRINT_REQUEST_STATUS_LABELS[a.status];
+  return {
+    title: `Demande ${a.reference} : ${label.toLowerCase()}`,
+    body: `La demande d'impression ${a.reference} (${a.eventTitle}) est maintenant « ${label} ».`,
+    href: a.toStaff ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
+    primaryLabel: "Voir la demande",
+    links: [],
+  };
+}
+
+export function printRequestPaidMessage(a: {
+  requestId: string;
+  eventId: string;
+  reference: string;
+  eventTitle: string;
+  amount: number;
+  manual: boolean;
+  audience: "event" | "platform";
+}): NotificationContent {
+  return {
+    title: `Demande ${a.reference} payée`,
+    body: a.manual
+      ? `La demande ${a.reference} (${a.eventTitle}) a été marquée payée par l'équipe Badge.`
+      : `Le paiement de ${formatFcfa(a.amount)} de la demande ${a.reference} (${a.eventTitle}) est reçu.`,
+    href: a.audience === "platform" ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
+    primaryLabel: "Voir la demande",
+    links: [],
+  };
+}
+
+export function printPaymentUnmatchedMessage(a: {
+  requestId: string;
+  reference: string;
+  amount: number;
+}): NotificationContent {
+  return {
+    title: `Paiement à vérifier : ${a.reference}`,
+    body: `Un paiement de ${formatFcfa(a.amount)} a été approuvé alors que la demande n'attendait plus ce paiement.`,
+    href: staffPrintHref(a.requestId),
+    primaryLabel: "Voir la demande",
     links: [],
   };
 }

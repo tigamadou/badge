@@ -86,10 +86,15 @@ services:
       - .env.preprod
     networks:
       - default
+      - rendu
+    environment:
+      RENDERER_URL: http://badge-renderer-preprod:3000
     depends_on:
       init:
         condition: service_completed_successfully
       mysql:
+        condition: service_healthy
+      renderer:
         condition: service_healthy
     # Laisse le temps de finir les envois en cours (SEND_TIMEOUT_MS = 2 min au pire).
     stop_grace_period: 150s

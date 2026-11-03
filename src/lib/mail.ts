@@ -311,11 +311,24 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
   const fullName = escapeText(`${reg.snapshotFirstName} ${reg.snapshotLastName}`);
   const eventTitle = escapeText(reg.event.title);
 
+  const baseUrl = buildBaseUrl({
+    BASE_URL: process.env.BASE_URL,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  });
+
   if (reg.status === "APPROVED") {
+    const encodedId = encodeURIComponent(reg.id);
     const body = `
       <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
       <p style="margin:0 0 16px;">Votre inscription à <strong>${eventTitle}</strong> a été <span style="color:#059669;font-weight:600;">approuvée</span>.</p>
-      <p style="margin:0;">Votre badge sera disponible le jour de l'événement.</p>
+      <p style="margin:0 0 24px;">Votre badge sera disponible le jour de l'événement.</p>
+      <div style="margin:0 0 8px;padding:16px;border:1px solid #e2e8f0;border-radius:8px;text-align:center;">
+        <p style="margin:0 0 12px;font-weight:600;">Votre QR d'accueil</p>
+        <img src="${baseUrl}/api/public/qr/${encodedId}" width="200" height="200" alt="QR d'accueil" style="display:inline-block;" />
+        <p style="margin:12px 0 4px;font-family:monospace;font-size:14px;">${escapeText(reg.id)}</p>
+        <p style="margin:0 0 12px;color:#64748b;font-size:13px;">À présenter à l'accueil, sur votre téléphone ou imprimé.</p>
+        <a href="${baseUrl}/account/registrations/${encodedId}" style="color:#4f46e5;font-size:14px;">Voir mon inscription</a>
+      </div>
     `;
     await enqueueEmail({
       to: reg.snapshotEmail,
@@ -329,10 +342,6 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
 
   // REJECTED -- v2-11 : lien vers /account/registrations/[id] (login requis)
   // au lieu de /edit-registration/[editToken] (token public legacy supprime).
-  const baseUrl = buildBaseUrl({
-    BASE_URL: process.env.BASE_URL,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  });
   const reasonBlock = reg.rejectionReason
     ? `<p style="margin:0 0 8px;"><strong>Motif :</strong> ${escapeText(reg.rejectionReason)}</p>`
     : "";

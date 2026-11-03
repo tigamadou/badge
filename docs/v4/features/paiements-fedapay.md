@@ -100,6 +100,47 @@ URL du webhook a declarer dans FedaPay : `${NEXTAUTH_URL}/api/webhooks/fedapay`.
    404 (transaction disparue, par ex. apres un changement d'environnement) n'empeche pas
    l'expiration. Un paiement `EXPIRED` reste confirmable si FedaPay l'approuve plus tard.
 
+## Paiement d'un devis d'impression
+
+Meme mecanique FedaPay que l'abonnement (plan 34, spec 34) ; `Payment.purpose` distingue les deux :
+`SUBSCRIPTION` (`planId` seul, valeur par defaut) ou `PRINT_REQUEST` (`printRequestId` seul, `planId` nul).
+
+1. Devis `ACCEPTED` : sur `/event/[eventId]/print/[requestId]`, l'`OWNER` voit « Payer X FCFA » ; un
+   `MANAGER` lit « Seul le proprietaire de l'organisation peut payer ce devis. » ; le staff n'a pas le bouton.
+2. `POST /api/org/[orgId]/events/[eventId]/print-requests/[requestId]/checkout` (`OWNER`, hors mode
+   staff) cree un `Payment` `PENDING` du montant integral de `acceptedTotal` (devise `XOF`) et une
+   transaction FedaPay dont le retour est `${NEXTAUTH_URL}/event/[eventId]/print/[requestId]/return`.
+   Reponse `{ url }` : redirection vers la page FedaPay. Erreurs : `REQUEST_NOT_FOUND`,
+   `REQUEST_NOT_PAYABLE` (demande plus `ACCEPTED`), `PAYMENT_IN_PROGRESS`, `PAYMENTS_DISABLED` (503).
+   L'evenement archive reste payable (abonnement actif requis, comme l'acceptation du plan 33).
+3. **Un seul paiement en cours par demande** : un second clic reprend le `PENDING` existant (meme
+   transaction FedaPay, nouveau jeton) ; un candidat de montant different remplace l'ancien, passe
+   `CANCELED` (raison `REPLACED`). Index `[printRequestId, status]`. Tant qu'un `PENDING` existe, la
+   reouverture du devis et le marquage manuel sont refuses (`isPaymentInProgress`).
+4. Page de retour `/event/[eventId]/print/[requestId]/return?id=<transaction>` : le paiement doit
+   appartenir a la demande, a l'evenement et a l'organisation de la page avant tout appel FedaPay.
+   Resultats : « Paiement confirme » (`PAID`, le paiement est `paidPaymentId` de la demande),
+   « Paiement recu. L'equipe Badge verifie votre demande » (`UNMATCHED`), montant inattendu
+   (`MISMATCH`), « Paiement en cours de confirmation » (lien « Actualiser »), « Le paiement n'a pas
+   abouti. Votre devis reste accepte » (la demande reste `ACCEPTED`, « Payer » est propose de nouveau),
+   « Paiement introuvable. ».
+5. Approbation : `confirmPayment` aiguille sur `purpose` ; une transition unique `ACCEPTED` → `PAID`
+   (`markPaid` du plan 33, verrou de la demande) ecrit l'entree du fil et notifie l'organisateur.
+   Webhook et tache horaire sont inchanges.
+6. **Paiement hors contexte** : approuve alors que la demande n'est plus `ACCEPTED` (annulee, deja
+   soldee autrement, montant different, paiement remplace approuve tard) : l'argent est conserve,
+   l'entree `PAYMENT_UNMATCHED` s'ajoute au fil et `STAFF_ADMIN` est alerte pour trancher.
+7. **Marquage manuel** : `STAFF_ADMIN` marque encore payee une demande reglee hors FedaPay (virement,
+   especes), avec motif, audite ; refuse avec « Un paiement FedaPay est en cours sur cette demande. »
+   tant qu'un `Payment` `PENDING` existe.
+8. Historique : carte « Paiements » du detail organisateur et du detail staff (objet « Impression
+   <reference> »), et historique des abonnements inchange.
+
+E2E : FedaPay n'etant pas joignable, `e2e/event/print-request-detail.spec.ts` (bouton OWNER, mention
+MANAGER), `e2e/event/print-payment-return.spec.ts` (paiement `APPROVED` prepare en base par
+`createTestPrintPayment`) et `e2e/platform/print-request-detail.spec.ts` (carte, refus pendant un
+paiement) couvrent ce que l'interface montre sans appel reel. Le parcours complet se valide en sandbox.
+
 ## Procedure sandbox
 
 1. Configurer FedaPay selon [`../installation.md`](../installation.md#paiements-fedapay-dev).

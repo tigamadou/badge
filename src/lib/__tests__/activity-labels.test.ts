@@ -135,6 +135,92 @@ describe("REGISTRATION_SNAPSHOT_REFRESHED", () => {
   });
 });
 
+describe("types d'impression (gabarits et planches)", () => {
+  const PRINT_TYPES = [
+    "PRINT_LAYOUT_CREATED",
+    "PRINT_LAYOUT_UPDATED",
+    "PRINT_LAYOUT_ARCHIVED",
+    "PRINT_SHEETS_GENERATED",
+  ] as const;
+
+  it("ont un libelle humain different du type brut", () => {
+    for (const t of PRINT_TYPES) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+  });
+
+  it("sont classes par categorie visuelle", () => {
+    expect(logKind(as("PRINT_LAYOUT_CREATED"))).toBe("creation");
+    expect(logKind(as("PRINT_LAYOUT_UPDATED"))).toBe("modification");
+    expect(logKind(as("PRINT_LAYOUT_ARCHIVED"))).toBe("suppression");
+    expect(logKind(as("PRINT_SHEETS_GENERATED"))).toBe("acces");
+  });
+
+  it("couvrent le catalogue de produits", () => {
+    for (const t of ["PRINT_PRODUCT_CREATED", "PRINT_PRODUCT_UPDATED", "PRINT_PRODUCT_ARCHIVED"] as const) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+    expect(logKind(as("PRINT_PRODUCT_CREATED"))).toBe("creation");
+    expect(logKind(as("PRINT_PRODUCT_UPDATED"))).toBe("modification");
+    expect(logKind(as("PRINT_PRODUCT_ARCHIVED"))).toBe("suppression");
+  });
+});
+
+describe("types des demandes d'impression", () => {
+  const REQUEST_TYPES = [
+    "PRINT_REQUEST_SUBMITTED",
+    "PRINT_REQUEST_UPDATED",
+    "PRINT_REQUEST_QUOTED",
+    "PRINT_REQUEST_ACCEPTED",
+    "PRINT_REQUEST_REOPENED",
+    "PRINT_REQUEST_STATUS_CHANGED",
+    "PRINT_REQUEST_CANCELLED",
+    "PRINT_REQUEST_REJECTED",
+    "PRINT_REQUEST_MARKED_PAID",
+  ] as const;
+
+  it("ont un libelle humain different du type brut", () => {
+    for (const t of REQUEST_TYPES) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+  });
+
+  it("sont classes par categorie visuelle", () => {
+    expect(logKind(as("PRINT_REQUEST_UPDATED"))).toBe("modification");
+    expect(logKind(as("PRINT_REQUEST_QUOTED"))).toBe("systeme");
+  });
+});
+
+describe("types de l'impression sur place et du credit", () => {
+  const TYPES = [
+    "PRINT_REQUEST_MARGIN_RAISED",
+    "PRINT_CREDIT_APPLIED",
+    "PRINT_CREDIT_EARNED",
+    "PRINT_REQUEST_SUPPLEMENT_CREATED",
+  ] as const;
+
+  it("ont un libelle humain different du type brut", () => {
+    for (const t of TYPES) {
+      const label = describeActivity(as(t));
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).not.toBe(t);
+    }
+  });
+
+  it("sont classes par categorie visuelle", () => {
+    expect(logKind(as("PRINT_REQUEST_MARGIN_RAISED"))).toBe("modification");
+    expect(logKind(as("PRINT_CREDIT_APPLIED"))).toBe("modification");
+    expect(logKind(as("PRINT_CREDIT_EARNED"))).toBe("creation");
+    expect(logKind(as("PRINT_REQUEST_SUPPLEMENT_CREATED"))).toBe("creation");
+  });
+});
+
 describe("describeActivity", () => {
   const KNOWN: Partial<Record<string, string>> = {
     REGISTRATION_CREATED: "Inscription créée",

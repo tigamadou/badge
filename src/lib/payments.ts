@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import type { PaymentStatus, SubscriptionChangeMode } from "@prisma/client";
+import type { PaymentPurpose, PaymentStatus, SubscriptionChangeMode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import {
@@ -11,19 +11,34 @@ import {
   retrieveTransaction,
 } from "@/lib/fedapay";
 import { planChangeFor } from "@/lib/subscription-changes";
-import { notifySubscriptionChanged } from "@/lib/notifications/triggers";
+import {
+  notifyPrintPaymentUnmatched,
+  notifyPrintRequestPaid,
+  notifySubscriptionChanged,
+} from "@/lib/notifications/triggers";
+import { spendOrgCreditForPaidRequest } from "@/lib/print-requests/org-credit";
+import { lockRequestWithEvent, markPaid } from "@/lib/print-requests/service";
+import { appendThreadEvent } from "@/lib/print-requests/thread";
 
 export type PaymentErrorCode =
   | "PLAN_NOT_FOR_SALE"
   | "CHANGE_ALREADY_SCHEDULED"
   | "PAYMENTS_DISABLED"
-  | "PROVIDER_ERROR";
+  | "PROVIDER_ERROR"
+  | "REQUEST_NOT_FOUND"
+  | "REQUEST_NOT_PAYABLE"
+  | "REQUEST_ALREADY_PAID"
+  | "PAYMENT_IN_PROGRESS";
 
 const HTTP_STATUS: Record<PaymentErrorCode, number> = {
   PLAN_NOT_FOR_SALE: 400,
   CHANGE_ALREADY_SCHEDULED: 409,
   PAYMENTS_DISABLED: 503,
   PROVIDER_ERROR: 502,
+  REQUEST_NOT_FOUND: 404,
+  REQUEST_NOT_PAYABLE: 409,
+  REQUEST_ALREADY_PAID: 409,
+  PAYMENT_IN_PROGRESS: 409,
 };
 
 export class PaymentError extends Error {
@@ -39,6 +54,46 @@ export class PaymentError extends Error {
 }
 
 const PLAN_LITE_SELECT = { id: true, name: true, period: true, price: true } as const;
+
+// Ouvre la transaction FedaPay d'un Payment deja cree et renvoie l'URL de paiement.
+// En cas d'echec, le Payment passe CANCELED et PROVIDER_ERROR est levee. Si le Payment n'est plus
+// PENDING quand la transaction est creee (remplace par un autre checkout), la transaction est quand
+// meme enregistree sur la ligne, mais PAYMENT_IN_PROGRESS est levee : aucune URL n'est renvoyee.
+async function openTransaction(
+  paymentId: string,
+  tx: {
+    description: string;
+    amount: number;
+    callbackPath: string;
+    customer: { email: string; firstname: string };
+    metadata: Record<string, string>;
+  },
+): Promise<string> {
+  try {
+    const baseUrl = (process.env.NEXTAUTH_URL as string).replace(/\/$/, "");
+    const created = await createTransaction({
+      description: tx.description,
+      amount: tx.amount,
+      callbackUrl: `${baseUrl}${tx.callbackPath}`,
+      customer: tx.customer,
+      metadata: tx.metadata,
+    });
+    // La transaction est toujours enregistree (meme sur un paiement remplace) : un paiement tardif
+    // reste ainsi retrouvable par le webhook et le sweep.
+    await prisma.payment.updateMany({
+      where: { id: paymentId, fedapayTransactionId: null },
+      data: { fedapayTransactionId: created.id, fedapayReference: created.reference },
+    });
+    const row = await prisma.payment.findUniqueOrThrow({ where: { id: paymentId }, select: { status: true } });
+    if (row.status !== "PENDING") throw new PaymentError("PAYMENT_IN_PROGRESS");
+    return await createPaymentUrl(created.id);
+  } catch (error) {
+    if (error instanceof PaymentError) throw error;
+    console.error("[checkout fedapay]", error instanceof FedapayError ? error.code : (error as Error).name);
+    await prisma.payment.updateMany({ where: { id: paymentId, status: "PENDING" }, data: { status: "CANCELED" } });
+    throw new PaymentError("PROVIDER_ERROR");
+  }
+}
 
 export async function startCheckout(input: {
   orgId: string;
@@ -73,26 +128,13 @@ export async function startCheckout(input: {
     data: { orgId, planId, userId, amount: plan.price, currency: "XOF", status: "PENDING" },
   });
 
-  let url: string;
-  try {
-    const baseUrl = (process.env.NEXTAUTH_URL as string).replace(/\/$/, "");
-    const tx = await createTransaction({
-      description: `Abonnement ${plan.name} — ${org.name}`,
-      amount: plan.price,
-      callbackUrl: `${baseUrl}/org/${orgId}/subscription/return`,
-      customer: { email: user.email, firstname: user.name },
-      metadata: { paymentId: payment.id, orgId },
-    });
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: { fedapayTransactionId: tx.id, fedapayReference: tx.reference },
-    });
-    url = await createPaymentUrl(tx.id);
-  } catch (error) {
-    console.error("[checkout fedapay]", error instanceof FedapayError ? error.code : (error as Error).name);
-    await prisma.payment.update({ where: { id: payment.id }, data: { status: "CANCELED" } });
-    throw new PaymentError("PROVIDER_ERROR");
-  }
+  const url = await openTransaction(payment.id, {
+    description: `Abonnement ${plan.name} — ${org.name}`,
+    amount: plan.price,
+    callbackPath: `/org/${orgId}/subscription/return`,
+    customer: { email: user.email, firstname: user.name },
+    metadata: { paymentId: payment.id, orgId },
+  });
 
   await logActivity({
     type: "PAYMENT_INITIATED",
@@ -106,17 +148,240 @@ export async function startCheckout(input: {
   return { paymentId: payment.id, url };
 }
 
+// Un Payment PENDING sans transaction plus jeune que ce delai : un autre checkout l'ouvre encore.
+const CHECKOUT_OPENING_MS = 2 * 60 * 1000;
+const PRINT_CHECKOUT_ATTEMPTS = 2;
+
+type PayableRequest = { reference: string; acceptedTotal: number; eventTitle: string };
+
+// Erreurs de metier communes au controle initial et a la relecture sous verrou.
+function assertPayable(
+  request: {
+    reference: string;
+    eventId: string;
+    orgId: string;
+    status: string;
+    acceptedTotal: number | null;
+    event: { title: string };
+  } | null,
+  scope: { orgId: string; eventId: string },
+): PayableRequest {
+  if (!request || request.eventId !== scope.eventId || request.orgId !== scope.orgId) {
+    throw new PaymentError("REQUEST_NOT_FOUND");
+  }
+  // Payee entre-temps (ex. paiement du candidat approuve pendant le checkout) : message distinct.
+  if (request.status === "PAID") throw new PaymentError("REQUEST_ALREADY_PAID");
+  if (request.status !== "ACCEPTED" || request.acceptedTotal === null || request.acceptedTotal <= 0) {
+    throw new PaymentError("REQUEST_NOT_PAYABLE");
+  }
+  return { reference: request.reference, acceptedTotal: request.acceptedTotal, eventTitle: request.event.title };
+}
+
+const PAYABLE_SELECT = {
+  reference: true,
+  eventId: true,
+  orgId: true,
+  status: true,
+  acceptedTotal: true,
+  event: { select: { title: true } },
+} as const;
+
+type Candidate = { id: string; fedapayTransactionId: number };
+
+// Garantit un seul paiement en cours par demande : cree le Payment sous le verrou de la demande
+// (evenement puis demande), ou renvoie le paiement PENDING a reutiliser.
+async function prepareCheckout(input: {
+  orgId: string;
+  eventId: string;
+  requestId: string;
+  userId: string;
+}): Promise<{ request: PayableRequest; paymentId: string } | { request: PayableRequest; candidate: Candidate }> {
+  const { orgId, eventId, requestId, userId } = input;
+  return prisma.$transaction(async (db) => {
+    await lockRequestWithEvent(db, requestId);
+    const request = assertPayable(
+      await db.printRequest.findUnique({ where: { id: requestId }, select: PAYABLE_SELECT }),
+      { orgId, eventId },
+    );
+    const pending = await db.payment.findFirst({
+      where: { printRequestId: requestId, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (pending?.fedapayTransactionId && pending.amount === request.acceptedTotal) {
+      return { request, candidate: { id: pending.id, fedapayTransactionId: pending.fedapayTransactionId } };
+    }
+    if (pending) {
+      if (!pending.fedapayTransactionId && Date.now() - pending.createdAt.getTime() < CHECKOUT_OPENING_MS) {
+        throw new PaymentError("PAYMENT_IN_PROGRESS");
+      }
+      // Checkout interrompu (rien presente au client) ou montant different du devis accepte : remplace.
+      await db.payment.updateMany({ where: { id: pending.id, status: "PENDING" }, data: { status: "CANCELED" } });
+      if (pending.fedapayTransactionId) {
+        await appendThreadEvent(db, requestId, "PAYMENT_FAILED", {
+          amount: pending.amount, paymentId: pending.id, reason: "REPLACED",
+        });
+      }
+    }
+    const created = await db.payment.create({
+      data: {
+        orgId, userId, purpose: "PRINT_REQUEST", printRequestId: requestId, planId: null,
+        amount: request.acceptedTotal, currency: "XOF", status: "PENDING",
+      },
+    });
+    return { request, paymentId: created.id };
+  });
+}
+
+export async function startPrintRequestCheckout(input: {
+  orgId: string;
+  eventId: string;
+  requestId: string;
+  userId: string;
+  req?: NextRequest;
+}): Promise<{ paymentId: string; url: string }> {
+  const { orgId, eventId, requestId, userId, req } = input;
+
+  assertPayable(
+    await prisma.printRequest.findUnique({ where: { id: requestId }, select: PAYABLE_SELECT }),
+    { orgId, eventId },
+  );
+  if (!getFedapayConfig().configured) throw new PaymentError("PAYMENTS_DISABLED");
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true } });
+
+  for (let attempt = 0; attempt < PRINT_CHECKOUT_ATTEMPTS; attempt += 1) {
+    const prepared = await prepareCheckout(input);
+
+    if ("paymentId" in prepared) {
+      const { request, paymentId } = prepared;
+      const url = await openTransaction(paymentId, {
+        description: `Impression ${request.reference} — ${request.eventTitle}`,
+        amount: request.acceptedTotal,
+        callbackPath: `/event/${eventId}/print/${requestId}/return`,
+        customer: { email: user.email, firstname: user.name },
+        metadata: { paymentId, printRequestId: requestId },
+      });
+      // Le journal ne doit jamais empecher le client d'atteindre la page de paiement.
+      try {
+        await logActivity({
+          type: "PAYMENT_INITIATED",
+          userId,
+          orgId,
+          targetId: paymentId,
+          details: { paymentId, purpose: "PRINT_REQUEST", printRequestId: requestId, amount: request.acceptedTotal },
+          req,
+        });
+      } catch (error) {
+        console.error("[payment] journal du checkout en echec", error);
+      }
+      return { paymentId, url };
+    }
+
+    // Paiement PENDING deja ouvert chez FedaPay : on ne retient que ce que FedaPay confirme.
+    const { candidate } = prepared;
+    let status: string | null;
+    try {
+      status = (await retrieveTransaction(candidate.fedapayTransactionId)).status;
+    } catch (error) {
+      if (!(error instanceof FedapayError) || error.httpStatus !== 404) throw providerError(error);
+      status = null;
+    }
+
+    if (status === "pending") {
+      try {
+        return { paymentId: candidate.id, url: await createPaymentUrl(candidate.fedapayTransactionId) };
+      } catch (error) {
+        // Jeton refuse pour un candidat encore valable : un seul remplacement, puis nouveau paiement.
+        const failure = providerError(error);
+        if (attempt > 0) throw failure;
+      }
+      status = null;
+    }
+    if (status === null) {
+      // Transaction inconnue de FedaPay : le paiement est remplace par un nouveau.
+      const stale = await prisma.payment.findUniqueOrThrow({ where: { id: candidate.id } });
+      await failPayment(stale, "CANCELED", "REPLACED");
+    } else {
+      try {
+        await confirmPayment(candidate.fedapayTransactionId);
+      } catch (error) {
+        throw providerError(error);
+      }
+    }
+    // Reprise : si la demande est devenue PAID, assertPayable leve REQUEST_ALREADY_PAID.
+  }
+  throw new PaymentError("PAYMENT_IN_PROGRESS");
+}
+
+function providerError(error: unknown): PaymentError {
+  console.error("[checkout fedapay]", error instanceof FedapayError ? error.code : (error as Error).name);
+  return new PaymentError("PROVIDER_ERROR");
+}
+
 // EXPIRED : balaye apres 24 h mais encore confirmable si FedaPay l'approuve ensuite.
 const CONFIRMABLE: PaymentStatus[] = ["PENDING", "EXPIRED"];
+// Demande d'impression : un paiement remplace (CANCELED) peut etre paye ensuite chez FedaPay ; l'argent
+// recu doit laisser une trace (PAID, ou PAYMENT_UNMATCHED + alerte du staff), jamais etre ignore.
+const CONFIRMABLE_PRINT: PaymentStatus[] = [...CONFIRMABLE, "CANCELED"];
+
+type PaymentRef = {
+  id: string;
+  orgId: string;
+  userId: string | null;
+  amount: number;
+  purpose: PaymentPurpose;
+  printRequestId: string | null;
+};
 
 // Passe un paiement PENDING (ou EXPIRED) a un statut final (idempotent : un seul appelant gagne).
+// Raisons du journal : declined, canceled (FedaPay), MISMATCH (montant/devise), REPLACED (checkout remplace).
 async function failPayment(
-  paymentId: string,
-  orgId: string,
-  userId: string | null,
+  payment: PaymentRef,
   status: "DECLINED" | "CANCELED",
   reason: string,
 ): Promise<{ status: PaymentStatus; applied: boolean }> {
+  const { id: paymentId, orgId, userId } = payment;
+  if (payment.purpose === "PRINT_REQUEST" && payment.printRequestId) {
+    const requestId = payment.printRequestId;
+    // Verrou de la demande avant le Payment (meme ordre que le checkout) : pas d'interblocage.
+    const count = await prisma.$transaction(async (db) => {
+      await lockRequestWithEvent(db, requestId);
+      const res = await db.payment.updateMany({
+        // CANCELED n'est rattrapable que pour l'argent recu a un montant errone ; sinon rejeu = sans effet.
+        where: {
+          id: paymentId,
+          status: { in: status === "DECLINED" && reason === "MISMATCH" ? CONFIRMABLE_PRINT : CONFIRMABLE },
+        },
+        data: { status },
+      });
+      if (res.count === 1) {
+        await appendThreadEvent(db, requestId, "PAYMENT_FAILED", { amount: payment.amount, paymentId, reason });
+      }
+      return res.count;
+    });
+    if (count === 1) {
+      try {
+        await logActivity({
+          type: "PAYMENT_FAILED",
+          userId: userId ?? undefined,
+          orgId,
+          targetId: paymentId,
+          details: { paymentId, reason, purpose: "PRINT_REQUEST", printRequestId: requestId },
+        });
+      } catch (error) {
+        console.error("[payment] journal apres paiement en echec", error);
+      }
+      // Argent recu pour un montant ou une devise inattendu : le staff doit regler. Notification a
+      // part : un echec du journal ne doit pas la supprimer.
+      if (reason === "MISMATCH") {
+        try {
+          await notifyPrintPaymentUnmatched(requestId, paymentId);
+        } catch (error) {
+          console.error("[payment] notification apres paiement en echec", error);
+        }
+      }
+    }
+    return { status, applied: false };
+  }
   const { count } = await prisma.payment.updateMany({
     where: { id: paymentId, status: { in: CONFIRMABLE } },
     data: { status },
@@ -133,6 +398,39 @@ async function failPayment(
   return { status, applied: false };
 }
 
+type PrintIssue = "PAID" | "UNMATCHED";
+
+// Branche demande d'impression : verrou de la demande AVANT le Payment (C2), puis la demande ne
+// passe PAID que si elle attend encore exactement ce montant ; sinon l'entree du fil prévient le staff.
+async function applyPrintRequestPayment(
+  payment: PaymentRef & { printRequestId: string },
+  now: Date,
+): Promise<PrintIssue | null> {
+  const requestId = payment.printRequestId;
+  return prisma.$transaction(async (db): Promise<PrintIssue | null> => {
+    await lockRequestWithEvent(db, requestId);
+    const { count } = await db.payment.updateMany({
+      where: { id: payment.id, status: { in: CONFIRMABLE_PRINT } },
+      data: { status: "APPROVED", approvedAt: now },
+    });
+    if (count !== 1) return null;
+
+    const request = await db.printRequest.findUniqueOrThrow({
+      where: { id: requestId },
+      select: { status: true, acceptedTotal: true },
+    });
+    const expected = request.status === "ACCEPTED" && request.acceptedTotal === payment.amount;
+    if (expected && (await markPaid(db, requestId, { paymentId: payment.id }))) {
+      // Accroche A4 : le crédit d'impression est décompté dans la même transaction.
+      await spendOrgCreditForPaidRequest(db, requestId);
+      return "PAID";
+    }
+
+    await appendThreadEvent(db, requestId, "PAYMENT_UNMATCHED", { paymentId: payment.id, amount: payment.amount });
+    return "UNMATCHED";
+  });
+}
+
 // Seule la transaction relue aupres de FedaPay fait foi (statut, montant, devise).
 // Les erreurs FedaPay remontent a l'appelant et laissent le paiement PENDING.
 export async function confirmPayment(
@@ -140,18 +438,27 @@ export async function confirmPayment(
 ): Promise<{ status: PaymentStatus; applied: boolean } | null> {
   const payment = await prisma.payment.findUnique({
     where: { fedapayTransactionId },
-    include: { plan: { select: PLAN_LITE_SELECT } },
+    include: { plan: { select: PLAN_LITE_SELECT }, printRequest: { select: { id: true } } },
   });
   if (!payment) return null;
-  if (!CONFIRMABLE.includes(payment.status)) return { status: payment.status, applied: false };
+  const confirmable = payment.purpose === "PRINT_REQUEST" ? CONFIRMABLE_PRINT : CONFIRMABLE;
+  if (!confirmable.includes(payment.status)) return { status: payment.status, applied: false };
 
+  // Règle : SUBSCRIPTION <=> plan seul, PRINT_REQUEST <=> demande seule. Avant tout appel FedaPay.
+  const plan = payment.plan;
+  if (payment.purpose === "SUBSCRIPTION" ? !plan || payment.printRequest : !payment.printRequest || plan) {
+    throw new Error("Paiement incohérent");
+  }
   const tx = await retrieveTransaction(fedapayTransactionId);
 
-  if (tx.status === "pending") return { status: payment.status, applied: false };
+  // Un paiement deja CANCELED ne change que s'il est approuve : tout autre statut FedaPay est sans effet.
+  if (tx.status === "pending" || (payment.status === "CANCELED" && !isPaidStatus(tx.status))) {
+    return { status: payment.status, applied: false };
+  }
 
   if (!isPaidStatus(tx.status)) {
     const status = tx.status === "canceled" ? "CANCELED" : "DECLINED";
-    return failPayment(payment.id, payment.orgId, payment.userId, status, tx.status);
+    return failPayment(payment, status, tx.status);
   }
 
   const mismatch =
@@ -162,10 +469,15 @@ export async function confirmPayment(
       expected: { amount: payment.amount, currency: "XOF" },
       received: { amount: tx.amount, currency: tx.currencyIso },
     });
-    return failPayment(payment.id, payment.orgId, payment.userId, "DECLINED", "MISMATCH");
+    return failPayment(payment, "DECLINED", "MISMATCH");
   }
 
   const now = new Date();
+  // La garde de cohérence garantit : pas de plan <=> PRINT_REQUEST avec sa demande.
+  if (!plan) {
+    return confirmPrintRequestPayment({ ...payment, printRequestId: payment.printRequestId as string }, now);
+  }
+
   const mode = await prisma.$transaction(async (db): Promise<SubscriptionChangeMode | null> => {
     const { count } = await db.payment.updateMany({
       where: { id: payment.id, status: { in: CONFIRMABLE } },
@@ -179,7 +491,7 @@ export async function confirmPayment(
       where: { orgId: payment.orgId },
       include: { plan: { select: PLAN_LITE_SELECT } },
     });
-    const change = planChangeFor(current, { ...payment.plan, price: payment.amount }, now);
+    const change = planChangeFor(current, { ...plan, price: payment.amount }, now);
 
     if (change.mode === "IMMEDIATE") {
       await db.subscription.upsert({
@@ -216,4 +528,38 @@ export async function confirmPayment(
   }
 
   return { status: "APPROVED", applied: true };
+}
+
+// Hors transaction : journal et notifications ne doivent jamais défaire le paiement.
+async function confirmPrintRequestPayment(
+  payment: PaymentRef & { printRequestId: string },
+  now: Date,
+): Promise<{ status: PaymentStatus; applied: boolean }> {
+  const issue = await applyPrintRequestPayment(payment, now);
+  if (issue === null) return { status: "APPROVED", applied: false };
+
+  try {
+    await logActivity({
+      type: "PAYMENT_APPROVED",
+      userId: payment.userId ?? undefined,
+      orgId: payment.orgId,
+      targetId: payment.id,
+      details: {
+        paymentId: payment.id,
+        purpose: "PRINT_REQUEST",
+        printRequestId: payment.printRequestId,
+        unmatched: issue === "UNMATCHED",
+      },
+    });
+  } catch (error) {
+    console.error("[payment] journal apres paiement en echec", error);
+  }
+  // Notification a part : un echec du journal ne doit pas la supprimer.
+  try {
+    if (issue === "PAID") await notifyPrintRequestPaid(payment.printRequestId, payment.userId);
+    else await notifyPrintPaymentUnmatched(payment.printRequestId, payment.id);
+  } catch (error) {
+    console.error("[payment] notification apres paiement en echec", error);
+  }
+  return { status: "APPROVED", applied: issue === "PAID" };
 }

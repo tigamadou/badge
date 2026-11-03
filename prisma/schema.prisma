@@ -55,13 +55,21 @@ model User {
   // v2-14 Task 14 : derniere connexion reussie (mise a jour par NextAuth signIn callback).
   lastLoginAt DateTime?
 
-  orgMemberships     OrgMembership[]
-  eventMemberships   EventMembership[]
-  payments           Payment[]
-  activityLogs       ActivityLog[]
-  registrations      Registration[]
-  profileSubmissions ProfileSubmission[]
-  notifications      Notification[]
+  orgMemberships        OrgMembership[]
+  eventMemberships      EventMembership[]
+  payments              Payment[]
+  activityLogs          ActivityLog[]
+  registrations         Registration[]
+  profileSubmissions    ProfileSubmission[]
+  notifications         Notification[]
+  printSheetLayouts     PrintSheetLayout[]
+  printProducts         PrintProduct[]
+  printSheetGenerations PrintSheetGeneration[]
+  printRequestsCreated  PrintRequest[]         @relation("PrintRequestCreatedBy")
+  printRequestsAccepted PrintRequest[]         @relation("PrintRequestAcceptedBy")
+  printRequestMessages  PrintRequestMessage[]
+  printRequestPrints    PrintRequestPrint[]   @relation("PrintRequestPrintPrintedBy")
+  orgPrintCredits       OrgPrintCredit[]      @relation("OrgPrintCreditCreatedBy")
 }
 
 enum StaffRole {
@@ -108,13 +116,15 @@ model Organization {
 
   // v2-12 : id de template de badge override pour cette org (null = heritage platform).
   // Note (2026-05-31) : OrgSettings supprime, ce champ vit directement sur Organization.
-  badgeTemplateId       String?
+  badgeTemplateId String?
 
   memberships       OrgMembership[]
   events            Event[]
   categoryTemplates CategoryTemplate[]
   subscription      Subscription?
   payments          Payment[]
+  printRequests     PrintRequest[]
+  printCredits      OrgPrintCredit[]
 }
 
 model OrgMembership {
@@ -152,37 +162,39 @@ model Event {
   orgId        String
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
-  title            String
-  slug             String    @unique
-  location         String
-  date             DateTime
+  title                String
+  slug                 String    @unique
+  location             String
+  date                 DateTime
   // v4 (plan 07) : informatif uniquement. `date` reste la date de reference pour
   // l'ID metier, les badges et l'ouverture des inscriptions.
-  endDate          DateTime?
-  description      String?   @db.Text
-  logo             String?
+  endDate              DateTime?
+  description          String?   @db.Text
+  logo                 String?
   // Consignes de securite imprimees sur les badges (liste de textes, variable
   // `list` des templates). Nullable : null vaut « aucune consigne ».
   securityInstructions Json?
   // Banniere de l'evenement (chemin de fichier, comme `logo`), source
   // event.bannerDataUrl des templates.
-  banner           String?
+  banner               String?
   // Options des templates de badge : { nomDeVariable: valeur }, reglees par
   // evenement. Nullable (pas de defaut JSON sous MySQL) : null vaut « aucune ».
-  templateOptions  Json?
-  registrationOpen Boolean   @default(false)
+  templateOptions      Json?
+  registrationOpen     Boolean   @default(false)
   // v2-12 : id de template de badge override pour cet event (null = heritage org/platform).
-  badgeTemplateId  String?
-  archived         Boolean   @default(false)
-  archivedAt       DateTime?
-  createdAt        DateTime  @default(now())
+  badgeTemplateId      String?
+  archived             Boolean   @default(false)
+  archivedAt           DateTime?
+  createdAt            DateTime  @default(now())
 
-  memberships      EventMembership[]
-  categories       Category[]
-  registrations    Registration[]
-  blockedEmails    BlockedEmail[]
-  blockedDocuments BlockedDocument[]
-  settings         EventSettings?
+  memberships           EventMembership[]
+  categories            Category[]
+  registrations         Registration[]
+  blockedEmails         BlockedEmail[]
+  blockedDocuments      BlockedDocument[]
+  printSheetGenerations PrintSheetGeneration[]
+  printRequests         PrintRequest[]
+  settings              EventSettings?
 
   @@index([orgId])
 }
@@ -269,16 +281,16 @@ model Registration {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  status           RegistrationStatus @default(PENDING)
-  badgePrinted     Boolean            @default(false)
-  badgePrintedAt   DateTime?
-  allAccessGranted Boolean            @default(false)
-  rejectionReason  String?
+  status             RegistrationStatus @default(PENDING)
+  badgePrinted       Boolean            @default(false)
+  badgePrintedAt     DateTime?
+  allAccessGranted   Boolean            @default(false)
+  rejectionReason    String?
   // v4 (plan 08) : reference au catalogue ; `rejectionReason` conserve le libelle
   // fige au moment de la decision.
   rejectionReasonId  String?
-  rejectionReasonRef RejectionReason? @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
-  rejectionDetails String?            @db.Text
+  rejectionReasonRef RejectionReason?   @relation(fields: [rejectionReasonId], references: [id], onDelete: SetNull)
+  rejectionDetails   String?            @db.Text
 
   // v2-11 : snapshot inline du profil au moment de la soumission. Reecrit a
   // chaque resoumission (pas de versionning historique). Les valeurs ici font
@@ -294,6 +306,9 @@ model Registration {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  printRequestItems PrintRequestItem[]
+  printRequestPrints PrintRequestPrint[]
 
   @@unique([userId, eventId])
   @@index([eventId])
@@ -329,7 +344,7 @@ model ProfileSubmission {
 
   reviewedById String?
   reviewedAt   DateTime?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
 
   @@index([userId, createdAt])
   @@index([status])
@@ -461,6 +476,10 @@ model PlatformSettings {
   // vide signifie « aucune racine definie » : resolveTemplate retombe alors sur la
   // famille `default`, dont le seed garantit l'existence.
   badgeTemplateId    String  @default("")
+  // plan 35 : impression sur place
+  onsitePrintTemplateIds     Json?
+  onsitePrinterNote          String? @db.Text
+  onsiteDefaultMarginPercent Int     @default(10)
   // v4 : droits selon l'etat de l'abonnement (actif / inactif), `{ [droit]: { active, inactive } }`.
   // Null = valeurs par defaut ; lecture tolerante via parseRights (src/lib/subscription-rights.ts).
   subscriptionRights Json?
@@ -507,6 +526,28 @@ model ActivityLog {
 }
 
 enum ActivityType {
+  // Demandes d'impression et devis
+  PRINT_REQUEST_SUBMITTED
+  PRINT_REQUEST_UPDATED
+  PRINT_REQUEST_QUOTED
+  PRINT_REQUEST_ACCEPTED
+  PRINT_REQUEST_REOPENED
+  PRINT_REQUEST_STATUS_CHANGED
+  PRINT_REQUEST_CANCELLED
+  PRINT_REQUEST_REJECTED
+  PRINT_REQUEST_MARKED_PAID
+  PRINT_REQUEST_MARGIN_RAISED
+  PRINT_CREDIT_APPLIED
+  PRINT_CREDIT_EARNED
+  PRINT_REQUEST_SUPPLEMENT_CREATED
+  // Gabarits d'impression et planches de badges
+  PRINT_LAYOUT_CREATED
+  PRINT_LAYOUT_UPDATED
+  PRINT_LAYOUT_ARCHIVED
+  PRINT_SHEETS_GENERATED
+  PRINT_PRODUCT_CREATED
+  PRINT_PRODUCT_UPDATED
+  PRINT_PRODUCT_ARCHIVED
   REGISTRATION_CREATED
   REGISTRATION_APPROVED
   REGISTRATION_REJECTED
@@ -628,23 +669,23 @@ enum SubscriptionPeriod {
 }
 
 model Subscription {
-  id        String             @id @default(cuid())
-  orgId     String             @unique // un abonnement courant par org
-  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  planId    String
-  plan      Plan               @relation(fields: [planId], references: [id])
-  status    SubscriptionStatus @default(ACTIVE)
-  startDate DateTime           @default(now())
-  endDate   DateTime? // null = sans echeance
+  id                              String                 @id @default(cuid())
+  orgId                           String                 @unique // un abonnement courant par org
+  org                             Organization           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId                          String
+  plan                            Plan                   @relation(fields: [planId], references: [id])
+  status                          SubscriptionStatus     @default(ACTIVE)
+  startDate                       DateTime               @default(now())
+  endDate                         DateTime? // null = sans echeance
   // Overrides par org (null = herite du plan)
   overrideMaxEvents               Int?
   overrideMaxParticipantsPerEvent Int?
   // Plan programme pour prendre le relais a l'echeance (changement SCHEDULED).
-  scheduledPlanId String?
-  scheduledPlan   Plan?              @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
-  reminders       SubscriptionReminder[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  scheduledPlanId                 String?
+  scheduledPlan                   Plan?                  @relation("ScheduledPlan", fields: [scheduledPlanId], references: [id], onDelete: SetNull)
+  reminders                       SubscriptionReminder[]
+  createdAt                       DateTime               @default(now())
+  updatedAt                       DateTime               @updatedAt
 
   @@index([planId])
   @@index([scheduledPlanId])
@@ -681,8 +722,12 @@ model Payment {
   id                   String                  @id @default(cuid())
   orgId                String
   org                  Organization            @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  planId               String
-  plan                 Plan                    @relation(fields: [planId], references: [id])
+  purpose              PaymentPurpose          @default(SUBSCRIPTION)
+  // SUBSCRIPTION <=> planId seul ; PRINT_REQUEST <=> printRequestId seul (plan 34)
+  planId               String?
+  plan                 Plan?                   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  printRequestId       String?
+  printRequest         PrintRequest?           @relation(fields: [printRequestId], references: [id], onDelete: Cascade)
   userId               String? // payeur
   user                 User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
   amount               Int
@@ -698,7 +743,13 @@ model Payment {
   @@index([orgId, createdAt])
   @@index([status, createdAt])
   @@index([planId])
+  @@index([printRequestId, status])
   @@index([userId])
+}
+
+enum PaymentPurpose {
+  SUBSCRIPTION
+  PRINT_REQUEST
 }
 
 enum JobType {
@@ -714,18 +765,18 @@ enum JobStatus {
 }
 
 model Job {
-  id        String    @id @default(cuid())
-  type      JobType
-  status    JobStatus @default(PENDING)
-  priority  Int       @default(0) // plus grand = plus prioritaire
+  id          String    @id @default(cuid())
+  type        JobType
+  status      JobStatus @default(PENDING)
+  priority    Int       @default(0) // plus grand = plus prioritaire
   // EMAIL : { to, subject, html, kind, ctx?, replyTo? }. Purge (html vide) apres succes.
-  payload   Json
+  payload     Json
   // Champs denormalises pour l'ecran d'admin (filtres, recherche) sans lire le payload.
-  kind      String // ex. "registration.approved"
-  recipient String?
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(5)
-  runAt       DateTime @default(now()) // prochain essai
+  kind        String // ex. "registration.approved"
+  recipient   String?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  runAt       DateTime  @default(now()) // prochain essai
   lockedAt    DateTime?
   lockedBy    String?
   lastError   String?   @db.Text
@@ -760,6 +811,10 @@ enum NotificationType {
   QUOTA_EXCEEDED
   EMAIL_FAILED
   SUBSCRIPTION_EXPIRING
+  PRINT_REQUEST_SUBMITTED
+  PRINT_REQUEST_QUOTED
+  PRINT_REQUEST_MESSAGE
+  PRINT_REQUEST_STATUS_CHANGED
 }
 
 enum NotificationScope {
@@ -788,4 +843,412 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
   @@index([userId, scope, createdAt])
+}
+
+// --- Gabarits d'impression et planches de badges -----------------------------
+
+enum SheetOrientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum BadgeOrientation {
+  AUTO
+  ORIGINAL
+  ROTATED
+}
+
+enum DuplexFlip {
+  LONG_EDGE
+  SHORT_EDGE
+}
+
+enum PrintSheetGenerationStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum GenerationOutput {
+  SHEETS
+  ZIP
+}
+
+// Toutes les longueurs sont en dixiemes de mm. Format stocke en portrait
+// (sheetWidth <= sheetHeight) ; l'orientation est portee par sheetOrientation.
+model PrintSheetLayout {
+  id               String           @id @default(cuid())
+  name             String           @unique
+  sheetWidth       Int
+  sheetHeight      Int
+  sheetOrientation SheetOrientation
+  marginTop        Int
+  marginRight      Int
+  marginBottom     Int
+  marginLeft       Int
+  gapHorizontal    Int
+  gapVertical      Int
+  badgeOrientation BadgeOrientation @default(AUTO)
+  duplexFlip       DuplexFlip       @default(LONG_EDGE)
+  cropMarks        Boolean          @default(true)
+  archived         Boolean          @default(false)
+  archivedAt       DateTime?
+  createdById      String?
+  createdBy        User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  generations PrintSheetGeneration[]
+}
+
+model PrintSheetGeneration {
+  id              String                     @id @default(cuid())
+  output          GenerationOutput           @default(SHEETS)
+  eventId         String
+  event           Event                      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  layoutId        String?
+  layout          PrintSheetLayout?          @relation(fields: [layoutId], references: [id], onDelete: SetNull)
+  // { spec, badgeMm, badgePages } fige a la creation ; null pour ZIP.
+  layoutSnapshot  Json?
+  duplex          Boolean                    @default(false)
+  registrationIds Json
+  status          PrintSheetGenerationStatus @default(PENDING)
+  attempts        Int                        @default(0)
+  lockedBy        String?
+  heartbeatAt     DateTime?
+  sheetCount      Int?
+  badgeCount      Int?
+  skippedIds      Json?
+  fileKey         String?
+  error           String?                    @db.Text
+  createdById     String?
+  createdBy       User?                      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime                   @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  printRequestId  String?
+  printRequest    PrintRequest?              @relation(fields: [printRequestId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([eventId])
+  @@index([printRequestId])
+}
+
+enum PrintProductKind {
+  BADGE
+  ACCESSORY
+}
+
+enum PrintOptionType {
+  CHOICE
+  MULTI_CHOICE
+  COLOR
+  TEXT
+  FILE
+  QUANTITY_SPLIT
+}
+
+// Catalogue des produits d'impression. Prix en plus petite unite de la devise.
+model PrintProduct {
+  id           String           @id @default(cuid())
+  kind         PrintProductKind
+  name         String           @db.VarChar(120)
+  slug         String           @unique
+  category     String?          @db.VarChar(60)
+  description  String?          @db.Text
+  basePrice    Int
+  minQuantity  Int              @default(1)
+  leadTimeDays Int?
+  position     Int              @default(0)
+  published    Boolean          @default(false)
+  archived     Boolean          @default(false)
+  archivedAt   DateTime?
+  createdById  String?
+  createdBy    User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  images     PrintProductImage[]
+  priceTiers PrintProductPriceTier[]
+  options    PrintProductOption[]
+  quoteLines PrintQuoteLine[]
+
+  @@index([kind, archived, published])
+}
+
+model PrintProductImage {
+  id         String       @id @default(cuid())
+  productId  String
+  product    PrintProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storageKey String
+  alt        String       @default("") @db.VarChar(200)
+  position   Int
+
+  @@index([productId, position])
+}
+
+model PrintProductPriceTier {
+  id          String       @id @default(cuid())
+  productId   String
+  product     PrintProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQuantity Int
+  unitPrice   Int
+
+  @@unique([productId, minQuantity])
+}
+
+model PrintProductOption {
+  id         String          @id @default(cuid())
+  productId  String
+  product    PrintProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String          @db.VarChar(80)
+  help       String?         @db.VarChar(300)
+  type       PrintOptionType
+  required   Boolean         @default(false)
+  // TEXT et FILE : supplement de prix.
+  priceDelta Int             @default(0)
+  // TEXT : longueur maximale.
+  maxLength  Int?
+  position   Int
+  archived   Boolean         @default(false)
+  archivedAt DateTime?
+
+  values PrintProductOptionValue[]
+
+  @@index([productId, position])
+}
+
+model PrintProductOptionValue {
+  id         String             @id @default(cuid())
+  optionId   String
+  option     PrintProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  label      String             @db.VarChar(80)
+  colorHex   String?            @db.VarChar(7)
+  imageKey   String?
+  priceDelta Int                @default(0)
+  position   Int
+  archived   Boolean            @default(false)
+  archivedAt DateTime?
+
+  @@index([optionId, position])
+}
+
+// =====================================================
+//  Demandes d'impression, devis et fil de discussion (plan 33)
+// =====================================================
+
+enum PrintRequestType {
+  ADVANCE
+  ONSITE
+}
+
+enum PrintRequestStatus {
+  DRAFT
+  SUBMITTED
+  QUOTED
+  ACCEPTED
+  PAID
+  IN_PRODUCTION
+  READY
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum PrintDelivery {
+  PICKUP
+  DELIVERY
+}
+
+enum PrintQuoteLineKind {
+  PRODUCT
+  SERVICE
+  DISCOUNT
+  CUSTOM
+}
+
+enum PrintLineAuthor {
+  ORGANIZER
+  STAFF
+}
+
+enum PrintThreadSide {
+  ORGANIZER
+  STAFF
+  SYSTEM
+}
+
+enum PrintMessageKind {
+  MESSAGE
+  EVENT
+}
+
+model PrintRequest {
+  id        String             @id @default(cuid())
+  reference String             @unique
+  eventId   String
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orgId     String
+  org       Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  type      PrintRequestType
+  status    PrintRequestStatus @default(DRAFT)
+
+  createdById String?
+  createdBy   User?   @relation("PrintRequestCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  badgeTemplateId String?
+  badgeWidthPx    Float?
+  badgeHeightPx   Float?
+  badgePages      Int?
+  templatePinned  Boolean @default(false)
+
+  delivery            PrintDelivery?
+  deliveryAddress     String?        @db.Text
+  deliveryContactName String?
+  deliveryContactPhone String?
+  wantedBy            DateTime?
+  estimatedQuantity   Int?
+
+  onsiteSchedule     Json?
+  onsiteLocation     String? @db.Text
+  onsiteContactName  String?
+  onsiteContactPhone String?
+  notes              String? @db.Text
+
+  quoteVersion    Int       @default(0)
+  acceptedVersion Int?
+  acceptedTotal   Int?
+  acceptedAt      DateTime?
+  acceptedById    String?
+  acceptedBy      User?     @relation("PrintRequestAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
+  total           Int       @default(0)
+  // plan 35
+  marginPercent   Int?
+  parentRequestId String?
+  parentRequest   PrintRequest?  @relation("PrintRequestParent", fields: [parentRequestId], references: [id], onDelete: SetNull)
+  childRequests   PrintRequest[] @relation("PrintRequestParent")
+  payments        Payment[]
+
+  submittedAt   DateTime?
+  quotedAt      DateTime?
+  paidAt        DateTime?
+  // plan 34 : Payment qui a solde la demande, sans relation Prisma (ecrit par markPaid).
+  paidPaymentId String?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  items       PrintRequestItem[]
+  lines       PrintQuoteLine[]
+  messages    PrintRequestMessage[]
+  generations PrintSheetGeneration[]
+  prints      PrintRequestPrint[]
+  credits     OrgPrintCredit[]
+
+  @@index([eventId, status])
+  @@index([status, submittedAt])
+  @@index([orgId])
+  @@index([parentRequestId])
+}
+
+model PrintRequestItem {
+  id             String       @id @default(cuid())
+  requestId      String
+  request        PrintRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  position       Int
+  createdAt      DateTime     @default(now())
+
+  @@unique([requestId, registrationId])
+  @@index([registrationId])
+}
+
+model PrintRequestPrint {
+  id             String        @id @default(cuid())
+  requestId      String
+  request        PrintRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  registrationId String?
+  registration   Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+  printedById    String?
+  printedBy      User?         @relation("PrintRequestPrintPrintedBy", fields: [printedById], references: [id], onDelete: SetNull)
+  printedAt      DateTime      @default(now())
+  reprint        Boolean       @default(false)
+
+  @@index([requestId, reprint])
+  @@index([registrationId])
+}
+
+enum OrgPrintCreditKind {
+  EARNED
+  SPENT
+}
+
+model OrgPrintCredit {
+  id          String             @id @default(cuid())
+  orgId       String
+  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  kind        OrgPrintCreditKind
+  // FCFA : > 0 pour EARNED, < 0 pour SPENT
+  amount      Int
+  // C1 : nullable, SetNull (la liste des mouvements doit gerer une demande absente)
+  requestId   String?
+  request     PrintRequest?      @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  // badges non utilises (EARNED)
+  quantity    Int?
+  unitPrice   Int?
+  createdById String?
+  createdBy   User?              @relation("OrgPrintCreditCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime           @default(now())
+
+  @@unique([requestId, kind])
+  @@index([orgId, createdAt])
+}
+
+model PrintQuoteLine {
+  id              String             @id @default(cuid())
+  requestId       String
+  request         PrintRequest       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  kind            PrintQuoteLineKind
+  productId       String?
+  product         PrintProduct?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  label           String
+  // ChoiceSnapshot[]
+  optionsSnapshot Json?
+  // OptionChoice[] brut, pour rouvrir le configurateur
+  choices         Json?
+  quantity        Int
+  unitPrice       Int
+  lineTotal       Int
+  position        Int
+  addedBy         PrintLineAuthor
+  priceOverridden    Boolean   @default(false)
+  quantityOverridden Boolean   @default(false)
+  usesOrgCredit   Boolean            @default(false)
+  removedAt       DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([requestId, removedAt])
+}
+
+model PrintRequestMessage {
+  id            String           @id @default(cuid())
+  requestId     String
+  request       PrintRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorId      String?
+  author        User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  side          PrintThreadSide
+  kind          PrintMessageKind
+  body          String           @db.Text
+  eventType     String?
+  details       Json?
+  attachmentKey String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([requestId, createdAt])
+  @@index([attachmentKey])
 }

@@ -3,15 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
+import { parseRegistrationQr } from "@/lib/registration-qr";
 
 const schema = z.object({ payload: z.string().min(1).max(2000) });
-
-function extractBadgeId(payload: string): string {
-  const trimmed = payload.trim();
-  const match = trimmed.match(/\/verify\/([A-Za-z0-9-]+)/);
-  if (match) return match[1];
-  return trimmed;
-}
 
 export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
@@ -20,7 +14,7 @@ export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, 
     return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
   }
 
-  const badgeId = extractBadgeId(parsed.data.payload);
+  const badgeId = parseRegistrationQr(parsed.data.payload);
   const reg = await prisma.registration.findUnique({
     where: { id: badgeId },
     select: {

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeRequest } from "@/lib/__tests__/helpers/print-requests";
+import { paymentProbe } from "@/lib/print-requests/service";
 import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@/lib/badge-templates/install";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
@@ -176,5 +178,57 @@ describe("PATCH /api/platform/settings/badge", () => {
     const req = makeReq({ badgeTemplateId: await installedDefaultId() });
     await expect(PATCH(req)).rejects.toThrow("boom-badge-role");
     spy.mockRestore();
+  });
+});
+
+describe("PATCH platform badge template : évènements verrouillés", () => {
+  beforeEach(async () => {
+    vi.mocked(getServerSession).mockReset();
+    await setupPlatform();
+  });
+
+  it("épingle l'évènement verrouillé qui hérite, laisse intact celui qui a son template", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    const defId = await installedDefaultId();
+    const rvId = await installedRectoVersoId();
+    const org = await prisma.organization.create({ data: { name: "Op", slug: `op-${Date.now()}-${Math.random()}` } });
+    const mk = (title: string, badgeTemplateId: string | null) =>
+      prisma.event.create({
+        data: { orgId: org.id, title, slug: `${title}-${Date.now()}-${Math.random()}`, location: "X", date: new Date(), badgeTemplateId },
+      });
+    const [locked, own, free] = [await mk("locked", null), await mk("own", defId), await mk("free", null)];
+    const lockedReq = await makeRequest({ org, event: locked, owner: staff }, { status: "READY", badgeTemplateId: defId });
+    const ownReq = await makeRequest({ org, event: own, owner: staff }, { status: "PAID", badgeTemplateId: defId });
+    const freeReq = await makeRequest({ org, event: free, owner: staff }, { status: "SUBMITTED", badgeTemplateId: defId });
+
+    const { PATCH } = await import("../route");
+    expect((await PATCH(makeReq({ badgeTemplateId: rvId }))).status).toBe(200);
+
+    const ev = (id: string) => prisma.event.findUniqueOrThrow({ where: { id } });
+    const rq = (id: string) => prisma.printRequest.findUniqueOrThrow({ where: { id } });
+    expect((await ev(locked.id)).badgeTemplateId).toBe(defId);
+    expect((await rq(lockedReq.id)).templatePinned).toBe(true);
+    expect((await ev(own.id)).badgeTemplateId).toBe(defId);
+    expect((await rq(ownReq.id)).templatePinned).toBe(false);
+    expect((await ev(free.id)).badgeTemplateId).toBeNull();
+    expect((await rq(freeReq.id)).badgeTemplateId).toBe(rvId);
+  });
+
+  it("demande ACCEPTED avec paiement en cours : épinglée, ni déplacée ni modifiée", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    const defId = await installedDefaultId();
+    const org = await prisma.organization.create({ data: { name: "Op", slug: `op-${Date.now()}-${Math.random()}` } });
+    const event = await prisma.event.create({
+      data: { orgId: org.id, title: "Pay", slug: `pay-${Date.now()}-${Math.random()}`, location: "X", date: new Date() },
+    });
+    const req = await makeRequest({ org, event, owner: staff }, { status: "ACCEPTED", badgeTemplateId: defId });
+    vi.spyOn(paymentProbe, "isPaymentInProgress").mockImplementation(async (id) => id === req.id);
+    const { PATCH } = await import("../route");
+    expect((await PATCH(makeReq({ badgeTemplateId: await installedRectoVersoId() }))).status).toBe(200);
+    vi.restoreAllMocks();
+    expect(await prisma.printRequest.findUniqueOrThrow({ where: { id: req.id } })).toMatchObject({
+      status: "ACCEPTED", badgeTemplateId: defId, templatePinned: true,
+    });
+    expect((await prisma.event.findUniqueOrThrow({ where: { id: event.id } })).badgeTemplateId).toBe(defId);
   });
 });

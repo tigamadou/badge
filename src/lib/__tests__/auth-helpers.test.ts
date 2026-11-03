@@ -214,6 +214,23 @@ describe("hasEventPermission", () => {
     expect(hasEventPermission(ctx, "e1", "o1", "badge.print")).toBe(false);
   });
 
+  it("print.request : ADMIN event, OWNER, MANAGER et staff oui ; OPERATOR, PRINTER, VIEWER, AUDITOR non", () => {
+    const yes = [
+      baseCtx({ eventMemberships: [{ eventId: "e1", role: "ADMIN" }] }),
+      baseCtx({ orgMemberships: [{ orgId: "o1", role: "OWNER" }] }),
+      baseCtx({ orgMemberships: [{ orgId: "o1", role: "MANAGER" }] }),
+      baseCtx({ isStaff: true, staffRole: "STAFF_OBSERVER" }),
+    ];
+    for (const ctx of yes) expect(hasEventPermission(ctx, "e1", "o1", "print.request")).toBe(true);
+    const no = [
+      baseCtx({ eventMemberships: [{ eventId: "e1", role: "OPERATOR" }] }),
+      baseCtx({ eventMemberships: [{ eventId: "e1", role: "PRINTER" }] }),
+      baseCtx({ eventMemberships: [{ eventId: "e1", role: "VIEWER" }] }),
+      baseCtx({ orgMemberships: [{ orgId: "o1", role: "AUDITOR" }] }),
+    ];
+    for (const ctx of no) expect(hasEventPermission(ctx, "e1", "o1", "print.request")).toBe(false);
+  });
+
   it("staff bypasses any event permission check", () => {
     const ctx = baseCtx({ isStaff: true, staffRole: "STAFF_OBSERVER" });
     expect(hasEventPermission(ctx, "e1", "o1", "event.read.detailed")).toBe(true);

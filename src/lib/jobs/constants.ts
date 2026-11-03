@@ -19,3 +19,8 @@ export function computeRetryDelayMs(attempts: number): number {
   const index = Math.min(Math.max(attempts, 1), RETRY_DELAYS_MS.length) - 1;
   return RETRY_DELAYS_MS[index];
 }
+
+// Planches d'impression : un battement est ecrit apres chaque badge rendu ; une generation
+// RUNNING sans battement depuis ce delai est reprise (worker mort), au plus MAX_ATTEMPTS fois.
+export const PRINT_SHEETS_STALE_MS = 180_000;
+export const PRINT_SHEETS_MAX_ATTEMPTS = 3;
