@@ -4,7 +4,7 @@
 import JSZip from "jszip";
 import type { PrintSheetGeneration } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { uploadFile } from "@/lib/storage";
+import { deleteFile, uploadFile } from "@/lib/storage";
 import { BATCH_RENDER_CONCURRENCY, badgeFileName, mapWithConcurrency } from "@/lib/badge-batch";
 import { loadBadgeRegistration, renderBadgePdf } from "@/lib/badge-templates/render-badge";
 import { appendThreadEvent } from "@/lib/print-requests/thread";
@@ -17,6 +17,7 @@ export type RunDeps = {
   // null = inscription absente ou non APPROVED.
   renderBadge(registrationId: string): Promise<{ pdf: Uint8Array; fileName: string } | null>;
   upload(key: string, body: Uint8Array, contentType: string): Promise<void>;
+  remove(key: string): Promise<void>;
   now(): Date;
   // Periode du battement entre la fin du rendu et l'ecriture finale (composition, ZIP, envoi).
   beatIntervalMs?: number;
@@ -33,6 +34,9 @@ export const defaultRunDeps: RunDeps = {
   },
   async upload(key, body, contentType) {
     await uploadFile(key, Buffer.from(body), contentType);
+  },
+  async remove(key) {
+    await deleteFile(key);
   },
   now: () => new Date(),
 };
@@ -162,7 +166,10 @@ export async function runGeneration(
         }
         throw err;
       }
-      key = `print-sheets/${generation.id}.pdf`;
+      // Planche d'une commande : clé stable, une regénération écrase le fichier précédent.
+      key = generation.printRequestId
+        ? `print-sheets/orders/${generation.printRequestId}.pdf`
+        : `print-sheets/${generation.id}.pdf`;
       contentType = "application/pdf";
     }
 
@@ -178,6 +185,15 @@ export async function runGeneration(
       completedAt: deps.now(),
     });
     if (!done) return "LOCK_LOST";
+    // Ancien fichier d'une regénération (autre clé, ex. planche créée avant la clé stable) : supprimé
+    // seulement après le succès. Secondaire : un échec de suppression ne change pas le résultat.
+    if (generation.fileKey && generation.fileKey !== key) {
+      try {
+        await deps.remove(generation.fileKey);
+      } catch (err) {
+        console.error("Ancien fichier de planche non supprimé", err);
+      }
+    }
     // Planches d'une commande : les badges ecartes sont signales dans son fil.
     if (generation.printRequestId && skippedIds.length > 0) {
       const requestId = generation.printRequestId;
