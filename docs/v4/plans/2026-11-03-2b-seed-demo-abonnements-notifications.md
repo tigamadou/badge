@@ -54,7 +54,7 @@ sur les hypothèses de ce plan :
 | 1 | Contrat du socle, monde relu en base, plans de démo | [x] | 2026-11-03 | Ecarts : dates via ctx.dates (pas daysAgo), loadWorld() sans ctx, WorldUser/WorldEvent etendus; seulement 4 orgs sur 12 ont un OWNER (repli membre/null); cleanupBilling(_ctx). |
 | 2 | Abonnements, rappels, quotas | [x] | 2026-11-03 | near-limit: ratio >= 85 % verifie seulement si plus gros evenement >= 9 (a petite echelle +1 suffit); echeance verifiee contre endInDays (garde-fou). |
 | 3 | Paiements d'abonnement | [x] | 2026-11-03 | Payeur = owner, sinon membre, sinon null (8 orgs sur 12 sans owner). PENDING/EXPIRED/DECLINED/CANCELED visent Standard (plan avec prix). cleanupActivity() (notifications/activity.ts) appelee en tete du journal de seedBilling; modes verifies par planChangeFor (erreur si ecart). |
-| 4 | Jobs email de chaque statut | [ ] | | |
+| 4 | Jobs email de chaque statut | [x] | 2026-11-03 | SeededJobs etendu (completedAt, retried). PENDING/RUNNING crees directement avec runAt/lockedAt +3650 j (createdAt = maintenant, jamais antedates). |
 | 5 | Notifications de chaque type hors impression | [ ] | | |
 | 6 | Journal d'activité | [ ] | | |
 | 7 | Vérification | [ ] | | |
