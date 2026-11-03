@@ -24,7 +24,7 @@ regénération.
 | 2 | Génération par commande avec écrasement | [x] | 2026-11-02 | createGeneration ecrase la ligne unique (409 GENERATION_IN_PROGRESS) ; tests lib + API |
 | 3 | Worker : clé stable et suppression de l'ancien fichier | [x] | 2026-11-02 | cle stable print-sheets/orders/<id>.pdf ; ancien fichier supprime apres succes |
 | 4 | Sous-pages À traiter / Générées / Génération libre | [x] | 2026-11-02 | sous-pages pending/generated/free, OrderQueueTable, modale, GET /orders |
-| 5 | e2e, doc, vérification | [ ] | | |
+| 5 | e2e, doc, vérification | [x] | 2026-11-02 | e2e print-sheets (5) + print-request-detail (8) verts ; couverture 100% ; doc ; controle navigateur 375 px non fait |
 
 ## Fichiers du lot (exclusifs)
 
