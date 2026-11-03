@@ -15,6 +15,15 @@ echo "Déploiement de $TAG en $ENV..."
 # 1. Pull des nouvelles images
 docker compose $F pull renderer app tools
 
+# 1b. Preprod uniquement : base remise a zero puis remplie (seed minimal + demo), app et
+# worker arretes pendant l'operation. `set -e` : un echec arrete le deploiement avant la
+# relance, jamais d'app sur une base a moitie remplie.
+if [ "$ENV" = "preprod" ]; then
+  echo "Rechargement de la preprod avec la demo..."
+  docker compose $F stop app worker
+  docker compose $F run --rm seed-demo
+fi
+
 # 2. Service de rendu, initialisation (db push + SUPER_ADMIN si absent) puis relance
 # de l'app. `renderer` et `init` doivent etre nommes explicitement : --no-deps ne les
 # demarrerait pas, et `app` attend leur etat (sain / termine avec succes).
