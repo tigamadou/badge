@@ -64,7 +64,7 @@ export async function recordOnsitePrints(
   const cap = onsiteCap(ordered, request.marginPercent ?? 0);
   const registrations = await prisma.registration.findMany({
     where: { eventId: event.id, status: "APPROVED" },
-    select: { id: true, badgePrinted: true },
+    select: { id: true, badgePrinted: true, createdAt: true },
     orderBy: { id: "asc" },
   });
   // Les inscriptions pas encore imprimees d'abord : une premiere impression en consomme une nouvelle.
@@ -84,8 +84,10 @@ export async function recordOnsitePrints(
     .slice(0, Math.min(s.onsite?.reprints ?? 0, first.length))
     .map((r) => ({ requestId: request.id, registrationId: r.id, printedById: operator.id, printedAt: at(), reprint: true }));
   if (rows.length + reprints.length > 0) await prisma.printRequestPrint.createMany({ data: [...rows, ...reprints] });
-  for (const r of rows) {
+  for (const [i, r] of rows.entries()) {
     await prisma.registration.updateMany({ where: { id: r.registrationId }, data: { badgePrinted: true, badgePrintedAt: r.printedAt } });
+    // updatedAt automatique = maintenant : on le ramene a l'impression.
+    await ctx.backdate("registration", r.registrationId, first[i].createdAt, r.printedAt);
   }
   return first.length;
 }
