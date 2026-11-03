@@ -115,11 +115,16 @@ test.describe("Parcours abonnement org", () => {
     // Dashboard bloque.
     await page.goto(`/org/${orgId}`);
     await expect(page.getByText("Abonnement inactif")).toBeVisible();
-    await expect(page.getByText(/Contactez le staff Badge/)).toBeVisible();
+    await expect(page.getByText(/contactez le support/)).toBeVisible();
 
     // Une autre sous-page l'est aussi.
-    await page.goto(`/org/${orgId}/events`);
+    await page.goto(`/org/${orgId}/members`);
     await expect(page.getByText("Abonnement inactif")).toBeVisible();
+
+    // La liste des évènements reste consultable ; seule la création est désactivée.
+    await page.goto(`/org/${orgId}/events`);
+    await expect(page.getByText(/Abonnement inactif : la création/)).toBeVisible();
+    await expect(page.getByText(/contactez le support/)).toHaveCount(0);
 
     // L'onglet Abonnement reste consultable.
     await page.goto(`/org/${orgId}/subscription`);

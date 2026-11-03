@@ -88,7 +88,9 @@ jobs:
           --health-interval=5s --health-timeout=5s --health-retries=10
     env:
       # Vitest exige une base de test (garde-fou de src/test-setup.ts : nom en _test).
-      DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge_test
+      # connection_limit : le pool par defaut (2 x coeurs physiques + 1) est trop petit sur les
+      # runners pour les tests d'interblocage, qui font tourner 3 transactions en parallele.
+      DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge_test?connection_limit=10
       S3_ENDPOINT: http://127.0.0.1:9000
       S3_REGION: us-east-1
       S3_ACCESS_KEY: rustfsadmin
