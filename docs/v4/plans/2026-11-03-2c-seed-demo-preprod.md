@@ -30,6 +30,8 @@ sur les hypothèses de ce plan :
   `demo/_tracked-keys.json`) est fait par le seed de démo lui-même : ne pas le dupliquer.
 - Compte staff de démo vérifié par les tests de fumée préprod : le premier compte staff de
   `DEMO_BADGE_LOCAL_EMAILS` (`prisma/seed/constants.ts`).
+- Compte des tests de fumée en préprod : `admin@badge.local` n'y est pas créé ; le compte staff est `admin2@badge.local` (premier de `DEMO_BADGE_LOCAL_EMAILS`), SUPER_ADMIN au mot de passe commun créé par `seedAccounts` (à documenter côté sécurité préprod).
+- `SEED_MODE=demo` passe par `runMinimalSeed`, qui réécrit le SMTP de `PlatformSettings` sur `PLATFORM_SMTP_*` ou à défaut `mailpit:1025` : le service `seed-demo` doit porter ces variables ou accepter l'écrasement. Le garde-fou `BADGE_ENV` est évalué avant ce seed minimal (`prisma/seed/run.ts`).
 
 ## Progression
 

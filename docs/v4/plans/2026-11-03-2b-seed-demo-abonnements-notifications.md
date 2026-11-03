@@ -40,6 +40,12 @@ sur les hypothèses de ce plan :
 - Journal : ce lot écrit **tous** les `BADGE_PRINTED` et `BADGE_*` (le lot 2a n'en écrit aucun) ;
   le lot 2a écrit les activités du domaine impression.
 - `fedapayTransactionId` : plage `910_000_000`–`919_999_999` confirmée (2a : `920_000_000`–`929_999_999`).
+- `orgMembers` / `eventMembers` souvent vides (voir 2a) : `?.` et repli pour tout abonnement, paiement ou notification destiné à un owner.
+- Filtrer `!org.archived` / `!event.archived` pour les abonnements actifs et les notifications de nouvelle inscription.
+- Slugs d'événement via `DemoEvent.slug` ; `DemoRegistrationRef` sans dates : relire le monde en base (impression sur place, `BADGE_PRINTED`).
+- Ne jamais antidater (`backdate("job")`) un `Job` PENDING : le créer directement avec un `runAt` lointain. Appeler `ctx.parkJobs()` après chaque création de jobs. (Le socle reporte aussi les PENDING dont le destinataire finit par `@demo.local`, et `runDemoSeed` appelle `parkJobs` dans son `finally`.)
+- `cleanupNotificationsAndActivity` doit supprimer les `Job` parqués des runs précédents (aucune cascade ne les atteint) ainsi que `Notification`, `Payment`, `Subscription`, `OrgPrintCredit` non liés par cascade : vérifier chaque `onDelete` (`Payment.planId` est `Restrict` vers `Plan`) ; critère de sélection : `recipient endsWith @demo.local`, `kind`, `orgId` des organisations `demo-%`.
+- `ctx.backdate` : découper en tranches de 1 000 ids pour les gros volumes (limite de 65 535 placeholders MySQL).
 
 ## Progression
 

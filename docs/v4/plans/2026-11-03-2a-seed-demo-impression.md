@@ -43,6 +43,12 @@ sur les hypothèses de ce plan :
 - Journal : ce lot écrit les activités du domaine impression (`PRINT_*` et apparentées) ; il
   n'écrit **aucun** `BADGE_PRINTED` ni `BADGE_*` (lot 2b).
 - `fedapayTransactionId` : plage `920_000_000`–`929_999_999` (2b a `910_000_000`–`919_999_999`).
+- `registry.orgMembers` / `registry.eventMembers` ne couvrent que les organisations et événements qui ont des comptes membres (4 organisations sur 12 ; 4 événements avec `EventMembership`). Ne jamais supposer `orgMembers.get(org.id)?.OWNER[0]` : utiliser `?.` et prévoir un repli (staff de démo, ou création du membre manquant dans le lot).
+- `registry.events` / `eventsByPhase.past` contiennent des événements archivés (et `demo-archivee` ses inscriptions PENDING) : filtrer `!event.archived` et `!org.archived` pour toute action « ouverte » (commande d'impression, ...), ou assumer le cas comme vitrine d'archive.
+- Slugs d'événement : ne jamais les reconstruire à la main (réalité `demo-grosse-org-past-1`, pas `demo-<org>-<événement>`) ; utiliser `DemoEvent.slug`.
+- `DemoRegistrationRef` ne porte ni dates, ni `allAccessGranted`, ni `badgePrintedAt` : relire les lignes en base.
+- Stockage : lister les préfixes de clés utilisés (`print-sheets/`, `print-requests/`, images produit) ; toute écriture passe par `ctx.storage.putAt` (suivi du manifeste). Les templates supplémentaires passent par `installDemoTemplate` (famille `demo-*`) pour rester dans le périmètre du nettoyage.
+- `PrintRequestPrint` n'a ni `createdAt` ni `updatedAt` : `ctx.backdate("printRequestPrint", ...)` lève toujours. Écrire `printedAt` directement à la création et ne pas appeler `backdate` pour ce modèle.
 
 ## Progression
 
