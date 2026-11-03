@@ -12,6 +12,7 @@ import { DEMO_SLUG_PREFIX } from "../../constants";
 import { insertInBatches, type DemoContext } from "../context";
 import { isDemoUserWhere, type DemoWorld, type WorldOrg, type WorldUser } from "../billing/world";
 import type { SeededJobs } from "./jobs";
+import { chunkIds } from "./activity";
 
 const DAY_MS = 86_400_000;
 const WINDOW_DAYS = 60;
@@ -30,17 +31,18 @@ export async function cleanupNotifications(): Promise<number> {
   const orgIds = orgs.map((o) => o.id);
   const events = await prisma.event.findMany({ where: { orgId: { in: orgIds } }, select: { id: true } });
   const users = await prisma.user.findMany({ where: isDemoUserWhere, select: { id: true } });
-  const res = await prisma.notification.deleteMany({
-    where: {
-      type: { notIn: PRINT_NOTIFICATION_TYPES },
-      OR: [
-        { userId: { in: users.map((u) => u.id) } },
-        { orgId: { in: orgIds } },
-        { eventId: { in: events.map((e) => e.id) } },
-      ],
-    },
-  });
-  return res.count;
+  const eventIds = events.map((e) => e.id);
+  let count = 0;
+  for (const userIds of chunkIds(users.map((u) => u.id))) {
+    const res = await prisma.notification.deleteMany({
+      where: {
+        type: { notIn: PRINT_NOTIFICATION_TYPES },
+        OR: [{ userId: { in: userIds } }, { orgId: { in: orgIds } }, { eventId: { in: eventIds } }],
+      },
+    });
+    count += res.count;
+  }
+  return count;
 }
 
 const active = (u: WorldUser) => !u.blocked && !u.archived;

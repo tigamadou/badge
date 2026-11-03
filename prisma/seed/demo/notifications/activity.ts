@@ -18,22 +18,28 @@ export const BILLING_ACTIVITY_TYPES: ActivityType[] = [
  * Supprime le journal de démo hors impression : entrées rattachées à une organisation `demo-`,
  * à un évènement de ces organisations ou à un utilisateur de démo. `keepBilling` épargne celles de la facturation.
  */
+/** Decoupe une liste d'ids en tranches pour borner les clauses `in` (limite de placeholders MySQL). */
+export function chunkIds<T>(ids: T[], size = 5000): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < ids.length; i += size) out.push(ids.slice(i, i + size));
+  return out.length > 0 ? out : [[]];
+}
+
 export async function cleanupActivity(opts: { keepBilling?: boolean } = {}): Promise<number> {
   const orgs = await prisma.organization.findMany({ where: { slug: { startsWith: DEMO_SLUG_PREFIX } }, select: { id: true } });
   const orgIds = orgs.map((o) => o.id);
   const events = await prisma.event.findMany({ where: { orgId: { in: orgIds } }, select: { id: true } });
   const users = await prisma.user.findMany({ where: isDemoUserWhere, select: { id: true } });
-  const res = await prisma.activityLog.deleteMany({
-    where: {
-      type: { notIn: opts.keepBilling ? [...PRINT_ACTIVITY_TYPES, ...BILLING_ACTIVITY_TYPES] : PRINT_ACTIVITY_TYPES },
-      OR: [
-        { orgId: { in: orgIds } },
-        { eventId: { in: events.map((e) => e.id) } },
-        { userId: { in: users.map((u) => u.id) } },
-      ],
-    },
-  });
-  return res.count;
+  const eventIds = events.map((e) => e.id);
+  const type = { notIn: opts.keepBilling ? [...PRINT_ACTIVITY_TYPES, ...BILLING_ACTIVITY_TYPES] : PRINT_ACTIVITY_TYPES };
+  let count = 0;
+  for (const userIds of chunkIds(users.map((u) => u.id))) {
+    const res = await prisma.activityLog.deleteMany({
+      where: { type, OR: [{ orgId: { in: orgIds } }, { eventId: { in: eventIds } }, { userId: { in: userIds } }] },
+    });
+    count += res.count;
+  }
+  return count;
 }
 
 /**

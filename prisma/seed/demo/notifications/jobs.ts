@@ -71,13 +71,21 @@ function statusPlan(total: number): JobStatus[] {
   return Array.from({ length: total }, (_, i) => pattern[i % pattern.length]);
 }
 
-export async function cleanupJobs(): Promise<number> {
-  const res = await prisma.job.deleteMany({ where: { recipient: { endsWith: DEMO_DOMAIN } } });
+/** Prefixe des jobs d'impression (lot 2a), epargnes quand seul le reste est reecrit. */
+export const PRINT_JOB_KIND_PREFIX = "notification.print_request";
+
+export async function cleanupJobs(opts: { keepPrint?: boolean } = {}): Promise<number> {
+  const res = await prisma.job.deleteMany({
+    where: {
+      recipient: { endsWith: DEMO_DOMAIN },
+      ...(opts.keepPrint ? { NOT: { kind: { startsWith: PRINT_JOB_KIND_PREFIX } } } : {}),
+    },
+  });
   return res.count;
 }
 
 export async function seedJobs(ctx: DemoContext, world: DemoWorld): Promise<SeededJobs> {
-  await cleanupJobs();
+  await cleanupJobs({ keepPrint: true });
   const { faker, dates } = ctx;
   const now = dates.now;
   const demoOnly = (users: WorldUser[]) => users.filter((u) => u.email.endsWith(DEMO_DOMAIN));

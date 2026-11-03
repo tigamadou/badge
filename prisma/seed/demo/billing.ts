@@ -25,6 +25,6 @@ export async function seedBilling(ctx: DemoContext): Promise<void> {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature figee par le socle
 export async function cleanupBilling(_ctx: DemoContext): Promise<void> {
   const orgs = { org: { slug: { startsWith: DEMO_SLUG_PREFIX } } };
-  await prisma.payment.deleteMany({ where: orgs });
+  await prisma.payment.deleteMany({ where: { ...orgs, purpose: "SUBSCRIPTION" } });
   await prisma.subscription.deleteMany({ where: orgs });
 }
