@@ -755,6 +755,72 @@ describe("messages", () => {
   });
 });
 
+describe("messages : polling, notes internes, lecture", () => {
+  const messagesUrl = (id: string) => `${BASE}/${id}/messages`;
+  const readAt = (requestId: string, userId: string) =>
+    prisma.printRequestRead.findUnique({ where: { requestId_userId: { requestId, userId } } });
+
+  it("GET ?after= : seulement les entrées strictement postérieures ; la lecture est enregistrée", async () => {
+    as(fx.staffSupport);
+    const r = await makeRequest(fx);
+    const old = await prisma.printRequestMessage.create({
+      data: { requestId: r.id, side: "ORGANIZER", kind: "MESSAGE", body: "Ancien", authorId: fx.owner.id, createdAt: new Date(Date.now() - 60_000) },
+    });
+    await prisma.printRequestMessage.create({
+      data: { requestId: r.id, side: "ORGANIZER", kind: "MESSAGE", body: "Récent", authorId: fx.owner.id },
+    });
+    const before = Date.now();
+    const res = await call(messagesGET, `${messagesUrl(r.id)}?after=${old.createdAt.toISOString()}`, "GET", { requestId: r.id });
+    expect(res.status).toBe(200);
+    expect(res.json.entries.map((e: { body: string }) => e.body)).toEqual(["Récent"]);
+    const read = await readAt(r.id, fx.staffSupport.id);
+    expect(read!.lastReadAt.getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  it("GET : un message arrivé après l'instant de lecture reste non lu ; ses propres messages ne comptent pas", async () => {
+    as(fx.staffSupport);
+    const r = await makeRequest(fx);
+    await call(messagesGET, messagesUrl(r.id), "GET", { requestId: r.id });
+    await prisma.printRequestMessage.create({
+      data: { requestId: r.id, side: "ORGANIZER", kind: "MESSAGE", body: "Après", authorId: fx.owner.id, createdAt: new Date(Date.now() + 5000) },
+    });
+    const { unreadByRequest } = await import("@/lib/print-requests/read-state");
+    expect((await unreadByRequest(fx.staffSupport.id, "STAFF", [r.id]))[r.id]).toBe(1);
+    await call(messagesPOST, messagesUrl(r.id), "POST", { requestId: r.id }, { body: "Moi" });
+    expect((await unreadByRequest(fx.staffSupport.id, "STAFF", [r.id]))[r.id]).toBe(1);
+  });
+
+  it("GET : ?after= invalide -> 400 VALIDATION", async () => {
+    const r = await makeRequest(fx);
+    const res = await call(messagesGET, `${messagesUrl(r.id)}?after=pas-une-date`, "GET", { requestId: r.id });
+    expect(res).toMatchObject({ status: 400, json: { error: "VALIDATION" } });
+  });
+
+  it("POST internal : entrée marquée interne, invisible côté organisateur, sans notification", async () => {
+    as(fx.staffSupport);
+    const r = await makeRequest(fx);
+    const res = await call(messagesPOST, messagesUrl(r.id), "POST", { requestId: r.id }, { body: "Note", internal: true });
+    expect(res.status).toBe(201);
+    expect(res.json.entry).toMatchObject({ body: "Note", internal: true, authorName: "staffSupport" });
+    const { listThread } = await import("@/lib/print-requests/thread");
+    expect((await listThread(r.id, "ORGANIZER")).map((e) => e.body)).not.toContain("Note");
+    expect((await listThread(r.id, "STAFF")).map((e) => e.body)).toContain("Note");
+    expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_MESSAGE" } })).toBe(0);
+  });
+
+  it("POST sans internal : visible de l'organisateur (internal faux)", async () => {
+    const r = await makeRequest(fx);
+    const res = await call(messagesPOST, messagesUrl(r.id), "POST", { requestId: r.id }, { body: "Public" });
+    expect(res.json.entry.internal).toBe(false);
+  });
+
+  it("POST internal non booléen -> 400", async () => {
+    const r = await makeRequest(fx);
+    const res = await call(messagesPOST, messagesUrl(r.id), "POST", { requestId: r.id }, { body: "x", internal: "oui" });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("erreurs inattendues et session sans nom", () => {
   it("une erreur autre que PrintRequestError est relancée", async () => {
     const r = await makeRequest(fx);

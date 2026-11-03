@@ -12,6 +12,7 @@ import {
   removeStaffLine,
   reopenQuote,
   sendQuote,
+  summarizeQuoteDiff,
   updateStaffLine,
 } from "@/lib/print-requests/quote";
 import { applyOrgCredit } from "@/lib/print-requests/org-credit";
@@ -87,8 +88,8 @@ describe("describeLineChange — intitulé seul", () => {
   });
 });
 
-describe("modifications du staff : une entrée par modification (critère 2)", () => {
-  it("prix du support 1500 -> 1200 puis ligne de service : deux entrées, total recalculé, statut SUBMITTED", async () => {
+describe("modifications du staff : une entrée interne par enregistrement", () => {
+  it("prix du support 1500 -> 1200 puis ligne de service : deux entrées internes, total recalculé, statut SUBMITTED", async () => {
     const { r, support } = await requestWithLines();
     const upd = await updateStaffLine({ requestId: r.id, lineId: support.id, userId: staff(), patch: { unitPrice: 1200 } });
     expect(upd.revised).toBe(false);
@@ -103,10 +104,8 @@ describe("modifications du staff : une entrée par modification (critère 2)", (
     expect(after.status).toBe("SUBMITTED");
     const entries = (await thread(r.id)).filter((m) => m.kind === "EVENT");
     expect(entries).toHaveLength(2);
-    expect(entries[0]).toMatchObject({ eventType: "LINES_CHANGED", side: "STAFF", authorId: staff() });
-    expect(entries[1]).toMatchObject({ eventType: "LINES_CHANGED", side: "STAFF", authorId: staff() });
-    const ops = entries.map((e) => (e.details as { changes: { op: string }[] }).changes.map((c) => c.op));
-    expect(ops).toEqual([["UPDATED"], ["ADDED"]]);
+    expect(entries.every((e) => e.eventType === "LINES_CHANGED" && e.side === "STAFF" && e.authorId === staff() && e.internal)).toBe(true);
+    expect(entries.map((e) => (e.details as { changes: { op: string }[] }).changes.map((c) => c.op))).toEqual([["UPDATED"], ["ADDED"]]);
     expect(await reject(prisma.$transaction((tx) => applyTransition(tx, r, "ACCEPT", "ORGANIZER")))).toMatchObject({ code: "INVALID_TRANSITION" });
   });
 
@@ -287,6 +286,73 @@ describe("addStaffLine — produit", () => {
   });
 });
 
+describe("summarizeQuoteDiff", () => {
+  const a = { id: "a", label: "Support", quantity: 3, unitPrice: 1500 };
+  const b = { id: "b", label: "Cordon", quantity: 3, unitPrice: 500 };
+  const c = { id: "c", label: "Livraison", quantity: 1, unitPrice: 5000 };
+
+  it("première version : liste toutes les lignes et le total", () => {
+    const text = summarizeQuoteDiff(null, [a, b], 1, 6000);
+    expect(text).toContain("Devis v1 : 2 ligne(s)");
+    expect(text).toContain("Ligne ajoutée : Support");
+    expect(text).toContain("Ligne ajoutée : Cordon");
+    expect(text).toContain(`Total : ${formatFcfa(6000)}`);
+  });
+
+  it("ajoutée, modifiée, retirée depuis la version précédente", () => {
+    const text = summarizeQuoteDiff([a, b], [{ ...a, unitPrice: 1200 }, c], 2, 8600);
+    expect(text).toContain("Ligne ajoutée : Livraison");
+    expect(text).toContain("Ligne modifiée : Support (prix unitaire");
+    expect(text).toContain("Ligne retirée : Cordon");
+    expect(text).not.toContain("Ligne modifiée : Cordon");
+    expect(text).toContain(`Total : ${formatFcfa(8600)}`);
+  });
+
+  it("changement d'intitulé seul compté comme modifié ; rien de changé -> mention explicite", () => {
+    expect(summarizeQuoteDiff([a], [{ ...a, label: "Support bleu" }], 2, 4500)).toContain("Ligne modifiée : Support bleu");
+    expect(summarizeQuoteDiff([a], [a], 2, 4500)).toContain("Aucune ligne modifiée.");
+  });
+});
+
+describe("sendQuote : récapitulatif pour l'organisateur", () => {
+  it("v1 puis v2 : message récapitulatif visible de l'organisateur avec les lignes changées entre les versions", async () => {
+    const { r, support, cordon } = await requestWithLines();
+    await sendQuote({ requestId: r.id, userId: staff() });
+    await prisma.printRequest.update({ where: { id: r.id }, data: { status: "SUBMITTED" } });
+    await updateStaffLine({ requestId: r.id, lineId: support.id, userId: staff(), patch: { unitPrice: 1200 } });
+    await removeStaffLine({ requestId: r.id, lineId: cordon.id, userId: staff() });
+    await addStaffLine(service(r.id));
+    const sent = await sendQuote({ requestId: r.id, userId: staff() });
+    const { listThread } = await import("@/lib/print-requests/thread");
+    const visible = await listThread(r.id, "ORGANIZER");
+    expect(visible.some((e) => e.eventType === "LINES_CHANGED")).toBe(false);
+    const recaps = visible.filter((e) => e.kind === "MESSAGE");
+    expect(recaps).toHaveLength(2);
+    const v2 = recaps[1];
+    expect(v2.side).toBe("STAFF");
+    expect(v2.body).toContain("Devis v2 : modifications depuis la version précédente");
+    expect(v2.body).toContain("Ligne ajoutée : ");
+    expect(v2.body).toContain("Ligne modifiée : Support");
+    expect(v2.body).toContain("Ligne retirée : Cordon");
+    expect(v2.body).toContain(`Total : ${formatFcfa(sent.total)}`);
+    const order = visible.map((e) => e.eventType ?? e.kind);
+    expect(order.lastIndexOf("QUOTE_SENT")).toBeLessThan(order.lastIndexOf("MESSAGE"));
+  });
+});
+
+describe("sendQuote : envoi antérieur sans instantané", () => {
+  it("récapitulatif complet de la version, comme pour la première", async () => {
+    const { r } = await requestWithLines();
+    await prisma.printRequestMessage.create({
+      data: { requestId: r.id, side: "STAFF", kind: "EVENT", eventType: "QUOTE_SENT", body: "Devis v1 envoyé", details: { version: 1, total: 100 } },
+    });
+    await prisma.printRequest.update({ where: { id: r.id }, data: { quoteVersion: 1 } });
+    await sendQuote({ requestId: r.id, userId: staff() });
+    const recap = (await thread(r.id)).find((m) => m.kind === "MESSAGE")!;
+    expect(recap.body).toContain("Devis v2 : 2 ligne(s)");
+  });
+});
+
 describe("sendQuote", () => {
   it("SUBMITTED -> QUOTED, quoteVersion 1, quotedAt, entrée « Devis v1 envoyé »", async () => {
     const { r, support } = await requestWithLines();
@@ -294,10 +360,11 @@ describe("sendQuote", () => {
     const sent = await sendQuote({ requestId: r.id, userId: staff() });
     expect(sent).toMatchObject({ status: "QUOTED", quoteVersion: 1, total: 5100 });
     expect(sent.quotedAt).not.toBeNull();
-    const last = (await thread(r.id)).at(-1)!;
-    expect(last).toMatchObject({ eventType: "QUOTE_SENT", side: "STAFF", authorId: staff() });
+    const last = (await thread(r.id)).find((m) => m.eventType === "QUOTE_SENT")!;
+    expect(last).toMatchObject({ eventType: "QUOTE_SENT", side: "STAFF", authorId: staff(), internal: false });
     expect(last.body).toBe(`Devis v1 envoyé : ${formatFcfa(5100)}`);
-    expect(last.details).toEqual({ version: 1, total: 5100 });
+    expect(last.details).toMatchObject({ version: 1, total: 5100 });
+    expect((last.details as { lines: unknown[] }).lines).toHaveLength(2);
   });
 
   it("sans ligne active -> EMPTY_QUOTE ; total négatif -> NEGATIVE_TOTAL ; rien n'est écrit", async () => {

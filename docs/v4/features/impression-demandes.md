@@ -109,10 +109,42 @@ paiement reçu ou échoué, planches lancées, inscriptions écartées.
 
 - Chaque modification de lignes crée **sa propre entrée** (aucun regroupement) : une entrée n'est
   jamais modifiée après coup, ce qui garantit que le rafraîchissement par date de création
-  (`?after=`) la retrouve.
+  (`?after=`) la retrouve. Côté staff, ces entrées sont **internes** (voir « Page de commande
+  côté staff »).
 - Les corps sont stockés bruts et **rendus en texte seulement**, jamais en HTML.
 - Le paiement hors ligne écrit « Paiement reçu : … (hors ligne : motif) ».
 - L'écran de l'organisateur se rafraîchit toutes les 30 secondes quand l'onglet est visible.
+
+## Page de commande côté staff
+
+`/platform/print/orders/[requestId]` est une **conversation** en trois colonnes à partir de `2xl` (1536 px : résumé, fil, devis). De `xl` à `2xl`, le
+résumé passe en bandeau pleine largeur au-dessus du fil et de la colonne devis (380 px) ; sous `xl`, tout est
+empilé (résumé, fil, devis) : la barre latérale du shell étant déjà affichée dès `lg`, le fil garde ainsi au
+moins ~400 px :
+
+- **Gauche** : résumé actualisé (statut, évènement, organisation, type, nombre de badges,
+  recto-verso, template, livraison, dates, total du devis et total accepté).
+- **Centre** : fil (bulles staff à droite, organisateur à gauche, évènements centrés, notes internes
+  sur fond ambré « Note interne »), pièces jointes et saisie avec la bascule « Note interne ».
+- **Droite** : devis éditable, actions de statut, crédit, impression sur place, planche
+  (`OrderSheetPanel`, lien de téléchargement masqué pour `STAFF_OBSERVER`) et paiements.
+
+Règles :
+
+- **Notes internes** : `POST …/messages` accepte `internal: true` ; jamais visibles ni notifiées côté
+  organisateur.
+- **Prix dans le fil** : chaque modification de ligne crée une entrée interne `LINES_CHANGED`
+  (une par enregistrement, sans regroupement). L'envoi du devis écrit l'évènement `QUOTE_SENT` (avec
+  un instantané des lignes dans `details.lines`, réservé au staff) puis un **message** de l'équipe,
+  visible de l'organisateur, qui récapitule les lignes ajoutées, modifiées et retirées depuis la
+  version précédente et le nouveau total (`summarizeQuoteDiff`). Le récapitulatif est un message,
+  car le texte d'un évènement est reconstruit côté organisateur à partir d'une liste blanche.
+- **Polling** : toutes les 10 s, onglet visible seulement, par `GET …/messages?after=` (plus grand
+  `createdAt` reçu moins 2 s, entrées dédoublonnées par identifiant). Chaque lecture appelle
+  `markRead` avec l'instant pris avant la lecture.
+- **Non-lus** : pastille par commande dans la liste ; le compteur du menu « Commandes » est l'union
+  des commandes à traiter (`SUBMITTED`) et des commandes avec non-lus. Un staff ne voit pas ses
+  propres messages comme non lus.
 
 ## Droits
 
@@ -188,12 +220,12 @@ cas d'échec. Les entrées du journal d'activité sont `PRINT_REQUEST_SUBMITTED`
 | `src/lib/print-requests/lifecycle.ts` | Création, envoi, annulation, acceptation |
 | `src/lib/print-requests/content.ts` | Badges, produits, quantités, validation des fichiers |
 | `src/lib/print-requests/quote.ts` | Lignes du devis côté staff, envoi, réouverture, refus, paiement manuel |
-| `src/lib/print-requests/thread.ts` | Fil : entrées automatiques |
+| `src/lib/print-requests/thread.ts` | Fil : entrées automatiques, notes internes |
 | `src/lib/print-requests/template-lock*.ts` | Verrou et épinglage du template |
 | `src/app/api/org/[orgId]/events/[eventId]/print-requests/**` | Routes organisateur |
 | `src/app/api/platform/print/requests/**` | Routes staff |
 | `src/components/event/print/**`, `src/components/print/**` | Écrans organisateur et composants communs |
-| `src/components/staff/print/**` | Écrans staff |
+| `src/components/staff/print/**`, `src/components/staff/print/order/**` | Écrans staff (page de commande en conversation) |
 | `e2e/event/print*.spec.ts`, `e2e/platform/print-request*.spec.ts` | Tests de bout en bout |
 
 ## Points d'extension

@@ -5,6 +5,7 @@ import { loadUserContext } from "@/lib/user-context";
 import { prisma } from "@/lib/prisma";
 import { RequestDetail } from "@/components/staff/print/RequestDetail";
 import { OnsiteError } from "@/lib/print-requests/onsite";
+import { getOrderSheet } from "@/lib/print-sheets/order-sheet";
 import { loadOnsiteOverview } from "@/lib/print-requests/onsite-station";
 import {
   getAvailableOrgPrintCredit,
@@ -51,7 +52,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
     },
   });
   if (!request) notFound();
-  const [lines, balance, available, movements] = await Promise.all([
+  const [lines, balance, available, movements, sheet] = await Promise.all([
     prisma.printQuoteLine.findMany({
       where: { requestId, removedAt: null },
       select: { lineTotal: true, usesOrgCredit: true },
@@ -59,6 +60,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
     getOrgPrintCreditBalance(request.orgId),
     getAvailableOrgPrintCredit(request.orgId, requestId),
     listOrgPrintCreditMovements(request.orgId),
+    getOrderSheet(requestId),
   ]);
   const applied = -lines.filter((l) => l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
   const grossTotal = lines.filter((l) => !l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
@@ -82,6 +84,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
       products={products}
       payments={payments}
       onsiteCounter={onsiteCounter}
+      sheet={sheet}
       credit={{ balance, available, applied, grossTotal, movements }}
       parentRequest={request.parentRequest}
       supplements={request.childRequests}

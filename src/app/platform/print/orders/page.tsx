@@ -1,5 +1,8 @@
 import type { Prisma, PrintRequestStatus } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { unreadByRequest } from "@/lib/print-requests/read-state";
 import { RequestList, type RequestFilters } from "@/components/staff/print/RequestList";
 
 const PAGE_SIZE = 50;
@@ -69,6 +72,12 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
     }),
   ]);
 
+  // Le layout /platform garantit une session staff ; la garde sert le typage.
+  const session = await getServerSession(authOptions);
+  const unread = session?.user?.id
+    ? await unreadByRequest(session.user.id, "STAFF", rows.map((r) => r.id))
+    : {};
+
   return (
     <div className="space-y-4">
       <div>
@@ -80,6 +89,7 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
           ...r,
           // Une commande sur place n'a pas d'items : on retombe sur la quantité estimée.
           badgeCount: r.type === "ADVANCE" ? _count.items : (estimatedQuantity ?? 0),
+          unread: unread[r.id] ?? 0,
         }))}
         total={total}
         page={page}

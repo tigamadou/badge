@@ -15,6 +15,8 @@ export type RequestRow = {
   type: PrintRequestType;
   status: PrintRequestStatus;
   badgeCount: number;
+  // Entrées du fil non lues par l'utilisateur courant.
+  unread?: number;
   total: number;
   wantedBy: Date | null;
   org: { id: string; name: string };
@@ -137,6 +139,15 @@ export function RequestList({
                     <Link href={`/platform/print/orders/${r.id}`} className="text-green-700 hover:underline">
                       {r.reference}
                     </Link>
+                    {r.unread ? (
+                      <span
+                        data-testid="unread-badge"
+                        aria-label={`${r.unread} non lu${r.unread > 1 ? "s" : ""}`}
+                        className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold text-white"
+                      >
+                        {r.unread}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">{r.org.name}</td>
                   <td className="px-4 py-3">{r.event.title}</td>
