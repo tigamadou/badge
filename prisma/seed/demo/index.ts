@@ -42,9 +42,13 @@ export async function runDemoSeed(options: DemoSeedOptions = {}): Promise<DemoCo
     await step("impression", () => seedPrint(ctx));
     await step("facturation", () => seedBilling(ctx));
     await step("notifications et journal", () => seedNotificationsAndActivity(ctx));
-    await ctx.parkJobs();
   } finally {
-    // Meme en cas d'echec : les cles ecrites hors `demo/` doivent rester retrouvables.
+    // Meme en cas d'echec : pas de job de demo a runAt proche, et les cles ecrites hors `demo/` restent retrouvables.
+    try {
+      await ctx.parkJobs();
+    } catch (e) {
+      console.error("[seed demo] parkJobs a echoue", e);
+    }
     await ctx.storage.flushTrackedKeys();
   }
 

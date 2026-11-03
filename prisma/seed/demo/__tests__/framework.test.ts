@@ -173,6 +173,8 @@ describe("cadre du seed de demo", () => {
 
       order.length = 0;
       vi.spyOn(billing, "seedBilling").mockImplementation(async (ctx: DemoContext) => {
+        const park = ctx.parkJobs;
+        ctx.parkJobs = async (...args) => { order.push("parkJobs"); return park(...args); };
         const flush = ctx.storage.flushTrackedKeys;
         ctx.storage.flushTrackedKeys = async () => { order.push("flush"); return flush(); };
         throw new Error("boom");
@@ -180,7 +182,18 @@ describe("cadre du seed de demo", () => {
       await expect(
         runDemoSeed({ env: DEV, scale: 0.02, accountsFile: null, storagePrefix: TEST_PREFIX }),
       ).rejects.toThrow("boom");
-      expect(order).toEqual(["flush"]);
+      expect(order).toEqual(["parkJobs", "flush"]);
+    });
+
+    it("parke les jobs sans masquer l'erreur d'origine quand parkJobs echoue aussi", async () => {
+      vi.spyOn(billing, "seedBilling").mockImplementation(async (ctx: DemoContext) => {
+        ctx.parkJobs = async () => { throw new Error("park casse"); };
+        throw new Error("boom");
+      });
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      await expect(
+        runDemoSeed({ env: DEV, scale: 0.02, accountsFile: null, storagePrefix: TEST_PREFIX }),
+      ).rejects.toThrow("boom");
     });
 
     it("ecrit le fichier de comptes par defaut dans le chemin demande", async () => {
@@ -364,6 +377,23 @@ describe("cadre du seed de demo", () => {
       const at = new Date("2040-01-01T00:00:00.000Z");
       expect(await ctx.parkJobs(new Date(0), at)).toBe(2);
       expect((await prisma.job.findUniqueOrThrow({ where: { id: old.id } })).runAt.toISOString()).toBe(at.toISOString());
+    });
+
+    it("reporte un job PENDING de demo antidate (createdAt < since), pas un job etranger", async () => {
+      const ctx = await createDemoContext({ env: DEV, scale: 0.02, storagePrefix: TEST_PREFIX });
+      const base = { type: "EMAIL" as const, payload: {}, kind: "test" };
+      const past = new Date(ctx.dates.now.getTime() - 30 * 86_400_000);
+      const demoJob = await prisma.job.create({ data: { ...base, recipient: "a@demo.local" } });
+      await ctx.backdate("job", demoJob.id, past);
+      const foreign = await prisma.job.create({ data: { ...base, recipient: "x@exemple.com" } });
+      await ctx.backdate("job", foreign.id, past);
+
+      expect(await ctx.parkJobs()).toBe(1);
+
+      const limit = ctx.dates.now.getTime() + 3000 * 86_400_000;
+      expect((await prisma.job.findUniqueOrThrow({ where: { id: demoJob.id } })).runAt.getTime()).toBeGreaterThan(limit);
+      expect((await prisma.job.findUniqueOrThrow({ where: { id: foreign.id } })).runAt.getTime()).toBeLessThan(limit);
+      expect(await ctx.parkJobs()).toBe(0);
     });
   });
 });

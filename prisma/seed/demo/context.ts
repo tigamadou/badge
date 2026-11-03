@@ -268,8 +268,13 @@ export async function createDemoContext(options: DemoSeedOptions = {}): Promise<
       );
     },
     async parkJobs(since = now, runAt = new Date(now.getTime() + 3650 * DAY_MS)) {
+      // `backdate("job")` recule createdAt : un job de demo reste donc reconnu par son destinataire.
       const res = await prisma.job.updateMany({
-        where: { status: "PENDING", createdAt: { gte: since } },
+        where: {
+          status: "PENDING",
+          runAt: { lt: runAt },
+          OR: [{ createdAt: { gte: since } }, { recipient: { endsWith: "@demo.local" } }],
+        },
         data: { runAt },
       });
       return res.count;
