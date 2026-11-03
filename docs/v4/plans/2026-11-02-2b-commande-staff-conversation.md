@@ -16,7 +16,7 @@ dans le fil, non-lus (liste, menu, notifications) et rafraîchissement par polli
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | API messages staff : polling, notes internes, lecture | [x] | 2026-11-02 | GET ?after= + markRead(at), POST internal via toEntryDTO ; masquage du lien de planche pour STAFF_OBSERVER reporté à la Task 3 (UI) |
-| 2 | Prix dans le fil : évènements internes et récapitulatif d'envoi | [ ] | | |
+| 2 | Prix dans le fil : évènements internes et récapitulatif d'envoi | [x] | 2026-11-03 | LINES_CHANGED internes, une entrée par enregistrement (écriture directe : appendThreadEvent fusionne et ne relirait pas par polling) ; récapitulatif d'envoi = message STAFF visible organisateur après QUOTE_SENT (le corps d'un évènement est reconstruit côté organisateur, il ne peut pas le porter) ; instantané des lignes dans details.lines |
 | 3 | Page conversation 3 colonnes | [ ] | | |
 | 4 | Non-lus : liste et menu staff | [ ] | | |
 | 5 | e2e, doc, vérification | [ ] | | |

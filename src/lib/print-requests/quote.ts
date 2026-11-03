@@ -30,7 +30,9 @@ import {
   recomputeTotal,
   retryOnReferenceCollision,
 } from "./service";
-import type { LineChange } from "./thread";
+import { describeThreadEvent, type LineChange } from "./thread";
+import { describeLineChange } from "./line-change";
+import { formatFcfa } from "./labels";
 import {
   staffLineSchema,
   staffLinePatchSchema,
@@ -70,6 +72,63 @@ async function recomputeChecked(tx: Prisma.TransactionClient, requestId: string)
   });
   if (Math.abs(sum._sum.lineTotal ?? 0) > MAX_AMOUNT) throw new PrintRequestError("VALIDATION", 400);
   return recomputeTotal(tx, requestId);
+}
+
+// Une modification de ligne = une entrée interne au staff, jamais regroupée avec la précédente
+// (appendThreadEvent fusionne les LINES_CHANGED consécutifs et réécrit l'entrée existante, que le
+// polling ne reverrait pas). La commande est déjà verrouillée par lockRequest.
+async function appendLineChange(
+  tx: Prisma.TransactionClient,
+  requestId: string,
+  userId: string,
+  change: LineChange,
+): Promise<void> {
+  const details = { changes: [change] };
+  await tx.printRequestMessage.create({
+    data: {
+      requestId,
+      authorId: userId,
+      side: "STAFF",
+      kind: "EVENT",
+      body: describeThreadEvent("LINES_CHANGED", details),
+      eventType: "LINES_CHANGED",
+      details: details as unknown as Prisma.InputJsonValue,
+      internal: true,
+    },
+  });
+}
+
+export type QuoteSnapshotLine = { id: string; label: string; quantity: number; unitPrice: number };
+
+const snap = (l: QuoteSnapshotLine) => ({ quantity: l.quantity, unitPrice: l.unitPrice });
+
+// Récapitulatif visible de l'organisateur : lignes ajoutées, modifiées et retirées depuis la
+// version précédente (`previous` nul : première version, ou version sans instantané), puis le total.
+export function summarizeQuoteDiff(
+  previous: QuoteSnapshotLine[] | null,
+  current: QuoteSnapshotLine[],
+  version: number,
+  total: number,
+): string {
+  const before = new Map((previous ?? []).map((l) => [l.id, l]));
+  const now = new Map(current.map((l) => [l.id, l]));
+  const added = current.filter((l) => !before.has(l.id));
+  const removed = (previous ?? []).filter((l) => !now.has(l.id));
+  const modified = current.filter((l) => {
+    const old = before.get(l.id);
+    return old && (old.label !== l.label || old.quantity !== l.quantity || old.unitPrice !== l.unitPrice);
+  });
+  const rows: string[] = [
+    ...added.map((l) => describeLineChange({ op: "ADDED", lineId: l.id, label: l.label, to: snap(l) })),
+    ...modified.map((l) =>
+      describeLineChange({ op: "UPDATED", lineId: l.id, label: l.label, from: snap(before.get(l.id)!), to: snap(l) }),
+    ),
+    ...removed.map((l) => describeLineChange({ op: "REMOVED", lineId: l.id, label: l.label, from: snap(l) })),
+  ];
+  const head =
+    previous === null ? `Devis v${version} : ${current.length} ligne(s)` : `Devis v${version} : modifications depuis la version précédente`;
+  const body = rows.length > 0 ? rows : ["Aucune ligne modifiée."];
+  return [head, ...body.map((r) => `• ${r}`), `Total : ${formatFcfa(total)}`].join("\n");
 }
 
 function lineDetail(line: Pick<PrintQuoteLine, "quantity" | "unitPrice">) {
@@ -137,7 +196,7 @@ export async function addStaffLine(input: {
       },
     });
     const change: LineChange = { op: "ADDED", lineId: created.id, label: created.label, to: lineDetail(created) };
-    await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [change] }, { userId: input.userId, ...STAFF });
+    await appendLineChange(tx, request.id, input.userId, change);
     await recomputeChecked(tx, request.id);
     return { line: created, revised: from === "QUOTED" };
   });
@@ -196,7 +255,7 @@ export async function updateStaffLine(input: {
       from: lineDetail(line),
       to: lineDetail(updated),
     };
-    await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [change] }, { userId: input.userId, ...STAFF });
+    await appendLineChange(tx, request.id, input.userId, change);
     await recomputeChecked(tx, request.id);
     return { line: updated, revised: from === "QUOTED" };
   });
@@ -221,7 +280,7 @@ export async function removeStaffLine(input: {
     const { from } = await applyEdit(tx, current, "STAFF", input.userId);
     await tx.printQuoteLine.update({ where: { id: line.id }, data: { removedAt: new Date() } });
     const change: LineChange = { op: "REMOVED", lineId: line.id, label: line.label, from: lineDetail(line) };
-    await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [change] }, { userId: input.userId, ...STAFF });
+    await appendLineChange(tx, request.id, input.userId, change);
     await recomputeChecked(tx, request.id);
     return { revised: from === "QUOTED" };
   });
@@ -259,7 +318,39 @@ export async function sendQuote(input: {
     }
     const version = current.quoteVersion + 1;
     await tx.printRequest.update({ where: { id: request.id }, data: { quoteVersion: version } });
-    await appendThreadEvent(tx, request.id, "QUOTE_SENT", { version, total }, { userId: input.userId, ...STAFF });
+    const lines = (
+      await tx.printQuoteLine.findMany({
+        where: { requestId: request.id, removedAt: null },
+        orderBy: { position: "asc" },
+        select: { id: true, label: true, quantity: true, unitPrice: true },
+      })
+    ).map((l) => ({ id: l.id, label: l.label, quantity: l.quantity, unitPrice: l.unitPrice }));
+    const previousSent = await tx.printRequestMessage.findFirst({
+      where: { requestId: request.id, eventType: "QUOTE_SENT" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+    // Envoi antérieur sans instantané des lignes : récapitulatif complet, comme pour la première version.
+    const previousLines = previousSent ? (previousSent.details as { lines?: QuoteSnapshotLine[] }).lines : undefined;
+    const sent = await appendThreadEvent(
+      tx,
+      request.id,
+      "QUOTE_SENT",
+      { version, total, lines },
+      { userId: input.userId, ...STAFF },
+    );
+    // Récapitulatif en message visible de l'organisateur (le texte d'un évènement est reconstruit
+    // pour lui à partir de la liste blanche de ses détails, il ne peut pas porter le récapitulatif).
+    // Aucune notification : l'envoi du devis a la sienne.
+    await tx.printRequestMessage.create({
+      data: {
+        requestId: request.id,
+        authorId: input.userId,
+        side: "STAFF",
+        kind: "MESSAGE",
+        body: summarizeQuoteDiff(Array.isArray(previousLines) ? previousLines : null, lines, version, total),
+        createdAt: new Date(sent.createdAt.getTime() + 1),
+      },
+    });
     return tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
   });
 }
