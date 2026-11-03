@@ -49,6 +49,26 @@ export type PrintState = {
   showcase: Map<string, ShowcaseOrder>;
   /** Numero du prochain fichier joint (nom `demo-<n>.<ext>`). */
   attachmentSeq: number;
+  /** Commandes de volume (ecrites par lots), pour les notifications et le journal. */
+  volume: VolumeOrder[];
+};
+
+export type VolumeOrder = {
+  id: string;
+  reference: string;
+  orgId: string;
+  orgName: string;
+  eventId: string;
+  eventTitle: string;
+  status: string;
+  badgeCount: number;
+  total: number;
+  quoteVersion: number;
+  submittedAt: Date | null;
+  quotedAt: Date | null;
+  endAt: Date;
+  /** Echanges de messages du fil (une question de l'organisateur puis la reponse du staff). */
+  exchanges: Array<{ authorName: string; body: string; toStaff: boolean; at: Date }>;
 };
 
 export type ShowcaseOrder = {
@@ -82,6 +102,7 @@ export function createPrintState(ctx: DemoContext): PrintState {
     orders: new Map(),
     showcase: new Map(),
     attachmentSeq: 1,
+    volume: [],
   };
 }
 
@@ -115,6 +136,10 @@ export async function cleanupPrintData(): Promise<void> {
       OR: [{ recipient: { endsWith: DEMO_DOMAIN } }, { runAt: { gt: new Date(Date.now() + 1000 * DAY_MS) } }],
     },
   });
+  // Rejouable seul : commandes (fils, lignes, paiements, lectures, impressions en cascade), credits et generations.
+  await prisma.printSheetGeneration.deleteMany({ where: { id: { in: generations.map((g) => g.id) } } });
+  await prisma.orgPrintCredit.deleteMany({ where: { orgId: { in: orgIds } } });
+  await prisma.printRequest.deleteMany({ where: { orgId: { in: orgIds } } });
   await prisma.printProduct.deleteMany({ where: { id: { in: products.map((p) => p.id) } } });
   await prisma.printSheetLayout.deleteMany({ where: { id: { in: layouts.map((l) => l.id) } } });
 }
