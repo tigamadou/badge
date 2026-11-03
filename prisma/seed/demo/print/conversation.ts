@@ -60,7 +60,10 @@ export async function postDemoMessage(
     }
   }
   const message = await postMessage({ requestId: ref.requestId, authorId, side, body, attachmentKey, internal: opts.internal });
-  if (!opts.internal) await notifyPrintRequestMessage(message.id, authorId);
+  if (!opts.internal) {
+    await notifyPrintRequestMessage(message.id, authorId);
+    await parkPrintJobs(ctx, state);
+  }
 }
 
 const plan = (ref: ScenarioRef) => ref.scenario.conversation;

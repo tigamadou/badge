@@ -53,6 +53,7 @@ export async function simulateFedapay(
       return created;
     });
     await notifyPrintRequestPaid(ref.requestId, ref.ownerId);
+    await parkPrintJobs(ctx, state);
     return payment;
   }
 
@@ -81,6 +82,7 @@ export async function settleOrder(ctx: DemoContext, state: PrintState, ref: Paym
       reason: "Virement reçu — rapprochement manuel",
     });
     await notifyPrintRequestPaid(ref.requestId, state.staffAdmin.id, { manual: true });
+    await parkPrintJobs(ctx, state);
   } else {
     await attemptPayments(ctx, state, ref, { ...s, pendingPayment: false });
     await simulateFedapay(ctx, state, ref, "APPROVED");

@@ -7,7 +7,7 @@ import {
 import type { NotificationContent } from "../../../../src/lib/notifications/types";
 import { DEMO_SLUG_PREFIX } from "../../constants";
 import { insertInBatches, type DemoContext, type DemoUser } from "../context";
-import { DAY_MS, HOUR_MS, MINUTE_MS, PRODUCT_SLUG_PREFIX, LAYOUT_NAME_PREFIX, type PrintState } from "./helpers";
+import { DAY_MS, HOUR_MS, MINUTE_MS, demoProductWhere, LAYOUT_NAME_MATCH, type PrintState } from "./helpers";
 
 const FIVE_YEARS_MS = 5 * 365 * DAY_MS;
 
@@ -64,13 +64,13 @@ async function catalogActivity(ctx: DemoContext, state: PrintState): Promise<Pri
   const entry = (type: ActivityType, targetId: string, createdAt: Date, details: Prisma.InputJsonValue, userId = staff.id) =>
     out.push({ id: randomUUID(), type, userId, targetId, details, staffActor: false, createdAt: before(ctx, createdAt) });
 
-  const products = await prisma.printProduct.findMany({ where: { slug: { startsWith: PRODUCT_SLUG_PREFIX } }, orderBy: { createdAt: "asc" } });
+  const products = await prisma.printProduct.findMany({ where: demoProductWhere, orderBy: { createdAt: "asc" } });
   for (const [i, p] of products.entries()) {
     entry("PRINT_PRODUCT_CREATED", p.id, p.createdAt, { name: p.name, kind: p.kind });
     if (p.published && i % 2 === 0) entry("PRINT_PRODUCT_UPDATED", p.id, new Date(p.createdAt.getTime() + 3 * DAY_MS), { name: p.name, fields: ["basePrice"] });
     if (p.archived) entry("PRINT_PRODUCT_ARCHIVED", p.id, p.archivedAt ?? new Date(p.createdAt.getTime() + 10 * DAY_MS), { name: p.name });
   }
-  const layouts = await prisma.printSheetLayout.findMany({ where: { name: { startsWith: LAYOUT_NAME_PREFIX } }, orderBy: { createdAt: "asc" } });
+  const layouts = await prisma.printSheetLayout.findMany({ where: { name: { startsWith: LAYOUT_NAME_MATCH } }, orderBy: { createdAt: "asc" } });
   for (const [i, l] of layouts.entries()) {
     entry("PRINT_LAYOUT_CREATED", l.id, l.createdAt, { name: l.name });
     if (i === 0) entry("PRINT_LAYOUT_UPDATED", l.id, new Date(l.createdAt.getTime() + 2 * DAY_MS), { name: l.name });

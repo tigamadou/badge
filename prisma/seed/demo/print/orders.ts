@@ -212,6 +212,7 @@ export async function runScenario(
   if (s.target === "DRAFT") return finish(ctx, state, ref, window, badgeCount, 0);
 
   await submitRequest({ requestId, eventId: event.id, userId: owner.id, now: ctx.dates.now });
+  await parkPrintJobs(ctx, state);
   await hooks.submitted?.(ref);
   if (s.target === "SUBMITTED") return finish(ctx, state, ref, window, badgeCount, 0);
 
@@ -263,6 +264,7 @@ export async function runScenario(
     }
     await sendQuote({ requestId, userId: version % 2 === 1 ? staff.id : support.id, now: ctx.dates.now });
     await notifyPrintRequestQuoted(requestId, version % 2 === 1 ? staff.id : support.id);
+    await parkPrintJobs(ctx, state);
     ref.version = version;
     await hooks.quoted?.(ref);
   }
@@ -272,6 +274,7 @@ export async function runScenario(
   if (s.endsFrom === "QUOTED") return conclude(ctx, state, ref, window, badgeCount);
 
   await acceptQuote({ requestId, eventId: event.id, userId: owner.id, version: ref.version, now: ctx.dates.now });
+  await parkPrintJobs(ctx, state);
   await hooks.accepted?.(ref);
   if (s.endsFrom === "ACCEPTED") return conclude(ctx, state, ref, window, badgeCount);
   if (s.target === "ACCEPTED") {
@@ -287,6 +290,7 @@ export async function runScenario(
   const advance = async (to: "IN_PRODUCTION" | "READY" | "COMPLETED") => {
     const result = await advanceStatus({ requestId, userId: staff.id, to });
     await notifyPrintRequestStatusChanged(requestId, staff.id, { organizer: true, staff: false });
+    await parkPrintJobs(ctx, state);
     return result;
   };
   await advance("IN_PRODUCTION");
@@ -314,6 +318,7 @@ async function conclude(ctx: DemoContext, state: PrintState, ref: ScenarioRef, w
   } else {
     await cancelRequest({ requestId, eventId: event.id, userId: owner.id });
   }
+  await parkPrintJobs(ctx, state);
   await sleepFree(ctx, state);
   return finish(ctx, state, ref, window, badgeCount, 0);
 }

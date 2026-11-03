@@ -9,9 +9,12 @@ export const DAY_MS = 86_400_000;
 export const HOUR_MS = 3_600_000;
 export const MINUTE_MS = 60_000;
 
-/** Prefixe des produits, des gabarits et des fichiers de demo hors cascade d'organisation. */
-export const PRODUCT_SLUG_PREFIX = "demo-";
+/** Prefixes des produits (badges, accessoires) et des gabarits de planche crees par ce lot, hors cascade d'organisation. */
+export const PRODUCT_SLUG_PREFIXES = ["demo-badge-", "demo-accessoire-"] as const;
 export const LAYOUT_NAME_PREFIX = "Démo ";
+/** Tous les gabarits de demo sont des formats de papier (A3, A4, A5) : un gabarit « Démo ... » d'un developpeur est epargne. */
+export const LAYOUT_NAME_MATCH = `${LAYOUT_NAME_PREFIX}A`;
+export const demoProductWhere = { OR: PRODUCT_SLUG_PREFIXES.map((p) => ({ slug: { startsWith: p } })) };
 
 /** Plage des identifiants de transaction FedaPay de ce lot (2b a 910_000_000-919_999_999). */
 export const FEDAPAY_ID_START = 920_000_000;
@@ -113,8 +116,8 @@ export async function cleanupPrintData(): Promise<void> {
   const events = await prisma.event.findMany({ where: { orgId: { in: orgIds } }, select: { id: true } });
   const eventIds = events.map((e) => e.id);
 
-  const products = await prisma.printProduct.findMany({ where: { slug: { startsWith: PRODUCT_SLUG_PREFIX } }, select: { id: true } });
-  const layouts = await prisma.printSheetLayout.findMany({ where: { name: { startsWith: LAYOUT_NAME_PREFIX } }, select: { id: true } });
+  const products = await prisma.printProduct.findMany({ where: demoProductWhere, select: { id: true } });
+  const layouts = await prisma.printSheetLayout.findMany({ where: { name: { startsWith: LAYOUT_NAME_MATCH } }, select: { id: true } });
   const generations = await prisma.printSheetGeneration.findMany({
     where: { OR: [{ eventId: { in: eventIds } }, { layoutId: { in: layouts.map((l) => l.id) } }] },
     select: { id: true },
@@ -140,12 +143,37 @@ export async function cleanupPrintData(): Promise<void> {
   if (orgIds.length > 0) {
     await prisma.$executeRaw`DELETE FROM Job WHERE kind LIKE 'notification.print_request%' AND JSON_UNQUOTE(JSON_EXTRACT(payload, '$.ctx.orgId')) IN (${Prisma.join(orgIds)})`;
   }
+  await resetOnsiteBadges(orgIds);
   // Rejouable seul : commandes (fils, lignes, paiements, lectures, impressions en cascade), credits et generations.
   await prisma.printSheetGeneration.deleteMany({ where: { id: { in: generations.map((g) => g.id) } } });
   await prisma.orgPrintCredit.deleteMany({ where: { orgId: { in: orgIds } } });
   await prisma.printRequest.deleteMany({ where: { orgId: { in: orgIds } } });
   await prisma.printProduct.deleteMany({ where: { id: { in: products.map((p) => p.id) } } });
   await prisma.printSheetLayout.deleteMany({ where: { id: { in: layouts.map((l) => l.id) } } });
+}
+
+/**
+ * Remet a zero les badges marques imprimes par les impressions sur place de la demo (avant la suppression
+ * des commandes, qui emporte les lignes d'impression). Seules les inscriptions dont badgePrintedAt egale
+ * la premiere impression sont touchees ; updatedAt n'est pas modifie.
+ */
+async function resetOnsiteBadges(orgIds: string[]): Promise<void> {
+  if (orgIds.length === 0) return;
+  const prints = await prisma.printRequestPrint.findMany({
+    where: { reprint: false, request: { orgId: { in: orgIds } } },
+    select: { registrationId: true, printedAt: true },
+  });
+  if (prints.length === 0) return;
+  const printedAt = new Map(prints.map((p) => [p.registrationId, p.printedAt.getTime()]));
+  const registrations = await prisma.registration.findMany({
+    where: { id: { in: [...printedAt.keys()] }, badgePrinted: true },
+    select: { id: true, badgePrintedAt: true },
+  });
+  const ids = registrations.filter((r) => r.badgePrintedAt?.getTime() === printedAt.get(r.id)).map((r) => r.id);
+  for (let i = 0; i < ids.length; i += 500) {
+    const chunk = ids.slice(i, i + 500);
+    await prisma.$executeRaw`UPDATE Registration SET badgePrinted = 0, badgePrintedAt = NULL WHERE id IN (${Prisma.join(chunk)})`;
+  }
 }
 
 /** Petite image de la reserve du contexte (octets + type), la n-ieme en boucle. */
