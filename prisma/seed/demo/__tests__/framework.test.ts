@@ -28,6 +28,8 @@ async function rowCounts() {
 describe("cadre du seed de demo", () => {
   beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
+    // Le catalogue de motifs vient du seed minimal : seedRegistrations est teste dans registrations.test.ts.
+    vi.spyOn(registrations, "seedRegistrations").mockImplementation(async () => {});
   });
 
   afterEach(async () => {
