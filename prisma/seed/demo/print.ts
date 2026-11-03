@@ -30,6 +30,10 @@ function mergeHooks(...all: ScenarioHooks[]): ScenarioHooks {
 }
 
 export async function seedPrint(ctx: DemoContext): Promise<void> {
+  if (ctx.registry.events.length === 0) {
+    console.warn("[seed demo] impression : aucun evenement de demo, etape ignoree");
+    return;
+  }
   const state: PrintState = createPrintState(ctx);
   await timed("nettoyage", () => cleanupPrintData());
   await timed("catalogue", () => seedCatalog(ctx, state));
