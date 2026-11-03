@@ -31,9 +31,8 @@ async function openRequest(page: Page, eventId: string, request: { id: string; r
   await expect(page.getByRole("heading", { name: request.reference })).toBeVisible();
 }
 
-// Badge de statut : le <span> qui suit le titre de la page.
-const statusBadge = (page: Page, reference: string) =>
-  page.locator("h1", { hasText: reference }).locator("xpath=following-sibling::span");
+// Badge de statut : dans le résumé de la commande (colonne de gauche).
+const statusBadge = (page: Page, _reference: string) => page.getByTestId("order-status");
 
 // Page Détail d'une commande d'impression — /event/[eventId]/print/[requestId]
 // Rôle : permission `print.request`. Seul le propriétaire de l'organisation (OWNER) accepte un devis.

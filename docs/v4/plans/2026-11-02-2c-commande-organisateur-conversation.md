@@ -17,8 +17,8 @@ de celle du staff.
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | API messages organisateur : polling et lecture | [x] | 2026-11-02 | GET ?after (400 si date invalide), markRead(at capture avant lecture) sauf staff en consultation ; POST au schéma strict (internal -> 400). Chevauchement 2 s + dédoublonnage : côté client (tâche 2). |
-| 2 | Page conversation 3 colonnes | [ ] | | |
-| 3 | Non-lus : liste et menu de l'évènement | [ ] | | |
+| 2 | Page conversation 3 colonnes | [~] | 2026-11-03 | Code écrit (page, order/*, thread-sync + test unitaire), typecheck OK ; e2e print-request-detail non concluant (hôte saturé, load > 90) — à rejouer. Non commité. |
+| 3 | Non-lus : liste et menu de l'évènement | [~] | 2026-11-03 | Code écrit (liste, EventShell, layout, router.refresh à l'ouverture) ; e2e print-conversation.spec.ts écrit, jamais exécuté. Non commité. |
 | 4 | e2e, doc, vérification | [ ] | | |
 
 ## Fichiers du lot (exclusifs)
