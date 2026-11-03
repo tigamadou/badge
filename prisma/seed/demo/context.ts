@@ -5,6 +5,7 @@ import type { EventRole, OrgRole, RegistrationStatus, StaffRole } from "@prisma/
 import { prisma } from "../../../src/lib/prisma";
 import { assertDemoSeedAllowed } from "../../../src/lib/badge-env";
 import { deleteFile, deletePrefix, getFile, uploadFile } from "../../../src/lib/storage";
+import { buildImageReserve } from "./images";
 import { DEMO_FAKER_SEED, DEMO_PASSWORD, DEMO_STORAGE_PREFIX } from "../constants";
 
 export type OrgSize = "huge" | "medium" | "small" | "archived";
@@ -234,6 +235,9 @@ export async function createDemoContext(options: DemoSeedOptions = {}): Promise<
   const passwordHash = await hash(DEMO_PASSWORD, 12);
   const accounts: DemoContext["accounts"] = [];
 
+  const storage = createStorage(options.storagePrefix ?? DEMO_STORAGE_PREFIX);
+  const images = await buildImageReserve({ faker, storage });
+
   return {
     faker,
     scale,
@@ -241,7 +245,7 @@ export async function createDemoContext(options: DemoSeedOptions = {}): Promise<
     env: badgeEnv,
     passwordHash,
     dates: createDates(now, faker),
-    storage: createStorage(options.storagePrefix ?? DEMO_STORAGE_PREFIX),
+    storage,
     async backdate(model, ids, createdAt, updatedAt = createdAt) {
       const list = Array.isArray(ids) ? ids : [ids];
       const cols = backdateColumns(model);
@@ -264,7 +268,7 @@ export async function createDemoContext(options: DemoSeedOptions = {}): Promise<
       });
       return res.count;
     },
-    images: { photos: [], logos: [], banners: [] },
+    images,
     registry: emptyRegistry(),
     recordAccount: (email, role, scenario) => {
       accounts.push({ email, role, scenario });

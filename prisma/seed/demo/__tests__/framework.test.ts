@@ -271,7 +271,7 @@ describe("cadre du seed de demo", () => {
     it("clearTracked sans manifeste ne supprime que le prefixe", async () => {
       const ctx = await createDemoContext({ env: DEV, scale: 0.02, storagePrefix: TEST_PREFIX });
       await ctx.storage.put(ctx.storage.key("seul.txt"), Buffer.from("a"), "text/plain");
-      expect(await ctx.storage.clearTracked()).toBe(1);
+      expect(await ctx.storage.clearTracked()).toBe(1 + ctx.images.photos.length + ctx.images.logos.length + ctx.images.banners.length);
       expect(await ctx.storage.clear()).toBe(0);
     });
 
