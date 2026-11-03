@@ -17,8 +17,8 @@ pousser la branche et ouvrir une PR vers `development`.
 | 2 | Fusion 2b | [x] | 2026-11-03 | 5e92069 ; conflits tests et doc (fil sans regroupement) résolus |
 | 3 | Fusion 2c | [x] | 2026-11-03 | sans conflit ; impression-demandes.md relu |
 | 4 | Vérification complète | [x] | 2026-11-03 | lint 0 erreur, typecheck OK, 3700 tests à 100 %, e2e impression 63/63 (après purge du cache Turbopack et redémarrage du worker), contrôle navigateur 375/1280 |
-| 5 | Push et PR | [x] | 2026-11-03 | |
-| 6 | Nettoyage des stacks d'agents | [ ] | | |
+| 5 | Push et PR | [x] | 2026-11-03 | PR tigamadou/badge#25 |
+| 6 | Nettoyage des stacks d'agents | [x] | 2026-11-03 | stacks 2a/2b/2c arrêtées ; worktrees, branches et bases conservés |
 
 ## Global Constraints
 
