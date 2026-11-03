@@ -57,7 +57,7 @@ sur les hypothèses de ce plan :
 | 4 | Jobs email de chaque statut | [x] | 2026-11-03 | SeededJobs etendu (completedAt, retried). PENDING/RUNNING crees directement avec runAt/lockedAt +3650 j (createdAt = maintenant, jamais antedates). |
 | 5 | Notifications de chaque type hors impression | [x] | 2026-11-03 | Ecart: assignScenarios donne les scenarios preferOwner (big-annual, monthly-renewed, expiring-7, expiring-1) aux orgs ayant un OWNER (sinon aucun rappel/notification ORG possible). Destinataires: staff demo uniquement (admin@badge.local exclu). cleanupNotifications dans notifications/notifications.ts. |
 | 6 | Journal d'activité | [x] | 2026-11-03 | Types non seedes: USER_DELETED, ORG_DELETED, REGISTRATION_DELETED. Plafond des dates = horloge reelle (comptes/membres crees apres ctx.dates.now). seedJobs renvoie un resultat vide si le monde est vide (framework.test). PLAN_UPDATED ajoute cote facturation; plans crees a now-175 j (fenetre de 180 j). cleanupActivity({keepBilling}). |
-| 7 | Vérification | [ ] | | |
+| 7 | Vérification | [x] | 2026-11-03 | lot2b.test.ts; make test-coverage vert (312 fichiers, 3800 tests, 403 s); seed reel facturation 0,4 s + notifications/journal 4,4 s; navigateur 375/1280 OK. typecheck: seules erreurs dans .next/dev/types/routes.d.ts (fichier corrompu par le serveur dev, hors lot). |
 
 ## Fichiers du lot (exclusifs)
 

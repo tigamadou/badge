@@ -22,6 +22,7 @@ export async function seedBilling(ctx: DemoContext): Promise<void> {
  * Supprime paiements et abonnements des organisations `demo-` (rappels en cascade). Les plans
  * `demo-*` restent : ils sont recrees par `upsert` et `Payment.planId` est RESTRICT.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature figee par le socle
 export async function cleanupBilling(_ctx: DemoContext): Promise<void> {
   const orgs = { org: { slug: { startsWith: DEMO_SLUG_PREFIX } } };
   await prisma.payment.deleteMany({ where: orgs });

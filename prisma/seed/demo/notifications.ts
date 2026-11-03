@@ -14,6 +14,7 @@ export async function seedNotificationsAndActivity(ctx: DemoContext): Promise<vo
 }
 
 /** Notifications et jobs de demo (aucune cascade ne les atteint) puis journal hors impression. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature figee par le socle
 export async function cleanupNotificationsAndActivity(_ctx: DemoContext): Promise<void> {
   await cleanupNotifications();
   await cleanupJobs();
