@@ -52,7 +52,7 @@ sur les hypothèses de ce plan :
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Contrat du socle, monde relu en base, plans de démo | [x] | 2026-11-03 | Ecarts : dates via ctx.dates (pas daysAgo), loadWorld() sans ctx, WorldUser/WorldEvent etendus; seulement 4 orgs sur 12 ont un OWNER (repli membre/null); cleanupBilling(_ctx). |
-| 2 | Abonnements, rappels, quotas | [ ] | | |
+| 2 | Abonnements, rappels, quotas | [x] | 2026-11-03 | near-limit: ratio >= 85 % verifie seulement si plus gros evenement >= 9 (a petite echelle +1 suffit); echeance verifiee contre endInDays (garde-fou). |
 | 3 | Paiements d'abonnement | [ ] | | |
 | 4 | Jobs email de chaque statut | [ ] | | |
 | 5 | Notifications de chaque type hors impression | [ ] | | |

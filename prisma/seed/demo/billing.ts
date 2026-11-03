@@ -2,9 +2,13 @@ import { prisma } from "../../../src/lib/prisma";
 import { DEMO_SLUG_PREFIX } from "../constants";
 import type { DemoContext } from "./context";
 import { ensurePlans } from "./billing/plans";
+import { seedSubscriptions } from "./billing/subscriptions";
+import { loadWorld } from "./billing/world";
 
 export async function seedBilling(ctx: DemoContext): Promise<void> {
-  await ensurePlans(ctx.dates.now);
+  const plans = await ensurePlans(ctx.dates.now);
+  const world = await loadWorld();
+  await seedSubscriptions(ctx, world, plans);
 }
 
 /**
