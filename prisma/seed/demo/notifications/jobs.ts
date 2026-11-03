@@ -87,7 +87,9 @@ export async function seedJobs(ctx: DemoContext, world: DemoWorld): Promise<Seed
     staff: demoOnly(world.staff),
   };
   const fallback = pools.participant.length > 0 ? pools.participant : demoOnly(world.staff);
-  if (fallback.length === 0) throw new Error("Aucun destinataire @demo.local pour les jobs de demo");
+  const seeded: SeededJobs = { failed: [], cancelled: [], retried: [] };
+  // Monde vide (modules du socle absents ou mockes) : rien a envoyer.
+  if (fallback.length === 0) return seeded;
 
   const orgsWithEvents = world.orgs.filter((o) => o.events.some((e) => !e.archived));
   const contextOf = (): { event: string; org: string } => {
@@ -96,7 +98,6 @@ export async function seedJobs(ctx: DemoContext, world: DemoWorld): Promise<Seed
     return { org: org.name, event: events.length > 0 ? faker.helpers.arrayElement(events).title : "un évènement" };
   };
 
-  const seeded: SeededJobs = { failed: [], cancelled: [], retried: [] };
   const statuses = statusPlan(ctx.scaled(60, 12));
   let pendingRetries = 0;
 

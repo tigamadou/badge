@@ -26,7 +26,7 @@ export const PLAN_SPECS: Record<PlanKey, PlanSpec> = {
  * garde les valeurs du seed minimal ou ajustées par le staff.
  */
 export async function ensurePlans(now: Date = new Date()): Promise<PlanCatalog> {
-  const createdAt = new Date(now.getTime() - 400 * DAY_MS);
+  const createdAt = new Date(now.getTime() - 175 * DAY_MS);
   const catalog: Partial<PlanCatalog> = {};
   for (const [key, spec] of Object.entries(PLAN_SPECS) as [PlanKey, PlanSpec][]) {
     catalog[key] = await prisma.plan.upsert({

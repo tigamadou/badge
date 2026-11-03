@@ -36,6 +36,11 @@ export async function writeBillingActivity(
     });
   }
 
+  const legacy = plans.legacy;
+  add("PLAN_UPDATED", capped(legacy.createdAt.getTime() + 60 * DAY_MS), {
+    ...byStaff(null), targetId: legacy.id, details: { changes: { archived: { from: false, to: true } } },
+  });
+
   for (const sub of subs) {
     const { scenario, org } = sub;
     const owner = org.owners[0] ?? org.members[0] ?? null;
