@@ -4,7 +4,7 @@
         prod prod-down prod-build prod-logs \
         prod-db-reset  prod-db-push \
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
-        preprod-db-reset \
+        preprod-db-reset preprod-reload-demo \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
         test test-db test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
@@ -200,12 +200,23 @@ preprod-db-push:
 	$(PREPROD_COMPOSE) up init
 
 # Reset destructif limite a la preprod : n'affecte jamais les volumes de prod
-# (projet compose `badge-preprod`, volumes suffixes `_preprod`).
+# (projet compose `badge-preprod`, volumes suffixes `_preprod`). Schema vide, aucun seed :
+# pour une preprod remplie, utiliser `make preprod-reload-demo`.
 preprod-db-reset:
 	@echo "WARNING: This will ERASE all PREPROD data (not production)."
 	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
 	docker exec badge-app-preprod prisma db push --force-reset
 	@echo "Preprod database reset (schema vide, aucun seed)."
+
+# Reset + seed minimal + seed de demo (meme service que deploy.sh en preprod).
+# Destructif : toute donnee saisie a la main en preprod est perdue.
+preprod-reload-demo:
+	@echo "WARNING: This will ERASE all PREPROD data (not production) and reload the demo."
+	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
+	$(PREPROD_COMPOSE) stop app worker
+	$(PREPROD_COMPOSE) run --rm seed-demo
+	$(PREPROD_COMPOSE) up -d app worker
+	@echo "Preprod rechargee avec la demo."
 
 # ============================================================
 #  Caddy
@@ -372,6 +383,7 @@ migrate-uploads-clear:
 smoke-tests:
 	docker compose run --rm tools yarn tsx scripts/smoke-tests.ts
 
+# Attend la demo chargee (deploy.sh ou `make preprod-reload-demo`).
 smoke-tests-preprod:
 	$(PREPROD_COMPOSE) run --rm tools yarn tsx scripts/smoke-tests.ts
 
@@ -538,7 +550,7 @@ db-seed:
 
 # Seed de demonstration (refuse hors BADGE_ENV=dev|preprod) : organisations, evenements,
 # profils et inscriptions fictifs, comptes @demo.local au mot de passe commun 123456.
-# Idempotent (nettoie ses propres donnees puis recree, sans db-reset). Options :
+# Dev et preprod ; refuse en prod (garde-fou BADGE_ENV). Idempotent (nettoie ses propres donnees puis recree, sans db-reset). Options :
 # DEMO_SCALE (volumes) et DEMO_ACCOUNTS_FILE (defaut .demo/comptes-demo.md).
 db-seed-demo:
 	$(DEV_COMPOSE) exec -e SEED_MODE=demo app npx prisma db seed

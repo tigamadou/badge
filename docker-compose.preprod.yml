@@ -188,6 +188,35 @@ services:
       renderer:
         condition: service_healthy
 
+  # Rechargement de la preprod avec la demo : DESTRUCTIF, preprod seulement. Remet la base
+  # a zero (schema recree), puis seed minimal et seed de demo (qui vide lui-meme le prefixe
+  # de stockage `demo/`). Lance par deploy.sh (ENV=preprod, app et worker arretes) ou par
+  # `make preprod-reload-demo`. Le seed minimal reecrit le SMTP de PlatformSettings sur
+  # PLATFORM_SMTP_* (.env.preprod) ou, a defaut, mailpit:1025.
+  seed-demo:
+    profiles: ["tools"]
+    image: ${BADGE_IMAGE:-ghcr.io/tigamadou/badge}-tools:${BADGE_TAG:-preprod}
+    env_file:
+      - .env.preprod
+    environment:
+      BADGE_ENV: preprod
+      RENDERER_URL: http://badge-renderer-preprod:3000
+    networks:
+      - default
+      - rendu
+    command:
+      - sh
+      - -c
+      - npx prisma db push --force-reset --accept-data-loss && yarn tsx prisma/seed.ts && SEED_MODE=demo yarn tsx prisma/seed.ts
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      renderer:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+
 volumes:
   mysql_data_preprod:
   uploads_data_preprod:

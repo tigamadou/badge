@@ -44,6 +44,15 @@ objets sous `demo/` du stockage) puis les recree, sans `make db-reset`.
   9 s (nettoyage inclus), identique a la relance. Les etapes impression, facturation et
   notifications/journal sont completees par les lots suivants.
 
+### Préprod : démo rechargée
+
+À chaque déploiement en préprod (`BADGE_ENV=preprod`), `deploy.sh` remet la base à zéro puis
+la remplit (seed minimal + seed de démo) via le service compose `seed-demo`. Sur le serveur, la
+même opération se lance avec `make preprod-reload-demo` (confirmation `yes`). Comptes :
+`*@demo.local` et `admin2@badge.local`, mot de passe commun `123456` (liste dans
+`.demo/comptes-demo.md`, selon `DEMO_ACCOUNTS_FILE`). Détails, avertissements et fichiers à
+recopier : `DEPLOYMENT.md`, section « Préprod rechargée à chaque déploiement ».
+
 > Un port deja pris (autre stack Docker exposant 80/443, MySQL local sur 33060...) fait
 > echouer `init-check` avec la liste des ports : arreter le service concerne et relancer.
 > Pour que l'IDE voie les types Prisma, lancer aussi `yarn install` sur l'hote (avec
