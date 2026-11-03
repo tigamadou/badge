@@ -9,7 +9,7 @@ import { Stepper } from "@/components/ui/Stepper";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { ONSITE_NOT_ELIGIBLE_MESSAGE, onsiteOptionState, type OnsiteEligibilityState } from "./onsite-option";
 
-// Étape 1 de l'assistant : type de demande, puis création du brouillon et passage à l'édition.
+// Étape 1 de l'assistant : type de commande, puis création du brouillon et passage à l'édition.
 export function NewPrintRequestForm({ orgId, eventId }: { orgId: string; eventId: string }) {
   const router = useRouter();
   const [type, setType] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function NewPrintRequestForm({ orgId, eventId }: { orgId: string; eventId
     <div>
       <Stepper steps={["Type", "Badges", "Support", "Accessoires", "Remise", "Récapitulatif"]} current={0} />
       <RadioCards
-        name="Type de demande"
+        name="Type de commande"
         options={[
           { value: "ADVANCE", title: "En amont", description: "Les badges sont imprimés avant l'évènement, pour les inscriptions choisies" },
           { value: "ONSITE", title: "Pendant l'évènement", description: "Impression sur place, pendant l'évènement", disabled: onsite.disabled },

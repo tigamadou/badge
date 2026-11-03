@@ -69,7 +69,7 @@ async function call(
 
 const logs = (type: string) => prisma.activityLog.findMany({ where: { type: type as never, eventId: fx.event.id } });
 
-// Toutes les routes avec une demande en brouillon prête et un corps valide.
+// Toutes les routes avec une commande en brouillon prête et un corps valide.
 const ROUTES: { name: string; handler: () => Handler; method: string; body?: unknown; needsRequest: boolean }[] = [
   { name: "GET liste", handler: () => list.GET as Handler, method: "GET", needsRequest: false },
   { name: "POST création", handler: () => list.POST as Handler, method: "POST", body: { type: "ADVANCE" }, needsRequest: false },
@@ -112,7 +112,7 @@ describe("contrôle d'accès commun", () => {
     }
 
     if (route.needsRequest) {
-      it(`${route.name} : 404 pour une demande d'un autre évènement`, async () => {
+      it(`${route.name} : 404 pour une commande d'un autre évènement`, async () => {
         const other = await prisma.event.create({
           data: { orgId: fx.org.id, title: "Autre", slug: `o-${Date.now()}-${Math.random()}`, location: "L", date: new Date() },
         });
@@ -131,7 +131,7 @@ describe("contrôle d'accès commun", () => {
 });
 
 describe("liste et création", () => {
-  it("GET : demandes récentes d'abord, brouillons compris, nombre de badges", async () => {
+  it("GET : commandes récentes d'abord, brouillons compris, nombre de badges", async () => {
     const a = await makeRequest(fx, { status: "DRAFT", reference: "IMP-A" });
     await prisma.printRequestItem.create({ data: { requestId: a.id, registrationId: fx.approved[0].id, position: 0 } });
     await new Promise((r) => setTimeout(r, 15));
@@ -148,7 +148,7 @@ describe("liste et création", () => {
     expect(body.requests[0].badgeCount).toBe(0);
   });
 
-  it("GET : ne renvoie jamais les demandes d'un autre évènement", async () => {
+  it("GET : ne renvoie jamais les commandes d'un autre évènement", async () => {
     const other = await prisma.event.create({
       data: { orgId: fx.org.id, title: "Autre", slug: `o-${Date.now()}-${Math.random()}`, location: "L", date: new Date() },
     });
@@ -158,7 +158,7 @@ describe("liste et création", () => {
     expect(body.requests.map((x: { id: string }) => x.id)).toEqual([mine.id]);
   });
 
-  it("GET et PATCH : aucun champ interne dans la demande ni dans les lignes", async () => {
+  it("GET et PATCH : aucun champ interne dans la commande ni dans les lignes", async () => {
     const r = await makeRequest(fx, {
       status: "QUOTED", quoteVersion: 1, marginPercent: 20, paidPaymentId: "pay", templatePinned: true,
       acceptedById: fx.owner.id,
@@ -269,7 +269,7 @@ describe("détail et modification", () => {
     expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: fx.staffAdmin.id } })).toBe(1);
   });
 
-  it("PATCH sur une demande envoyée sans révision : journal sans notification", async () => {
+  it("PATCH sur une commande envoyée sans révision : journal sans notification", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     const res = await call(detail.PATCH as Handler, "PATCH", { requestId: r.id, body: { notes: "Précision" } });
     expect(res.status).toBe(200);
@@ -283,7 +283,7 @@ describe("détail et modification", () => {
     expect((await call(detail.PATCH as Handler, "PATCH", { requestId: r.id, body: { notes: "x" } })).status).toBe(410);
   });
 
-  it("PATCH sur une demande annulée : 409", async () => {
+  it("PATCH sur une commande annulée : 409", async () => {
     const r = await makeRequest(fx, { status: "CANCELLED" });
     const res = await call(detail.PATCH as Handler, "PATCH", { requestId: r.id, body: { notes: "x" } });
     expect(res.status).toBe(409);
@@ -298,7 +298,7 @@ describe("inscriptions, badges, produits", () => {
     expect((await res.json()).candidates).toHaveLength(3);
   });
 
-  it("PUT badges : 200 et nombre ; 400 sans sélection ; journal sur demande envoyée", async () => {
+  it("PUT badges : 200 et nombre ; 400 sans sélection ; journal sur commande envoyée", async () => {
     const r = await makeRequest(fx, { status: "DRAFT" });
     const ok = await call(badges.PUT as Handler, "PUT", { requestId: r.id, body: { selection: { mode: "ALL_AVAILABLE" } } });
     expect(ok.status).toBe(200);
@@ -338,13 +338,13 @@ describe("inscriptions, badges, produits", () => {
 });
 
 describe("envoi, annulation", () => {
-  it("submit : 409 INVALID_TRANSITION sur une demande déjà envoyée", async () => {
+  it("submit : 409 INVALID_TRANSITION sur une commande déjà envoyée", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     const res = await call(submit.POST as Handler, "POST", { requestId: r.id });
     expect(res.status).toBe(409);
   });
 
-  it("submit ONSITE avec un template hors liste : 409 ONSITE_TEMPLATE_UNSUITABLE, demande inchangée", async () => {
+  it("submit ONSITE avec un template hors liste : 409 ONSITE_TEMPLATE_UNSUITABLE, commande inchangée", async () => {
     await prisma.platformSettings.update({ where: { id: "singleton" }, data: { onsitePrintTemplateIds: [] } });
     const r = await makeRequest(fx, {
       type: "ONSITE", status: "DRAFT", estimatedQuantity: 20, onsiteLocation: "Hall",
@@ -387,7 +387,7 @@ describe("envoi, annulation", () => {
     expect((await call(submit.POST as Handler, "POST", { requestId: r.id })).status).toBe(410);
   });
 
-  it("cancel : brouillon sans notification ; demande envoyée avec notification ; autorisé sur évènement archivé", async () => {
+  it("cancel : brouillon sans notification ; commande envoyée avec notification ; autorisé sur évènement archivé", async () => {
     const draft = await makeRequest(fx, { status: "DRAFT" });
     const res = await call(cancel.POST as Handler, "POST", { requestId: draft.id });
     expect(res.status).toBe(200);
@@ -401,7 +401,7 @@ describe("envoi, annulation", () => {
     expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: fx.staffAdmin.id } })).toBe(1);
   });
 
-  it("cancel : 409 sur une demande déjà annulée", async () => {
+  it("cancel : 409 sur une commande déjà annulée", async () => {
     const r = await makeRequest(fx, { status: "CANCELLED" });
     expect((await call(cancel.POST as Handler, "POST", { requestId: r.id })).status).toBe(409);
   });

@@ -8,7 +8,7 @@
 Le staff de la plateforme tient un **catalogue** de produits d'impression : supports de badge
 et accessoires (cordons, porte-badges…) que les organisateurs pourront commander. Chaque
 produit a un prix de base, des prix dégressifs, des images et des options configurables. Le
-calcul du prix estimé et la copie figée des choix sont fournis ici ; l'assistant de demande et
+calcul du prix estimé et la copie figée des choix sont fournis ici ; l'assistant de commande et
 le devis arrivent avec le plan 33.
 
 | Écran | Rôle | Droits |
@@ -20,6 +20,11 @@ L'entrée « Catalogue » est dans le groupe « Impression » de la navigation s
 (`StaffShell`), après « Gabarits ». Un `STAFF_OBSERVER` voit la fiche sans bouton ni champ
 modifiable. Les organisateurs n'ont pas d'écran ici : ils verront la vitrine dans l'assistant
 du plan 33.
+
+Le seed (minimal comme démo) publie cinq **accessoires** : porte-badge souple, porte-badge
+rigide, cordon tour de cou (couleur, marquage texte, logo), pince crocodile et enrouleur de
+badge, avec prix dégressifs. Ils sont créés une seule fois (par slug) : un produit déjà présent
+n'est pas modifié. Aucun support de badge n'est seedé.
 
 ## Familles et produits
 
@@ -75,7 +80,7 @@ quantité commandée ; sans palier atteint, `basePrice`. Les paliers sont rempla
 Les types à valeurs (`CHOICE`, `MULTI_CHOICE`, `COLOR`, `QUANTITY_SPLIT`) portent des
 `PrintProductOptionValue` : libellé, couleur (`COLOR`), vignette facultative, supplément par
 unité, position. Options et valeurs sont remplacées d'un bloc (`PUT .../options`) ; celles qui
-disparaissent sont **archivées** (jamais supprimées), avec leur `id` conservé pour les demandes
+disparaissent sont **archivées** (jamais supprimées), avec leur `id` conservé pour les commandes
 existantes. Le type d'une option enregistrée est **verrouillé** : `PUT .../options` refuse un
 changement (`400 OPTION_TYPE_LOCKED`) ; il faut retirer l'option et en créer une nouvelle.
 
@@ -98,8 +103,8 @@ unitaire, même total). Le plan 33 ne doit pas « corriger » cet écart.
 ## Copie figée
 
 `snapshotChoices(product, choices, quantity)` produit une copie des choix avec **les libellés
-et les suppléments au moment de la demande** (`ChoiceSnapshot`). Modifier ou archiver ensuite
-le produit ne change pas les demandes déjà passées. Les demandes d'impression (plan 33) la
+et les suppléments au moment de la commande** (`ChoiceSnapshot`). Modifier ou archiver ensuite
+le produit ne change pas les commandes déjà passées. Les commandes d'impression (plan 33) la
 stockeront telle quelle.
 
 ## Téléversement et clés
@@ -109,7 +114,7 @@ stockeront telle quelle.
 | Contexte | Rôle minimum | Clé de stockage | Visibilité |
 |---|---|---|---|
 | `print-product` (images du catalogue) | `STAFF_ADMIN` | `platform/print-products/{uuid}.{ext}` | publique via `/api/files` |
-| `print-request` (pièces d'une demande) | `STAFF_SUPPORT` | `print-requests/staff/{uuid}.{ext}` | réservée au staff |
+| `print-request` (pièces d'une commande) | `STAFF_SUPPORT` | `print-requests/staff/{uuid}.{ext}` | réservée au staff |
 
 Types acceptés : JPEG, PNG, WebP (et PDF pour `print-request`), **5 Mo maximum**. Réponses
 d'erreur alignées sur les autres routes d'upload : `403` hors rôle, `400` contexte invalide ou
@@ -138,7 +143,7 @@ publication) et `PRINT_PRODUCT_ARCHIVED`, avec `targetId` = identifiant du produ
 
 ## Contrat pour le plan 33
 
-Le plan 33 (demandes et devis) consomme `src/lib/print-catalog/pricing.ts`, qui réexporte le
+Le plan 33 (commandes et devis) consomme `src/lib/print-catalog/pricing.ts`, qui réexporte le
 calcul pur de `pricing-core.ts` (utilisable dans le navigateur, sans Prisma) :
 
 - `unitPriceFor(product, quantity, choices)` : prix unitaire estimé ;

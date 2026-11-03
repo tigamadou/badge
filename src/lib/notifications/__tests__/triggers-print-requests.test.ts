@@ -59,11 +59,11 @@ describe("notifyPrintRequestSubmitted", () => {
     const rows = await prisma.notification.findMany({
       where: { type: "PRINT_REQUEST_SUBMITTED", userId: t.staffAdmin.id },
     });
-    expect(rows[0]).toMatchObject({ scope: "PLATFORM", href: `/platform/print/requests/${t.request.id}` });
+    expect(rows[0]).toMatchObject({ scope: "PLATFORM", href: `/platform/print/orders/${t.request.id}` });
     expect(vi.mocked(enqueueEmail).mock.calls.length).toBe((await idsOf("PRINT_REQUEST_SUBMITTED")).length);
   });
 
-  it("demande sur place sans item : quantité estimée, puis 0", async () => {
+  it("commande sur place sans item : quantité estimée, puis 0", async () => {
     const a = await setup({ type: "ONSITE", estimatedQuantity: 30 });
     await notifyPrintRequestSubmitted(a.request.id, a.owner.id);
     const rowA = await prisma.notification.findFirstOrThrow({ where: { userId: a.staffAdmin.id } });
@@ -102,7 +102,7 @@ describe("notifyPrintRequestMessage", () => {
     const ids = rows.map((r) => r.userId);
     for (const id of [t.staffAdmin.id, t.superAdmin.id, t.support.id]) expect(ids).toContain(id);
     for (const id of [t.observer.id, t.owner.id, t.admin.id]) expect(ids).not.toContain(id);
-    expect(rows[0]).toMatchObject({ scope: "PLATFORM", href: `/platform/print/requests/${t.request.id}` });
+    expect(rows[0]).toMatchObject({ scope: "PLATFORM", href: `/platform/print/orders/${t.request.id}` });
     expect(rows[0].body).toBe("Owner : Bonjour");
     expect(vi.mocked(enqueueEmail)).toHaveBeenCalledTimes(rows.length);
   });
@@ -122,6 +122,16 @@ describe("notifyPrintRequestMessage", () => {
     const rows = await prisma.notification.findMany({ where: { type: "PRINT_REQUEST_MESSAGE", eventId: t.event.id } });
     expect(rows.map((r) => r.userId).sort()).toEqual(sorted(t.owner.id, t.admin.id, t.manager.id));
     expect(rows[0]).toMatchObject({ scope: "EVENT", href: `/event/${t.event.id}/print/${t.request.id}` });
+  });
+
+  it("note interne du staff : aucune notification vers l'organisateur", async () => {
+    const t = await setup();
+    const m = await prisma.printRequestMessage.create({
+      data: { requestId: t.request.id, authorId: t.staffAdmin.id, side: "STAFF", kind: "MESSAGE", body: "Note", internal: true },
+    });
+    await notifyPrintRequestMessage(m.id, t.staffAdmin.id);
+    expect(await prisma.notification.count({ where: { type: "PRINT_REQUEST_MESSAGE" } })).toBe(0);
+    expect(vi.mocked(enqueueEmail)).not.toHaveBeenCalled();
   });
 
   it("message staff sans auteur connu : libellé générique", async () => {
@@ -160,7 +170,7 @@ describe("notifyPrintRequestStatusChanged", () => {
     expect(ids).not.toContain(t.support.id);
     expect(ids).not.toContain(t.owner.id);
     const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.staffAdmin.id } });
-    expect(row).toMatchObject({ scope: "PLATFORM", href: `/platform/print/requests/${t.request.id}` });
+    expect(row).toMatchObject({ scope: "PLATFORM", href: `/platform/print/orders/${t.request.id}` });
     expect(row.title).toContain("devis envoyé");
   });
 
@@ -170,11 +180,11 @@ describe("notifyPrintRequestStatusChanged", () => {
     const org = await prisma.notification.findFirstOrThrow({ where: { userId: t.owner.id } });
     const staff = await prisma.notification.findFirstOrThrow({ where: { userId: t.staffAdmin.id } });
     expect(org.href).toBe(`/event/${t.event.id}/print/${t.request.id}`);
-    expect(staff.href).toBe(`/platform/print/requests/${t.request.id}`);
+    expect(staff.href).toBe(`/platform/print/orders/${t.request.id}`);
   });
 });
 
-describe("demande supprimée", () => {
+describe("commande supprimée", () => {
   it("aucune notification, aucune exception", async () => {
     const t = await setup();
     await prisma.printRequest.delete({ where: { id: t.request.id } });
@@ -205,7 +215,7 @@ describe("notifyPrintRequestPaid / notifyPrintPaymentUnmatched", () => {
     expect(manager[0].href).toBe(`/event/${t.event.id}/print/${t.request.id}`);
   });
 
-  it("paid : repli sur total sans acceptedTotal ; demande inconnue sans effet", async () => {
+  it("paid : repli sur total sans acceptedTotal ; commande inconnue sans effet", async () => {
     const t = await setup();
     await notifyPrintRequestPaid(t.request.id, null);
     const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.staffAdmin.id } });

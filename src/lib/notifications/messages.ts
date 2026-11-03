@@ -293,7 +293,7 @@ export function emailFailedMessage(a: {
 
 const PRINT_EXCERPT_LENGTH = 140;
 
-const staffPrintHref = (requestId: string) => `/platform/print/requests/${enc(requestId)}`;
+const staffPrintHref = (requestId: string) => `/platform/print/orders/${enc(requestId)}`;
 const organizerPrintHref = (eventId: string, requestId: string) =>
   `/event/${enc(eventId)}/print/${enc(requestId)}`;
 
@@ -306,10 +306,10 @@ export function printRequestSubmittedMessage(a: {
   badgeCount: number;
 }): NotificationContent {
   return {
-    title: "Nouvelle demande d'impression",
-    body: `${a.orgName} a envoyé la demande ${a.reference} (${PRINT_REQUEST_TYPE_LABELS[a.type].toLowerCase()}, ${a.badgeCount} badges) pour ${a.eventTitle}.`,
+    title: "Nouvelle commande d'impression",
+    body: `${a.orgName} a envoyé la commande ${a.reference} (${PRINT_REQUEST_TYPE_LABELS[a.type].toLowerCase()}, ${a.badgeCount} badges) pour ${a.eventTitle}.`,
     href: staffPrintHref(a.requestId),
-    primaryLabel: "Voir la demande",
+    primaryLabel: "Voir la commande",
     links: [],
   };
 }
@@ -324,7 +324,7 @@ export function printRequestQuotedMessage(a: {
 }): NotificationContent {
   return {
     title: "Devis d'impression disponible",
-    body: `Le devis v${a.version} de la demande ${a.reference} (${a.eventTitle}) s'élève à ${formatFcfa(a.total)}. Le propriétaire de l'organisation peut l'accepter.`,
+    body: `Le devis v${a.version} de la commande ${a.reference} (${a.eventTitle}) s'élève à ${formatFcfa(a.total)}. Le propriétaire de l'organisation peut l'accepter.`,
     href: organizerPrintHref(a.eventId, a.requestId),
     primaryLabel: "Voir le devis",
     links: [],
@@ -360,10 +360,10 @@ export function printRequestStatusChangedMessage(a: {
 }): NotificationContent {
   const label = PRINT_REQUEST_STATUS_LABELS[a.status];
   return {
-    title: `Demande ${a.reference} : ${label.toLowerCase()}`,
-    body: `La demande d'impression ${a.reference} (${a.eventTitle}) est maintenant « ${label} ».`,
+    title: `Commande ${a.reference} : ${label.toLowerCase()}`,
+    body: `La commande d'impression ${a.reference} (${a.eventTitle}) est maintenant « ${label} ».`,
     href: a.toStaff ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
-    primaryLabel: "Voir la demande",
+    primaryLabel: "Voir la commande",
     links: [],
   };
 }
@@ -378,12 +378,12 @@ export function printRequestPaidMessage(a: {
   audience: "event" | "platform";
 }): NotificationContent {
   return {
-    title: `Demande ${a.reference} payée`,
+    title: `Commande ${a.reference} payée`,
     body: a.manual
-      ? `La demande ${a.reference} (${a.eventTitle}) a été marquée payée par l'équipe Badge.`
-      : `Le paiement de ${formatFcfa(a.amount)} de la demande ${a.reference} (${a.eventTitle}) est reçu.`,
+      ? `La commande ${a.reference} (${a.eventTitle}) a été marquée payée par l'équipe Badge.`
+      : `Le paiement de ${formatFcfa(a.amount)} de la commande ${a.reference} (${a.eventTitle}) est reçu.`,
     href: a.audience === "platform" ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
-    primaryLabel: "Voir la demande",
+    primaryLabel: "Voir la commande",
     links: [],
   };
 }
@@ -395,9 +395,9 @@ export function printPaymentUnmatchedMessage(a: {
 }): NotificationContent {
   return {
     title: `Paiement à vérifier : ${a.reference}`,
-    body: `Un paiement de ${formatFcfa(a.amount)} a été approuvé alors que la demande n'attendait plus ce paiement.`,
+    body: `Un paiement de ${formatFcfa(a.amount)} a été approuvé alors que la commande n'attendait plus ce paiement.`,
     href: staffPrintHref(a.requestId),
-    primaryLabel: "Voir la demande",
+    primaryLabel: "Voir la commande",
     links: [],
   };
 }

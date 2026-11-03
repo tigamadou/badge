@@ -63,14 +63,14 @@ describe("submitRequest", () => {
     const entries = await thread(r.id);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ eventType: "SUBMITTED", side: "ORGANIZER", authorId: fx.owner.id });
-    expect(entries[0].body).toContain("Demande envoyée : 3 badges");
+    expect(entries[0].body).toContain("Commande envoyée : 3 badges");
     expect(triggers.notifyPrintRequestSubmitted).toHaveBeenCalledWith(r.id, fx.owner.id);
     // Positions recalculées dans l'ordre d'impression (catégorie, nom).
     const items = await prisma.printRequestItem.findMany({ where: { requestId: r.id }, orderBy: { position: "asc" } });
     expect(items.map((i) => i.registrationId)).toEqual(fx.approved.map((a) => a.id));
   });
 
-  it("autre évènement -> NOT_FOUND ; demande déjà envoyée -> INVALID_TRANSITION", async () => {
+  it("autre évènement -> NOT_FOUND ; commande déjà envoyée -> INVALID_TRANSITION", async () => {
     const r = await readyDraft();
     expect((await reject(submitRequest({ ...base(r.id), eventId: "autre" })))?.code).toBe("NOT_FOUND");
     await submitRequest(base(r.id));
@@ -297,7 +297,7 @@ describe("acceptQuote", () => {
 });
 
 describe("acceptQuote : devis entièrement couvert par le crédit", () => {
-  // Demande à 6000 FCFA, crédit de 6000 appliqué (total 0) puis devis envoyé : QUOTED v1, total 0.
+  // Commande à 6000 FCFA, crédit de 6000 appliqué (total 0) puis devis envoyé : QUOTED v1, total 0.
   async function zeroQuoted() {
     const r = await makeRequest(fx, { status: "SUBMITTED", total: 6000 });
     await prisma.printQuoteLine.create({

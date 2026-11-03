@@ -17,7 +17,7 @@ import { toast } from "../helpers/feedback";
 // Lien factice : seul le segment /verify/<id> compte pour le poste (c'est le contenu d'un QR d'accueil).
 const qrOf = (registrationId: string) => `https://badge.example/verify/${registrationId}`;
 
-// Demande sur place payée : 10 badges commandés (ligne produit BADGE) et marge de la demande.
+// Commande sur place payée : 10 badges commandés (ligne produit BADGE) et marge de la commande.
 // Plafond = 10 + 10 % = 11. `printed` inscriptions approuvées sont déjà imprimées (journal + badge imprimé),
 // puis une dernière inscription approuvée reste à imprimer (`nextId`). Identifiants triés par nom.
 async function seedOnsiteRequest(
@@ -48,19 +48,19 @@ async function seedOnsiteRequest(
   return { orgId, eventId, categoryId, request, printedIds: ids.slice(0, printed), nextId: ids[printed] };
 }
 
-// Du menu à la demande : « Demandes », puis la référence dans la liste.
+// Du menu à la commande : « Commandes », puis la référence dans la liste.
 async function openRequest(page: Page, request: { id: string; reference: string }) {
-  await page.getByRole("link", { name: /^Demandes/ }).click();
-  await expect(page).toHaveURL(/\/platform\/print\/requests$/);
+  await page.getByRole("link", { name: /^Commandes/ }).click();
+  await expect(page).toHaveURL(/\/platform\/print\/orders$/);
   await page.getByRole("link", { name: request.reference }).click();
-  await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${request.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${request.id}$`));
   await expect(page.getByRole("heading", { name: request.reference })).toBeVisible();
 }
 
-// De la demande au poste d'impression, caméra coupée (elle n'est pas disponible en e2e).
+// De la commande au poste d'impression, caméra coupée (elle n'est pas disponible en e2e).
 async function openStation(page: Page, request: { id: string; reference: string }) {
   await page.getByRole("link", { name: "Ouvrir le poste d'impression" }).click();
-  await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${request.id}/onsite$`));
+  await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${request.id}/onsite$`));
   await expect(page.getByRole("heading", { name: `Poste d'impression · ${request.reference}` })).toBeVisible();
   await page.getByRole("button", { name: "Désactiver la caméra" }).click();
   await expect(page.getByText("Caméra désactivée")).toBeVisible();
@@ -74,8 +74,8 @@ async function submitQuery(page: Page, text: string) {
 
 const counter = (page: Page) => page.getByTestId("onsite-counter");
 
-// Page Poste d'impression sur place — /platform/print/requests/[requestId]/onsite, ouvert depuis le bloc
-// « impression sur place » de la demande. La caméra n'est pas automatisable : le contenu du QR d'accueil
+// Page Poste d'impression sur place — /platform/print/orders/[requestId]/onsite, ouvert depuis le bloc
+// « impression sur place » de la commande. La caméra n'est pas automatisable : le contenu du QR d'accueil
 // est saisi dans le champ de recherche (toute saisie qui contient /verify/ est lue comme un QR).
 // Rôles : STAFF_SUPPORT imprime ; STAFF_ADMIN règle en plus la marge (motif obligatoire).
 test.describe("Platform — Poste d'impression sur place", () => {
@@ -92,7 +92,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 
-    // Bloc de la demande : compteur à zéro, plafond 11, pas de réglage de marge pour STAFF_SUPPORT.
+    // Bloc de la commande : compteur à zéro, plafond 11, pas de réglage de marge pour STAFF_SUPPORT.
     await expect(counter(page)).toContainText("0 / 10 badges imprimés");
     await expect(counter(page)).toContainText("Plafond 11 · marge 10 %");
     await expect(page.getByLabel("Marge (%)")).toHaveCount(0);
@@ -243,7 +243,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
     await expect(toast(page, "La marge ne peut pas être inférieure au nombre de badges déjà imprimés.")).toBeVisible();
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).marginPercent).toBe(10);
 
-    // Succès : marge 20 %, plafond 12, motif au fil de la demande.
+    // Succès : marge 20 %, plafond 12, motif au fil de la commande.
     await form.getByLabel("Marge (%)").fill("20");
     await form.getByLabel("Motif").fill("Affluence imprévue");
     await form.getByRole("button", { name: "Enregistrer" }).click();
@@ -268,7 +268,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
     expect(await getDb().printRequestPrint.count({ where: { requestId: request.id, reprint: false } })).toBe(12);
   });
 
-  test("Une demande non payée n'offre pas le poste d'impression", async ({ page }) => {
+  test("Une commande non payée n'offre pas le poste d'impression", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "onsite-unpaid" });
     const organizer = await createTestUser({ scope: "onsite-unpaid-org", verified: true });
     const request = await createTestPrintRequest({
@@ -286,8 +286,8 @@ test.describe("Platform — Poste d'impression sur place", () => {
     await expect(page.getByRole("link", { name: "Ouvrir le poste d'impression" })).toHaveCount(0);
     await expect(page.getByTestId("onsite-counter")).toHaveCount(0);
 
-    // Accès direct au poste : retour à la demande.
-    await page.goto(`/platform/print/requests/${request.id}/onsite`);
-    await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${request.id}$`));
+    // Accès direct au poste : retour à la commande.
+    await page.goto(`/platform/print/orders/${request.id}/onsite`);
+    await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${request.id}$`));
   });
 });

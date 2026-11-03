@@ -43,7 +43,7 @@ export const getOrgPrintCreditBalance = (orgId: string): Promise<number> => bala
 export const getAvailableOrgPrintCredit = (orgId: string, excludeRequestId?: string): Promise<number> =>
   availableOf(prisma, orgId, excludeRequestId);
 
-// `request` est null quand la demande a été supprimée (le mouvement est conservé).
+// `request` est null quand la commande a été supprimée (le mouvement est conservé).
 export async function listOrgPrintCreditMovements(orgId: string): Promise<
   Array<{
     id: string;
@@ -69,7 +69,7 @@ export async function listOrgPrintCreditMovements(orgId: string): Promise<
   return rows;
 }
 
-// Applique (ou remplace) la ligne de crédit d'une demande. Verrous : Event, PrintRequest, puis
+// Applique (ou remplace) la ligne de crédit d'une commande. Verrous : Event, PrintRequest, puis
 // Organization (même ordre que markPaid, qui insère ensuite le mouvement SPENT). Aucune lecture
 // simple avant le verrou de l'organisation : l'instantané de la transaction doit voir les crédits
 // réservés par les applications concurrentes, déjà validées.
@@ -99,7 +99,7 @@ export async function applyOrgCredit(input: {
       where: { requestId, removedAt: null, usesOrgCredit: false },
       _sum: { lineTotal: true },
     });
-    // Le total de la demande ne devient jamais négatif.
+    // Le total de la commande ne devient jamais négatif.
     if (amount > (others._sum.lineTotal ?? 0)) throw new OnsiteError("CREDIT_EXCEEDS_TOTAL", 409);
 
     const { from } = await applyEdit(tx, { id: requestId, status: request.status }, "STAFF", userId);
@@ -128,8 +128,8 @@ export async function applyOrgCredit(input: {
   });
 }
 
-// Accroche A4 : appelée dans la transaction qui vient de passer la demande à PAID (le verrou de la
-// demande est tenu). Un seul mouvement SPENT par demande (@@unique [requestId, kind]) : un rejeu
+// Accroche A4 : appelée dans la transaction qui vient de passer la commande à PAID (le verrou de la
+// commande est tenu). Un seul mouvement SPENT par commande (@@unique [requestId, kind]) : un rejeu
 // ne crée rien. Renvoie le montant dépensé, positif (0 sans ligne de crédit ou déjà dépensé).
 export async function spendOrgCreditForPaidRequest(tx: Db, requestId: string): Promise<number> {
   const line = await tx.printQuoteLine.findFirst({

@@ -27,7 +27,7 @@ export const POST = withStaffAuth<{ requestId: string }>(
       const target = await loadStaffRequest(requestId);
       const { to } = await parseBody(req, bodySchema);
       const userId = session.user.id;
-      // Clore une demande sur place verse un crédit ou crée une facture : STAFF_ADMIN au moins.
+      // Clore une commande sur place verse un crédit ou crée une facture : STAFF_ADMIN au moins.
       // `withStaffAuth` garantit un compte staff : le contexte et son rôle existent.
       if (to === "COMPLETED" && target.type === "ONSITE") {
         const ctx = (await loadUserContext(userId))!;
@@ -48,7 +48,7 @@ export const POST = withStaffAuth<{ requestId: string }>(
       await afterCommit("status notification", () =>
         notifyPrintRequestStatusChanged(requestId, userId, { organizer: true, staff: false }),
       );
-      // La clôture d'une demande sur place a eu lieu dans la transaction : on journalise et on
+      // La clôture d'une commande sur place a eu lieu dans la transaction : on journalise et on
       // notifie ici, après elle (un échec de notification ne doit pas la défaire).
       if (closure?.outcome === "CREDIT") {
         await afterCommit("PRINT_CREDIT_EARNED log", () =>

@@ -22,8 +22,36 @@ make init
 | 5 | `db-push` puis `db-seed` | Schema Prisma et donnees de dev (dont les templates de badge). |
 | 6 | `dev-https` puis `dev-https-check` | `/etc/hosts` + CA Caddy (mot de passe admin demande), puis verification. |
 
-Comptes crees par le seed : `admin@badge.local` (SUPER_ADMIN), `admin2@`, `support@`,
-`observer@`, `participant@badge.local`, mot de passe `123456` (cf. `prisma/seed.ts`).
+Compte cree par le seed minimal (`make db-seed`) : `admin@badge.local` (SUPER_ADMIN, dev
+uniquement), mot de passe `123456` (cf. `prisma/seed/minimal.ts`).
+
+### Seed de demonstration (dev)
+
+`make db-seed-demo` (apres `make db-seed`) remplit la base de dev avec des organisations,
+evenements, profils et inscriptions fictifs a tous les statuts. Il est idempotent : il
+supprime d'abord ses propres donnees (organisations `demo-*`, utilisateurs `@demo.local`,
+objets sous `demo/` du stockage) puis les recree, sans `make db-reset`.
+
+- **Garde-fou** : refuse de tourner si `BADGE_ENV` ne vaut pas `dev` ou `preprod`.
+- **Comptes** : tous en `@demo.local` (`owner.grosse-org@`, `manager.moyenne-1@`,
+  `event-operator@`, `participant.blocked@`, `invitation.pending@`...) plus les comptes
+  staff `admin2@`, `support@`, `observer@badge.local` ; **mot de passe commun `123456`**.
+  La liste complete (email, role, cas) est ecrite dans `.demo/comptes-demo.md`.
+- **`DEMO_SCALE`** (defaut `1`) : multiplie les volumes (ex. `DEMO_SCALE=0.1` pour un jeu reduit).
+- **`DEMO_ACCOUNTS_FILE`** : chemin du fichier de comptes (defaut `.demo/comptes-demo.md`).
+- **Volumes et duree (`DEMO_SCALE=1`)** : 12 organisations, 28 evenements, 7 510 inscriptions (dont 3 200 sur l'evenement de la
+  grosse organisation), 4 892 utilisateurs, 5 116 envois de profil ; duree mesuree d'environ
+  9 s (nettoyage inclus), identique a la relance. Les etapes impression, facturation et
+  notifications/journal sont completees par les lots suivants.
+
+### Préprod : démo rechargée
+
+À chaque déploiement en préprod (`BADGE_ENV=preprod`), `deploy.sh` remet la base à zéro puis
+la remplit (seed minimal + seed de démo) via le service compose `seed-demo`. Sur le serveur, la
+même opération se lance avec `make preprod-reload-demo` (confirmation `yes`). Comptes :
+`*@demo.local` et `admin2@badge.local`, mot de passe commun `123456` (liste dans
+`.demo/comptes-demo.md`, selon `DEMO_ACCOUNTS_FILE`). Détails, avertissements et fichiers à
+recopier : `DEPLOYMENT.md`, section « Préprod rechargée à chaque déploiement ».
 
 > Un port deja pris (autre stack Docker exposant 80/443, MySQL local sur 33060...) fait
 > echouer `init-check` avec la liste des ports : arreter le service concerne et relancer.
@@ -166,13 +194,14 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 
 | Commande | Description |
 |----------|-------------|
-| `make test [FILE=chemin]` | Suite Vitest complete (unitaire lib + integration API), ou un seul fichier. Arrete le worker pendant l'execution puis le relance. |
+| `make test [FILE=chemin]` | Suite Vitest complete (unitaire lib + integration API), ou un seul fichier, sur la **base de test** `badge_test` et le bucket `badge-test` (jamais la base de dev). |
+| `make test-db` | Cree et met au schema la base de test (`prisma db push`) ; appele par `make test`, `test-unit` et `test-coverage`. |
 | `make test-unit` | Sous-ensemble unitaire cible sur `src/lib`. |
 | `make test-coverage` | Vitest + rapport de couverture V8. **Seuils 100%** (lignes/branches/fonctions/statements) sur `src/lib/**` et `src/app/api/**` = gate (`vitest.config.ts`). |
 | `make test-e2e [FILE=chemin]` | Playwright (chromium systeme) dans le conteneur, contre `http://localhost:3000`. Le worker doit tourner (les specs qui lisent Mailpit en dependent). |
 | `make test-e2e-ui` | Playwright mode UI depuis l'hote (fenetre Electron ; app sur `localhost:3785`). |
 | `make test-all` | `lint` + `typecheck` + `test` + `test-e2e`, s'arrete au premier echec. |
-| `make ci` | Memes checks que la CI GitHub : `db-push` + `lint` + `typecheck` + `test-coverage` (seuils 100 %) + `test-e2e`, puis `db-seed`. |
+| `make ci` | Memes checks que la CI GitHub : `db-push` + `lint` + `typecheck` + `test-coverage` (seuils 100 %) + `test-e2e`. |
 
 > **Worker d'emails** (spec 23) : les emails passent par une queue MySQL traitee par le service
 > `worker`. Variables `JOB_POLL_INTERVAL_MS` (defaut 2000, 500 en dev) et
@@ -180,10 +209,13 @@ Toutes les commandes tournent dans le conteneur dev (`make dev` prealable).
 > `docker compose -f docker-compose.dev.yml logs -f worker`. `make db-push` relance le
 > worker (il a son propre client Prisma). Voir `docs/v4/features/queue-emails.md`.
 
-> **Attention** : `make test` (et `test-coverage`/`test-all`) **vide la base de dev**
-> (`src/test-setup.ts` fait un `deleteMany` global en `beforeEach`). Relancer
-> `make db-seed` ensuite pour retrouver les comptes de dev. Les tests e2e seedent
-> leurs propres fixtures (`e2e/helpers/`) et ne dependent pas du seed global.
+> **Base de test** : Vitest tourne sur `<base de dev>_test` (`badge_test`), que
+> `src/test-setup.ts` vide avant chaque test ; la base de dev n'est plus touchee et le
+> worker n'est plus arrete. Un garde-fou (`src/test-guard.ts`) refuse toute base dont le nom
+> ne finit pas par `_test` : lancer Vitest a la main sur la base de dev echoue. Les nouveaux
+> tests preparent leurs donnees avec `src/test/factories.ts` (`@faker-js/faker`, vraie base,
+> pas de mock de Prisma) ; regles completes : `CLAUDE.md`, « Regles de test ». Les tests e2e
+> tournent contre l'app (base de dev) avec leurs propres fixtures (`e2e/helpers/`).
 
 > **Templates de badge** (v4, plan 12) : `make db-seed` installe aussi les modeles de
 > badge livres avec l'application, depuis `prisma/badge-templates/`. Sans lui, aucun
@@ -213,6 +245,28 @@ Voir `docs/v4/features/templates-badges.md` pour le format du manifeste.
 **Pre-requis Playwright / RustFS** : le chromium systeme est installe dans le conteneur
 `app` (cf. commentaire de la cible `test-e2e` dans le `Makefile`) ; le stockage objet
 (RustFS) doit tourner (`make dev` le demarre) pour les tests d'upload.
+
+## Stacks d'agents
+
+Pour paralleliser le travail de sous-agents, chacun dispose d'un worktree et d'une **stack
+legere** : `app`, `worker` et `agent-mailpit` lui sont propres ; MySQL, RustFS et le renderer
+sont ceux de la stack principale, qui doit tourner (`make dev`). Surcouche :
+`docker-compose.agent.yml` ; configuration locale du worktree : `.agent.env` (non versionne),
+lu par le `Makefile` (`DEV_COMPOSE`, `DB_NAME`, `DB_HOST`, `S3_TEST_BUCKET`).
+
+| Commande | Description |
+|----------|-------------|
+| `scripts/agent-stack.sh up <lot> <branche-base>` | Cree `../badge-wt-<lot>` sur `feat/commandes-impression-<lot>`, demarre la stack `badge-ag-<lot>` (port 3790-3799, `127.0.0.1`), applique le schema et seede `badge_<lot>`, prepare `badge_<lot>_test` |
+| `scripts/agent-stack.sh status` | Stacks d'agents, ports, worktrees |
+| `scripts/agent-stack.sh down <lot>` | Arrete la stack et supprime ses volumes ; garde worktree, branche, bases et buckets |
+| `make db-drop-agent LOT=<lot>` | Supprime les bases `badge_<lot>` et `badge_<lot>_test` (destructif, apres fusion) |
+
+Dans le worktree, toutes les commandes `make` visent la stack de l'agent (base `badge_<lot>`,
+tests sur `badge_<lot>_test` et le bucket `badge-<lot>-test`). Limites : 3 stacks au plus
+(environ 1,5 Go de RAM chacune, surtout le serveur Next), images `badge-app` et `badge-worker`
+reutilisees (construites par la stack principale), `NPM_TOKEN` requis dans `.env`. L'agent ne
+rejoint pas le reseau par defaut de la stack principale (le Caddy principal y resout `app`) :
+MySQL et RustFS sont joints par `host.docker.internal`, le renderer par le reseau `badge_rendu`.
 
 ## Jeton du registre
 

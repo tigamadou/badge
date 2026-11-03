@@ -203,7 +203,7 @@ export function ProductEditor({ product, canWrite }: { product: CatalogProduct; 
         }
       >
         <p className="text-sm text-slate-600">
-          {"Le produit disparaît de la vitrine ; les demandes d'impression existantes le conservent."}
+          {"Le produit disparaît de la vitrine ; les commandes d'impression existantes le conservent."}
         </p>
       </Dialog>
     </div>

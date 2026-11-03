@@ -23,7 +23,7 @@ const rejectCode = async (p: Promise<unknown>) => {
   return { code: e.code, status: e.httpStatus, details: e.details };
 };
 
-// Demande IN_PRODUCTION, ligne BADGE de 10 à 1 500, marge 10 % : plafond 11.
+// Commande IN_PRODUCTION, ligne BADGE de 10 à 1 500, marge 10 % : plafond 11.
 async function onsiteRequest(over: Parameters<typeof makeRequest>[1] = {}, quantity: number | null = 10) {
   const r = await makeRequest(fx, {
     type: "ONSITE", status: "IN_PRODUCTION", estimatedQuantity: 10, marginPercent: 10, ...over,
@@ -54,11 +54,11 @@ beforeEach(async () => {
 });
 
 describe("loadOnsiteRequest", () => {
-  it("demande inconnue : NOT_FOUND 404", async () => {
+  it("commande inconnue : NOT_FOUND 404", async () => {
     expect(await rejectCode(loadOnsiteRequest("inconnue"))).toMatchObject({ code: "NOT_FOUND", status: 404 });
   });
 
-  it("NOT_ONSITE pour une demande ADVANCE et pour une demande complémentaire", async () => {
+  it("NOT_ONSITE pour une commande ADVANCE et pour une commande complémentaire", async () => {
     const advance = await makeRequest(fx, { type: "ADVANCE" });
     expect(await rejectCode(loadOnsiteRequest(advance.id))).toMatchObject({ code: "NOT_ONSITE", status: 409 });
     const parent = await onsiteRequest();
@@ -85,7 +85,7 @@ describe("loadOnsiteRequest", () => {
   });
 });
 
-describe("statut de la demande (poste)", () => {
+describe("statut de la commande (poste)", () => {
   it("DRAFT : NOT_FOUND 404 ; les autres statuts non imprimables : REQUEST_NOT_PRINTABLE 409", async () => {
     const reg = fx.approved[0];
     for (const [status, expected] of [
@@ -112,7 +112,7 @@ describe("statut de la demande (poste)", () => {
     }
   });
 
-  it("loadOnsiteOverview lit la demande quel que soit son statut (pages de détail, route de marge)", async () => {
+  it("loadOnsiteOverview lit la commande quel que soit son statut (pages de détail, route de marge)", async () => {
     const done = await onsiteRequest({ status: "COMPLETED" });
     const loaded = await loadOnsiteOverview(done.id);
     expect(loaded.request.status).toBe("COMPLETED");
@@ -157,7 +157,7 @@ describe("lookupOnsiteRegistration", () => {
     await recordOnsitePrint(input(r.id, here.id));
     expect(await lookupOnsiteRegistration(r.id, elsewhere.id)).toMatchObject({ badgePrinted: true, printedOnsite: false });
     expect(await lookupOnsiteRegistration(r.id, here.id)).toMatchObject({ badgePrinted: true, printedOnsite: true });
-    // Le journal est propre à la demande : une autre demande ne voit pas cette impression.
+    // Le journal est propre à la commande : une autre commande ne voit pas cette impression.
     expect(await lookupOnsiteRegistration(other.id, here.id)).toMatchObject({ badgePrinted: true, printedOnsite: false });
   });
 
@@ -359,7 +359,7 @@ describe("recordOnsitePrint", () => {
     expect(await prisma.printRequestPrint.count({ where: { requestId: r.id, reprint: false } })).toBe(220);
   });
 
-  it("demande QUOTED : REQUEST_NOT_PRINTABLE ; PAID et READY passent", async () => {
+  it("commande QUOTED : REQUEST_NOT_PRINTABLE ; PAID et READY passent", async () => {
     const q = await onsiteRequest({ status: "QUOTED" });
     expect(await rejectCode(recordOnsitePrint(input(q.id, fx.approved[0].id)))).toMatchObject({
       code: "REQUEST_NOT_PRINTABLE", status: 409,
@@ -370,7 +370,7 @@ describe("recordOnsitePrint", () => {
     }
   });
 
-  it("refus : demande inconnue, ADVANCE, inscription inconnue, autre évènement, PENDING", async () => {
+  it("refus : commande inconnue, ADVANCE, inscription inconnue, autre évènement, PENDING", async () => {
     expect(await reject(recordOnsitePrint(input("inconnue", fx.approved[0].id)))).toBeInstanceOf(PrintRequestError);
     const advance = await makeRequest(fx, { type: "ADVANCE", status: "IN_PRODUCTION" });
     expect(await rejectCode(recordOnsitePrint(input(advance.id, fx.approved[0].id)))).toMatchObject({ code: "NOT_ONSITE" });

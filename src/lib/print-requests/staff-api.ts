@@ -15,7 +15,7 @@ export async function parseBody<T extends z.ZodType>(req: NextRequest, schema: T
   return parsed.data;
 }
 
-// Un brouillon est invisible du staff : il répond comme une demande inexistante.
+// Un brouillon est invisible du staff : il répond comme une commande inexistante.
 export async function loadStaffRequest(requestId: string): Promise<PrintRequest> {
   const request = await loadRequest(requestId);
   if (request.status === "DRAFT") throw new PrintRequestError("NOT_FOUND", 404);
@@ -33,7 +33,7 @@ export async function guarded(run: () => Promise<Response>): Promise<Response> {
 
 export const json = (body: unknown, status = 200) => NextResponse.json(body, { status });
 
-// Champs exposés d'une demande : ni l'auteur, ni le paiement interne, ni le chaînage du plan 35.
+// Champs exposés d'une commande : ni l'auteur, ni le paiement interne, ni le chaînage du plan 35.
 export function requestDTO(r: PrintRequest) {
   return {
     id: r.id,
@@ -86,7 +86,7 @@ export function lineDTO(l: PrintQuoteLine) {
   };
 }
 
-// Demandes en attente de traitement : pastille du menu staff.
+// Commandes en attente de traitement : pastille du menu staff.
 export function getSubmittedPrintRequestCount(): Promise<number> {
   return prisma.printRequest.count({ where: { status: "SUBMITTED" } });
 }

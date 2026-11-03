@@ -8,7 +8,7 @@ import { withEventAuth, type EventAuthCtx } from "@/lib/with-event-auth";
 import { PrintRequestError } from "./errors";
 import { onsiteOrPrintErrorResponse } from "./onsite";
 
-// Le staff supervise depuis /platform : il lit les demandes mais n'agit jamais côté organisateur.
+// Le staff supervise depuis /platform : il lit les commandes mais n'agit jamais côté organisateur.
 export function assertNotStaff(session: EventAuthCtx["session"]): void {
   if (session.user.isStaff) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
 }
@@ -23,7 +23,7 @@ export async function parseBody<S extends z.ZodTypeAny>(req: NextRequest, schema
 
 type RouteCtx = EventAuthCtx & { requestId: string };
 
-// Route organisateur des demandes d'impression : permission `print.request`, refus du staff sur
+// Route organisateur des commandes d'impression : permission `print.request`, refus du staff sur
 // toute méthode qui écrit (C10), erreurs métier converties en réponses JSON françaises.
 export function organizerRoute(
   options: { allowArchived: boolean },
@@ -69,8 +69,8 @@ export async function afterEdit(
   }
 }
 
-// Liste blanche des champs d'une demande exposés à l'organisateur (rien de interne : créateur,
-// accepteur, paiement, marge, demande parente, verrou de template).
+// Liste blanche des champs d'une commande exposés à l'organisateur (rien de interne : créateur,
+// accepteur, paiement, marge, commande parente, verrou de template).
 export function toOrganizerDTO(r: PrintRequest) {
   return {
     id: r.id,

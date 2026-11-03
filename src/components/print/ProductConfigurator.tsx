@@ -64,7 +64,7 @@ function FileField({
   if (!uploadFile) {
     return (
       <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] text-slate-400">
-        {"Téléversement disponible dans la demande d'impression"}
+        {"Téléversement disponible dans la commande d'impression"}
       </p>
     );
   }

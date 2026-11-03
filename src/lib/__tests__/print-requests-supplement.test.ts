@@ -8,13 +8,13 @@ import { applyOrgCredit, getOrgPrintCreditBalance } from "@/lib/print-requests/o
 import { rejectRequest, sendQuote } from "@/lib/print-requests/quote";
 import { seedPrintFixture, makeRequest, type PrintFixture } from "./helpers/print-requests";
 
-// Demande complémentaire (surplus facturé à la clôture) : protégée côté organisateur, et payable
+// Commande complémentaire (surplus facturé à la clôture) : protégée côté organisateur, et payable
 // avec du crédit d'impression jusqu'au bout (crédit appliqué, devis envoyé, accepté, payé).
 
 let fx: PrintFixture;
 const reject = async (p: Promise<unknown>) => p.then(() => null, (e) => e as { code: string; status: number });
 
-// Demande sur place de 200 badges à 1 500 FCFA, 212 imprimés : clôture = 12 badges en trop (18 000).
+// Commande sur place de 200 badges à 1 500 FCFA, 212 imprimés : clôture = 12 badges en trop (18 000).
 async function closedWithSupplement() {
   const parent = await makeRequest(fx, {
     type: "ONSITE", status: "COMPLETED", estimatedQuantity: 200, marginPercent: 10, completedAt: new Date(),
@@ -39,7 +39,7 @@ beforeEach(async () => {
   fx = await seedPrintFixture();
 });
 
-describe("demande complémentaire : protégée côté organisateur", () => {
+describe("commande complémentaire : protégée côté organisateur", () => {
   it("l'organisateur ne l'annule ni ne la modifie (REQUEST_LOCKED 409), rien n'est écrit", async () => {
     const child = await closedWithSupplement();
     const ids = { requestId: child.id, eventId: fx.event.id, userId: fx.owner.id };
@@ -56,7 +56,7 @@ describe("demande complémentaire : protégée côté organisateur", () => {
     expect(after).toMatchObject({ status: "QUOTED", cancelledAt: null, onsiteLocation: null });
   });
 
-  it("une demande ordinaire reste annulable par l'organisateur", async () => {
+  it("une commande ordinaire reste annulable par l'organisateur", async () => {
     const r = await makeRequest(fx, { type: "ONSITE", status: "SUBMITTED" });
     const { request } = await cancelRequest({ requestId: r.id, eventId: fx.event.id, userId: fx.owner.id });
     expect(request.status).toBe("CANCELLED");
@@ -69,7 +69,7 @@ describe("demande complémentaire : protégée côté organisateur", () => {
   });
 });
 
-describe("demande complémentaire payée avec du crédit (intégration)", () => {
+describe("commande complémentaire payée avec du crédit (intégration)", () => {
   beforeEach(() => {
     vi.stubEnv("FEDAPAY_ENVIRONMENT", "sandbox");
     vi.stubEnv("FEDAPAY_SECRET_KEY", "sk_test");

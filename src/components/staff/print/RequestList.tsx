@@ -15,6 +15,8 @@ export type RequestRow = {
   type: PrintRequestType;
   status: PrintRequestStatus;
   badgeCount: number;
+  // Entrées du fil non lues par l'utilisateur courant.
+  unread?: number;
   total: number;
   wantedBy: Date | null;
   org: { id: string; name: string };
@@ -43,7 +45,7 @@ function pageHref(filters: RequestFilters, page: number): string {
   for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
   if (page > 1) params.set("page", String(page));
   const qs = params.toString();
-  return `/platform/print/requests${qs ? `?${qs}` : ""}`;
+  return `/platform/print/orders${qs ? `?${qs}` : ""}`;
 }
 
 export function RequestList({
@@ -112,7 +114,7 @@ export function RequestList({
       </form>
 
       {rows.length === 0 ? (
-        <EmptyState icon="inbox" title="Aucune demande" description="Aucune demande ne correspond à ces filtres." />
+        <EmptyState icon="inbox" title="Aucune commande" description="Aucune commande ne correspond à ces filtres." />
       ) : (
         <TableFrame>
           <table className="w-full text-sm">
@@ -134,9 +136,18 @@ export function RequestList({
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
                   <td className="whitespace-nowrap px-4 py-3 font-medium">
-                    <Link href={`/platform/print/requests/${r.id}`} className="text-green-700 hover:underline">
+                    <Link href={`/platform/print/orders/${r.id}`} className="text-green-700 hover:underline">
                       {r.reference}
                     </Link>
+                    {r.unread ? (
+                      <span
+                        data-testid="unread-badge"
+                        aria-label={`${r.unread} non lu${r.unread > 1 ? "s" : ""}`}
+                        className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold text-white"
+                      >
+                        {r.unread}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">{r.org.name}</td>
                   <td className="px-4 py-3">{r.event.title}</td>
@@ -157,7 +168,7 @@ export function RequestList({
       {total > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
           <span>
-            {total} demande{total > 1 ? "s" : ""}
+            {total} commande{total > 1 ? "s" : ""}
           </span>
           <div className="flex items-center gap-2">
             {page > 1 ? (

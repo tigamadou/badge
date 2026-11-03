@@ -46,7 +46,7 @@ describe("canEditQuote", () => {
 });
 
 describe("canGenerateSheets", () => {
-  it("demande en amont payée, de PAID à READY", () => {
+  it("commande en amont payée, de PAID à READY", () => {
     expect(canGenerateSheets("PAID", "ADVANCE", "STAFF_SUPPORT")).toBe(true);
     expect(canGenerateSheets("READY", "ADVANCE", "STAFF_ADMIN")).toBe(true);
     expect(canGenerateSheets("COMPLETED", "ADVANCE", "STAFF_ADMIN")).toBe(false);

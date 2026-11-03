@@ -11,7 +11,7 @@ export type NavLink = {
   label: string;
   icon: IconName;
   exact?: boolean;
-  // Pastille à droite du libellé quand le compteur est positif (ex. demandes en attente).
+  // Pastille à droite du libellé quand le compteur est positif (ex. commandes en attente).
   count?: number;
 };
 export type NavGroup = { group: string };

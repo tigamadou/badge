@@ -12,7 +12,7 @@ const bodySchema = z.object({
   selection: z.discriminatedUnion("mode", [
     z.object({ mode: z.literal("ALL") }),
     z.object({ mode: z.literal("CATEGORIES"), categoryIds: z.array(id) }),
-    // Avec printRequestId : tous les badges de la demande, lus côté serveur.
+    // Avec printRequestId : tous les badges de la commande, lus côté serveur.
     z.object({ mode: z.literal("REQUEST") }),
     z.object({ mode: z.literal("IDS"), registrationIds: z.array(id).max(5000) }),
   ]),
@@ -24,8 +24,9 @@ export const GET = withStaffAuth(
   async (req) => {
     const eventId = new URL(req.url).searchParams.get("eventId");
     const generations = await prisma.printSheetGeneration.findMany({
-      // Cet ecran ne liste que les planches (les archives ZIP ont le leur).
-      where: { output: "SHEETS", ...(eventId ? { eventId } : {}) },
+      // Generation libre : planches hors commande (les archives ZIP ont leur ecran, les planches
+      // de commande sont servies par /orders).
+      where: { output: "SHEETS", printRequestId: null, ...(eventId ? { eventId } : {}) },
       orderBy: { createdAt: "desc" },
       take: 50,
       // Sans registrationIds (jusqu'a 5000 ids) ni layoutSnapshot : liste rafraichie toutes les 5 s.

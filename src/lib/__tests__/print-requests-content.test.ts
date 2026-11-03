@@ -23,7 +23,7 @@ beforeEach(async () => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-// La demande telle que le chargement initial l'a vue, avant un changement concurrent : le premier
+// La commande telle que le chargement initial l'a vue, avant un changement concurrent : le premier
 // findUnique (loadRequest) renvoie cette copie périmée, les suivants (verrou, relecture) la base.
 async function staleOnFirstLoad(id: string, stale: Partial<Prisma.PrintRequestUncheckedUpdateInput>) {
   const real = await prisma.printRequest.findUniqueOrThrow({ where: { id } });
@@ -85,7 +85,7 @@ describe("lockEventRow / reservedRegistrations / listCandidates", () => {
     await expect(run((tx) => lockEventRow(tx, fx.event.id))).resolves.toBeUndefined();
   });
 
-  it("3 candidats (PENDING absente), ordre catégorie-nom, réservation par une demande SUBMITTED seulement", async () => {
+  it("3 candidats (PENDING absente), ordre catégorie-nom, réservation par une commande SUBMITTED seulement", async () => {
     const mine = await makeRequest(fx, { status: "DRAFT" });
     const other = await makeRequest(fx, { status: "SUBMITTED" });
     await reserve(other.id, fx.approved[0].id);
@@ -100,7 +100,7 @@ describe("lockEventRow / reservedRegistrations / listCandidates", () => {
     expect(rows[2]).toMatchObject({ categoryName: "Exposant", categoryNumber: 2, selected: false });
   });
 
-  it.each(["DRAFT", "CANCELLED", "REJECTED"] as const)("demande %s : ne réserve rien", async (status) => {
+  it.each(["DRAFT", "CANCELLED", "REJECTED"] as const)("commande %s : ne réserve rien", async (status) => {
     const mine = await makeRequest(fx, { status: "DRAFT" });
     const other = await makeRequest(fx, { status });
     await reserve(other.id, fx.approved[0].id);
@@ -165,13 +165,13 @@ describe("setBadges", () => {
     expect([err?.code, err?.status]).toEqual(["EMPTY_SELECTION", 400]);
   });
 
-  it("demande ONSITE -> TYPE_MISMATCH ; demande d'un autre évènement -> NOT_FOUND", async () => {
+  it("commande ONSITE -> TYPE_MISMATCH ; commande d'un autre évènement -> NOT_FOUND", async () => {
     const o = await makeRequest(fx, { type: "ONSITE", status: "DRAFT" });
     expect((await reject(setBadges(base({ requestId: o.id }))))?.code).toBe("TYPE_MISMATCH");
     expect((await reject(setBadges(base({ requestId: o.id, eventId: "autre" }))))?.code).toBe("NOT_FOUND");
   });
 
-  it("demande verrouillée (PAID) -> REQUEST_LOCKED, rien n'est écrit", async () => {
+  it("commande verrouillée (PAID) -> REQUEST_LOCKED, rien n'est écrit", async () => {
     const r = await makeRequest(fx, { status: "PAID" });
     expect((await reject(setBadges(base({ requestId: r.id }))))?.code).toBe("REQUEST_LOCKED");
     expect(await items(r.id)).toHaveLength(0);
@@ -199,7 +199,7 @@ describe("setBadges", () => {
     expect(entry.details).toMatchObject({ added: 0, removed: 1, count: 2, lagging: ["Pochette"] });
   });
 
-  it("demande QUOTED : SUBMITTED, revised, QUOTE_REVISION puis BADGES_CHANGED", async () => {
+  it("commande QUOTED : SUBMITTED, revised, QUOTE_REVISION puis BADGES_CHANGED", async () => {
     const r = await makeRequest(fx, { status: "QUOTED" });
     const res = await setBadges(base({ requestId: r.id }));
     expect(res).toEqual({ count: 3, revised: true });
@@ -210,7 +210,7 @@ describe("setBadges", () => {
     expect(entries[1].details).toMatchObject({ added: 3, removed: 0, count: 3, lagging: [] });
   });
 
-  it("demande DRAFT : aucune entrée", async () => {
+  it("commande DRAFT : aucune entrée", async () => {
     const r = await makeRequest(fx, { status: "DRAFT" });
     await setBadges(base({ requestId: r.id }));
     expect(await thread(r.id)).toHaveLength(0);
@@ -227,7 +227,7 @@ describe("setBadges", () => {
     expect(await thread(r.id)).toHaveLength(before);
   });
 
-  it("relit la demande sous verrou : un statut changé depuis le chargement fait foi", async () => {
+  it("relit la commande sous verrou : un statut changé depuis le chargement fait foi", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     await staleOnFirstLoad(r.id, { status: "DRAFT" });
     await setBadges(base({ requestId: r.id }));
@@ -235,14 +235,14 @@ describe("setBadges", () => {
     expect((await thread(r.id)).map((e) => e.eventType)).toEqual(["BADGES_CHANGED"]);
   });
 
-  it("une demande devenue ACCEPTED depuis le chargement est refusée sous verrou", async () => {
+  it("une commande devenue ACCEPTED depuis le chargement est refusée sous verrou", async () => {
     const r = await makeRequest(fx, { status: "ACCEPTED" });
     await staleOnFirstLoad(r.id, { status: "SUBMITTED" });
     expect(await reject(setBadges(base({ requestId: r.id })))).toMatchObject({ code: "QUOTE_ACCEPTED" });
     expect(await items(r.id)).toHaveLength(0);
   });
 
-  it("deux demandes simultanées ne se réservent pas la même inscription", async () => {
+  it("deux commandes simultanées ne se réservent pas la même inscription", async () => {
     const a = await makeRequest(fx, { status: "SUBMITTED" });
     const b = await makeRequest(fx, { status: "SUBMITTED" });
     const sel = { mode: "IDS" as const, registrationIds: [fx.approved[0].id] };
@@ -283,7 +283,7 @@ describe("updateDetails", () => {
   const upd = (requestId: string, patch: Parameters<typeof updateDetails>[0]["patch"]) =>
     updateDetails({ requestId, eventId: fx.event.id, userId: fx.owner.id, patch });
 
-  it("relit la demande sous verrou : le statut et les valeurs courants décident", async () => {
+  it("relit la commande sous verrou : le statut et les valeurs courants décident", async () => {
     const accepted = await makeRequest(fx, { status: "ACCEPTED" });
     await staleOnFirstLoad(accepted.id, { status: "SUBMITTED" });
     expect(await reject(upd(accepted.id, { delivery: "PICKUP" }))).toMatchObject({ code: "QUOTE_ACCEPTED" });
@@ -349,7 +349,7 @@ describe("updateDetails", () => {
     );
   });
 
-  it("quantité estimée inchangée ou absente : lignes intactes ; demande sans quantité initiale", async () => {
+  it("quantité estimée inchangée ou absente : lignes intactes ; commande sans quantité initiale", async () => {
     const r = await makeRequest(fx, { type: "ONSITE", status: "DRAFT", estimatedQuantity: 150 });
     await line(r.id, { label: "Badge", quantity: 150, unitPrice: 10 });
     await upd(r.id, { estimatedQuantity: 150 });
@@ -420,7 +420,7 @@ describe("updateDetails", () => {
     expect((await reject(upd(o.id, { delivery: "PICKUP" })))?.code).toBe("TYPE_MISMATCH");
   });
 
-  it("créneau inversé -> VALIDATION (zod) ; demande acceptée -> QUOTE_ACCEPTED", async () => {
+  it("créneau inversé -> VALIDATION (zod) ; commande acceptée -> QUOTE_ACCEPTED", async () => {
     const parsed = detailsPatchSchema.safeParse({ onsiteSchedule: [{ date: "2026-11-02", from: "18:00", to: "09:00" }] });
     expect(parsed.success).toBe(false);
     const r = await makeRequest(fx, { status: "ACCEPTED" });

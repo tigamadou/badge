@@ -11,8 +11,12 @@ import {
   renderBadgeHtml,
   renderBadgePdf,
   resolveEventTemplate,
+  BadgeRenderError,
+  BadgeTooLargeError,
+  badgeRenderFailure,
 } from "../render-badge";
 import { __TEST__ } from "../build-context";
+import { ExportError } from "@tigamadou/pdf-engine/export";
 import { countPdfPages, fakeExporter } from "@/lib/__tests__/helpers/fake-exporter";
 
 describe("loadBadgeRegistration / renderBadgePdf", () => {
@@ -119,5 +123,39 @@ describe("loadBadgeRegistration / renderBadgePdf", () => {
     expect((await resolveEventTemplate(event)).meta.id).toBe(defaultId);
     await prisma.organization.update({ where: { id: org.id }, data: { badgeTemplateId: rectoVersoId } });
     expect((await resolveEventTemplate(event)).meta.id).toBe(rectoVersoId);
+  });
+});
+
+describe("BadgeRenderError / badgeRenderFailure", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("BadgeRenderError garde l'inscription fautive et l'erreur d'origine", () => {
+    const original = new Error("boom");
+    const err = new BadgeRenderError("reg-1", original);
+    expect(err.registrationId).toBe("reg-1");
+    expect(err.original).toBe(original);
+    expect(err.message).toContain("reg-1");
+  });
+
+  it("repond 503 quand le service de rendu est indisponible", async () => {
+    const res = badgeRenderFailure(new ExportError("UNAVAILABLE", "x"), "reg-1", "route");
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe("RENDERER_UNAVAILABLE");
+  });
+
+  it("repond 500 avec le message pour un badge trop lourd", async () => {
+    const res = badgeRenderFailure(new BadgeTooLargeError("badge trop volumineux"), "reg-1", "route");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toMatchObject({ error: "RENDER_FAILED", id: "reg-1" });
+    expect(body.message).toMatch(/volumineux/);
+  });
+
+  it("repond 500 sans message pour toute autre erreur", async () => {
+    const res = badgeRenderFailure(new Error("secret"), "reg-1", "route");
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "RENDER_FAILED", id: "reg-1" });
   });
 });

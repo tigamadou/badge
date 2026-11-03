@@ -64,7 +64,7 @@ export const GET = withStaffAuth(async (req) => {
 
   const requests = rows.map(({ _count, ...r }) => ({
     ...r,
-    // Une demande sur place n'a pas d'items : on retombe sur la quantité estimée.
+    // Une commande sur place n'a pas d'items : on retombe sur la quantité estimée.
     badgeCount: r.type === "ADVANCE" ? _count.items : (r.estimatedQuantity ?? 0),
   }));
   return NextResponse.json({ requests, total, page: q.page });

@@ -27,7 +27,7 @@ const thread = (id: string, eventType?: string) =>
 const activeLines = (id: string) =>
   prisma.printQuoteLine.findMany({ where: { requestId: id, removedAt: null }, orderBy: { position: "asc" } });
 
-// Demande de `total` FCFA : une seule ligne de service.
+// Commande de `total` FCFA : une seule ligne de service.
 async function requestOf(total = 60000, status: PrintRequestStatus = "SUBMITTED", extra = {}) {
   const r = await makeRequest(fx, { status, total, ...extra });
   await prisma.printQuoteLine.create({
@@ -53,7 +53,7 @@ describe("solde et disponible", () => {
     expect(await getAvailableOrgPrintCredit(other.id)).toBe(0);
   });
 
-  it("liste des mouvements : plus récent d'abord, avec la demande (null si supprimée)", async () => {
+  it("liste des mouvements : plus récent d'abord, avec la commande (null si supprimée)", async () => {
     const r = await requestOf(60000, "ACCEPTED");
     await prisma.orgPrintCredit.create({
       data: { orgId: fx.org.id, kind: "SPENT", amount: -1000, requestId: r.id },
@@ -86,13 +86,13 @@ describe("applyOrgCredit", () => {
     expect(entries[0].body).toContain("Crédit d'impression appliqué");
   });
 
-  it("le disponible exclut la demande indiquée", async () => {
+  it("le disponible exclut la commande indiquée", async () => {
     const r = await requestOf();
     await apply(r.id, 45000);
     expect(await getAvailableOrgPrintCredit(fx.org.id, r.id)).toBe(45000);
   });
 
-  it("une seconde demande ne peut pas réutiliser ce crédit : CREDIT_INSUFFICIENT", async () => {
+  it("une seconde commande ne peut pas réutiliser ce crédit : CREDIT_INSUFFICIENT", async () => {
     const a = await requestOf();
     const b = await requestOf();
     await apply(a.id, 45000);
@@ -101,7 +101,7 @@ describe("applyOrgCredit", () => {
     expect(await activeLines(b.id)).toHaveLength(1);
   });
 
-  it("la première demande annulée avant paiement : disponible revient à 45 000", async () => {
+  it("la première commande annulée avant paiement : disponible revient à 45 000", async () => {
     const a = await requestOf();
     await apply(a.id, 45000);
     await prisma.printRequest.update({ where: { id: a.id }, data: { status: "CANCELLED" } });
@@ -110,7 +110,7 @@ describe("applyOrgCredit", () => {
     expect((await apply(b.id, 45000)).line.lineTotal).toBe(-45000);
   });
 
-  it("une demande ACCEPTED ou QUOTED réserve aussi son crédit", async () => {
+  it("une commande ACCEPTED ou QUOTED réserve aussi son crédit", async () => {
     const q = await requestOf(60000, "QUOTED", { quoteVersion: 1 });
     await apply(q.id, 10000);
     const a = await requestOf(60000, "ACCEPTED");
@@ -123,7 +123,7 @@ describe("applyOrgCredit", () => {
     expect(await getAvailableOrgPrintCredit(fx.org.id)).toBe(30000);
   });
 
-  it("crédit de 100 000 appliqué à 70 000 sur une demande de 60 000 : CREDIT_EXCEEDS_TOTAL", async () => {
+  it("crédit de 100 000 appliqué à 70 000 sur une commande de 60 000 : CREDIT_EXCEEDS_TOTAL", async () => {
     await prisma.orgPrintCredit.create({ data: { orgId: fx.org.id, kind: "EARNED", amount: 100000 } });
     const r = await requestOf();
     expect(await fail(apply(r.id, 70000))).toMatchObject({ code: "CREDIT_EXCEEDS_TOTAL", httpStatus: 409 });
@@ -132,7 +132,7 @@ describe("applyOrgCredit", () => {
     expect((await reload(r.id)).total).toBe(0);
   });
 
-  it("demande sans aucune ligne : CREDIT_EXCEEDS_TOTAL", async () => {
+  it("commande sans aucune ligne : CREDIT_EXCEEDS_TOTAL", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED", total: 0 });
     expect(await fail(apply(r.id, 1))).toMatchObject({ code: "CREDIT_EXCEEDS_TOTAL" });
   });
@@ -156,7 +156,7 @@ describe("applyOrgCredit", () => {
     expect((await apply(r.id, 45000)).line.lineTotal).toBe(-45000);
   });
 
-  it("demande QUOTED : repasse SUBMITTED avec entrée QUOTE_REVISION", async () => {
+  it("commande QUOTED : repasse SUBMITTED avec entrée QUOTE_REVISION", async () => {
     const r = await requestOf(60000, "QUOTED", { quoteVersion: 1 });
     const { revised } = await apply(r.id, 1000);
     expect(revised).toBe(true);
@@ -173,7 +173,7 @@ describe("applyOrgCredit", () => {
     }
   });
 
-  it("montant invalide : VALIDATION ; demande inconnue : NOT_FOUND", async () => {
+  it("montant invalide : VALIDATION ; commande inconnue : NOT_FOUND", async () => {
     const r = await requestOf();
     for (const amount of [0, -5, 1.5, 3_000_000_000, Number.NaN]) {
       expect(await fail(apply(r.id, amount)), String(amount)).toMatchObject({ code: "VALIDATION", status: 400 });
@@ -181,7 +181,7 @@ describe("applyOrgCredit", () => {
     expect(await fail(apply("inconnue", 1000))).toMatchObject({ code: "NOT_FOUND", status: 404 });
   });
 
-  it("deux applications concurrentes sur deux demandes : le crédit n'est jamais dépensé deux fois", async () => {
+  it("deux applications concurrentes sur deux commandes : le crédit n'est jamais dépensé deux fois", async () => {
     const a = await requestOf();
     const b = await requestOf();
     const res = await Promise.allSettled([apply(a.id, 45000), apply(b.id, 45000)]);
@@ -191,7 +191,7 @@ describe("applyOrgCredit", () => {
 });
 
 describe("réservation concurrente du solde", () => {
-  it("solde 45 000, deux demandes SUBMITTED de 30 000, deux applications de 30 000 : une réussit, l'autre CREDIT_INSUFFICIENT", async () => {
+  it("solde 45 000, deux commandes SUBMITTED de 30 000, deux applications de 30 000 : une réussit, l'autre CREDIT_INSUFFICIENT", async () => {
     const a = await requestOf(30000);
     const b = await requestOf(30000);
     const res = await Promise.allSettled([apply(a.id, 30000), apply(b.id, 30000)]);
@@ -233,7 +233,7 @@ describe("spendOrgCreditForPaidRequest", () => {
     expect(await thread(r.id, "ORG_CREDIT_SPENT")).toHaveLength(1);
   });
 
-  it("appels concurrents sous le verrou de la demande (comme les appelants) : un seul mouvement SPENT", async () => {
+  it("appels concurrents sous le verrou de la commande (comme les appelants) : un seul mouvement SPENT", async () => {
     const r = await requestOf();
     await apply(r.id, 45000);
     const locked = () =>

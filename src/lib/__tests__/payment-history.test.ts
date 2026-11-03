@@ -20,16 +20,16 @@ describe("toPaymentHistoryItem", () => {
     expect(item.id).toBe("p1");
   });
 
-  it("utilise la référence de la demande d'impression", () => {
+  it("utilise la référence de la commande d'impression", () => {
     const item = toPaymentHistoryItem({ ...base, printRequest: { reference: "IMP-2026-0042" } });
     expect(item.label).toBe("Impression IMP-2026-0042");
   });
 
-  it("retombe sur un tiret sans plan ni demande", () => {
+  it("retombe sur un tiret sans plan ni commande", () => {
     expect(toPaymentHistoryItem(base).label).toBe("—");
   });
 
-  it("sélectionne plan et demande", () => {
+  it("sélectionne plan et commande", () => {
     expect(PAYMENT_HISTORY_SELECT.printRequest).toEqual({ select: { reference: true } });
   });
 });

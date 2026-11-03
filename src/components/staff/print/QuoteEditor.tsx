@@ -78,8 +78,8 @@ function LineRow({
 
   return (
     <tr className="border-b border-slate-100 align-top">
-      <td className="px-3 py-2 text-xs text-slate-500">{KIND_LABEL[line.kind]}</td>
-      <td className="min-w-[10rem] px-3 py-2">
+      <td className="hidden px-1.5 py-2 text-xs text-slate-500 2xl:table-cell">{KIND_LABEL[line.kind]}</td>
+      <td className="min-w-[5rem] px-1.5 py-2">
         <input
           aria-label={`Intitulé de la ligne ${line.label}`}
           className={CELL}
@@ -90,10 +90,10 @@ function LineRow({
           onBlur={() => void commit()}
         />
       </td>
-      <td className="w-24 px-3 py-2">
+      <td className="w-14 px-1.5 py-2">
         <input
           aria-label={`Quantité de ${line.label}`}
-          className={`${CELL} tabular-nums`}
+          className={`${CELL} px-1 text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none`}
           type="number"
           min={1}
           value={quantity}
@@ -102,10 +102,10 @@ function LineRow({
           onBlur={() => void commit()}
         />
       </td>
-      <td className="w-32 px-3 py-2">
+      <td className="w-24 px-1.5 py-2">
         <input
           aria-label={`Prix unitaire de ${line.label}`}
-          className={`${CELL} tabular-nums`}
+          className={`${CELL} px-1 text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none`}
           type="number"
           min={0}
           value={price}
@@ -114,8 +114,8 @@ function LineRow({
           onBlur={() => void commit()}
         />
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatFcfa(line.lineTotal)}</td>
-      <td className="px-2 py-2 text-right">
+      <td className="whitespace-nowrap px-1 py-2 text-right text-xs tabular-nums">{formatFcfa(line.lineTotal)}</td>
+      <td className="px-0 py-2 text-right">
         <button
           type="button"
           aria-label={`Retirer la ligne ${line.label}`}
@@ -264,7 +264,7 @@ export function QuoteEditor({
         title="Devis"
         subtitle={canEdit ? "Modifiez une valeur puis quittez le champ pour l'enregistrer." : "Lecture seule dans cet état."}
       />
-      <CardBody>
+      <CardBody className="!px-3">
         {lines.length === 0 ? (
           <p className="text-sm text-slate-500">Aucune ligne.</p>
         ) : (
@@ -272,12 +272,12 @@ export function QuoteEditor({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wider text-slate-500">
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Intitulé</th>
-                  <th className="px-3 py-2 font-medium">Qté</th>
-                  <th className="px-3 py-2 font-medium">Prix unitaire</th>
-                  <th className="px-3 py-2 text-right font-medium">Total</th>
-                  <th className="px-2 py-2" />
+                  <th className="hidden px-1.5 py-2 font-medium 2xl:table-cell">Type</th>
+                  <th className="px-1.5 py-2 font-medium">Intitulé</th>
+                  <th className="px-1.5 py-2 font-medium">Qté</th>
+                  <th className="px-1.5 py-2 font-medium">Prix unitaire</th>
+                  <th className="px-1.5 py-2 text-right font-medium">Total</th>
+                  <th className="px-0 py-2" />
                 </tr>
               </thead>
               <tbody>
@@ -285,21 +285,21 @@ export function QuoteEditor({
                   ? lines.map((l) => <LineRow key={`${l.id}:${l.label}:${l.quantity}:${l.unitPrice}`} line={l} requestId={requestId} onChanged={onChanged} />)
                   : lines.map((l) => (
                       <tr key={l.id} className="border-b border-slate-100">
-                        <td className="px-3 py-2 text-xs text-slate-500">{KIND_LABEL[l.kind]}</td>
-                        <td className="px-3 py-2">{l.label}</td>
-                        <td className="px-3 py-2 tabular-nums">{l.quantity}</td>
-                        <td className="whitespace-nowrap px-3 py-2 tabular-nums">{formatFcfa(l.unitPrice)}</td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">{formatFcfa(l.lineTotal)}</td>
+                        <td className="hidden px-1.5 py-2 text-xs text-slate-500 2xl:table-cell">{KIND_LABEL[l.kind]}</td>
+                        <td className="px-1.5 py-2">{l.label}</td>
+                        <td className="px-1.5 py-2 tabular-nums">{l.quantity}</td>
+                        <td className="whitespace-nowrap px-1.5 py-2 tabular-nums">{formatFcfa(l.unitPrice)}</td>
+                        <td className="whitespace-nowrap px-1 py-2 text-right text-xs tabular-nums">{formatFcfa(l.lineTotal)}</td>
                         <td />
                       </tr>
                     ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={4} className="px-3 py-2 text-right text-sm font-medium text-slate-700">
+                  <td colSpan={4} className="px-1.5 py-2 text-right text-sm font-medium text-slate-700">
                     Total
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums">{formatFcfa(total)}</td>
+                  <td className="whitespace-nowrap px-1 py-2 text-right text-xs font-semibold tabular-nums">{formatFcfa(total)}</td>
                   <td />
                 </tr>
               </tfoot>

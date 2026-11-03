@@ -61,7 +61,7 @@ async function syncValues(tx: Tx, optionId: string, values: OptionValueInput[], 
   }
 }
 
-// Les options et valeurs retirees sont archivees (jamais supprimees) : les demandes
+// Les options et valeurs retirees sont archivees (jamais supprimees) : les commandes
 // d'impression et les configurations figees gardent des identifiants stables.
 export async function syncOptions(productId: string, options: OptionInput[]): Promise<void> {
   await prisma.$transaction(async (tx) => {

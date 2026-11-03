@@ -10,8 +10,10 @@ import {
   createTestUser,
   disconnectDb,
   getDb,
+  makeEventAdminUser,
 } from "../helpers/db";
 import { loginAndEnter } from "../helpers/nav";
+import { loginAs } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
 
@@ -22,12 +24,12 @@ const lines = (badgeProductId: string) => [
   { label: "Frais de dossier", quantity: 1, unitPrice: 5000, kind: "SERVICE" as const },
 ];
 
-// Du menu au détail d'une demande : « Demandes », puis la référence dans la liste.
+// Du menu au détail d'une commande : « Commandes », puis la référence dans la liste.
 async function openRequest(page: Page, request: { id: string; reference: string }) {
-  await page.getByRole("link", { name: /^Demandes/ }).click();
-  await expect(page).toHaveURL(/\/platform\/print\/requests$/);
+  await page.getByRole("link", { name: /^Commandes/ }).click();
+  await expect(page).toHaveURL(/\/platform\/print\/orders$/);
   await page.getByRole("link", { name: request.reference }).click();
-  await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${request.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${request.id}$`));
   await expect(page.getByRole("heading", { name: request.reference })).toBeVisible();
 }
 
@@ -63,10 +65,10 @@ async function seedRequest(
   return { orgId, eventId, request, organizer, registrationIds };
 }
 
-// Page Détail d'une demande d'impression (staff) — /platform/print/requests/[requestId]
+// Page Détail d'une commande d'impression (staff) — /platform/print/orders/[requestId]
 // Rôles : STAFF_ADMIN modifie le devis, l'envoie, rouvre et marque payée ; STAFF_SUPPORT refuse,
 // écrit et fait avancer la production ; STAFF_OBSERVER lit.
-test.describe("Platform — Détail d'une demande d'impression", () => {
+test.describe("Platform — Détail d'une commande d'impression", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -97,18 +99,113 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     expect(added.unitPrice).toBe(2500);
     expect(added.addedBy).toBe("STAFF");
 
-    // Les deux modifications consécutives du même auteur forment une seule entrée du fil.
-    await expect(page.getByText("2 lignes modifiées")).toHaveCount(1);
+    // Chaque modification de ligne est une entrée interne du fil (jamais regroupée).
+    const internalEvents = page.locator('[data-entry-kind="internal-event"]');
+    await expect(internalEvents).toHaveCount(2);
+    await expect(internalEvents.nth(0)).toContainText("Ligne modifiée : Frais de dossier");
+    await expect(internalEvents.nth(1)).toContainText("Ligne ajoutée : Frais de livraison");
 
     // Envoi du devis.
     await page.getByRole("button", { name: "Envoyer le devis" }).click();
     await expect(toast(page, "Devis envoyé.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Devis envoyé");
     await expect(page.getByText(/Devis v1 envoyé/)).toBeVisible();
+    // Récapitulatif du devis dans le fil, avec le nouveau total.
+    await expect(page.getByText(/Devis v1 : 3 ligne\(s\)/)).toBeVisible();
     const quoted = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(quoted.status).toBe("QUOTED");
     expect(quoted.quoteVersion).toBe(1);
     await expectLastActivity({ type: "PRINT_REQUEST_QUOTED", eventId, userId: admin.id, targetId: request.id });
+  });
+
+  // Lit le fil côté organisateur par l'API de son espace (session distincte du staff).
+  async function organizerThread(
+    browser: import("@playwright/test").Browser,
+    organizer: { email: string; password: string },
+    ids: { orgId: string; eventId: string; requestId: string },
+  ): Promise<{ body: string; eventType: string | null; kind: string }[]> {
+    const context = await browser.newContext();
+    try {
+      const orgPage = await context.newPage();
+      await loginAs(orgPage, organizer);
+      const res = await context.request.get(
+        `/api/org/${ids.orgId}/events/${ids.eventId}/print-requests/${ids.requestId}/messages`,
+      );
+      expect(res.ok()).toBe(true);
+      return ((await res.json()) as { entries: { body: string; eventType: string | null; kind: string }[] }).entries;
+    } finally {
+      await context.close();
+    }
+  }
+
+  test("Une note interne est visible du staff seulement, un message simple l'est de l'organisateur", async ({ page, browser }) => {
+    const { orgId, eventId, request } = await seedRequest("prd-note", "SUBMITTED");
+    const organizer = await makeEventAdminUser({ scope: "prd-note-org", eventId, orgId });
+    const support = await createTestStaff({ scope: "prd-note", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+    await openRequest(page, request);
+
+    await page.getByLabel("Votre message").fill("Visible de tous");
+    await page.getByRole("button", { name: "Envoyer", exact: true }).click();
+    await expect(page.locator('[data-entry-kind="message"]', { hasText: "Visible de tous" })).toBeVisible();
+    const countNotified = () => getDb().notification.count({ where: { userId: organizer.id, type: "PRINT_REQUEST_MESSAGE" } });
+    const notifiedBefore = await countNotified();
+    expect(notifiedBefore).toBeGreaterThan(0);
+
+    await page.getByLabel("Note interne").check();
+    await page.getByLabel("Votre message").fill("Client difficile, prudence");
+    await page.getByRole("button", { name: "Ajouter la note" }).click();
+    const note = page.locator('[data-entry-kind="internal-note"]', { hasText: "Client difficile, prudence" });
+    await expect(note).toBeVisible();
+    await expect(note).toContainText("Note interne");
+    const stored = await getDb().printRequestMessage.findFirstOrThrow({ where: { requestId: request.id, body: "Client difficile, prudence" } });
+    expect(stored.internal).toBe(true);
+
+    const seen = await organizerThread(browser, organizer, { orgId, eventId, requestId: request.id });
+    expect(seen.map((e) => e.body)).toContain("Visible de tous");
+    expect(seen.map((e) => e.body)).not.toContain("Client difficile, prudence");
+    // Aucune notification pour l'organisateur à la suite de la note.
+    expect(await countNotified()).toBe(notifiedBefore);
+  });
+
+  test("Un message de l'organisateur apparaît par polling, sans doublon ni rechargement", async ({ page }) => {
+    const { request, organizer } = await seedRequest("prd-poll", "SUBMITTED");
+    const support = await createTestStaff({ scope: "prd-poll", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+    await openRequest(page, request);
+    await expect(page.getByText("Aucun échange pour le moment.")).toBeVisible();
+
+    await getDb().printRequestMessage.create({
+      data: { requestId: request.id, side: "ORGANIZER", kind: "MESSAGE", body: "Bonjour, une question", authorId: organizer.id },
+    });
+    // Polling toutes les 10 s.
+    await expect(page.getByText("Bonjour, une question")).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByText("Bonjour, une question")).toHaveCount(1);
+    // Un second tour de polling ne duplique pas l'entrée.
+    await page.waitForTimeout(11_000);
+    await expect(page.getByText("Bonjour, une question")).toHaveCount(1);
+  });
+
+  test("L'envoi du devis publie un récapitulatif visible de l'organisateur, les modifications de prix restent internes", async ({ page, browser }) => {
+    const { orgId, eventId, request } = await seedRequest("prd-recap", "SUBMITTED");
+    const organizer = await makeEventAdminUser({ scope: "prd-recap-org", eventId, orgId });
+    const admin = await createTestStaff({ scope: "prd-recap", role: "STAFF_ADMIN" });
+    await loginAndEnter(page, admin, { kind: "platform" });
+    await openRequest(page, request);
+
+    const price = page.getByLabel("Prix unitaire de Frais de dossier");
+    await price.fill("6000");
+    await price.press("Tab");
+    await expect(page.locator('[data-entry-kind="internal-event"]')).toHaveCount(1);
+    await page.getByRole("button", { name: "Envoyer le devis" }).click();
+    await expect(toast(page, "Devis envoyé.")).toBeVisible();
+    await expect(page.getByText(/Devis v1 : 2 ligne\(s\)/)).toBeVisible();
+
+    const seen = await organizerThread(browser, organizer, { orgId, eventId, requestId: request.id });
+    const recap = seen.find((e) => e.kind === "MESSAGE");
+    expect(recap?.body).toContain("Devis v1 : 2 ligne(s)");
+    expect(recap?.body).toContain("Total :");
+    expect(seen.some((e) => e.eventType === "LINES_CHANGED")).toBe(false);
   });
 
   test("Le refus exige un motif : bouton désactivé tant qu'il est vide, puis refus transmis", async ({ page }) => {
@@ -118,7 +215,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await openRequest(page, request);
 
     await page.getByRole("button", { name: "Refuser", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Refuser la demande" });
+    const dialog = page.getByRole("dialog", { name: "Refuser la commande" });
     await expect(dialog).toBeVisible();
 
     // Échec attendu : motif vide ou blanc, la confirmation reste impossible et rien ne change.
@@ -128,18 +225,18 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(confirm).toBeDisabled();
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("SUBMITTED");
 
-    // Succès : avec un motif, la demande est refusée et le motif apparaît dans le fil.
+    // Succès : avec un motif, la commande est refusée et le motif apparaît dans le fil.
     await dialog.getByRole("textbox").fill("Maquette illisible");
     await expect(confirm).toBeEnabled();
     await confirm.click();
-    await expect(toast(page, "Demande refusée.")).toBeVisible();
+    await expect(toast(page, "Commande refusée.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Refusée");
-    await expect(page.getByText("Demande refusée : Maquette illisible")).toBeVisible();
+    await expect(page.getByText("Commande refusée : Maquette illisible")).toBeVisible();
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("REJECTED");
     await expectLastActivity({ type: "PRINT_REQUEST_REJECTED", eventId, userId: support.id, targetId: request.id });
   });
 
-  test("STAFF_ADMIN marque payée une demande acceptée avec un motif de paiement hors ligne", async ({ page }) => {
+  test("STAFF_ADMIN marque payée une commande acceptée avec un motif de paiement hors ligne", async ({ page }) => {
     const { eventId, request } = await seedRequest("prd-paid", "ACCEPTED");
     const admin = await createTestStaff({ scope: "prd-paid", role: "STAFF_ADMIN" });
     await loginAndEnter(page, admin, { kind: "platform" });
@@ -147,7 +244,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(statusBadge(page, request.reference)).toHaveText("Devis accepté");
 
     await page.getByRole("button", { name: "Marquer payée", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Marquer la demande payée" });
+    const dialog = page.getByRole("dialog", { name: "Marquer la commande payée" });
     const confirm = dialog.getByRole("button", { name: "Marquer payée", exact: true });
     // Motif de moins de 3 caractères : confirmation impossible.
     await dialog.getByRole("textbox").fill("ab");
@@ -156,7 +253,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await confirm.click();
 
     // Succès : statut « Payée », entrée du fil « (hors ligne : …) », effet en base et audit.
-    await expect(toast(page, "Demande marquée payée.")).toBeVisible();
+    await expect(toast(page, "Commande marquée payée.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Payée");
     await expect(page.getByText(/Paiement reçu : .* \(hors ligne : virement du 30\/10\)/)).toBeVisible();
     const paid = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
@@ -171,7 +268,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     const support = await createTestStaff({ scope: "prd-support", role: "STAFF_SUPPORT" });
     await loginAndEnter(page, support, { kind: "platform" });
 
-    // Demande envoyée : devis en lecture seule, ni ajout de ligne ni envoi du devis.
+    // Commande envoyée : devis en lecture seule, ni ajout de ligne ni envoi du devis.
     await openRequest(page, submitted.request);
     await expect(page.getByText("Lecture seule dans cet état.")).toBeVisible();
     await expect(page.getByText("Ajouter une ligne")).toHaveCount(0);
@@ -181,17 +278,17 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(page.getByLabel("Votre message")).toBeVisible();
     await expect(page.getByRole("button", { name: "Refuser", exact: true })).toBeVisible();
 
-    // Demande acceptée : ni « Marquer payée » ni « Rouvrir le devis ».
-    await page.getByRole("link", { name: "Demandes" }).first().click();
-    await expect(page).toHaveURL(/\/platform\/print\/requests$/);
+    // Commande acceptée : ni « Marquer payée » ni « Rouvrir le devis ».
+    await page.getByRole("link", { name: "Commandes" }).first().click();
+    await expect(page).toHaveURL(/\/platform\/print\/orders$/);
     await page.getByRole("link", { name: accepted.request.reference }).click();
-    await expect(page).toHaveURL(new RegExp(`/platform/print/requests/${accepted.request.id}$`));
+    await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${accepted.request.id}$`));
     await expect(statusBadge(page, accepted.request.reference)).toHaveText("Devis accepté");
     await expect(page.getByRole("button", { name: "Marquer payée" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Rouvrir le devis" })).toHaveCount(0);
   });
 
-  test("« Générer les planches » ouvre la génération pré-remplie par la demande payée", async ({ page }) => {
+  test("« Générer les planches » ouvre la génération pré-remplie par la commande payée", async ({ page }) => {
     const { orgId, eventId, request } = await seedRequest("prd-sheets", "PAID", { registrations: 2 });
     const support = await createTestStaff({ scope: "prd-sheets", role: "STAFF_SUPPORT" });
     await loginAndEnter(page, support, { kind: "platform" });
@@ -199,13 +296,13 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
 
     await page.getByRole("link", { name: "Générer les planches" }).click();
     await expect(page).toHaveURL(new RegExp(`/platform/print/sheets\\?printRequestId=${request.id}$`));
-    await expect(page.getByText(`Planches de la demande ${request.reference}`)).toBeVisible();
-    // Organisation et évènement sont ceux de la demande et ne se changent plus.
+    await expect(page.getByText(`Planches de la commande ${request.reference}`)).toBeVisible();
+    // Organisation et évènement sont ceux de la commande et ne se changent plus.
     await expect(selectByLabel(page, "Organisation")).toHaveValue(orgId);
     await expect(selectByLabel(page, "Organisation")).toBeDisabled();
     await expect(selectByLabel(page, "Évènement")).toHaveValue(eventId);
     await expect(selectByLabel(page, "Évènement")).toBeDisabled();
-    await expect(page.getByText("2 badges de la demande, dans l'ordre de la demande.")).toBeVisible();
+    await expect(page.getByText("2 badges de la commande, dans l'ordre de la commande.")).toBeVisible();
   });
 
   test("Le lien « Générer les planches » n'existe pas avant le paiement", async ({ page }) => {
@@ -217,7 +314,7 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await expect(page.getByRole("link", { name: "Générer les planches" })).toHaveCount(0);
   });
 
-  test("La carte « Paiements » liste le paiement d'impression de la demande", async ({ page }) => {
+  test("La carte « Paiements » liste le paiement d'impression de la commande", async ({ page }) => {
     const { orgId, request, organizer } = await seedRequest("prd-payments", "PAID");
     await createTestPrintPayment({
       orgId,
@@ -245,12 +342,12 @@ test.describe("Platform — Détail d'une demande d'impression", () => {
     await openRequest(page, request);
 
     await page.getByRole("button", { name: "Marquer payée", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "Marquer la demande payée" });
+    const dialog = page.getByRole("dialog", { name: "Marquer la commande payée" });
     await dialog.getByRole("textbox").fill("virement du 30/10");
     await dialog.getByRole("button", { name: "Marquer payée", exact: true }).click();
 
-    // Échec attendu : message de paiement en cours, la demande reste acceptée.
-    await expect(toast(page, "Un paiement FedaPay est en cours sur cette demande.")).toBeVisible();
+    // Échec attendu : message de paiement en cours, la commande reste acceptée.
+    await expect(toast(page, "Un paiement FedaPay est en cours sur cette commande.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Devis accepté");
     const unchanged = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(unchanged.status).toBe("ACCEPTED");

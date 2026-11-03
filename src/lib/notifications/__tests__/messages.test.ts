@@ -253,15 +253,15 @@ describe("messages", () => {
     }
   });
 
-  describe("demandes d'impression", () => {
+  describe("commandes d'impression", () => {
     it("printRequestSubmitted", () => {
       const m = printRequestSubmittedMessage({
         requestId: "p1", reference: "IMP-2026-0001", eventTitle: "Forum", orgName: "Acme", type: "ONSITE", badgeCount: 12,
       });
-      expect(m.title).toBe("Nouvelle demande d'impression");
-      expect(m.body).toBe("Acme a envoyé la demande IMP-2026-0001 (pendant l'évènement, 12 badges) pour Forum.");
-      expect(m.href).toBe("/platform/print/requests/p1");
-      expect(m.primaryLabel).toBe("Voir la demande");
+      expect(m.title).toBe("Nouvelle commande d'impression");
+      expect(m.body).toBe("Acme a envoyé la commande IMP-2026-0001 (pendant l'évènement, 12 badges) pour Forum.");
+      expect(m.href).toBe("/platform/print/orders/p1");
+      expect(m.primaryLabel).toBe("Voir la commande");
       expect(m.links).toEqual([]);
     });
 
@@ -271,7 +271,7 @@ describe("messages", () => {
       });
       expect(m.title).toBe("Devis d'impression disponible");
       expect(m.body).toBe(
-        `Le devis v2 de la demande IMP-2026-0001 (Forum) s'élève à ${formatFcfa(150000)}. Le propriétaire de l'organisation peut l'accepter.`,
+        `Le devis v2 de la commande IMP-2026-0001 (Forum) s'élève à ${formatFcfa(150000)}. Le propriétaire de l'organisation peut l'accepter.`,
       );
       expect(m.href).toBe("/event/e1/print/p1");
       expect(m.primaryLabel).toBe("Voir le devis");
@@ -283,7 +283,7 @@ describe("messages", () => {
       const long = printRequestMessageMessage({ ...base, body: "x".repeat(200), toStaff: true });
       expect(long.title).toBe("Nouveau message — IMP-2026-0001");
       expect(long.body).toBe(`Awa : ${"x".repeat(140)}…`);
-      expect(long.href).toBe("/platform/print/requests/p1");
+      expect(long.href).toBe("/platform/print/orders/p1");
       expect(long.primaryLabel).toBe("Répondre");
       expect(long.links).toEqual([]);
       const exact = printRequestMessageMessage({ ...base, body: "y".repeat(140), toStaff: false });
@@ -294,39 +294,39 @@ describe("messages", () => {
     it("printRequestPaid : titre, corps et lien selon l'audience", () => {
       const base = { requestId: "p1", eventId: "e1", reference: "IMP-2026-0042", eventTitle: "Forum", amount: 150000 };
       const m = printRequestPaidMessage({ ...base, manual: false, audience: "event" });
-      expect(m.title).toBe("Demande IMP-2026-0042 payée");
-      expect(m.body).toBe(`Le paiement de ${formatFcfa(150000)} de la demande IMP-2026-0042 (Forum) est reçu.`);
+      expect(m.title).toBe("Commande IMP-2026-0042 payée");
+      expect(m.body).toBe(`Le paiement de ${formatFcfa(150000)} de la commande IMP-2026-0042 (Forum) est reçu.`);
       expect(m.body).toContain("150");
       expect(m.href).toBe("/event/e1/print/p1");
-      expect(m.primaryLabel).toBe("Voir la demande");
+      expect(m.primaryLabel).toBe("Voir la commande");
       expect(m.links).toEqual([]);
-      expect(printRequestPaidMessage({ ...base, manual: false, audience: "platform" }).href).toBe("/platform/print/requests/p1");
+      expect(printRequestPaidMessage({ ...base, manual: false, audience: "platform" }).href).toBe("/platform/print/orders/p1");
     });
 
     it("printRequestPaid manual : marquée payée par l'équipe Badge", () => {
       const m = printRequestPaidMessage({
         requestId: "p1", eventId: "e1", reference: "IMP-2026-0042", eventTitle: "Forum", amount: 1, manual: true, audience: "platform",
       });
-      expect(m.body).toBe("La demande IMP-2026-0042 (Forum) a été marquée payée par l'équipe Badge.");
+      expect(m.body).toBe("La commande IMP-2026-0042 (Forum) a été marquée payée par l'équipe Badge.");
     });
 
     it("printPaymentUnmatched : titre, corps, lien plateforme", () => {
       const m = printPaymentUnmatchedMessage({ requestId: "p1", reference: "IMP-2026-0042", amount: 150000 });
       expect(m.title).toBe("Paiement à vérifier : IMP-2026-0042");
-      expect(m.body).toBe(`Un paiement de ${formatFcfa(150000)} a été approuvé alors que la demande n'attendait plus ce paiement.`);
-      expect(m.href).toBe("/platform/print/requests/p1");
-      expect(m.primaryLabel).toBe("Voir la demande");
+      expect(m.body).toBe(`Un paiement de ${formatFcfa(150000)} a été approuvé alors que la commande n'attendait plus ce paiement.`);
+      expect(m.href).toBe("/platform/print/orders/p1");
+      expect(m.primaryLabel).toBe("Voir la commande");
     });
 
     it("printRequestStatusChanged : lien selon le destinataire", () => {
       const base = { requestId: "p1", eventId: "e1", reference: "IMP-2026-0001", eventTitle: "Forum", status: "IN_PRODUCTION" as const };
       const org = printRequestStatusChangedMessage({ ...base, toStaff: false });
-      expect(org.title).toBe("Demande IMP-2026-0001 : en production");
-      expect(org.body).toBe("La demande d'impression IMP-2026-0001 (Forum) est maintenant « En production ».");
+      expect(org.title).toBe("Commande IMP-2026-0001 : en production");
+      expect(org.body).toBe("La commande d'impression IMP-2026-0001 (Forum) est maintenant « En production ».");
       expect(org.href).toBe("/event/e1/print/p1");
-      expect(org.primaryLabel).toBe("Voir la demande");
+      expect(org.primaryLabel).toBe("Voir la commande");
       expect(org.links).toEqual([]);
-      expect(printRequestStatusChangedMessage({ ...base, toStaff: true }).href).toBe("/platform/print/requests/p1");
+      expect(printRequestStatusChangedMessage({ ...base, toStaff: true }).href).toBe("/platform/print/orders/p1");
     });
   });
 });

@@ -30,7 +30,9 @@ import {
   recomputeTotal,
   retryOnReferenceCollision,
 } from "./service";
-import type { LineChange } from "./thread";
+import { describeThreadEvent, type LineChange } from "./thread";
+import { describeLineChange } from "./line-change";
+import { formatFcfa } from "./labels";
 import {
   staffLineSchema,
   staffLinePatchSchema,
@@ -41,7 +43,7 @@ import type { PrintRequestAction } from "./transitions";
 
 const STAFF = { side: "STAFF" } as const;
 
-// Verrouille la ligne de la demande (sérialise les écritures et la sonde de paiement) puis la
+// Verrouille la ligne de la commande (sérialise les écritures et la sonde de paiement) puis la
 // relit. Ordre des verrous du chantier : Event d'abord, PrintRequest ensuite ; le staff ne
 // touche jamais aux réservations, il ne prend donc que celui-ci.
 async function lockRequest(tx: Prisma.TransactionClient, requestId: string): Promise<PrintRequest> {
@@ -70,6 +72,63 @@ async function recomputeChecked(tx: Prisma.TransactionClient, requestId: string)
   });
   if (Math.abs(sum._sum.lineTotal ?? 0) > MAX_AMOUNT) throw new PrintRequestError("VALIDATION", 400);
   return recomputeTotal(tx, requestId);
+}
+
+// Une modification de ligne = une entrée interne au staff, jamais regroupée avec la précédente
+// (appendThreadEvent fusionne les LINES_CHANGED consécutifs et réécrit l'entrée existante, que le
+// polling ne reverrait pas). La commande est déjà verrouillée par lockRequest.
+async function appendLineChange(
+  tx: Prisma.TransactionClient,
+  requestId: string,
+  userId: string,
+  change: LineChange,
+): Promise<void> {
+  const details = { changes: [change] };
+  await tx.printRequestMessage.create({
+    data: {
+      requestId,
+      authorId: userId,
+      side: "STAFF",
+      kind: "EVENT",
+      body: describeThreadEvent("LINES_CHANGED", details),
+      eventType: "LINES_CHANGED",
+      details: details as unknown as Prisma.InputJsonValue,
+      internal: true,
+    },
+  });
+}
+
+export type QuoteSnapshotLine = { id: string; label: string; quantity: number; unitPrice: number };
+
+const snap = (l: QuoteSnapshotLine) => ({ quantity: l.quantity, unitPrice: l.unitPrice });
+
+// Récapitulatif visible de l'organisateur : lignes ajoutées, modifiées et retirées depuis la
+// version précédente (`previous` nul : première version, ou version sans instantané), puis le total.
+export function summarizeQuoteDiff(
+  previous: QuoteSnapshotLine[] | null,
+  current: QuoteSnapshotLine[],
+  version: number,
+  total: number,
+): string {
+  const before = new Map((previous ?? []).map((l) => [l.id, l]));
+  const now = new Map(current.map((l) => [l.id, l]));
+  const added = current.filter((l) => !before.has(l.id));
+  const removed = (previous ?? []).filter((l) => !now.has(l.id));
+  const modified = current.filter((l) => {
+    const old = before.get(l.id);
+    return old && (old.label !== l.label || old.quantity !== l.quantity || old.unitPrice !== l.unitPrice);
+  });
+  const rows: string[] = [
+    ...added.map((l) => describeLineChange({ op: "ADDED", lineId: l.id, label: l.label, to: snap(l) })),
+    ...modified.map((l) =>
+      describeLineChange({ op: "UPDATED", lineId: l.id, label: l.label, from: snap(before.get(l.id)!), to: snap(l) }),
+    ),
+    ...removed.map((l) => describeLineChange({ op: "REMOVED", lineId: l.id, label: l.label, from: snap(l) })),
+  ];
+  const head =
+    previous === null ? `Devis v${version} : ${current.length} ligne(s)` : `Devis v${version} : modifications depuis la version précédente`;
+  const body = rows.length > 0 ? rows : ["Aucune ligne modifiée."];
+  return [head, ...body.map((r) => `• ${r}`), `Total : ${formatFcfa(total)}`].join("\n");
 }
 
 function lineDetail(line: Pick<PrintQuoteLine, "quantity" | "unitPrice">) {
@@ -137,7 +196,7 @@ export async function addStaffLine(input: {
       },
     });
     const change: LineChange = { op: "ADDED", lineId: created.id, label: created.label, to: lineDetail(created) };
-    await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [change] }, { userId: input.userId, ...STAFF });
+    await appendLineChange(tx, request.id, input.userId, change);
     await recomputeChecked(tx, request.id);
     return { line: created, revised: from === "QUOTED" };
   });
@@ -196,7 +255,7 @@ export async function updateStaffLine(input: {
       from: lineDetail(line),
       to: lineDetail(updated),
     };
-    await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [change] }, { userId: input.userId, ...STAFF });
+    await appendLineChange(tx, request.id, input.userId, change);
     await recomputeChecked(tx, request.id);
     return { line: updated, revised: from === "QUOTED" };
   });
@@ -221,7 +280,7 @@ export async function removeStaffLine(input: {
     const { from } = await applyEdit(tx, current, "STAFF", input.userId);
     await tx.printQuoteLine.update({ where: { id: line.id }, data: { removedAt: new Date() } });
     const change: LineChange = { op: "REMOVED", lineId: line.id, label: line.label, from: lineDetail(line) };
-    await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [change] }, { userId: input.userId, ...STAFF });
+    await appendLineChange(tx, request.id, input.userId, change);
     await recomputeChecked(tx, request.id);
     return { revised: from === "QUOTED" };
   });
@@ -238,11 +297,11 @@ export async function sendQuote(input: {
     // Transition d'abord : un statut interdit prime sur un devis vide. Les refus qui suivent
     // annulent la transaction, donc rien n'est écrit.
     await applyTransition(tx, current, "SEND_QUOTE", "STAFF", input.now);
-    // Template devenu inadapté : le devis d'une demande sur place ne part pas (annule la transaction).
+    // Template devenu inadapté : le devis d'une commande sur place ne part pas (annule la transaction).
     await assertOnsiteCanAdvance(current);
     const active = await tx.printQuoteLine.count({ where: { requestId: request.id, removedAt: null } });
     if (active === 0) throw new PrintRequestError("EMPTY_QUOTE", 400);
-    // Le devis porte toujours le support de badge (les demandes complémentaires de la clôture en ont un).
+    // Le devis porte toujours le support de badge (les commandes complémentaires de la clôture en ont un).
     const badgeLines = await tx.printQuoteLine.count({
       where: { requestId: request.id, removedAt: null, kind: "PRODUCT", product: { kind: "BADGE" } },
     });
@@ -250,7 +309,7 @@ export async function sendQuote(input: {
     const total = await recomputeChecked(tx, request.id);
     if (total < 0) throw new PrintRequestError("NEGATIVE_TOTAL", 400);
     // Un total nul n'est admis que s'il vient d'une ligne de crédit active (devis entièrement couvert
-    // par le crédit de l'organisation) : la demande passe alors PAID à l'acceptation, sans paiement.
+    // par le crédit de l'organisation) : la commande passe alors PAID à l'acceptation, sans paiement.
     if (total === 0) {
       const credit = await tx.printQuoteLine.count({
         where: { requestId: request.id, removedAt: null, usesOrgCredit: true },
@@ -259,7 +318,39 @@ export async function sendQuote(input: {
     }
     const version = current.quoteVersion + 1;
     await tx.printRequest.update({ where: { id: request.id }, data: { quoteVersion: version } });
-    await appendThreadEvent(tx, request.id, "QUOTE_SENT", { version, total }, { userId: input.userId, ...STAFF });
+    const lines = (
+      await tx.printQuoteLine.findMany({
+        where: { requestId: request.id, removedAt: null },
+        orderBy: { position: "asc" },
+        select: { id: true, label: true, quantity: true, unitPrice: true },
+      })
+    ).map((l) => ({ id: l.id, label: l.label, quantity: l.quantity, unitPrice: l.unitPrice }));
+    const previousSent = await tx.printRequestMessage.findFirst({
+      where: { requestId: request.id, eventType: "QUOTE_SENT" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+    // Envoi antérieur sans instantané des lignes : récapitulatif complet, comme pour la première version.
+    const previousLines = previousSent ? (previousSent.details as { lines?: QuoteSnapshotLine[] }).lines : undefined;
+    const sent = await appendThreadEvent(
+      tx,
+      request.id,
+      "QUOTE_SENT",
+      { version, total, lines },
+      { userId: input.userId, ...STAFF },
+    );
+    // Récapitulatif en message visible de l'organisateur (le texte d'un évènement est reconstruit
+    // pour lui à partir de la liste blanche de ses détails, il ne peut pas porter le récapitulatif).
+    // Aucune notification : l'envoi du devis a la sienne.
+    await tx.printRequestMessage.create({
+      data: {
+        requestId: request.id,
+        authorId: input.userId,
+        side: "STAFF",
+        kind: "MESSAGE",
+        body: summarizeQuoteDiff(Array.isArray(previousLines) ? previousLines : null, lines, version, total),
+        createdAt: new Date(sent.createdAt.getTime() + 1),
+      },
+    });
     return tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
   });
 }
@@ -305,18 +396,18 @@ export async function advanceStatus(input: {
   const action = Object.hasOwn(ADVANCE_ACTIONS, input.to) ? ADVANCE_ACTIONS[input.to] : null;
   if (!action) throw new PrintRequestError("VALIDATION", 400);
   const request = await loadRequest(input.requestId);
-  // La clôture d'une demande sur place (crédit ou demande complémentaire) fait partie de la
-  // transaction : si elle échoue, la demande reste READY et peut être clôturée de nouveau. Une
-  // collision de référence (demande complémentaire) rejoue toute la transaction.
+  // La clôture d'une commande sur place (crédit ou commande complémentaire) fait partie de la
+  // transaction : si elle échoue, la commande reste READY et peut être clôturée de nouveau. Une
+  // collision de référence (commande complémentaire) rejoue toute la transaction.
   return retryOnReferenceCollision(() =>
     prisma.$transaction(async (tx) => {
       const current = await lockRequest(tx, request.id);
       const from: PrintRequestStatus = current.status;
       const to = await applyTransition(tx, current, action, "STAFF");
       // Aucun contrôle du template ici : il est figé au paiement (PAID et au-delà), un changement
-      // ultérieur de l'organisateur ne doit pas bloquer une demande déjà payée. Le contrôle se fait à l'envoi du devis.
+      // ultérieur de l'organisateur ne doit pas bloquer une commande déjà payée. Le contrôle se fait à l'envoi du devis.
       await appendThreadEvent(tx, request.id, "STATUS_CHANGED", { from, to }, { userId: input.userId, ...STAFF });
-      // Seule une demande sur place sans parent se clôture (une complémentaire ne produit ni crédit ni surplus).
+      // Seule une commande sur place sans parent se clôture (une complémentaire ne produit ni crédit ni surplus).
       const closure =
         input.to === "COMPLETED" && current.type === "ONSITE" && current.parentRequestId === null
           ? await closeOnsiteInTx(tx, request.id, input.userId)
@@ -344,7 +435,7 @@ export async function markPaidManually(input: {
   const request = await loadRequest(input.requestId);
 
   return prisma.$transaction(async (tx) => {
-    // Verrou de la demande avant la sonde : sans lui, un paiement PENDING pourrait apparaître
+    // Verrou de la commande avant la sonde : sans lui, un paiement PENDING pourrait apparaître
     // entre la sonde et l'écriture.
     await lockRequest(tx, request.id);
     if (await isPaymentInProgress(request.id)) throw new PrintRequestError("PAYMENT_IN_PROGRESS", 409);

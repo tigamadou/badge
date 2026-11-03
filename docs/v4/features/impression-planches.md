@@ -13,7 +13,8 @@ rastérisation, et **jamais mis à l'échelle** (100 %).
 
 | Écran | Rôle | Droits |
 |---|---|---|
-| `/platform/print/layouts` (« Gabarits ») | Liste, création, modification, archivage des gabarits, avec aperçu en schéma | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
+| `/platform/print/layouts` (« Gabarits ») | Liste des gabarits en cartes (miniature de la zone utile sans emplacements, format, marges et espacements), archivage | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
+| `/platform/print/layouts/new`, `/platform/print/layouts/[layoutId]` | Éditeur d'un gabarit avec aperçu en direct ; lecture seule sous `STAFF_ADMIN`, `/new` redirige vers la liste | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
 | `/platform/print/sheets` (« Planches ») | Lancer une génération, historique, aperçu et téléchargement | `STAFF_SUPPORT` minimum (`STAFF_OBSERVER` est redirigé vers `/platform`) |
 
 Les deux entrées sont dans le groupe « Impression » de la navigation staff (`StaffShell`).
@@ -35,10 +36,24 @@ millimètre** (entiers) ; l'interface saisit des millimètres.
 | Retournement recto-verso | `LONG_EDGE` (défaut) ou `SHORT_EDGE` |
 | Traits de coupe | oui par défaut |
 
-L'écran affiche un **badge témoin** (template installé ou taille libre) qui sert à annoncer
-« N badges par feuille » dans la liste et dans l'aperçu. Modifier un gabarit ne change pas les
+Seul l'éditeur affiche un **badge témoin** (template installé ou taille libre, premier
+template par défaut) qui sert à annoncer « N badges par feuille » ; la liste n'en a pas et
+aucun paramètre d'URL ne le transmet. Pour un template
+installé, l'écran indique s'il est **recto-verso** (deux pages) ou **recto seul** ; la liste
+déroulante le signale aussi (« · recto-verso »).
+
+L'éditeur regroupe les réglages par section (identité, feuille, marges et espacements,
+disposition, impression) : format et orientations se choisissent par tuiles, les quatre marges
+s'éditent autour d'un schéma de la zone utile et peuvent être liées (« Marges identiques »).
+L'aperçu en direct, en grande colonne collante à gauche (les réglages sont à droite), dessine la planche sur un fond sombre (`#1D2128`) ; les
+cartes de la liste en reprennent une miniature. Modifier un gabarit ne change pas les
 générations passées : leurs réglages sont **figés à la création** (`layoutSnapshot`). Un
 gabarit archivé ne peut plus servir à générer.
+
+Le seed (minimal comme démo) crée un gabarit par défaut, **« A3 standard »** : A3 portrait,
+marges de 10 mm, **5 mm** d'espace horizontal et vertical entre les badges, orientation
+automatique, retournement sur le bord long, traits de coupe. Il est créé une seule fois (par
+nom) : un gabarit déjà présent, même retouché par le staff, n'est pas modifié.
 
 ## Calcul de la grille
 
@@ -105,10 +120,34 @@ Un évènement peut compter des milliers de badges : le rendu prend plusieurs mi
 - Journal d'activité : `PRINT_LAYOUT_CREATED`, `PRINT_LAYOUT_UPDATED`,
   `PRINT_LAYOUT_ARCHIVED`, `PRINT_SHEETS_GENERATED`.
 
+## Planches par commande
+
+`/platform/print/sheets` est un groupe de sous-pages (onglets) :
+
+- **À traiter** (`/pending`, avec compteur) : commandes `ADVANCE` en `PAID` ou `IN_PRODUCTION`
+  sans planche. « Générer » ouvre une modale de choix du gabarit (aperçu de la disposition) ;
+  le recto-verso est imposé par le template.
+- **Générées** (`/generated`) : commandes de la file avec une planche, quel que soit son état
+  (`PENDING`, `RUNNING`, `DONE`, `FAILED`), la plus récente d'abord. « Télécharger », « Voir »
+  (PDF en modale) et « Regénérer ». Rafraîchie toutes les 5 s (`GET /api/platform/print/sheets/orders`)
+  tant qu'une planche est en attente ou en cours.
+- **Génération libre** (`/free`) : le formulaire historique ; son historique exclut les planches
+  de commande.
+- `?printRequestId=` (lien « Générer les planches » de la page d'une commande) garde le
+  formulaire prérempli à la racine, puis renvoie vers « Générées ».
+
+Une commande n'a qu'**une planche** (`PrintSheetGeneration.printRequestId` unique). Regénérer
+remet la même ligne en `PENDING` (gabarit, sélection, compteurs, erreur et tentatives remis à
+zéro) et le worker écrase le PDF sous la clé stable `print-sheets/orders/{requestId}.pdf` ; un
+ancien fichier d'une autre clé est supprimé après le succès (conservé en cas d'échec). Regénérer
+une planche `PENDING` ou `RUNNING` est refusé : `409 GENERATION_IN_PROGRESS`. L'évènement de fil
+`SHEETS_GENERATED` (interne) est ajouté à chaque génération ; `PRINT_SHEETS_GENERATED` porte
+`details.regenerated` à `true` lors d'un écrasement. Le statut de la commande n'est pas modifié.
+
 ## Export ZIP de l'organisateur
 
 L'ancienne route `…/badges/print-zip` (200 badges au plus) est supprimée. L'organisateur
-(permission `badge.print`) demande un export depuis le panneau de lot ; la demande est une
+(permission `badge.print`) commande un export depuis le panneau de lot ; la commande est une
 `PrintSheetGeneration` de sortie `ZIP` (sans gabarit), traitée par le même worker avec la même
 reprise. Le ZIP (un PDF par badge) est stocké en `badge-exports/{eventId}/{id}.zip` et se
 télécharge quand il est prêt. **Aucune limite de nombre.** Voir
@@ -158,7 +197,7 @@ laisser une à moitié faite.
 |---|---|
 | Voir les gabarits | `STAFF_OBSERVER` |
 | Créer, modifier, archiver un gabarit | `STAFF_ADMIN` |
-| Lancer une génération, voir l'historique, aperçu, téléchargement | `STAFF_SUPPORT` |
+| Lancer ou regénérer une génération (libre ou par commande), voir les sous-pages, aperçu, téléchargement | `STAFF_SUPPORT` |
 | Télécharger un ZIP d'export | staff, ou `badge.print` sur l'évènement |
 
 ## Tests

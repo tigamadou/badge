@@ -63,3 +63,9 @@ next-env.d.ts
 
 # Worktrees de developpement parallele (voir chore(dev))
 /.worktrees/
+
+# Stack d agent (scripts/agent-stack.sh) : propre a chaque worktree
+.agent.env
+
+# Fichier des comptes du seed de demo (genere)
+.demo/

@@ -29,13 +29,13 @@ import type { BadgeSelection, DetailsPatch, OnsiteSlot, OrganizerProductInput } 
 // Taille des paquets pour les lectures et écritures par identifiants (borne les paramètres SQL).
 const ID_CHUNK = 5000;
 
-// Sérialise les réservations d'un évènement : deux demandes ne se réservent pas la même
+// Sérialise les réservations d'un évènement : deux commandes ne se réservent pas la même
 // inscription en parallèle. À appeler avant de lire les réservations existantes.
 export async function lockEventRow(tx: Prisma.TransactionClient, eventId: string): Promise<void> {
   await tx.$queryRaw`SELECT id FROM \`Event\` WHERE id = ${eventId} FOR UPDATE`;
 }
 
-// Inscription -> référence de la demande qui la réserve (hors la demande exclue).
+// Inscription -> référence de la commande qui la réserve (hors la commande exclue).
 export async function reservedRegistrations(
   tx: Prisma.TransactionClient,
   eventId: string,
@@ -184,8 +184,8 @@ async function resolveSelection(
   return available;
 }
 
-// Remplace les badges d'une demande en amont. Les réservations sont sérialisées par évènement
-// (verrou sur la ligne Event) dès que la demande n'est plus un brouillon.
+// Remplace les badges d'une commande en amont. Les réservations sont sérialisées par évènement
+// (verrou sur la ligne Event) dès que la commande n'est plus un brouillon.
 export async function setBadges(input: {
   requestId: string;
   eventId: string;
@@ -197,7 +197,7 @@ export async function setBadges(input: {
 
   // Ordre des verrous : la ligne Event d'abord, puis la ligne PrintRequest (lockRequestWithEvent,
   // comme setOrganizerProducts). Ne jamais verrouiller l'Event après avoir verrouillé une
-  // PrintRequest. La demande est relue sous verrou : son statut peut avoir changé depuis le chargement.
+  // PrintRequest. La commande est relue sous verrou : son statut peut avoir changé depuis le chargement.
   return prisma.$transaction(async (tx) => {
     await lockRequestWithEvent(tx, request.id);
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
@@ -286,7 +286,7 @@ export async function updateDetails(input: {
   }
 
   return prisma.$transaction(async (tx) => {
-    // Ordre des verrous : Event puis PrintRequest. La demande est relue sous verrou : la décision
+    // Ordre des verrous : Event puis PrintRequest. La commande est relue sous verrou : la décision
     // (modification réelle ou non, statut éditable) porte sur l'état courant, pas sur celui du chargement.
     await lockRequestWithEvent(tx, request.id);
     const current = await tx.printRequest.findUniqueOrThrow({ where: { id: request.id } });
@@ -323,7 +323,7 @@ export async function updateDetails(input: {
   });
 }
 
-// Traduit un échec de validateChoices en erreur de demande (partagé avec la saisie du staff).
+// Traduit un échec de validateChoices en erreur de commande (partagé avec la saisie du staff).
 export function choiceFailureToError(
   product: Pick<ProductForPricing, "id" | "minQuantity">,
   result: Extract<ChoiceResult, { ok: false }>,

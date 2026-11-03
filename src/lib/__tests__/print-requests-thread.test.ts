@@ -70,10 +70,10 @@ describe("describeLineChange", () => {
 describe("describeThreadEvent", () => {
   const cases: Record<ThreadEventType, [Record<string, unknown>, string]> = {
     LINES_CHANGED: [{ changes: [added("a"), added("b")] }, "2 lignes modifiées"],
-    SUBMITTED: [{ badgeCount: 10, total: 5000 }, `Demande envoyée : 10 badges, total estimé ${formatFcfa(5000)}`],
+    SUBMITTED: [{ badgeCount: 10, total: 5000 }, `Commande envoyée : 10 badges, total estimé ${formatFcfa(5000)}`],
     BADGES_CHANGED: [
       { added: 2, removed: 1, count: 9, lagging: ["Cordon", "PVC"] },
-      "Badges de la demande : +2, −1 (9 au total) — quantités fixées par l'équipe à vérifier : Cordon, PVC",
+      "Badges de la commande : +2, −1 (9 au total) — quantités fixées par l'équipe à vérifier : Cordon, PVC",
     ],
     REQUEST_UPDATED: [{ fields: ["livraison", "notes"] }, "Informations modifiées : livraison, notes"],
     QUOTE_SENT: [{ version: 2, total: 900 }, `Devis v2 envoyé : ${formatFcfa(900)}`],
@@ -85,11 +85,11 @@ describe("describeThreadEvent", () => {
       { from: "PAID", to: "READY" },
       `Statut : ${PRINT_REQUEST_STATUS_LABELS.PAID} → ${PRINT_REQUEST_STATUS_LABELS.READY}`,
     ],
-    REJECTED: [{ reason: "Hors délai" }, "Demande refusée : Hors délai"],
-    CANCELLED: [{}, "Demande annulée"],
+    REJECTED: [{ reason: "Hors délai" }, "Commande refusée : Hors délai"],
+    CANCELLED: [{}, "Commande annulée"],
     PAYMENT_RECEIVED: [{ amount: 100, reason: "virement" }, `Paiement reçu : ${formatFcfa(100)} (hors ligne : virement)`],
     PAYMENT_FAILED: [{ amount: 100 }, `Paiement échoué : ${formatFcfa(100)}`],
-    PAYMENT_UNMATCHED: [{ amount: 100 }, `Paiement de ${formatFcfa(100)} reçu alors que la demande n'attendait plus ce paiement : l'équipe Badge vérifie.`],
+    PAYMENT_UNMATCHED: [{ amount: 100 }, `Paiement de ${formatFcfa(100)} reçu alors que la commande n'attendait plus ce paiement : l'équipe Badge vérifie.`],
     SHEETS_GENERATED: [{ generationId: "g", badgeCount: 30 }, "Planches lancées pour 30 badges"],
     REGISTRATIONS_SKIPPED: [
       { registrationIds: ["r1", "r2"] },
@@ -104,7 +104,7 @@ describe("describeThreadEvent", () => {
     ],
     ONSITE_SUPPLEMENT_CREATED: [
       { reference: "IMP-2026-0002", extraBadges: 12 },
-      "Demande complémentaire IMP-2026-0002 : 12 badges supplémentaires",
+      "Commande complémentaire IMP-2026-0002 : 12 badges supplémentaires",
     ],
   };
 
@@ -125,7 +125,7 @@ describe("describeThreadEvent", () => {
   it("variantes : une seule ligne, sans retard, sans motif, template sans annulation", () => {
     expect(describeThreadEvent("LINES_CHANGED", { changes: [added("a")] })).toBe(describeLineChange(added("a")));
     expect(describeThreadEvent("BADGES_CHANGED", { added: 1, removed: 0, count: 1, lagging: [] })).toBe(
-      "Badges de la demande : +1, −0 (1 au total)",
+      "Badges de la commande : +1, −0 (1 au total)",
     );
     expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 100 })).toBe(`Paiement reçu : ${formatFcfa(100)}`);
     expect(describeThreadEvent("PAYMENT_RECEIVED", { amount: 0, byCredit: true })).toBe(
@@ -141,56 +141,59 @@ describe("appendThreadEvent", () => {
   it("crée une entrée EVENT système par défaut", async () => {
     const { request } = await seed();
     const m = await prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "CANCELLED", {}));
-    expect(m).toMatchObject({ kind: "EVENT", side: "SYSTEM", authorId: null, eventType: "CANCELLED", body: "Demande annulée" });
+    expect(m).toMatchObject({ kind: "EVENT", side: "SYSTEM", authorId: null, eventType: "CANCELLED", body: "Commande annulée" });
   });
 
-  it("trois modifications de lignes du même staff donnent une seule entrée « 3 lignes modifiées »", async () => {
+  it("trois modifications de lignes du même staff donnent trois entrées distinctes", async () => {
     const { request, staff } = await seed();
     const actor = { userId: staff.id, side: "STAFF" as const };
-    let last;
+    const ids: string[] = [];
     for (const id of ["a", "b", "c"]) {
-      last = await prisma.$transaction((tx) =>
+      const m = await prisma.$transaction((tx) =>
         appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor),
       );
+      ids.push(m.id);
     }
-    const rows = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
-    expect(rows).toHaveLength(1);
-    expect((rows[0].details as { changes: unknown[] }).changes).toHaveLength(3);
-    expect(rows[0].body).toBe("3 lignes modifiées");
-    expect(last!.id).toBe(rows[0].id);
-  });
-
-  it("un message intercalé coupe le regroupement", async () => {
-    const { request, staff } = await seed();
-    const actor = { userId: staff.id, side: "STAFF" as const };
-    const add = (id: string) =>
-      prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor));
-    await add("a");
-    await postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "Bonjour", attachmentKey: null });
-    await add("b");
-    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(3);
-  });
-
-  it("un autre type d'entrée intercalé coupe le regroupement", async () => {
-    const { request, staff } = await seed();
-    const actor = { userId: staff.id, side: "STAFF" as const };
-    await prisma.$transaction(async (tx) => {
-      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, actor);
-      await appendThreadEvent(tx, request.id, "QUOTE_REVISION", {}, actor);
-      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, actor);
+    const rows = await prisma.printRequestMessage.findMany({
+      where: { requestId: request.id },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
-    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(3);
+    expect(rows.map((r) => r.id).sort()).toEqual([...ids].sort());
+    expect(rows.every((r) => (r.details as { changes: unknown[] }).changes.length === 1)).toBe(true);
+    expect(rows.map((r) => (r.details as { changes: { lineId: string }[] }).changes[0].lineId)).toEqual(["a", "b", "c"]);
   });
 
-  it("auteur différent ou côté différent : pas de regroupement", async () => {
+  it("une entrée par appel, quel que soit l'auteur, le côté ou l'entrée intercalée", async () => {
     const { request, staff, staff2, organizer } = await seed();
     await prisma.$transaction(async (tx) => {
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, { userId: staff.id, side: "STAFF" });
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, { userId: staff2.id, side: "STAFF" });
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("c")] }, { userId: staff2.id, side: "ORGANIZER" });
       await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("d")] }, { userId: organizer.id, side: "ORGANIZER" });
+      await appendThreadEvent(tx, request.id, "QUOTE_REVISION", {}, { userId: staff.id, side: "STAFF" });
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("e")] }, { userId: staff.id, side: "STAFF" });
     });
-    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(4);
+    await postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "Bonjour", attachmentKey: null });
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(7);
+  });
+
+  it("interne et public restent des entrées séparées", async () => {
+    const { request, staff } = await seed();
+    const actor = { userId: staff.id, side: "STAFF" as const };
+    await prisma.$transaction(async (tx) => {
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, actor, { internal: true });
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, actor);
+      await appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("c")] }, actor, { internal: true });
+    });
+    const rows = await prisma.printRequestMessage.findMany({
+      where: { requestId: request.id },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    expect(rows.map((r) => r.internal)).toEqual([true, false, true]);
+    expect(rows.every((r) => (r.details as { changes: unknown[] }).changes.length === 1)).toBe(true);
+    const organizerView = await listThread(request.id, "ORGANIZER");
+    expect(organizerView).toHaveLength(1);
+    expect(organizerView[0].id).toBe(rows[1].id);
   });
 });
 
@@ -233,7 +236,7 @@ describe("postMessage", () => {
     expect(ok.side).toBe("STAFF");
   });
 
-  it("staff : la clé d'une autre demande (autre organisation) ou sans demande est refusée", async () => {
+  it("staff : la clé d'une autre commande (autre organisation) ou sans commande est refusée", async () => {
     const mine = await seed();
     const theirs = await seed();
     const stf = (attachmentKey: string) =>
@@ -257,12 +260,12 @@ describe("postMessage", () => {
     expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
   });
 
-  it("demande absente -> 404", async () => {
+  it("commande absente -> 404", async () => {
     const { organizer } = await seed();
     await expect(postMessage({ ...base({ id: "nope" }, organizer) })).rejects.toMatchObject({ code: "NOT_FOUND", status: 404 });
   });
 
-  it("reste permis sur une demande COMPLETED, REJECTED et CANCELLED", async () => {
+  it("reste permis sur une commande COMPLETED, REJECTED et CANCELLED", async () => {
     for (const status of ["COMPLETED", "REJECTED", "CANCELLED"] as const) {
       const { request, organizer } = await seed(status);
       const m = await postMessage(base(request, organizer));
@@ -272,37 +275,16 @@ describe("postMessage", () => {
 });
 
 describe("appendThreadEvent : concurrence", () => {
-  it("deux ajouts simultanés du même auteur gardent les deux changements", async () => {
+  it("deux ajouts simultanés du même auteur créent deux entrées", async () => {
     const { request, staff } = await seed();
     const actor = { userId: staff.id, side: "STAFF" as const };
     const add = (id: string) =>
       prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added(id)] }, actor));
     await Promise.all([add("a"), add("b")]);
     const rows = await prisma.printRequestMessage.findMany({ where: { requestId: request.id } });
-    expect(rows).toHaveLength(1);
-    const ids = (rows[0].details as { changes: { lineId: string }[] }).changes.map((c) => c.lineId).sort();
+    expect(rows).toHaveLength(2);
+    const ids = rows.flatMap((r) => (r.details as { changes: { lineId: string }[] }).changes.map((c) => c.lineId)).sort();
     expect(ids).toEqual(["a", "b"]);
-  });
-
-  it("tolère un details stocké sans tableau changes", async () => {
-    const { request, staff } = await seed();
-    await prisma.printRequestMessage.create({
-      data: {
-        requestId: request.id, authorId: staff.id, side: "STAFF", kind: "EVENT",
-        eventType: "LINES_CHANGED", body: "x", details: { changes: "oops" },
-      },
-    });
-    const m = await prisma.$transaction((tx) =>
-      appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("a")] }, { userId: staff.id, side: "STAFF" }),
-    );
-    expect((m.details as { changes: unknown[] }).changes).toHaveLength(1);
-    const nul = await prisma.printRequestMessage.create({
-      data: { requestId: request.id, authorId: staff.id, side: "STAFF", kind: "EVENT", eventType: "LINES_CHANGED", body: "x" },
-    });
-    const m2 = await prisma.$transaction((tx) =>
-      appendThreadEvent(tx, request.id, "LINES_CHANGED", { changes: [added("b")] }, { userId: staff.id, side: "STAFF" }),
-    );
-    expect(m2.id).toBe(nul.id);
   });
 });
 
@@ -362,7 +344,7 @@ describe("listThread", () => {
     await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "Hello", attachmentKey: null });
     const thread = await listThread(request.id, "STAFF");
     expect(thread.map((t) => [t.kind, t.authorName, t.body])).toEqual([
-      ["EVENT", null, "Demande annulée"],
+      ["EVENT", null, "Commande annulée"],
       ["MESSAGE", "Orga", "Hello"],
     ]);
     expect(thread[0]).toMatchObject({ eventType: "CANCELLED", attachmentKey: null, side: "SYSTEM" });
@@ -445,6 +427,50 @@ describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
     expect(thread[3]).toMatchObject({ kind: "MESSAGE", body: "Salut" });
     const m = await prisma.printRequestMessage.findFirstOrThrow({ where: { requestId: request.id, kind: "MESSAGE" } });
     expect(toEntryDTO(m, "Orga", "ORGANIZER").details).toBeNull();
+  });
+});
+
+describe("notes internes et lecture incrémentale", () => {
+  it("postMessage refuse internal côté organisateur (VALIDATION)", async () => {
+    const { request, organizer } = await seed();
+    await expect(
+      postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "x", attachmentKey: null, internal: true }),
+    ).rejects.toMatchObject({ code: "VALIDATION" });
+    expect(await prisma.printRequestMessage.count({ where: { requestId: request.id } })).toBe(0);
+  });
+
+  it("une note interne du staff est stockée et absente du fil organisateur", async () => {
+    const { request, staff, organizer } = await seed();
+    await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "public", attachmentKey: null });
+    const note = await postMessage({ requestId: request.id, authorId: staff.id, side: "STAFF", body: "secret", attachmentKey: null, internal: true });
+    expect(note.internal).toBe(true);
+    const orga = await listThread(request.id, "ORGANIZER");
+    expect(orga.map((e) => e.body)).toEqual(["public"]);
+    expect(orga[0].internal).toBe(false);
+    const staffView = await listThread(request.id, "STAFF");
+    expect(staffView.map((e) => [e.body, e.internal])).toEqual([["public", false], ["secret", true]]);
+  });
+
+  it("appendThreadEvent accepte internal ; l'évènement interne est masqué à l'organisateur", async () => {
+    const { request } = await seed();
+    const m = await prisma.$transaction((tx) =>
+      appendThreadEvent(tx, request.id, "CANCELLED", {}, undefined, { internal: true }),
+    );
+    expect(m.internal).toBe(true);
+    expect(await listThread(request.id, "ORGANIZER")).toEqual([]);
+    expect(await listThread(request.id, "STAFF")).toHaveLength(1);
+    const plain = await prisma.$transaction((tx) => appendThreadEvent(tx, request.id, "CANCELLED", {}));
+    expect(plain.internal).toBe(false);
+  });
+
+  it("after ne renvoie que les entrées strictement postérieures", async () => {
+    const { request, organizer } = await seed();
+    const a = await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "a", attachmentKey: null });
+    await new Promise((r) => setTimeout(r, 15));
+    await postMessage({ requestId: request.id, authorId: organizer.id, side: "ORGANIZER", body: "b", attachmentKey: null });
+    const after = await listThread(request.id, "ORGANIZER", { after: a.createdAt });
+    expect(after.map((e) => e.body)).toEqual(["b"]);
+    expect(await listThread(request.id, "ORGANIZER", {})).toHaveLength(2);
   });
 });
 

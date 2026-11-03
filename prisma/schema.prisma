@@ -68,6 +68,7 @@ model User {
   printRequestsCreated  PrintRequest[]         @relation("PrintRequestCreatedBy")
   printRequestsAccepted PrintRequest[]         @relation("PrintRequestAcceptedBy")
   printRequestMessages  PrintRequestMessage[]
+  printRequestReads     PrintRequestRead[]
   printRequestPrints    PrintRequestPrint[]   @relation("PrintRequestPrintPrintedBy")
   orgPrintCredits       OrgPrintCredit[]      @relation("OrgPrintCreditCreatedBy")
 }
@@ -932,7 +933,7 @@ model PrintSheetGeneration {
 
   @@index([status, createdAt])
   @@index([eventId])
-  @@index([printRequestId])
+  @@unique([printRequestId])
 }
 
 enum PrintProductKind {
@@ -1143,7 +1144,8 @@ model PrintRequest {
   items       PrintRequestItem[]
   lines       PrintQuoteLine[]
   messages    PrintRequestMessage[]
-  generations PrintSheetGeneration[]
+  generation  PrintSheetGeneration?
+  reads       PrintRequestRead[]
   prints      PrintRequestPrint[]
   credits     OrgPrintCredit[]
 
@@ -1234,6 +1236,17 @@ model PrintQuoteLine {
   @@index([requestId, removedAt])
 }
 
+model PrintRequestRead {
+  id         String       @id @default(cuid())
+  requestId  String
+  request    PrintRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime
+
+  @@unique([requestId, userId])
+}
+
 model PrintRequestMessage {
   id            String           @id @default(cuid())
   requestId     String
@@ -1246,6 +1259,7 @@ model PrintRequestMessage {
   eventType     String?
   details       Json?
   attachmentKey String?
+  internal      Boolean          @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

@@ -4,7 +4,7 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { PrintRequestError, printRequestErrorResponse } from "@/lib/print-requests/errors";
 import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES, printRequestFileKey } from "@/lib/storage";
 
-// Plan 33 : fichier joint à une demande d'impression (maquette, logo, PDF). Réservé aux
+// Plan 33 : fichier joint à une commande d'impression (maquette, logo, PDF). Réservé aux
 // détenteurs de `print.request`. Le fil reste ouvert sur un évènement archivé (C11).
 const EXT: Record<string, string> = {
   "image/jpeg": ".jpg",

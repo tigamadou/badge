@@ -2,7 +2,7 @@ import Link from "next/link";
 
 type Ref = { id: string; reference: string };
 
-// Liens croisés entre une demande sur place et ses demandes complémentaires.
+// Liens croisés entre une commande sur place et ses commandes complémentaires.
 export function RelatedRequestLinks({
   parent,
   supplements,
@@ -23,7 +23,7 @@ export function RelatedRequestLinks({
       ) : null}
       {supplements.map((s) => (
         <li key={s.id}>
-          <Link href={hrefOf(s.id)} className={cls}>{`Demande complémentaire ${s.reference}`}</Link>
+          <Link href={hrefOf(s.id)} className={cls}>{`Commande complémentaire ${s.reference}`}</Link>
         </li>
       ))}
     </ul>

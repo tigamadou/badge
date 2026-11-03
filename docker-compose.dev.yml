@@ -16,6 +16,7 @@ services:
       - path: .env
         required: false
     environment:
+      BADGE_ENV: dev
       NPM_TOKEN: ${NPM_TOKEN}
       RENDERER_URL: http://renderer:3000
     networks: [default, rendu]
@@ -45,6 +46,7 @@ services:
       - path: .env
         required: false
     environment:
+      BADGE_ENV: dev
       NPM_TOKEN: ${NPM_TOKEN}
       JOB_POLL_INTERVAL_MS: "500"
       RENDERER_URL: http://renderer:3000

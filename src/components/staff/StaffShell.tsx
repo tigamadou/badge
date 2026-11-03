@@ -15,10 +15,11 @@ function buildNav(pendingPrintRequests: number): NavEntry[] {
     { href: "/platform/users", label: "Utilisateurs", icon: "users" },
     { href: "/platform/badge-templates", label: "Templates de badge", icon: "id-card" },
     { group: "Impression" },
+    { href: "/platform/print/orders", label: "Commandes", icon: "inbox", count: pendingPrintRequests },
     { href: "/platform/print/sheets", label: "Planches", icon: "printer" },
     { href: "/platform/print/layouts", label: "Gabarits", icon: "layout-grid" },
     { href: "/platform/print/catalog", label: "Catalogue", icon: "package" },
-    { href: "/platform/print/requests", label: "Demandes", icon: "inbox", count: pendingPrintRequests },
+    { group: "Plateforme" },
     { href: "/platform/jobs", label: "Emails", icon: "mail" },
     { href: "/platform/settings", label: "Paramètres", icon: "settings" },
     { href: "/platform/activity", label: "Journal", icon: "scroll-text" },
@@ -40,7 +41,7 @@ export function StaffShell({
 }: {
   user: { name: string; email: string; staffRole: StaffRole };
   photoUrl?: string | null;
-  // Demandes d'impression envoyées, en attente de traitement (pastille du menu).
+  // Commandes d'impression envoyées, en attente de traitement (pastille du menu).
   pendingPrintRequests: number;
   children: React.ReactNode;
 }) {

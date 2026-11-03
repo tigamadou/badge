@@ -4,14 +4,14 @@
         prod prod-down prod-build prod-logs \
         prod-db-reset  prod-db-push \
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
-        preprod-db-reset \
+        preprod-db-reset preprod-reload-demo \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
-        test test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
+        test test-db test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
         db-push db-seed db-studio db-generate db-reset \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates migrate-installed-templates-preprod migrate-installed-templates-prod \
         validate-badge-templates-preprod validate-badge-templates-prod \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
-        net-create \
+        net-create db-drop-agent \
         download-uploads download-db logs-prod
 
 # Meme compte et meme cle que le workflow GitHub Actions : les stacks vivent
@@ -33,6 +33,18 @@ PREPROD_COMPOSE=docker compose -f docker-compose.preprod.yml
 # conteneurs preprod. Declare `external` dans les deux compose, donc il doit
 # exister avant tout `up`. Idempotent.
 NET=badge_web
+
+# Stack de dev. Dans le worktree d'un agent, `.agent.env` (ecrit par
+# scripts/agent-stack.sh) surcharge DEV_COMPOSE, DB_HOST et DB_NAME.
+-include .agent.env
+DEV_COMPOSE ?= docker compose -f docker-compose.dev.yml
+# Base de test : toujours `<base de dev>_test`, jamais la base de dev (garde-fou
+# dans src/test-setup.ts). Le serveur MySQL est celui de la stack de dev.
+DB_HOST ?= mysql:3306
+DB_NAME ?= badge
+TEST_DATABASE_URL ?= mysql://root:password@$(DB_HOST)/$(DB_NAME)_test
+# Bucket de test : separe du bucket de dev (cree par storage.ts au premier usage).
+S3_TEST_BUCKET ?= badge-test
 
 net-create:
 	@docker network inspect $(NET) >/dev/null 2>&1 || docker network create $(NET)
@@ -60,7 +72,7 @@ init:
 	@echo "  phpMyAdmin : https://pma.badge.local"
 	@echo "  Mailpit    : https://mail.badge.local"
 	@echo "  RustFS     : https://s3.badge.local (rustfsadmin / rustfsadmin)"
-	@echo "  Comptes    : admin@badge.local (SUPER_ADMIN), mot de passe 123456 (cf. prisma/seed.ts)"
+	@echo "  Compte     : admin@badge.local (SUPER_ADMIN), mot de passe 123456 ; donnees de demo : make db-seed-demo"
 	@echo "Types Prisma dans l'IDE : lancer 'yarn install' sur l'hote puis 'make db-generate'."
 
 init-check:
@@ -71,9 +83,9 @@ init-check:
 	@docker info >/dev/null 2>&1 || { echo "Erreur : le daemon Docker ne repond pas (Docker Desktop demarre ?)."; exit 1; }
 	@# Ports lus dans le compose plutot qu'ecrits en dur. Controle saute si la stack
 	@# tourne deja : ses propres ports seraient alors signales a tort.
-	@if [ -z "$$(docker compose -f docker-compose.dev.yml ps -q 2>/dev/null)" ]; then \
+	@if [ -z "$$($(DEV_COMPOSE) ps -q 2>/dev/null)" ]; then \
 	  busy=""; \
-	  for p in $$(docker compose -f docker-compose.dev.yml config 2>/dev/null \
+	  for p in $$($(DEV_COMPOSE) config 2>/dev/null \
 	      | grep -oE 'published: "?[0-9]+' | grep -oE '[0-9]+' | sort -un); do \
 	    nc -z -w1 127.0.0.1 $$p 2>/dev/null && busy="$$busy $$p"; \
 	  done; \
@@ -128,16 +140,16 @@ init-wait:
 #  Developpement
 # ============================================================
 dev:
-	docker compose -f docker-compose.dev.yml up -d
+	$(DEV_COMPOSE) up -d
 
 dev-build:
-	docker compose -f docker-compose.dev.yml up --build -d
+	$(DEV_COMPOSE) up --build -d
 
 dev-down:
-	docker compose -f docker-compose.dev.yml down
+	$(DEV_COMPOSE) down
 
 dev-restart:
-	docker compose -f docker-compose.dev.yml down && docker compose -f docker-compose.dev.yml up -d
+	$(DEV_COMPOSE) down && $(DEV_COMPOSE) up -d
 
 # ============================================================
 #  Production
@@ -188,12 +200,23 @@ preprod-db-push:
 	$(PREPROD_COMPOSE) up init
 
 # Reset destructif limite a la preprod : n'affecte jamais les volumes de prod
-# (projet compose `badge-preprod`, volumes suffixes `_preprod`).
+# (projet compose `badge-preprod`, volumes suffixes `_preprod`). Schema vide, aucun seed :
+# pour une preprod remplie, utiliser `make preprod-reload-demo`.
 preprod-db-reset:
 	@echo "WARNING: This will ERASE all PREPROD data (not production)."
 	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
 	docker exec badge-app-preprod prisma db push --force-reset
 	@echo "Preprod database reset (schema vide, aucun seed)."
+
+# Reset + seed minimal + seed de demo (meme service que deploy.sh en preprod).
+# Destructif : toute donnee saisie a la main en preprod est perdue.
+preprod-reload-demo:
+	@echo "WARNING: This will ERASE all PREPROD data (not production) and reload the demo."
+	@read -p "Type 'yes' to confirm: " confirm && [ "$$confirm" = "yes" ] || (echo "Cancelled." && exit 1)
+	$(PREPROD_COMPOSE) stop app worker
+	$(PREPROD_COMPOSE) run --rm seed-demo
+	$(PREPROD_COMPOSE) up -d app worker
+	@echo "Preprod rechargee avec la demo."
 
 # ============================================================
 #  Caddy
@@ -272,7 +295,7 @@ dev-https-hosts:
 dev-https-trust:
 	@rm -f $(CADDY_ROOT_CRT)
 	@i=0; \
-	until docker compose -f docker-compose.dev.yml cp \
+	until $(DEV_COMPOSE) cp \
 	    caddy:/data/caddy/pki/authorities/local/root.crt $(CADDY_ROOT_CRT) >/dev/null 2>&1; do \
 	  i=$$((i+1)); \
 	  if [ $$i -ge 10 ]; then \
@@ -360,6 +383,7 @@ migrate-uploads-clear:
 smoke-tests:
 	docker compose run --rm tools yarn tsx scripts/smoke-tests.ts
 
+# Attend la demo chargee (deploy.sh ou `make preprod-reload-demo`).
 smoke-tests-preprod:
 	$(PREPROD_COMPOSE) run --rm tools yarn tsx scripts/smoke-tests.ts
 
@@ -381,45 +405,41 @@ rollback-prod:
 # ============================================================
 #  Commandes dans le conteneur dev
 # ============================================================
-# FILE=<chemin> limite l'execution a un fichier. Vitest et le worker partagent la BDD de dev :
-# le worker est arrete pendant les tests (il volerait les jobs crees par les tests) puis
-# relance, meme en cas d'echec.
+# FILE=<chemin> limite l'execution a un fichier. Vitest tourne sur la base de test
+# (TEST_DATABASE_URL), jamais sur la base de dev : le worker peut rester demarre.
 FILE ?=
 
-test:
-	docker compose -f docker-compose.dev.yml stop worker
-	docker compose -f docker-compose.dev.yml exec app yarn vitest run $(FILE); status=$$?; \
-	docker compose -f docker-compose.dev.yml start worker; exit $$status
+# Base de test : creee au besoin par `prisma db push` et mise au schema, comme en CI
+# (pas de seed : la suite prepare ses propres donnees).
+test-db:
+	@case "$(TEST_DATABASE_URL)" in *_test) ;; *) echo "TEST_DATABASE_URL doit viser une base en _test"; exit 1;; esac
+	$(DEV_COMPOSE) exec -e DATABASE_URL=$(TEST_DATABASE_URL) app npx prisma db push --skip-generate --accept-data-loss
+
+test: test-db
+	$(DEV_COMPOSE) exec -e DATABASE_URL=$(TEST_DATABASE_URL) -e S3_BUCKET=$(S3_TEST_BUCKET) app yarn vitest run $(FILE)
 
 # Tests unitaires cibles sur la logique metier de src/lib (sous-ensemble de `test`).
-test-unit:
-	docker compose -f docker-compose.dev.yml stop worker
-	docker compose -f docker-compose.dev.yml exec app yarn vitest run src/lib; status=$$?; \
-	docker compose -f docker-compose.dev.yml start worker; exit $$status
+test-unit: test-db
+	$(DEV_COMPOSE) exec -e DATABASE_URL=$(TEST_DATABASE_URL) -e S3_BUCKET=$(S3_TEST_BUCKET) app yarn vitest run src/lib
 
 # Suite Vitest complete avec rapport de couverture V8 (seuils 100% = gate, cf. vitest.config.ts).
-test-coverage:
-	docker compose -f docker-compose.dev.yml stop worker
-	docker compose -f docker-compose.dev.yml exec app yarn vitest run --coverage; status=$$?; \
-	docker compose -f docker-compose.dev.yml start worker; exit $$status
+test-coverage: test-db
+	$(DEV_COMPOSE) exec -e DATABASE_URL=$(TEST_DATABASE_URL) -e S3_BUCKET=$(S3_TEST_BUCKET) app yarn vitest run --coverage
 
 # Chaine de verification complete : s'arrete au premier echec (ordre des prerequis).
-# NB : `test` vide la base dev -> relancer `make db-seed` ensuite pour l'app manuelle.
 # Les tests e2e seedent leurs propres fixtures (e2e/helpers/db.ts), non impactes par le vidage.
 test-all: lint typecheck test test-e2e
 	@echo "OK : lint + typecheck + vitest + e2e passes."
 
 # Memes jobs que .github/workflows/ci.yml, dans le container app : schema a jour,
-# lint, typecheck, vitest avec seuils de couverture (gate), e2e. Re-seed la base
-# dev a la fin, puisque vitest la vide.
+# lint, typecheck, vitest avec seuils de couverture (gate), e2e.
 ci: db-push lint typecheck test-coverage test-e2e
-	$(MAKE) db-seed
 	@echo "OK : tous les checks de la CI passent."
 
 test-e2e:
 	@echo "Playwright tests s'executent dans le container app (chromium Alpine systeme) contre http://localhost:3000."
-	@echo "Pre-requis : make dev demarre. Premiere fois : 'docker compose -f docker-compose.dev.yml exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
-	docker compose -f docker-compose.dev.yml exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test $(FILE)
+	@echo "Pre-requis : make dev demarre. Premiere fois : '$(DEV_COMPOSE) exec --user root app apk add --no-cache chromium nss freetype ttf-freefont harfbuzz ca-certificates' (deja fait pour v2-11)."
+	$(DEV_COMPOSE) exec -e PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/chromium-browser app yarn playwright test $(FILE)
 
 # Mode UI Playwright (debug visuel, fenetre Electron native). S'execute sur
 # l'hote macOS, pas dans le container : il faut un display. Pre-requis :
@@ -440,7 +460,7 @@ test-e2e-ui:
 	PLAYWRIGHT_BASE_URL=https://badge.local yarn playwright test --ui
 
 validate-badge-templates:
-	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/validate-badge-templates.ts
+	$(DEV_COMPOSE) exec app yarn tsx scripts/validate-badge-templates.ts
 
 validate-badge-templates-preprod:
 	$(SSH) $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/validate-badge-templates.ts"
@@ -452,7 +472,7 @@ validate-badge-templates-prod:
 # pour ecrire) et genere leur epreuve proof.png par le service de rendu. Le moteur
 # 2.x ne sait pas rendre une ligne restee en v1 ; une ligne v2 est lue en memoire.
 migrate-installed-templates:
-	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-installed-templates-v3.ts $(ARGS)
+	$(DEV_COMPOSE) exec app yarn tsx scripts/migrate-installed-templates-v3.ts $(ARGS)
 
 migrate-installed-templates-preprod:
 	$(SSH) $(SERVER) "cd $(PREPROD_DIR) && export BADGE_TAG=$(or $(TAG),preprod) && $(PREPROD_COMPOSE) --profile tools pull tools && $(PREPROD_COMPOSE) --profile tools run --rm tools yarn tsx scripts/migrate-installed-templates-v3.ts $(ARGS)"
@@ -467,7 +487,7 @@ migrate-installed-templates-prod:
 # Templates archives inclus. ARGS=--accept enregistre la reference de CET environnement
 # (chaque environnement a la sienne), apres examen de ses epreuves. Code 1 si refuse.
 verify-engine:
-	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)
+	$(DEV_COMPOSE) exec app yarn tsx scripts/verify-engine-upgrade.ts $(ARGS)
 
 # Sur le serveur, AVANT de deployer l'application : pull l'image `tools` du commit
 # a verifier (TAG=sha-<commit>, publiee par GitHub Actions ; defaut : tag de
@@ -484,7 +504,7 @@ verify-engine-prod:
 # Exporte les templates installes vers un dossier a deposer dans le corpus de
 # pdfStudio (packages/engine/corpus/). OUT=dossier (defaut : backups/engine-corpus).
 export-engine-corpus:
-	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/export-engine-corpus.ts $(or $(OUT),backups/engine-corpus)
+	$(DEV_COMPOSE) exec app yarn tsx scripts/export-engine-corpus.ts $(or $(OUT),backups/engine-corpus)
 
 export-engine-corpus-prod:
 	$(SSH) $(SERVER) "rm -rf /tmp/engine-corpus && cd $(PROD_DIR) && docker compose --profile tools pull tools && docker compose --profile tools run --rm -v /tmp/engine-corpus:/out tools yarn tsx scripts/export-engine-corpus.ts /out"
@@ -495,19 +515,19 @@ export-engine-corpus-prod:
 # des templates installes. Idempotent. Utile sur une base de dev anterieure au plan 12 ;
 # une base neuve est deja correcte apres `make db-seed`.
 migrate-badge-template-refs:
-	docker compose -f docker-compose.dev.yml exec app yarn tsx scripts/migrate-badge-template-refs.ts
+	$(DEV_COMPOSE) exec app yarn tsx scripts/migrate-badge-template-refs.ts
 
 lint:
-	docker compose -f docker-compose.dev.yml exec app yarn lint
+	$(DEV_COMPOSE) exec app yarn lint
 
 typecheck:
-	docker compose -f docker-compose.dev.yml exec app yarn tsc --noEmit
+	$(DEV_COMPOSE) exec app yarn tsc --noEmit
 
 build:
-	docker compose -f docker-compose.dev.yml exec app yarn build
+	$(DEV_COMPOSE) exec app yarn build
 
 logs:
-	docker compose -f docker-compose.dev.yml logs -f
+	$(DEV_COMPOSE) logs -f
 
 # ============================================================
 #  Base de donnees (dev)
@@ -518,30 +538,33 @@ logs:
 # La generation hote est silencieuse et non bloquante : elle echoue sans casser la cible
 # si les node_modules de l'hote sont absents (installation 100% conteneur).
 db-push:
-	docker compose -f docker-compose.dev.yml exec app npx prisma db push
+	$(DEV_COMPOSE) exec app npx prisma db push
 	@# Le worker a son propre node_modules, donc son propre client Prisma.
-	@docker compose -f docker-compose.dev.yml restart worker >/dev/null 2>&1 || true
+	@$(DEV_COMPOSE) restart worker >/dev/null 2>&1 || true
 	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
 
+# Seed minimal : plans, motifs, templates de badge, gabarits et catalogue d'impression,
+# plus admin@badge.local (dev uniquement, mot de passe 123456).
 db-seed:
-	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
+	$(DEV_COMPOSE) exec app npx prisma db seed
 
-# ADR 2026-06-01 (v2-14 Task 15) : seed de demonstration complet (10 orgs,
-# 30 events, 200 participants). NE PAS executer en production (le smoke test
-# "0 org / 0 event" echouera). Reserve au dev local.
+# Seed de demonstration (refuse hors BADGE_ENV=dev|preprod) : organisations, evenements,
+# profils et inscriptions fictifs, comptes @demo.local au mot de passe commun 123456.
+# Dev et preprod ; refuse en prod (garde-fou BADGE_ENV). Idempotent (nettoie ses propres donnees puis recree, sans db-reset). Options :
+# DEMO_SCALE (volumes) et DEMO_ACCOUNTS_FILE (defaut .demo/comptes-demo.md).
 db-seed-demo:
-	docker compose -f docker-compose.dev.yml exec -e SEED_MODE=demo app npx prisma db seed
+	$(DEV_COMPOSE) exec -e SEED_MODE=demo app npx prisma db seed
 
 db-studio:
-	docker compose -f docker-compose.dev.yml exec app npx prisma studio
+	$(DEV_COMPOSE) exec app npx prisma studio
 
 db-generate:
-	docker compose -f docker-compose.dev.yml exec app npx prisma generate
+	$(DEV_COMPOSE) exec app npx prisma generate
 	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
 
 db-reset:
-	docker compose -f docker-compose.dev.yml exec app npx prisma db push --force-reset
-	docker compose -f docker-compose.dev.yml exec app npx prisma db seed
+	$(DEV_COMPOSE) exec app npx prisma db push --force-reset
+	$(DEV_COMPOSE) exec app npx prisma db seed
 
 # ============================================================
 #  Serveur (le deploiement passe uniquement par GitHub Actions :
@@ -562,3 +585,9 @@ download-db:
 
 logs-prod:
 	$(SSH) $(SERVER) "docker logs -f --tail 200 badge-app"
+
+# Supprime les bases d'une stack d'agent (destructif, apres fusion de son lot).
+# Usage : make db-drop-agent LOT=2a
+db-drop-agent:
+	@echo "$(LOT)" | grep -Eq '^[a-z0-9]+$$' || { echo "LOT=<lot> requis (minuscules et chiffres)"; exit 1; }
+	docker compose -f docker-compose.dev.yml exec mysql mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS badge_$(LOT); DROP DATABASE IF EXISTS badge_$(LOT)_test;"

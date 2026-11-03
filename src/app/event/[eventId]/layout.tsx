@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { getApprovedPhotoUrl } from "@/lib/approved-photo";
+import { countOrdersWithUnread } from "@/lib/print-requests/read-state";
 import { effectiveEventRole, hasOrgRole } from "@/lib/auth-helpers";
 import { EventShell } from "@/components/event/EventShell";
 import { EventOperatorShell } from "@/components/event/EventOperatorShell";
@@ -95,12 +96,20 @@ export default async function EventLayout({
     );
   }
 
+  // Compteur du menu « Impression » : seulement pour qui voit l'entrée (permission `print.request`),
+  // limité à l'évènement courant ; le staff en consultation n'enregistre pas de lecture.
+  const printUnread =
+    (role === "ADMIN" || role === "STAFF") && !ctx.isStaff
+      ? await countOrdersWithUnread(ctx.user.id, "ORGANIZER", { eventId: event.id })
+      : 0;
+
   return (
     <EventShell
       org={{ id: event.organization.id, name: event.organization.name }}
       event={event}
       effectiveRole={role}
       isStaffMode={isStaffMode}
+      printUnread={printUnread}
       user={{ name: ctx.user.name, email: ctx.user.email }}
       photoUrl={photoUrl}
     >

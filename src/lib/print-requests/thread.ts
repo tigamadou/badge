@@ -60,10 +60,10 @@ export function describeThreadEvent(
         : `${changes.length} lignes modifiées`;
     }
     case "SUBMITTED":
-      return `Demande envoyée : ${num(details.badgeCount)} badges, total estimé ${F(details.total)}`;
+      return `Commande envoyée : ${num(details.badgeCount)} badges, total estimé ${F(details.total)}`;
     case "BADGES_CHANGED": {
       const lagging = strings(details.lagging);
-      const base = `Badges de la demande : +${num(details.added)}, −${num(details.removed)} (${num(details.count)} au total)`;
+      const base = `Badges de la commande : +${num(details.added)}, −${num(details.removed)} (${num(details.count)} au total)`;
       return lagging.length > 0
         ? `${base} — quantités fixées par l'équipe à vérifier : ${lagging.join(", ")}`
         : base;
@@ -91,9 +91,9 @@ export function describeThreadEvent(
     case "STATUS_CHANGED":
       return `Statut : ${L(details.from)} → ${L(details.to)}`;
     case "REJECTED":
-      return `Demande refusée : ${txt(details.reason)}`;
+      return `Commande refusée : ${txt(details.reason)}`;
     case "CANCELLED":
-      return "Demande annulée";
+      return "Commande annulée";
     case "PAYMENT_RECEIVED":
       if (details.byCredit === true) return "Devis réglé par le crédit d'impression : aucun paiement à effectuer";
       return (
@@ -103,7 +103,7 @@ export function describeThreadEvent(
     case "PAYMENT_FAILED":
       return `Paiement échoué : ${F(details.amount)}`;
     case "PAYMENT_UNMATCHED":
-      return `Paiement de ${F(details.amount)} reçu alors que la demande n'attendait plus ce paiement : l'équipe Badge vérifie.`;
+      return `Paiement de ${F(details.amount)} reçu alors que la commande n'attendait plus ce paiement : l'équipe Badge vérifie.`;
     case "SHEETS_GENERATED":
       return `Planches lancées pour ${num(details.badgeCount)} badges`;
     case "REGISTRATIONS_SKIPPED": {
@@ -120,14 +120,13 @@ export function describeThreadEvent(
     case "ONSITE_CREDIT_EARNED":
       return `${num(details.quantity)} badges non utilisés : ${F(details.amount)} versés au crédit d'impression`;
     case "ONSITE_SUPPLEMENT_CREATED":
-      return `Demande complémentaire ${txt(details.reference)} : ${num(details.extraBadges)} badges supplémentaires`;
+      return `Commande complémentaire ${txt(details.reference)} : ${num(details.extraBadges)} badges supplémentaires`;
   }
 }
 
-// Ajoute une entrée automatique au fil ; les modifications de lignes consécutives du même
-// auteur sont regroupées dans la dernière entrée. Les ajouts sont sérialisés par demande :
-// la ligne PrintRequest est verrouillée (FOR UPDATE) avant de lire la dernière entrée, donc
-// deux modifications concurrentes ne perdent aucun changement. Les corps (messages et textes
+// Ajoute une entrée automatique au fil : une entrée par appel, sans regroupement. Une entrée
+// n'est jamais modifiée après coup, car les écrans interrogent le fil par date de création
+// (?after=) et ne reverraient pas une entrée mise à jour sur place. Les corps (messages et textes
 // d'évènement) sont stockés bruts et doivent être rendus en texte, jamais en HTML.
 export async function appendThreadEvent(
   tx: Prisma.TransactionClient,
@@ -135,31 +134,8 @@ export async function appendThreadEvent(
   eventType: ThreadEventType,
   details: Record<string, unknown>,
   actor: ThreadActor = SYSTEM_ACTOR,
+  opts: { internal?: boolean } = {},
 ): Promise<PrintRequestMessage> {
-  await tx.$queryRaw`SELECT id FROM \`PrintRequest\` WHERE id = ${requestId} FOR UPDATE`;
-  if (eventType === "LINES_CHANGED") {
-    const last = await tx.printRequestMessage.findFirst({
-      where: { requestId },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    });
-    if (
-      last &&
-      last.kind === "EVENT" &&
-      last.eventType === "LINES_CHANGED" &&
-      last.side === actor.side &&
-      last.authorId === actor.userId
-    ) {
-      const previous = changesOf((last.details as { changes?: unknown } | null)?.changes);
-      const merged = { ...details, changes: [...previous, ...changesOf(details.changes)] };
-      return tx.printRequestMessage.update({
-        where: { id: last.id },
-        data: {
-          details: merged as unknown as Prisma.InputJsonValue,
-          body: describeThreadEvent("LINES_CHANGED", merged),
-        },
-      });
-    }
-  }
   return tx.printRequestMessage.create({
     data: {
       requestId,
@@ -169,6 +145,7 @@ export async function appendThreadEvent(
       body: describeThreadEvent(eventType, details),
       eventType,
       details: details as Prisma.InputJsonValue,
+      internal: opts.internal ?? false,
     },
   });
 }
@@ -184,7 +161,10 @@ export async function postMessage(input: {
   side: "ORGANIZER" | "STAFF";
   body: string;
   attachmentKey: string | null;
+  internal?: boolean;
 }): Promise<PrintRequestMessage> {
+  // Une note interne n'existe que côté staff.
+  if (input.internal && input.side !== "STAFF") throw new PrintRequestError("VALIDATION", 400);
   const request = await prisma.printRequest.findUnique({
     where: { id: input.requestId },
     select: { id: true, eventId: true, status: true },
@@ -201,8 +181,8 @@ export async function postMessage(input: {
 
   if (input.attachmentKey) {
     // Forme stricte : préfixe + un seul nom de fichier (pas de sous-dossier, pas de « .. »).
-    // Le préfixe lie la pièce à la demande (staff) ou à l'évènement (organisateur) : une clé d'une
-    // autre demande ou d'une autre organisation est refusée, et /api/files en déduit l'évènement.
+    // Le préfixe lie la pièce à la commande (staff) ou à l'évènement (organisateur) : une clé d'une
+    // autre commande ou d'une autre organisation est refusée, et /api/files en déduit l'évènement.
     const prefix =
       input.side === "STAFF" ? `print-requests/staff/${request.id}/` : `print-requests/${request.eventId}/`;
     const name = input.attachmentKey.slice(prefix.length);
@@ -225,6 +205,7 @@ export async function postMessage(input: {
       kind: "MESSAGE",
       body,
       attachmentKey: input.attachmentKey,
+      internal: input.internal ?? false,
     },
   });
 }
@@ -238,6 +219,7 @@ export type ThreadEntryDTO = {
   eventType: string | null;
   details: unknown;
   attachmentKey: string | null;
+  internal: boolean;
   authorName: string | null;
   createdAt: string;
 };
@@ -314,14 +296,23 @@ export function toEntryDTO(
     eventType: m.eventType,
     details,
     attachmentKey: m.attachmentKey,
+    internal: m.internal,
     authorName,
     createdAt: m.createdAt.toISOString(),
   };
 }
 
-export async function listThread(requestId: string, audience: ThreadAudience): Promise<ThreadEntryDTO[]> {
+export async function listThread(
+  requestId: string,
+  audience: ThreadAudience,
+  opts: { after?: Date } = {},
+): Promise<ThreadEntryDTO[]> {
   const rows = await prisma.printRequestMessage.findMany({
-    where: { requestId },
+    where: {
+      requestId,
+      ...(audience === "ORGANIZER" ? { internal: false } : {}),
+      ...(opts.after ? { createdAt: { gt: opts.after } } : {}),
+    },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     include: { author: { select: { name: true } } },
   });

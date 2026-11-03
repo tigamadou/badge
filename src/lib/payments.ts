@@ -188,8 +188,8 @@ const PAYABLE_SELECT = {
 
 type Candidate = { id: string; fedapayTransactionId: number };
 
-// Garantit un seul paiement en cours par demande : cree le Payment sous le verrou de la demande
-// (evenement puis demande), ou renvoie le paiement PENDING a reutiliser.
+// Garantit un seul paiement en cours par commande : cree le Payment sous le verrou de la commande
+// (evenement puis commande), ou renvoie le paiement PENDING a reutiliser.
 async function prepareCheckout(input: {
   orgId: string;
   eventId: string;
@@ -307,7 +307,7 @@ export async function startPrintRequestCheckout(input: {
         throw providerError(error);
       }
     }
-    // Reprise : si la demande est devenue PAID, assertPayable leve REQUEST_ALREADY_PAID.
+    // Reprise : si la commande est devenue PAID, assertPayable leve REQUEST_ALREADY_PAID.
   }
   throw new PaymentError("PAYMENT_IN_PROGRESS");
 }
@@ -319,7 +319,7 @@ function providerError(error: unknown): PaymentError {
 
 // EXPIRED : balaye apres 24 h mais encore confirmable si FedaPay l'approuve ensuite.
 const CONFIRMABLE: PaymentStatus[] = ["PENDING", "EXPIRED"];
-// Demande d'impression : un paiement remplace (CANCELED) peut etre paye ensuite chez FedaPay ; l'argent
+// Commande d'impression : un paiement remplace (CANCELED) peut etre paye ensuite chez FedaPay ; l'argent
 // recu doit laisser une trace (PAID, ou PAYMENT_UNMATCHED + alerte du staff), jamais etre ignore.
 const CONFIRMABLE_PRINT: PaymentStatus[] = [...CONFIRMABLE, "CANCELED"];
 
@@ -342,7 +342,7 @@ async function failPayment(
   const { id: paymentId, orgId, userId } = payment;
   if (payment.purpose === "PRINT_REQUEST" && payment.printRequestId) {
     const requestId = payment.printRequestId;
-    // Verrou de la demande avant le Payment (meme ordre que le checkout) : pas d'interblocage.
+    // Verrou de la commande avant le Payment (meme ordre que le checkout) : pas d'interblocage.
     const count = await prisma.$transaction(async (db) => {
       await lockRequestWithEvent(db, requestId);
       const res = await db.payment.updateMany({
@@ -400,7 +400,7 @@ async function failPayment(
 
 type PrintIssue = "PAID" | "UNMATCHED";
 
-// Branche demande d'impression : verrou de la demande AVANT le Payment (C2), puis la demande ne
+// Branche commande d'impression : verrou de la commande AVANT le Payment (C2), puis la commande ne
 // passe PAID que si elle attend encore exactement ce montant ; sinon l'entree du fil prévient le staff.
 async function applyPrintRequestPayment(
   payment: PaymentRef & { printRequestId: string },
@@ -444,7 +444,7 @@ export async function confirmPayment(
   const confirmable = payment.purpose === "PRINT_REQUEST" ? CONFIRMABLE_PRINT : CONFIRMABLE;
   if (!confirmable.includes(payment.status)) return { status: payment.status, applied: false };
 
-  // Règle : SUBSCRIPTION <=> plan seul, PRINT_REQUEST <=> demande seule. Avant tout appel FedaPay.
+  // Règle : SUBSCRIPTION <=> plan seul, PRINT_REQUEST <=> commande seule. Avant tout appel FedaPay.
   const plan = payment.plan;
   if (payment.purpose === "SUBSCRIPTION" ? !plan || payment.printRequest : !payment.printRequest || plan) {
     throw new Error("Paiement incohérent");
@@ -473,7 +473,7 @@ export async function confirmPayment(
   }
 
   const now = new Date();
-  // La garde de cohérence garantit : pas de plan <=> PRINT_REQUEST avec sa demande.
+  // La garde de cohérence garantit : pas de plan <=> PRINT_REQUEST avec sa commande.
   if (!plan) {
     return confirmPrintRequestPayment({ ...payment, printRequestId: payment.printRequestId as string }, now);
   }

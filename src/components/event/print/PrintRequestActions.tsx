@@ -11,7 +11,7 @@ import { toastSuccess } from "@/lib/toast";
 const EDITABLE = ["DRAFT", "SUBMITTED", "QUOTED"];
 const CANCELLABLE = ["DRAFT", "SUBMITTED", "QUOTED", "ACCEPTED"];
 
-// Actions de l'organisateur sur une demande. Le bouton « Payer » est rendu par la page (PrintPayButton).
+// Actions de l'organisateur sur une commande. Le bouton « Payer » est rendu par la page (PrintPayButton).
 export function PrintRequestActions({
   orgId,
   eventId,
@@ -53,7 +53,7 @@ export function PrintRequestActions({
   const { run: cancel, pending: cancelling } = useAsyncAction(() => post("cancel"), {
     onSuccess: () => {
       setConfirming(false);
-      toastSuccess("Demande annulée.");
+      toastSuccess("Commande annulée.");
       router.refresh();
     },
   });
@@ -80,7 +80,7 @@ export function PrintRequestActions({
         ) : null}
         {canCancel ? (
           <Button type="button" variant="danger" onClick={() => setConfirming(true)}>
-            Annuler la demande
+            Annuler la commande
           </Button>
         ) : null}
       </div>
@@ -89,20 +89,20 @@ export function PrintRequestActions({
       ) : null}
       <Dialog
         open={confirming}
-        title="Annuler la demande"
+        title="Annuler la commande"
         onClose={() => setConfirming(false)}
         footer={
           <>
             <Button type="button" variant="secondary" onClick={() => setConfirming(false)}>
-              Garder la demande
+              Garder la commande
             </Button>
             <Button type="button" variant="danger" loading={cancelling} onClick={() => void cancel()}>
-              Annuler la demande
+              Annuler la commande
             </Button>
           </>
         }
       >
-        Voulez-vous vraiment annuler cette demande d&apos;impression ? Les badges réservés seront libérés.
+        Voulez-vous vraiment annuler cette commande d&apos;impression ? Les badges réservés seront libérés.
       </Dialog>
     </div>
   );

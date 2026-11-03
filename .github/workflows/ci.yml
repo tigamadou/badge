@@ -67,7 +67,7 @@ jobs:
         image: mysql:8
         env:
           MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: badge
+          MYSQL_DATABASE: badge_test
         ports:
           - 3306:3306
         options: >-
@@ -87,7 +87,8 @@ jobs:
           --health-cmd="curl -fsS http://127.0.0.1:9000/health"
           --health-interval=5s --health-timeout=5s --health-retries=10
     env:
-      DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge
+      # Vitest exige une base de test (garde-fou de src/test-setup.ts : nom en _test).
+      DATABASE_URL: mysql://root:password@127.0.0.1:3306/badge_test
       S3_ENDPOINT: http://127.0.0.1:9000
       S3_REGION: us-east-1
       S3_ACCESS_KEY: rustfsadmin

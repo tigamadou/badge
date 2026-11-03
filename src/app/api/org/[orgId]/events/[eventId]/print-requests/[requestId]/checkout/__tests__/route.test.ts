@@ -118,13 +118,13 @@ describe("POST /api/org/[orgId]/events/[eventId]/print-requests/[requestId]/chec
     expect(await res.json()).toEqual({ url: "https://pay.fedapay.com/t" });
   });
 
-  it("404 REQUEST_NOT_FOUND pour une demande inconnue", async () => {
+  it("404 REQUEST_NOT_FOUND pour une commande inconnue", async () => {
     const res = await call(fx, { requestId: "inconnue" });
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "REQUEST_NOT_FOUND" });
   });
 
-  it("409 REQUEST_NOT_PAYABLE sur une demande QUOTED", async () => {
+  it("409 REQUEST_NOT_PAYABLE sur une commande QUOTED", async () => {
     const quoted = await makeRequest(fx, { status: "QUOTED", quoteVersion: 1, total: 5000 });
     const res = await call(fx, { requestId: quoted.id });
     expect(res.status).toBe(409);

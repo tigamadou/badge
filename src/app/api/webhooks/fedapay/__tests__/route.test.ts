@@ -87,7 +87,7 @@ describe("POST /api/webhooks/fedapay", () => {
     expect(await prisma.subscription.count({ where: { orgId: org.id } })).toBe(1);
   });
 
-  it("transaction.approved d'un paiement d'impression → demande PAID, 200", async () => {
+  it("transaction.approved d'un paiement d'impression → commande PAID, 200", async () => {
     const fx = await seedAcceptedPrintRequest({ total: 150000 });
     const payment = await prisma.payment.create({
       data: {

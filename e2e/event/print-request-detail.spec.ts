@@ -22,7 +22,7 @@ const LINES = [
 // Devis de 150 000 FCFA : une ligne produit de 100 x 1 500.
 const PAY_LINES = [{ label: "Support badge PVC", quantity: 100, unitPrice: 1500, kind: "PRODUCT" as const }];
 
-// Du menu au détail d'une demande : « Impression », puis la référence dans la liste.
+// Du menu au détail d'une commande : « Impression », puis la référence dans la liste.
 async function openRequest(page: Page, eventId: string, request: { id: string; reference: string }) {
   await page.getByRole("link", { name: "Impression", exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
@@ -31,15 +31,14 @@ async function openRequest(page: Page, eventId: string, request: { id: string; r
   await expect(page.getByRole("heading", { name: request.reference })).toBeVisible();
 }
 
-// Badge de statut : le <span> qui suit le titre de la page.
-const statusBadge = (page: Page, reference: string) =>
-  page.locator("h1", { hasText: reference }).locator("xpath=following-sibling::span");
+// Badge de statut : dans le résumé de la commande (colonne de gauche).
+const statusBadge = (page: Page, _reference: string) => page.getByTestId("order-status");
 
-// Page Détail d'une demande d'impression — /event/[eventId]/print/[requestId]
+// Page Détail d'une commande d'impression — /event/[eventId]/print/[requestId]
 // Rôle : permission `print.request`. Seul le propriétaire de l'organisation (OWNER) accepte un devis.
 // Actions : échanger avec l'équipe (message + pièce jointe), accepter le devis, le payer (bouton « Payer », FedaPay
-// n'est pas appelé en e2e), annuler la demande.
-test.describe("Event — Détail d'une demande d'impression", () => {
+// n'est pas appelé en e2e), annuler la commande.
+test.describe("Event — Détail d'une commande d'impression", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
@@ -132,28 +131,28 @@ test.describe("Event — Détail d'une demande d'impression", () => {
     await expectLastActivity({ type: "PRINT_REQUEST_ACCEPTED", eventId, userId: owner.id, targetId: request.id });
   });
 
-  test("ADMIN annule une demande envoyée après confirmation", async ({ page }) => {
+  test("ADMIN annule une commande envoyée après confirmation", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "print-detail-cancel" });
     const admin = await makeEventAdminUser({ scope: "print-detail-cancel", eventId, orgId });
     const request = await createTestPrintRequest({ eventId, orgId, createdById: admin.id, status: "SUBMITTED", lines: LINES });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
     await openRequest(page, eventId, request);
 
-    // « Garder la demande » referme la confirmation sans rien changer.
-    await page.getByRole("button", { name: "Annuler la demande" }).click();
-    const dialog = page.getByRole("dialog", { name: "Annuler la demande" });
+    // « Garder la commande » referme la confirmation sans rien changer.
+    await page.getByRole("button", { name: "Annuler la commande" }).click();
+    const dialog = page.getByRole("dialog", { name: "Annuler la commande" });
     await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Garder la demande" }).click();
+    await dialog.getByRole("button", { name: "Garder la commande" }).click();
     await expect(dialog).toHaveCount(0);
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("SUBMITTED");
 
-    await page.getByRole("button", { name: "Annuler la demande" }).click();
-    await dialog.getByRole("button", { name: "Annuler la demande" }).click();
+    await page.getByRole("button", { name: "Annuler la commande" }).click();
+    await dialog.getByRole("button", { name: "Annuler la commande" }).click();
 
     // Succès : toast, statut « Annulée », plus d'action, effet en base et trace d'audit.
-    await expect(toast(page, "Demande annulée.")).toBeVisible();
+    await expect(toast(page, "Commande annulée.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Annulée");
-    await expect(page.getByRole("button", { name: "Annuler la demande" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Annuler la commande" })).toHaveCount(0);
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("CANCELLED");
     await expectLastActivity({ type: "PRINT_REQUEST_CANCELLED", eventId, userId: admin.id, targetId: request.id });
   });

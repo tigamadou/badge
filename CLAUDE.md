@@ -106,6 +106,40 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
 ---
 
+## Règles de test (tous les tests, présents et futurs)
+
+Ces règles s'appliquent à **tout nouveau test** écrit dans le projet, quel que soit le plan ou
+la tâche.
+
+- **Base de test dédiée** : Vitest tourne sur une base dont le nom finit par `_test`
+  (`badge_test` ; `badge_<lot>_test` pour un agent), jamais sur une base de dev. `make test`
+  crée et met au schéma cette base (`make test-db`). Un garde-fou dans `src/test-setup.ts` refuse
+  toute autre base.
+- **Pas de mock de la base ni de Prisma** : les tests d'intégration utilisent le vrai MySQL
+  (verrous, `SKIP LOCKED`, contraintes d'unicité, transactions, cascades). Seuls les services
+  externes se mockent (FedaPay, SMTP réel, renderer via `fakeExporter`, session NextAuth).
+- **Fabriques de données** : préparer les données avec `src/test/factories.ts`
+  (`@faker-js/faker`, écriture dans la vraie base de test, graine fixée par fichier). Ajouter une
+  fabrique plutôt que dupliquer des `prisma.*.create` dans les tests.
+- **Ne jamais modifier le code de production pour faire passer un test** ou atteindre la
+  couverture : s'arrêter et demander.
+- **Couverture** : 100 % sur `src/lib/**` et `src/app/api/**` (gate dans `vitest.config.ts`).
+- **e2e** (Playwright) : contre l'app en cours d'exécution, avec leurs propres fixtures
+  préfixées et nettoyées (`e2e/helpers/db.ts`).
+
+---
+
+## Chantiers (features multi-zones)
+
+Tout chantier non trivial (plusieurs zones du code ou plus d'une session) suit le skill projet
+**`chantier`** (`.claude/skills/chantier/SKILL.md`) : une fois la spec validée, découpage en socle,
+lots parallèles à fichiers exclusifs (3 au maximum) et fusion ; plans rédigés en parallèle par des
+sous-agents ; puis, après accord de l'utilisateur, une tâche planifiée d'orchestration
+(`.claude/skills/chantier/orchestrator-template.md`) qui fait tourner chaque lot dans son propre
+environnement d'agent (`scripts/agent-stack.sh`), en respectant les règles de test ci-dessus.
+
+---
+
 ## Workflow Git — valeurs projet
 
 - **Branche principale** : `development`
@@ -144,6 +178,8 @@ Commandes principales :
 |----------|-------------|
 | `make init` | Initialisation d'un poste neuf : prérequis, `NPM_TOKEN`, build, schéma, seed, HTTPS local |
 | `make lint` / `make typecheck` / `make test` | Vérifications avant commit |
+| `make test-db` | Crée et met au schéma la base de test (`badge_test`) ; appelé par `make test` |
+| `scripts/agent-stack.sh up\|down\|status` | Stack légère d'un sous-agent (worktree, app, worker, Mailpit) ; voir `docs/v4/installation.md` |
 | `make dev` / `make dev-down` / `make logs` | Cycle dev local |
 | `make dev-https` / `make dev-https-check` | HTTPS local : `/etc/hosts` + confiance CA Caddy (idempotent) |
 | `make db-push` / `make db-seed` / `make db-studio` | Schéma Prisma + seed + Prisma Studio |
@@ -155,7 +191,7 @@ Voir `docs/<version>/installation.md` pour la liste complète.
 
 ## Actions à risque — toujours demander avant
 
-- `make prod-db-reset`, `make db-reset`, toute commande avec `--force-reset`
+- `make prod-db-reset`, `make db-reset`, `make db-drop-agent`, toute commande avec `--force-reset`
 - Suppression de fichiers dans `uploads/`
 - Modification de `.env`, `.env.production`, `Caddyfile`, `docker-compose*.yml`, `Dockerfile*`
 - Déploiement : publication d'une release ou pre-release GitHub (déclenche `.github/workflows/deploy.yml`)

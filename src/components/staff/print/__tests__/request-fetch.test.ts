@@ -6,7 +6,7 @@ vi.mock("@/lib/toast", () => ({ toastError: (m: string) => toastError(m), toastA
 
 import { staffRequest } from "../request-fetch";
 
-const MESSAGES = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette demande." };
+const MESSAGES = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette commande." };
 
 function respond(status: number, body: unknown) {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));

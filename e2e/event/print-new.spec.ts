@@ -28,21 +28,21 @@ async function approvedRegistrations(eventId: string, categoryId: string, scope:
   return ids;
 }
 
-// Du menu à l'étape 1 de l'assistant : liste, « Nouvelle demande », type, « Continuer ».
+// Du menu à l'étape 1 de l'assistant : liste, « Nouvelle commande », type, « Continuer ».
 async function startAdvanceDraft(page: Page, eventId: string) {
   await page.getByRole("link", { name: "Impression", exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
-  await page.getByRole("link", { name: "Nouvelle demande" }).click();
+  await page.getByRole("link", { name: "Nouvelle commande" }).click();
   await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
   await page.getByRole("radio", { name: /En amont/ }).click();
   await page.getByRole("button", { name: "Continuer" }).click();
   await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/[^/]+/edit$`));
 }
 
-// Page Nouvelle demande d'impression — /event/[eventId]/print/new, puis l'assistant en 6 étapes
+// Page Nouvelle commande d'impression — /event/[eventId]/print/new, puis l'assistant en 6 étapes
 // sur /print/[requestId]/edit (type, badges, support, accessoires, remise, récapitulatif).
 // Rôle : permission `print.request` (ADMIN de l'évènement ou OWNER/MANAGER de l'organisation).
-test.describe("Event — Nouvelle demande d'impression", () => {
+test.describe("Event — Nouvelle commande d'impression", () => {
   // Les templates adaptés à l'impression sur place et la marge par défaut sont des réglages globaux.
   let onsiteSnapshot: TestOnsiteSettings | null = null;
 
@@ -56,7 +56,7 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     await disconnectDb();
   });
 
-  test("ADMIN crée une demande en amont (tous les badges, support, cordon, retrait) et l'envoie", async ({ page }) => {
+  test("ADMIN crée une commande en amont (tous les badges, support, cordon, retrait) et l'envoie", async ({ page }) => {
     const stamp = Date.now();
     const badgeName = `Support PVC E2E ${stamp}`;
     const lanyardName = `Cordon E2E ${stamp}`;
@@ -71,7 +71,7 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     // Étape « Type » : « Continuer » reste désactivé tant qu'aucun type n'est choisi.
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
-    await page.getByRole("link", { name: "Nouvelle demande" }).click();
+    await page.getByRole("link", { name: "Nouvelle commande" }).click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
     await expect(page.getByRole("button", { name: "Continuer" })).toBeDisabled();
     await page.getByRole("radio", { name: /En amont/ }).click();
@@ -115,11 +115,11 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     await expect(page.getByRole("cell", { name: badgeName })).toBeVisible();
     await expect(page.getByRole("cell", { name: lanyardName })).toBeVisible();
     await expect(page.getByText("Le prix définitif est fixé par l'équipe Badge dans le devis.")).toBeVisible();
-    await page.getByRole("button", { name: "Envoyer la demande" }).click();
-    await expect(toast(page, "Demande envoyée.")).toBeVisible();
+    await page.getByRole("button", { name: "Envoyer la commande" }).click();
+    await expect(toast(page, "Commande envoyée.")).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/${requestId}$`));
 
-    // Effet persistant : demande envoyée, trois badges réservés, trace d'audit.
+    // Effet persistant : commande envoyée, trois badges réservés, trace d'audit.
     const sent = await getDb().printRequest.findUniqueOrThrow({ where: { id: requestId } });
     expect(sent.status).toBe("SUBMITTED");
     expect(sent.submittedAt).not.toBeNull();
@@ -127,13 +127,13 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     expect(items.map((i) => i.registrationId).sort()).toEqual([...registrationIds].sort());
     await expectLastActivity({ type: "PRINT_REQUEST_SUBMITTED", eventId, userId: admin.id, targetId: requestId });
 
-    // La liste montre la demande « Envoyée ».
+    // La liste montre la commande « Envoyée ».
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
     await expect(page.locator("tr", { hasText: sent.reference })).toContainText("Envoyée");
   });
 
-  test("Une deuxième demande ne propose pas les inscriptions déjà demandées", async ({ page }) => {
+  test("Une deuxième commande ne propose pas les inscriptions déjà demandées", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "print-new-reserved" });
     const admin = await makeEventAdminUser({ scope: "print-new-reserved", eventId, orgId });
     const [first, second, third, free] = await approvedRegistrations(eventId, categoryId, "print-new-reserved", 4);
@@ -181,7 +181,7 @@ test.describe("Event — Nouvelle demande d'impression", () => {
 
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
-    await page.getByRole("link", { name: "Nouvelle demande" }).click();
+    await page.getByRole("link", { name: "Nouvelle commande" }).click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
 
     // L'option est grisée et le message explique pourquoi ; « En amont » reste disponible.
@@ -196,11 +196,11 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     await page.getByRole("link", { name: "Changer le modèle de badge" }).click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/settings/badge$`));
 
-    // Aucune demande n'a été créée.
+    // Aucune commande n'a été créée.
     expect(await getDb().printRequest.count({ where: { eventId } })).toBe(0);
   });
 
-  test("Template adapté : une demande sur place s'envoie avec la marge par défaut (15 %)", async ({ page }) => {
+  test("Template adapté : une commande sur place s'envoie avec la marge par défaut (15 %)", async ({ page }) => {
     const stamp = Date.now();
     const badgeName = `Support PVC sur place E2E ${stamp}`;
     const { orgId, eventId } = await createTestEvent({ scope: "print-new-onsite-ok" });
@@ -213,7 +213,7 @@ test.describe("Event — Nouvelle demande d'impression", () => {
     // Étape « Type » : l'option est disponible, sans message d'avertissement.
     await page.getByRole("link", { name: "Impression", exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print$`));
-    await page.getByRole("link", { name: "Nouvelle demande" }).click();
+    await page.getByRole("link", { name: "Nouvelle commande" }).click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/new$`));
     await expect(page.getByRole("radio", { name: /Pendant l'évènement/ })).toBeEnabled();
     await expect(page.getByText("n'est pas adapté à l'impression sur place")).toHaveCount(0);
@@ -254,11 +254,11 @@ test.describe("Event — Nouvelle demande d'impression", () => {
 
     // Récapitulatif puis envoi.
     await expect(page.getByRole("cell", { name: badgeName })).toBeVisible();
-    await page.getByRole("button", { name: "Envoyer la demande" }).click();
-    await expect(toast(page, "Demande envoyée.")).toBeVisible();
+    await page.getByRole("button", { name: "Envoyer la commande" }).click();
+    await expect(toast(page, "Commande envoyée.")).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/print/${requestId}$`));
 
-    // Effet persistant : demande envoyée, marge par défaut du moment copiée, template figé.
+    // Effet persistant : commande envoyée, marge par défaut du moment copiée, template figé.
     const sent = await getDb().printRequest.findUniqueOrThrow({ where: { id: requestId } });
     expect(sent.status).toBe("SUBMITTED");
     expect(sent.type).toBe("ONSITE");

@@ -27,7 +27,7 @@ const isoDate = z.string().refine(
   { message: "Date invalide" },
 );
 
-// Modification partielle des informations d'une demande : tous les champs sont facultatifs.
+// Modification partielle des informations d'une commande : tous les champs sont facultatifs.
 export const detailsPatchSchema = z.object({
   delivery: z.enum(["PICKUP", "DELIVERY"]).optional(),
   deliveryAddress: z.string().max(500).optional(),

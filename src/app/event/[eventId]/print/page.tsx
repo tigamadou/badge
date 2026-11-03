@@ -6,6 +6,7 @@ import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBa
 import { requirePrintAccess } from "@/components/event/print/guard";
 import { OrgPrintCreditCard } from "@/components/print/OrgPrintCreditCard";
 import { getOrgPrintCreditBalance, listOrgPrintCreditMovements } from "@/lib/print-requests/org-credit";
+import { unreadByRequest } from "@/lib/print-requests/read-state";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,10 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: { _count: { select: { items: true } } },
   });
+  // Le staff en consultation n'enregistre pas de lecture : pas de non-lus pour lui.
+  const unread = ctx.isStaff ? {} : await unreadByRequest(ctx.user.id, "ORGANIZER", rows.map((r) => r.id));
   const data = rows.map((r) => ({
+    unread: unread[r.id] ?? 0,
     id: r.id,
     reference: r.reference,
     type: r.type,
@@ -37,20 +41,20 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">Impression</h1>
-          <p className="mt-0.5 text-sm text-slate-400">Demandes d&apos;impression de badges et devis</p>
+          <p className="mt-0.5 text-sm text-slate-400">Commandes d&apos;impression de badges et devis</p>
         </div>
         {!event.archived && !ctx.isStaff ? (
           <Link
             href={`/event/${eventId}/print/new`}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
           >
-            Nouvelle demande
+            Nouvelle commande
           </Link>
         ) : null}
       </div>
       <OrgPrintCreditCard balance={creditBalance} movements={creditMovements} />
       {data.length === 0 ? (
-        <EmptyState icon="printer" title="Aucune demande d'impression pour cet évènement." />
+        <EmptyState icon="printer" title="Aucune commande d'impression pour cet évènement." />
       ) : (
         <Table
           data={data}
@@ -60,9 +64,20 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
               key: "reference",
               header: "Référence",
               render: (r) => (
-                <Link href={`/event/${eventId}/print/${r.id}`} className="font-medium text-green-700 hover:underline">
-                  {r.reference}
-                </Link>
+                <span className="inline-flex items-center gap-2">
+                  <Link href={`/event/${eventId}/print/${r.id}`} className="font-medium text-green-700 hover:underline">
+                    {r.reference}
+                  </Link>
+                  {r.unread > 0 ? (
+                    <span
+                      data-testid="unread-badge"
+                      aria-label={`${r.unread} message${r.unread > 1 ? "s" : ""} non lu${r.unread > 1 ? "s" : ""}`}
+                      className="inline-flex min-w-5 items-center justify-center rounded-full bg-green-600 px-1.5 text-[11px] font-semibold leading-5 text-white"
+                    >
+                      {r.unread}
+                    </span>
+                  ) : null}
+                </span>
               ),
             },
             { key: "type", header: "Type", render: (r) => PRINT_REQUEST_TYPE_LABELS[r.type] },

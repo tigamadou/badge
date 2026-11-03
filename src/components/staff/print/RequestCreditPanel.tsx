@@ -17,11 +17,11 @@ import { ApplyCreditDialog } from "./ApplyCreditDialog";
 export type StaffCreditData = {
   /** Solde de l'organisation (somme des mouvements). */
   balance: number;
-  /** Crédit libre, hors la réservation de cette demande. */
+  /** Crédit libre, hors la réservation de cette commande. */
   available: number;
-  /** Crédit appliqué à cette demande (0 sans ligne de crédit). */
+  /** Crédit appliqué à cette commande (0 sans ligne de crédit). */
   applied: number;
-  /** Total des lignes de la demande hors ligne de crédit. */
+  /** Total des lignes de la commande hors ligne de crédit. */
   grossTotal: number;
   movements: CreditMovementView[];
 };
@@ -51,7 +51,7 @@ export function RequestCreditPanel({
             <div className="space-y-0.5 text-sm text-slate-800">
               <p>{`Crédit disponible de l'organisation : ${formatFcfa(credit.available)}`}</p>
               {credit.applied > 0 ? (
-                <p className="text-slate-500">{`Crédit appliqué à cette demande : ${formatFcfa(credit.applied)}`}</p>
+                <p className="text-slate-500">{`Crédit appliqué à cette commande : ${formatFcfa(credit.applied)}`}</p>
               ) : null}
             </div>
             {canApplyCredit(status, role, credit.available, credit.grossTotal) ? (

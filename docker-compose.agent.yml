@@ -1,0 +1,54 @@
+# Surcouche d'une stack d'agent (scripts/agent-stack.sh), appliquee par-dessus
+# docker-compose.dev.yml avec un nom de projet propre (`-p badge-<lot>`).
+# Seuls app, worker et agent-mailpit tournent pour l'agent ; MySQL, RustFS et le
+# renderer sont ceux de la stack principale, qui doit etre demarree :
+# - MySQL et RustFS par leurs ports publies sur l'hote (host.docker.internal) ;
+# - le renderer par le reseau interne `badge_rendu` de la stack principale.
+# L'agent ne rejoint PAS le reseau par defaut de la stack principale : le Caddy
+# principal y resout `app` et pourrait tomber sur l'app de l'agent.
+services:
+  app:
+    image: badge-app:latest
+    build: !reset null
+    pull_policy: never
+    ports: !override
+      - "127.0.0.1:${AGENT_APP_PORT}:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: mysql://root:password@host.docker.internal:33060/badge_${AGENT_LOT}
+      S3_ENDPOINT: http://host.docker.internal:9000
+      S3_BUCKET: badge-${AGENT_LOT}
+      PLATFORM_SMTP_HOST: agent-mailpit
+      NEXTAUTH_URL: http://localhost:${AGENT_APP_PORT}
+      MAILPIT_URL: http://agent-mailpit:8025
+    depends_on: !reset {}
+
+  worker:
+    image: badge-worker:latest
+    build: !reset null
+    pull_policy: never
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: mysql://root:password@host.docker.internal:33060/badge_${AGENT_LOT}
+      S3_ENDPOINT: http://host.docker.internal:9000
+      S3_BUCKET: badge-${AGENT_LOT}
+      PLATFORM_SMTP_HOST: agent-mailpit
+    depends_on: !reset {}
+
+  agent-mailpit:
+    image: axllent/mailpit
+
+  # Services fournis par la stack principale (ou inutiles a un agent) : non demarres.
+  mysql: { profiles: ["manual"] }
+  rustfs: { profiles: ["manual"] }
+  renderer: { profiles: ["manual"] }
+  mailpit: { profiles: ["manual"] }
+  phpmyadmin: { profiles: ["manual"] }
+  caddy: { profiles: ["manual"] }
+
+networks:
+  rendu:
+    external: true
+    name: badge_rendu

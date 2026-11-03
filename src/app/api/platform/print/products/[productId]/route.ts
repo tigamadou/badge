@@ -37,7 +37,7 @@ export const PATCH = withStaffAuth<{ productId: string }>(
   { minRole: "STAFF_ADMIN" },
 );
 
-// Archivage logique : les demandes d'impression referencent les produits.
+// Archivage logique : les commandes d'impression referencent les produits.
 export const DELETE = withStaffAuth<{ productId: string }>(
   async (req, { session }, { params }) => {
     const { productId } = await params;

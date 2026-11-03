@@ -45,8 +45,8 @@ describe("StaffShell", () => {
     expect(bellScope(html)).toEqual({ kind: "platform" });
   });
 
-  it("affiche l'entrée Demandes avec son compteur", () => {
-    expect(html).toContain("Demandes");
+  it("affiche l'entrée Commandes avec son compteur", () => {
+    expect(html).toContain("Commandes");
     expect(html).toContain('aria-label="2 en attente"');
   });
 
@@ -54,6 +54,19 @@ describe("StaffShell", () => {
     expect(html).toContain('href="/platform/notifications"');
     expect(html).toContain('href="/platform/jobs"');
     expect(html).toContain("Emails");
+  });
+
+  it("ordonne les groupes Impression puis Plateforme", () => {
+    const at = (t: string) => html.indexOf(t);
+    expect(at("Impression")).toBeGreaterThan(-1);
+    expect(at("Impression")).toBeLessThan(at("Commandes"));
+    expect(at("Commandes")).toBeLessThan(at("Planches"));
+    expect(at("Planches")).toBeLessThan(at("Gabarits"));
+    expect(at("Gabarits")).toBeLessThan(at("Catalogue"));
+    expect(at("Catalogue")).toBeLessThan(at(">Plateforme<"));
+    expect(at(">Plateforme<")).toBeLessThan(at("Emails"));
+    expect(at("Emails")).toBeLessThan(at("Paramètres"));
+    expect(at("Paramètres")).toBeLessThan(at("Journal"));
   });
 
   it("affiche l'avatar à initiales", () => {

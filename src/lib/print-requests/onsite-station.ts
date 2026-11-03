@@ -20,7 +20,7 @@ export type OnsiteRegistrationCard = {
   category: { name: string; color: string };
   badgePrinted: boolean;
   badgePrintedAt: Date | null;
-  /** Déjà imprimé AU POSTE pour cette demande (journal) : seule une telle impression est une réimpression. */
+  /** Déjà imprimé AU POSTE pour cette commande (journal) : seule une telle impression est une réimpression. */
   printedOnsite: boolean;
 };
 
@@ -65,7 +65,7 @@ function toCard(
   };
 }
 
-// Lecture de la demande et de son compteur (premières impressions seulement : le journal sans réimpressions).
+// Lecture de la commande et de son compteur (premières impressions seulement : le journal sans réimpressions).
 async function loadWith(db: Db | typeof prisma, requestId: string) {
   const request = await db.printRequest.findUnique({
     where: { id: requestId },
@@ -102,7 +102,7 @@ export function loadOnsiteOverview(requestId: string) {
   return loadWith(prisma, requestId);
 }
 
-// Le poste ne sert qu'une demande payée : un brouillon est invisible, les autres statuts sont refusés.
+// Le poste ne sert qu'une commande payée : un brouillon est invisible, les autres statuts sont refusés.
 export async function loadOnsiteRequest(requestId: string) {
   const loaded = await loadWith(prisma, requestId);
   const { status } = loaded.request;
@@ -111,7 +111,7 @@ export async function loadOnsiteRequest(requestId: string) {
   return loaded;
 }
 
-// Contrôles communs : l'inscription existe, appartient à l'évènement de la demande et est approuvée.
+// Contrôles communs : l'inscription existe, appartient à l'évènement de la commande et est approuvée.
 async function findPrintableRegistration(db: Db | typeof prisma, eventId: string, registrationId: string) {
   const reg = await db.registration.findUnique({ where: { id: registrationId }, select: CARD_SELECT });
   if (!reg) throw new OnsiteError("REGISTRATION_NOT_FOUND", 404);
@@ -163,14 +163,14 @@ export async function recordOnsitePrint(input: {
 }): Promise<{ print: PrintRequestPrint; counter: OnsiteCounter }> {
   const { requestId, registrationId, userId, confirmReprint } = input;
   const result = await prisma.$transaction(async (tx) => {
-    // Ordre des verrous : Event puis PrintRequest (jamais la demande seule).
+    // Ordre des verrous : Event puis PrintRequest (jamais la commande seule).
     await lockRequestWithEvent(tx, requestId);
     const { request, eventId, counter, hasBadgeLine } = await loadWith(tx, requestId);
     if (!PRINTABLE_STATUSES.includes(request.status)) throw new OnsiteError("REQUEST_NOT_PRINTABLE", 409);
     // Sans ligne de badges il n'y a pas de commande à honorer : pas de repli sur la quantité estimée.
     if (!hasBadgeLine) throw new OnsiteError("REQUEST_NOT_PRINTABLE", 409);
     const reg = await findPrintableRegistration(tx, eventId, registrationId);
-    // Réimpression = déjà imprimée AU POSTE pour cette demande (journal lu sous verrou). Un badge
+    // Réimpression = déjà imprimée AU POSTE pour cette commande (journal lu sous verrou). Un badge
     // marqué imprimé par l'organisateur reste une première impression : sinon l'organisateur
     // marquerait tout « imprimé » pour obtenir des badges hors compteur.
     const printedHere = (await tx.printRequestPrint.count({ where: { requestId, registrationId } })) > 0;
@@ -217,10 +217,10 @@ export async function setOnsiteMargin(input: {
 }): Promise<{ counter: OnsiteCounter; from: number }> {
   const { requestId, marginPercent, reason, userId } = input;
   return prisma.$transaction(async (tx) => {
-    // Ordre des verrous : Event puis PrintRequest (jamais la demande seule).
+    // Ordre des verrous : Event puis PrintRequest (jamais la commande seule).
     await lockRequestWithEvent(tx, requestId);
     const { request, counter } = await loadWith(tx, requestId);
-    // Un brouillon est invisible du staff ; une demande terminée ne se règle plus.
+    // Un brouillon est invisible du staff ; une commande terminée ne se règle plus.
     if (request.status === "DRAFT") throw new OnsiteError("NOT_FOUND", 404);
     if (LOCKED_STATUSES.includes(request.status)) throw new OnsiteError("REQUEST_LOCKED", 409);
     // `counter.marginPercent` vaut 0 pour une marge nulle en base (marge nulle en base -> from: 0).
