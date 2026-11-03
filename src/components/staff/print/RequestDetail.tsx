@@ -104,13 +104,15 @@ export function RequestDetail({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)_380px]">
-        <OrderSummaryColumn
-          data={data}
-          acceptedTotal={request.acceptedTotal}
-          parentRequest={parentRequest}
-          supplements={supplements}
-        />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[300px_minmax(0,1fr)_380px]">
+        <div className="min-w-0 xl:col-span-2 2xl:col-span-1">
+          <OrderSummaryColumn
+            data={data}
+            acceptedTotal={request.acceptedTotal}
+            parentRequest={parentRequest}
+            supplements={supplements}
+          />
+        </div>
         <OrderConversation
           messagesUrl={requestUrl(requestId, "/messages")}
           uploadUrl={`/api/platform/upload?context=print-request&requestId=${requestId}`}

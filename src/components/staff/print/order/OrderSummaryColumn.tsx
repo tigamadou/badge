@@ -39,7 +39,7 @@ export function OrderSummaryColumn({
         <p className="text-sm text-slate-500">{PRINT_REQUEST_TYPE_LABELS[request.type]}</p>
       </div>
       <RelatedRequestLinks parent={parentRequest} supplements={supplements} hrefOf={(id) => `/platform/print/orders/${id}`} />
-      <dl className="grid gap-3">
+      <dl className="grid gap-3 lg:grid-cols-3 2xl:grid-cols-1">
         <Field label="Évènement">{event.title}</Field>
         <Field label="Organisation">{event.org.name}</Field>
         <Field label="Badges">

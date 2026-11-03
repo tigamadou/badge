@@ -116,8 +116,10 @@ paiement reçu ou échoué, planches lancées, inscriptions écartées.
 
 ## Page de commande côté staff
 
-`/platform/print/orders/[requestId]` est une **conversation à trois colonnes** (empilées sous `lg` :
-résumé, fil, devis) :
+`/platform/print/orders/[requestId]` est une **conversation** en trois colonnes à partir de `2xl` (1536 px : résumé, fil, devis). De `xl` à `2xl`, le
+résumé passe en bandeau pleine largeur au-dessus du fil et de la colonne devis (380 px) ; sous `xl`, tout est
+empilé (résumé, fil, devis) : la barre latérale du shell étant déjà affichée dès `lg`, le fil garde ainsi au
+moins ~400 px :
 
 - **Gauche** : résumé actualisé (statut, évènement, organisation, type, nombre de badges,
   recto-verso, template, livraison, dates, total du devis et total accepté).
