@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import type { PrintProduct, PrintSheetLayout } from "@prisma/client";
+import { Prisma, type PrintProduct, type PrintSheetLayout } from "@prisma/client";
 import { prisma } from "../../../../src/lib/prisma";
 import { getFile } from "../../../../src/lib/storage";
 import { DEMO_DOMAIN, DEMO_SLUG_PREFIX } from "../../constants";
@@ -136,6 +136,10 @@ export async function cleanupPrintData(): Promise<void> {
       OR: [{ recipient: { endsWith: DEMO_DOMAIN } }, { runAt: { gt: new Date(Date.now() + 1000 * DAY_MS) } }],
     },
   });
+  // Emails deja envoyes par le worker avant le parcage : reconnus a l'organisation du contexte du payload.
+  if (orgIds.length > 0) {
+    await prisma.$executeRaw`DELETE FROM Job WHERE kind LIKE 'notification.print_request%' AND JSON_UNQUOTE(JSON_EXTRACT(payload, '$.ctx.orgId')) IN (${Prisma.join(orgIds)})`;
+  }
   // Rejouable seul : commandes (fils, lignes, paiements, lectures, impressions en cascade), credits et generations.
   await prisma.printSheetGeneration.deleteMany({ where: { id: { in: generations.map((g) => g.id) } } });
   await prisma.orgPrintCredit.deleteMany({ where: { orgId: { in: orgIds } } });
