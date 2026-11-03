@@ -30,6 +30,10 @@ describe("cadre du seed de demo", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     // Le catalogue de motifs vient du seed minimal : seedRegistrations est teste dans registrations.test.ts.
     vi.spyOn(registrations, "seedRegistrations").mockImplementation(async () => {});
+    // Les lots impression, facturation et notifications ont leurs propres tests : ici seul le cadre compte.
+    vi.spyOn(print, "seedPrint").mockImplementation(async () => {});
+    vi.spyOn(billing, "seedBilling").mockImplementation(async () => {});
+    vi.spyOn(notifications, "seedNotificationsAndActivity").mockImplementation(async () => {});
   });
 
   afterEach(async () => {
