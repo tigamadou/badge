@@ -51,7 +51,7 @@ sur les hypothèses de ce plan :
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Contrat du socle, monde relu en base, plans de démo | [ ] | | |
+| 1 | Contrat du socle, monde relu en base, plans de démo | [x] | 2026-11-03 | Ecarts : dates via ctx.dates (pas daysAgo), loadWorld() sans ctx, WorldUser/WorldEvent etendus; seulement 4 orgs sur 12 ont un OWNER (repli membre/null); cleanupBilling(_ctx). |
 | 2 | Abonnements, rappels, quotas | [ ] | | |
 | 3 | Paiements d'abonnement | [ ] | | |
 | 4 | Jobs email de chaque statut | [ ] | | |
