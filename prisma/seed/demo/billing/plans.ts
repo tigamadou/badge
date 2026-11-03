@@ -27,15 +27,13 @@ export const PLAN_SPECS: Record<PlanKey, PlanSpec> = {
  */
 export async function ensurePlans(now: Date = new Date()): Promise<PlanCatalog> {
   const createdAt = new Date(now.getTime() - 400 * DAY_MS);
-  const entries = await Promise.all(
-    (Object.entries(PLAN_SPECS) as [PlanKey, PlanSpec][]).map(async ([key, spec]) => {
-      const plan = await prisma.plan.upsert({
-        where: { name: spec.name },
-        create: { ...spec, archived: spec.archived ?? false, createdAt },
-        update: { archived: spec.archived ?? false },
-      });
-      return [key, plan] as const;
-    }),
-  );
-  return Object.fromEntries(entries) as PlanCatalog;
+  const catalog: Partial<PlanCatalog> = {};
+  for (const [key, spec] of Object.entries(PLAN_SPECS) as [PlanKey, PlanSpec][]) {
+    catalog[key] = await prisma.plan.upsert({
+      where: { name: spec.name },
+      create: { ...spec, archived: spec.archived ?? false, createdAt },
+      update: { archived: spec.archived ?? false },
+    });
+  }
+  return catalog as PlanCatalog;
 }

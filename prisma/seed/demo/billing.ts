@@ -4,11 +4,18 @@ import type { DemoContext } from "./context";
 import { ensurePlans } from "./billing/plans";
 import { seedSubscriptions } from "./billing/subscriptions";
 import { loadWorld } from "./billing/world";
+import { seedSubscriptionPayments } from "./billing/payments";
+import { writeBillingActivity } from "./billing/activity";
+import { cleanupActivity } from "./notifications/activity";
 
 export async function seedBilling(ctx: DemoContext): Promise<void> {
   const plans = await ensurePlans(ctx.dates.now);
   const world = await loadWorld();
-  await seedSubscriptions(ctx, world, plans);
+  const subs = await seedSubscriptions(ctx, world, plans);
+  const payments = await seedSubscriptionPayments(ctx, world, plans, subs);
+  // Le journal de demo (hors impression) est reecrit en entier : celui de la facturation en premier.
+  await cleanupActivity();
+  await writeBillingActivity(ctx, world, plans, subs, payments);
 }
 
 /**
