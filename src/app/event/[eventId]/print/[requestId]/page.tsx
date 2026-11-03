@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
-import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { OnsiteTemplateAlert } from "@/components/print/OnsiteTemplateAlert";
 import { onsiteTemplateStatus } from "@/lib/print-requests/onsite";
 import { OnsiteCounterCard } from "@/components/print/OnsiteCounterCard";
