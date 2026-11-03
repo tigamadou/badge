@@ -534,9 +534,9 @@ db-push:
 db-seed:
 	$(DEV_COMPOSE) exec app npx prisma db seed
 
-# ADR 2026-06-01 (v2-14 Task 15) : seed de demonstration complet (10 orgs,
-# 30 events, 200 participants). NE PAS executer en production (le smoke test
-# "0 org / 0 event" echouera). Reserve au dev local.
+# Seed de demonstration (dev uniquement, refuse hors BADGE_ENV=dev|preprod) :
+# organisations, evenements et inscrits fictifs. Relancer sans reset redonne le
+# meme etat. Ecrit la liste des comptes dans .demo/comptes-demo.md.
 db-seed-demo:
 	$(DEV_COMPOSE) exec -e SEED_MODE=demo app npx prisma db seed
 

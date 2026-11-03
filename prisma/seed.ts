@@ -5,6 +5,7 @@
 import { prisma } from "../src/lib/prisma";
 import { seedSuperAdmin } from "../src/lib/seed-super-admin";
 import { runMinimalSeed } from "./seed/minimal";
+import { runDemoSeed } from "./seed/demo";
 
 async function main() {
   const mode = process.env.SEED_MODE ?? "minimal";
@@ -25,18 +26,7 @@ async function main() {
 
   if (mode === "demo") {
     await runMinimalSeed();
-    // Module cree par la Task 3 ; variable pour que l'absence ne casse pas la compilation.
-    const demoModule = "./seed/demo/index";
-    try {
-      const { runDemoSeed } = await import(demoModule);
-      await runDemoSeed();
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") {
-        throw new Error("Seed de demo indisponible : prisma/seed/demo/index.ts est absent.");
-      }
-      throw err;
-    }
+    await runDemoSeed();
     return;
   }
 
