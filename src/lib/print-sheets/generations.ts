@@ -1,4 +1,4 @@
-import type { PrintSheetGeneration } from "@prisma/client";
+import { Prisma, type PrintSheetGeneration } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { chunk } from "@/lib/badge-batch";
 import { appendThreadEvent } from "@/lib/print-requests/thread";
@@ -17,7 +17,8 @@ export type GenerationErrorCode =
   | "BADGE_TOO_LARGE"
   | "PRINT_REQUEST_NOT_FOUND"
   | "PRINT_REQUEST_NOT_ADVANCE"
-  | "PRINT_REQUEST_NOT_PAID";
+  | "PRINT_REQUEST_NOT_PAID"
+  | "GENERATION_IN_PROGRESS";
 
 const HTTP_STATUS: Record<GenerationErrorCode, number> = {
   LAYOUT_NOT_FOUND: 404,
@@ -29,6 +30,7 @@ const HTTP_STATUS: Record<GenerationErrorCode, number> = {
   PRINT_REQUEST_NOT_FOUND: 404,
   PRINT_REQUEST_NOT_ADVANCE: 400,
   PRINT_REQUEST_NOT_PAID: 409,
+  GENERATION_IN_PROGRESS: 409,
 };
 
 export class GenerationError extends Error {
@@ -162,6 +164,45 @@ async function selectRequestRegistrations(
   return items.filter((i) => !wanted || wanted.has(i.registrationId)).map((i) => ({ id: i.registrationId }));
 }
 
+// Crée la planche de la commande ou écrase l'existante (remise à PENDING). Le fichier précédent
+// reste référencé par `fileKey` : le worker le remplace à la fin d'une génération réussie.
+async function saveOrderGeneration(
+  tx: Prisma.TransactionClient,
+  printRequestId: string,
+  data: Prisma.PrintSheetGenerationUncheckedCreateInput,
+): Promise<{ generation: PrintSheetGeneration; regenerated: boolean }> {
+  const inProgress = () => new GenerationError("GENERATION_IN_PROGRESS", "Une génération est déjà en cours pour cette commande");
+  const existing = await tx.printSheetGeneration.findUnique({ where: { printRequestId } });
+  if (!existing) {
+    try {
+      return { generation: await tx.printSheetGeneration.create({ data: { ...data, printRequestId } }), regenerated: false };
+    } catch (err) {
+      // Création concurrente de la planche de la même commande.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") throw inProgress();
+      throw err;
+    }
+  }
+  // Conditionné à l'état : un worker ou un autre clic ne peut pas être écrasé en cours de route.
+  const { count } = await tx.printSheetGeneration.updateMany({
+    where: { id: existing.id, status: { in: ["DONE", "FAILED"] } },
+    data: {
+      ...data,
+      status: "PENDING",
+      attempts: 0,
+      lockedBy: null,
+      heartbeatAt: null,
+      sheetCount: null,
+      skippedIds: Prisma.DbNull,
+      error: null,
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date(),
+    },
+  });
+  if (count === 0) throw inProgress();
+  return { generation: await tx.printSheetGeneration.findUniqueOrThrow({ where: { id: existing.id } }), regenerated: true };
+}
+
 export async function createGeneration(input: {
   eventId: string;
   layoutId: string;
@@ -226,24 +267,32 @@ export async function createGeneration(input: {
     createdById: input.userId,
   };
   const { printRequestId } = input;
+  let regenerated = false;
   const generation = printRequestId
     ? await prisma.$transaction(async (tx) => {
-        const created = await tx.printSheetGeneration.create({ data: { ...data, printRequestId } });
+        // Une seule planche par commande : une génération existante est écrasée (même ligne).
+        const saved = await saveOrderGeneration(tx, printRequestId, data);
+        regenerated = saved.regenerated;
         await appendThreadEvent(
           tx,
           printRequestId,
           "SHEETS_GENERATED",
-          { generationId: created.id, badgeCount: rows.length },
+          { generationId: saved.generation.id, badgeCount: rows.length },
           { userId: input.userId, side: "STAFF" },
         );
-        return created;
+        return saved.generation;
       })
     : await prisma.printSheetGeneration.create({ data });
   await logActivity({
     type: "PRINT_SHEETS_GENERATED",
     userId: input.userId,
     targetId: generation.id,
-    details: { eventId: event.id, badgeCount: rows.length, layoutId: layout.id },
+    details: {
+      eventId: event.id,
+      badgeCount: rows.length,
+      layoutId: layout.id,
+      ...(printRequestId ? { regenerated } : {}),
+    },
   });
   return generation;
 }
