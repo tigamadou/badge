@@ -24,25 +24,27 @@ export type Scenario = {
   overrides?: "near-limit" | "partner";
   /** Abonnement créé ou offert par le staff plateforme. */
   byStaff?: boolean;
+  /** Préfère une organisation qui a un OWNER (paiements, rappels et notifications leur sont destinés). */
+  preferOwner?: boolean;
   payments: PaymentSpec[];
 };
 
 const MINUTE = 1 / 1440;
 
 export const SCENARIOS: Scenario[] = [
-  { key: "big-annual", plan: "enterprise", status: "ACTIVE", startDaysAgo: 120, endInDays: 245, reminders: [],
+  { key: "big-annual", preferOwner: true, plan: "enterprise", status: "ACTIVE", startDaysAgo: 120, endInDays: 245, reminders: [],
     payments: [{ status: "APPROVED", mode: "IMMEDIATE", daysAgo: 120 }] },
-  { key: "monthly-renewed", plan: "standard", status: "ACTIVE", startDaysAgo: 45, endInDays: 15, reminders: [],
+  { key: "monthly-renewed", preferOwner: true, plan: "standard", status: "ACTIVE", startDaysAgo: 45, endInDays: 15, reminders: [],
     payments: [
       { status: "APPROVED", mode: "IMMEDIATE", daysAgo: 45 },
       { status: "APPROVED", mode: "EXTENSION", daysAgo: 20 },
     ] },
-  { key: "expiring-7", plan: "standard", status: "ACTIVE", startDaysAgo: 24, endInDays: 6, reminders: [7],
+  { key: "expiring-7", preferOwner: true, plan: "standard", status: "ACTIVE", startDaysAgo: 24, endInDays: 6, reminders: [7],
     payments: [
       { status: "APPROVED", mode: "IMMEDIATE", daysAgo: 24 },
       { status: "DECLINED", daysAgo: 50 },
     ] },
-  { key: "expiring-1", plan: "standard", status: "ACTIVE", startDaysAgo: 29, endInDays: 1, reminders: [7, 1],
+  { key: "expiring-1", preferOwner: true, plan: "standard", status: "ACTIVE", startDaysAgo: 29, endInDays: 1, reminders: [7, 1],
     payments: [{ status: "APPROVED", mode: "IMMEDIATE", daysAgo: 29 }] },
   { key: "expired-renewable", plan: "standard", status: "EXPIRED", startDaysAgo: 39, endInDays: -9, reminders: [7, 1],
     payments: [
@@ -70,15 +72,21 @@ export const SCENARIOS: Scenario[] = [
 
 /**
  * Distribue les scénarios : l'organisation archivée prend `archived-expired`, les autres suivent
- * l'ordre du tableau (la plus grosse d'abord), en boucle si le monde en compte davantage.
- * Déterministe, sans faker.
+ * l'ordre du tableau en prenant la plus grosse organisation restante. Seuls 4 organisations sur 12 ont un
+ * OWNER : les scénarios `preferOwner` prennent d'abord une organisation avec OWNER, les autres une sans
+ * (repli sur la première restante). En boucle si le monde en compte davantage. Déterministe, sans faker.
  */
 export function assignScenarios(world: DemoWorld): { org: WorldOrg; scenario: Scenario }[] {
   const archivedScenario = SCENARIOS.find((s) => s.key === "archived-expired")!;
   const running = SCENARIOS.filter((s) => s !== archivedScenario);
-  let next = 0;
-  return world.orgs.map((org) => ({
-    org,
-    scenario: org.archived ? archivedScenario : running[next++ % running.length],
-  }));
+  const remaining = world.orgs.filter((o) => !o.archived);
+  const picked = new Map<string, Scenario>();
+  for (let i = 0; remaining.length > 0; i++) {
+    const scenario = running[i % running.length];
+    const wantsOwner = scenario.preferOwner === true;
+    const org = remaining.find((o) => (o.owners.length > 0) === wantsOwner) ?? remaining[0];
+    remaining.splice(remaining.indexOf(org), 1);
+    picked.set(org.id, scenario);
+  }
+  return world.orgs.map((org) => ({ org, scenario: org.archived ? archivedScenario : picked.get(org.id)! }));
 }

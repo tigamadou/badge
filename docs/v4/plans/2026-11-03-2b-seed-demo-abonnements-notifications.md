@@ -55,7 +55,7 @@ sur les hypothèses de ce plan :
 | 2 | Abonnements, rappels, quotas | [x] | 2026-11-03 | near-limit: ratio >= 85 % verifie seulement si plus gros evenement >= 9 (a petite echelle +1 suffit); echeance verifiee contre endInDays (garde-fou). |
 | 3 | Paiements d'abonnement | [x] | 2026-11-03 | Payeur = owner, sinon membre, sinon null (8 orgs sur 12 sans owner). PENDING/EXPIRED/DECLINED/CANCELED visent Standard (plan avec prix). cleanupActivity() (notifications/activity.ts) appelee en tete du journal de seedBilling; modes verifies par planChangeFor (erreur si ecart). |
 | 4 | Jobs email de chaque statut | [x] | 2026-11-03 | SeededJobs etendu (completedAt, retried). PENDING/RUNNING crees directement avec runAt/lockedAt +3650 j (createdAt = maintenant, jamais antedates). |
-| 5 | Notifications de chaque type hors impression | [ ] | | |
+| 5 | Notifications de chaque type hors impression | [x] | 2026-11-03 | Ecart: assignScenarios donne les scenarios preferOwner (big-annual, monthly-renewed, expiring-7, expiring-1) aux orgs ayant un OWNER (sinon aucun rappel/notification ORG possible). Destinataires: staff demo uniquement (admin@badge.local exclu). cleanupNotifications dans notifications/notifications.ts. |
 | 6 | Journal d'activité | [ ] | | |
 | 7 | Vérification | [ ] | | |
 
