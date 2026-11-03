@@ -21,7 +21,11 @@ docker compose $F pull renderer app tools
 if [ "$ENV" = "preprod" ]; then
   echo "Rechargement de la preprod avec la demo..."
   docker compose $F stop app worker
-  docker compose $F run --rm seed-demo
+  if ! docker compose $F run --rm seed-demo; then
+    echo "ERREUR : seed-demo a echoue sur $ENV. app et worker restent arretes." >&2
+    echo "Corriger la cause puis relancer : docker compose $F run --rm seed-demo, puis deploy.sh $ENV $TAG." >&2
+    exit 1
+  fi
 fi
 
 # 2. Service de rendu, initialisation (db push + SUPER_ADMIN si absent) puis relance

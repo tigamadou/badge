@@ -29,7 +29,7 @@ function run(env: string, failOn?: string) {
     encoding: "utf8",
   });
   const lines = existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : [];
-  return { status: res.status, lines };
+  return { status: res.status, lines, output: `${res.stdout}${res.stderr}` };
 }
 
 beforeEach(() => {
@@ -67,8 +67,11 @@ describe("deploy.sh", () => {
   });
 
   it("preprod : echec de seed-demo, arret sans relance", () => {
-    const { status, lines } = run("preprod", "seed-demo");
-    expect(status).not.toBe(0);
+    const { status, lines, output } = run("preprod", "seed-demo");
+    expect(status).toBe(1);
+    expect(output).toContain("ERREUR : seed-demo a echoue");
+    expect(output).toContain("app et worker restent arretes");
+    expect(output).toContain("docker compose -f docker-compose.preprod.yml run --rm seed-demo");
     expect(lines.some((l) => l.includes("seed-demo"))).toBe(true);
     expect(lines.some((l) => l.includes("up -d"))).toBe(false);
   });
