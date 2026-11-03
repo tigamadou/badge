@@ -5,6 +5,7 @@ import { cleanupPrint } from "../../print";
 import { seedCatalog } from "../catalog";
 import { createPrintState } from "../helpers";
 import { runScenario } from "../orders";
+import { ensureOnsiteSettings } from "../onsite";
 import { SCENARIOS } from "../scenarios";
 import { buildWorld, disposeWorld } from "./helpers";
 
@@ -24,6 +25,7 @@ describe("cleanupPrint seul", () => {
     ctx = await buildWorld();
     const state = createPrintState(ctx);
     await seedCatalog(ctx, state);
+    await ensureOnsiteSettings(ctx);
     const scenario = SCENARIOS.find((s) => s.key === "o-in-production")!;
     const order = await runScenario(ctx, state, scenario);
     expect(order).not.toBeNull();
