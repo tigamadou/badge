@@ -59,6 +59,18 @@ export function makeEvent(orgId: string, data: Partial<Prisma.EventUncheckedCrea
   });
 }
 
+export function makePlan(data: Partial<Prisma.PlanUncheckedCreateInput> = {}) {
+  return prisma.plan.create({
+    data: { name: `Plan ${uid()}`, maxEvents: 10, maxParticipantsPerEvent: 1000, ...data },
+  });
+}
+
+export function makePayment(orgId: string, data: Partial<Prisma.PaymentUncheckedCreateInput> = {}) {
+  return prisma.payment.create({
+    data: { orgId, amount: faker.number.int({ min: 1000, max: 50000 }), ...data },
+  });
+}
+
 export async function makeCategory(eventId: string, data: Partial<Prisma.CategoryUncheckedCreateInput> = {}) {
   const number = data.number ?? (await prisma.category.count({ where: { eventId } })) + 1;
   return prisma.category.create({
