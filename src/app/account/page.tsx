@@ -7,6 +7,9 @@ import { Alert, EmptyState } from "@/components/ui/Feedback";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
 import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 function fmtDay(d: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { day: "numeric" }).format(d);
@@ -15,29 +18,41 @@ function fmtMonth(d: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { month: "short" }).format(d).replace(".", "");
 }
 
-export default async function AccountHomePage() {
+export default async function AccountHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const list = parseListPage(await searchParams);
   const session = await getServerSession(authOptions);
   // Le layout a deja garanti la session ; on cast en string.
   const userId = session!.user!.id as string;
 
-  const [user, registrations] = await Promise.all([
+  const [user, result] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { name: true, participantProfileCompletedAt: true },
     }),
-    prisma.registration.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        status: true,
-        rejectionReason: true,
-        createdAt: true,
-        event: { select: { title: true, date: true, location: true, slug: true, banner: true } },
-        category: { select: { name: true, color: true } },
-      },
-    }),
+    paginate(
+      list,
+      () => prisma.registration.count({ where: { userId } }),
+      (range) =>
+        prisma.registration.findMany({
+          where: { userId },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          ...range,
+          select: {
+            id: true,
+            status: true,
+            rejectionReason: true,
+            createdAt: true,
+            event: { select: { title: true, date: true, location: true, slug: true, banner: true } },
+            category: { select: { name: true, color: true } },
+          },
+        }),
+    ),
   ]);
+  const registrations = result.rows;
 
   return (
     <div className="space-y-8">
@@ -114,6 +129,7 @@ export default async function AccountHomePage() {
             ))}
           </div>
         )}
+        <div className="mt-4"><UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} /></div>
       </section>
     </div>
   );
