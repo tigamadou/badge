@@ -29,8 +29,8 @@ logique modifiée.
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Vérifier le socle et fixer la table de correspondance | [ ] | | |
-| 2 | Statuts et tons d'impression (`PrintRequestStatusBadge`, `entry-tone`, `JobStatusBadge`) | [ ] | | |
+| 1 | Vérifier le socle et fixer la table de correspondance | [x] | 2026-11-04 | 68 fichiers a migrer (mesure initiale), socle present |
+| 2 | Statuts et tons d'impression (`PrintRequestStatusBadge`, `entry-tone`, `JobStatusBadge`) | [x] | 2026-11-04 | ton interne (amber) classe or ; statuts reclasses par sens |
 | 3 | Composants `src/components/print/**` (hors statuts) | [ ] | | |
 | 4 | `src/components/notifications/**` | [ ] | | |
 | 5 | Pages `src/app/platform/**` | [ ] | | |

@@ -12,9 +12,9 @@ export interface ToneEntry {
 
 export const toneClasses: Record<Tone, string> = {
   client: "bg-slate-100 text-slate-800",
-  staff: "bg-emerald-50 text-emerald-900 ring-1 ring-emerald-200",
-  quote: "bg-indigo-50 text-indigo-900 ring-1 ring-indigo-200",
-  internal: "bg-amber-50 text-amber-900 ring-1 ring-amber-200",
+  staff: "bg-turquoise-soft text-navy ring-1 ring-turquoise-strong/20",
+  quote: "bg-mist text-navy ring-1 ring-line",
+  internal: "bg-gold-soft text-gold-strong ring-1 ring-gold",
   event: "bg-transparent text-slate-500",
 };
 

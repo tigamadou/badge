@@ -1,9 +1,9 @@
 import type { JobStatus } from "@prisma/client";
 
 const STATUS: Record<JobStatus, { label: string; tone: string }> = {
-  PENDING: { label: "En attente", tone: "bg-amber-50 text-amber-700" },
-  RUNNING: { label: "En cours", tone: "bg-blue-50 text-blue-700" },
-  SUCCEEDED: { label: "Envoyé", tone: "bg-emerald-50 text-emerald-700" },
+  PENDING: { label: "En attente", tone: "bg-gold-soft text-gold-strong" },
+  RUNNING: { label: "En cours", tone: "bg-mist text-navy" },
+  SUCCEEDED: { label: "Envoyé", tone: "bg-turquoise-soft text-turquoise-strong" },
   FAILED: { label: "En échec", tone: "bg-rose-50 text-rose-700" },
   CANCELLED: { label: "Annulé", tone: "bg-slate-100 text-slate-600" },
 };
