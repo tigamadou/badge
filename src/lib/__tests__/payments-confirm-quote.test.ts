@@ -66,6 +66,27 @@ describe("confirmPayment : montant figé, périodes couvertes", () => {
     expect(row.coversTo!.getTime() - row.coversFrom!.getTime()).toBe(30 * DAY);
   });
 
+  it("paiement hérité sans prix plein : montée en gamme appliquée, sans écart de crédit", async () => {
+    const { org, dear } = await setup({ price: 30000, endInDays: 15 });
+    const id = newTx();
+    const p = await pending(org.id, dear.id, 45000, id, { listPrice: null });
+    fetchMock.mockResolvedValue(tx(id, 45000));
+    await confirmPayment(id);
+    const row = await prisma.payment.findUniqueOrThrow({ where: { id: p.id } });
+    expect(row.mode).toBe("IMMEDIATE");
+    expect(await prisma.activityLog.count({ where: { type: "PAYMENT_PRORATA_MISMATCH", orgId: org.id } })).toBe(0);
+  });
+
+  it("paiement hérité sans crédit enregistré : traité comme un crédit nul", async () => {
+    const { org, dear } = await setup({ price: 30000, endInDays: 15 });
+    const id = newTx();
+    const p = await pending(org.id, dear.id, 45000, id, { prorataCredit: null });
+    fetchMock.mockResolvedValue(tx(id, 45000));
+    await confirmPayment(id);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: p.id } })).mode).toBe("IMMEDIATE");
+    expect(await prisma.activityLog.count({ where: { type: "PAYMENT_PRORATA_MISMATCH", orgId: org.id } })).toBe(0);
+  });
+
   it("EXTENSION : de l'ancienne à la nouvelle échéance", async () => {
     const { org, cheap, sub } = await setup({ price: 30000, endInDays: 5 });
     const id = newTx();
