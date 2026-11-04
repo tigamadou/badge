@@ -33,7 +33,7 @@ défaut), deux modules `src/lib/` purs (`image-dimensions.ts`, `list-query.ts`),
 | 4 | `Pagination.tsx` (options 10/20/50/100/500) + `UrlPagination` | [x] | 2026-11-04 | |
 | 5 | Seed minimal (motifs de rejet, plans `publicVisible`) | [x] | 2026-11-04 | |
 | 6 | Fabriques (nouveaux champs) | [x] | 2026-11-04 | |
-| 7 | Vérification | [ ] | | |
+| 7 | Vérification | [x] | 2026-11-04 | lint, typecheck, coverage verts; controle visuel : socle sans UI visible nouvelle, non realise | |
 
 ## Fichiers du lot (exclusifs)
 

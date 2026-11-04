@@ -374,7 +374,7 @@ Concerne la page staff (`/platform/print/orders/[requestId]`) et la page organis
   (hauteur +4, largeur +6) ; `parseListPage` valide par `Number.isInteger` (`1e9` plafonné).
 - Socle : le test `badges/__tests__/route.test.ts` est mis à jour (taille hors liste → 100, 500 valide) ;
   `ACTIVITY_NOT_SEEDED` (`prisma/seed/demo/notifications/activity.ts`, code non-test) doit recevoir
-  `EVENT_IMAGE_UPDATED` et `PAYMENT_PRORATA_MISMATCH` : en attente d'autorisation.
+  `EVENT_IMAGE_UPDATED` et `PAYMENT_PRORATA_MISMATCH` : ajoutés (autorisation utilisateur).
 - Crédit ≥ prix du nouveau plan : refus `NOTHING_TO_PAY` (409) avec message invitant à contacter le
   support (FedaPay n'encaisse pas 0) — cas rare, revu si besoin.
 - 2a : premier bloc retenu si plusieurs cadres ; WebP refusé pour logo et bannière ; photo minimale
