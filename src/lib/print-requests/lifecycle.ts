@@ -1,5 +1,6 @@
 import type { PrintRequest, PrintRequestStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { assertEventImagesCompliantById } from "@/lib/event-image-compliance";
 import { orderRegistrations } from "@/lib/print-sheets/generations";
 import {
   notifyPrintRequestPaid,
@@ -57,6 +58,8 @@ export async function submitRequest(input: {
   now?: Date;
 }): Promise<PrintRequest> {
   await loadRequest(input.requestId, { eventId: input.eventId });
+  // Une commande ne part pas avec des images deformees (seules les soumissions sont controlees).
+  await assertEventImagesCompliantById(input.eventId);
   const result = await prisma.$transaction(async (tx) => {
     await lockEventRow(tx, input.eventId);
     // Verrou de la commande avant toute lecture : une modification ou annulation concurrente

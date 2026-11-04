@@ -28,19 +28,19 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Stack, dépendance, contrats du socle, fabriques du lot | [ ] | | |
-| 2 | Cadres du manifeste et exigences (`image-frames.ts`) | [ ] | | |
-| 3 | Conformité serveur (`event-image-compliance.ts`) | [ ] | | |
-| 4 | Logo / bannière : route d'envoi, PATCH évènement, création | [ ] | | |
-| 5 | Photo du participant : contrôle serveur sur tous les chemins | [ ] | | |
-| 6 | Blocage : rendu PDF, aperçu, exports, planches | [ ] | | |
-| 7 | Blocage : soumission de commande, impression sur place | [ ] | | |
-| 8 | Composant `ImageCropper` | [ ] | | |
-| 9 | Interface évènement : réglages, bandeau, tableau de bord | [ ] | | |
-| 10 | Interface photo : compte, inscription, règles de la photo d'identité | [ ] | | |
-| 11 | Seed démo et fixtures e2e conformes | [ ] | | |
-| 12 | e2e Playwright et contrôle 375 / 1024 / 1280 px | [ ] | | |
-| 13 | e2e, doc, vérification | [ ] | | |
+| 1 | Stack, dépendance, contrats du socle, fabriques du lot | [x] | 2026-11-04 | react-easy-crop 6.2.4 ; JPEG/WebP en-tete seul ; gabarit cadre : variable nommee comme sa source |
+| 2 | Cadres du manifeste et exigences (`image-frames.ts`) | [x] | 2026-11-04 | 100 % ; formes square/circle/ellipse lues via w/h |
+| 3 | Conformité serveur (`event-image-compliance.ts`) | [x] | 2026-11-04 | 100 % ; test 'aucun template' vide installedBadgeTemplate puis reinstalle les references |
+| 4 | Logo / bannière : route d'envoi, PATCH évènement, création | [x] | 2026-11-04 | tests PATCH adaptes (vraies images) ; events/route.ts verifie en couverture globale |
+| 5 | Photo du participant : contrôle serveur sur tous les chemins | [x] | 2026-11-04 | helpers checkIdPhotoBuffer/Key et rejectionResponse dans event-image-compliance ; PUT /api/account/profile (pas PATCH) |
+| 6 | Blocage : rendu PDF, aperçu, exports, planches | [x] | 2026-11-04 | tests regroupes dans event-images-blocking.test.ts ; worker FAILED OK sans modification |
+| 7 | Blocage : soumission de commande, impression sur place | [x] | 2026-11-04 | tests regroupes dans event-images-blocking-requests.test.ts |
+| 8 | Composant `ImageCropper` | [x] | 2026-11-04 | dialogue sans footer Dialog (boutons dans le corps) ; image locale lue en data URL ; comportement canvas a verifier en e2e |
+| 9 | Interface évènement : réglages, bandeau, tableau de bord | [x] | 2026-11-04 | formulaire : champ EventImageField interne ; WebP toujours cadre (sortie PNG) ; verification navigateur en tache 12 |
+| 10 | Interface photo : compte, inscription, règles de la photo d'identité | [x] | 2026-11-04 | hook useCropFlow dans ImageCropper.tsx (envoi direct si conforme, WebP toujours cadre) |
+| 11 | Seed démo et fixtures e2e conformes | [x] | 2026-11-04 |  |
+| 12 | e2e Playwright et contrôle 375 / 1024 / 1280 px | [x] | 2026-11-04 | e2e ecrits ; verification sous forte charge, voir rapport |
+| 13 | e2e, doc, vérification | [x] | 2026-11-04 | docs faites ; e2e du lot verts ; lint 0 erreur, typecheck OK ; make test-coverage vert (335 fichiers, 4008 tests, 100 %) ; contrôle visuel manuel reporté en vague 3 |
 
 ## Décisions du lot (à journaliser dans la spec en fin de lot)
 

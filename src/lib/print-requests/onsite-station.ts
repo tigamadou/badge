@@ -2,6 +2,7 @@ import type { Prisma, PrintRequest, PrintRequestPrint, RegistrationStatus } from
 import { sendBadgePrintedNotification } from "@/lib/mail";
 import { notifyBadgePrinted } from "@/lib/notifications/triggers";
 import { prisma } from "@/lib/prisma";
+import { assertEventImagesCompliantById } from "@/lib/event-image-compliance";
 import { parseRegistrationQr } from "@/lib/registration-qr";
 import { OnsiteError } from "./onsite";
 import { computeOnsiteCounter, orderedBadgeLine, type OnsiteCounter } from "./onsite-counter";
@@ -162,6 +163,8 @@ export async function recordOnsitePrint(input: {
   confirmReprint: boolean;
 }): Promise<{ print: PrintRequestPrint; counter: OnsiteCounter }> {
   const { requestId, registrationId, userId, confirmReprint } = input;
+  const target = await prisma.printRequest.findUnique({ where: { id: requestId }, select: { eventId: true } });
+  if (target) await assertEventImagesCompliantById(target.eventId);
   const result = await prisma.$transaction(async (tx) => {
     // Ordre des verrous : Event puis PrintRequest (jamais la commande seule).
     await lockRequestWithEvent(tx, requestId);

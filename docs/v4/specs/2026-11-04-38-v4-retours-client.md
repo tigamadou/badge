@@ -383,3 +383,17 @@ Concerne la page staff (`/platform/print/orders/[requestId]`) et la page organis
 - `package-lock.json` périmé (Yarn fait foi) : seul `yarn.lock` est mis à jour ; nettoyage éventuel
   hors chantier.
 - Amendements de plans après relecture du socle (2026-11-04) : 2a, cas de ratio 1530x500 remplacé par 1520x500 (ok) et 1530x500 hors tolérance ; 2b, `PAYMENT_PRORATA_MISMATCH` (socle) réutilisé et fabriques renommées `makeBillingPlan`/`makeBillingPayment` (pas de collision avec celles du socle) ; 2c, `BadgeListTable`/`RegistrationTable` utilisent `Pagination` avec callbacks (`router.replace`, `scroll: false`, `page` retiré au changement de filtre) et non `UrlPagination`.
+- Lot 2a, fin de lot (2026-11-04) : le cadre se cherche par **liaison** (`bindings[nom] ===
+  "event.logoDataUrl"`), premier bloc en ordre de document, groupes parcourus ; ratio à ± 2 %
+  (`ratioMatches`), résolution minimale 2 × le cadre ; photo d'identité 7:9, 210 × 270 px minimum ;
+  WebP refusé pour logo et bannière (415), accepté pour l'original de recadrage (sortie PNG) ;
+  dimensions mémorisées (`logoWidth`…) et conformité **calculée** (jamais stockée) ; pas de blocage
+  rétroactif (valeur inchangée non revalidée) ; création d'évènement : dimensions du logo mémorisées,
+  sans contrôle de ratio (l'évènement naît « à recadrer » si le template l'impose) ; blocage 422
+  `EVENT_IMAGES_NONCOMPLIANT` sur PDF, ZIP, planches, soumission de commande et impression sur place.
+- **Aperçu `?format=html` (arbitrage orchestrateur)** : jamais bloqué ; il n'avertit que par l'en-tête
+  HTTP `x-event-images: noncompliant` (+ `x-event-images-slots`), sans bandeau dans l'interface ; les
+  bandeaux du tableau de bord et des réglages de l'évènement portent l'avertissement visible.
+- Clés de stockage fournies par le client (logo, bannière, originaux, photo d'identité) : limitées au
+  dossier de l'organisation (`orgs/<orgId>/`), de l'évènement (`events/<eventId>/`) ou de
+  l'utilisateur (`profile/<userId>/`) ; sinon 400 `INVALID_IMAGE` (même réponse qu'un fichier absent).

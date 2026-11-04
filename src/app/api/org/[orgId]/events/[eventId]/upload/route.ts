@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { withEventAuth } from "@/lib/with-event-auth";
+import { checkIdPhotoBuffer } from "@/lib/event-image-compliance";
 import {
   uploadFile,
   isAllowedMime,
@@ -40,6 +41,10 @@ export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { eventId })
     );
   }
   const buffer = Buffer.from(await file.arrayBuffer());
+  if (kind === "photo") {
+    const rejected = checkIdPhotoBuffer(buffer, mime);
+    if (rejected) return rejected;
+  }
   // mime est deja restreint aux cles de EXT par isAllowedMime ci-dessus.
   const filename = `${randomUUID()}${EXT[mime]}`;
   const storageKey =

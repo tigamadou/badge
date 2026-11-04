@@ -8,6 +8,7 @@ import { computeParticipantProfileCompletedAt } from "@/lib/participant-profile"
 import { submitProfile, getCurrentSubmission } from "@/lib/profile-review";
 import { refreshPendingRegistrationSnapshots } from "@/lib/registration-snapshot-sync";
 import { notifyProfileSubmitted } from "@/lib/notifications/triggers";
+import { checkIdPhotoKey } from "@/lib/event-image-compliance";
 
 const ID_DOC_TYPES = ["CNI", "Passeport", "Permis", "Autre"] as const;
 
@@ -138,6 +139,11 @@ export async function PUT(req: NextRequest) {
     });
     if (!before) {
       return NextResponse.json({ code: "NOT_FOUND", error: "Utilisateur introuvable." }, { status: 404 });
+    }
+    // Photo d'identite : relue seulement si elle change (pas de blocage retroactif).
+    if (data.photo !== undefined && data.photo !== before.photo) {
+      const rejected = await checkIdPhotoKey(data.photo, [`profile/${session.id}/`]);
+      if (rejected) return rejected;
     }
     const merged = { ...before, ...data };
     const participantProfileCompletedAt = computeParticipantProfileCompletedAt(merged);

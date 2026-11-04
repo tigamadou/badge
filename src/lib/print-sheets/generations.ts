@@ -4,6 +4,11 @@ import { chunk } from "@/lib/badge-batch";
 import { appendThreadEvent } from "@/lib/print-requests/thread";
 import { logActivity } from "@/lib/activity-log";
 import { resolveEventTemplate } from "@/lib/badge-templates/render-badge";
+import {
+  EVENT_IMAGE_SELECT,
+  assertEventImagesCompliant,
+  assertEventImagesCompliantById,
+} from "@/lib/event-image-compliance";
 import { BadgeTooLargeError, computeSheetLayout, type LayoutSpec } from "./compute-layout";
 import { toLayoutSpec } from "./layout-input";
 import { pxToMm } from "./units";
@@ -216,7 +221,7 @@ export async function createGeneration(input: {
   if (!layout || layout.archived) throw new GenerationError("LAYOUT_NOT_FOUND", "Gabarit introuvable");
   const event = await prisma.event.findUnique({
     where: { id: input.eventId },
-    select: { id: true, badgeTemplateId: true, orgId: true },
+    select: EVENT_IMAGE_SELECT,
   });
   if (!event) throw new GenerationError("EVENT_NOT_FOUND", "Évènement introuvable");
 
@@ -233,6 +238,9 @@ export async function createGeneration(input: {
       input.printRequestId ? "Aucun badge à imprimer dans cette commande." : "Aucune inscription approuvée à imprimer",
     );
   }
+
+  // Planche deformee interdite : les images de l'evenement doivent respecter le cadre du template.
+  await assertEventImagesCompliant(event);
 
   const template = await resolveEventTemplate(event);
   const badgePages = template.meta.pages === 2 ? 2 : 1;
@@ -322,6 +330,7 @@ export async function createZipExport(input: {
     const same = inProgress.find((g) => (g.registrationIds as string[]).every((id, i) => id === ids[i]));
     if (same) return { generation: same, reused: true };
   }
+  await assertEventImagesCompliantById(input.eventId);
   const rows = await selectRegistrations(input.eventId, { mode: "IDS", registrationIds: ids });
   const byId = new Map(rows.map((r) => [r.id, r]));
   const ordered = ids.map((id) => byId.get(id)!);

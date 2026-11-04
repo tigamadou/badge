@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { createGeneration, GenerationError } from "@/lib/print-sheets/generations";
+import { EventImagesNoncompliantError, eventImagesErrorResponse } from "@/lib/event-image-compliance";
 
 const id = z.string().min(1);
 
@@ -70,6 +71,7 @@ export const POST = withStaffAuth(
       const generation = await createGeneration({ ...parsed.data, userId: session.user.id });
       return NextResponse.json({ generation }, { status: 201 });
     } catch (err) {
+      if (err instanceof EventImagesNoncompliantError) return eventImagesErrorResponse(err);
       if (err instanceof GenerationError) {
         return NextResponse.json({ error: err.code, message: err.message }, { status: err.httpStatus });
       }

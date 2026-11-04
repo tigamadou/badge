@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
+import { makeFramedTemplate, makePng, putTestImage } from "@/test/factories-2a";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 
@@ -236,19 +238,20 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
 
   it("updates logo field", async () => {
     const { u, org, event } = await seedAdmin();
+    const logoKey = await putTestImage(`orgs/${org.id}/images/settings-logo-${event.id}.png`, makePng(136, 136), "image/png");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ logo: "https://cdn.x.test/logo.png" }),
+      body: JSON.stringify({ logo: logoKey }),
       headers: { "content-type": "application/json" },
     });
     const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(200);
 
     const updated = await prisma.event.findUnique({ where: { id: event.id } });
-    expect(updated?.logo).toBe("https://cdn.x.test/logo.png");
+    expect(updated?.logo).toBe(logoKey);
   });
 
   it("returns 400 VALIDATION for a malformed date value", async () => {
@@ -362,8 +365,9 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
     expect(fields).not.toContain("securityInstructions");
   });
 
-  async function patchEvent(body: unknown) {
+  async function patchEvent(input: unknown | ((org: { id: string }) => Promise<unknown>)) {
     const { u, org, event } = await seedAdmin();
+    const body = typeof input === "function" ? await input(org) : input;
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
@@ -376,9 +380,13 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
   }
 
   it("ecrit puis efface la banniere", async () => {
-    const { res, event, org, PATCH } = await patchEvent({ banner: "uploads/o/b.png" });
+    let bannerKey = "";
+    const { res, event, org, PATCH } = await patchEvent(async (o: { id: string }) => {
+      bannerKey = await putTestImage(`orgs/${o.id}/images/settings-banner-${Date.now()}.png`, makePng(1500, 500), "image/png");
+      return { banner: bannerKey };
+    });
     expect(res.status).toBe(200);
-    expect((await prisma.event.findUnique({ where: { id: event.id } }))?.banner).toBe("uploads/o/b.png");
+    expect((await prisma.event.findUnique({ where: { id: event.id } }))?.banner).toBe(bannerKey);
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
       method: "PATCH",
       body: JSON.stringify({ banner: null }),
@@ -673,5 +681,126 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/settings", () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe("VALIDATION");
+  });
+});
+
+describe("PATCH /api/org/[orgId]/events/[eventId] : images", () => {
+  beforeEach(async () => {
+    await prisma.activityLog.deleteMany();
+    await prisma.registration.deleteMany();
+    await prisma.category.deleteMany();
+    await prisma.eventMembership.deleteMany();
+    await prisma.event.deleteMany();
+    await prisma.organization.deleteMany();
+    await prisma.user.deleteMany();
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  async function setup() {
+    const { u, org, event } = await seedAdmin();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const staff = await makeStaff("SUPER_ADMIN");
+    const template = await makeFramedTemplate(staff.id, { logo: { w: 68, h: 68 }, banner: { w: 750, h: 250 } });
+    await prisma.event.update({ where: { id: event.id }, data: { badgeTemplateId: template.id } });
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
+    const patch = (body: unknown) =>
+      PATCH(
+        new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(body),
+          headers: { "content-type": "application/json" },
+        }),
+        { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
+      );
+    const put = (name: string, w: number, h: number) =>
+      putTestImage(`events/${event.id}/photos/patch-${name}.png`, makePng(w, h), "image/png");
+    const row = () => prisma.event.findUniqueOrThrow({ where: { id: event.id } });
+    return { event, patch, put, row, staff };
+  }
+
+  it("enregistre un logo conforme, ses dimensions et une ligne de journal", async () => {
+    const { event, patch, put, row } = await setup();
+    const logo = await put("ok", 136, 136);
+    const original = await put("orig", 800, 600);
+    const res = await patch({ logo, logoOriginal: original });
+    expect(res.status).toBe(200);
+    expect(await row()).toMatchObject({ logo, logoOriginal: original, logoWidth: 136, logoHeight: 136 });
+    const logs = await prisma.activityLog.findMany({ where: { eventId: event.id, type: "EVENT_IMAGE_UPDATED" } });
+    expect(logs).toHaveLength(1);
+    expect(logs[0].details).toEqual({ slot: "logo", removed: false });
+  });
+
+  it("refuse un logo hors ratio et laisse la colonne inchangée", async () => {
+    const { patch, put, row } = await setup();
+    const res = await patch({ logo: await put("bad", 300, 100) });
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ code: "IMAGE_RATIO", slot: "logo" });
+    expect((await row()).logo).toBeNull();
+  });
+
+  it("refuse une clé inexistante", async () => {
+    const { event, patch } = await setup();
+    const res = await patch({ banner: `events/${event.id}/photos/inexistant.png` });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE", slot: "banner" });
+  });
+
+  it("refuse une clé d'un autre dossier, même existante, et un original hors périmètre", async () => {
+    const { patch } = await setup();
+    const foreign = await putTestImage("orgs/autre-org/images/logo.png", makePng(136, 136), "image/png");
+    const res = await patch({ logo: foreign });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE", slot: "logo" });
+    const original = await patch({ logoOriginal: "profile/quelquun/photos/p.png" });
+    expect(original.status).toBe(400);
+    expect(await original.json()).toMatchObject({ code: "INVALID_IMAGE" });
+  });
+
+  it("ne revalide pas une image inchangée (pas de blocage rétroactif)", async () => {
+    const { event, patch, put, row } = await setup();
+    const logo = await put("old", 300, 100);
+    await prisma.event.update({ where: { id: event.id }, data: { logo } });
+    const res = await patch({ logo, title: "Autre titre" });
+    expect(res.status).toBe(200);
+    expect((await row()).logo).toBe(logo);
+    expect(await prisma.activityLog.count({ where: { type: "EVENT_IMAGE_UPDATED" } })).toBe(0);
+  });
+
+  it("accepte un original ancien hors périmètre renvoyé inchangé", async () => {
+    const { event, patch, row } = await setup();
+    const legacy = "legacy/ancien-logo-original.png";
+    await prisma.event.update({ where: { id: event.id }, data: { logoOriginal: legacy } });
+    const res = await patch({ logoOriginal: legacy, title: "Autre titre" });
+    expect(res.status).toBe(200);
+    expect((await row()).logoOriginal).toBe(legacy);
+  });
+
+  it("efface la clé, les dimensions et l'original avec null", async () => {
+    const { event, patch, put, row } = await setup();
+    const logo = await put("rm", 136, 136);
+    await prisma.event.update({
+      data: { logo, logoOriginal: logo, logoWidth: 136, logoHeight: 136 },
+      where: { id: event.id },
+    });
+    const res = await patch({ logo: null, logoOriginal: logo });
+    expect(res.status).toBe(200);
+    expect(await row()).toMatchObject({ logo: null, logoOriginal: null, logoWidth: null, logoHeight: null });
+    const log = await prisma.activityLog.findFirstOrThrow({ where: { type: "EVENT_IMAGE_UPDATED" } });
+    expect(log.details).toEqual({ slot: "logo", removed: true });
+  });
+
+  it("enregistre l'original de la bannière seul", async () => {
+    const { patch, put, row } = await setup();
+    const original = await put("b-orig", 3000, 900);
+    expect((await patch({ bannerOriginal: original })).status).toBe(200);
+    expect((await row()).bannerOriginal).toBe(original);
+  });
+
+  it("contrôle la bannière contre son cadre et mémorise ses dimensions", async () => {
+    const { patch, put, row } = await setup();
+    expect((await patch({ banner: await put("b-bad", 1000, 1000) })).status).toBe(422);
+    const banner = await put("b-ok", 1500, 500);
+    expect((await patch({ banner })).status).toBe(200);
+    expect(await row()).toMatchObject({ bannerWidth: 1500, bannerHeight: 500 });
   });
 });

@@ -1,5 +1,6 @@
 import { writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { encodePng } from "../../prisma/seed/demo/png";
 
 // Genere les fixtures binaires E2E (JPEG + PDF) au premier appel, dans le
 // dossier `e2e/fixtures/`. Idempotent. Permet d'embarquer les fichiers binaires
@@ -52,8 +53,25 @@ const PDF_BYTES = Buffer.from(
 
 let initialized = false;
 
+// Degrade doux : leger a compresser, jamais uni (un PNG uni cacherait un defaut de recadrage).
+const gradient = (width: number, height: number) =>
+  encodePng(width, height, (x, y): [number, number, number] => [
+    Math.round((x / width) * 255),
+    Math.round((y / height) * 255),
+    140,
+  ]);
+
 export type FixturePaths = {
+  // Nom historique : designe desormais une photo PNG 420 x 540 (7:9), acceptee sans cadrage.
   jpeg: string;
+  // Photo d'identite 420 x 540 (7:9).
+  photo: string;
+  // 600 x 600 : conforme a un cadre 1:1, hors ratio 7:9 et 3:1.
+  square: string;
+  // 1800 x 600 : conforme a un cadre 3:1, hors ratio 1:1 et 7:9.
+  wide: string;
+  // L'ancien JPEG de 332 octets (1 x 1) : trop petit pour tout cadre.
+  tiny: string;
   pdf: string;
   txt: string;
   oversized: string;
@@ -64,14 +82,21 @@ export function ensureFixtures(): FixturePaths {
     mkdirSync(FIXTURE_DIR, { recursive: true });
   }
   const paths: FixturePaths = {
-    jpeg: join(FIXTURE_DIR, "awa-photo.jpg"),
+    jpeg: join(FIXTURE_DIR, "awa-photo.png"),
+    photo: join(FIXTURE_DIR, "awa-photo.png"),
+    square: join(FIXTURE_DIR, "awa-square.png"),
+    wide: join(FIXTURE_DIR, "awa-wide.png"),
+    tiny: join(FIXTURE_DIR, "awa-tiny.jpg"),
     pdf: join(FIXTURE_DIR, "awa-cni.pdf"),
     txt: join(FIXTURE_DIR, "awa-bogus.txt"),
     oversized: join(FIXTURE_DIR, "awa-oversized.bin"),
   };
 
-  if (!initialized || !existsSync(paths.jpeg)) {
-    writeFileSync(paths.jpeg, Buffer.from(JPEG_BYTES));
+  if (!initialized || !existsSync(paths.photo) || !existsSync(paths.tiny)) {
+    writeFileSync(paths.photo, gradient(420, 540));
+    writeFileSync(paths.square, gradient(600, 600));
+    writeFileSync(paths.wide, gradient(1800, 600));
+    writeFileSync(paths.tiny, Buffer.from(JPEG_BYTES));
     writeFileSync(paths.pdf, PDF_BYTES);
     writeFileSync(paths.txt, "Ceci est un fichier texte invalide pour upload.");
     // 6 Mo de zeros : depasse la limite 5 Mo cote API.

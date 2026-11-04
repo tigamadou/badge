@@ -10,6 +10,9 @@ import {
 } from "../helpers/db";
 import { loginAs } from "../helpers/auth";
 import { ensureFixtures } from "../fixtures";
+import { readFileSync } from "node:fs";
+import { readImageDimensions } from "@/lib/image-dimensions";
+import { confirmCrop } from "../helpers/images-2a";
 
 test.describe("Account profile edit", () => {
   test.afterAll(async () => {
@@ -62,8 +65,47 @@ test.describe("Account profile edit", () => {
       where: { id: user.id },
       select: { photo: true },
     });
-    expect(updated?.photo).toMatch(/^profile\/.+\/photos\/.+\.jpg$/);
+    expect(updated?.photo).toMatch(/^profile\/.+\/photos\/.+\.png$/);
     // La restitution du fichier via /api/files est couverte en integration.
+  });
+
+  test("une photo hors 7:9 passe par le cadrage et la photo stockee est 7:9", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-crop-photo", verified: true, profile: true });
+    await loginAs(page, user);
+    await page.goto("/account/profile");
+
+    // Les règles de la photo d'identité sont visibles près de l'envoi.
+    await expect(page.getByText("Fond blanc uni")).toBeVisible();
+    await expect(page.getByText(/Format 7:9/)).toBeVisible();
+
+    await page.setInputFiles('input[type="file"][accept*="image/jpeg"]', fixtures.wide);
+    await confirmCrop(page);
+    await expect(page.getByText(/photo enregistrée/i)).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: /enregistrer/i }).click();
+
+    let photo: string | null = null;
+    await expect(async () => {
+      photo = (await getDb().user.findUnique({ where: { id: user.id }, select: { photo: true } }))?.photo ?? null;
+      expect(photo).toContain(`profile/${user.id}/photos/`);
+    }).toPass();
+    const served = await page.request.get(`/api/files/${photo}`);
+    expect(served.status()).toBe(200);
+    const dims = readImageDimensions(await served.body());
+    expect(dims).not.toBeNull();
+    expect(Math.abs(dims!.width / dims!.height - 7 / 9)).toBeLessThan(0.02);
+    expect(dims!.width).toBeGreaterThanOrEqual(210);
+  });
+
+  test("l'envoi direct d'une photo carrée est refusé par le serveur", async ({ page }) => {
+    const fixtures = ensureFixtures();
+    const user = await createTestUser({ scope: "profile-direct-square", verified: true, profile: true });
+    await loginAs(page, user);
+    const res = await page.request.post("/api/account/upload?kind=photo", {
+      multipart: { file: { name: "carre.png", mimeType: "image/png", buffer: readFileSync(fixtures.square) } },
+    });
+    expect(res.status()).toBe(422);
+    expect((await res.json()).code).toBeTruthy();
   });
 
   test("upload document PDF persists and serves", async ({ page }) => {
@@ -227,6 +269,6 @@ test.describe("Account profile edit", () => {
       select: { snapshotPhoto: true },
     });
     expect(after?.snapshotPhoto).not.toBe(before?.snapshotPhoto);
-    expect(after?.snapshotPhoto).toMatch(/^profile\/.+\/photos\/.+\.jpg$/);
+    expect(after?.snapshotPhoto).toMatch(/^profile\/.+\/photos\/.+\.png$/);
   });
 });
