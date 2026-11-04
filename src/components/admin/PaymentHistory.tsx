@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PaymentStatus } from "@prisma/client";
 import { Table } from "@/components/ui/Table";
+import { STATUS_LABELS } from "@/components/payments/status";
 
 export interface PaymentHistoryItem {
   id: string;
@@ -10,14 +11,6 @@ export interface PaymentHistoryItem {
   status: PaymentStatus;
   fedapayReference: string | null;
 }
-
-const STATUS_LABELS: Record<PaymentStatus, string> = {
-  PENDING: "En attente",
-  APPROVED: "Payé",
-  DECLINED: "Refusé",
-  CANCELED: "Annulé",
-  EXPIRED: "Expiré",
-};
 
 const amountFormat = new Intl.NumberFormat("fr-FR");
 
