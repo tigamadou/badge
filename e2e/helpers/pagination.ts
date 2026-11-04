@@ -15,7 +15,7 @@ export async function expectPagination(
 ): Promise<void> {
   await expect(page.getByText(`${opts.total} résultat${opts.total > 1 ? "s" : ""}`, { exact: true })).toBeVisible();
   await expect(page.getByLabel(SIZE_LABEL)).toHaveValue(String(opts.pageSize));
-  await expect(page.locator('[aria-current="page"]').first()).toHaveText(String(opts.page ?? 1));
+  await expect(page.locator('button[aria-current="page"]')).toHaveText(String(opts.page ?? 1));
 }
 
 export async function expectNoHorizontalOverflow(page: Page): Promise<void> {

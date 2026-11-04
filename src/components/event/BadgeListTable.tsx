@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BatchBar, BatchButton } from "@/components/ui/BatchBar";
 import { Checkbox } from "@/components/ui/FormControls";
 import { CatPill, Tag } from "@/components/ui/Labels";
@@ -11,6 +12,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { SearchInput, Toolbar } from "@/components/ui/Toolbar";
 import { toastError, toastInfo, toastSuccess } from "@/lib/toast";
 import { storeSelection } from "@/lib/badge-batch-client";
+import { BADGE_PAGE_SIZE_DEFAULT, parseBadgePage } from "@/lib/badge-list-query";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Row = {
@@ -24,17 +26,22 @@ type Row = {
 
 type Filter = "all" | "printed" | "unprinted" | "allaccess";
 
-const PAGE_SIZES = [50, 100, 200, 500];
+const FILTERS: Filter[] = ["all", "printed", "unprinted", "allaccess"];
 
 export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Filtre, recherche, page et taille vivent dans l'URL (rechargement et lien partageable).
+  const { page, pageSize } = parseBadgePage(searchParams);
+  const rawFilter = searchParams.get("filter");
+  const filter: Filter = FILTERS.includes(rawFilter as Filter) ? (rawFilter as Filter) : "unprinted";
+  const q = searchParams.get("q") ?? "";
+
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(100);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<Filter>("unprinted");
-  const [search, setSearch] = useState("");
-  const [q, setQ] = useState("");
+  const [search, setSearch] = useState(q);
   const [busy, setBusy] = useState(false);
   const [selectingAll, setSelectingAll] = useState(false);
   // Numero de la derniere requete de liste : une reponse perimee (filtre change entre-temps) est ignoree.
@@ -45,6 +52,17 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
   useEffect(() => {
     selectedCount.current = selected.size;
   }, [selected]);
+
+  // Ecrit des parametres dans l'URL sans empiler l'historique ni remonter la page.
+  function updateUrl(patch: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null) next.delete(key);
+      else next.set(key, value);
+    }
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   const base = `/api/org/${orgId}/events/${eventId}/badges`;
   function filterQuery() {
@@ -77,7 +95,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
       setTotal(count);
       // La page demandee n'existe plus (ex. dernier badge marque imprime) : derniere page non vide.
       const lastPage = Math.max(1, Math.ceil(count / pageSize));
-      if (page > lastPage) setPage(lastPage);
+      if (page > lastPage) updateUrl({ page: lastPage > 1 ? String(lastPage) : null });
     } catch {
       if (mine !== latest.current) return;
       setRows([]);
@@ -100,8 +118,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
     const t = setTimeout(() => {
       const next = search.trim();
       if (next === q) return;
-      setQ(next);
-      setPage(1);
+      updateUrl({ q: next || null, page: null });
       resetSelection();
     }, 300);
     return () => clearTimeout(t);
@@ -114,8 +131,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
   }, [filter, q, page, pageSize]);
 
   function changeFilter(next: Filter) {
-    setFilter(next);
-    setPage(1);
+    updateUrl({ filter: next === "unprinted" ? null : next, page: null });
     resetSelection();
   }
 
@@ -279,12 +295,10 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
         totalPages={Math.max(1, Math.ceil(total / pageSize))}
         total={total}
         pageSize={pageSize}
-        pageSizeOptions={PAGE_SIZES}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
+        onPageChange={(next) => updateUrl({ page: next > 1 ? String(next) : null })}
+        onPageSizeChange={(size) =>
+          updateUrl({ pageSize: size === BADGE_PAGE_SIZE_DEFAULT ? null : String(size), page: null })
+        }
       />
     </div>
   );

@@ -135,6 +135,33 @@ describe("GET /registrations", () => {
     expect(json.registrations[0].status).toBe("PENDING");
   });
 
+  it("pagine par pageSize (liste commune) et renvoie pageSize", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    for (let i = 0; i < 22; i++) await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const call = async (qs: string) => {
+      const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations?${qs}`);
+      return (await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) })).json();
+    };
+
+    const ten = await call("pageSize=10");
+    expect(ten.registrations).toHaveLength(10);
+    expect(ten).toMatchObject({ total: 22, page: 1, pageSize: 10 });
+    expect(ten).not.toHaveProperty("limit");
+
+    const invalid = await call("pageSize=7");
+    expect(invalid.pageSize).toBe(20);
+    expect(invalid.registrations).toHaveLength(20);
+
+    const big = await call("pageSize=500");
+    expect(big.pageSize).toBe(500);
+    expect(big.registrations).toHaveLength(22);
+
+    const p3 = await call("pageSize=10&page=3");
+    expect(p3.registrations).toHaveLength(2);
+  });
+
   it("searches by q on email/firstName/lastName/document", async () => {
     const { u, org, event, cat } = await seedAdmin();
     await mkReg(event.id, cat.id, { email: "amadou@x.test", firstName: "Amadou" });

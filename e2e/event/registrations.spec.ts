@@ -12,7 +12,7 @@ import { createTestEventMember } from "../helpers/db";
 
 // Page Inscriptions (liste) — /event/[eventId]/registrations
 // Rôle : ADMIN. Actions : recherche (nom/e-mail/document), filtre statut,
-// Actualiser, Export CSV, pagination (25/page), lien vers le detail,
+// Actualiser, Export CSV, pagination (20/page), lien vers le detail,
 // bouton Nouvelle inscription.
 test.describe("Event — Inscriptions (liste)", () => {
   test.afterAll(async () => {
@@ -83,7 +83,7 @@ test.describe("Event — Inscriptions (liste)", () => {
     await expect(page.getByRole("cell", { name: /en attente/i })).toBeVisible();
     await expect(page.getByRole("cell", { name: /^validé$/i })).toBeVisible();
 
-    await page.locator("select").selectOption("APPROVED");
+    await page.getByLabel("Filtrer par statut").selectOption("APPROVED");
     await expect(page.getByRole("cell", { name: /^validé$/i })).toBeVisible();
     await expect(page.getByRole("cell", { name: /en attente/i })).toBeHidden();
   });
@@ -104,9 +104,9 @@ test.describe("Event — Inscriptions (liste)", () => {
     await expect(page.locator("tbody tr")).toHaveCount(1);
   });
 
-  test("Pagination : 25 par page, la page 2 affiche la suite", async ({ page }) => {
+  test("Pagination : 20 par page, la page 2 affiche la suite", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-pagin" });
-    // 26 inscriptions => 2 pages.
+    // 26 inscriptions => 2 pages (20 + 6).
     for (let i = 0; i < 26; i++) {
       await addReg(eventId, categoryId, "PENDING", `reg-pagin-${i}`);
     }
@@ -114,14 +114,15 @@ test.describe("Event — Inscriptions (liste)", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
-    // 25 lignes de donnees sur la premiere page.
-    await expect(page.locator("tbody tr")).toHaveCount(25);
+    // 20 lignes de donnees sur la premiere page.
+    await expect(page.locator("tbody tr")).toHaveCount(20);
 
-    await page.getByRole("button", { name: /suivant/i }).click();
-    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(6);
 
-    await page.getByRole("button", { name: /précédent/i }).click();
-    await expect(page.locator("tbody tr")).toHaveCount(25);
+    await page.getByRole("button", { name: "Page précédente" }).click();
+    await expect(page.locator("tbody tr")).toHaveCount(20);
   });
 
   test("Le clic sur une ligne ouvre le detail", async ({ page }) => {
