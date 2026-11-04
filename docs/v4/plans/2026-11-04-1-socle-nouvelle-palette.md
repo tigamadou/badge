@@ -43,7 +43,7 @@ rôle** (pas par teinte).
 | 7 | Garde-fou local du socle + mise à jour des tests existants | [x] | 2026-11-04 | |
 | 8 | `/styleguide` | [x] | 2026-11-04 | |
 | 9 | Contrôle visuel 375 / 1024 / 1280 px | [x] | 2026-11-04 | styleguide 375/1024/1280 : pas de defilement horizontal, palette, boutons et menu OK. /platform (StaffShell) 375 (tiroir), 1024, 1280 OK ; PlatformOrgShell 1024 OK ; EventShell mode staff (bandeau marine) 1024 OK ; /account 1024 OK. OrgShell et shells lecteur/operateur/imprimeur non verifies visuellement (le compte staff est redirige hors de /org). Focus clavier non verifie a la main. |
-| 10 | Vérification complète | [ ] | | |
+| 10 | Vérification complète | [x] | 2026-11-04 | |
 
 ## Fichiers du lot (exclusifs)
 

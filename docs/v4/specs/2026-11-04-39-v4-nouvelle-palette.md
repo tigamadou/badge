@@ -206,6 +206,12 @@ Chantier `nouvelle-palette`, branche d'intégration **`feat/nouvelle-palette`** 
 - Garde-fou : test local du socle (`src/components/ui/__tests__/palette-socle.test.ts`) dès la
   vague 1, test global (`src/__tests__/palette-guard.test.ts`) en vague 3. Le nettoyage des restes
   en vague 3 est l'objet même du chantier (pas une modification de prod pour faire passer un test).
+- Vague 1 (socle) : `sidebar-classes.ts` porte les classes du menu clair (liens, groupes, compteur,
+  bandeau) pour tous les shells ; `Button` gagne `positive` (ActionButton aussi) ; `RoleBadge` garde
+  `green` (turquoise) et `amber` (or) et gagne `warn` ; `data-surface="navy"` pour le focus or ;
+  `MiniChart` et la progression en marine (séries neutres) ; `QuotaBar` sain en turquoise,
+  >= 75 % en `warn` ; bloc « Après » du `Diff` du journal en turquoise pâle ; `AccountNav`,
+  `SidebarNav`, `OrgShell` et shells d'évènement migrés par le socle.
 
 ## Hors périmètre
 
