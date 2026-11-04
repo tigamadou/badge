@@ -341,7 +341,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 
-    await expect(page.getByText("Paiements", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Paiements", exact: true })).toBeVisible();
     const row = page.getByRole("row", { name: new RegExp(`Impression ${request.reference}`) });
     await expect(row).toContainText("20 000 FCFA");
     await expect(row).toContainText("Payé");
