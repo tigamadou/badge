@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
 import { FullHeightPage } from "@/components/layout/FullHeightPage";
-import { OrderSteps } from "@/components/print/OrderSteps";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { OrderBadgesButton } from "@/components/staff/print/order/OrderBadgesButton";
 import { PrintRequestActions } from "@/components/event/print/PrintRequestActions";
@@ -140,7 +139,7 @@ export default async function PrintRequestDetailPage({
               <Alert tone="info">{creditOfferSentence(availableCredit)}</Alert>
             ) : null}
             {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
-            <OrderSteps status={request.status} type={request.type} />
+            <div><PrintRequestStatusBadge status={request.status} /></div>
             <OrganizerOrderSummary request={request} badgeCount={badgeCount}>
               {onsiteCounter ? <OnsiteCounterCard counter={onsiteCounter} /> : null}
             </OrganizerOrderSummary>
@@ -157,7 +156,7 @@ export default async function PrintRequestDetailPage({
         }
         quote={
           <OrganizerQuoteColumn
-            lines={lines}
+            lineCount={lines.length}
             total={request.total}
             badgeCount={badgeCount}
             quoteVersion={request.quoteVersion}
