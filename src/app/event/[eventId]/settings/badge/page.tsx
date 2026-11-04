@@ -12,6 +12,8 @@ import BadgeTemplatePicker, {
 } from "@/components/admin/BadgeTemplatePicker";
 import { getEventOrgId } from "@/lib/event-org";
 import { findTemplateLock } from "@/lib/print-requests/template-lock-core";
+import { EVENT_IMAGE_SELECT, evaluateEventImages } from "@/lib/event-image-compliance";
+import { EventImageAlert } from "@/components/event/EventImageAlert";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export default async function EventBadgeSettingsPage({
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, orgId: true, title: true, badgeTemplateId: true },
+    select: { title: true, ...EVENT_IMAGE_SELECT },
   });
   if (!event || event.orgId !== orgId) notFound();
   if (!hasEventPermission(ctx, eventId, orgId, "event.settings.update")) {
@@ -62,6 +64,7 @@ export default async function EventBadgeSettingsPage({
 
   const templates: TemplateSummary[] = await listAvailableTemplates();
   const lock = await findTemplateLock(eventId);
+  const imageIssues = await evaluateEventImages(event);
 
   return (
     <div className="space-y-6">
@@ -72,6 +75,8 @@ export default async function EventBadgeSettingsPage({
           plateforme.
         </p>
       </div>
+
+      <EventImageAlert eventId={eventId} issues={imageIssues} />
 
       <BadgeTemplatePicker
         templates={templates}

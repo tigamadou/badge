@@ -16,6 +16,8 @@ import { EventInfoCard } from "@/components/event/EventInfoCard";
 import { EventCover, eventCoverUrl } from "@/components/event/EventCover";
 import { buildBaseUrl } from "@/lib/mail-helpers";
 import { getEventOrgId } from "@/lib/event-org";
+import { EVENT_IMAGE_SELECT, evaluateEventImages } from "@/lib/event-image-compliance";
+import { EventImageAlert } from "@/components/event/EventImageAlert";
 
 export default async function EventDashboardPage({
   params,
@@ -32,8 +34,6 @@ export default async function EventDashboardPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
-      id: true,
-      orgId: true,
       title: true,
       slug: true,
       date: true,
@@ -41,7 +41,7 @@ export default async function EventDashboardPage({
       location: true,
       description: true,
       registrationOpen: true,
-      banner: true,
+      ...EVENT_IMAGE_SELECT,
     },
   });
   if (!event || event.orgId !== orgId) redirect("/select");
@@ -107,6 +107,7 @@ export default async function EventDashboardPage({
     select: { id: true, name: true, color: true },
   });
 
+  const imageIssues = await evaluateEventImages(event);
   const { maxParticipantsPerEvent: participantLimit } = await resolveOrgLimits(orgId);
   const quotaPct =
     participantLimit != null ? Math.round((quota30d / participantLimit) * 100) : null;
@@ -131,6 +132,8 @@ export default async function EventDashboardPage({
         categories={categories}
         variant="staff"
       />
+
+      <EventImageAlert eventId={eventId} issues={imageIssues} />
 
       {quotaPct != null && quotaPct > 80 && (
         <Alert tone="warn">

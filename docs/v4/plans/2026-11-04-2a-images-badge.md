@@ -36,7 +36,7 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 | 6 | Blocage : rendu PDF, aperçu, exports, planches | [x] | 2026-11-04 | tests regroupes dans event-images-blocking.test.ts ; worker FAILED OK sans modification |
 | 7 | Blocage : soumission de commande, impression sur place | [x] | 2026-11-04 | tests regroupes dans event-images-blocking-requests.test.ts |
 | 8 | Composant `ImageCropper` | [x] | 2026-11-04 | dialogue sans footer Dialog (boutons dans le corps) ; image locale lue en data URL ; comportement canvas a verifier en e2e |
-| 9 | Interface évènement : réglages, bandeau, tableau de bord | [ ] | | |
+| 9 | Interface évènement : réglages, bandeau, tableau de bord | [x] | 2026-11-04 | formulaire : champ EventImageField interne ; WebP toujours cadre (sortie PNG) ; verification navigateur en tache 12 |
 | 10 | Interface photo : compte, inscription, règles de la photo d'identité | [ ] | | |
 | 11 | Seed démo et fixtures e2e conformes | [ ] | | |
 | 12 | e2e Playwright et contrôle 375 / 1024 / 1280 px | [ ] | | |
