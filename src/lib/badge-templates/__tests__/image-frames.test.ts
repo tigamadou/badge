@@ -4,6 +4,8 @@ import {
   ID_PHOTO_REQUIREMENT,
   checkAgainst,
   computeCropOutput,
+  cropEncodingAttempts,
+  MAX_CROP_BYTES,
   findImageFrames,
   frameForSource,
   requirementFromFrame,
@@ -132,5 +134,20 @@ describe("computeCropOutput", () => {
     expect(computeCropOutput({ width: 5000, height: 1666 }, banner)).toEqual({ width: 4500, height: 1500 });
     expect(computeCropOutput({ width: 800, height: 266 }, banner)).toEqual({ width: 1500, height: 500 });
     expect(computeCropOutput({ width: 2000, height: 666 }, banner)).toEqual({ width: 2000, height: 667 });
+  });
+});
+
+describe("cropEncodingAttempts", () => {
+  const banner = requirementFromFrame({ width: 750, height: 250 });
+  const out = { width: 4500, height: 1500 };
+
+  it("commence par le format demande, puis replie en JPEG a fond blanc jusqu'au minimum du cadre", () => {
+    const png = cropEncodingAttempts(out, banner, "image/png");
+    expect(png[0]).toEqual({ mime: "image/png", quality: 0.92, ...out, flatten: false });
+    expect(png.slice(1).every((a) => a.mime === "image/jpeg" && a.flatten)).toBe(true);
+    const last = png[png.length - 1];
+    expect({ width: last.width, height: last.height }).toEqual({ width: banner.minWidth, height: banner.minHeight });
+    expect(cropEncodingAttempts(out, banner, "image/jpeg")[0].flatten).toBe(true);
+    expect(MAX_CROP_BYTES).toBe(5 * 1024 * 1024);
   });
 });

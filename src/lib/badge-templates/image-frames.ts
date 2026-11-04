@@ -111,3 +111,31 @@ export function computeCropOutput(
   const width = Math.round(Math.min(Math.max(area.width, req.minWidth), 3 * req.minWidth));
   return { width, height: Math.round((width * req.ratio.height) / req.ratio.width) };
 }
+
+// Miroir de MAX_UPLOAD_BYTES (storage.ts, serveur) : le recadrage ne doit pas produire plus.
+export const MAX_CROP_BYTES = 5 * 1024 * 1024;
+
+export type CropEncoding = {
+  mime: "image/png" | "image/jpeg";
+  quality: number;
+  width: number;
+  height: number;
+  // JPEG sans transparence : le fond est rempli en blanc avant le dessin.
+  flatten: boolean;
+};
+
+// Encodages successifs a essayer jusqu'a rentrer sous MAX_CROP_BYTES : le format demande, puis JPEG
+// de moins en moins qualitatif, enfin JPEG a la resolution minimale du cadre.
+export function cropEncodingAttempts(
+  out: { width: number; height: number },
+  req: ImageRequirement,
+  mime: "image/png" | "image/jpeg",
+): CropEncoding[] {
+  const min = { width: req.minWidth, height: req.minHeight };
+  return [
+    { mime, quality: 0.92, ...out, flatten: mime === "image/jpeg" },
+    { mime: "image/jpeg", quality: 0.85, ...out, flatten: true },
+    { mime: "image/jpeg", quality: 0.7, ...out, flatten: true },
+    { mime: "image/jpeg", quality: 0.8, ...min, flatten: true },
+  ];
+}

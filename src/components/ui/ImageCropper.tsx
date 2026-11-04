@@ -4,7 +4,9 @@ import dynamic from "next/dynamic";
 import type { Area } from "react-easy-crop";
 import {
   checkAgainst,
+  MAX_CROP_BYTES,
   computeCropOutput,
+  cropEncodingAttempts,
   type ImageRequirement,
 } from "@/lib/badge-templates/image-frames";
 import { Button } from "./Button";
@@ -77,15 +79,22 @@ export function cropToBlob(
   return withUrl(source, async (url) => {
     const img = await loadImage(url);
     const out = computeCropOutput(area, requirement);
-    const canvas = document.createElement("canvas");
-    canvas.width = out.width;
-    canvas.height = out.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Recadrage indisponible sur ce navigateur.");
-    ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, out.width, out.height);
-    return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Recadrage impossible."))), mime, 0.92);
-    });
+    for (const attempt of cropEncodingAttempts(out, requirement, mime)) {
+      const canvas = document.createElement("canvas");
+      canvas.width = attempt.width;
+      canvas.height = attempt.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Recadrage indisponible sur ce navigateur.");
+      if (attempt.flatten) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, attempt.width, attempt.height);
+      }
+      ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, attempt.width, attempt.height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, attempt.mime, attempt.quality));
+      if (!blob) throw new Error("Recadrage impossible.");
+      if (blob.size <= MAX_CROP_BYTES) return blob;
+    }
+    throw new Error("L'image recadrée dépasse 5 Mo : choisissez une image plus légère.");
   });
 }
 

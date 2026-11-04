@@ -58,7 +58,7 @@ async function postImage(orgId: string, eventId: string, file: Blob, purpose: Im
 }
 
 function formatHint(requirement: ImageRequirement | undefined) {
-  if (!requirement) return "Aucune contrainte de format pour le modèle de badge actuel";
+  if (!requirement) return "Aucune contrainte de format pour le modèle de badge actuel — JPEG ou PNG, 5 Mo max";
   return (
     `Format attendu : ${requirement.ratioLabel}, par ex. ${requirement.exampleWidth} × ${requirement.exampleHeight} px ` +
     `(minimum ${requirement.minWidth} × ${requirement.minHeight}) — JPEG, PNG ou WebP, 5 Mo max`
