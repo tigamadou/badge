@@ -21,7 +21,7 @@
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Vérification du socle, helper `paginate`, helpers e2e | [ ] | | |
+| 1 | Vérification du socle, helper `paginate`, helpers e2e | [x] | 2026-11-04 | UrlPagination = { page, totalPages, total, pageSize, pageSizeOptions? } (conforme) |
 | 2 | Espace évènement — badges et inscriptions | [ ] | | |
 | 3 | Espace évènement — catégories, membres, blocage, journal, impression | [ ] | | |
 | 4 | Espace organisation — évènements, membres, templates, journal | [ ] | | |
