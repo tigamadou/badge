@@ -23,14 +23,28 @@ function paint(ctx: Pick<DemoContext, "faker">, width: number, height: number) {
   const accent = [faker.number.int({ max: 255 }), faker.number.int({ max: 255 }), faker.number.int({ max: 255 })];
   const radius = Math.min(width, height) / 4;
   const cell = cellSize(width, height);
-  return (x: number, y: number): [number, number, number] => {
-    const cx = Math.floor(x / cell) * cell + cell / 2;
-    const cy = Math.floor(y / cell) * cell + cell / 2;
+  const cols = Math.ceil(width / cell);
+  // Une couleur par cellule, calculee une seule fois : le rendu par pixel se reduit a une lecture.
+  const colors = new Map<number, [number, number, number]>();
+  const colorOf = (col: number, row: number): [number, number, number] => {
+    const cx = col * cell + cell / 2;
+    const cy = row * cell + cell / 2;
     if (Math.hypot(cx - width / 2, cy - height / 2) < radius) {
       return [clamp(accent[0]), clamp(accent[1]), clamp(accent[2])];
     }
     const t = (cx + cy) / (width + height);
     return [0, 1, 2].map((i) => clamp(from[i] + (to[i] - from[i]) * t)) as [number, number, number];
+  };
+  return (x: number, y: number): [number, number, number] => {
+    const col = Math.floor(x / cell);
+    const row = Math.floor(y / cell);
+    const id = row * cols + col;
+    let color = colors.get(id);
+    if (!color) {
+      color = colorOf(col, row);
+      colors.set(id, color);
+    }
+    return color;
   };
 }
 
