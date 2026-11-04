@@ -104,7 +104,7 @@ Expected: `parseListPage`, `PAGE_SIZE_OPTIONS`, `DEFAULT_PAGE_SIZE`, `Pagination
 
 - [ ] **Step 2: Relever la signature réelle de `UrlPagination`**
 
-La spec ne fige pas ses props. Le plan suppose `<UrlPagination page totalPages total pageSize />` (les props de `Pagination` sans les callbacks). Si la signature réelle diffère, **ne pas modifier le composant** : écrire dans la section Progression (Notes) la forme réelle et l'utiliser partout ; si elle est inutilisable, s'arrêter et signaler.
+La spec ne fige pas ses props. Le plan suppose `<UrlPagination page totalPages total pageSize />` (les props de `Pagination` sans les callbacks). Si la signature réelle diffère, **ne pas modifier le composant** (ni `Pagination` ni `UrlPagination` ; `BadgeListTable` utilise `Pagination` avec callbacks, voir Task 2 Step 4) : écrire dans la section Progression (Notes) la forme réelle et l'utiliser partout ; si elle est inutilisable, s'arrêter et signaler.
 
 - [ ] **Step 3: Écrire le test de `paginate` (échoue)**
 
@@ -142,7 +142,7 @@ Expected: PASS.
 - Test: tests API existants de ces routes (`src/app/api/org/[orgId]/events/[eventId]/registrations/__tests__/…`), `e2e/event/badges.spec.ts`, `e2e/event/registrations.spec.ts`, `e2e/event/pagination.spec.ts`
 
 **Interfaces:**
-- Consomme : `parseListPage(searchParams, { defaultSize })`, `UrlPagination`, `parseBadgePage` / `buildBadgeWhere` (socle, API inchangée).
+- Consomme : `parseListPage(searchParams, { defaultSize })`, `Pagination` (avec callbacks, pour `BadgeListTable`) et `UrlPagination` (autres listes), `parseBadgePage` / `buildBadgeWhere` (socle, API inchangée).
 - Produit : `GET …/registrations?status&q&categoryId&page&pageSize` → `{ registrations, total, page, pageSize }` (le paramètre `limit` disparaît ; plus aucun appelant : `grep -rn "limit=" src` pour le confirmer).
 
 - [ ] **Step 1: Test API (échoue)** — dans le test de la route registrations : `pageSize=10` renvoie 10 lignes ; `pageSize=7` retombe sur 20 ; `pageSize=500` accepté ; réponse contient `pageSize` et plus `limit`.
@@ -153,9 +153,9 @@ Expected: FAIL.
 
 - [ ] **Step 3: Route badges (GET)** : vérifier qu'elle appelle `parseBadgePage` (défaut 100) ; si le test existant suppose une taille hors `PAGE_SIZE_OPTIONS` (ex. 200), l'adapter (pas de code de production modifié pour un test : si la route doit changer, c'est pour consommer le socle). Run: `make test FILE="src/app/api/org/[orgId]/events/[eventId]/badges"` — Expected: PASS.
 
-- [ ] **Step 4: `BadgeListTable`** — l'état `filter`, `q`, `page`, `pageSize` vient de l'URL (`useSearchParams`) et s'écrit par `router.replace(`?${params}`, { scroll: false })` ; supprimer `PAGE_SIZES` locale et utiliser `UrlPagination` (défaut 100 : `pageSize` absent de l'URL = 100). Changer filtre ou recherche → `page` retiré. Conserver la recherche différée (300 ms), `latest`/`epoch` et la sélection globale. La page bornée par le serveur : si `page > lastPage`, remplacer l'URL par la dernière page. Les erreurs d'API passent par `useAsyncAction` (message `message` de l'API affiché en priorité — voir Task 9).
+- [ ] **Step 4: `BadgeListTable`** — l'état `filter`, `q`, `page`, `pageSize` vient de l'URL (`useSearchParams`) et s'écrit par `router.replace(`?${params}`, { scroll: false })` ; supprimer `PAGE_SIZES` locale et utiliser le composant `Pagination` **avec callbacks** (`onPageChange` / `onPageSizeChange` qui appellent ce `router.replace`), **pas** `UrlPagination` (il fait `router.push` avec scroll et écrit toujours `page`/`pageSize` ; le composant ne doit pas être modifié) ; au changement de taille, retirer `page` (défaut 100 : `pageSize` absent de l'URL = 100). Changer filtre ou recherche → `page` retiré. Conserver la recherche différée (300 ms), `latest`/`epoch` et la sélection globale. La page bornée par le serveur : si `page > lastPage`, remplacer l'URL par la dernière page. Les erreurs d'API passent par `useAsyncAction` (message `message` de l'API affiché en priorité — voir Task 9).
 
-- [ ] **Step 5: `RegistrationTable`** — mêmes principes : `status`, `q`, `page`, `pageSize` dans l'URL, `UrlPagination` à la place des boutons maison, bouton « Rafraîchir » conservé (`router.refresh()` ne suffit pas pour un fetch client : rappeler `load()`).
+- [ ] **Step 5: `RegistrationTable`** — mêmes principes : `status`, `q`, `page`, `pageSize` dans l'URL, `Pagination` avec callbacks (`router.replace`, `scroll: false`) à la place des boutons maison, bouton « Rafraîchir » conservé (`router.refresh()` ne suffit pas pour un fetch client : rappeler `load()`).
 
 - [ ] **Step 6: e2e** — `e2e/event/pagination.spec.ts` (section badges/inscriptions) : seed de 45 inscriptions approuvées (`seedMany`) ; défaut 20 lignes pour les inscriptions, 45 pour les badges (défaut 100) ; choisir 10 → URL `pageSize=10`, 10 lignes ; page suivante ; recharger : l'état persiste ; filtre « Imprimés » remet `page` à 1 ; `?page=99` affiche la dernière page ; `expectNoHorizontalOverflow` à 375, 1024 et 1280 px.
 Run: `make test-e2e FILE=e2e/event/pagination.spec.ts` puis `make test-e2e FILE=e2e/event/badges.spec.ts` puis `…registrations.spec.ts`

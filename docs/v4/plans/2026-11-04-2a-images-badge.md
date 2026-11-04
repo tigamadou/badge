@@ -217,7 +217,7 @@ Expected: PASS.
   - `findImageFrames` : un `rect` `{w: 68, h: 68, image: {source: "logo"}}` → `[{width: 68, height: 68}]` ; même bloc dans un `group` imbriqué sur 2 niveaux → trouvé ; bloc sans `image`, bloc `text`, `list` et image d'une autre source → ignorés ; deux blocs → ordre de document conservé.
   - `frameForSource` : variable `logo` liée à `event.logoDataUrl` (nom ≠ source) → cadre du bloc qui référence `logo` ; deux variables liées à la même source → premier bloc en ordre de document ; aucune liaison / bloc absent → `null` ; liaison `null` ou `"option"` → `null`.
   - `requirementFromFrame({width: 750, height: 250})` → `ratioLabel "3:1"`, `minWidth 1500`, `minHeight 500`, exemple `1500 × 500` ; `{68, 68}` → `"1:1"`, min `136 × 136` ; `{106, 150}` → `"5:7"` (tolérance 2 %) ; cadre `{279.69, 396.85}` → min `560 × 794`.
-  - `checkAgainst` : `1500×500` vs 3:1 → ok ; `1530×500` (+2 %) ok ; `1600×500` → `RATIO` avec message exact ci-dessus ; `300×100` → `RESOLUTION` ; `ID_PHOTO_REQUIREMENT` : `420×540` ok, `540×540` RATIO `Ratio attendu 7:9, par ex. 210 × 270 px.`, `140×180` RESOLUTION.
+  - `checkAgainst` : `1500×500` vs 3:1 → ok ; `1520×500` (+1,33 %) ok ; `1530×500` (+2,0000…18 %, `ratioMatches` renvoie `false`) hors tolérance → `RATIO` ; `1600×500` → `RATIO` avec message exact ci-dessus ; `300×100` → `RESOLUTION` ; `ID_PHOTO_REQUIREMENT` : `420×540` ok, `540×540` RATIO `Ratio attendu 7:9, par ex. 210 × 270 px.`, `140×180` RESOLUTION.
   - `computeCropOutput({width: 5000, height: 1666}, req 3:1 min 1500)` → `4500 × 1500` ; `{width: 800, …}` → `1500 × 500` (plancher).
 
 - [ ] **Step 2: Run — échec attendu**

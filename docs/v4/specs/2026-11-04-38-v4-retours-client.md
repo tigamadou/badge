@@ -382,3 +382,4 @@ Concerne la page staff (`/platform/print/orders/[requestId]`) et la page organis
   bibliothèque `react-easy-crop` ; `fixtures.jpeg` e2e devient un PNG 7:9 conforme.
 - `package-lock.json` périmé (Yarn fait foi) : seul `yarn.lock` est mis à jour ; nettoyage éventuel
   hors chantier.
+- Amendements de plans après relecture du socle (2026-11-04) : 2a, cas de ratio 1530x500 remplacé par 1520x500 (ok) et 1530x500 hors tolérance ; 2b, `PAYMENT_PRORATA_MISMATCH` (socle) réutilisé et fabriques renommées `makeBillingPlan`/`makeBillingPayment` (pas de collision avec celles du socle) ; 2c, `BadgeListTable`/`RegistrationTable` utilisent `Pagination` avec callbacks (`router.replace`, `scroll: false`, `page` retiré au changement de filtre) et non `UrlPagination`.

@@ -105,8 +105,9 @@ de 2a / 2c. **Besoin d'y toucher → s'arrêter et le signaler** (ex. un champ P
   dans l'URL). **Ses props ne sont pas fixées par la spec** : à la Task 7, lire la signature
   réelle livrée par le socle et l'utiliser telle quelle (hypothèse de ce plan :
   `<UrlPagination page={p} totalPages={tp} total={n} pageSize={s} />`).
-- Pas de nouvel `ActivityType` : on réutilise `PAYMENT_INITIATED`, `PAYMENT_APPROVED`,
-  `SUBSCRIPTION_UPDATED`, `PLAN_CREATED`, `PLAN_UPDATED`.
+- Pas de nouvel `ActivityType` ajouté par 2b : on réutilise `PAYMENT_INITIATED`, `PAYMENT_APPROVED`,
+  `SUBSCRIPTION_UPDATED`, `PLAN_CREATED`, `PLAN_UPDATED`, ainsi que `PAYMENT_PRORATA_MISMATCH`
+  (déjà ajouté par le socle) pour journaliser l'écart de prorata.
 
 ## Arbitrages de ce plan (écarts spec ↔ code relevés à la lecture)
 
@@ -265,14 +266,15 @@ export async function listPublicPlans(): Promise<PublicPlan[]>;
 - Consumes: `planChangeFor`, `isRunning`, `PERIOD_DAYS`, `computeSubscriptionDates` (existants),
   champs `Payment.listPrice/prorataCredit/coversFrom/coversTo` (socle).
 - Produces: les signatures de « Interfaces de référence » (bloc `subscription-changes.ts`) et,
-  dans `factories-billing.ts` : `makePlan(data?)`, `makeSubscription(orgId, planId, data?)`,
-  `makePayment(input: { orgId; planId; amount; status?; userId?; coversFrom?; coversTo?;
+  dans `factories-billing.ts` : `makeBillingPlan(data?)`, `makeSubscription(orgId, planId, data?)`,
+  `makeBillingPayment(input: { orgId; planId; amount; status?; userId?; coversFrom?; coversTo?;
   listPrice?; prorataCredit?; mode?; approvedAt?; fedapayTransactionId?; createdAt? })`,
   `makePrintPayment(input)` — toutes `async`, écrivent dans la base de test et renvoient la ligne.
 
 - [ ] **Step 1: écrire `src/test/factories-billing.ts`** sur le modèle de `src/test/factories.ts`
   (même usage de `faker`, `seedFactories` importé, noms de plan uniques via `faker.string.alphanumeric`).
-  `makePayment` pose `status: "APPROVED"` et `approvedAt` par défaut ; `fedapayTransactionId`
+  `makeBillingPlan` / `makeBillingPayment` portent des noms distincts de `makePlan` / `makePayment(orgId, data)` du socle
+  (`src/test/factories.ts`, défaut `PENDING`), qui restent inchangés ; `makeBillingPayment` pose `status: "APPROVED"` et `approvedAt` par défaut ; `fedapayTransactionId`
   aléatoire (plage 900 000 000+) quand non fourni et statut ≠ PENDING.
 
 - [ ] **Step 2: écrire les tests purs (échouent)** dans `subscription-quote.test.ts`
@@ -583,7 +585,7 @@ export async function listPublicPlans(): Promise<PublicPlan[]>;
 
 **Interfaces:**
 - Consumes: `parseListPage` (socle) n'est **pas** appelé ici (les pages le font) ;
-  `makePayment`/`makePlan` (Task 1).
+  `makeBillingPayment`/`makeBillingPlan` (Task 1).
 - Produces: les signatures de « Interfaces de référence » (bloc `payments-query.ts`), avec
   `PaymentListItem = { id; createdAt; approvedAt; amount; currency; status; purpose; mode;
   fedapayReference; orgId; orgName; label: string; planId: string|null;
