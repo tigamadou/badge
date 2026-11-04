@@ -28,7 +28,7 @@ describe("NotificationsList", () => {
     expect(html).toContain('id="n-n1"');
     expect(html).toContain('id="n-n2"');
     expect(html).toContain("target:ring-2");
-    expect(html).toContain("target:ring-green-600");
+    expect(html).toContain("target:ring-navy");
   });
 
   it("affiche le bouton du lien principal avec son libellé et les liens secondaires", () => {

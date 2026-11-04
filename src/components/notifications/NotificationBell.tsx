@@ -29,7 +29,7 @@ export function NotificationBellButton({
       aria-label={count > 0 ? `Notifications, ${count} non lues` : "Notifications"}
       aria-expanded={open}
       aria-haspopup="dialog"
-      className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+      className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
     >
       <Bell size={20} aria-hidden="true" />
       {badge ? (
