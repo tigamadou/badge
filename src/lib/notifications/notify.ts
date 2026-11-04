@@ -71,7 +71,10 @@ async function notifyOne(
       title: content.title,
       body: content.body,
       href: content.href,
-      links: [{ label: content.primaryLabel, href: content.href }, ...content.links],
+      links: [
+        { label: content.primaryLabel, href: content.href, ...(content.anchor ? { anchor: content.anchor } : {}) },
+        ...content.links,
+      ],
     })),
   });
   for (const r of recipients) served.add(r.id);

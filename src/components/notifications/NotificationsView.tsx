@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/Feedback";
 import { formatRelativeTime } from "@/lib/format-relative-time";
 import { InvalidCursorError, listNotifications } from "@/lib/notifications/queries";
 import { notificationsPagePath, type NotificationScopeRef } from "@/lib/notifications/scope";
+import { isAnchored, splitBodyByAnchors } from "@/lib/notifications/split-body";
 import type { NotificationDTO } from "@/lib/notifications/types";
 import { MarkAllReadButton } from "./MarkAllReadButton";
 
@@ -12,6 +13,10 @@ export function NotificationsList({ items, now }: { items: NotificationDTO[]; no
     <ul className="divide-y divide-slate-100">
       {items.map((n) => {
         const [primary, ...secondary] = n.links;
+        const primaryInBody = isAnchored(n.body, primary);
+        const segments = splitBodyByAnchors(n.body, n.links);
+        const loose = secondary.filter((l) => !isAnchored(n.body, l));
+        const titleClass = `text-sm text-slate-900 ${n.readAt === null ? "font-semibold" : "font-medium"}`;
         return (
           <li
             key={n.id}
@@ -19,8 +24,14 @@ export function NotificationsList({ items, now }: { items: NotificationDTO[]; no
             className="scroll-mt-20 px-4 py-4 target:ring-2 target:ring-inset target:ring-navy sm:px-6"
           >
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <h2 className={`text-sm text-slate-900 ${n.readAt === null ? "font-semibold" : "font-medium"}`}>
-                {n.title}
+              <h2 className={titleClass}>
+                {primary && !primaryInBody ? (
+                  <Link href={primary.href} className="hover:underline">
+                    {n.title}
+                  </Link>
+                ) : (
+                  n.title
+                )}
               </h2>
               {n.readAt === null ? (
                 <span className="rounded-full bg-mist px-2 py-0.5 text-[11px] font-medium text-navy">
@@ -29,19 +40,21 @@ export function NotificationsList({ items, now }: { items: NotificationDTO[]; no
               ) : null}
               <span className="text-xs text-slate-400">{formatRelativeTime(n.createdAt, now)}</span>
             </div>
-            <p className="mt-1 text-[13px] text-slate-600">{n.body}</p>
-            {primary || secondary.length > 0 ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                {primary ? (
-                  <Link
-                    href={primary.href}
-                    className="inline-flex h-10 items-center rounded-lg bg-navy px-4 text-sm font-medium text-white hover:bg-navy-hover"
-                  >
-                    {primary.label}
+            <p className="mt-1 text-[13px] text-slate-600">
+              {segments.map((seg, i) =>
+                seg.href ? (
+                  <Link key={i} href={seg.href} className="font-medium text-navy hover:underline">
+                    {seg.text}
                   </Link>
-                ) : null}
-                {secondary.map((l) => (
-                  <Link key={l.href} href={l.href} className="text-[13px] font-medium text-navy hover:text-navy-hover">
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                ),
+              )}
+            </p>
+            {loose.length > 0 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                {loose.map((l) => (
+                  <Link key={l.href} href={l.href} className="text-[13px] font-medium text-navy hover:underline">
                     {l.label}
                   </Link>
                 ))}

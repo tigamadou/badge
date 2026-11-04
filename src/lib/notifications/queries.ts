@@ -28,6 +28,12 @@ function isLink(value: unknown): value is NotificationLink {
   return typeof v.label === "string" && typeof v.href === "string";
 }
 
+function sanitizeLink(l: NotificationLink): NotificationLink {
+  const out: NotificationLink = { label: l.label, href: l.href };
+  if (typeof l.anchor === "string" && l.anchor !== "") out.anchor = l.anchor;
+  return out;
+}
+
 export function toNotificationDTO(n: Notification): NotificationDTO {
   return {
     id: n.id,
@@ -35,7 +41,7 @@ export function toNotificationDTO(n: Notification): NotificationDTO {
     title: n.title,
     body: n.body,
     href: n.href,
-    links: Array.isArray(n.links) ? n.links.filter(isLink) : [],
+    links: Array.isArray(n.links) ? n.links.filter(isLink).map(sanitizeLink) : [],
     readAt: n.readAt ? n.readAt.toISOString() : null,
     createdAt: n.createdAt.toISOString(),
   };

@@ -63,8 +63,8 @@ describe("notify", () => {
       title: "Nouvelle inscription", href: "/event/e1/registrations/r1", readAt: null,
     });
     expect(row.links).toEqual([
-      { label: "Voir l'inscription", href: "/event/e1/registrations/r1" },
-      { label: "Voir l'évènement", href: "/event/e1" },
+      { label: "Voir l'inscription", href: "/event/e1/registrations/r1", anchor: "Awa <b>" },
+      { label: "Voir l'évènement", href: "/event/e1", anchor: "Forum" },
     ]);
   });
 

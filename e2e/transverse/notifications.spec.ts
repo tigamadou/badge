@@ -66,7 +66,7 @@ test.describe("Transverse — Notifications", () => {
     await expect(page.getByRole("button", { name: /^Notifications$/ })).toBeVisible();
 
     const registration = await getLatestRegistrationForUser(participant.id);
-    await item.getByRole("link", { name: "Voir l'inscription" }).click();
+    await item.getByRole("link", { name: `${registration!.snapshotFirstName} ${registration!.snapshotLastName}` }).click();
     await expect(page).toHaveURL(`/event/${eventId}/registrations/${registration!.id}`);
 
     // Une seule notification par destinataire (l'administrateur est OWNER d'org ET ADMIN).
