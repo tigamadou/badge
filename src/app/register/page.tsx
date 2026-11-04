@@ -69,7 +69,7 @@ function RegisterForm() {
     <AuthCard title="Créer un compte">
       {done ? (
         <div className="space-y-4 text-center">
-          <p className="text-green-700 font-medium">Compte créé.</p>
+          <p className="text-turquoise-strong font-medium">Compte créé.</p>
           <p className="text-sm text-slate-700">
             Nous vous avons envoyé un email à <strong>{email}</strong> pour confirmer votre adresse.
             {next
@@ -78,7 +78,7 @@ function RegisterForm() {
           </p>
           {!next && (
             <p className="text-sm">
-              <Link href="/login" className="text-green-600 hover:underline">Retour à la connexion</Link>
+              <Link href="/login" className="text-navy hover:underline">Retour à la connexion</Link>
             </p>
           )}
         </div>
@@ -123,7 +123,7 @@ function RegisterForm() {
           </Button>
           <p className="text-sm text-center text-slate-600">
             Déjà inscrit ?{" "}
-            <Link href="/login" className="text-green-600 hover:underline">
+            <Link href="/login" className="text-navy hover:underline">
               Se connecter
             </Link>
           </p>

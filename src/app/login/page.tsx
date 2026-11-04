@@ -56,7 +56,7 @@ function LoginForm() {
       footer={
         <>
           Besoin d&apos;aide ?{" "}
-          <a href="mailto:contact@badge.app" className="text-green-600 hover:underline">
+          <a href="mailto:contact@badge.app" className="text-navy hover:underline">
             Contactez votre administrateur
           </a>
         </>
@@ -90,7 +90,7 @@ function LoginForm() {
           disabled={loading}
         />
         <div className="text-right">
-          <Link href="/forgot-password" className="text-[13px] text-green-600 hover:underline">
+          <Link href="/forgot-password" className="text-[13px] text-navy hover:underline">
             Mot de passe oublié ?
           </Link>
         </div>

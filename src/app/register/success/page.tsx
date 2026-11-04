@@ -9,7 +9,7 @@ export default function RegisterSuccessPage() {
           Votre inscription a bien été reçue. Vous recevrez un email de confirmation
           lorsqu&apos;elle sera validée.
         </p>
-        <Link href="/" className="text-green-600 hover:underline text-sm">
+        <Link href="/" className="text-navy hover:underline text-sm">
           Faire une autre inscription
         </Link>
       </div>

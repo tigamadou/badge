@@ -55,7 +55,7 @@ export default async function SelectPage() {
   if (targets.length === 1) redirect(targets[0]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-slate-50 px-5 py-16">
+    <div className="flex min-h-screen flex-col items-center bg-white px-5 py-16">
       <Image src="/logo.png" alt="Badge" width={120} height={30} className="mb-8 h-8 w-auto object-contain" />
       <div className="w-full max-w-3xl">
         <h1 className="mb-1 text-center text-[22px] font-semibold text-slate-900">Choisissez un espace</h1>
