@@ -31,7 +31,7 @@
 | 8 | Compte participant | [x] | 2026-11-04 | page compte |
 | 9 | Affichage des erreurs `EVENT_IMAGES_NONCOMPLIANT` | [x] | 2026-11-04 | test api-error-display |
 | 10 | Routes de liste des badges d'une commande (staff + organisateur) | [x] | 2026-11-04 | routes items et thread |
-| 11 | `AppShell` / `FullHeightPage` et fonctions pures de la page commande | [ ] | | |
+| 11 | `AppShell` / `FullHeightPage` et fonctions pures de la page commande | [x] | 2026-11-04 | FullHeightPage et modules purs |
 | 12 | Composants communs de la page commande | [ ] | | |
 | 13 | Page commande staff | [ ] | | |
 | 14 | Page commande organisateur | [ ] | | |
