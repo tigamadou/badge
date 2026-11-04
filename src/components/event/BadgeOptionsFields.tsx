@@ -19,7 +19,7 @@ type Props = {
 };
 
 const TEXTAREA_CLASS =
-  "block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
+  "block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy";
 
 // Brouillon local : re-deriver la zone de texte depuis la liste nettoyee effacerait
 // la ligne vide qu'on vient d'ouvrir avec Entree.
@@ -69,7 +69,7 @@ function OptionField({
           type="checkbox"
           checked={value === true}
           onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+          className="h-4 w-4 rounded border-slate-300 text-navy focus:ring-navy"
         />
       );
     case "text":
@@ -150,7 +150,7 @@ export function BadgeOptionsFields({ options, values, onChange, onUpload }: Prop
                 <label htmlFor={`option-${option.name}`} className="block text-sm font-medium text-slate-700">
                   {option.label}
                   {option.kind !== "boolean" && isUnset(value) && (
-                    <span className="ml-2 text-xs text-amber-700">À renseigner</span>
+                    <span className="ml-2 text-xs text-warn">À renseigner</span>
                   )}
                 </label>
                 <OptionField

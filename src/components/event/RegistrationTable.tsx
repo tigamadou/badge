@@ -120,7 +120,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
           </Button>
           <Link
             href={`/event/${eventId}/registrations/new`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
           >
             <Icon name="plus" size={16} /> Inscription
           </Link>
@@ -130,7 +130,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3 hidden md:table-cell">E-mail</th>
               <th className="px-4 py-3 hidden md:table-cell">Catégorie</th>
@@ -148,11 +148,11 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={r.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3">
                   <Link
                     href={`/event/${eventId}/registrations/${r.id}`}
-                    className="text-sm font-medium text-slate-900 hover:text-green-600"
+                    className="text-sm font-medium text-slate-900 hover:text-navy hover:underline"
                   >
                     {r.firstName} {r.lastName}
                   </Link>
@@ -172,7 +172,7 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/event/${eventId}/registrations/${r.id}`}
-                    className="text-[13px] font-medium text-green-600 hover:underline"
+                    className="text-[13px] font-medium text-navy hover:underline"
                   >
                     Détail
                   </Link>

@@ -21,7 +21,7 @@ type FieldErrors = Partial<Record<FieldName, string>>;
 const FIELD_NAMES: readonly string[] = ["firstName", "lastName", "email", "structure", "idDocumentNumber"];
 
 const SELECT_CLASS =
-  "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500";
+  "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-navy";
 
 export function RegistrationForm({
   orgId,

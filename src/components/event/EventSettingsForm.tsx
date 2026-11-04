@@ -364,7 +364,7 @@ export function EventSettingsForm({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
               />
             </div>
             <EventImageField
@@ -403,7 +403,7 @@ export function EventSettingsForm({
                 onChange={(e) => setInstructionsDraft(e.target.value)}
                 rows={5}
                 placeholder="Une consigne par ligne"
-                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
               />
               {fieldErrors.securityInstructions && (
                 <p className="mt-1 text-sm text-rose-600">{fieldErrors.securityInstructions}</p>

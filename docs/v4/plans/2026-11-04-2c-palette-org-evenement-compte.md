@@ -37,7 +37,7 @@ signaler dans la progression.
 | 2 | Pages `src/app/org/**` | [x] | 2026-11-04 |  |
 | 3 | Pages `src/app/event/**` | [x] | 2026-11-04 |  |
 | 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [ ] | | |
-| 5 | `components/event` — formulaires, tableaux, actions, fonds | [ ] | | |
+| 5 | `components/event` — formulaires, tableaux, actions, fonds | [x] | 2026-11-04 |  |
 | 6 | `components/event/print/**` — assistant et conversation | [ ] | | |
 | 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [ ] | | |
 | 8 | `components/admin` — hors shells | [ ] | | |
