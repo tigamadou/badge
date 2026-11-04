@@ -37,7 +37,7 @@ export function OrderModalPanel({
             type="button"
             aria-label="Fermer"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-mist hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
           >
             <Icon name="x" size={18} />
           </button>

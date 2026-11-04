@@ -26,7 +26,7 @@ export function OrderTabs({ tabs, defaultId }: { tabs: OrderTab[]; defaultId: st
             aria-controls={`order-panel-${tab.id}`}
             onClick={() => setActive(tab.id)}
             className={`flex-1 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-              tab.id === current.id ? "border-green-600 text-green-700" : "border-transparent text-slate-500 hover:text-slate-700"
+              tab.id === current.id ? "border-navy text-navy" : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
             {tab.label}

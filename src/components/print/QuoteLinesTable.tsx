@@ -58,7 +58,7 @@ export function QuoteLinesTable({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+            <tr className="border-b border-slate-200 bg-mist text-left text-xs font-medium uppercase tracking-wider text-slate-500">
               <th className={cell}>Ligne</th>
               <th className={`${cell} text-right`}>Quantité</th>
               <th className={`${cell} text-right`}>Prix unitaire</th>
@@ -95,7 +95,7 @@ export function QuoteLinesTable({
             ) : null}
           </tbody>
           <tfoot>
-            <tr className="bg-slate-50">
+            <tr className="bg-mist">
               <td colSpan={3} className={`${cell} text-right text-sm font-semibold text-slate-900`}>
                 {`Total estimé (${badgeCount} badge${badgeCount > 1 ? "s" : ""})`}
               </td>

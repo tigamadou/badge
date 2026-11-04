@@ -19,7 +19,7 @@ export const toneClasses: Record<Tone, string> = {
 };
 
 // Le point de vue (`viewer`) ne change pas la teinte d'une entrée : le client est toujours neutre,
-// l'équipe Badge toujours verte. Il est conservé pour que l'appelant explicite son rôle.
+// l'équipe Badge toujours turquoise. Il est conservé pour que l'appelant explicite son rôle.
 export function entryTone(entry: ToneEntry, _viewer: "STAFF" | "ORGANIZER"): Tone {
   if (entry.internal) return "internal";
   if (entry.kind === "EVENT") return entry.eventType === "QUOTE_SENT" ? "quote" : "event";

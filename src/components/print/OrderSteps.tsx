@@ -2,8 +2,8 @@ import type { PrintRequestStatus, PrintRequestType } from "@prisma/client";
 import { orderSteps, type StepState } from "./order-steps";
 
 const DOT: Record<StepState, string> = {
-  done: "bg-green-600 text-white",
-  current: "bg-green-600 text-white ring-4 ring-green-100",
+  done: "bg-navy text-white",
+  current: "bg-navy text-white ring-4 ring-mist",
   todo: "bg-slate-200 text-slate-500",
   stopped: "bg-rose-600 text-white ring-4 ring-rose-100",
 };
