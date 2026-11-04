@@ -232,6 +232,42 @@ async function prepareCheckout(input: {
   });
 }
 
+// Paiement PENDING deja ouvert chez FedaPay : on ne retient que ce que FedaPay confirme.
+// Renvoie l'URL de paiement, ou "RETRY" quand le candidat a ete remplace ou confirme et qu'il
+// faut relire l'etat (nouvelle preparation).
+async function resolveCandidate(candidate: Candidate, attempt: number): Promise<{ url: string } | "RETRY"> {
+  let status: string | null;
+  try {
+    status = (await retrieveTransaction(candidate.fedapayTransactionId)).status;
+  } catch (error) {
+    if (!(error instanceof FedapayError) || error.httpStatus !== 404) throw providerError(error);
+    status = null;
+  }
+
+  if (status === "pending") {
+    try {
+      return { url: await createPaymentUrl(candidate.fedapayTransactionId) };
+    } catch (error) {
+      // Jeton refuse pour un candidat encore valable : un seul remplacement, puis nouveau paiement.
+      const failure = providerError(error);
+      if (attempt > 0) throw failure;
+    }
+    status = null;
+  }
+  if (status === null) {
+    // Transaction inconnue de FedaPay : le paiement est remplace par un nouveau.
+    const stale = await prisma.payment.findUniqueOrThrow({ where: { id: candidate.id } });
+    await failPayment(stale, "CANCELED", "REPLACED");
+  } else {
+    try {
+      await confirmPayment(candidate.fedapayTransactionId);
+    } catch (error) {
+      throw providerError(error);
+    }
+  }
+  return "RETRY";
+}
+
 export async function startPrintRequestCheckout(input: {
   orgId: string;
   eventId: string;
@@ -276,37 +312,8 @@ export async function startPrintRequestCheckout(input: {
       return { paymentId, url };
     }
 
-    // Paiement PENDING deja ouvert chez FedaPay : on ne retient que ce que FedaPay confirme.
-    const { candidate } = prepared;
-    let status: string | null;
-    try {
-      status = (await retrieveTransaction(candidate.fedapayTransactionId)).status;
-    } catch (error) {
-      if (!(error instanceof FedapayError) || error.httpStatus !== 404) throw providerError(error);
-      status = null;
-    }
-
-    if (status === "pending") {
-      try {
-        return { paymentId: candidate.id, url: await createPaymentUrl(candidate.fedapayTransactionId) };
-      } catch (error) {
-        // Jeton refuse pour un candidat encore valable : un seul remplacement, puis nouveau paiement.
-        const failure = providerError(error);
-        if (attempt > 0) throw failure;
-      }
-      status = null;
-    }
-    if (status === null) {
-      // Transaction inconnue de FedaPay : le paiement est remplace par un nouveau.
-      const stale = await prisma.payment.findUniqueOrThrow({ where: { id: candidate.id } });
-      await failPayment(stale, "CANCELED", "REPLACED");
-    } else {
-      try {
-        await confirmPayment(candidate.fedapayTransactionId);
-      } catch (error) {
-        throw providerError(error);
-      }
-    }
+    const resolved = await resolveCandidate(prepared.candidate, attempt);
+    if (resolved !== "RETRY") return { paymentId: prepared.candidate.id, url: resolved.url };
     // Reprise : si la commande est devenue PAID, assertPayable leve REQUEST_ALREADY_PAID.
   }
   throw new PaymentError("PAYMENT_IN_PROGRESS");
