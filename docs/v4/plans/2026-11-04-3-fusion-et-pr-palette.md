@@ -31,9 +31,9 @@ les anciennes variables de `globals.css` sont retirées.
 | 7 | Relecture transverse des défauts jumeaux | [x] | 2026-11-04 | aucun blanc sur turquoise ; fixtures intactes |
 | 8 | Spec, plans, documentation | [x] | 2026-11-04 | spec et journal a jour |
 | 9 | Seed et e2e complets | [x] | 2026-11-04 | e2e non relances : aucun selecteur de couleur, structure inchangee (strategie de tests allegee) |
-| 10 | Contrôle visuel 375 / 1024 / 1280 px | [ ] |  |  |
-| 11 | Arrêt des stacks et push | [ ] |  |  |
-| 12 | PR et clôture | [ ] |  |  |
+| 10 | Contrôle visuel 375 / 1024 / 1280 px | [x] | 2026-11-04 | partiel : accueil, tarifs, styleguide et panel plateforme a 1280 px ; e-mail Mailpit, /e/..., espaces org/evenement non verifies |
+| 11 | Arrêt des stacks et push | [x] | 2026-11-04 | stacks arretees, branche poussee |
+| 12 | PR et clôture | [x] | 2026-11-04 | PR 29 ouverte, non fusionnee |
 
 ## Global Constraints
 
