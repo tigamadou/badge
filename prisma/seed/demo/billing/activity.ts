@@ -88,9 +88,9 @@ export async function writeBillingActivity(
   for (const p of payments) {
     const sub = subs.find((s) => s.subscriptionId === p.subscriptionId)!;
     const base = { userId: p.userId, staffActor: false, orgId: p.orgId, targetId: p.id };
-    add("PAYMENT_INITIATED", p.createdAt, { ...base, details: { paymentId: p.id, planId: p.planId, amount: p.amount } });
+    add("PAYMENT_INITIATED", p.createdAt, { ...base, details: { paymentId: p.id, planId: p.planId, listPrice: p.listPrice, prorataCredit: p.prorataCredit, amount: p.amount } });
     if (p.status === "APPROVED" && p.approvedAt) {
-      add("PAYMENT_APPROVED", p.approvedAt, { ...base, details: { paymentId: p.id, planId: p.planId, amount: p.amount, mode: p.mode } });
+      add("PAYMENT_APPROVED", p.approvedAt, { ...base, details: { paymentId: p.id, planId: p.planId, listPrice: p.listPrice, prorataCredit: p.prorataCredit, amount: p.amount, mode: p.mode } });
       add("SUBSCRIPTION_UPDATED", new Date(p.approvedAt.getTime() + 1000), {
         userId: null, staffActor: false, orgId: p.orgId, targetId: sub.subscriptionId,
         details: { source: "payment", paymentId: p.id, planId: p.planId, mode: p.mode },

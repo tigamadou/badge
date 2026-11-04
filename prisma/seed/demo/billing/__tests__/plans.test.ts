@@ -21,10 +21,24 @@ describe("ensurePlans", () => {
     expect(pick(first.legacy)).toEqual({ name: "demo-ancien-offre", maxEvents: 3, max: 300, period: "MONTHLY", price: 8000, archived: true });
   });
 
+  it("expose trois plans publics avec position, description et caracteristiques", async () => {
+    await ensurePlans();
+    const visible = await prisma.plan.findMany({ where: { publicVisible: true }, orderBy: { position: "asc" } });
+    expect(visible.map((p) => p.name)).toEqual(["Standard", "demo-pro", "demo-entreprise-annuel"]);
+    expect(new Set(visible.map((p) => p.position)).size).toBe(3);
+    expect(visible.filter((p) => p.highlighted).map((p) => p.name)).toEqual(["demo-pro"]);
+    for (const p of visible) {
+      expect(p.description).toBeTruthy();
+      expect((p.features as string[]).length).toBeGreaterThan(0);
+    }
+    expect(await prisma.plan.count({ where: { publicVisible: false } })).toBe(3);
+  });
+
   it("ne modifie pas un plan existant ajuste par le staff", async () => {
     await prisma.plan.create({ data: { name: "Standard", maxEvents: 5, maxParticipantsPerEvent: 50, price: 1 } });
     const plans = await ensurePlans();
     expect(plans.standard.maxEvents).toBe(5);
     expect(plans.standard.price).toBe(1);
+    expect(plans.standard.publicVisible).toBe(true);
   });
 });

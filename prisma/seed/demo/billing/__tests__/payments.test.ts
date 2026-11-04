@@ -29,7 +29,15 @@ describe("seedSubscriptionPayments", () => {
       expect(p.purpose).toBe("SUBSCRIPTION");
       expect(p.planId).not.toBeNull();
       expect(p.printRequestId).toBeNull();
-      expect(p.amount).toBe(p.plan!.price);
+      expect(p.listPrice).toBe(p.plan!.price);
+      expect(p.listPrice! - p.prorataCredit!).toBe(p.amount);
+      if (p.status !== "APPROVED") {
+        expect(p.prorataCredit).toBe(0);
+        expect(p.coversFrom).toBeNull();
+        expect(p.coversTo).toBeNull();
+      } else {
+        expect(p.coversFrom!.getTime()).toBeLessThan(p.coversTo!.getTime());
+      }
       expect(p.currency).toBe("XOF");
       expect(p.approvedAt !== null).toBe(p.status === "APPROVED");
       expect(p.mode !== null).toBe(p.status === "APPROVED");
@@ -42,6 +50,17 @@ describe("seedSubscriptionPayments", () => {
         expect(ids.has(p.fedapayTransactionId!)).toBe(false);
         ids.add(p.fedapayTransactionId!);
       }
+    }
+  });
+
+  it("recale la derniere periode couverte sur l'echeance et montre un credit au prorata", async () => {
+    const payments = await prisma.payment.findMany({ where: { status: "APPROVED" }, orderBy: { approvedAt: "asc" } });
+    expect(payments.some((p) => (p.prorataCredit ?? 0) > 0 && p.amount < p.listPrice!)).toBe(true);
+    const subs = await prisma.subscription.findMany();
+    for (const sub of subs) {
+      const own = payments.filter((p) => p.orgId === sub.orgId && p.mode !== "SCHEDULED");
+      if (own.length === 0 || !sub.endDate) continue;
+      expect(own[own.length - 1].coversTo!.getTime()).toBe(sub.endDate.getTime());
     }
   });
 
