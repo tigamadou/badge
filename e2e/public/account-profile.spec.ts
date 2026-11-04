@@ -12,7 +12,6 @@ import { loginAs } from "../helpers/auth";
 import { ensureFixtures } from "../fixtures";
 import { readFileSync } from "node:fs";
 import { readImageDimensions } from "@/lib/image-dimensions";
-import { getFile } from "@/lib/storage";
 import { confirmCrop } from "../helpers/images-2a";
 
 test.describe("Account profile edit", () => {
@@ -88,9 +87,11 @@ test.describe("Account profile edit", () => {
     let photo: string | null = null;
     await expect(async () => {
       photo = (await getDb().user.findUnique({ where: { id: user.id }, select: { photo: true } }))?.photo ?? null;
-      expect(photo).toBeTruthy();
+      expect(photo).toContain(`profile/${user.id}/photos/`);
     }).toPass();
-    const dims = readImageDimensions((await getFile(photo!)).body);
+    const served = await page.request.get(`/api/files/${photo}`);
+    expect(served.status()).toBe(200);
+    const dims = readImageDimensions(await served.body());
     expect(dims).not.toBeNull();
     expect(Math.abs(dims!.width / dims!.height - 7 / 9)).toBeLessThan(0.02);
     expect(dims!.width).toBeGreaterThanOrEqual(210);
