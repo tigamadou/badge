@@ -29,7 +29,7 @@ défaut), deux modules `src/lib/` purs (`image-dimensions.ts`, `list-query.ts`),
 |---|---|---|---|---|
 | 1 | Schéma Prisma + `ActivityType` + libellés | [x] | 2026-11-04 | |
 | 2 | `src/lib/image-dimensions.ts` | [x] | 2026-11-04 | |
-| 3 | `src/lib/list-query.ts` + réécriture de `badge-list-query.ts` | [ ] | | |
+| 3 | `src/lib/list-query.ts` + réécriture de `badge-list-query.ts` | [x] | 2026-11-04 | |
 | 4 | `Pagination.tsx` (options 10/20/50/100/500) + `UrlPagination` | [ ] | | |
 | 5 | Seed minimal (motifs de rejet, plans `publicVisible`) | [ ] | | |
 | 6 | Fabriques (nouveaux champs) | [ ] | | |
