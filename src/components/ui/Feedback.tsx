@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
 const ALERT: Record<string, string> = {
-  info: "border-blue-200 bg-blue-50 text-blue-700",
+  info: "border-line bg-mist text-navy",
   err: "border-rose-200 bg-rose-50 text-rose-700",
-  warn: "border-amber-200 bg-amber-50 text-amber-700",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  warn: "border-warn/20 bg-warn-soft text-warn",
+  success: "border-turquoise/30 bg-turquoise-soft text-turquoise-strong",
 };
 
 export function Alert({ tone, children }: { tone: "info" | "err" | "warn" | "success"; children: ReactNode }) {
@@ -44,7 +44,7 @@ export function Spinner({ size = 28 }: { size?: number }) {
     <span
       role="status"
       aria-label="Chargement"
-      className="inline-block animate-spin rounded-full border-[3px] border-slate-200 border-t-green-600"
+      className="inline-block animate-spin rounded-full border-[3px] border-slate-200 border-t-navy"
       style={{ width: size, height: size }}
     />
   );
@@ -53,15 +53,15 @@ export function Spinner({ size = 28 }: { size?: number }) {
 export function ProgressBar({ pct }: { pct: number }) {
   const w = Math.max(0, Math.min(100, pct));
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-      <div data-testid="progress-fill" className="h-full rounded-full bg-green-600" style={{ width: `${w}%` }} />
+    <div className="h-2 overflow-hidden rounded-full bg-mist">
+      <div data-testid="progress-fill" className="h-full rounded-full bg-navy" style={{ width: `${w}%` }} />
     </div>
   );
 }
 
 export function SuccessRing({ children }: { children: ReactNode }) {
   return (
-    <span className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-emerald-50 text-green-600">
+    <span className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-turquoise-soft text-turquoise-strong">
       {children}
     </span>
   );

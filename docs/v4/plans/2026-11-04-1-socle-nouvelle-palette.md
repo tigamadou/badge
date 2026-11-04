@@ -38,7 +38,7 @@ rôle** (pas par teinte).
 | 3 | `sidebar-classes.ts`, `AppShell`, `MobileNav`, `UserAvatar` (menu clair, fond blanc) | [x] | 2026-11-04 | |
 | 4 | `StaffShell` et `PlatformOrgShell` | [x] | 2026-11-04 | |
 | 4b | Menu latéral clair : `SidebarNav`, `OrgShell`, shells d'évènement, `AccountNav` | [x] | 2026-11-04 | |
-| 5 | `ui` — boutons (variante `positive`), feedback, étiquettes, statuts, onglets, pagination, champs | [ ] | | |
+| 5 | `ui` — boutons (variante `positive`), feedback, étiquettes, statuts, onglets, pagination, champs | [x] | 2026-11-04 | |
 | 6 | `ui` — reste des composants (barres, cartes, tableaux, fichiers, journal…) | [ ] | | |
 | 7 | Garde-fou local du socle + mise à jour des tests existants | [ ] | | |
 | 8 | `/styleguide` | [ ] | | |

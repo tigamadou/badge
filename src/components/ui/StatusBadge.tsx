@@ -1,8 +1,8 @@
 type Status = "PENDING" | "APPROVED" | "REJECTED";
 
 const statusConfig: Record<Status, { label: string; className: string }> = {
-  PENDING: { label: "En attente", className: "bg-amber-50 text-amber-700" },
-  APPROVED: { label: "Validé", className: "bg-emerald-50 text-emerald-700" },
+  PENDING: { label: "En attente", className: "bg-gold-soft text-gold-strong" },
+  APPROVED: { label: "Validé", className: "bg-turquoise-soft text-turquoise-strong" },
   REJECTED: { label: "Rejeté", className: "bg-rose-50 text-rose-700" },
 };
 

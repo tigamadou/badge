@@ -32,6 +32,14 @@ describe("Pagination", () => {
     expect(html).not.toContain("500 par page");
   });
 
+  it("palette : page courante marine, focus marine, survol mist", () => {
+    const html = renderToStaticMarkup(<Pagination {...base} />);
+    expect(html).toContain("bg-navy text-white");
+    expect(html).toContain("ring-navy");
+    expect(html).toContain("hover:bg-mist");
+    expect(html).not.toContain("green-");
+  });
+
   it("page 1 : precedent desactive, page courante marquee, total", () => {
     const html = renderToStaticMarkup(<Pagination {...base} />);
     expect(html).toMatch(/aria-current="page"[^>]*>1</);

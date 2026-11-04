@@ -12,17 +12,18 @@ export function CatPill({ color, label, count }: { color: string; label: ReactNo
 }
 
 const ROLE: Record<string, string> = {
-  green: "bg-green-100 text-green-700",
-  navy: "bg-brand-navy/10 text-brand-navy",
-  amber: "bg-amber-50 text-amber-700",
-  slate: "bg-slate-100 text-slate-600",
+  green: "bg-turquoise-soft text-turquoise-strong",
+  navy: "bg-navy/10 text-navy",
+  amber: "bg-gold-soft text-gold-strong",
+  warn: "bg-warn-soft text-warn",
+  slate: "bg-mist text-slate-600",
 };
 
 export function RoleBadge({
   tone = "green",
   children,
 }: {
-  tone?: "green" | "navy" | "amber" | "slate";
+  tone?: "green" | "navy" | "amber" | "warn" | "slate";
   children: ReactNode;
 }) {
   return (
@@ -36,7 +37,7 @@ export function RoleBadge({
 
 export function Tag({ icon, children }: { icon?: IconName; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-mist px-2 py-0.5 text-xs font-medium text-slate-600">
       {icon ? <Icon name={icon} size={12} /> : null}
       {children}
     </span>

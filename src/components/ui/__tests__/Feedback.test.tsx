@@ -10,6 +10,26 @@ describe("Feedback", () => {
     expect(html).toContain("bg-rose-50");
   });
 
+  it("Alert : tons de la palette", () => {
+    const info = renderToStaticMarkup(<Alert tone="info">i</Alert>);
+    expect(info).toContain("bg-mist");
+    expect(info).toContain("text-navy");
+    const warn = renderToStaticMarkup(<Alert tone="warn">w</Alert>);
+    expect(warn).toContain("bg-warn-soft");
+    expect(warn).toContain("text-warn");
+    const ok = renderToStaticMarkup(<Alert tone="success">s</Alert>);
+    expect(ok).toContain("bg-turquoise-soft");
+    expect(ok).toContain("text-turquoise-strong");
+  });
+
+  it("spinner, progression et icône de succès en palette", () => {
+    expect(renderToStaticMarkup(<Spinner />)).toContain("border-t-navy");
+    expect(renderToStaticMarkup(<ProgressBar pct={40} />)).toContain("bg-navy");
+    const ring = renderToStaticMarkup(<SuccessRing>ok</SuccessRing>);
+    expect(ring).toContain("bg-turquoise-soft");
+    expect(ring).toContain("text-turquoise-strong");
+  });
+
   it("EmptyState montre titre et description", () => {
     const html = renderToStaticMarkup(<EmptyState icon="inbox" title="Aucune inscription" description="Rien ici" />);
     expect(html).toContain("Aucune inscription");

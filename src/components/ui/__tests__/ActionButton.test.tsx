@@ -16,6 +16,15 @@ describe("ActionButton", () => {
     expect(html).not.toContain("aria-busy");
   });
 
+  it("variant positive rend le turquoise", () => {
+    const html = renderToStaticMarkup(
+      <ActionButton action={async () => 1} variant="positive">
+        Approuver
+      </ActionButton>,
+    );
+    expect(html).toContain("bg-turquoise");
+  });
+
   it("transmet disabled", () => {
     const html = renderToStaticMarkup(
       <ActionButton action={async () => 1} disabled>

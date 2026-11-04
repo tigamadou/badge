@@ -21,7 +21,7 @@ export function Tabs({
             aria-selected={on}
             onClick={() => onChange(t.value)}
             className={`-mb-px shrink-0 border-b-2 px-3.5 py-2.5 text-sm font-medium ${
-              on ? "border-green-600 text-green-600" : "border-transparent text-slate-400 hover:text-slate-600"
+              on ? "border-navy text-navy" : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
             {t.label}
@@ -42,7 +42,7 @@ export function Segmented({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="inline-flex gap-0.5 rounded-[9px] bg-slate-100 p-[3px]">
+    <div className="inline-flex gap-0.5 rounded-[9px] bg-mist p-[3px]">
       {options.map((o) => {
         const on = o.value === value;
         return (
