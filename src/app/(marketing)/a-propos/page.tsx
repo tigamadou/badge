@@ -130,7 +130,7 @@ export default function AProposPage() {
               <div key={m.name} className="text-center">
                 <div
                   style={displayFont}
-                  className="mx-auto mb-3.5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-mist text-2xl font-bold text-navy"
+                  className="mx-auto mb-3.5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-slate-100 text-2xl font-bold text-navy"
                 >
                   {m.av}
                 </div>

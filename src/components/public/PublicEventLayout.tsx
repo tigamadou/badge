@@ -30,7 +30,7 @@ export function PublicEventLayout({ event, organization, contact, children }: Pr
     .join("");
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-white">
       {/* Bannière marine — hero événement */}
       <header className="bg-navy py-7 text-white">
         <div className="mx-auto flex max-w-[720px] items-center gap-4 px-5">

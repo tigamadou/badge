@@ -44,7 +44,7 @@ export function BadgeVerifyView({ data }: Props) {
       <VerifyBanner valid title="Badge valide" />
       <Card>
         <CardBody className="text-center">
-          <span className="mx-auto mb-3 flex h-[88px] w-[88px] items-center justify-center rounded-2xl bg-mist text-slate-400">
+          <span className="mx-auto mb-3 flex h-[88px] w-[88px] items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
             <Icon name={anonymous ? "lock" : "user"} size={34} />
           </span>
           {anonymous || !data.participant ? (

@@ -35,12 +35,12 @@ export function BadgeCredential({
     >
       <div className="h-3 bg-navy" />
       <div className="flex items-center gap-2.5 px-5 pt-[18px]">
-        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-mist text-[11px] font-bold text-navy">
+        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-slate-100 text-[11px] font-bold text-navy">
           {orgInitials}
         </span>
         <span className="text-xs font-semibold tracking-[0.02em] text-slate-600">{orgLabel}</span>
       </div>
-      <div className="mx-auto mb-3.5 mt-4 flex h-[120px] w-[120px] items-center justify-center rounded-xl bg-mist text-slate-400">
+      <div className="mx-auto mb-3.5 mt-4 flex h-[120px] w-[120px] items-center justify-center rounded-xl bg-slate-100 text-slate-400">
         <Icon name="user" size={44} />
       </div>
       <div className="px-4 text-center text-[22px] font-bold leading-[1.15] text-slate-900">{name}</div>

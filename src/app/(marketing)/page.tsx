@@ -183,7 +183,7 @@ export default async function HomePage() {
               ["MV", "Meetup Ville"],
             ].map(([mk, name]) => (
               <div key={name} className="flex items-center gap-2.5 text-[15px] font-semibold text-slate-400">
-                <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-mist text-[13px] font-bold text-navy">
+                <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-slate-100 text-[13px] font-bold text-navy">
                   {mk}
                 </span>
                 {name}
