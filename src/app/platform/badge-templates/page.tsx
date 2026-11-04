@@ -8,6 +8,9 @@ import { Icon } from "@/components/ui/Icon";
 import { TemplatePreview } from "@/components/ui/TemplatePreview";
 import { BadgeTemplateInstaller } from "@/components/staff/BadgeTemplateInstaller";
 import { BadgeTemplateArchiveButton } from "@/components/staff/BadgeTemplateArchiveButton";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +18,12 @@ function formatDate(d: Date): string {
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(d);
 }
 
-export default async function PlatformBadgeTemplatesPage() {
+export default async function PlatformBadgeTemplatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const list = parseListPage(await searchParams);
   const session = await getServerSession(authOptions);
   const me = session?.user?.id
     ? await prisma.user.findUnique({
@@ -27,9 +35,16 @@ export default async function PlatformBadgeTemplatesPage() {
   // comme les autres reglages plateforme. Les autres roles consultent.
   const canInstall = me?.staffRole === "STAFF_ADMIN" || me?.staffRole === "SUPER_ADMIN";
 
-  const templates = await prisma.installedBadgeTemplate.findMany({
-    orderBy: [{ family: "asc" }, { version: "desc" }],
-  });
+  const result = await paginate(
+    list,
+    () => prisma.installedBadgeTemplate.count(),
+    (range) =>
+      prisma.installedBadgeTemplate.findMany({
+        orderBy: [{ family: "asc" }, { version: "desc" }, { id: "asc" }],
+        ...range,
+      }),
+  );
+  const templates = result.rows;
   const onsiteIds = new Set((await getOnsitePrintSettings()).templateIds);
 
   return (
@@ -105,6 +120,7 @@ export default async function PlatformBadgeTemplatesPage() {
           </ul>
         )}
       </div>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

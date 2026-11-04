@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 const TYPES: ActivityType[] = [
   "REGISTRATION_CREATED",
@@ -85,9 +88,11 @@ export default async function StaffActivityPage({
     from?: string;
     to?: string;
     page?: string;
+    pageSize?: string;
   }>;
 }) {
   const sp = await searchParams;
+  const list = parseListPage(sp);
 
   const where: Prisma.ActivityLogWhereInput = {};
   if (sp.type) where.type = sp.type as ActivityType;
@@ -110,39 +115,27 @@ export default async function StaffActivityPage({
     if (range.gte || range.lte) where.createdAt = range;
   }
 
-  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
-  const pageSize = 50;
-
-  const [activities, total] = await Promise.all([
-    prisma.activityLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        type: true,
-        orgId: true,
-        eventId: true,
-        targetId: true,
-        staffActor: true,
-        createdAt: true,
-        user: { select: { id: true, email: true, name: true } },
-      },
-    }),
-    prisma.activityLog.count({ where }),
-  ]);
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  function pageHref(p: number): string {
-    const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(sp)) {
-      if (v && k !== "page") params.set(k, v);
-    }
-    params.set("page", String(p));
-    return `/platform/activity?${params.toString()}`;
-  }
+  const result = await paginate(
+    list,
+    () => prisma.activityLog.count({ where }),
+    (range) =>
+      prisma.activityLog.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+        select: {
+          id: true,
+          type: true,
+          orgId: true,
+          eventId: true,
+          targetId: true,
+          staffActor: true,
+          createdAt: true,
+          user: { select: { id: true, email: true, name: true } },
+        },
+      }),
+  );
+  const activities = result.rows;
 
   return (
     <div className="space-y-4">
@@ -152,6 +145,7 @@ export default async function StaffActivityPage({
       </div>
 
       <form method="get" className="flex flex-wrap items-end gap-2.5">
+        <input type="hidden" name="pageSize" value={result.pageSize} />
         <label className="text-[13px] text-slate-500">
           <div className="mb-1">Type</div>
           <select name="type" defaultValue={sp.type ?? ""} className={FIELD_CLASS}>
@@ -194,10 +188,6 @@ export default async function StaffActivityPage({
           Filtrer
         </button>
       </form>
-
-      <div className="text-[13px] text-slate-400">
-        {total} entrée{total > 1 ? "s" : ""} · page {page} / {totalPages}
-      </div>
 
       <TableFrame>
         <table className="w-full text-sm">
@@ -248,26 +238,7 @@ export default async function StaffActivityPage({
         </table>
       </TableFrame>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2">
-          {page > 1 && (
-            <Link
-              href={pageHref(page - 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
-            >
-              <Icon name="arrow-left" size={14} /> Précédent
-            </Link>
-          )}
-          {page < totalPages && (
-            <Link
-              href={pageHref(page + 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
-            >
-              Suivant <Icon name="arrow-right" size={14} />
-            </Link>
-          )}
-        </div>
-      )}
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import type { Job, JobStatus, JobType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
 import { isSensitiveEmailKind } from "./email-kinds";
 import { parseEmailPayload } from "./email-payload";
 
-export const JOB_PAGE_SIZES = [10, 20, 30, 50] as const;
-const DEFAULT_PAGE_SIZE = 20;
 const DAY_MS = 24 * 3_600_000;
 const JOB_STATUSES: readonly JobStatus[] = ["PENDING", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"];
 const RETRYABLE: JobStatus[] = ["FAILED", "CANCELLED"];
@@ -33,12 +33,11 @@ export function parseJobListFilters(
   if (status && !JOB_STATUSES.includes(status as JobStatus)) {
     return { ok: false, code: "INVALID_STATUS" };
   }
-  const page = Number.parseInt(params.get("page") ?? "", 10);
-  const pageSize = Number.parseInt(params.get("pageSize") ?? "", 10);
+  const { page, pageSize } = parseListPage(params);
   const lastDay = parseDay(params.get("to"));
   const filters: JobListFilters = {
-    page: page >= 1 ? page : 1,
-    pageSize: (JOB_PAGE_SIZES as readonly number[]).includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE,
+    page,
+    pageSize,
   };
   if (status) filters.status = status as JobStatus;
   const kind = params.get("kind");
@@ -92,17 +91,19 @@ export async function listJobs(
       : {}),
     ...(f.q ? { recipient: { contains: f.q } } : {}),
   };
-  const [jobs, total] = await Promise.all([
-    prisma.job.findMany({
-      where,
-      select: LIST_SELECT,
-      orderBy: { createdAt: "desc" },
-      skip: (f.page - 1) * f.pageSize,
-      take: f.pageSize,
-    }),
-    prisma.job.count({ where }),
-  ]);
-  return { jobs, total, page: f.page, pageSize: f.pageSize };
+  // `paginate` borne la page demandee a la derniere page non vide.
+  const result = await paginate(
+    f,
+    () => prisma.job.count({ where }),
+    (range) =>
+      prisma.job.findMany({
+        where,
+        select: LIST_SELECT,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+      }),
+  );
+  return { jobs: result.rows, total: result.total, page: result.page, pageSize: result.pageSize };
 }
 
 export async function listJobKinds(): Promise<string[]> {

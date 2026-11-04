@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { parseListPage } from "@/lib/list-query";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
@@ -27,11 +28,7 @@ export const GET = withStaffAuth(async (req) => {
       : archivedParam === "true"
         ? true
         : false;
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
-  const pageSize = Math.min(
-    100,
-    Math.max(1, parseInt(searchParams.get("pageSize") ?? "20", 10) || 20),
-  );
+  const { page, pageSize, skip, take } = parseListPage(searchParams);
 
   const where: Prisma.UserWhereInput = {
     ...(archivedFilter !== undefined && { archived: archivedFilter }),
@@ -60,8 +57,8 @@ export const GET = withStaffAuth(async (req) => {
         _count: { select: { orgMemberships: true } },
       },
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip,
+      take,
     }),
     prisma.user.count({ where }),
   ]);

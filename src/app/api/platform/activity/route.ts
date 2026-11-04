@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { ActivityType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { parseListPage } from "@/lib/list-query";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 
 // Liste blanche des ActivityType valides (filtre exact) : on s'appuie sur
@@ -22,14 +23,7 @@ export const GET = withStaffAuth(async (req) => {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  const page = Math.max(
-    1,
-    parseInt(searchParams.get("page") ?? "1", 10) || 1,
-  );
-  const pageSize = Math.min(
-    200,
-    Math.max(1, parseInt(searchParams.get("pageSize") ?? "50", 10) || 50),
-  );
+  const { page, pageSize, skip, take } = parseListPage(searchParams);
 
   const where: Prisma.ActivityLogWhereInput = {};
   if (typeParam) {
@@ -61,8 +55,8 @@ export const GET = withStaffAuth(async (req) => {
     prisma.activityLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip,
+      take,
       select: {
         id: true,
         type: true,

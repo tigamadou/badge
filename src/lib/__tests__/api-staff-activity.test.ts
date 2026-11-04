@@ -99,7 +99,7 @@ describe("GET /api/platform/activity", () => {
     expect(json.activities[2].type).toBe("USER_CREATED");
     expect(json.total).toBe(3);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(50);
+    expect(json.pageSize).toBe(20);
   });
 
   it("includes related user (id, email, name) in each entry", async () => {
@@ -296,8 +296,8 @@ describe("GET /api/platform/activity", () => {
     const u = await prisma.user.create({
       data: { email: `p-${Date.now()}@x`, password: "x", name: "P" },
     });
-    // 5 entries.
-    for (let i = 0; i < 5; i++) {
+    // 12 entries.
+    for (let i = 0; i < 12; i++) {
       await prisma.activityLog.create({
         data: {
           type: "USER_LOGIN",
@@ -309,26 +309,26 @@ describe("GET /api/platform/activity", () => {
 
     const { GET } = await import("@/app/api/platform/activity/route");
     const req1 = new NextRequest(
-      "http://localhost/api/platform/activity?page=1&pageSize=2",
+      "http://localhost/api/platform/activity?page=1&pageSize=10",
     );
     const res1 = await GET(req1, { params: Promise.resolve({}) });
     const j1 = await res1.json();
-    expect(j1.activities.length).toBe(2);
-    expect(j1.total).toBe(5);
+    expect(j1.activities.length).toBe(10);
+    expect(j1.total).toBe(12);
     expect(j1.page).toBe(1);
-    expect(j1.pageSize).toBe(2);
+    expect(j1.pageSize).toBe(10);
 
     const req2 = new NextRequest(
-      "http://localhost/api/platform/activity?page=3&pageSize=2",
+      "http://localhost/api/platform/activity?page=2&pageSize=10",
     );
     const res2 = await GET(req2, { params: Promise.resolve({}) });
     const j2 = await res2.json();
-    expect(j2.activities.length).toBe(1);
-    expect(j2.total).toBe(5);
-    expect(j2.page).toBe(3);
+    expect(j2.activities.length).toBe(2);
+    expect(j2.total).toBe(12);
+    expect(j2.page).toBe(2);
   });
 
-  it("defaults page/pageSize to 1/50 when query params are not numeric", async () => {
+  it("defaults page/pageSize to 1/20 when query params are not numeric", async () => {
     await makeStaff();
     const u = await prisma.user.create({
       data: { email: `bad-${Date.now()}@x`, password: "x", name: "Bad" },
@@ -344,7 +344,7 @@ describe("GET /api/platform/activity", () => {
 
     expect(res.status).toBe(200);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(50);
+    expect(json.pageSize).toBe(20);
   });
 
   it("returns 400 INVALID_TYPE for a malformed type param", async () => {

@@ -35,6 +35,12 @@ describe("parseJobListFilters", () => {
     expect(r).toEqual({ ok: true, filters: { page: 1, pageSize: 20 } });
   });
 
+  it("accepte la liste commune de tailles (500) et refuse les autres (30)", () => {
+    expect(parseJobListFilters(params("pageSize=500"))).toEqual({ ok: true, filters: { page: 1, pageSize: 500 } });
+    expect(parseJobListFilters(params("pageSize=30"))).toEqual({ ok: true, filters: { page: 1, pageSize: 20 } });
+    expect(parseJobListFilters(params("page=abc"))).toEqual({ ok: true, filters: { page: 1, pageSize: 20 } });
+  });
+
   it("makes the `to` day inclusive and keeps the other filters", () => {
     const r = parseJobListFilters(
       params("status=FAILED&kind=k&from=2026-10-01&to=2026-10-24&q=%20bob%20&page=3&pageSize=10"),
@@ -55,6 +61,16 @@ describe("parseJobListFilters", () => {
 });
 
 describe("listJobs", () => {
+  it("borne une page hors limites a la derniere page non vide", async () => {
+    for (let i = 0; i < 12; i++) {
+      await createEmailJob({ to: `p${i}@x.test`, kind: "k.c", createdAt: now });
+    }
+    const r = await listJobs({ page: 99, pageSize: 10 });
+    expect(r.page).toBe(2);
+    expect(r.jobs).toHaveLength(2);
+    expect(r.total).toBe(12);
+  });
+
   it("filters by status, kind, period and recipient and paginates", async () => {
     for (let i = 0; i < 25; i++) {
       await createEmailJob({
