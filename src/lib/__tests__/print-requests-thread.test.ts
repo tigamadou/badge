@@ -409,6 +409,17 @@ describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
     expect(organizer[0].body).toBe(`Ligne ajoutée : Cordon (100 × ${formatFcfa(450)})`);
   });
 
+  it("QUOTE_SENT garde le tableau des lignes pour l'organisateur", async () => {
+    const { request } = await seed();
+    const lines = [{ id: "l1", label: "Badge PVC", quantity: 100, unitPrice: 450 }];
+    const { organizer, staff } = await entries(request, [
+      { eventType: "QUOTE_SENT", details: { version: 2, total: 45000, lines, paymentId: "pay_1" } },
+    ]);
+    expect(organizer[0].details).toEqual({ version: 2, total: 45000, lines });
+    expect(JSON.stringify(organizer)).not.toContain("pay_1");
+    expect(staff[0].details).toMatchObject({ lines });
+  });
+
   it("détails absents ou mal formés : objet vide ; type inconnu : aucun détail ; message intact", async () => {
     const { request, organizer: orga } = await seed();
     await prisma.printRequestMessage.create({

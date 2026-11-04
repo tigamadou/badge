@@ -232,7 +232,7 @@ const ORGANIZER_DETAILS: Record<ThreadEventType, string[]> = {
   LINES_CHANGED: ["changes"],
   BADGES_CHANGED: ["added", "removed", "count", "lagging"],
   REQUEST_UPDATED: ["fields", "lagging"],
-  QUOTE_SENT: ["version", "total"],
+  QUOTE_SENT: ["version", "total", "lines"],
   QUOTE_ACCEPTED: ["version", "total"],
   QUOTE_REOPENED: ["version"],
   QUOTE_REVISION: [],
