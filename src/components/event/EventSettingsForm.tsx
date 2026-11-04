@@ -77,6 +77,7 @@ function EventImageField({
   warning,
   value,
   onChange,
+  onBusyChange,
 }: {
   orgId: string;
   eventId: string;
@@ -88,8 +89,14 @@ function EventImageField({
   warning: string | null;
   value: ImageValue;
   onChange: (value: ImageValue) => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploadingState] = useState(false);
+  // Le formulaire parent désactive « Enregistrer » pendant l'envoi : sinon l'ancienne clé partirait.
+  const setUploading = (busy: boolean) => {
+    setUploadingState(busy);
+    onBusyChange(busy);
+  };
   // Source en cours de cadrage ; `pendingOriginal` est le fichier choisi, a envoyer comme original.
   const [cropSource, setCropSource] = useState<CropSource | null>(null);
   const [pendingOriginal, setPendingOriginal] = useState<File | null>(null);
@@ -218,6 +225,8 @@ export function EventSettingsForm({
     original: initial.event.bannerOriginal,
   });
   const [optionValues, setOptionValues] = useState(initial.optionValues);
+  const [busySlots, setBusySlots] = useState<Record<ImageSlot, boolean>>({ logo: false, banner: false });
+  const imageBusy = busySlots.logo || busySlots.banner;
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
   // Brouillon brut : re-deriver la zone de texte depuis la liste nettoyee
   // effacerait la ligne vide qu'on vient d'ouvrir avec Entree.
@@ -369,6 +378,7 @@ export function EventSettingsForm({
               warning={logo.key === initial.event.logo ? (imageIssues.logo ?? null) : null}
               value={logo}
               onChange={setLogo}
+              onBusyChange={(busy) => setBusySlots((b) => ({ ...b, logo: busy }))}
             />
             <EventImageField
               orgId={orgId}
@@ -381,6 +391,7 @@ export function EventSettingsForm({
               warning={banner.key === initial.event.banner ? (imageIssues.banner ?? null) : null}
               value={banner}
               onChange={setBanner}
+              onBusyChange={(busy) => setBusySlots((b) => ({ ...b, banner: busy }))}
             />
             <div className="space-y-1">
               <label htmlFor="event-security-instructions" className="block text-sm font-medium text-slate-700">
@@ -408,7 +419,7 @@ export function EventSettingsForm({
               uniquement)
             </p>
             <div className="flex justify-end">
-              <Button type="submit" loading={saveEvent.pending}>
+              <Button type="submit" loading={saveEvent.pending} disabled={imageBusy}>
                 Enregistrer
               </Button>
             </div>

@@ -11,6 +11,7 @@ import { loginAndEnter } from "../helpers/nav";
 import { ensureFixtures } from "../fixtures";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
+import { confirmCrop, installFramedTemplate } from "../helpers/images-2a";
 
 // Page Parametres evenement — /event/[eventId]/settings et /settings/badge
 // Rôle : ADMIN (la page badge exige la permission event.settings.update).
@@ -155,18 +156,60 @@ test.describe("Event — Parametres", () => {
     await expect(page.getByRole("button", { name: /enregistrer/i }).first()).toBeVisible();
   });
 
-  test("ADMIN televerse un logo d'evenement", async ({ page }) => {
+  test("ADMIN televerse un logo conforme au cadre : aucun cadrage", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "evset-logo" });
     const admin = await makeEventAdminUser({ scope: "evset-logo", eventId, orgId });
+    const row = await installFramedTemplate({ adminId: admin.id, eventId, logo: { w: 68, h: 68 } });
     const fixtures = ensureFixtures();
-    await loginAndEnter(page, admin, { kind: "event", id: eventId });
+    try {
+      await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    await page.goto(`/event/${eventId}/settings`);
-    await page.locator('input[type="file"]').first().setInputFiles(fixtures.jpeg);
+      await page.goto(`/event/${eventId}/settings`);
+      await page.locator('input[type="file"]').first().setInputFiles(fixtures.square);
 
-    await expect(page.getByRole("button", { name: /retirer/i }).first()).toBeVisible({
-      timeout: 15_000,
-    });
+      await expect(page.getByRole("button", { name: /retirer/i }).first()).toBeVisible({
+        timeout: 15_000,
+      });
+      await expect(page.getByRole("button", { name: "Valider le cadrage" })).toHaveCount(0);
+      await page.getByRole("button", { name: /^enregistrer$/i }).first().click();
+      await expect(async () => {
+        const fresh = await getDb().event.findUniqueOrThrow({ where: { id: eventId } });
+        expect(fresh.logoWidth).toBe(600);
+        expect(fresh.logoHeight).toBe(600);
+      }).toPass();
+    } finally {
+      await row.cleanup();
+    }
+  });
+
+  test("ADMIN televerse un logo hors cadre : le cadrage s'ouvre et le logo enregistre est au bon ratio", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "evset-logo-crop" });
+    const admin = await makeEventAdminUser({ scope: "evset-logo-crop", eventId, orgId });
+    const row = await installFramedTemplate({ adminId: admin.id, eventId, logo: { w: 68, h: 68 } });
+    const fixtures = ensureFixtures();
+    try {
+      await loginAndEnter(page, admin, { kind: "event", id: eventId });
+
+      await page.goto(`/event/${eventId}/settings`);
+      // Le format attendu est lisible avant tout envoi.
+      await expect(page.getByText(/1:1/).first()).toBeVisible();
+      await page.locator('input[type="file"]').first().setInputFiles(fixtures.wide);
+      await confirmCrop(page);
+      await expect(page.getByRole("button", { name: /retirer/i }).first()).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await page.getByRole("button", { name: /^enregistrer$/i }).first().click();
+      await expect(async () => {
+        const fresh = await getDb().event.findUniqueOrThrow({ where: { id: eventId } });
+        expect(fresh.logo).toBeTruthy();
+        expect(Math.abs(fresh.logoWidth! / fresh.logoHeight! - 1)).toBeLessThan(0.02);
+        expect(fresh.logoOriginal).toBeTruthy();
+        expect(fresh.logoOriginal).not.toBe(fresh.logo);
+      }).toPass();
+    } finally {
+      await row.cleanup();
+    }
   });
 
   test("ADMIN choisit un modele de badge puis revient a l'heritage", async ({ page }) => {
