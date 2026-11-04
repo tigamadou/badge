@@ -29,7 +29,7 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Stack, dépendance, contrats du socle, fabriques du lot | [x] | 2026-11-04 | react-easy-crop 6.2.4 ; JPEG/WebP en-tete seul ; gabarit cadre : variable nommee comme sa source |
-| 2 | Cadres du manifeste et exigences (`image-frames.ts`) | [ ] | | |
+| 2 | Cadres du manifeste et exigences (`image-frames.ts`) | [x] | 2026-11-04 | 100 % ; formes square/circle/ellipse lues via w/h |
 | 3 | Conformité serveur (`event-image-compliance.ts`) | [ ] | | |
 | 4 | Logo / bannière : route d'envoi, PATCH évènement, création | [ ] | | |
 | 5 | Photo du participant : contrôle serveur sur tous les chemins | [ ] | | |
