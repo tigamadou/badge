@@ -10,5 +10,9 @@ describe("Stepper", () => {
     expect(html).toContain('data-state="done"');
     expect(html).toContain('data-state="on"');
     expect(html).toContain('data-state="todo"');
+    expect(html).toContain("bg-turquoise-soft text-turquoise-strong");
+    expect(html).toContain("bg-navy text-white");
+    expect(html).toContain("bg-mist text-slate-500");
+    expect(html).not.toMatch(/green-|emerald-/);
   });
 });

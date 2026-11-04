@@ -11,10 +11,10 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
               <span
                 className={`flex h-7 w-7 flex-none items-center justify-center rounded-full text-[13px] font-semibold ${
                   state === "on"
-                    ? "bg-green-600 text-white"
+                    ? "bg-navy text-white"
                     : state === "done"
-                      ? "bg-emerald-50 text-green-700"
-                      : "bg-slate-100 text-slate-500"
+                      ? "bg-turquoise-soft text-turquoise-strong"
+                      : "bg-mist text-slate-500"
                 }`}
               >
                 {i + 1}

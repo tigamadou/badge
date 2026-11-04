@@ -11,7 +11,13 @@ describe("Timeline", () => {
     );
     expect(html).toContain("Organisation creee");
     expect(html).toContain("Marie Dubois - il y a 2 h");
-    expect(html).toContain("bg-green-600");
+    expect(html).toContain("border-turquoise bg-turquoise");
+  });
+
+  it("applique la tonalite warn sur le dot", () => {
+    expect(renderToStaticMarkup(<TimelineItem tone="warn" title="Alerte" meta="hier" />)).toContain(
+      "border-warn bg-white",
+    );
   });
 
   it("applique la tonalite danger sur le dot", () => {

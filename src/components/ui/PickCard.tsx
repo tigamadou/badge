@@ -14,7 +14,7 @@ function initials(name: string) {
 export function OrgLogo({ name, size = 44 }: { name: string; size?: number }) {
   return (
     <span
-      className="flex flex-none items-center justify-center rounded-[10px] bg-slate-100 font-bold text-brand-navy"
+      className="flex flex-none items-center justify-center rounded-[10px] bg-mist font-bold text-navy"
       style={{ width: size, height: size, fontSize: size * 0.36 }}
     >
       {initials(name)}
@@ -38,7 +38,7 @@ export function PickCard({
   return (
     <Link
       href={href}
-      className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-green-600"
+      className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-navy"
     >
       {logo}
       <div>
@@ -54,7 +54,7 @@ export function PickCardDashed({ href, icon, label }: { href: string; icon: Icon
   return (
     <Link
       href={href}
-      className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-slate-600 transition-colors hover:border-green-600"
+      className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-slate-600 transition-colors hover:border-navy"
     >
       <Icon name={icon} size={22} />
       {label}

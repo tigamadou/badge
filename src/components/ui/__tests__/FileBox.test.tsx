@@ -9,10 +9,14 @@ describe("FileBox / Dropzone", () => {
     expect(html).toContain("240 Ko");
   });
 
+  it("FileBox : puce d'icône mist", () => {
+    expect(renderToStaticMarkup(<FileBox title="a" />)).toContain("bg-mist");
+  });
+
   it("FileBox affiche l'avertissement sous le sous-titre", () => {
     const html = renderToStaticMarkup(<FileBox title="logo.png" subtitle="12 Ko" warning="À recadrer" />);
     expect(html).toContain("À recadrer");
-    expect(html).toContain("text-amber-600");
+    expect(html).toContain("text-warn");
   });
 
   it("Dropzone rend son invite", () => {
@@ -22,5 +26,7 @@ describe("FileBox / Dropzone", () => {
     expect(html).toContain("Deposez un fichier");
     expect(html).toContain("JPEG, PNG, PDF - max 5 Mo");
     expect(html).toContain("border-dashed");
+    expect(html).toContain("border-slate-300 bg-mist hover:border-navy hover:bg-mist");
+    expect(html).not.toMatch(/green-|emerald-|bg-slate-50\b/);
   });
 });

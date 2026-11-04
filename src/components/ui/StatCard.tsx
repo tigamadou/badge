@@ -23,7 +23,7 @@ export function StatCard({
     <div className="rounded-xl border border-slate-200 bg-white p-6">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-mist text-slate-500">
           <Icon name={icon} size={18} />
         </span>
       </div>
@@ -33,7 +33,7 @@ export function StatCard({
           {delta ? (
             <span
               className={`mr-1 inline-flex items-center gap-1 font-medium ${
-                delta.dir === "up" ? "text-emerald-700" : "text-rose-700"
+                delta.dir === "up" ? "text-turquoise-strong" : "text-rose-700"
               }`}
             >
               <Icon name={delta.dir === "up" ? "trending-up" : "trending-down"} size={12} />

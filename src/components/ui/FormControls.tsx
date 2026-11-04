@@ -40,7 +40,7 @@ export function Switch({
     >
       <span
         className={`relative h-[22px] w-[38px] flex-none rounded-full transition-colors ${
-          checked ? "bg-green-600" : "bg-slate-300"
+          checked ? "bg-navy" : "bg-slate-300"
         }`}
       >
         <span
@@ -71,7 +71,7 @@ export function Checkbox({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`mt-px flex h-4 w-4 flex-none items-center justify-center rounded border ${
-          checked ? "border-green-600 bg-green-600 text-white" : "border-slate-300 bg-white"
+          checked ? "border-navy bg-navy text-white" : "border-slate-300 bg-white"
         }`}
       >
         {checked ? <Icon name="check" size={12} /> : null}

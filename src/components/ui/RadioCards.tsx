@@ -27,9 +27,9 @@ export function RadioCards({
             onClick={() => onChange(o.value)}
             className={`relative flex items-start gap-3 rounded-xl border-[1.5px] p-4 text-left transition-colors ${
               o.disabled
-                ? "cursor-not-allowed border-slate-200 bg-slate-50 opacity-60"
+                ? "cursor-not-allowed border-slate-200 bg-mist opacity-60"
                 : sel
-                  ? "border-green-600 bg-emerald-50"
+                  ? "border-navy bg-mist"
                   : "border-slate-200 bg-white hover:border-slate-300"
             }`}
           >
@@ -41,7 +41,7 @@ export function RadioCards({
               ) : null}
             </span>
             {sel ? (
-              <span className="absolute right-3 top-3 text-green-600">
+              <span className="absolute right-3 top-3 text-navy">
                 <Icon name="check" size={16} />
               </span>
             ) : null}

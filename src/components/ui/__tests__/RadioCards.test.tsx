@@ -12,9 +12,19 @@ describe("RadioCards", () => {
     const html = renderToStaticMarkup(<RadioCards name="cat" value="expo" onChange={() => {}} options={OPTS} />);
     expect(html).toContain("Exposant");
     expect(html).toContain("Presse");
-    // l'option selectionnee porte aria-checked=true + fond emeraude
+    // l'option selectionnee porte aria-checked=true + bordure marine sur fond mist
     expect(html).toContain('aria-checked="true"');
-    expect(html).toContain("bg-emerald-50");
+    expect(html).toContain("border-navy bg-mist");
+    expect(html).toContain("text-navy");
+    expect(html).not.toMatch(/emerald-|green-/);
+  });
+
+  it("option désactivée sur fond mist", () => {
+    const html = renderToStaticMarkup(
+      <RadioCards name="cat" value={null} onChange={() => {}} options={[{ value: "a", title: "A", disabled: true }]} />,
+    );
+    expect(html).toContain("bg-mist");
+    expect(html).not.toMatch(/bg-slate-50\b/);
   });
 
   it("aucune selection quand value est null", () => {

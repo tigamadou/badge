@@ -13,7 +13,11 @@ describe("StatCard", () => {
     expect(html).toContain("24");
     expect(html).toContain("+2");
     expect(html).toContain("ce mois");
-    expect(html).toContain("text-emerald-700");
+    expect(html).toContain("text-turquoise-strong");
+  });
+
+  it("puce d'icône mist", () => {
+    expect(renderToStaticMarkup(<StatCard label="a" value="1" icon="user-check" />)).toContain("bg-mist");
   });
 
   it("delta down en rose", () => {
