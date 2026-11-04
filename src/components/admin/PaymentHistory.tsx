@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { PaymentStatus } from "@prisma/client";
 import { Table } from "@/components/ui/Table";
 
@@ -20,7 +21,13 @@ const STATUS_LABELS: Record<PaymentStatus, string> = {
 
 const amountFormat = new Intl.NumberFormat("fr-FR");
 
-export function PaymentHistory({ payments }: { payments: PaymentHistoryItem[] }) {
+export function PaymentHistory({
+  payments,
+  detailHref,
+}: {
+  payments: PaymentHistoryItem[];
+  detailHref?: (payment: PaymentHistoryItem) => string;
+}) {
   if (payments.length === 0) {
     return <p className="text-sm text-slate-400">Aucun paiement.</p>;
   }
@@ -38,6 +45,19 @@ export function PaymentHistory({ payments }: { payments: PaymentHistoryItem[] })
           header: "Référence",
           render: (p) => <span className="font-mono text-xs">{p.fedapayReference ?? "—"}</span>,
         },
+        ...(detailHref
+          ? [
+              {
+                key: "detail",
+                header: "",
+                render: (p: PaymentHistoryItem) => (
+                  <Link href={detailHref(p)} className="text-sm font-medium text-blue-600 hover:underline">
+                    Voir
+                  </Link>
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   );

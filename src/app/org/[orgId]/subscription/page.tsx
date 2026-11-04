@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { hasOrgRole } from "@/lib/auth-helpers";
 import { resolveOrgLimits } from "@/lib/subscription";
+import { loadProrataCredit, isRunning, quoteChange, type SubscriptionState } from "@/lib/subscription-changes";
+import type { QuoteView } from "@/components/admin/PlanCatalog";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { Alert } from "@/components/ui/Feedback";
@@ -45,7 +47,7 @@ export default async function OrgSubscriptionPage({
           planId: true,
           scheduledPlanId: true,
           scheduledPlan: { select: { name: true } },
-          plan: { select: { name: true, period: true, price: true } },
+          plan: { select: { id: true, name: true, period: true, price: true } },
         },
       },
     },
@@ -76,6 +78,30 @@ export default async function OrgSubscriptionPage({
       select: PAYMENT_HISTORY_SELECT,
     }),
   ]);
+
+  const now = new Date();
+  const state: SubscriptionState | null = sub
+    ? {
+        planId: sub.planId,
+        plan: sub.plan,
+        status: sub.status,
+        startDate: sub.startDate,
+        endDate: sub.endDate,
+        scheduledPlanId: sub.scheduledPlanId,
+      }
+    : null;
+  const credit = state && isRunning(state, now) ? await loadProrataCredit(prisma, orgId, state.planId, now) : 0;
+  const quotes: Record<string, QuoteView> = {};
+  for (const plan of catalog) {
+    const q = quoteChange(state, { id: plan.id, name: plan.name, period: plan.period, price: plan.price }, now, credit);
+    quotes[plan.id] = q.allowed
+      ? { allowed: true, mode: q.mode, listPrice: q.listPrice, credit: q.credit, amount: q.amount, daysLeft: q.daysLeft }
+      : {
+          allowed: false,
+          activeUntil: q.activeUntil?.toISOString() ?? null,
+          renewableFrom: q.renewableFrom?.toISOString() ?? null,
+        };
+  }
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -137,7 +163,7 @@ export default async function OrgSubscriptionPage({
             orgId={orgId}
             plans={catalog.map((p) => ({ ...p, price: p.price as number }))}
             currentPlanId={sub?.planId ?? null}
-            currentPrice={limits.active ? (sub?.plan.price ?? 0) : 0}
+            quotes={quotes}
             scheduledPlanId={sub?.scheduledPlanId ?? null}
             canPay={canPay}
           />
