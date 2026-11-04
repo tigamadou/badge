@@ -32,7 +32,8 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
 
   // Ecrit des parametres dans l'URL sans empiler l'historique ni remonter la page.
   function updateUrl(patch: Record<string, string | null>) {
-    const next = new URLSearchParams(searchParams.toString());
+    // URL courante (pas le rendu figé) : une recherche différée ne doit pas écraser un filtre changé entre-temps.
+    const next = new URLSearchParams(window.location.search);
     for (const [key, value] of Object.entries(patch)) {
       if (value === null) next.delete(key);
       else next.set(key, value);
