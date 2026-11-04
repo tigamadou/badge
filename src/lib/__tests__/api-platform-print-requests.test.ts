@@ -226,9 +226,9 @@ describe("GET liste", () => {
     const get = async (qs: string) => (await call(listGET, `${BASE}?orgId=${fx.org.id}${qs}`, "GET", {})).json;
     const p1 = await get("");
     const p2 = await get("&page=2&pageSize=50");
-    expect([p1.requests.length, p2.requests.length, p1.total, p2.page, p1.pageSize]).toEqual([20, 2, 52, 2, 20]);
+    expect([p1.requests.length, p2.requests.length, p1.total, p2.page, p1.pageSize]).toEqual([10, 2, 52, 2, 10]);
     expect((await get("&pageSize=10")).requests).toHaveLength(10);
-    expect((await get("&pageSize=7")).pageSize).toBe(20);
+    expect((await get("&pageSize=7")).pageSize).toBe(10);
     expect((await get("&pageSize=500")).requests).toHaveLength(52);
     expect((await get("&page=0")).page).toBe(1);
   });

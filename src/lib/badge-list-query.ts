@@ -7,7 +7,7 @@ import { LIST_PAGE_MAX, PAGE_SIZE_OPTIONS, parseListPage } from "@/lib/list-quer
 export const BADGE_FILTERS = ["all", "unprinted", "printed", "allaccess"] as const;
 export type BadgeFilter = (typeof BADGE_FILTERS)[number];
 
-export const BADGE_PAGE_SIZE_DEFAULT = 100;
+export const BADGE_PAGE_SIZE_DEFAULT = 10;
 export const BADGE_PAGE_SIZE_MAX = PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1];
 export const BADGE_PAGE_MAX = LIST_PAGE_MAX;
 

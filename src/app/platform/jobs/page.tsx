@@ -36,7 +36,7 @@ export default async function PlatformJobsPage({
     parsed = parseJobListFilters(params);
   }
   // Sans statut, le second appel ne peut pas echouer.
-  const filters = parsed.ok ? parsed.filters : { page: 1, pageSize: 20 };
+  const filters = parsed.ok ? parsed.filters : { page: 1, pageSize: 10 };
 
   const [{ jobs, total, page, pageSize }, kinds, counts] = await Promise.all([
     listJobs(filters),

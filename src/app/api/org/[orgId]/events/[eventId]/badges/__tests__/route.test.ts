@@ -184,37 +184,37 @@ describe("GET /badges", () => {
       });
     }
 
-    it("renvoie le total exact et pagine 250 inscriptions en pages de 100", async () => {
+    it("renvoie le total exact et pagine 25 inscriptions en pages de 10", async () => {
       const { u, org, event } = await seedEvent("PRINTER");
       const cat = await prisma.category.create({ data: { eventId: event.id, name: "V1", color: "#000000", number: 1 } });
-      await seedMany(event.id, cat.id, 250);
+      await seedMany(event.id, cat.id, 25);
       withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
       const p1 = await (await callGet(org.id, event.id)).json();
-      expect(p1.total).toBe(250);
+      expect(p1.total).toBe(25);
       expect(p1.page).toBe(1);
-      expect(p1.pageSize).toBe(100);
-      expect(p1.registrations).toHaveLength(100);
+      expect(p1.pageSize).toBe(10);
+      expect(p1.registrations).toHaveLength(10);
 
       const p2 = await (await callGet(org.id, event.id, "?page=2")).json();
       const p3 = await (await callGet(org.id, event.id, "?page=3")).json();
-      expect(p2.registrations).toHaveLength(100);
-      expect(p3.registrations).toHaveLength(50);
+      expect(p2.registrations).toHaveLength(10);
+      expect(p3.registrations).toHaveLength(5);
       const names = [...p1.registrations, ...p2.registrations, ...p3.registrations].map((r: { lastName: string }) => r.lastName);
-      expect(new Set(names).size).toBe(250);
+      expect(new Set(names).size).toBe(25);
       expect(names).toEqual([...names].sort());
     });
 
-    it("replie les tailles hors liste au defaut (100) et accepte 500", async () => {
+    it("replie les tailles hors liste au defaut (10) et accepte 500", async () => {
       const { u, org, event } = await seedEvent("PRINTER");
       const cat = await prisma.category.create({ data: { eventId: event.id, name: "V1", color: "#000000", number: 1 } });
       await seedMany(event.id, cat.id, 3, false);
       withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
-      expect((await (await callGet(org.id, event.id, "?pageSize=9999")).json()).pageSize).toBe(100);
+      expect((await (await callGet(org.id, event.id, "?pageSize=9999")).json()).pageSize).toBe(10);
       expect((await (await callGet(org.id, event.id, "?pageSize=500")).json()).pageSize).toBe(500);
-      expect((await (await callGet(org.id, event.id, "?pageSize=abc&page=-4")).json())).toMatchObject({ pageSize: 100, page: 1 });
-      expect((await (await callGet(org.id, event.id, "?pageSize=0")).json()).pageSize).toBe(100);
+      expect((await (await callGet(org.id, event.id, "?pageSize=abc&page=-4")).json())).toMatchObject({ pageSize: 10, page: 1 });
+      expect((await (await callGet(org.id, event.id, "?pageSize=0")).json()).pageSize).toBe(10);
       const small = await (await callGet(org.id, event.id, "?pageSize=10&page=2")).json();
       expect(small.registrations).toHaveLength(0);
       expect(small.total).toBe(3);
