@@ -4,11 +4,14 @@ import { loadUserContext } from "@/lib/user-context";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { listProducts } from "@/lib/print-catalog/products";
 import { CatalogList } from "@/components/staff/print/CatalogList";
+import { parseListPage } from "@/lib/list-query";
+import { paginateArray } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export default async function PrintCatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string; archived?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
   const session = await getServerSession(authOptions);
@@ -18,7 +21,9 @@ export default async function PrintCatalogPage({
 
   const kind = sp.kind === "BADGE" || sp.kind === "ACCESSORY" ? sp.kind : null;
   const archived = sp.archived === "true";
-  const rows = await listProducts({ kind: kind ?? undefined, archived });
+  const all = await listProducts({ kind: kind ?? undefined, archived });
+  // listProducts renvoie tout le catalogue (lib hors lot) : la tranche est prise ici.
+  const result = paginateArray(all, parseListPage(sp));
 
   return (
     <div className="space-y-4">
@@ -28,7 +33,8 @@ export default async function PrintCatalogPage({
           Supports de badge et accessoires proposés aux organisateurs
         </p>
       </div>
-      <CatalogList rows={rows} kind={kind} archived={archived} canWrite={canWrite} />
+      <CatalogList rows={result.rows} kind={kind} archived={archived} canWrite={canWrite} />
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

@@ -39,11 +39,14 @@ test.describe("Platform — Catalogue d'impression", () => {
     const archived = await createTestPrintProduct({ name: "e2e-Vue-archive" });
     await getDb().printProduct.update({ where: { id: archived.id }, data: { archived: true, archivedAt: new Date() } });
     await goToCatalog(page, "catalog-views", "STAFF_ADMIN");
+    // Le catalogue est paginé (20 par défaut) et la base e2e partagée contient d'autres produits.
+    await page.goto("/platform/print/catalog?pageSize=500");
     await expect(page.getByRole("link", { name: "e2e-Vue-actif" })).toBeVisible();
     await expect(page.getByText("e2e-Vue-archive")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Archivés" }).click();
-    await expect(page).toHaveURL(/\/platform\/print\/catalog\?archived=true$/);
+    // Changer de vue conserve la taille de page.
+    await expect(page).toHaveURL(/\/platform\/print\/catalog\?archived=true&pageSize=500$/);
     await expect(page.getByRole("link", { name: "e2e-Vue-archive" })).toBeVisible();
     await expect(page.getByText("e2e-Vue-actif")).toHaveCount(0);
     expect(active.id).not.toBe(archived.id);

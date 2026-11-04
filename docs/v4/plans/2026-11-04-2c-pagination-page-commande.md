@@ -27,7 +27,7 @@
 | 4 | Espace organisation — évènements, membres, templates, journal | [x] | 2026-11-04 | ownerCount (dernier OWNER) calcule cote serveur; archiver un evenement ne le retire pas de la liste (archives affichees) : pas de rabat de page a tester |
 | 5 | Espace plateforme — organisations (liste + 3 sous-pages) | [x] | 2026-11-04 | pages organisations paginees |
 | 6 | Espace plateforme — profils, utilisateurs, templates, journal, emails | [x] | 2026-11-04 | profils, utilisateurs, gabarits, activite, jobs |
-| 7 | Espace plateforme — impression : commandes, gabarits, catalogue, planches | [ ] | | |
+| 7 | Espace plateforme — impression : commandes, gabarits, catalogue, planches | [x] | 2026-11-04 | commandes, gabarits, catalogue, planches |
 | 8 | Compte participant | [ ] | | |
 | 9 | Affichage des erreurs `EVENT_IMAGES_NONCOMPLIANT` | [ ] | | |
 | 10 | Routes de liste des badges d'une commande (staff + organisateur) | [ ] | | |
