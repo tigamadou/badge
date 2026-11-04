@@ -38,7 +38,7 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 | 8 | Composant `ImageCropper` | [x] | 2026-11-04 | dialogue sans footer Dialog (boutons dans le corps) ; image locale lue en data URL ; comportement canvas a verifier en e2e |
 | 9 | Interface évènement : réglages, bandeau, tableau de bord | [x] | 2026-11-04 | formulaire : champ EventImageField interne ; WebP toujours cadre (sortie PNG) ; verification navigateur en tache 12 |
 | 10 | Interface photo : compte, inscription, règles de la photo d'identité | [x] | 2026-11-04 | hook useCropFlow dans ImageCropper.tsx (envoi direct si conforme, WebP toujours cadre) |
-| 11 | Seed démo et fixtures e2e conformes | [ ] | | |
+| 11 | Seed démo et fixtures e2e conformes | [x] | 2026-11-04 |  |
 | 12 | e2e Playwright et contrôle 375 / 1024 / 1280 px | [ ] | | |
 | 13 | e2e, doc, vérification | [ ] | | |
 

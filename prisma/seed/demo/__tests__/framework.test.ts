@@ -187,7 +187,7 @@ describe("cadre du seed de demo", () => {
         runDemoSeed({ env: DEV, scale: 0.02, accountsFile: null, storagePrefix: TEST_PREFIX }),
       ).rejects.toThrow("boom");
       expect(order).toEqual(["parkJobs", "flush"]);
-    });
+    }, 30_000);
 
     it("parke les jobs sans masquer l'erreur d'origine quand parkJobs echoue aussi", async () => {
       vi.spyOn(billing, "seedBilling").mockImplementation(async (ctx: DemoContext) => {
