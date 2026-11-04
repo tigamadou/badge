@@ -168,6 +168,10 @@ jobs:
       S3_ACCESS_KEY: rustfsadmin
       S3_SECRET_KEY: rustfsadmin
       S3_BUCKET: badge-dev
+      # Cles factices : la route de checkout verifie que FedaPay est configure avant ses regles
+      # metier (ALREADY_ACTIVE) ; aucun appel reseau n'est emis dans ces tests.
+      FEDAPAY_SECRET_KEY: sk_sandbox_ci
+      FEDAPAY_WEBHOOK_SECRET: whsec_ci
       PLAYWRIGHT_BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
