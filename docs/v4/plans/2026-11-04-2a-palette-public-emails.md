@@ -81,7 +81,7 @@ badge factice), `rgba(15,23,42,…)` d'ombre. Le garde-fou de la vague 3 ne couv
 | 3 | Pages du site public (`src/app/(marketing)/**`) | [x] | 2026-11-04 |  |
 | 4 | Pages publiques d'évènement et de vérification (`public`, `e`, `verify`) | [x] | 2026-11-04 |  |
 | 5 | Authentification (`auth`, login, register, mots de passe, `select`) | [x] | 2026-11-04 |  |
-| 6 | E-mails transactionnels `mail.ts` | [ ] | | |
+| 6 | E-mails transactionnels `mail.ts` | [x] | 2026-11-04 |  |
 | 7 | Notifications par e-mail, e-mail de contact, `mail-helpers` | [ ] | | |
 | 8 | Module paiements : composants et reçu HTML | [ ] | | |
 | 9 | Tests unitaires du lot mis à jour | [ ] | | |

@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { BRAND } from "@/lib/brand-colors";
 import nodemailer, { type Transporter } from "nodemailer";
 import { prisma } from "@/lib/prisma";
 import { resolveSettings, getPlatformSmtp, type ResolvedSettings } from "@/lib/settings";
@@ -189,13 +190,13 @@ export function buildEmail({ title, body, ctx }: BuildEmailArgs): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeText(title)}</title>
 </head>
-<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:32px 16px;">
+<body style="margin:0;padding:0;background-color:${BRAND.mist};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.mist};padding:32px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:12px;border:1px solid ${BRAND.line};overflow:hidden;">
           <tr>
-            <td align="center" style="background-color:#0f172a;padding:28px 24px;">
+            <td align="center" style="background-color:${BRAND.navy};padding:28px 24px;">
               ${logoBlock}
               <h1 style="margin:0;color:#ffffff;font-size:18px;font-weight:600;letter-spacing:0.02em;">${escapeText(headerLabel)}</h1>
             </td>
@@ -206,7 +207,7 @@ export function buildEmail({ title, body, ctx }: BuildEmailArgs): string {
             </td>
           </tr>
           <tr>
-            <td align="center" style="padding:20px 28px;border-top:1px solid #e2e8f0;">
+            <td align="center" style="padding:20px 28px;border-top:1px solid ${BRAND.line};">
               ${footerLines.join("\n")}
             </td>
           </tr>
@@ -320,14 +321,14 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
     const encodedId = encodeURIComponent(reg.id);
     const body = `
       <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
-      <p style="margin:0 0 16px;">Votre inscription à <strong>${eventTitle}</strong> a été <span style="color:#059669;font-weight:600;">approuvée</span>.</p>
+      <p style="margin:0 0 16px;">Votre inscription à <strong>${eventTitle}</strong> a été <span style="color:${BRAND.turquoiseStrong};font-weight:600;">approuvée</span>.</p>
       <p style="margin:0 0 24px;">Votre badge sera disponible le jour de l'événement.</p>
-      <div style="margin:0 0 8px;padding:16px;border:1px solid #e2e8f0;border-radius:8px;text-align:center;">
+      <div style="margin:0 0 8px;padding:16px;border:1px solid ${BRAND.line};border-radius:8px;text-align:center;">
         <p style="margin:0 0 12px;font-weight:600;">Votre QR d'accueil</p>
         <img src="${baseUrl}/api/public/qr/${encodedId}" width="200" height="200" alt="QR d'accueil" style="display:inline-block;" />
         <p style="margin:12px 0 4px;font-family:monospace;font-size:14px;">${escapeText(reg.id)}</p>
         <p style="margin:0 0 12px;color:#64748b;font-size:13px;">À présenter à l'accueil, sur votre téléphone ou imprimé.</p>
-        <a href="${baseUrl}/account/registrations/${encodedId}" style="color:#4f46e5;font-size:14px;">Voir mon inscription</a>
+        <a href="${baseUrl}/account/registrations/${encodedId}" style="color:${BRAND.navy};font-size:14px;">Voir mon inscription</a>
       </div>
     `;
     await enqueueEmail({
@@ -349,7 +350,7 @@ export async function sendStatusNotification(registrationId: string): Promise<vo
     ? `<p style="margin:0 0 16px;color:#64748b;font-size:14px;">${escapeText(reg.rejectionDetails)}</p>`
     : "";
   const editBlock = `<p style="margin:0 0 24px;text-align:center;">
-        <a href="${baseUrl}/account/registrations/${encodeURIComponent(reg.id)}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Consulter et resoumettre mon inscription</a>
+        <a href="${baseUrl}/account/registrations/${encodeURIComponent(reg.id)}" style="display:inline-block;background-color:${BRAND.navy};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Consulter et resoumettre mon inscription</a>
       </p>
       <p style="margin:0 0 16px;color:#64748b;font-size:13px;">Connectez-vous à votre compte Badge pour modifier votre profil et resoumettre votre inscription.</p>`;
 
@@ -406,7 +407,7 @@ export async function sendBadgePrintedNotification(registrationId: string): Prom
       ? `
       <p style="margin:16px 0 8px;">Pour toute question concernant le retrait :</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 4px;">
-        ${ctx.contactEmail ? `<tr><td style="padding:4px 0;color:#64748b;font-size:14px;">Email :</td><td style="padding:4px 0 4px 8px;"><a href="mailto:${escapeAttr(ctx.contactEmail)}" style="color:#4f46e5;text-decoration:none;">${escapeText(ctx.contactEmail)}</a></td></tr>` : ""}
+        ${ctx.contactEmail ? `<tr><td style="padding:4px 0;color:#64748b;font-size:14px;">Email :</td><td style="padding:4px 0 4px 8px;"><a href="mailto:${escapeAttr(ctx.contactEmail)}" style="color:${BRAND.navy};text-decoration:none;">${escapeText(ctx.contactEmail)}</a></td></tr>` : ""}
         ${ctx.contactPhone ? `<tr><td style="padding:4px 0;color:#64748b;font-size:14px;">Tél :</td><td style="padding:4px 0 4px 8px;color:#334155;">${escapeText(ctx.contactPhone)}</td></tr>` : ""}
       </table>
     `
@@ -463,7 +464,7 @@ export async function sendAccountVerifyEmail(
     <p style="margin:0 0 16px;">Bonjour <strong>${safeName}</strong>,</p>
     <p style="margin:0 0 16px;">Bienvenue sur Badge. Pour activer votre compte, veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous :</p>
     <p style="margin:0 0 24px;text-align:center;">
-      <a href="${verifyUrl}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">${ctaLabel}</a>
+      <a href="${verifyUrl}" style="display:inline-block;background-color:${BRAND.navy};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">${ctaLabel}</a>
     </p>
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message.</p>
   `;
@@ -503,7 +504,7 @@ export async function sendAccountPasswordReset(userId: string, plainToken: strin
     <p style="margin:0 0 16px;">Vous avez demandé à réinitialiser le mot de passe de votre compte Badge.</p>
     <p style="margin:0 0 24px;">Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
     <p style="margin:0 0 24px;text-align:center;">
-      <a href="${baseUrl}/reset-password/${plainToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Réinitialiser mon mot de passe</a>
+      <a href="${baseUrl}/reset-password/${plainToken}" style="display:inline-block;background-color:${BRAND.navy};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Réinitialiser mon mot de passe</a>
     </p>
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
   `;
@@ -562,7 +563,7 @@ export async function sendRegistrationResubmitted(
     <p style="margin:0 0 16px;">Votre inscription à <strong>${eventTitle}</strong> a bien été resoumise et est de nouveau en attente de validation.</p>
     ${categoryChange}    <p style="margin:0 0 16px;">Vous recevrez un email dès que votre inscription sera traitée.</p>
     <p style="margin:0;text-align:center;">
-      <a href="${baseUrl}/account/registrations/${encodeURIComponent(reg.id)}" style="color:#4f46e5;text-decoration:none;font-size:14px;">Voir le détail de mon inscription</a>
+      <a href="${baseUrl}/account/registrations/${encodeURIComponent(reg.id)}" style="color:${BRAND.navy};text-decoration:none;font-size:14px;">Voir le détail de mon inscription</a>
     </p>
   `;
 
@@ -639,7 +640,7 @@ export async function sendUserInvitation(
     ${roleClause}
     <p style="margin:0 0 24px;">Cliquez sur le bouton ci-dessous pour définir votre mot de passe et activer votre compte :</p>
     <p style="margin:0 0 24px;text-align:center;">
-      <a href="${baseUrl}/setup-password?token=${inviteToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Définir mon mot de passe</a>
+      <a href="${baseUrl}/setup-password?token=${inviteToken}" style="display:inline-block;background-color:${BRAND.navy};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Définir mon mot de passe</a>
     </p>
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures.</p>
   `;
@@ -685,7 +686,7 @@ export async function sendPasswordResetEmail(userId: string): Promise<void> {
     <p style="margin:0 0 16px;">Une réinitialisation de votre mot de passe a été déclenchée pour votre compte Badge.</p>
     <p style="margin:0 0 24px;">Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
     <p style="margin:0 0 24px;text-align:center;">
-      <a href="${baseUrl}/setup-password?token=${inviteToken}" style="display:inline-block;background-color:#4f46e5;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Réinitialiser mon mot de passe</a>
+      <a href="${baseUrl}/setup-password?token=${inviteToken}" style="display:inline-block;background-color:${BRAND.navy};color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;">Réinitialiser mon mot de passe</a>
     </p>
     <p style="margin:0;color:#64748b;font-size:13px;">Ce lien est valable 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>
   `;
@@ -756,8 +757,8 @@ export async function sendProfileApproved(userId: string): Promise<void> {
   const baseUrl = buildBaseUrl({ BASE_URL: process.env.BASE_URL, NEXTAUTH_URL: process.env.NEXTAUTH_URL });
   const body = `
     <p style="margin:0 0 16px;">Bonjour <strong>${fullName}</strong>,</p>
-    <p style="margin:0 0 16px;">Votre profil a été <span style="color:#059669;font-weight:600;">validé</span> par la plateforme. Vous pouvez désormais vous inscrire aux événements.</p>
-    <p style="margin:0;"><a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a></p>
+    <p style="margin:0 0 16px;">Votre profil a été <span style="color:${BRAND.turquoiseStrong};font-weight:600;">validé</span> par la plateforme. Vous pouvez désormais vous inscrire aux événements.</p>
+    <p style="margin:0;"><a href="${baseUrl}/account/profile" style="color:${BRAND.navy};">Accéder à mon profil</a></p>
   `;
   await enqueueEmail({
     to: user.email,
@@ -794,7 +795,7 @@ export async function sendProfileRejected(userId: string): Promise<void> {
     <p style="margin:0 0 16px;">Vos documents ont été <span style="color:#e11d48;font-weight:600;">refusés</span> par la plateforme.</p>
     ${reasonBlock}
     ${detailsBlock}
-    <p style="margin:0;">Corrigez vos documents puis enregistrez à nouveau votre profil : <a href="${baseUrl}/account/profile" style="color:#4f46e5;">Accéder à mon profil</a>.</p>
+    <p style="margin:0;">Corrigez vos documents puis enregistrez à nouveau votre profil : <a href="${baseUrl}/account/profile" style="color:${BRAND.navy};">Accéder à mon profil</a>.</p>
   `;
   await enqueueEmail({
     to: user.email,
