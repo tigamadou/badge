@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
+import { publicFieldsData, publicFieldsLog, publicFieldsSchema } from "../public-fields";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -11,6 +12,7 @@ const updateSchema = z.object({
   maxParticipantsPerEvent: z.number().int().min(0).nullable().optional(),
   price: z.number().int().min(100).max(10_000_000).nullable().optional(),
   archived: z.boolean().optional(),
+  ...publicFieldsSchema,
 });
 
 export const PATCH = withStaffAuth<{ planId: string }>(
@@ -38,6 +40,7 @@ export const PATCH = withStaffAuth<{ planId: string }>(
           }),
           ...(data.price !== undefined && { price: data.price }),
           ...(data.archived !== undefined && { archived: data.archived }),
+          ...publicFieldsData(data),
         },
       });
       await logActivity({
@@ -50,6 +53,7 @@ export const PATCH = withStaffAuth<{ planId: string }>(
           maxParticipantsPerEvent: plan.maxParticipantsPerEvent,
           price: plan.price,
           archived: plan.archived,
+          ...publicFieldsLog(plan),
         },
         req,
       });
