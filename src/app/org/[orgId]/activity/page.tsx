@@ -5,19 +5,31 @@ import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { logKind } from "@/lib/activity-labels";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export default async function ActivityPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
-  const logs = await prisma.activityLog.findMany({
-    where: { orgId },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { user: { select: { email: true, name: true } } },
-  });
+  const list = parseListPage(await searchParams);
+  const result = await paginate(
+    list,
+    () => prisma.activityLog.count({ where: { orgId } }),
+    (range) =>
+      prisma.activityLog.findMany({
+        where: { orgId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+        include: { user: { select: { email: true, name: true } } },
+      }),
+  );
+  const logs = result.rows;
 
   return (
     <div className="space-y-4">
@@ -72,6 +84,7 @@ export default async function ActivityPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

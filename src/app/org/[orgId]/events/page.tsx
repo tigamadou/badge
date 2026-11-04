@@ -10,34 +10,47 @@ import { EventArchiveActions } from "./EventArchiveActions";
 import { getOrgAccess } from "@/lib/org-access";
 import { can } from "@/lib/subscription-rights";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export default async function EventsListPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
+  const list = parseListPage(await searchParams);
   // Archiver/restaurer est reserve a MANAGER+ : on masque le controle sinon.
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
   const canManage = ctx ? hasOrgRole(ctx, orgId, "MANAGER") : false;
   const access = await getOrgAccess(orgId);
   const canCreate = can(access, "CREATE_EVENT");
-  const events = await prisma.event.findMany({
-    where: { orgId },
-    orderBy: { date: "desc" },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      date: true,
-      endDate: true,
-      location: true,
-      registrationOpen: true,
-      archived: true,
-      _count: { select: { registrations: true } },
-    },
-  });
+  const result = await paginate(
+    list,
+    () => prisma.event.count({ where: { orgId } }),
+    (range) =>
+      prisma.event.findMany({
+        where: { orgId },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+        ...range,
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          date: true,
+          endDate: true,
+          location: true,
+          registrationOpen: true,
+          archived: true,
+          _count: { select: { registrations: true } },
+        },
+      }),
+  );
+  const events = result.rows;
 
   return (
     <div className="space-y-4">
@@ -121,6 +134,7 @@ export default async function EventsListPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }
