@@ -39,7 +39,7 @@ signaler dans la progression.
 | 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [ ] | | |
 | 5 | `components/event` — formulaires, tableaux, actions, fonds | [x] | 2026-11-04 |  |
 | 6 | `components/event/print/**` — assistant et conversation | [x] | 2026-11-04 |  |
-| 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [ ] | | |
+| 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [x] | 2026-11-04 | Test ScannerFrame : non-regression text-rose-700 ajoutee. |
 | 8 | `components/admin` — hors shells | [ ] | | |
 | 9 | `components/badge` et test `MiniBadge` | [ ] | | |
 | 10 | Balayage final, contrôle des tests de classes | [ ] | | |

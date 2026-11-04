@@ -10,14 +10,15 @@ describe("ScannerFrame / ScanResult", () => {
       </ScannerFrame>,
     );
     expect(html).toContain("flux");
-    expect(html).toContain("border-green-400");
+    expect(html).toContain("border-turquoise");
   });
 
   it("ScanResult reflete valide / invalide", () => {
     expect(renderToStaticMarkup(<ScanResult valid title="Acces autorise" />)).toContain("Acces autorise");
-    expect(renderToStaticMarkup(<ScanResult valid title="Acces autorise" />)).toContain("text-emerald-700");
+    expect(renderToStaticMarkup(<ScanResult valid title="Acces autorise" />)).toContain("text-turquoise-strong");
     const invalid = renderToStaticMarkup(<ScanResult valid={false} title="Badge revoque" />);
     expect(invalid).toContain("Badge revoque");
     expect(invalid).toContain("bg-rose-600");
+    expect(invalid).toContain("text-rose-700");
   });
 });
