@@ -10,7 +10,7 @@ export function CtaBand({
   actions: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[20px] bg-brand-navy px-6 py-14 text-center text-white sm:px-14">
+    <div className="rounded-[20px] bg-navy px-6 py-14 text-center text-white sm:px-14">
       <h2 style={displayFont} className="text-[28px] font-bold tracking-tight sm:text-[34px]">
         {title}
       </h2>

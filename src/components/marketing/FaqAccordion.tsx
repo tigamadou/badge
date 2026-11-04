@@ -13,7 +13,7 @@ export function FaqAccordion({
         <details
           key={it.q}
           open={defaultOpenFirst && i === 0}
-          className="group border-b border-slate-200"
+          className="group border-b border-line"
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 text-base font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
             {it.q}

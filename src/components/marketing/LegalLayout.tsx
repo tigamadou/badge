@@ -16,7 +16,7 @@ export function LegalLayout({
 }) {
   return (
     <div className="mx-auto max-w-[760px] px-7 py-14">
-      <Link href="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-green-600 hover:underline">
+      <Link href="/" className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-navy hover:underline">
         <Icon name="arrow-left" size={14} /> Retour à l&apos;accueil
       </Link>
       <h1 style={displayFont} className="text-[34px] font-bold tracking-tight text-slate-900">
