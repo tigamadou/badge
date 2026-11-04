@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { BRAND } from "@/lib/brand-colors";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PaymentDetail, PaymentListItem } from "@/lib/payments-query";
 import { PaymentFilters } from "../PaymentFilters";
@@ -47,7 +46,8 @@ describe("PaymentsTable", () => {
     expect(html).toContain("Payé");
     expect(html).toContain("Abonnement");
     expect(html).toContain('href="/org/o1/payments/p1"');
-    expect(html).toContain(`background:${BRAND.navy}`);
+    expect(html).toContain("text-navy");
+    expect(html).not.toContain("blue-600");
     expect(html).toContain("trx_42");
     expect(html).not.toContain("Organisation");
   });
