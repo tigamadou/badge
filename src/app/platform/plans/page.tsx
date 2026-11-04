@@ -3,7 +3,7 @@ import { PlanManager, type PlanRow } from "@/components/staff/PlanManager";
 
 export default async function PlatformPlansPage() {
   const plans = await prisma.plan.findMany({
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
     include: { _count: { select: { subscriptions: true } } },
   });
 
@@ -16,6 +16,12 @@ export default async function PlatformPlansPage() {
     price: p.price,
     archived: p.archived,
     subscriptionsCount: p._count.subscriptions,
+    publicVisible: p.publicVisible,
+    position: p.position,
+    description: p.description,
+    // Json libre en base : tout ce qui n'est pas une liste de textes est ignoré.
+    features: Array.isArray(p.features) ? p.features.filter((f): f is string => typeof f === "string") : [],
+    highlighted: p.highlighted,
   }));
 
   return (

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeBillingPayment, makeSubscription } from "@/test/factories-billing";
 import { POST } from "@/app/api/org/[orgId]/subscription/checkout/route";
 
 function withSession(user: { id: string; email: string; name: string }) {
@@ -75,6 +76,40 @@ describe("POST /api/org/[orgId]/subscription/checkout", () => {
     const res = await call(org.id, { planId: "inconnu" });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "PLAN_NOT_FOR_SALE" });
+  });
+
+  it("même plan hors fenêtre → 409 ALREADY_ACTIVE avec les dates ISO", async () => {
+    const { org, plan } = await seed("OWNER");
+    const endDate = new Date(Date.now() + 20 * 86400000);
+    await makeSubscription(org.id, plan.id, { endDate });
+    const res = await call(org.id, { planId: plan.id });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: "ALREADY_ACTIVE",
+      activeUntil: endDate.toISOString(),
+      renewableFrom: new Date(endDate.getTime() - 7 * 86400000).toISOString(),
+    });
+  });
+
+  it("abonnement sans échéance, même plan → 409 ALREADY_ACTIVE sans dates", async () => {
+    const { org, plan } = await seed("OWNER");
+    await makeSubscription(org.id, plan.id, { endDate: null });
+    const res = await call(org.id, { planId: plan.id });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "ALREADY_ACTIVE", activeUntil: null, renewableFrom: null });
+  });
+
+  it("crédit supérieur au prix → 409 NOTHING_TO_PAY", async () => {
+    const { org, plan } = await seed("OWNER");
+    const cheap = await prisma.plan.create({ data: { name: "cheap", price: 5000 } });
+    await makeSubscription(org.id, cheap.id, { endDate: new Date(Date.now() + 20 * 86400000) });
+    await makeBillingPayment({
+      orgId: org.id, planId: cheap.id, amount: 60000,
+      coversFrom: new Date(Date.now() - 86400000), coversTo: new Date(Date.now() + 29 * 86400000),
+    });
+    const res = await call(org.id, { planId: plan.id });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "NOTHING_TO_PAY" });
   });
 
   it("erreur inattendue (org inexistante, accès staff) → propagée", async () => {

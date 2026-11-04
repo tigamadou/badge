@@ -21,7 +21,16 @@ export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
     return NextResponse.json({ url });
   } catch (err) {
     if (err instanceof PaymentError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
+      return NextResponse.json(
+        {
+          error: err.code,
+          ...(err.detail && {
+            activeUntil: err.detail.activeUntil?.toISOString() ?? null,
+            renewableFrom: err.detail.renewableFrom?.toISOString() ?? null,
+          }),
+        },
+        { status: err.httpStatus },
+      );
     }
     throw err;
   }

@@ -57,3 +57,17 @@ describe("PaymentHistory", () => {
     expect(html).toContain("—");
   });
 });
+
+describe("PaymentHistory : lien vers la fiche", () => {
+  it("ajoute un lien par ligne avec detailHref", () => {
+    const html = renderToStaticMarkup(
+      <PaymentHistory payments={[base]} detailHref={(p) => `/org/o1/payments/${p.id}`} />,
+    );
+    expect(html).toContain('href="/org/o1/payments/p1"');
+    expect(html).toContain("Voir");
+  });
+
+  it("sans detailHref : aucun lien", () => {
+    expect(renderToStaticMarkup(<PaymentHistory payments={[base]} />)).not.toContain("<a ");
+  });
+});

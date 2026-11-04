@@ -74,7 +74,10 @@ export default async function OrgSubscriptionPage({
       <Card>
         <CardHead title="Historique des paiements" />
         <CardBody>
-          <PaymentHistory payments={payments.map(toPaymentHistoryItem)} />
+          <PaymentHistory
+            payments={payments.map(toPaymentHistoryItem)}
+            detailHref={(p) => `/platform/payments/${p.id}`}
+          />
         </CardBody>
       </Card>
     </div>

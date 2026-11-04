@@ -35,14 +35,40 @@ prix), `CHANGE_ALREADY_SCHEDULED` (409), `PAYMENTS_DISABLED` (503, FedaPay non c
 
 ## Regles de calcul
 
-Voir « Changements de plan » dans [`abonnements.md`](abonnements.md) : meme plan = prolongation,
-plan plus cher = bascule immediate sans prorata, plan moins cher = programme a l'echeance.
-Montants : entiers en FCFA (`Plan.price` de 100 a 10 000 000), devise `XOF` uniquement.
+Voir « Changements de plan » dans [`abonnements.md`](abonnements.md) : meme plan = prolongation (fenetre de
+7 jours), plan plus cher = bascule immediate **avec credit au prorata**, plan moins cher = programme a
+l'echeance. Montants : entiers en FCFA (`Plan.price` de 100 a 10 000 000), devise `XOF` uniquement.
 
-> **Decision 1 remplacee le 2026-11-01** : le plan `free` n'est plus sans echeance. C'est un essai de
-> 30 jours, une seule fois ; a l'echeance l'abonnement passe a `EXPIRED` (plus de repli sur `free`), sauf
-> plan programme. Voir [`abonnements.md`](abonnements.md) et la
-> [spec du 2026-11-01](../specs/2026-11-01-30-v4-abonnement-essai-droits.md).
+### Montant fige et periodes couvertes
+
+`Payment` d'abonnement porte : `listPrice` (prix plein du plan), `prorataCredit` (credit deduit), `amount`
+(= `listPrice - prorataCredit`, le montant envoye a FedaPay, **fige a la creation**), et a l'approbation
+`coversFrom` / `coversTo` (periode achetee) plus `mode`.
+
+A la confirmation, `confirmPayment` compare le montant FedaPay a `listPrice ?? amount` du paiement. Le credit
+recalcule a ce moment peut differer du credit fige (ex. le paiement a ete retarde) : l'ecart (`creditDrift`)
+est consigne (`creditDrift`) dans les journaux `PAYMENT_APPROVED` / `SUBSCRIPTION_UPDATED` et dans une entree
+`PAYMENT_PRORATA_MISMATCH` (`details = { frozen, current }`). Le paiement est applique au montant fige : le
+client n'est jamais re-facture.
+
+Un paiement d'abonnement passe `CANCELED` (remplace par un nouveau `PENDING`) mais approuve ensuite par
+FedaPay est confirmable, comme un `EXPIRED`.
+
+**Limite connue** : le balayage horaire ne rejoue pas les paiements d'abonnement deja remplaces par un
+paiement plus recent ; seuls le webhook et l'URL de retour les appliquent.
+
+## Module Paiements (lecture seule)
+
+- Organisation : `/org/[orgId]/payments` (liste), `/org/[orgId]/payments/[paymentId]` (fiche),
+  `/org/[orgId]/payments/[paymentId]/receipt` (recu imprimable). Droit : `MANAGER` ou plus. Reste accessible
+  avec un abonnement inactif (`isAlwaysAllowedOrgPath`).
+- Staff : `/platform/payments`, `/platform/payments/[paymentId]`, `.../receipt`. Droit : `STAFF_OBSERVER` ou plus
+  (`requireStaff`) ; filtre supplementaire par organisation (nom ou identifiant).
+- Filtres dans l'URL (`status`, `purpose`, `from`, `to`, `q` = reference FedaPay, `orgQuery` cote staff) et
+  pagination `page` / `pageSize` ; requetes dans `src/lib/payments-query.ts`.
+- Les filtres de dates (`from`, `to`) du module Paiements sont interpretes en UTC.
+- Le recu est une page HTML construite a la main (`escapeHtml`), reservee aux paiements `APPROVED`
+  (404 sinon), `Cache-Control: private, no-store`. Un paiement d'une autre organisation donne 404.
 
 ## Statuts d'un `Payment`
 
@@ -180,5 +206,5 @@ paiement) couvrent ce que l'interface montre sans appel reel. Le parcours comple
 
 ## Non-objectifs
 
-Renouvellement automatique, prorata, remboursement, factures PDF, autre devise ou prestataire,
-creation d'organisation en libre-service, page marketing `PricingCards` (prix en dur).
+Renouvellement automatique, remboursement, factures PDF, autre devise ou prestataire,
+creation d'organisation en libre-service.

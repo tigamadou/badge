@@ -37,18 +37,18 @@ ci-dessous en cas d'écart de signature : le signaler dans la progression).
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Fabriques de lot + règles pures de devis (prorata, fenêtre 7 j, périodes couvertes) | [ ] | | |
-| 2 | Extraire la résolution d'un paiement PENDING candidat (sans changement de comportement) | [ ] | | |
-| 3 | `startCheckout` : devis, garde PENDING, montée en gamme malgré un plan programmé | [ ] | | |
-| 4 | `confirmPayment` : montant figé, `coversFrom/To`, écart de crédit, paiement tardif | [ ] | | |
-| 5 | Route checkout, page Abonnement, `PlanCatalog` (aperçu du prorata), `PaymentHistory` | [ ] | | |
-| 6 | `payments-query` + `subscription-path` | [ ] | | |
-| 7 | Module Paiements côté organisation (liste, fiche, reçu, menu) | [ ] | | |
-| 8 | Module Paiements côté staff (liste, fiche, reçu, menu) | [ ] | | |
-| 9 | Plans : champs publics (API, page et formulaire staff) | [ ] | | |
-| 10 | `/tarifs` et `PricingCards` dynamiques, `ComparisonTable` | [ ] | | |
-| 11 | Seed démo : plans visibles, paiements cohérents | [ ] | | |
-| 12 | e2e, doc, vérification | [ ] | | |
+| 1 | Fabriques de lot + règles pures de devis (prorata, fenêtre 7 j, périodes couvertes) | [x] | 2026-11-04 |  |
+| 2 | Extraire la résolution d'un paiement PENDING candidat (sans changement de comportement) | [x] | 2026-11-04 |  |
+| 3 | `startCheckout` : devis, garde PENDING, montée en gamme malgré un plan programmé | [x] | 2026-11-04 | |
+| 4 | `confirmPayment` : montant figé, `coversFrom/To`, écart de crédit, paiement tardif | [x] | 2026-11-04 | |
+| 5 | Route checkout, page Abonnement, `PlanCatalog` (aperçu du prorata), `PaymentHistory` | [x] | 2026-11-04 | |
+| 6 | `payments-query` + `subscription-path` | [x] | 2026-11-04 | |
+| 7 | Module Paiements côté organisation (liste, fiche, reçu, menu) | [x] | 2026-11-04 | |
+| 8 | Module Paiements côté staff (liste, fiche, reçu, menu) | [x] | 2026-11-04 | |
+| 9 | Plans : champs publics (API, page et formulaire staff) | [x] | 2026-11-04 | |
+| 10 | `/tarifs` et `PricingCards` dynamiques, `ComparisonTable` | [x] | 2026-11-04 | |
+| 11 | Seed démo : plans visibles, paiements cohérents | [x] | 2026-11-04 | |
+| 12 | e2e, doc, vérification | [x] | 2026-11-04 | |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task
 validée : statut `[x]` + date ; en cas d'interruption : `[~]`, date et état précis (step en

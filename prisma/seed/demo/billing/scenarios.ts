@@ -52,7 +52,10 @@ export const SCENARIOS: Scenario[] = [
       { status: "CANCELED", daysAgo: 5 },
     ] },
   { key: "downgrade-scheduled", plan: "pro", status: "ACTIVE", startDaysAgo: 10, endInDays: 20, scheduledPlan: "standard", reminders: [],
+    // Standard payé il y a 20 jours, puis montée en gamme vers Pro il y a 10 jours (crédit au prorata),
+    // puis retour programmé vers Standard.
     payments: [
+      { plan: "standard", status: "APPROVED", mode: "IMMEDIATE", daysAgo: 20 },
       { status: "APPROVED", mode: "IMMEDIATE", daysAgo: 10 },
       { plan: "standard", status: "APPROVED", mode: "SCHEDULED", daysAgo: 3 },
     ] },

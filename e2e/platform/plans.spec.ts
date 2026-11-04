@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { cleanupE2ETestData, disconnectDb, getDb } from "../helpers/db";
 import { loginAsStaff } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
+import { cleanupBillingPlans, createTestPlan } from "../helpers/billing";
 
 // Page Plans (catalogue) — /platform/plans
 // Rôle : STAFF_ADMIN. Actions : creer un plan, archiver / restaurer (toggle par
@@ -20,6 +21,7 @@ test.describe("Platform — Plans", () => {
         .catch(() => undefined);
     }
     await cleanupE2ETestData();
+    await cleanupBillingPlans();
     await disconnectDb();
   });
 
@@ -87,6 +89,33 @@ test.describe("Platform — Plans", () => {
     expect(dbPlan?.maxEvents).toBeNull();
     expect(dbPlan?.maxParticipantsPerEvent).toBeNull();
     createdPlanIds.push(dbPlan!.id);
+  });
+
+  test("STAFF_ADMIN edite la fiche publique d'un plan", async ({ page }) => {
+    const staff = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "plans-public" });
+    const plan = await createTestPlan({ scope: "plans-public", price: 20000 });
+
+    await page.goto("/platform/plans");
+    const row = page.locator("tr", { hasText: plan.name }).first();
+    await expect(row).toContainText("Masqué");
+    await row.getByRole("button", { name: "Fiche publique" }).click();
+
+    const panel = page.locator("tr", { hasText: "Visible sur /tarifs" });
+    await panel.getByLabel("Visible sur /tarifs").check();
+    await panel.getByLabel("Mis en avant").check();
+    await panel.getByLabel(/Position/).fill("7");
+    await panel.getByLabel(/Description courte/).fill("Pour les equipes en croissance");
+    await panel.getByLabel(/Fonctionnalités/).fill("Badges PDF\nScanner mobile");
+    await panel.getByRole("button", { name: "Enregistrer" }).click();
+
+    await expect(row).toContainText("Visible · position 7 · mis en avant");
+    const db = await getDb().plan.findUniqueOrThrow({ where: { id: plan.id } });
+    expect(db.publicVisible).toBe(true);
+    expect(db.highlighted).toBe(true);
+    expect(db.position).toBe(7);
+    expect(db.description).toBe("Pour les equipes en croissance");
+    expect(db.features).toEqual(["Badges PDF", "Scanner mobile"]);
+    await expectLastActivity({ type: "PLAN_UPDATED", userId: staff.id, targetId: plan.id });
   });
 
   // --- Gardes & API -------------------------------------------------------
