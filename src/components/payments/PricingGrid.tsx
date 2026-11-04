@@ -52,7 +52,7 @@ export function PricingGrid({ plans }: { plans: PublicPlan[] }) {
                 aria-pressed={period === p}
                 onClick={() => setPeriod(p)}
                 className={`min-h-[40px] rounded-full px-5 text-sm font-medium transition-colors ${
-                  period === p ? "bg-green-600 text-white" : "text-slate-600 hover:text-slate-900"
+                  period === p ? "bg-navy text-white" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 {p === "MONTHLY" ? "Mensuel" : "Annuel"}
@@ -67,12 +67,12 @@ export function PricingGrid({ plans }: { plans: PublicPlan[] }) {
             key={plan.id}
             className={`relative flex flex-col rounded-2xl bg-white p-[30px] ${
               plan.highlighted
-                ? "border border-green-600 shadow-[0_0_0_1px_var(--color-green-600,#16a34a)]"
+                ? "border border-gold shadow-[0_0_0_1px_var(--color-gold)]"
                 : "border border-slate-200"
             }`}
           >
             {plan.highlighted && (
-              <span className="absolute -top-3 left-[30px] rounded-full bg-green-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-white">
+              <span className="absolute -top-3 left-[30px] rounded-full bg-gold px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-navy">
                 Le plus choisi
               </span>
             )}
@@ -92,14 +92,14 @@ export function PricingGrid({ plans }: { plans: PublicPlan[] }) {
               )}
             </div>
             <p className="mb-[22px] min-h-[42px] text-sm leading-relaxed text-slate-500">{plan.description}</p>
-            <ul className="mb-[26px] flex flex-1 flex-col gap-3 border-t border-slate-100 pt-[22px]">
+            <ul className="mb-[26px] flex flex-1 flex-col gap-3 border-t border-line pt-[22px]">
               {[
                 limitLine(plan.maxEvents, "événement", "événements", "Événements illimités"),
                 `${limitLine(plan.maxParticipantsPerEvent, "participant", "participants", "Participants illimités")} / événement`,
                 ...plan.features,
               ].map((line, i) => (
                 <li key={`${i}-${line}`} className="flex items-start gap-2.5 text-sm leading-snug text-slate-600">
-                  <span className="mt-0.5 flex-none text-green-600">
+                  <span className="mt-0.5 flex-none text-turquoise-strong">
                     <Icon name="check" size={16} />
                   </span>
                   {line}
