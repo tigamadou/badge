@@ -63,7 +63,7 @@ export default async function PrintRequestsPage({
         {!event.archived && !ctx.isStaff ? (
           <Link
             href={`/event/${eventId}/print/new`}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+            className="rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-navy-hover"
           >
             Nouvelle commande
           </Link>
@@ -82,14 +82,14 @@ export default async function PrintRequestsPage({
               header: "Référence",
               render: (r) => (
                 <span className="inline-flex items-center gap-2">
-                  <Link href={`/event/${eventId}/print/${r.id}`} className="font-medium text-green-700 hover:underline">
+                  <Link href={`/event/${eventId}/print/${r.id}`} className="font-medium text-navy hover:underline">
                     {r.reference}
                   </Link>
                   {r.unread > 0 ? (
                     <span
                       data-testid="unread-badge"
                       aria-label={`${r.unread} message${r.unread > 1 ? "s" : ""} non lu${r.unread > 1 ? "s" : ""}`}
-                      className="inline-flex min-w-5 items-center justify-center rounded-full bg-green-600 px-1.5 text-[11px] font-semibold leading-5 text-white"
+                      className="inline-flex min-w-5 items-center justify-center rounded-full bg-gold px-1.5 text-[11px] font-semibold leading-5 text-navy"
                     >
                       {r.unread}
                     </span>
