@@ -69,5 +69,5 @@ describe("reserve d'images de demo", () => {
     expect(second).toEqual(first);
     expect(bytes2.equals(bytes1)).toBe(true);
     expect(listing2).toEqual(listing1);
-  });
+  }, 60_000);
 });

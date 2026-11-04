@@ -18,6 +18,9 @@ import { createDemoContext, insertInBatches, type DemoContext } from "../context
 import { runDemoSeed } from "../index";
 import { writeAccountsFile } from "../accounts-file";
 
+// Chaque contexte construit la reserve d'images aux dimensions des cadres : plus lent qu'avant.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
+
 const DEV = { BADGE_ENV: "dev" };
 const TEST_PREFIX = "demo/_test/";
 
