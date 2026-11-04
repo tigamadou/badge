@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { RoleBadge, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -18,9 +21,13 @@ function initials(name: string | null): string {
 export default async function StaffUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; archived?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { q, type = "all", archived } = await searchParams;
+  const sp = await searchParams;
+  const q = typeof sp.q === "string" ? sp.q : undefined;
+  const type = typeof sp.type === "string" ? sp.type : "all";
+  const archived = typeof sp.archived === "string" ? sp.archived : undefined;
+  const list = parseListPage(sp);
   const showArchived = archived === "true";
 
   const where: Prisma.UserWhereInput = {
@@ -32,20 +39,26 @@ export default async function StaffUsersPage({
     }),
   };
 
-  const users = await prisma.user.findMany({
-    where,
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      isStaff: true,
-      staffRole: true,
-      archived: true,
-      _count: { select: { orgMemberships: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const result = await paginate(
+    list,
+    () => prisma.user.count({ where }),
+    (range) =>
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          isStaff: true,
+          staffRole: true,
+          archived: true,
+          _count: { select: { orgMemberships: true } },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+      }),
+  );
+  const users = result.rows;
 
   return (
     <div className="space-y-4">
@@ -63,6 +76,7 @@ export default async function StaffUsersPage({
       </div>
 
       <form method="get" className="flex flex-wrap items-center gap-2.5">
+        <input type="hidden" name="pageSize" value={result.pageSize} />
         <div className="relative min-w-0 basis-full flex-1 sm:basis-auto sm:min-w-[200px]">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon name="search" size={16} />
@@ -156,6 +170,7 @@ export default async function StaffUsersPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

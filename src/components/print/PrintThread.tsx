@@ -6,7 +6,11 @@ import { Timeline, TimelineItem } from "@/components/ui/Timeline";
 import { Icon } from "@/components/ui/Icon";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { useVisibleInterval } from "@/hooks/useVisibleInterval";
+import { formatFcfa } from "@/lib/print-requests/labels";
 import { describeLineChange, type LineChange } from "@/lib/print-requests/line-change";
+import { entryTone, toneClasses } from "./entry-tone";
+import { indexQuoteEntries, parseQuoteMessage } from "./quote-message";
+import { QuoteMessageCard, type QuoteCardLine } from "./QuoteMessageCard";
 
 export type ThreadEntry = {
   id: string;
@@ -16,6 +20,7 @@ export type ThreadEntry = {
   eventType: string | null;
   details: unknown;
   attachmentKey: string | null;
+  internal?: boolean;
   authorName: string | null;
   createdAt: string;
 };
@@ -29,6 +34,25 @@ export function lineChangesOf(entry: Pick<ThreadEntry, "eventType" | "details">)
   if (entry.eventType !== "LINES_CHANGED") return [];
   const changes = (entry.details as { changes?: unknown } | null)?.changes;
   return Array.isArray(changes) ? (changes as LineChange[]).map(describeLineChange) : [];
+}
+
+const isLine = (l: unknown): l is QuoteCardLine =>
+  typeof l === "object" && l !== null && typeof (l as QuoteCardLine).label === "string" &&
+  typeof (l as QuoteCardLine).quantity === "number" && typeof (l as QuoteCardLine).unitPrice === "number";
+
+// Carte de devis d'une entrée QUOTE_SENT. Lignes : `details.lines`, sinon les lignes courantes du
+// devis si la version est la dernière envoyée, sinon `null` (la carte montre alors le récapitulatif).
+export function quoteCardOf(
+  entry: Pick<ThreadEntry, "eventType" | "details">,
+  current?: { version: number; lines: QuoteCardLine[] },
+): { version: number; total: number; lines: QuoteCardLine[] | null } | null {
+  if (entry.eventType !== "QUOTE_SENT") return null;
+  const d = (entry.details ?? {}) as { version?: unknown; total?: unknown; lines?: unknown };
+  if (typeof d.version !== "number") return null;
+  const total = typeof d.total === "number" ? d.total : 0;
+  if (Array.isArray(d.lines) && d.lines.every(isLine)) return { version: d.version, total, lines: d.lines };
+  if (current && current.version === d.version) return { version: d.version, total, lines: current.lines };
+  return { version: d.version, total, lines: null };
 }
 
 // Nom du fichier joint = dernier segment de la clé de stockage.
@@ -45,6 +69,7 @@ export function PrintThread({
   uploadUrl,
   placeholder = "Écrire un message à l'équipe Badge…",
   refreshKey = 0,
+  currentQuote,
 }: {
   entriesUrl: string;
   postUrl: string | null;
@@ -52,6 +77,8 @@ export function PrintThread({
   placeholder?: string;
   // Changé par l'écran après une action (ex. côté staff) : recharge le fil sans attendre le tour suivant.
   refreshKey?: number;
+  // Lignes du devis courant : repli de la carte quand l'évènement n'embarque pas ses lignes.
+  currentQuote?: { version: number; lines: QuoteCardLine[] };
 }) {
   const [entries, setEntries] = useState<ThreadEntry[] | null>(null);
   const [body, setBody] = useState("");
@@ -112,6 +139,8 @@ export function PrintThread({
     },
   );
 
+  const { versions: quoteVersions, rows: recapRows } = indexQuoteEntries(entries ?? []);
+
   return (
     <div>
       {entries === null ? (
@@ -121,9 +150,16 @@ export function PrintThread({
       ) : (
         <Timeline>
           {entries.map((entry) => {
+            const quoteCard = quoteCardOf(entry, currentQuote);
+            const recap = parseQuoteMessage(entry.body);
+            // Le récapitulatif qui suit l'évènement de même version alimente la carte : pas de doublon.
+            if (entry.kind === "MESSAGE" && recap && quoteVersions.has(recap.version)) return null;
             const changes = lineChangesOf(entry);
             const isMessage = entry.kind === "MESSAGE";
             const author = entry.authorName ?? SIDE_LABELS[entry.side];
+            const tone = entryTone(entry, "STAFF");
+            const cardRows = quoteCard ? (recapRows.get(quoteCard.version) ?? []) : (recap?.rows ?? []);
+            const asCard = quoteCard ?? (isMessage && recap ? { version: recap.version, total: 0, lines: null } : null);
             return (
               <TimelineItem
                 key={entry.id}
@@ -131,7 +167,14 @@ export function PrintThread({
                 title={
                   <>
                     {isMessage ? <span className="mr-1.5">{author}</span> : null}
-                    {changes.length > 1 ? (
+                    {asCard ? (
+                      <QuoteMessageCard
+                        version={asCard.version}
+                        total={recap?.total ?? formatFcfa(asCard.total)}
+                        rows={cardRows}
+                        lines={asCard.lines ?? undefined}
+                      />
+                    ) : changes.length > 1 ? (
                       // Entrée regroupée : le résumé (« n lignes modifiées »), puis le détail.
                       <>
                         <span className="text-slate-600">{entry.body}</span>
@@ -141,10 +184,12 @@ export function PrintThread({
                           ))}
                         </ul>
                       </>
-                    ) : (
-                      <span className={`whitespace-pre-wrap break-words ${isMessage ? "block font-normal" : "text-slate-600"}`}>
+                    ) : isMessage ? (
+                      <span className={`block whitespace-pre-wrap break-words rounded-lg px-3 py-2 font-normal ${toneClasses[tone]}`}>
                         {entry.body}
                       </span>
+                    ) : (
+                      <span className="whitespace-pre-wrap break-words text-slate-600">{entry.body}</span>
                     )}
                     {entry.attachmentKey ? (
                       <a

@@ -1,36 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { toastError } from "@/lib/toast";
+import { useState, type ReactNode } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { GenerationForm, type LayoutOption, type LinkedPrintRequest } from "@/components/staff/print/GenerationForm";
 import { GenerationList, type GenerationRow } from "@/components/staff/print/GenerationList";
+import { mergeRowsById } from "@/components/staff/print/sheets/merge-rows";
 
 // Réunit le formulaire et l'historique : une génération créée apparaît aussitôt en tête.
 export function GenerationsScreen({
   layouts,
   initial,
   printRequest,
+  pagination,
 }: {
   layouts: LayoutOption[];
   initial: GenerationRow[];
   printRequest?: LinkedPrintRequest;
+  // Pagination par l'URL, rendue par la page serveur.
+  pagination?: ReactNode;
 }) {
-  const [rows, setRows] = useState(initial);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Lignes de la page courante, mises a jour par le polling (qui renvoie la liste non paginee).
+  const [polled, setPolled] = useState<{ from: GenerationRow[]; rows: GenerationRow[] } | null>(null);
+  const rows = polled && polled.from === initial ? polled.rows : initial;
 
-  async function reload() {
-    try {
-      const res = await fetch("/api/platform/print/sheets");
-      if (!res.ok) throw res;
-      setRows((await res.json()).generations);
-    } catch {
-      toastError("Impossible d'actualiser l'historique. Rechargez la page.");
-    }
+  // Une generation creee apparait en tete : retour a la page 1 et relecture de la tranche serveur.
+  function reload() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("page");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    router.refresh();
   }
 
   return (
     <div className="space-y-6">
-      <GenerationForm layouts={layouts} onCreated={() => void reload()} printRequest={printRequest} />
-      <GenerationList generations={rows} onChange={setRows} />
+      <GenerationForm layouts={layouts} onCreated={reload} printRequest={printRequest} />
+      <GenerationList
+        generations={rows}
+        onChange={(fresh) => setPolled({ from: initial, rows: mergeRowsById(rows, fresh) })}
+      />
+      {pagination}
     </div>
   );
 }

@@ -216,20 +216,25 @@ describe("GET liste", () => {
     expect(await ids(`orgId=${fx.org.id}&status=&page=`)).toHaveLength(2);
   });
 
-  it("pagination par 50", async () => {
+  it("pagination par la liste commune de tailles", async () => {
     await prisma.printRequest.createMany({
       data: Array.from({ length: 52 }, (_, i) => ({
         reference: `PG-${Date.now()}-${i}`, eventId: fx.event.id, orgId: fx.org.id, type: "ADVANCE" as const,
         status: "SUBMITTED" as const, submittedAt: new Date(2026, 0, 1, 0, i),
       })),
     });
-    const p1 = (await call(listGET, `${BASE}?orgId=${fx.org.id}`, "GET", {})).json;
-    const p2 = (await call(listGET, `${BASE}?orgId=${fx.org.id}&page=2`, "GET", {})).json;
-    expect([p1.requests.length, p2.requests.length, p1.total, p2.page]).toEqual([50, 2, 52, 2]);
+    const get = async (qs: string) => (await call(listGET, `${BASE}?orgId=${fx.org.id}${qs}`, "GET", {})).json;
+    const p1 = await get("");
+    const p2 = await get("&page=2&pageSize=50");
+    expect([p1.requests.length, p2.requests.length, p1.total, p2.page, p1.pageSize]).toEqual([20, 2, 52, 2, 20]);
+    expect((await get("&pageSize=10")).requests).toHaveLength(10);
+    expect((await get("&pageSize=7")).pageSize).toBe(20);
+    expect((await get("&pageSize=500")).requests).toHaveLength(52);
+    expect((await get("&page=0")).page).toBe(1);
   });
 
-  it("400 sur paramètre invalide (DRAFT, date, page)", async () => {
-    for (const qs of ["status=DRAFT", "wantedFrom=demain", "page=0", "type=X"]) {
+  it("400 sur paramètre invalide (DRAFT, date, type)", async () => {
+    for (const qs of ["status=DRAFT", "wantedFrom=demain", "type=X"]) {
       expect((await call(listGET, `${BASE}?${qs}`, "GET", {})).status, qs).toBe(400);
     }
   });

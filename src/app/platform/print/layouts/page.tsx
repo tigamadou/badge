@@ -6,12 +6,30 @@ import {
   canWriteLayouts,
   toLayoutRow,
 } from "@/lib/print-sheets/layout-page-data";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
-export default async function PrintLayoutsPage() {
-  const [canWrite, layouts] = await Promise.all([
+export default async function PrintLayoutsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const list = parseListPage(await searchParams);
+  const [canWrite, result] = await Promise.all([
     canWriteLayouts(),
-    prisma.printSheetLayout.findMany({ where: { archived: false }, orderBy: { createdAt: "asc" } }),
+    paginate(
+      list,
+      () => prisma.printSheetLayout.count({ where: { archived: false } }),
+      (range) =>
+        prisma.printSheetLayout.findMany({
+          where: { archived: false },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          ...range,
+        }),
+    ),
   ]);
+  const layouts = result.rows;
 
   return (
     <div className="space-y-4">
@@ -35,6 +53,7 @@ export default async function PrintLayoutsPage() {
         layouts={layouts.map(toLayoutRow)}
         canWrite={canWrite}
       />
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

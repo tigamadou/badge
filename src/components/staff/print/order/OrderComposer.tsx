@@ -63,7 +63,7 @@ export function OrderComposer({
 
   return (
     <form
-      className={`space-y-2 rounded-xl border p-3 ${internal ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}
+      className={`flex-none space-y-2 rounded-xl border p-3 ${internal ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}
       onSubmit={(e) => {
         e.preventDefault();
         if (canSend) void send();

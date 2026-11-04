@@ -298,6 +298,30 @@ describe("inscriptions, badges, produits", () => {
     expect((await res.json()).candidates).toHaveLength(3);
   });
 
+  it("GET inscriptions scope=items : tranche paginée des badges de cette commande", async () => {
+    const r = await makeRequest(fx, { status: "DRAFT" });
+    const other = await makeRequest(fx, { status: "DRAFT" });
+    await prisma.printRequestItem.createMany({
+      data: [
+        { requestId: r.id, registrationId: fx.approved[0].id, position: 0 },
+        { requestId: r.id, registrationId: fx.approved[1].id, position: 1 },
+        { requestId: r.id, registrationId: fx.approved[2].id, position: 2 },
+        { requestId: other.id, registrationId: fx.approved[0].id, position: 0 },
+      ],
+    });
+    const req = (query: string) =>
+      new NextRequest(`http://localhost/api/org/${fx.org.id}/events/${fx.event.id}/print-requests/${r.id}/registrations${query}`);
+    const ctx = { params: Promise.resolve({ orgId: fx.org.id, eventId: fx.event.id, requestId: r.id }) };
+    const page = await (registrations.GET as Handler)(req("?scope=items&pageSize=10&page=1&q=bravo"), ctx);
+    expect(page.status).toBe(200);
+    const body = await page.json();
+    expect(body).toMatchObject({ total: 1, page: 1, pageSize: 10 });
+    expect(body.items[0]).toMatchObject({ registrationId: fx.approved[1].id, position: 1, categoryName: "Participant" });
+    expect(body.candidates).toBeUndefined();
+    const all = await (await (registrations.GET as Handler)(req("?scope=items"), ctx)).json();
+    expect(all.total).toBe(3);
+  });
+
   it("PUT badges : 200 et nombre ; 400 sans sélection ; journal sur commande envoyée", async () => {
     const r = await makeRequest(fx, { status: "DRAFT" });
     const ok = await call(badges.PUT as Handler, "PUT", { requestId: r.id, body: { selection: { mode: "ALL_AVAILABLE" } } });

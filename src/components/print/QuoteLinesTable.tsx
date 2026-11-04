@@ -44,21 +44,25 @@ export function QuoteLinesTable({
   lines,
   total,
   badgeCount,
+  compact = false,
 }: {
   lines: QuoteLineView[];
   total: number;
   badgeCount: number;
+  // Variante resserrée pour les colonnes étroites.
+  compact?: boolean;
 }) {
+  const cell = compact ? "px-2 py-2" : "px-4 py-3";
   return (
     <div>
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-              <th className="px-4 py-3">Ligne</th>
-              <th className="px-4 py-3 text-right">Quantité</th>
-              <th className="px-4 py-3 text-right">Prix unitaire</th>
-              <th className="px-4 py-3 text-right">Total</th>
+              <th className={cell}>Ligne</th>
+              <th className={`${cell} text-right`}>Quantité</th>
+              <th className={`${cell} text-right`}>Prix unitaire</th>
+              <th className={`${cell} text-right`}>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -66,7 +70,7 @@ export function QuoteLinesTable({
               const options = describeSnapshot(line.optionsSnapshot);
               return (
                 <tr key={line.id} className="border-b border-slate-100 align-top">
-                  <td className="px-4 py-3">
+                  <td className={cell}>
                     <div className="font-medium text-slate-900">{line.label}</div>
                     {options.map((o) => (
                       <div key={o} className="text-xs text-slate-500">
@@ -74,9 +78,9 @@ export function QuoteLinesTable({
                       </div>
                     ))}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{line.quantity}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatFcfa(line.unitPrice)}</td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums">
+                  <td className={`whitespace-nowrap ${cell} text-right tabular-nums`}>{line.quantity}</td>
+                  <td className={`whitespace-nowrap ${cell} text-right tabular-nums`}>{formatFcfa(line.unitPrice)}</td>
+                  <td className={`whitespace-nowrap ${cell} text-right font-medium tabular-nums`}>
                     {formatFcfa(line.lineTotal)}
                   </td>
                 </tr>
@@ -92,10 +96,10 @@ export function QuoteLinesTable({
           </tbody>
           <tfoot>
             <tr className="bg-slate-50">
-              <td colSpan={3} className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+              <td colSpan={3} className={`${cell} text-right text-sm font-semibold text-slate-900`}>
                 {`Total estimé (${badgeCount} badge${badgeCount > 1 ? "s" : ""})`}
               </td>
-              <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums text-slate-900">
+              <td className={`whitespace-nowrap ${cell} text-right text-sm font-semibold tabular-nums text-slate-900`}>
                 {formatFcfa(total)}
               </td>
             </tr>

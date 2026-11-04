@@ -169,10 +169,10 @@ describe("GET /api/org/[orgId]/events/[eventId]/activity", () => {
     expect(res.status).toBe(403);
   });
 
-  it("supports pagination via page and limit", async () => {
+  it("pagine par page et pageSize (liste commune)", async () => {
     const { admin, org, event } = await scaffold();
     await prisma.activityLog.createMany({
-      data: Array.from({ length: 5 }).map(() => ({
+      data: Array.from({ length: 25 }).map(() => ({
         type: "BADGE_SCANNED" as const,
         userId: admin.id,
         eventId: event.id,
@@ -182,21 +182,23 @@ describe("GET /api/org/[orgId]/events/[eventId]/activity", () => {
     await withSession({ id: admin.id, email: admin.email, name: admin.name, isStaff: false });
 
     const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/activity/route");
-    const res = await GET(
-      new NextRequest(
-        `http://localhost/api/org/${org.id}/events/${event.id}/activity?page=2&limit=2`,
-      ),
-      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
-    );
-    const json = (await res.json()) as {
-      total: number;
-      logs: unknown[];
-      page: number;
-      limit: number;
+    const call = async (qs: string) => {
+      const res = await GET(new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/activity?${qs}`), {
+        params: Promise.resolve({ orgId: org.id, eventId: event.id }),
+      });
+      return (await res.json()) as { total: number; logs: unknown[]; page: number; pageSize: number };
     };
-    expect(json.total).toBe(5);
-    expect(json.page).toBe(2);
-    expect(json.limit).toBe(2);
-    expect(json.logs).toHaveLength(2);
+
+    const ten = await call("page=3&pageSize=10");
+    expect(ten).toMatchObject({ total: 25, page: 3, pageSize: 10 });
+    expect(ten.logs).toHaveLength(5);
+    expect(ten).not.toHaveProperty("limit");
+
+    const fallback = await call("pageSize=3");
+    expect(fallback.pageSize).toBe(20);
+    expect(fallback.logs).toHaveLength(20);
+
+    const all = await call("pageSize=500");
+    expect(all.logs).toHaveLength(25);
   });
 });

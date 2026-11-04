@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
 import { CatPill, Tag } from "@/components/ui/Labels";
@@ -25,22 +26,26 @@ type Cat = {
 export function CategoryTable({
   orgId,
   eventId,
-  initial,
+  rows: cats,
+  allCategories,
+  footer,
 }: {
   orgId: string;
   eventId: string;
-  initial: Cat[];
+  rows: Cat[];
+  // Toutes les categories de l'evenement (cibles de reaffectation), pas seulement la page affichee.
+  allCategories: { id: string; name: string; number: number }[];
+  footer?: ReactNode;
 }) {
-  const [cats, setCats] = useState(initial);
+  const router = useRouter();
   const [editing, setEditing] = useState<Cat | null>(null);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
   const [reassign, setReassign] = useState<Cat | null>(null);
 
+  // Les lignes viennent de la page serveur (tranche de l'URL) : on la relit apres chaque mutation.
   async function refresh() {
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/categories`);
-    const json = await res.json();
-    setCats(json.categories);
+    router.refresh();
     setEditing(null);
     setAdding(false);
     setImporting(false);
@@ -94,7 +99,7 @@ export function CategoryTable({
           orgId={orgId}
           eventId={eventId}
           fromCategory={reassign}
-          candidates={cats.filter((c) => c.id !== reassign.id)}
+          candidates={allCategories.filter((c) => c.id !== reassign.id)}
           onDone={refresh}
           onCancel={() => setReassign(null)}
         />
@@ -164,6 +169,7 @@ export function CategoryTable({
           </tbody>
         </table>
       </TableFrame>
+      {footer}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

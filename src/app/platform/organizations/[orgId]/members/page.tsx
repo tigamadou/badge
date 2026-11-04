@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { PlatformOrgMemberInviteForm } from "@/components/platform/PlatformOrgMemberInviteForm";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 const ROLE_LABEL: Record<string, string> = {
   OWNER: "Propriétaire",
@@ -11,25 +14,35 @@ const ROLE_LABEL: Record<string, string> = {
 // v4 Bloc B : liste read-only des membres d'une org, pour la supervision staff.
 export default async function OrgMembersSupervisionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
-  const members = await prisma.orgMembership.findMany({
-    where: { orgId },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      role: true,
-      createdAt: true,
-      user: { select: { name: true, email: true } },
-    },
-  });
+  const list = parseListPage(await searchParams);
+  const result = await paginate(
+    list,
+    () => prisma.orgMembership.count({ where: { orgId } }),
+    (range) =>
+      prisma.orgMembership.findMany({
+        where: { orgId },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        ...range,
+        select: {
+          id: true,
+          role: true,
+          createdAt: true,
+          user: { select: { name: true, email: true } },
+        },
+      }),
+  );
+  const members = result.rows;
 
   return (
     <div className="space-y-4">
       <PlatformOrgMemberInviteForm orgId={orgId} />
-      <h2 className="text-base font-semibold text-slate-800">Membres ({members.length})</h2>
+      <h2 className="text-base font-semibold text-slate-800">Membres ({result.total})</h2>
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
@@ -61,6 +74,7 @@ export default async function OrgMembersSupervisionPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

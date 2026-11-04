@@ -21,21 +21,21 @@
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Vérification du socle, helper `paginate`, helpers e2e | [ ] | | |
-| 2 | Espace évènement — badges et inscriptions | [ ] | | |
-| 3 | Espace évènement — catégories, membres, blocage, journal, impression | [ ] | | |
-| 4 | Espace organisation — évènements, membres, templates, journal | [ ] | | |
-| 5 | Espace plateforme — organisations (liste + 3 sous-pages) | [ ] | | |
-| 6 | Espace plateforme — profils, utilisateurs, templates, journal, emails | [ ] | | |
-| 7 | Espace plateforme — impression : commandes, gabarits, catalogue, planches | [ ] | | |
-| 8 | Compte participant | [ ] | | |
-| 9 | Affichage des erreurs `EVENT_IMAGES_NONCOMPLIANT` | [ ] | | |
-| 10 | Routes de liste des badges d'une commande (staff + organisateur) | [ ] | | |
-| 11 | `AppShell` / `FullHeightPage` et fonctions pures de la page commande | [ ] | | |
-| 12 | Composants communs de la page commande | [ ] | | |
-| 13 | Page commande staff | [ ] | | |
-| 14 | Page commande organisateur | [ ] | | |
-| 15 | e2e, doc, vérification | [ ] | | |
+| 1 | Vérification du socle, helper `paginate`, helpers e2e | [x] | 2026-11-04 | UrlPagination = { page, totalPages, total, pageSize, pageSizeOptions? } (conforme) |
+| 2 | Espace évènement — badges et inscriptions | [x] | 2026-11-04 | RegistrationTable/BadgeListTable : etat dans l'URL (router.replace), page bornee cote client |
+| 3 | Espace évènement — catégories, membres, blocage, journal, impression | [x] | 2026-11-04 | listes a etat local : lignes en props + router.refresh(); onglets de blocage via ?tab=; allCategories charge hors tranche pour la reaffectation |
+| 4 | Espace organisation — évènements, membres, templates, journal | [x] | 2026-11-04 | ownerCount (dernier OWNER) calcule cote serveur; archiver un evenement ne le retire pas de la liste (archives affichees) : pas de rabat de page a tester |
+| 5 | Espace plateforme — organisations (liste + 3 sous-pages) | [x] | 2026-11-04 | pages organisations paginees |
+| 6 | Espace plateforme — profils, utilisateurs, templates, journal, emails | [x] | 2026-11-04 | profils, utilisateurs, gabarits, activite, jobs |
+| 7 | Espace plateforme — impression : commandes, gabarits, catalogue, planches | [x] | 2026-11-04 | commandes, gabarits, catalogue, planches |
+| 8 | Compte participant | [x] | 2026-11-04 | page compte |
+| 9 | Affichage des erreurs `EVENT_IMAGES_NONCOMPLIANT` | [x] | 2026-11-04 | test api-error-display |
+| 10 | Routes de liste des badges d'une commande (staff + organisateur) | [x] | 2026-11-04 | routes items et thread |
+| 11 | `AppShell` / `FullHeightPage` et fonctions pures de la page commande | [x] | 2026-11-04 | FullHeightPage et modules purs |
+| 12 | Composants communs de la page commande | [x] | 2026-11-04 | composants communs |
+| 13 | Page commande staff | [x] | 2026-11-04 | page commande staff |
+| 14 | Page commande organisateur | [x] | 2026-11-04 | page commande organisateur |
+| 15 | e2e, doc, vérification | [x] | 2026-11-04 | doc ; lint/typecheck/test-coverage verts ; e2e du lot verts (print-sheets et onsite : 1 flaky chacun, vert au retry) ; controle visuel manuel non fait |
 
 ## Fichiers du lot (exclusifs)
 

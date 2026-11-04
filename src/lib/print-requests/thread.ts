@@ -232,7 +232,7 @@ const ORGANIZER_DETAILS: Record<ThreadEventType, string[]> = {
   LINES_CHANGED: ["changes"],
   BADGES_CHANGED: ["added", "removed", "count", "lagging"],
   REQUEST_UPDATED: ["fields", "lagging"],
-  QUOTE_SENT: ["version", "total"],
+  QUOTE_SENT: ["version", "total", "lines"],
   QUOTE_ACCEPTED: ["version", "total"],
   QUOTE_REOPENED: ["version"],
   QUOTE_REVISION: [],
@@ -258,6 +258,12 @@ function publicChange(change: LineChange): Omit<LineChange, "lineId"> {
   return { op: change.op, label: change.label, from: change.from, to: change.to };
 }
 
+// Les lignes d'un devis sans l'identifiant interne du snapshot.
+function publicQuoteLines(raw: unknown): { label: unknown; quantity: unknown; unitPrice: unknown }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((l: Record<string, unknown>) => ({ label: l?.label, quantity: l?.quantity, unitPrice: l?.unitPrice }));
+}
+
 function organizerDetails(eventType: ThreadEventType, raw: unknown): Record<string, unknown> {
   const source = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const details: Record<string, unknown> = {};
@@ -265,6 +271,7 @@ function organizerDetails(eventType: ThreadEventType, raw: unknown): Record<stri
     if (source[key] !== undefined) details[key] = source[key];
   }
   if (eventType === "LINES_CHANGED") details.changes = changesOf(details.changes).map(publicChange);
+  if (eventType === "QUOTE_SENT") details.lines = publicQuoteLines(details.lines);
   return details;
 }
 

@@ -4,6 +4,7 @@ import {
   createTestEvent,
   createTestPrintPayment,
   createTestPrintRequest,
+  createTestRegistration,
   createTestUser,
   disconnectDb,
   getDb,
@@ -12,6 +13,7 @@ import {
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
+import { expectNoHorizontalOverflow } from "../helpers/pagination";
 import { ensureFixtures } from "../fixtures";
 
 const LINES = [
@@ -194,5 +196,80 @@ test.describe("Event — Détail d'une commande d'impression", () => {
     await expect(page.getByText("Seul le propriétaire de l'organisation peut payer ce devis.")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Payer/ })).toHaveCount(0);
     expect((await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } })).status).toBe("ACCEPTED");
+  });
+
+  test("Disposition : en-tête fixe avec « Accepter le devis », trois colonnes à 1280 px, composer collé en bas", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "print-detail-layout" });
+    const owner = await makeEventAdminUser({ scope: "print-detail-layout-owner", eventId, orgId });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: owner.id, status: "QUOTED", quoteVersion: 1, lines: LINES });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await loginAndEnter(page, owner, { kind: "event", id: eventId });
+    await openRequest(page, eventId, request);
+
+    const accept = page.getByRole("button", { name: "Accepter le devis v1" });
+    await expect(accept).toBeVisible();
+    const top = (await accept.boundingBox())!.y;
+    await page.getByTestId("thread-list").evaluate((el) => (el.scrollTop = el.scrollHeight));
+    expect((await accept.boundingBox())!.y).toBe(top);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    const summary = (await page.getByRole("complementary", { name: "Résumé de la commande" }).boundingBox())!;
+    const thread = (await page.getByTestId("thread-list").boundingBox())!;
+    const quote = (await page.getByRole("complementary", { name: "Devis" }).boundingBox())!;
+    expect(summary.x + summary.width).toBeLessThanOrEqual(thread.x);
+    expect(thread.x + thread.width).toBeLessThanOrEqual(quote.x);
+    const composer = (await page.getByLabel("Votre message").boundingBox())!;
+    expect(composer.y + composer.height).toBeGreaterThan(800 - 120);
+    await expect(page.getByRole("tablist")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("Onglets sous 1280 px, Discussion par défaut, sans débordement horizontal", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "print-detail-tabs" });
+    const owner = await makeEventAdminUser({ scope: "print-detail-tabs-owner", eventId, orgId });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: owner.id, status: "QUOTED", quoteVersion: 1, lines: LINES });
+    await loginAndEnter(page, owner, { kind: "event", id: eventId });
+    await openRequest(page, eventId, request);
+    for (const width of [1024, 375]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`/event/${eventId}/print/${request.id}`);
+      await expect(page.getByRole("tab", { name: "Discussion" })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByTestId("thread-list")).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      await page.getByRole("tab", { name: "Devis" }).click();
+      await expectNoHorizontalOverflow(page);
+      await page.getByRole("tab", { name: "Infos" }).click();
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
+  test("« Voir les badges (N) » liste les badges de la commande avec recherche et pagination", async ({ page }) => {
+    test.setTimeout(240_000);
+    const { orgId, eventId, categoryId } = await createTestEvent({ scope: "print-detail-badges" });
+    const owner = await makeEventAdminUser({ scope: "print-detail-badges-owner", eventId, orgId });
+    const registrationIds: string[] = [];
+    for (let i = 0; i < 45; i++) {
+      const participant = await createTestUser({ scope: `print-detail-badges-p${i}`, verified: true, profile: true });
+      registrationIds.push((await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" })).id);
+    }
+    const request = await createTestPrintRequest({
+      eventId, orgId, createdById: owner.id, status: "SUBMITTED", lines: LINES, registrationIds,
+    });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await loginAndEnter(page, owner, { kind: "event", id: eventId });
+    await openRequest(page, eventId, request);
+
+    await page.getByRole("button", { name: "Voir les badges (45)" }).click();
+    const dialog = page.getByRole("dialog", { name: "Badges de la commande" });
+    await expect(dialog.getByText("45 résultats", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("row")).toHaveCount(21);
+    await dialog.getByLabel("Nombre de résultats par page").selectOption("10");
+    await expect(dialog.getByRole("row")).toHaveCount(11);
+    await dialog.getByRole("button", { name: "Page suivante" }).click();
+    await expect(dialog.locator('button[aria-current="page"]')).toHaveText("2");
+
+    const last = (await getDb().registration.findFirstOrThrow({ where: { id: registrationIds[0] } })).snapshotLastName;
+    await dialog.getByLabel("Rechercher un badge").fill(last);
+    await expect(dialog.getByRole("row").nth(1)).toContainText(last);
   });
 });

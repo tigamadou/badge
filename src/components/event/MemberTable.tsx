@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/Feedback";
@@ -30,19 +31,19 @@ type Member = {
 export function MemberTable({
   orgId,
   eventId,
-  initial,
+  rows: members,
+  footer,
 }: {
   orgId: string;
   eventId: string;
-  initial: Member[];
+  rows: Member[];
+  footer?: ReactNode;
 }) {
-  const [members, setMembers] = useState(initial);
+  const router = useRouter();
   const [inviting, setInviting] = useState(false);
 
   async function refresh() {
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/members`);
-    const json = await res.json();
-    setMembers(json.members);
+    router.refresh();
     setInviting(false);
   }
 
@@ -98,6 +99,7 @@ export function MemberTable({
           </tbody>
         </table>
       </TableFrame>
+      {footer}
 
       {inviting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

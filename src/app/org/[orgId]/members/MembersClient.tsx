@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { OrgMemberForm } from "@/components/admin/OrgMemberForm";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ActionError } from "@/lib/toast";
@@ -27,42 +28,28 @@ type Member = {
   invitedAt: string;
 };
 
-type MemberApi = {
-  userId: string;
-  email: string;
-  name: string;
-  archived: boolean;
-  role: string;
-  invitedAt: string;
-};
-
 const ORG_ROLES = ["OWNER", "MANAGER", "AUDITOR"] as const;
 
 export function MembersClient({
   orgId,
-  initial,
+  rows: members,
+  ownerCount,
+  footer,
   canManageRoles = false,
 }: {
   orgId: string;
-  initial: Member[];
+  rows: Member[];
+  // Nombre d'OWNER de toute l'organisation (la liste est paginee : on ne peut pas le deduire des lignes).
+  ownerCount: number;
+  footer?: ReactNode;
   // Seul un OWNER peut changer les roles : sinon le role reste en lecture seule.
   canManageRoles?: boolean;
 }) {
-  const [members, setMembers] = useState(initial);
+  const router = useRouter();
 
+  // Les lignes viennent de la page serveur (tranche de l'URL) : on la relit apres chaque mutation.
   async function refresh() {
-    const res = await fetch(`/api/org/${orgId}/members`);
-    const json = (await res.json()) as { members: MemberApi[] };
-    setMembers(
-      json.members.map((m) => ({
-        userId: m.userId,
-        email: m.email,
-        name: m.name,
-        archived: m.archived,
-        role: m.role,
-        invitedAt: new Date(m.invitedAt).toISOString(),
-      })),
-    );
+    router.refresh();
   }
 
   // Le dernier OWNER ne peut ni changer de rôle ni être retiré (409).
@@ -81,8 +68,6 @@ export function MembersClient({
     if (res.status === 409) throw new ActionError("Impossible : c'est le dernier OWNER.");
     if (!res.ok) throw res;
   }
-
-  const ownerCount = members.filter((m) => m.role === "OWNER").length;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -119,6 +104,7 @@ export function MembersClient({
           </tbody>
         </table>
       </TableFrame>
+      {footer}
     </div>
   );
 }

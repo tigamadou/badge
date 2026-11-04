@@ -9,14 +9,14 @@ import { countCountableRegistrations, resolveOrgLimits } from "@/lib/subscriptio
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
 import { canRegisterToEvent } from "@/lib/profile-review";
 import { toRegistrationListDTO } from "@/lib/registration-dto";
+import { parseListPage } from "@/lib/list-query";
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (req, { eventId }) => {
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const categoryId = url.searchParams.get("categoryId");
   const q = url.searchParams.get("q")?.trim();
-  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "25")));
+  const { page, pageSize, skip, take } = parseListPage(url.searchParams);
 
   const where: Prisma.RegistrationWhereInput = { eventId };
   if (status && ["PENDING", "APPROVED", "REJECTED"].includes(status)) {
@@ -36,8 +36,8 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
     prisma.registration.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip,
+      take,
       select: {
         id: true,
         snapshotFirstName: true,
@@ -58,7 +58,7 @@ export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, a
     registrations: registrations.map(toRegistrationListDTO),
     total,
     page,
-    limit,
+    pageSize,
   });
 });
 

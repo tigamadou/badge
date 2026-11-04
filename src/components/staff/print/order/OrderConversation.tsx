@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { useVisibleInterval } from "@/hooks/useVisibleInterval";
-import { attachmentName, lineChangesOf } from "@/components/print/PrintThread";
+import { attachmentName, lineChangesOf, quoteCardOf } from "@/components/print/PrintThread";
+import { entryTone, toneClasses } from "@/components/print/entry-tone";
+import { indexQuoteEntries, parseQuoteMessage } from "@/components/print/quote-message";
+import { QuoteMessageCard, type QuoteCardLine } from "@/components/print/QuoteMessageCard";
+import { formatFcfa } from "@/lib/print-requests/labels";
 import { OrderComposer } from "./OrderComposer";
 import { afterParam, mergeEntries, type OrderEntry } from "./order-thread";
 
@@ -26,8 +30,34 @@ function Attachment({ fileKey }: { fileKey: string }) {
   );
 }
 
-function Entry({ entry }: { entry: OrderEntry }) {
+function Entry({
+  entry,
+  recapRows,
+  currentQuote,
+}: {
+  entry: OrderEntry;
+  recapRows: Map<number, string[]>;
+  currentQuote?: { version: number; lines: QuoteCardLine[] };
+}) {
   const meta = `${entry.authorName ?? ""}${entry.authorName ? " · " : ""}${formatDateTime(entry.createdAt)}`;
+  const card = quoteCardOf(entry, currentQuote);
+  const recap = entry.kind === "MESSAGE" ? parseQuoteMessage(entry.body) : null;
+  if (card || recap) {
+    const version = card?.version ?? recap!.version;
+    return (
+      <div className="flex justify-center" data-entry-kind="quote">
+        <div className="w-full max-w-[95%]">
+          <QuoteMessageCard
+            version={version}
+            total={recap?.total ?? formatFcfa(card?.total ?? 0)}
+            rows={recapRows.get(version) ?? []}
+            lines={card?.lines ?? undefined}
+          />
+          <div className="mt-0.5 text-center text-[11px] text-slate-500">{meta}</div>
+        </div>
+      </div>
+    );
+  }
   if (entry.kind === "EVENT") {
     const changes = lineChangesOf(entry);
     return (
@@ -56,11 +86,7 @@ function Entry({ entry }: { entry: OrderEntry }) {
     );
   }
   const mine = entry.side === "STAFF";
-  const tone = entry.internal
-    ? "border border-amber-300 bg-amber-50 text-amber-950"
-    : mine
-      ? "bg-green-600 text-white"
-      : "bg-slate-100 text-slate-900";
+  const tone = toneClasses[entryTone(entry, "STAFF")];
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`} data-entry-kind={entry.internal ? "internal-note" : "message"}>
       <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${tone}`}>
@@ -69,7 +95,7 @@ function Entry({ entry }: { entry: OrderEntry }) {
         ) : null}
         <p className="whitespace-pre-wrap break-words">{entry.body}</p>
         {entry.attachmentKey ? <Attachment fileKey={entry.attachmentKey} /> : null}
-        <div className={`mt-0.5 text-[11px] ${mine && !entry.internal ? "text-green-100" : "text-slate-500"}`}>{meta}</div>
+        <div className="mt-0.5 text-[11px] text-slate-500">{meta}</div>
       </div>
     </div>
   );
@@ -84,6 +110,7 @@ export function OrderConversation({
   canPost,
   refreshKey,
   onFirstRead,
+  currentQuote,
 }: {
   messagesUrl: string;
   uploadUrl: string;
@@ -92,6 +119,8 @@ export function OrderConversation({
   refreshKey: number;
   // Appelé une fois le fil lu pour la première fois (le fil est alors marqué lu : menu à rafraîchir).
   onFirstRead?: () => void;
+  // Lignes du devis courant : repli de la carte quand l'évènement n'embarque pas ses lignes.
+  currentQuote?: { version: number; lines: QuoteCardLine[] };
 }) {
   const [entries, setEntries] = useState<OrderEntry[] | null>(null);
   const [hasNew, setHasNew] = useState(false);
@@ -154,21 +183,28 @@ export function OrderConversation({
     setHasNew(false);
   }
 
+  const { versions: quoteVersions, rows: recapRows } = indexQuoteEntries(entries ?? []);
+
   return (
-    <div className="flex min-w-0 flex-col gap-3">
-      <div className="relative">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <div className="relative min-h-0 flex-1">
         <div
           ref={scroller}
           onScroll={onScroll}
           aria-label="Fil de la commande"
-          className="max-h-[60vh] min-h-48 space-y-2.5 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 lg:max-h-[calc(100vh-22rem)]"
+          className="h-full min-h-48 space-y-2.5 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3"
         >
           {entries === null ? (
             <p className="text-sm text-slate-400">Chargement…</p>
           ) : entries.length === 0 ? (
             <p className="text-sm text-slate-400">Aucun échange pour le moment.</p>
           ) : (
-            entries.map((entry) => <Entry key={entry.id} entry={entry} />)
+            entries.map((entry) => {
+              // Le récapitulatif d'une version annoncée est porté par la carte de l'évènement.
+              const recap = entry.kind === "MESSAGE" ? parseQuoteMessage(entry.body) : null;
+              if (recap && quoteVersions.has(recap.version)) return null;
+              return <Entry key={entry.id} entry={entry} recapRows={recapRows} currentQuote={currentQuote} />;
+            })
           )}
         </div>
         {hasNew ? (

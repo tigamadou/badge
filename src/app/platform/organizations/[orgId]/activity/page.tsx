@@ -2,34 +2,44 @@ import { prisma } from "@/lib/prisma";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { logKind } from "@/app/platform/activity/page";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 // v4 Bloc B : journal read-only filtre sur l'org, pour la supervision staff.
 export default async function OrgActivitySupervisionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
-  const activities = await prisma.activityLog.findMany({
-    where: { orgId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true,
-      type: true,
-      eventId: true,
-      targetId: true,
-      staffActor: true,
-      createdAt: true,
-      user: { select: { email: true } },
-    },
-  });
+  const list = parseListPage(await searchParams);
+  const result = await paginate(
+    list,
+    () => prisma.activityLog.count({ where: { orgId } }),
+    (range) =>
+      prisma.activityLog.findMany({
+        where: { orgId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+        select: {
+          id: true,
+          type: true,
+          eventId: true,
+          targetId: true,
+          staffActor: true,
+          createdAt: true,
+          user: { select: { email: true } },
+        },
+      }),
+  );
+  const activities = result.rows;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold text-slate-800">
-        Journal d&apos;activité (50 dernières entrées)
-      </h2>
+      <h2 className="text-base font-semibold text-slate-800">Journal d&apos;activité ({result.total})</h2>
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
@@ -70,6 +80,7 @@ export default async function OrgActivitySupervisionPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

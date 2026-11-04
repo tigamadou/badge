@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { PrintRequestStatus, PrintRequestType } from "@prisma/client";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { EmptyState } from "@/components/ui/Feedback";
@@ -40,33 +41,27 @@ const STATUS_OPTIONS = (Object.keys(PRINT_REQUEST_STATUS_LABELS) as PrintRequest
 
 const FIELD = "rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-900";
 
-function pageHref(filters: RequestFilters, page: number): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
-  if (page > 1) params.set("page", String(page));
-  const qs = params.toString();
-  return `/platform/print/orders${qs ? `?${qs}` : ""}`;
-}
-
 export function RequestList({
   rows,
   total,
-  page,
   pageSize,
+  pagination,
   filters,
   orgs,
 }: {
   rows: RequestRow[];
   total: number;
-  page: number;
   pageSize: number;
+  // Pagination par l'URL, rendue par la page serveur.
+  pagination: ReactNode;
   filters: RequestFilters;
   orgs: { id: string; name: string }[];
 }) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   return (
     <div className="space-y-4">
       <form method="get" className="flex flex-wrap items-end gap-2.5">
+        {/* Soumettre un filtre retire `page` (non envoye) mais conserve la taille de page. */}
+        <input type="hidden" name="pageSize" value={pageSize} />
         <label className="flex flex-col gap-1 text-xs text-slate-500">
           Statut
           <select name="status" defaultValue={filters.status} className={FIELD}>
@@ -165,28 +160,7 @@ export function RequestList({
         </TableFrame>
       )}
 
-      {total > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-          <span>
-            {total} commande{total > 1 ? "s" : ""}
-          </span>
-          <div className="flex items-center gap-2">
-            {page > 1 ? (
-              <Link href={pageHref(filters, page - 1)} className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100">
-                Précédent
-              </Link>
-            ) : null}
-            <span>
-              Page {page} sur {totalPages}
-            </span>
-            {page < totalPages ? (
-              <Link href={pageHref(filters, page + 1)} className="rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-100">
-                Suivant
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      )}
+      {total > 0 && pagination}
     </div>
   );
 }
