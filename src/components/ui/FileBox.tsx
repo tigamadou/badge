@@ -9,12 +9,14 @@ export function FileBox({
   subtitle,
   thumbUrl,
   action,
+  warning,
 }: {
   icon?: IconName;
   title: ReactNode;
   subtitle?: ReactNode;
   thumbUrl?: string;
   action?: ReactNode;
+  warning?: ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-[10px] border border-slate-200 bg-white p-3">
@@ -29,6 +31,7 @@ export function FileBox({
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-medium text-slate-900">{title}</div>
         {subtitle ? <div className="mt-0.5 text-xs text-slate-400">{subtitle}</div> : null}
+        {warning ? <div className="mt-0.5 text-xs font-medium text-amber-600">{warning}</div> : null}
       </div>
       {action}
     </div>

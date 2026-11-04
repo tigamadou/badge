@@ -35,7 +35,7 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 | 5 | Photo du participant : contrôle serveur sur tous les chemins | [x] | 2026-11-04 | helpers checkIdPhotoBuffer/Key et rejectionResponse dans event-image-compliance ; PUT /api/account/profile (pas PATCH) |
 | 6 | Blocage : rendu PDF, aperçu, exports, planches | [x] | 2026-11-04 | tests regroupes dans event-images-blocking.test.ts ; worker FAILED OK sans modification |
 | 7 | Blocage : soumission de commande, impression sur place | [x] | 2026-11-04 | tests regroupes dans event-images-blocking-requests.test.ts |
-| 8 | Composant `ImageCropper` | [ ] | | |
+| 8 | Composant `ImageCropper` | [x] | 2026-11-04 | dialogue sans footer Dialog (boutons dans le corps) ; image locale lue en data URL ; comportement canvas a verifier en e2e |
 | 9 | Interface évènement : réglages, bandeau, tableau de bord | [ ] | | |
 | 10 | Interface photo : compte, inscription, règles de la photo d'identité | [ ] | | |
 | 11 | Seed démo et fixtures e2e conformes | [ ] | | |
