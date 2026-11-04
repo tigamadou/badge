@@ -41,7 +41,7 @@ signaler dans la progression.
 | 6 | `components/event/print/**` — assistant et conversation | [x] | 2026-11-04 |  |
 | 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [x] | 2026-11-04 | Test ScannerFrame : non-regression text-rose-700 ajoutee. |
 | 8 | `components/admin` — hors shells | [x] | 2026-11-04 |  |
-| 9 | `components/badge` et test `MiniBadge` | [ ] | | |
+| 9 | `components/badge` et test `MiniBadge` | [x] | 2026-11-04 | BadgeDocumentView garde bg-[#8b8b90]. |
 | 10 | Balayage final, contrôle des tests de classes | [ ] | | |
 | 11 | e2e, contrôle visuel, vérification | [ ] | | |
 

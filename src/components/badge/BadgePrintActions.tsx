@@ -61,7 +61,7 @@ export function BadgePrintActions({
       <div className="flex flex-wrap items-center gap-3">
         <a
           href={`${pdfUrl}?download=1`}
-          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-mist"
         >
           Télécharger
         </a>
@@ -69,7 +69,7 @@ export function BadgePrintActions({
           href={pdfUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-mist"
         >
           Imprimer
         </a>
