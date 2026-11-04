@@ -15,6 +15,8 @@ export type PaymentFilters = {
   status?: PaymentStatus;
   purpose?: PaymentPurpose;
   orgId?: string;
+  // Recherche libre sur le nom ou l'identifiant court (slug) de l'organisation (staff).
+  orgQuery?: string;
   from?: Date;
   to?: Date;
   q?: string;
@@ -62,6 +64,8 @@ export function parsePaymentFilters(params: Params, opts: { allowOrg: boolean })
   if (opts.allowOrg) {
     const orgId = first(params, "orgId")?.trim().slice(0, QUERY_MAX);
     if (orgId) filters.orgId = orgId;
+    const orgQuery = first(params, "orgQuery")?.trim().slice(0, QUERY_MAX).trim();
+    if (orgQuery) filters.orgQuery = orgQuery;
   }
   return filters;
 }
@@ -70,6 +74,9 @@ export function paymentWhere(filters: PaymentFilters, scope: { orgId?: string })
   const orgId = scope.orgId ?? filters.orgId;
   return {
     ...(orgId ? { orgId } : {}),
+    ...(!scope.orgId && filters.orgQuery
+      ? { org: { OR: [{ name: { contains: filters.orgQuery } }, { slug: { contains: filters.orgQuery } }] } }
+      : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.purpose ? { purpose: filters.purpose } : {}),
     ...(filters.from || filters.to

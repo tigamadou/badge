@@ -37,6 +37,9 @@ describe("parsePaymentFilters", () => {
     expect(parsePaymentFilters({ orgId: "o1" }, { allowOrg: false })).toEqual({});
     expect(parsePaymentFilters({ orgId: " o1 " }, { allowOrg: true })).toEqual({ orgId: "o1" });
     expect(parsePaymentFilters({ orgId: "" }, { allowOrg: true })).toEqual({});
+    expect(parsePaymentFilters({ orgQuery: "  alpha  " }, { allowOrg: true })).toEqual({ orgQuery: "alpha" });
+    expect(parsePaymentFilters({ orgQuery: "alpha" }, { allowOrg: false })).toEqual({});
+    expect(parsePaymentFilters({ orgQuery: "   " }, { allowOrg: true })).toEqual({});
   });
 
   it("prend la première valeur d'un tableau", () => {
@@ -49,6 +52,13 @@ describe("paymentWhere", () => {
     expect(paymentWhere({ orgId: "autre" }, { orgId: "o1" })).toEqual({ orgId: "o1" });
     expect(paymentWhere({ orgId: "autre" }, {})).toEqual({ orgId: "autre" });
     expect(paymentWhere({}, {})).toEqual({});
+  });
+
+  it("orgQuery cherche dans le nom et le slug, sauf avec un scope d'organisation", () => {
+    expect(paymentWhere({ orgQuery: "alp" }, {})).toEqual({
+      org: { OR: [{ name: { contains: "alp" } }, { slug: { contains: "alp" } }] },
+    });
+    expect(paymentWhere({ orgQuery: "alp" }, { orgId: "o1" })).toEqual({ orgId: "o1" });
   });
 
   it("traduit statut, type, période et référence", () => {
@@ -133,6 +143,16 @@ describe("listPayments / loadPayment", () => {
     const all = await listPayments({ orgId: other.id }, {}, { skip: 0, take: 10 });
     expect(all.total).toBe(1);
     expect(all.items[0].orgId).toBe(other.id);
+  });
+
+  it("orgQuery filtre sur org.name et org.slug", async () => {
+    const plan = await makeBillingPlan();
+    const byName = await makeOrg({ name: "Zanzibar Events" });
+    const bySlug = await makeOrg({ name: "Autre", slug: `zanzi-slug-${Date.now()}` });
+    const none = await makeOrg({ name: "Rien" });
+    for (const o of [byName, bySlug, none]) await makeBillingPayment({ orgId: o.id, planId: plan.id, amount: 1 });
+    const { items } = await listPayments({ orgQuery: "zanzi" }, {}, { skip: 0, take: 20 });
+    expect(items.map((p) => p.orgId).sort()).toEqual([byName.id, bySlug.id].sort());
   });
 
   it("loadPayment : détail complet, null hors scope et pour un id inconnu", async () => {

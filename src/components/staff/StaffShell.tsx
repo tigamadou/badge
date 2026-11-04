@@ -12,6 +12,7 @@ function buildNav(pendingPrintRequests: number): NavEntry[] {
     { href: "/platform/organizations", label: "Organisations", icon: "building-2" },
     { href: "/platform/profiles", label: "Profils", icon: "user-check" },
     { href: "/platform/plans", label: "Plans", icon: "credit-card" },
+    { href: "/platform/payments", label: "Paiements", icon: "file" },
     { href: "/platform/users", label: "Utilisateurs", icon: "users" },
     { href: "/platform/badge-templates", label: "Templates de badge", icon: "id-card" },
     { group: "Impression" },
