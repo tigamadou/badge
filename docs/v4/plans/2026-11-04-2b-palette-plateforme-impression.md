@@ -34,7 +34,7 @@ logique modifiée.
 | 3 | Composants `src/components/print/**` (hors statuts) | [x] | 2026-11-04 | compteur: barre ok turquoise, warn bg-warn |
 | 4 | `src/components/notifications/**` | [x] | 2026-11-04 | cloche sur fond blanc : ring navy |
 | 5 | Pages `src/app/platform/**` | [x] | 2026-11-04 | progression dashboard en marine ; pastilles neutres slate-100 conservees |
-| 6 | Composants staff hors `print/` | [ ] | | |
+| 6 | Composants staff hors `print/` | [x] | 2026-11-04 | classes mist/navy uniquement |
 | 7 | Staff `print/` — listes, éditeurs, catalogue | [ ] | | |
 | 8 | Staff `print/` — gabarits, planches, commande, sur place | [ ] | | |
 | 9 | Passe de contrôle (grep) et tests existants | [ ] | | |

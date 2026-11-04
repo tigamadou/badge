@@ -83,7 +83,7 @@ export function SubscriptionRightsForm({
                       checked={rights[right][state]}
                       disabled={!canManage || save.pending}
                       onChange={(e) => toggle(right, state, e.target.checked)}
-                      className="h-4 w-4 accent-green-600"
+                      className="h-4 w-4 accent-navy"
                     />
                   </td>
                 ))}

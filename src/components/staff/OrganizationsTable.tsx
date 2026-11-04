@@ -17,7 +17,7 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
     <TableFrame>
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             <th className="px-4 py-3">Organisation</th>
             <th className="px-4 py-3 hidden md:table-cell">Slug</th>
             <th className="px-4 py-3 hidden md:table-cell">Membres</th>
@@ -36,14 +36,14 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
           {organizations.map((o) => (
             <tr
               key={o.id}
-              className={`border-t border-slate-100 hover:bg-slate-50 ${o.archived ? "opacity-60" : ""}`}
+              className={`border-t border-slate-100 hover:bg-mist ${o.archived ? "opacity-60" : ""}`}
             >
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <OrgLogo name={o.name} size={30} />
                   <Link
                     href={`/platform/organizations/${o.id}`}
-                    className="text-sm font-medium text-slate-900 hover:text-green-600"
+                    className="text-sm font-medium text-slate-900 hover:text-navy"
                   >
                     {o.name}
                   </Link>
@@ -57,7 +57,7 @@ export function OrganizationsTable({ organizations }: { organizations: OrgRow[] 
                 <Link
                   href={`/platform/organizations/${o.id}`}
                   aria-label={`Ouvrir ${o.name}`}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                 >
                   <Icon name="chevron-right" size={16} />
                 </Link>

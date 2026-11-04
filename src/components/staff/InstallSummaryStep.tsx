@@ -51,7 +51,7 @@ export function InstallSummaryStep({
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <div className="flex h-24 w-32 flex-none items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+        <div className="flex h-24 w-32 flex-none items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-mist">
           <TemplatePreview src={summary.preview ?? ""} label={summary.label} />
         </div>
         <div className="min-w-0">

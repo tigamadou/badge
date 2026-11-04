@@ -113,7 +113,7 @@ export function SubscriptionForm({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-mist"
           >
             Modifier
           </button>
@@ -159,7 +159,7 @@ export function SubscriptionForm({
       </label>
       <div className="flex flex-col gap-1 text-sm">
         <span className="text-slate-600">Période</span>
-        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
+        <p className="rounded-lg border border-slate-200 bg-mist px-3 py-2 text-slate-700">
           {selectedPlan ? periodLabel(selectedPlan.period) : "—"}
         </p>
         <span className="text-xs text-slate-500">
@@ -197,7 +197,7 @@ export function SubscriptionForm({
             type="button"
             onClick={cancel}
             disabled={busy}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-mist disabled:opacity-50"
           >
             Annuler
           </button>

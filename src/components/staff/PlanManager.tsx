@@ -222,7 +222,7 @@ function PublicSheetPanel({ plan, onClose }: { plan: PlanRow; onClose: () => voi
   );
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className="space-y-3 rounded-lg border border-slate-200 bg-mist p-4">
       <PublicSheetFields sheet={sheet} onChange={setSheet} />
       <div className="flex gap-2">
         <Button type="button" loading={save.pending} onClick={() => void save.run()}>
