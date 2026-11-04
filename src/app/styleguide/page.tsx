@@ -4,6 +4,17 @@
 // Reproduit template/styleguide.html : un exemple de chaque composant transverse.
 import { useState } from "react";
 import { Icon, ICON_NAMES } from "@/components/ui/Icon";
+import { Button } from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  SHELL_BANNER,
+  SIDEBAR_BRAND,
+  SIDEBAR_COUNT,
+  SIDEBAR_FOOTER_TEXT,
+  SIDEBAR_GROUP,
+  SIDEBAR_LINK,
+  SIDEBAR_LINK_ACTIVE,
+} from "@/components/layout/sidebar-classes";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { Timeline, TimelineItem } from "@/components/ui/Timeline";
@@ -35,6 +46,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Les 13 couleurs du thème (globals.css), avec la classe de fond et la couleur de texte lisible.
+const PALETTE: { name: string; bg: string; hex: string; text: string }[] = [
+  { name: "navy", bg: "bg-navy", hex: "#081558", text: "text-white" },
+  { name: "navy-hover", bg: "bg-navy-hover", hex: "#121F6E", text: "text-white" },
+  { name: "gold", bg: "bg-gold", hex: "#F4B942", text: "text-navy" },
+  { name: "gold-strong", bg: "bg-gold-strong", hex: "#8A5A00", text: "text-white" },
+  { name: "gold-soft", bg: "bg-gold-soft", hex: "#FFF4DC", text: "text-gold-strong" },
+  { name: "turquoise", bg: "bg-turquoise", hex: "#16B8A6", text: "text-navy" },
+  { name: "turquoise-strong", bg: "bg-turquoise-strong", hex: "#0E7C70", text: "text-white" },
+  { name: "turquoise-soft", bg: "bg-turquoise-soft", hex: "#E3F7F4", text: "text-turquoise-strong" },
+  { name: "mist", bg: "bg-mist", hex: "#F5F7FC", text: "text-navy" },
+  { name: "line", bg: "bg-line", hex: "#EEF1F8", text: "text-navy" },
+  { name: "nav-muted", bg: "bg-nav-muted", hex: "#5A6285", text: "text-white" },
+  { name: "warn", bg: "bg-warn", hex: "#C2410C", text: "text-white" },
+  { name: "warn-soft", bg: "bg-warn-soft", hex: "#FFF1E6", text: "text-warn" },
+];
+
 export default function StyleguidePage() {
   const [sw, setSw] = useState(true);
   const [ck, setCk] = useState(false);
@@ -47,6 +75,70 @@ export default function StyleguidePage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="mb-8 text-xl font-semibold text-slate-900">Styleguide — design system v2-16</h1>
+
+      <Section title="Palette">
+        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
+          {PALETTE.map((c) => (
+            <div
+              key={c.name}
+              className={`rounded-lg border border-slate-200 px-3 py-4 text-xs font-medium ${c.bg} ${c.text}`}
+            >
+              <div>{c.bg}</div>
+              <div className="mt-0.5 font-normal">{c.hex}</div>
+            </div>
+          ))}
+        </div>
+        <div className="grid w-full gap-2 text-sm sm:grid-cols-2">
+          <p className="rounded-lg bg-navy px-3 py-2 text-white">Blanc sur marine (16,7)</p>
+          <p className="rounded-lg bg-turquoise px-3 py-2 text-navy">Marine sur turquoise (6,7)</p>
+          <p className="rounded-lg bg-gold px-3 py-2 text-navy">Marine sur or (9,4)</p>
+          <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-turquoise-strong">
+            Turquoise foncé sur blanc (5,1)
+          </p>
+          <p className="rounded-lg bg-gold-soft px-3 py-2 text-gold-strong">Or foncé sur or pâle</p>
+          <p className="rounded-lg bg-warn-soft px-3 py-2 text-warn">Orange sur orange pâle (4,7)</p>
+          <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-nav-muted">
+            Gris bleu sur blanc (6,0)
+          </p>
+        </div>
+      </Section>
+
+      <Section title="Boutons">
+        {(["primary", "positive", "secondary", "danger", "link"] as const).map((variant) => (
+          <div key={variant} className="flex flex-col items-start gap-2">
+            <span className="text-xs text-slate-500">{variant}</span>
+            <Button variant={variant}>Normal</Button>
+            <Button variant={variant} disabled>
+              Désactivé
+            </Button>
+            <Button variant={variant} loading>
+              Chargement
+            </Button>
+          </div>
+        ))}
+      </Section>
+
+      <Section title="Menu latéral clair">
+        <div className="w-56 border-r border-line bg-white p-3">
+          <div className={SIDEBAR_BRAND}>Badge</div>
+          <div className="flex flex-col gap-1">
+            <div className={SIDEBAR_GROUP}>Impression</div>
+            <a href="#" className={SIDEBAR_LINK}>
+              <Icon name="printer" size={18} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Planches</span>
+            </a>
+            <a href="#" aria-current="page" className={SIDEBAR_LINK_ACTIVE}>
+              <Icon name="inbox" size={18} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Commandes</span>
+              <span className={SIDEBAR_COUNT}>3</span>
+            </a>
+          </div>
+          <div className="mt-3 border-t border-line pt-3">
+            <div className={SIDEBAR_FOOTER_TEXT}>awa@exemple.org</div>
+          </div>
+        </div>
+        <div className={`w-72 rounded-lg ${SHELL_BANNER}`}>Mode staff — actions auditées</div>
+      </Section>
 
       <Section title="Statistiques">
         <div className="w-full">
@@ -86,6 +178,7 @@ export default function StyleguidePage() {
         <div className="w-full space-y-3">
           <StorageAlert pct={82}>Quota de stockage bientot atteint (82%).</StorageAlert>
           <Alert tone="info">Message d&apos;information.</Alert>
+          <Alert tone="warn">Message d&apos;avertissement.</Alert>
           <Alert tone="err">Identifiants incorrects.</Alert>
           <Alert tone="success">Inscription approuvee.</Alert>
         </div>
@@ -135,7 +228,11 @@ export default function StyleguidePage() {
         <RoleBadge tone="navy">SUPER_ADMIN</RoleBadge>
         <RoleBadge tone="green">OWNER</RoleBadge>
         <RoleBadge tone="amber">MANAGER</RoleBadge>
+        <RoleBadge tone="warn">SUPERVISION</RoleBadge>
         <RoleBadge tone="slate">AUDITOR</RoleBadge>
+        <StatusBadge status="PENDING" />
+        <StatusBadge status="APPROVED" />
+        <StatusBadge status="REJECTED" />
         <Tag icon="clock">en attente</Tag>
       </Section>
 
