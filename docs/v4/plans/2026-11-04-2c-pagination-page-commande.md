@@ -34,7 +34,7 @@
 | 11 | `AppShell` / `FullHeightPage` et fonctions pures de la page commande | [x] | 2026-11-04 | FullHeightPage et modules purs |
 | 12 | Composants communs de la page commande | [x] | 2026-11-04 | composants communs |
 | 13 | Page commande staff | [x] | 2026-11-04 | page commande staff |
-| 14 | Page commande organisateur | [ ] | | |
+| 14 | Page commande organisateur | [x] | 2026-11-04 | page commande organisateur |
 | 15 | e2e, doc, vérification | [ ] | | |
 
 ## Fichiers du lot (exclusifs)

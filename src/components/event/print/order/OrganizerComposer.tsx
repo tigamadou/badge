@@ -59,7 +59,7 @@ export function OrganizerComposer({
 
   return (
     <form
-      className="space-y-2 border-t border-slate-100 bg-white p-3"
+      className="flex-none space-y-2 border-t border-slate-100 bg-white p-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (body.trim() || attachment) void send();

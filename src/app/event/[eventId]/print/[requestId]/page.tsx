@@ -2,6 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
+import { FullHeightPage } from "@/components/layout/FullHeightPage";
+import { OrderSteps } from "@/components/print/OrderSteps";
+import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
+import { OrderBadgesButton } from "@/components/staff/print/order/OrderBadgesButton";
+import { PrintRequestActions } from "@/components/event/print/PrintRequestActions";
+import { PrintPayButton } from "@/components/event/print/PrintPayButton";
+import { OrganizerOrderLayout } from "@/components/event/print/order/OrganizerOrderLayout";
 import { OnsiteTemplateAlert } from "@/components/print/OnsiteTemplateAlert";
 import { onsiteTemplateStatus } from "@/lib/print-requests/onsite";
 import { OnsiteCounterCard } from "@/components/print/OnsiteCounterCard";
@@ -73,77 +80,91 @@ export default async function PrintRequestDetailPage({
   // Le staff en consultation ne doit pas effacer ses propres non-lus.
   if (!ctx.isStaff) await markRead(requestId, ctx.user.id, readAt);
 
+  const currentQuote =
+    request.quoteVersion > 0
+      ? {
+          version: request.quoteVersion,
+          lines: lines.map((l) => ({ label: l.label, quantity: l.quantity, unitPrice: l.unitPrice })),
+        }
+      : undefined;
+
   return (
-    <div className="space-y-4">
-      <Link
-        href={`/event/${eventId}/print`}
-        className="inline-flex items-center gap-1 text-[13px] text-slate-500 hover:text-slate-700"
-      >
-        <Icon name="arrow-left" size={14} /> Impression
-      </Link>
-
-      <h1 className="text-xl font-semibold text-slate-900">Commande d&apos;impression {request.reference}</h1>
-
-      <RelatedRequestLinks
-        parent={request.parentRequest}
-        supplements={request.childRequests}
-        hrefOf={(id) => `/event/${eventId}/print/${id}`}
-      />
-
-      {showsCreditOffer(request.status, availableCredit) ? (
-        <Alert tone="info">{creditOfferSentence(availableCredit)}</Alert>
-      ) : null}
-
-      {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
-
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[280px_minmax(0,1fr)_340px]">
-        <div className="order-2 lg:col-start-2 lg:row-start-1 2xl:col-start-1">
-          <OrganizerOrderSummary request={request} badgeCount={badgeCount}>
-            {onsiteCounter ? <OnsiteCounterCard counter={onsiteCounter} /> : null}
-          </OrganizerOrderSummary>
+    <FullHeightPage>
+      <div className="flex-none space-y-2 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+        <Link
+          href={`/event/${eventId}/print`}
+          className="inline-flex items-center gap-1 text-[13px] text-slate-500 hover:text-slate-700"
+        >
+          <Icon name="arrow-left" size={14} /> Impression
+        </Link>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 className="text-xl font-semibold text-slate-900">Commande d&apos;impression {request.reference}</h1>
+          <PrintRequestStatusBadge status={request.status} />
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {request.type === "ADVANCE" && badgeCount > 0 ? (
+              <OrderBadgesButton count={badgeCount} fetchUrl={`${base}/${requestId}/registrations?scope=items`} />
+            ) : null}
+            <PrintRequestActions
+              orgId={orgId}
+              eventId={eventId}
+              requestId={requestId}
+              status={request.status}
+              quoteVersion={request.quoteVersion}
+              canAccept={canAccept}
+              archived={event.archived}
+              readOnly={ctx.isStaff}
+            />
+            {request.status === "ACCEPTED" ? (
+              <PrintPayButton
+                orgId={orgId}
+                eventId={eventId}
+                requestId={requestId}
+                amount={request.acceptedTotal ?? request.total}
+                canPay={isOwner}
+                pending={hasPendingPayment(payments)}
+              />
+            ) : null}
+          </div>
         </div>
+        <RelatedRequestLinks
+          parent={request.parentRequest}
+          supplements={request.childRequests}
+          hrefOf={(id) => `/event/${eventId}/print/${id}`}
+        />
+      </div>
 
-        <section className="order-1 min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1 2xl:col-start-2 2xl:row-span-1" aria-label="Échanges avec l'équipe Badge">
+      <OrganizerOrderLayout
+        summary={
+          <div className="space-y-4">
+            {showsCreditOffer(request.status, availableCredit) ? (
+              <Alert tone="info">{creditOfferSentence(availableCredit)}</Alert>
+            ) : null}
+            {onsiteTemplate === "UNSUITABLE" ? <OnsiteTemplateAlert side="ORGANIZER" eventId={eventId} /> : null}
+            <OrderSteps status={request.status} type={request.type} />
+            <OrganizerOrderSummary request={request} badgeCount={badgeCount}>
+              {onsiteCounter ? <OnsiteCounterCard counter={onsiteCounter} /> : null}
+            </OrganizerOrderSummary>
+          </div>
+        }
+        conversation={
           <OrganizerConversation
             entriesUrl={`${base}/${requestId}/messages`}
             postUrl={ctx.isStaff || request.status === "DRAFT" ? null : `${base}/${requestId}/messages`}
             uploadUrl={`${base}/upload`}
             initialEntries={entries}
+            currentQuote={currentQuote}
           />
-        </section>
-
-        <div className="order-3 lg:col-start-2 lg:row-start-2 2xl:col-start-3 2xl:row-start-1">
+        }
+        quote={
           <OrganizerQuoteColumn
             lines={lines}
             total={request.total}
             badgeCount={badgeCount}
             quoteVersion={request.quoteVersion}
-            actions={{
-              orgId,
-              eventId,
-              requestId,
-              status: request.status,
-              quoteVersion: request.quoteVersion,
-              canAccept,
-              archived: event.archived,
-              readOnly: ctx.isStaff,
-            }}
-            pay={
-              request.status === "ACCEPTED"
-                ? {
-                    orgId,
-                    eventId,
-                    requestId,
-                    amount: request.acceptedTotal ?? request.total,
-                    canPay: isOwner,
-                    pending: hasPendingPayment(payments),
-                  }
-                : null
-            }
             payments={payments}
           />
-        </div>
-      </div>
-    </div>
+        }
+      />
+    </FullHeightPage>
   );
 }
