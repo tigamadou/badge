@@ -75,7 +75,7 @@ export function OrganizerComposer({
         maxLength={5000}
         rows={2}
         placeholder="Écrire un message à l'équipe Badge…"
-        className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
+        className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy"
       />
       {attachment ? (
         <div className="flex items-center gap-2 text-[13px] text-slate-600">

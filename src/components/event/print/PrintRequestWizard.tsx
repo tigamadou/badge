@@ -66,7 +66,7 @@ function slotsOf(value: unknown): Slot[] {
 }
 
 const textareaClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500";
+  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy";
 
 export function PrintRequestWizard({
   orgId,
@@ -499,7 +499,7 @@ export function PrintRequestWizard({
                 </div>
                 <button
                   type="button"
-                  className="mt-2 text-[13px] font-medium text-green-700 hover:underline"
+                  className="mt-2 text-[13px] font-medium text-navy hover:underline"
                   onClick={() => setSlots((s) => [...s, { date: "", from: "", to: "" }])}
                 >
                   Ajouter un créneau
