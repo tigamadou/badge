@@ -7,6 +7,7 @@ import { findEffectiveTemplateRow, resolveEventTemplateId } from "@/lib/badge-te
 import { readLayout } from "@/lib/badge-templates/resolve";
 import type { Bindings } from "@/lib/badge-templates/bindings";
 import {
+  ID_PHOTO_REQUIREMENT,
   checkAgainst,
   frameForSource,
   requirementFromFrame,
@@ -216,4 +217,25 @@ export function eventImagesErrorResponse(err: EventImagesNoncompliantError): Nex
     { error: err.message, code: err.code, message: err.message, issues: err.issues },
     { status: err.httpStatus },
   );
+}
+
+type Rejection = Extract<UploadVerdict, { ok: false }>;
+
+// Corps d'erreur commun a tous les points d'envoi d'image : { error, code, message }.
+export function rejectionResponse(verdict: Rejection, extra: Record<string, unknown> = {}): NextResponse {
+  return NextResponse.json(
+    { error: verdict.message, code: verdict.code, message: verdict.message, ...extra },
+    { status: verdict.status },
+  );
+}
+
+// Photo d'identite (7:9, 210 x 270 px minimum) : null si conforme, sinon la reponse de rejet.
+export function checkIdPhotoBuffer(buf: Buffer, mime: string): NextResponse | null {
+  const verdict = validateImageBuffer(buf, mime, ID_PHOTO_REQUIREMENT);
+  return verdict.ok ? null : rejectionResponse(verdict);
+}
+
+export async function checkIdPhotoKey(key: string): Promise<NextResponse | null> {
+  const verdict = await validateStoredImage(key, ID_PHOTO_REQUIREMENT);
+  return verdict.ok ? null : rejectionResponse(verdict);
 }

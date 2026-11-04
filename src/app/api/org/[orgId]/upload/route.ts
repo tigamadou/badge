@@ -6,6 +6,7 @@ import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES } from "@/lib/storage";
 import {
   EVENT_IMAGE_SELECT,
   getEventImageRequirements,
+  rejectionResponse,
   validateImageBuffer,
   type ImageSlot,
 } from "@/lib/event-image-compliance";
@@ -58,12 +59,7 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId }) => {
       requirement = (await getEventImageRequirements(event))[purpose as ImageSlot] ?? null;
     }
     const verdict = validateImageBuffer(buffer, mime, requirement, { engineFormatsOnly: purpose !== "original" });
-    if (!verdict.ok) {
-      return NextResponse.json(
-        { error: verdict.message, code: verdict.code, message: verdict.message },
-        { status: verdict.status },
-      );
-    }
+    if (!verdict.ok) return rejectionResponse(verdict);
     dimensions = purpose === "original" ? null : { width: verdict.width, height: verdict.height };
   }
 

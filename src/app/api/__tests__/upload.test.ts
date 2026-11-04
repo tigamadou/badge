@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, beforeAll, afterEach } from "vitest";
 import fs from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/prisma";
+import { makePng } from "@/test/factories-2a";
 import { POST } from "@/app/api/upload/route";
 import { resetRateLimitForTests } from "@/lib/rate-limit";
 
@@ -43,7 +44,7 @@ function makeReq(slug: string, kind: "photo" | "document", file: { name: string;
 describe("POST /api/upload", () => {
   it("accepts a valid JPEG for photo", async () => {
     const ev = await setupOpenEvent();
-    const req = makeReq(ev.slug, "photo", { name: "p.jpg", type: "image/jpeg", bytes: Buffer.from("xxx") });
+    const req = makeReq(ev.slug, "photo", { name: "p.png", type: "image/png", bytes: makePng(420, 540) });
     const res = await POST(req as unknown as Request);
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -172,7 +173,7 @@ describe("POST /api/upload", () => {
   it("accepts a photo whose filename has no extension (extOf fallback)", async () => {
     // origName sans point -> extOf renvoie le fallback (.pdf/.bin selon mime).
     const ev = await setupOpenEvent("u-noext");
-    const req = makeReq(ev.slug, "photo", { name: "noext", type: "image/jpeg", bytes: Buffer.from("x") });
+    const req = makeReq(ev.slug, "photo", { name: "noext", type: "image/png", bytes: makePng(420, 540) });
     const res = await POST(req as unknown as Request);
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -189,5 +190,42 @@ describe("POST /api/upload", () => {
     expect(res.status).toBe(429);
     const json = await res.json();
     expect(json.code).toBe("RATE_LIMITED");
+  });
+
+  async function sender(kind: "photo" | "document") {
+    const ev = await setupOpenEvent("u-2a");
+    return (file: { name: string; type: string; bytes: Buffer }) =>
+      POST(makeReq(ev.slug, kind, file) as unknown as Request);
+  }
+  const photoSender = () => sender("photo");
+  const documentSender = () => sender("document");
+
+  it("kind=photo : accepte 420x540, refuse hors ratio, trop petit ou non image", async () => {
+    const send = await photoSender();
+    const png = (w: number, h: number) => ({ name: "p.png", type: "image/png", bytes: makePng(w, h) });
+    expect((await send(png(420, 540))).status).toBe(200);
+
+    const square = await send(png(540, 540));
+    expect(square.status).toBe(422);
+    expect(await square.json()).toMatchObject({
+      code: "IMAGE_RATIO",
+      message: "Ratio attendu 7:9, par ex. 210 × 270 px.",
+    });
+
+    const tiny = await send(png(140, 180));
+    expect(tiny.status).toBe(422);
+    expect((await tiny.json()).code).toBe("IMAGE_RESOLUTION");
+
+    expect((await send(png(428, 540))).status).toBe(200);
+    expect((await send(png(429, 540))).status).toBe(422);
+
+    const text = await send({ name: "p.png", type: "image/png", bytes: Buffer.from("texte") });
+    expect(text.status).toBe(400);
+    expect((await text.json()).code).toBe("INVALID_IMAGE");
+  });
+
+  it("kind=document : une image quelconque reste acceptée", async () => {
+    const send = await documentSender();
+    expect((await send({ name: "d.png", type: "image/png", bytes: makePng(10, 10) })).status).toBe(200);
   });
 });

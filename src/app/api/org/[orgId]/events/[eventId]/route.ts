@@ -15,6 +15,7 @@ import {
 import { readTemplateOptions, templateOptionsSchema } from "@/lib/badge-templates/template-options";
 import {
   getEventImageRequirements,
+  rejectionResponse,
   validateStoredImage,
   type ImageSlot,
 } from "@/lib/event-image-compliance";
@@ -139,12 +140,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
       if (changed) {
         requirements ??= await getEventImageRequirements({ badgeTemplateId: before.badgeTemplateId, orgId });
         const verdict = await validateStoredImage(key, requirements[slot] ?? null, { engineFormatsOnly: true });
-        if (!verdict.ok) {
-          return NextResponse.json(
-            { error: verdict.message, code: verdict.code, message: verdict.message, slot },
-            { status: verdict.status },
-          );
-        }
+        if (!verdict.ok) return rejectionResponse(verdict, { slot });
         Object.assign(data, { [cols.width]: verdict.width, [cols.height]: verdict.height });
       }
       data[cols.key] = key;

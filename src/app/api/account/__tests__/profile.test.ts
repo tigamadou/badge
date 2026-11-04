@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { makePng, putTestImage } from "@/test/factories-2a";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -23,11 +24,19 @@ function makeReq(body?: unknown, method: "GET" | "PUT" = "GET"): NextRequest {
   });
 }
 
+// Photos reelles dans le stockage de test : la route relit la photo qui change.
+const PHOTO_KEY = "test-2a/profile-photo.png";
+const NEW_PHOTO_KEY = "test-2a/profile-photo-new.png";
+beforeAll(async () => {
+  await putTestImage(PHOTO_KEY, makePng(420, 540), "image/png");
+  await putTestImage(NEW_PHOTO_KEY, makePng(420, 540), "image/png");
+});
+
 const COMPLETE_PROFILE = {
   firstName: "Alice",
   lastName: "Doe",
   structure: "ACME",
-  photo: "/uploads/photo.png",
+  photo: PHOTO_KEY,
   idDocumentType: "CNI",
   idDocumentNumber: "AB1234",
   idDocument: "/uploads/doc.pdf",
@@ -103,6 +112,43 @@ describe("GET /api/account/profile", () => {
   });
 });
 
+describe("PUT /api/account/profile : photo d'identité", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  async function setup(photo: string | null = null) {
+    const u = await prisma.user.create({
+      data: { email: `ph-${Date.now()}@v2-11-profile.test`, password: "x", name: "Ph", photo },
+    });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { PUT } = await import("@/app/api/account/profile/route");
+    return { u, put: (body: unknown) => PUT(makeReq(body, "PUT")) };
+  }
+
+  it("refuse une photo hors ratio et laisse la colonne inchangée", async () => {
+    const { u, put } = await setup();
+    const square = await putTestImage("test-2a/profile-square.png", makePng(540, 540), "image/png");
+    const res = await put({ photo: square });
+    expect(res.status).toBe(422);
+    expect((await res.json()).code).toBe("IMAGE_RATIO");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).photo).toBeNull();
+  });
+
+  it("refuse une clé absente du stockage", async () => {
+    const { put } = await setup();
+    const res = await put({ photo: "test-2a/absente.png" });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("INVALID_IMAGE");
+  });
+
+  it("n'impose rien à la photo déjà enregistrée, même non conforme", async () => {
+    const square = await putTestImage("test-2a/profile-square.png", makePng(540, 540), "image/png");
+    const { put } = await setup(square);
+    expect((await put({ photo: square, structure: "Autre" })).status).toBe(200);
+  });
+});
+
 describe("PUT /api/account/profile", () => {
   beforeEach(() => {
     vi.mocked(getServerSession).mockReset();
@@ -133,7 +179,7 @@ describe("PUT /api/account/profile", () => {
     expect(updated?.firstName).toBe("Alice");
     expect(updated?.lastName).toBe("Doe");
     expect(updated?.structure).toBe("ACME");
-    expect(updated?.photo).toBe("/uploads/photo.png");
+    expect(updated?.photo).toBe(PHOTO_KEY);
     expect(updated?.idDocumentType).toBe("CNI");
     expect(updated?.idDocumentNumber).toBe("AB1234");
     expect(updated?.idDocument).toBe("/uploads/doc.pdf");
@@ -407,11 +453,11 @@ describe("PUT /api/account/profile — propagation aux inscriptions en attente",
     await withSession({ id: user.id, email: user.email, name: user.name, isStaff: false });
 
     const { PUT } = await import("@/app/api/account/profile/route");
-    const res = await PUT(makeReq({ photo: "profile/u/photos/new.jpg" }, "PUT"));
+    const res = await PUT(makeReq({ photo: NEW_PHOTO_KEY }, "PUT"));
 
     expect(res.status).toBe(200);
     const after = await prisma.registration.findUniqueOrThrow({ where: { id: registration.id } });
-    expect(after.snapshotPhoto).toBe("profile/u/photos/new.jpg");
+    expect(after.snapshotPhoto).toBe(NEW_PHOTO_KEY);
 
     const log = await prisma.activityLog.findFirst({
       where: { type: "REGISTRATION_SNAPSHOT_REFRESHED", targetId: registration.id },
