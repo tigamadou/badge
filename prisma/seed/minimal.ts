@@ -218,12 +218,20 @@ export async function runMinimalSeed(env: Env = process.env): Promise<void> {
   }
   await prisma.plan.upsert({
     where: { name: DEFAULT_PLAN_NAME },
-    create: { name: DEFAULT_PLAN_NAME, maxEvents: 1, maxParticipantsPerEvent: 100 },
+    create: { name: DEFAULT_PLAN_NAME, maxEvents: 1, maxParticipantsPerEvent: 100, publicVisible: true, position: 0 },
     update: {},
   });
   await prisma.plan.upsert({
     where: { name: "Standard" },
-    create: { name: "Standard", maxEvents: 10, maxParticipantsPerEvent: 1000, price: 15000 },
+    create: {
+      name: "Standard",
+      maxEvents: 10,
+      maxParticipantsPerEvent: 1000,
+      price: 15000,
+      publicVisible: true,
+      position: 1,
+      highlighted: true,
+    },
     update: {},
   });
   // Prix de demo pour un Standard existant sans prix (ne touche pas un prix ajuste par le staff).
@@ -245,6 +253,10 @@ export async function runMinimalSeed(env: Env = process.env): Promise<void> {
     { label: "Categorie demandee non justifiee", scope: "REGISTRATION", sortOrder: 70 },
     { label: "Quota de la categorie atteint", scope: "REGISTRATION", sortOrder: 80 },
     { label: "Inscription en doublon", scope: "REGISTRATION", sortOrder: 90 },
+    { label: "Fond non blanc", scope: "PROFILE", sortOrder: 21 },
+    { label: "Visage non visible ou non centré", scope: "PROFILE", sortOrder: 22 },
+    { label: "Photo floue ou sombre", scope: "PROFILE", sortOrder: 23 },
+    { label: "Couvre-chef ou lunettes de soleil", scope: "PROFILE", sortOrder: 24 },
   ];
   for (const r of rejectionReasonSeeds) {
     const existing = await prisma.rejectionReason.findFirst({ where: { label: r.label } });
