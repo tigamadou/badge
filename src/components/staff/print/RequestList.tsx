@@ -102,7 +102,7 @@ export function RequestList({
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded-lg bg-mist px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>
@@ -114,7 +114,7 @@ export function RequestList({
         <TableFrame>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-slate-200 bg-mist">
                 {["Référence", "Organisation", "Évènement", "Type", "Badges", "Total", "Statut", "Date souhaitée"].map(
                   (h) => (
                     <th
@@ -129,9 +129,9 @@ export function RequestList({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
+                <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-mist">
                   <td className="whitespace-nowrap px-4 py-3 font-medium">
-                    <Link href={`/platform/print/orders/${r.id}`} className="text-green-700 hover:underline">
+                    <Link href={`/platform/print/orders/${r.id}`} className="text-navy hover:underline">
                       {r.reference}
                     </Link>
                     {r.unread ? (

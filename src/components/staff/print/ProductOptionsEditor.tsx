@@ -105,7 +105,7 @@ function ValueRow({
     onSuccess: (imageKey) => onChange({ imageKey }),
   });
   return (
-    <li className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <li className="rounded-lg border border-slate-200 bg-mist p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 basis-40">
           <Input label="Libellé" value={v.label} maxLength={80} disabled={disabled} onChange={(e) => onChange({ label: e.target.value })} />

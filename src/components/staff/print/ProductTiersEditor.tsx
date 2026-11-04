@@ -8,7 +8,7 @@ import { PRODUCTS_API, parseInt0, sendJson, VALIDATION_MESSAGE } from "./catalog
 
 type Row = { minQuantity: string; unitPrice: string };
 
-const field = "w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
+const field = "w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy";
 
 export function ProductTiersEditor({
   productId,

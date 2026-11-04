@@ -63,7 +63,7 @@ export function OrderComposer({
 
   return (
     <form
-      className={`flex-none space-y-2 rounded-xl border p-3 ${internal ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}
+      className={`flex-none space-y-2 rounded-xl border p-3 ${internal ? "border-warn/30 bg-warn-soft" : "border-slate-200 bg-white"}`}
       onSubmit={(e) => {
         e.preventDefault();
         if (canSend) void send();
@@ -79,7 +79,7 @@ export function OrderComposer({
         maxLength={5000}
         rows={3}
         placeholder={internal ? "Note interne, invisible de l'organisateur…" : "Écrire à l'organisateur…"}
-        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy"
       />
       {attachment ? (
         <div className="flex items-center gap-2 text-[13px] text-slate-600">
@@ -96,7 +96,7 @@ export function OrderComposer({
             type="checkbox"
             checked={internal}
             onChange={(e) => setInternal(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+            className="h-4 w-4 rounded border-slate-300 text-warn focus:ring-navy"
           />
           Note interne
         </label>

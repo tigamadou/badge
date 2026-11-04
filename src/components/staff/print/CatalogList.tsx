@@ -20,8 +20,8 @@ function StatusPill({ row }: { row: ProductListRow }) {
   const [label, cls] = row.archived
     ? ["Archivé", "bg-slate-100 text-slate-600"]
     : row.published
-      ? ["Publié", "bg-emerald-50 text-emerald-700"]
-      : ["Brouillon", "bg-amber-50 text-amber-700"];
+      ? ["Publié", "bg-turquoise-soft text-turquoise-strong"]
+      : ["Brouillon", "bg-gold-soft text-gold-strong"];
   return <span className={`px-2 py-1 rounded-full text-xs font-medium ${cls}`}>{label}</span>;
 }
 
@@ -122,7 +122,7 @@ export function CatalogList({
         <TableFrame>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
+              <tr className="border-b border-slate-200 bg-mist">
                 {["", "Nom", "Catégorie", "À partir de", "Statut", "Options"].map((h, i) => (
                   <th
                     key={i}
@@ -138,7 +138,7 @@ export function CatalogList({
                 <tr
                   key={r.id}
                   onClick={() => router.push(`/platform/print/catalog/${r.id}`)}
-                  className="cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50"
+                  className="cursor-pointer border-b border-slate-100 transition-colors hover:bg-mist"
                 >
                   <td className="px-4 py-3">
                     {r.mainImageKey ? (
@@ -149,11 +149,11 @@ export function CatalogList({
                         className="h-10 w-10 rounded-md border border-slate-200 object-cover"
                       />
                     ) : (
-                      <div className="h-10 w-10 rounded-md border border-slate-200 bg-slate-50" />
+                      <div className="h-10 w-10 rounded-md border border-slate-200 bg-mist" />
                     )}
                   </td>
                   <td className="px-4 py-3 font-medium text-slate-900">
-                    <Link href={`/platform/print/catalog/${r.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <Link href={`/platform/print/catalog/${r.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline focus:outline-none focus:ring-2 focus:ring-navy">
                       {r.name}
                     </Link>
                   </td>

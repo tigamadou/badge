@@ -25,9 +25,9 @@ export type GenerationRow = {
 export const REFRESH_INTERVAL_MS = 5000;
 
 const STATUS: Record<GenerationStatus, { label: string; className: string }> = {
-  PENDING: { label: "En attente", className: "bg-amber-50 text-amber-700" },
-  RUNNING: { label: "En cours", className: "bg-sky-50 text-sky-700" },
-  DONE: { label: "Terminée", className: "bg-emerald-50 text-emerald-700" },
+  PENDING: { label: "En attente", className: "bg-gold-soft text-gold-strong" },
+  RUNNING: { label: "En cours", className: "bg-mist text-navy" },
+  DONE: { label: "Terminée", className: "bg-turquoise-soft text-turquoise-strong" },
   FAILED: { label: "Échec", className: "bg-rose-50 text-rose-700" },
 };
 
@@ -132,7 +132,7 @@ export function GenerationList({
                       <p className="text-xs text-rose-600">{g.error ?? "Erreur inconnue."}</p>
                     )}
                     {skippedOf(g).length > 0 && (
-                      <details className="text-xs text-amber-700">
+                      <details className="text-xs text-warn">
                         <summary className="cursor-pointer">
                           {skippedOf(g).length} badge{skippedOf(g).length > 1 ? "s" : ""} écarté
                           {skippedOf(g).length > 1 ? "s" : ""}
@@ -150,13 +150,13 @@ export function GenerationList({
                 render: (g) =>
                   g.status === "DONE" ? (
                     <div className="flex items-center gap-3">
-                      <Button type="button" variant="link" className="text-green-600" onClick={() => setPreviewState((p) => ({ id: g.id, nonce: (p?.nonce ?? 0) + 1 }))}>
+                      <Button type="button" variant="link" className="text-navy" onClick={() => setPreviewState((p) => ({ id: g.id, nonce: (p?.nonce ?? 0) + 1 }))}>
                         Aperçu
                       </Button>
                       <a
                         href={`/api/files/${fileKey(g.id)}`}
                         download={`planches-${g.id}.pdf`}
-                        className="text-[13px] font-medium text-green-600 hover:underline"
+                        className="text-[13px] font-medium text-navy hover:underline"
                       >
                         Télécharger
                       </a>

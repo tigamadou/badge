@@ -29,8 +29,8 @@ function StatusPill({ product }: { product: CatalogProduct }) {
   const [label, cls] = product.archived
     ? ["Archivé", "bg-slate-100 text-slate-600"]
     : product.published
-      ? ["Publié", "bg-emerald-50 text-emerald-700"]
-      : ["Brouillon", "bg-amber-50 text-amber-700"];
+      ? ["Publié", "bg-turquoise-soft text-turquoise-strong"]
+      : ["Brouillon", "bg-gold-soft text-gold-strong"];
   return <span className={`px-2 py-1 rounded-full text-xs font-medium ${cls}`}>{label}</span>;
 }
 
@@ -87,7 +87,7 @@ function InfoForm({
           value={f.description}
           disabled={disabled}
           onChange={(e) => set({ description: e.target.value })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
         />
       </div>
       <div className="grid gap-x-4 sm:grid-cols-3">
