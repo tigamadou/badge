@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { PAGE_SIZE_OPTIONS, withListParams } from "@/lib/list-query";
+
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -9,8 +12,6 @@ interface PaginationProps {
   onPageSizeChange: (size: number) => void;
   pageSizeOptions?: number[];
 }
-
-const PAGE_SIZE_OPTIONS = [10, 20, 30, 50];
 
 function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
   if (totalPages <= 5) {
@@ -136,5 +137,31 @@ export function Pagination({
         </select>
       </div>
     </div>
+  );
+}
+
+interface UrlPaginationProps {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: number;
+  pageSizeOptions?: number[];
+}
+
+// Pagination pilotee par l'URL (page / pageSize), pour les listes rendues cote serveur.
+export function UrlPagination(props: UrlPaginationProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const go = (patch: { page?: number; pageSize?: number }) =>
+    router.push(`${pathname}?${withListParams(searchParams.toString(), patch)}`);
+
+  return (
+    <Pagination
+      {...props}
+      onPageChange={(page) => go({ page })}
+      onPageSizeChange={(pageSize) => go({ pageSize, page: 1 })}
+    />
   );
 }
