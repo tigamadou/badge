@@ -116,18 +116,34 @@ paiement reçu ou échoué, planches lancées, inscriptions écartées.
 
 ### Page de la commande côté organisateur
 
-`/event/[eventId]/print/[requestId]` est une page de conversation : une colonne sous 1024 px (fil en premier et saisie sous le fil),
-deux colonnes de `lg` à `2xl` (fil à gauche ; résumé puis devis empilés à droite,
-`lg:grid-cols-[minmax(0,1fr)_300px]`), trois colonnes à partir de `2xl` (1536 px,
-`2xl:grid-cols-[280px_minmax(0,1fr)_340px]`) : la barre latérale de l'EventShell prend ~224 px dès `lg`,
-trois colonnes plus tôt écraseraient le fil sous ~400 px. En trois colonnes :
+`/event/[eventId]/print/[requestId]` occupe toute la hauteur de la zone de contenu (`FullHeightPage`) :
+l'en-tête reste fixe (retour « Impression », référence, statut, « Voir les badges (N) » pour une
+commande en amont, actions selon le statut et le rôle — accepter pour le OWNER, modifier, annuler —
+et « Payer ») et seules les colonnes défilent. À partir de `xl` (1280 px), trois colonnes
+(`OrganizerOrderLayout`, `[280px_minmax(0,1fr)_340px]`) ; en dessous, des onglets **Infos /
+Discussion / Devis**, Discussion par défaut (`OrderTabs`). Une seule disposition est montée à la fois
+(`useIsWide`), pour ne pas dupliquer le fil ni son relevé.
 
-- **gauche** : référence, statut, type, nombre de badges, remise ou créneaux sur place, total
-  (`OrganizerOrderSummary`) ;
-- **centre** : fil (bulles de l'organisateur à droite, de l'équipe à gauche, évènements centrés,
-  pièces jointes) et saisie (`OrganizerConversation`, `OrganizerComposer`). Pas de bascule « note interne » ;
-- **droite** : devis en lecture, total, actions selon le statut et le rôle (accepter pour le OWNER,
-  payer, annuler, modifier), historique des paiements (`OrganizerQuoteColumn`).
+- **gauche** : alertes de crédit et de template inadapté, frise d'avancement (`OrderSteps`), type,
+  nombre de badges, remise ou créneaux sur place, compteur sur place (`OrganizerOrderSummary`) ;
+- **centre** : fil scrollable et saisie collée en bas (`OrganizerConversation`,
+  `OrganizerComposer`). Pas de bascule « note interne » ;
+- **droite** : devis en lecture (`QuoteLinesTable compact`), total et historique des paiements
+  (`OrganizerQuoteColumn`).
+
+**Couleurs du fil** (`entry-tone.ts`) : message du client en gris neutre, message de l'équipe Badge
+teinté vert, devis en indigo, note interne en ambre (staff seulement), évènement système discret.
+L'évènement `QUOTE_SENT` s'affiche en **carte de devis** (`QuoteMessageCard`) : tableau des lignes
+(`details.lines`, présent sur toutes les versions côté organisateur depuis la liste blanche de
+`thread.ts`), sinon les lignes courantes du devis si la version est la dernière, sinon le
+récapitulatif texte. Ce récapitulatif n'est pas affiché une seconde fois.
+
+**Liste des badges** : la modale « Voir les badges (N) » (`OrderBadgesDialog`) charge
+`GET …/print-requests/{requestId}/registrations?scope=items&q&page&pageSize` (réponse
+`{ items, total, page, pageSize }`, tri par position, accessible à tout rôle ayant accès à la
+commande, évènement archivé compris). Sans `scope`, la route renvoie toujours `{ candidates }`
+(sélection des badges du parcours de création). La pagination de la modale est locale (20 par
+défaut, pas d'URL).
 
 L'organisateur ne voit **jamais** une note interne : ni dans le fil, ni dans le relevé, ni dans les
 non-lus.
@@ -146,17 +162,25 @@ le compteur à jour.
 
 ## Page de commande côté staff
 
-`/platform/print/orders/[requestId]` est une **conversation** en trois colonnes à partir de `2xl` (1536 px : résumé, fil, devis). De `xl` à `2xl`, le
-résumé passe en bandeau pleine largeur au-dessus du fil et de la colonne devis (380 px) ; sous `xl`, tout est
-empilé (résumé, fil, devis) : la barre latérale du shell étant déjà affichée dès `lg`, le fil garde ainsi au
-moins ~400 px :
+`/platform/print/orders/[requestId]` occupe toute la hauteur (`FullHeightPage`, qui remplit le `<main>`
+d'`AppShell`). L'en-tête reste fixe : retour « Commandes », référence, statut, « Voir les badges (N) »
+(commande en amont), « Modifier le devis » (`canEditQuote`) et les actions de statut
+(`RequestStatusActions`). À partir de `xl` (1280 px), trois colonnes `[260px_minmax(0,1fr)_340px]`,
+chacune défilant seule ; en dessous, onglets **Infos / Discussion / Devis**, Discussion par défaut.
 
-- **Gauche** : résumé actualisé (statut, évènement, organisation, type, nombre de badges,
-  recto-verso, template, livraison, dates, total du devis et total accepté).
-- **Centre** : fil (bulles staff à droite, organisateur à gauche, évènements centrés, notes internes
-  sur fond ambré « Note interne »), pièces jointes et saisie avec la bascule « Note interne ».
-- **Droite** : devis éditable, actions de statut, crédit, impression sur place, planche
-  (`OrderSheetPanel`, lien de téléchargement masqué pour `STAFF_OBSERVER`) et paiements.
+- **Gauche** : frise d'avancement (`OrderSteps`), puis l'essentiel (évènement, organisation, badges,
+  livraison ou sur place, contact) ; template, dates, totaux et remarques sont repliés dans « Détails ».
+- **Centre** : fil (bulles, évènements centrés, notes internes sur fond ambré « Note interne »,
+  cartes de devis), pièces jointes et saisie collée en bas avec la bascule « Note interne ».
+- **Droite** : devis en lecture, crédit, impression sur place, planche (`OrderSheetPanel`, lien de
+  téléchargement masqué pour `STAFF_OBSERVER`) et paiements.
+
+**Modales** (`OrderModal`) : « Modifier le devis » ouvre `QuoteEditor` sans carte (`bare`) ;
+« Voir les badges (N) » ouvre `OrderBadgesDialog` sur `GET /api/platform/print/requests/{requestId}/items?q&page&pageSize`
+(`{ items, total, page, pageSize }`, tri par position, `q` : chaque mot dans le prénom ou le nom).
+`GET /api/platform/print/requests/{requestId}` continue de renvoyer la liste **complète** des
+`items` : `RequestStatusActions` en a besoin pour proposer de marquer les badges imprimés à la
+clôture (`unprintedIds`).
 
 Règles :
 
@@ -253,7 +277,9 @@ cas d'échec. Les entrées du journal d'activité sont `PRINT_REQUEST_SUBMITTED`
 | `src/lib/print-requests/template-lock*.ts` | Verrou et épinglage du template |
 | `src/app/api/org/[orgId]/events/[eventId]/print-requests/**` | Routes organisateur |
 | `src/app/api/platform/print/requests/**` | Routes staff |
-| `src/components/event/print/**`, `src/components/print/**` | Écrans organisateur et composants communs |
+| `src/components/event/print/**`, `src/components/print/**` | Écrans organisateur et composants communs (`OrderModal`, `OrderBadgesDialog`, `OrderSteps`, `OrderTabs`, `QuoteMessageCard`, `entry-tone`, `useIsWide`) |
+| `src/lib/print-items-page.ts` | Tranche paginée des badges d'une commande (routes staff `…/items` et organisateur `…/registrations?scope=items`) |
+| `src/components/layout/FullHeightPage.tsx` | Page occupant toute la hauteur d'`AppShell` |
 | `src/components/staff/print/**`, `src/components/staff/print/order/**` | Écrans staff (page de commande en conversation) |
 | `e2e/event/print*.spec.ts`, `e2e/platform/print-request*.spec.ts` | Tests de bout en bout |
 
