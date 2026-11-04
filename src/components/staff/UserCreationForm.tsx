@@ -75,9 +75,9 @@ export function UserCreationForm({
   const busy = create.pending || navigating;
 
   const typeOptions = [
-    { value: "client", title: "Client", description: "Rattaché à une organisation.", color: "#16a34a" },
+    { value: "client", title: "Client", description: "Rattaché à une organisation.", color: "#16B8A6" },
     ...(canCreateStaff
-      ? [{ value: "staff", title: "Staff applicatif", description: "Administration de la plateforme.", color: "#004D74" }]
+      ? [{ value: "staff", title: "Staff applicatif", description: "Administration de la plateforme.", color: "#081558" }]
       : []),
   ];
 

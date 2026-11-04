@@ -38,7 +38,7 @@ logique modifiée.
 | 7 | Staff `print/` — listes, éditeurs, catalogue | [x] | 2026-11-04 | Brouillon (catalogue, produit) = or (attente de publication) ; pastille Archive neutre conservee. Appliques aussi en bloc: OnsiteStation, OrderSheetPanel, OnsiteRequestPanel, OrderComposer/Conversation, OrderQueueTable, GenerationForm/List (task 8) |
 | 8 | Staff `print/` — gabarits, planches, commande, sur place | [x] | 2026-11-04 | LayoutEditor: legende de l'aside (sky-400/green-600) conservee car alignee sur SheetPreview (exclu, lecture seule) ; diagramme des marges en marine |
 | 9 | Passe de contrôle (grep) et tests existants | [x] | 2026-11-04 | grep residuel: SheetPreview (amber-300) et legende LayoutEditor (sky-400, green-600/100) seulement ; pastilles neutres slate-100 conservees |
-| 10 | e2e, contrôle visuel, vérification | [ ] | | |
+| 10 | e2e, contrôle visuel, vérification | [x] | 2026-11-04 | typecheck, lint et 27 fichiers de tests cibles verts ; e2e non lances (consigne) ; pastilles hex du formulaire de creation de compte migrees ; PlatformOrgMemberInviteForm deja migre |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task
 validée : statut `[x]` + date ; en cas d'interruption : `[~]`, date et état précis (step en
