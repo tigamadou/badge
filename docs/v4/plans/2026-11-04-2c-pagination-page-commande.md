@@ -35,7 +35,7 @@
 | 12 | Composants communs de la page commande | [x] | 2026-11-04 | composants communs |
 | 13 | Page commande staff | [x] | 2026-11-04 | page commande staff |
 | 14 | Page commande organisateur | [x] | 2026-11-04 | page commande organisateur |
-| 15 | e2e, doc, vérification | [x] | 2026-11-04 | doc ; e2e sheets/onsite non confirmes (charge machine) |
+| 15 | e2e, doc, vérification | [x] | 2026-11-04 | doc ; lint/typecheck/test-coverage verts ; e2e du lot verts (print-sheets et onsite : 1 flaky chacun, vert au retry) ; controle visuel manuel non fait |
 
 ## Fichiers du lot (exclusifs)
 
