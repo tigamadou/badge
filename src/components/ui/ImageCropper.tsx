@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType, type ReactElement } from "react";
 import dynamic from "next/dynamic";
 import type { Area } from "react-easy-crop";
 import {
@@ -203,4 +203,46 @@ function CropperBody({ source, requirement, outputMime, onConfirm, onCancel }: C
       </div>
     </>
   );
+}
+
+// Parcours « choisir une image » : envoi direct si elle respecte deja le cadre, cadrage sinon.
+// WebP passe toujours par le cadrage (le moteur de rendu ne le lit pas ; la sortie est un PNG).
+// Une image illisible part telle quelle : le serveur explique le refus.
+export function useCropFlow(
+  requirement: ImageRequirement,
+  title: string,
+  upload: (file: File) => Promise<void>,
+): { choose: (file: File | null | undefined) => Promise<void>; recrop: (url: string) => void; cropper: ReactElement } {
+  const [source, setSource] = useState<CropSource | null>(null);
+
+  async function choose(file: File | null | undefined) {
+    if (!file) return;
+    const size = await readImageSize(file).catch(() => null);
+    if (!size || (file.type !== "image/webp" && isConforming(size, requirement))) {
+      await upload(file);
+      return;
+    }
+    setSource(file);
+  }
+
+  async function confirm(blob: Blob) {
+    setSource(null);
+    await upload(new File([blob], `photo.${blob.type === "image/jpeg" ? "jpg" : "png"}`, { type: blob.type }));
+  }
+
+  const outputMime =
+    typeof source === "string" ? (/\.jpe?g$/i.test(source) ? "image/jpeg" : "image/png") : source ? outputMimeFor(source) : "image/png";
+
+  const cropper = (
+    <ImageCropper
+      open={source !== null}
+      title={title}
+      source={source}
+      requirement={requirement}
+      outputMime={outputMime}
+      onConfirm={confirm}
+      onCancel={() => setSource(null)}
+    />
+  );
+  return { choose, recrop: setSource, cropper };
 }

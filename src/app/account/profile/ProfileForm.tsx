@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { FormSection } from "@/components/ui/FormControls";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
+import { useCropFlow } from "@/components/ui/ImageCropper";
+import { IdPhotoRules } from "@/components/account/IdPhotoRules";
+import { ID_PHOTO_REQUIREMENT } from "@/lib/badge-templates/image-frames";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
@@ -53,13 +56,20 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
     }
   }
 
-  async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
+  async function uploadPhoto(file: File) {
     setUploadingPhoto(true);
-    const key = await uploadFile(f, "photo");
+    const key = await uploadFile(file, "photo");
     setUploadingPhoto(false);
     if (key) setPhoto(key);
+  }
+  const photoFlow = useCropFlow(ID_PHOTO_REQUIREMENT, "Recadrer la photo", uploadPhoto);
+
+  async function handlePhoto(e: ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const f = input.files?.[0];
+    await photoFlow.choose(f);
+    // Permet de rechoisir le meme fichier apres un refus.
+    input.value = "";
   }
 
   async function handleDoc(e: ChangeEvent<HTMLInputElement>) {
@@ -130,10 +140,19 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
         />
       </FormSection>
 
-      <FormSection title="Photo" description="JPEG, PNG ou WebP — 5 Mo maximum.">
+      <FormSection title="Photo" description="JPEG, PNG ou WebP — 5 Mo maximum — format photo d'identité 7:9.">
+        <IdPhotoRules />
         {photo ? (
           <div className="mb-3 space-y-1">
             <DocumentPreview storageKey={photo} label="Photo enregistrée" />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={uploadingPhoto}
+              onClick={() => photoFlow.recrop(`/api/files/${photo}`)}
+            >
+              Recadrer
+            </Button>
             {uploadingPhoto && <p className="text-xs text-slate-500">Envoi en cours…</p>}
           </div>
         ) : null}
@@ -145,6 +164,7 @@ export default function ProfileForm({ initial, redirectTo }: Props) {
           className="block text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
         />
         {uploadingPhoto && <p className="mt-1 text-xs text-slate-500">Envoi en cours…</p>}
+        {photoFlow.cropper}
       </FormSection>
 
       <div className="pt-4 text-xs text-slate-500">

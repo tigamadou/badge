@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -9,6 +9,9 @@ import { Card } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { RadioCards } from "@/components/ui/RadioCards";
 import { ActionError, toastApiError } from "@/lib/toast";
+import { useCropFlow } from "@/components/ui/ImageCropper";
+import { IdPhotoRules } from "@/components/account/IdPhotoRules";
+import { ID_PHOTO_REQUIREMENT } from "@/lib/badge-templates/image-frames";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 type Category = { id: string; name: string; number: number };
@@ -58,10 +61,9 @@ export function RegistrationForm({
 
   async function uploadReg(
     kind: "photo" | "document",
-    files: FileList,
+    file: File | undefined,
     setter: (key: string) => void,
   ) {
-    const file = files[0];
     if (!file) return;
     setUploading(kind);
     try {
@@ -81,6 +83,10 @@ export function RegistrationForm({
       setUploading(null);
     }
   }
+
+  const photoFlow = useCropFlow(ID_PHOTO_REQUIREMENT, "Recadrer la photo", (file) =>
+    uploadReg("photo", file, setPhoto),
+  );
 
   // Motif C + D : les `issues` rattachées à un champ s'affichent sous ce champ, le reste en toast.
   // Pas de toast de succès : la fiche de l'inscription s'affiche.
@@ -207,15 +213,18 @@ export function RegistrationForm({
                 storageKey={photo}
                 accept="image/jpeg,image/png,image/webp"
                 uploading={uploading === "photo"}
-                onUpload={(files) => uploadReg("photo", files, setPhoto)}
+                onUpload={(files) => photoFlow.choose(files[0])}
                 onClear={() => setPhoto(null)}
+                above={<IdPhotoRules />}
+                onRecrop={photo ? () => photoFlow.recrop(`/api/files/${photo}`) : undefined}
+                below={photoFlow.cropper}
               />
               <RegFileField
                 label="Pièce d'identité"
                 storageKey={idDocument}
                 accept="image/jpeg,image/png,image/webp,application/pdf"
                 uploading={uploading === "document"}
-                onUpload={(files) => uploadReg("document", files, setIdDocument)}
+                onUpload={(files) => uploadReg("document", files[0], setIdDocument)}
                 onClear={() => setIdDocument(null)}
               />
             </div>
@@ -239,6 +248,9 @@ function RegFileField({
   uploading,
   onUpload,
   onClear,
+  above,
+  below,
+  onRecrop,
 }: {
   label: string;
   storageKey: string | null;
@@ -246,11 +258,15 @@ function RegFileField({
   uploading: boolean;
   onUpload: (files: FileList) => void;
   onClear: () => void;
+  above?: ReactNode;
+  below?: ReactNode;
+  onRecrop?: () => void;
 }) {
   const isPdf = accept.includes("pdf");
   return (
     <div className="space-y-2">
       <span className="block text-sm font-medium text-slate-700">{label}</span>
+      {above}
       {storageKey ? (
         <FileBox
           icon="file"
@@ -258,9 +274,16 @@ function RegFileField({
           title={label}
           subtitle={storageKey}
           action={
-            <Button type="button" variant="secondary" onClick={onClear}>
-              Retirer
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {onRecrop ? (
+                <Button type="button" variant="secondary" onClick={onRecrop} disabled={uploading}>
+                  Recadrer
+                </Button>
+              ) : null}
+              <Button type="button" variant="secondary" onClick={onClear}>
+                Retirer
+              </Button>
+            </div>
           }
         />
       ) : (
@@ -271,6 +294,7 @@ function RegFileField({
           subtitle="5 Mo max"
         />
       )}
+      {below}
     </div>
   );
 }
