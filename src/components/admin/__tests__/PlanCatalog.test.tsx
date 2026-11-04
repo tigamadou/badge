@@ -53,6 +53,15 @@ describe("PlanCatalog", () => {
     expect(text(q)).toContain("Le montant exact est figé à la création du paiement.");
   });
 
+  it("crédit couvrant le plan : message clair et bouton désactivé", () => {
+    const q: Record<string, QuoteView> = {
+      dear: { allowed: true, mode: "IMMEDIATE", listPrice: 45000, credit: 45000, amount: 0, daysLeft: 20 },
+    };
+    expect(text(q)).toContain("Votre crédit couvre déjà ce plan — contactez le support.");
+    expect(text(q)).not.toContain("à payer");
+    expect(button(html(q), "Passer à ce plan")).toEqual({ found: true, disabled: true });
+  });
+
   it("un seul jour restant : singulier ; sans échéance : pas de jours", () => {
     const one: Record<string, QuoteView> = {
       dear: { allowed: true, mode: "IMMEDIATE", listPrice: 45000, credit: 100, amount: 44900, daysLeft: 1 },

@@ -66,6 +66,7 @@ paiement plus recent ; seuls le webhook et l'URL de retour les appliquent.
   (`requireStaff`) ; filtre supplementaire par organisation (nom ou identifiant).
 - Filtres dans l'URL (`status`, `purpose`, `from`, `to`, `q` = reference FedaPay, `orgQuery` cote staff) et
   pagination `page` / `pageSize` ; requetes dans `src/lib/payments-query.ts`.
+- Les filtres de dates (`from`, `to`) du module Paiements sont interpretes en UTC.
 - Le recu est une page HTML construite a la main (`escapeHtml`), reservee aux paiements `APPROVED`
   (404 sinon), `Cache-Control: private, no-store`. Un paiement d'une autre organisation donne 404.
 

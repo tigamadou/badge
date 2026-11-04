@@ -117,7 +117,8 @@ export function PlanCatalog({
       <ul className="grid gap-3 sm:grid-cols-2">
         {plans.map((plan) => {
           const quote = quotes[plan.id];
-          const blocked = quote !== undefined && !quote.allowed;
+          const covered = quote?.allowed === true && quote.amount <= 0;
+          const blocked = (quote !== undefined && !quote.allowed) || covered;
           return (
             <li key={plan.id} className="flex flex-col justify-between gap-3 rounded-lg border border-slate-200 p-4">
               <div>
@@ -139,7 +140,12 @@ export function PlanCatalog({
                 {quote && !quote.allowed && (
                   <p className="mt-2 text-xs text-slate-600">{activeMessage(quote)}</p>
                 )}
-                {quote?.allowed && quote.mode === "IMMEDIATE" && quote.credit > 0 && (
+                {covered && (
+                  <p className="mt-2 text-xs text-slate-600">
+                    Votre crédit couvre déjà ce plan — contactez le support.
+                  </p>
+                )}
+                {quote?.allowed && quote.mode === "IMMEDIATE" && quote.credit > 0 && !covered && (
                   <p className="mt-2 text-xs text-slate-600">
                     Prix plein {fcfa(quote.listPrice)} − crédit {fcfa(quote.credit)}
                     {quote.daysLeft !== null && ` (${quote.daysLeft} jour${quote.daysLeft > 1 ? "s" : ""} restant${quote.daysLeft > 1 ? "s" : ""})`}{" "}
