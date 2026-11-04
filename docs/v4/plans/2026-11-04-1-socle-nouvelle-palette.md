@@ -40,7 +40,7 @@ rôle** (pas par teinte).
 | 4b | Menu latéral clair : `SidebarNav`, `OrgShell`, shells d'évènement, `AccountNav` | [x] | 2026-11-04 | |
 | 5 | `ui` — boutons (variante `positive`), feedback, étiquettes, statuts, onglets, pagination, champs | [x] | 2026-11-04 | |
 | 6 | `ui` — reste des composants (barres, cartes, tableaux, fichiers, journal…) | [x] | 2026-11-04 | |
-| 7 | Garde-fou local du socle + mise à jour des tests existants | [ ] | | |
+| 7 | Garde-fou local du socle + mise à jour des tests existants | [x] | 2026-11-04 | |
 | 8 | `/styleguide` | [ ] | | |
 | 9 | Contrôle visuel 375 / 1024 / 1280 px | [ ] | | |
 | 10 | Vérification complète | [ ] | | |
