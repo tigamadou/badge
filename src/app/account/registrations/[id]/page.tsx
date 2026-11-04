@@ -91,7 +91,7 @@ export default async function RegistrationDetailPage({
         variant="hero"
       />
       <div>
-        <Link href="/account" className="inline-flex items-center gap-1 text-sm text-green-600 hover:underline">
+        <Link href="/account" className="inline-flex items-center gap-1 text-sm text-navy hover:underline">
           <Icon name="arrow-left" size={14} /> Retour
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -110,7 +110,7 @@ export default async function RegistrationDetailPage({
             <p className="mt-1 text-[13px]">
               Vos pièces sont en cours de vérification par la plateforme. Votre inscription sera examinée
               par l&apos;organisateur une fois cette vérification terminée.{" "}
-              <Link href="/account/profile" className="text-green-700 underline">
+              <Link href="/account/profile" className="text-navy underline">
                 Voir mon profil
               </Link>
             </p>
@@ -154,7 +154,7 @@ export default async function RegistrationDetailPage({
               Vous pouvez corriger les informations de votre profil ou choisir une autre catégorie, puis resoumettre
               votre inscription. Le snapshot soumis sera réécrit avec les valeurs actuelles de votre profil.
             </p>
-            <Link href="/account/profile" className="inline-block text-sm text-green-600 hover:underline">
+            <Link href="/account/profile" className="inline-block text-sm text-navy hover:underline">
               Modifier mon profil
             </Link>
             <ResubmitButton

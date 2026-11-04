@@ -56,18 +56,18 @@ export default async function ProfilePage() {
           <strong>Nom du compte :</strong> {user.name}
         </p>
         {user.profileStatus === "INCOMPLETE" && (
-          <p className="text-amber-700 mt-1">
+          <p className="text-warn mt-1">
             Profil incomplet : complétez tous les champs ci-dessous pour pouvoir vous inscrire.
           </p>
         )}
         {user.profileStatus === "PENDING" && (
-          <p className="text-sky-700 mt-1">
+          <p className="text-gold-strong mt-1">
             Vos documents sont en cours de vérification par la plateforme. Vous pourrez vous inscrire à un
             événement une fois votre profil validé.
           </p>
         )}
         {user.profileStatus === "APPROVED" && (
-          <p className="text-emerald-700 mt-1">Profil validé — vous pouvez vous inscrire aux événements.</p>
+          <p className="text-turquoise-strong mt-1">Profil validé — vous pouvez vous inscrire aux événements.</p>
         )}
         {user.profileStatus === "REJECTED" && (
           <p className="text-rose-700 mt-1">
