@@ -33,8 +33,8 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 | 3 | Conformité serveur (`event-image-compliance.ts`) | [x] | 2026-11-04 | 100 % ; test 'aucun template' vide installedBadgeTemplate puis reinstalle les references |
 | 4 | Logo / bannière : route d'envoi, PATCH évènement, création | [x] | 2026-11-04 | tests PATCH adaptes (vraies images) ; events/route.ts verifie en couverture globale |
 | 5 | Photo du participant : contrôle serveur sur tous les chemins | [x] | 2026-11-04 | helpers checkIdPhotoBuffer/Key et rejectionResponse dans event-image-compliance ; PUT /api/account/profile (pas PATCH) |
-| 6 | Blocage : rendu PDF, aperçu, exports, planches | [ ] | | |
-| 7 | Blocage : soumission de commande, impression sur place | [ ] | | |
+| 6 | Blocage : rendu PDF, aperçu, exports, planches | [x] | 2026-11-04 | tests regroupes dans event-images-blocking.test.ts ; worker FAILED OK sans modification |
+| 7 | Blocage : soumission de commande, impression sur place | [x] | 2026-11-04 | tests regroupes dans event-images-blocking-requests.test.ts |
 | 8 | Composant `ImageCropper` | [ ] | | |
 | 9 | Interface évènement : réglages, bandeau, tableau de bord | [ ] | | |
 | 10 | Interface photo : compte, inscription, règles de la photo d'identité | [ ] | | |

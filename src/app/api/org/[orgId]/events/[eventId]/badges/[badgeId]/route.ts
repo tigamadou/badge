@@ -7,6 +7,7 @@ import {
   renderBadgePdf,
 } from "@/lib/badge-templates/render-badge";
 import { badgeFileName } from "@/lib/badge-batch";
+import { evaluateEventImages } from "@/lib/event-image-compliance";
 
 export const runtime = "nodejs";
 
@@ -37,9 +38,14 @@ export const GET = withEventAuth(
     try {
       if (format === "html") {
         const { document, templateId } = await renderBadgeHtml(registration);
-        return NextResponse.json(document, {
-          headers: { "cache-control": "private, no-store", "x-template-id": templateId },
-        });
+        const headers: Record<string, string> = { "cache-control": "private, no-store", "x-template-id": templateId };
+        // L'apercu n'est jamais bloque, mais signale les images a recadrer.
+        const issues = await evaluateEventImages(registration.event);
+        if (issues.length > 0) {
+          headers["x-event-images"] = "noncompliant";
+          headers["x-event-images-slots"] = issues.map((i) => i.slot).join(",");
+        }
+        return NextResponse.json(document, { headers });
       }
       const { pdf, templateId } = await renderBadgePdf(registration);
       const disposition = req.nextUrl.searchParams.get("download") === "1" ? "attachment" : "inline";

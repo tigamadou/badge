@@ -10,6 +10,11 @@ import { buildValues } from "./build-values";
 import { optionVariables } from "./template-options";
 import { NextResponse } from "next/server";
 import { getExporter, isRendererUnavailable, rendererUnavailableResponse } from "@/lib/renderer";
+import {
+  EventImagesNoncompliantError,
+  assertEventImagesCompliant,
+  eventImagesErrorResponse,
+} from "@/lib/event-image-compliance";
 
 // Relations necessaires au rendu d'un badge (contexte du template, controle
 // d'appartenance a l'evenement, statut, nommage du fichier).
@@ -26,6 +31,10 @@ export const badgeRegistrationInclude = {
       templateOptions: true,
       badgeTemplateId: true,
       orgId: true,
+      logoWidth: true,
+      logoHeight: true,
+      bannerWidth: true,
+      bannerHeight: true,
     },
   },
   category: { select: { name: true, color: true, neutralBadge: true, anonymous: true } },
@@ -109,6 +118,8 @@ export async function renderBadgeHtml(
 export async function renderBadgePdf(
   registration: BadgeRegistration,
 ): Promise<{ pdf: Uint8Array; templateId: string }> {
+  // Un badge deforme ne s'imprime pas : l'apercu reste possible, le PDF non.
+  await assertEventImagesCompliant(registration.event);
   const { document, templateId } = await renderBadgeDocument(registration);
   return { pdf: await getExporter().pdf(document), templateId };
 }
@@ -126,6 +137,7 @@ export class BadgeRenderError extends Error {
 // Reponse commune des routes de rendu : 503 si le service manque ou tarde, sinon 500.
 // Le message n'est expose que pour un badge trop lourd, qui se corrige cote contenu.
 export function badgeRenderFailure(err: unknown, registrationId: string, route: string): NextResponse {
+  if (err instanceof EventImagesNoncompliantError) return eventImagesErrorResponse(err);
   console.error(`[${route}] rendu en echec pour ${registrationId}`, err);
   if (isRendererUnavailable(err)) return rendererUnavailableResponse();
   const body =

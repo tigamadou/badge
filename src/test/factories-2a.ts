@@ -1,5 +1,6 @@
 import type { InstalledBadgeTemplate, Prisma } from "@prisma/client";
 import { encodePng } from "../../prisma/seed/demo/png";
+import { prisma } from "@/lib/prisma";
 import { uploadFile } from "@/lib/storage";
 import { makeInstalledTemplate } from "./factories";
 
@@ -91,3 +92,22 @@ export function makeFramedTemplate(
     ...data,
   });
 }
+
+/**
+ * Rend les images d'un evenement non conformes : template qui cadre le logo en 1:1 et logo
+ * stocke en 300 x 100 (dimensions memorisees).
+ */
+export async function breakEventLogo(eventId: string, installedById: string) {
+  const template = await makeFramedTemplate(installedById, { logo: { w: 68, h: 68 } });
+  const logo = await putTestImage(`test-2a/broken-logo-${eventId}.png`, makePng(300, 100), "image/png");
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { badgeTemplateId: template.id, logo, logoWidth: 300, logoHeight: 100 },
+  });
+  return { template, logo };
+}
+
+/** Message attendu quand seul le logo (cadre 1:1) est non conforme. */
+export const NONCOMPLIANT_LOGO_MESSAGE =
+  "Images de l'évènement à recadrer : logo — Ratio attendu 1:1, par ex. 136 × 136 px. " +
+  "Corrigez-les dans les paramètres de l'évènement avant de générer les badges.";
