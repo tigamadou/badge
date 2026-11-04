@@ -198,6 +198,7 @@ Le logo et la bannière d'un évènement doivent respecter le **cadre** que le t
   `bannerWidth/bannerHeight`, ainsi que `logoOriginal` / `bannerOriginal` (la source du
   recadrage, pour « Recadrer » sans renvoyer de fichier). L'évènement créé par `POST …/events`
   mémorise les dimensions de son logo.
+- **Clés fournies par le client** : `logo`, `banner`, `logoOriginal`, `bannerOriginal` (PATCH évènement) et `logo` (création) doivent commencer par `orgs/<orgId>/` ou `events/<eventId>/` ; sinon `400 INVALID_IMAGE` (même réponse qu'un fichier absent : aucun oracle d'existence sur les fichiers d'une autre organisation).
 - **Conformité calculée, jamais stockée** : `evaluateEventImages` compare le template effectif aux
   dimensions mémorisées. Changer de template peut donc rendre des images non conformes ; le
   tableau de bord de l'évènement (hors opérateur) et les réglages affichent alors « Images à

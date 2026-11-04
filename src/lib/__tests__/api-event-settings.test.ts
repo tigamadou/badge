@@ -238,7 +238,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
 
   it("updates logo field", async () => {
     const { u, org, event } = await seedAdmin();
-    const logoKey = await putTestImage(`test-2a/settings-logo-${event.id}.png`, makePng(136, 136), "image/png");
+    const logoKey = await putTestImage(`orgs/${org.id}/images/settings-logo-${event.id}.png`, makePng(136, 136), "image/png");
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
@@ -365,8 +365,9 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
     expect(fields).not.toContain("securityInstructions");
   });
 
-  async function patchEvent(body: unknown) {
+  async function patchEvent(input: unknown | ((org: { id: string }) => Promise<unknown>)) {
     const { u, org, event } = await seedAdmin();
+    const body = typeof input === "function" ? await input(org) : input;
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/route");
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
@@ -379,8 +380,11 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
   }
 
   it("ecrit puis efface la banniere", async () => {
-    const bannerKey = await putTestImage(`test-2a/settings-banner-${Date.now()}.png`, makePng(1500, 500), "image/png");
-    const { res, event, org, PATCH } = await patchEvent({ banner: bannerKey });
+    let bannerKey = "";
+    const { res, event, org, PATCH } = await patchEvent(async (o: { id: string }) => {
+      bannerKey = await putTestImage(`orgs/${o.id}/images/settings-banner-${Date.now()}.png`, makePng(1500, 500), "image/png");
+      return { banner: bannerKey };
+    });
     expect(res.status).toBe(200);
     expect((await prisma.event.findUnique({ where: { id: event.id } }))?.banner).toBe(bannerKey);
     const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}`, {
@@ -709,7 +713,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId] : images", () => {
         { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
       );
     const put = (name: string, w: number, h: number) =>
-      putTestImage(`test-2a/patch-${event.id}-${name}.png`, makePng(w, h), "image/png");
+      putTestImage(`events/${event.id}/photos/patch-${name}.png`, makePng(w, h), "image/png");
     const row = () => prisma.event.findUniqueOrThrow({ where: { id: event.id } });
     return { event, patch, put, row, staff };
   }
@@ -735,10 +739,21 @@ describe("PATCH /api/org/[orgId]/events/[eventId] : images", () => {
   });
 
   it("refuse une clé inexistante", async () => {
-    const { patch } = await setup();
-    const res = await patch({ banner: "test-2a/inexistant.png" });
+    const { event, patch } = await setup();
+    const res = await patch({ banner: `events/${event.id}/photos/inexistant.png` });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE", slot: "banner" });
+  });
+
+  it("refuse une clé d'un autre dossier, même existante, et un original hors périmètre", async () => {
+    const { patch } = await setup();
+    const foreign = await putTestImage("orgs/autre-org/images/logo.png", makePng(136, 136), "image/png");
+    const res = await patch({ logo: foreign });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE", slot: "logo" });
+    const original = await patch({ logoOriginal: "profile/quelquun/photos/p.png" });
+    expect(original.status).toBe(400);
+    expect(await original.json()).toMatchObject({ code: "INVALID_IMAGE" });
   });
 
   it("ne revalide pas une image inchangée (pas de blocage rétroactif)", async () => {

@@ -71,7 +71,7 @@ export async function seedEventImage(
   buffer: Buffer,
   size: Frame,
 ): Promise<string> {
-  const key = `e2e/${eventId}/${slot}-${Date.now()}.png`;
+  const key = `events/${eventId}/photos/e2e-${slot}-${Date.now()}.png`;
   await uploadFile(key, buffer, "image/png");
   await getDb().event.update({
     where: { id: eventId },

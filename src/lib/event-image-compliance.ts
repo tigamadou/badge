@@ -175,11 +175,20 @@ export function validateImageBuffer(
   return { ok: true, width: dims.width, height: dims.height };
 }
 
+/** Une cle fournie par le client doit appartenir a l'un des prefixes attendus (org, evenement, utilisateur). */
+export function keyHasPrefix(key: string, prefixes: readonly string[]): boolean {
+  return !key.includes("..") && prefixes.some((prefix) => key.startsWith(prefix));
+}
+
+const KEY_REJECTED: UploadVerdict = { ok: false, status: 400, code: "INVALID_IMAGE", message: "Image introuvable." };
+
 export async function validateStoredImage(
   key: string,
   req: ImageRequirement | null,
-  opts: { engineFormatsOnly?: boolean } = {},
+  opts: { engineFormatsOnly?: boolean; allowedPrefixes: readonly string[] },
 ): Promise<UploadVerdict> {
+  // Meme reponse qu'un fichier absent : aucun oracle d'existence sur les fichiers d'autrui.
+  if (!keyHasPrefix(key, opts.allowedPrefixes)) return KEY_REJECTED;
   let body: Buffer;
   try {
     ({ body } = await getFile(key));
@@ -235,7 +244,7 @@ export function checkIdPhotoBuffer(buf: Buffer, mime: string): NextResponse | nu
   return verdict.ok ? null : rejectionResponse(verdict);
 }
 
-export async function checkIdPhotoKey(key: string): Promise<NextResponse | null> {
-  const verdict = await validateStoredImage(key, ID_PHOTO_REQUIREMENT);
+export async function checkIdPhotoKey(key: string, allowedPrefixes: readonly string[]): Promise<NextResponse | null> {
+  const verdict = await validateStoredImage(key, ID_PHOTO_REQUIREMENT, { allowedPrefixes });
   return verdict.ok ? null : rejectionResponse(verdict);
 }

@@ -25,11 +25,11 @@ function makeReq(body?: unknown, method: "GET" | "PUT" = "GET"): NextRequest {
 }
 
 // Photos reelles dans le stockage de test : la route relit la photo qui change.
-const PHOTO_KEY = "test-2a/profile-photo.png";
-const NEW_PHOTO_KEY = "test-2a/profile-photo-new.png";
+// La cle doit etre sous `profile/<userId>/` : l'utilisateur du test « updates all profile fields » porte cet id.
+const PUT_USER_ID = "u2a-put-profile";
+const PHOTO_KEY = `profile/${PUT_USER_ID}/photos/photo.png`;
 beforeAll(async () => {
   await putTestImage(PHOTO_KEY, makePng(420, 540), "image/png");
-  await putTestImage(NEW_PHOTO_KEY, makePng(420, 540), "image/png");
 });
 
 const COMPLETE_PROFILE = {
@@ -128,7 +128,7 @@ describe("PUT /api/account/profile : photo d'identité", () => {
 
   it("refuse une photo hors ratio et laisse la colonne inchangée", async () => {
     const { u, put } = await setup();
-    const square = await putTestImage("test-2a/profile-square.png", makePng(540, 540), "image/png");
+    const square = await putTestImage(`profile/${u.id}/photos/square.png`, makePng(540, 540), "image/png");
     const res = await put({ photo: square });
     expect(res.status).toBe(422);
     expect((await res.json()).code).toBe("IMAGE_RATIO");
@@ -136,14 +136,23 @@ describe("PUT /api/account/profile : photo d'identité", () => {
   });
 
   it("refuse une clé absente du stockage", async () => {
-    const { put } = await setup();
-    const res = await put({ photo: "test-2a/absente.png" });
+    const { u, put } = await setup();
+    const res = await put({ photo: `profile/${u.id}/photos/absente.png` });
     expect(res.status).toBe(400);
     expect((await res.json()).code).toBe("INVALID_IMAGE");
   });
 
+  it("refuse une clé hors du dossier de l'utilisateur, même si le fichier existe", async () => {
+    const { put } = await setup();
+    const foreign = await putTestImage("profile/autre-utilisateur/photos/ok.png", makePng(420, 540), "image/png");
+    const res = await put({ photo: foreign });
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe("INVALID_IMAGE");
+    expect((await put({ photo: "profile/../orgs/x/images/a.png" })).status).toBe(400);
+  });
+
   it("n'impose rien à la photo déjà enregistrée, même non conforme", async () => {
-    const square = await putTestImage("test-2a/profile-square.png", makePng(540, 540), "image/png");
+    const square = await putTestImage("profile/u-pre/photos/square.png", makePng(540, 540), "image/png");
     const { put } = await setup(square);
     expect((await put({ photo: square, structure: "Autre" })).status).toBe(200);
   });
@@ -164,6 +173,7 @@ describe("PUT /api/account/profile", () => {
   it("updates all profile fields, recomputes participantProfileCompletedAt and logs USER_PROFILE_UPDATED", async () => {
     const u = await prisma.user.create({
       data: {
+        id: PUT_USER_ID,
         email: "put@v2-11-profile.test",
         password: "x",
         name: "Put",
@@ -295,7 +305,7 @@ describe("PUT /api/account/profile", () => {
 
   it("cree une soumission de profil quand les pieces deviennent completes", async () => {
     const u = await prisma.user.create({
-      data: { email: "submit@profile08.test", password: "x", name: "U" },
+      data: { id: PUT_USER_ID, email: "submit@profile08.test", password: "x", name: "U" },
     });
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
 
@@ -453,11 +463,12 @@ describe("PUT /api/account/profile — propagation aux inscriptions en attente",
     await withSession({ id: user.id, email: user.email, name: user.name, isStaff: false });
 
     const { PUT } = await import("@/app/api/account/profile/route");
-    const res = await PUT(makeReq({ photo: NEW_PHOTO_KEY }, "PUT"));
+    const newPhoto = await putTestImage(`profile/${user.id}/photos/new.png`, makePng(420, 540), "image/png");
+    const res = await PUT(makeReq({ photo: newPhoto }, "PUT"));
 
     expect(res.status).toBe(200);
     const after = await prisma.registration.findUniqueOrThrow({ where: { id: registration.id } });
-    expect(after.snapshotPhoto).toBe(NEW_PHOTO_KEY);
+    expect(after.snapshotPhoto).toBe(newPhoto);
 
     const log = await prisma.activityLog.findFirst({
       where: { type: "REGISTRATION_SNAPSHOT_REFRESHED", targetId: registration.id },

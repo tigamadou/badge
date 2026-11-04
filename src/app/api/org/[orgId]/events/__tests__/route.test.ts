@@ -92,7 +92,7 @@ describe("POST /api/org/[orgId]/events : logo", () => {
 
   it("memorise les dimensions d'un logo valide", async () => {
     const { org } = await seedOwnerOrg();
-    const logo = await putTestImage(`test-2a/create-logo-${Date.now()}.png`, makePng(136, 136), "image/png");
+    const logo = await putTestImage(`orgs/${org.id}/images/create-logo-${Date.now()}.png`, makePng(136, 136), "image/png");
     const res = await callPost(org.id, { ...base, logo });
     expect(res.status).toBe(201);
     const { event } = (await res.json()) as { event: { id: string } };
@@ -103,9 +103,17 @@ describe("POST /api/org/[orgId]/events : logo", () => {
     });
   });
 
+  it("refuse un logo hors du dossier de l'organisation", async () => {
+    const { org } = await seedOwnerOrg();
+    const foreign = await putTestImage("orgs/autre-org/images/logo.png", makePng(136, 136), "image/png");
+    const res = await callPost(org.id, { ...base, logo: foreign });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE" });
+  });
+
   it("cree l'evenement meme si le logo est introuvable", async () => {
     const { org } = await seedOwnerOrg();
-    const res = await callPost(org.id, { ...base, logo: "test-2a/absent.png" });
+    const res = await callPost(org.id, { ...base, logo: `orgs/${org.id}/images/absent.png` });
     expect(res.status).toBe(201);
     const { event } = (await res.json()) as { event: { id: string } };
     expect(await prisma.event.findUnique({ where: { id: event.id } })).toMatchObject({

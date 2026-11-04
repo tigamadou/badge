@@ -941,8 +941,8 @@ describe("PATCH /registrations/[regId]", () => {
     const { u, org, event, cat } = await seedAdmin();
     const r = await mkReg(event.id, cat.id);
     await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    const good = await putTestImage(`test-2a/reg-good-${r.id}.png`, makePng(420, 540), "image/png");
-    const bad = await putTestImage(`test-2a/reg-bad-${r.id}.png`, makePng(540, 540), "image/png");
+    const good = await putTestImage(`events/${event.id}/photos/reg-good-${r.id}.png`, makePng(420, 540), "image/png");
+    const bad = await putTestImage(`events/${event.id}/photos/reg-bad-${r.id}.png`, makePng(540, 540), "image/png");
 
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
     const patch = (body: unknown) =>
@@ -954,6 +954,14 @@ describe("PATCH /registrations/[regId]", () => {
         }),
         { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
       );
+
+    const foreign = await putTestImage("profile/autre/photos/ok.png", makePng(420, 540), "image/png");
+    const outside = await patch({ snapshotPhoto: foreign });
+    expect(outside.status).toBe(400);
+    expect((await outside.json()).code).toBe("INVALID_IMAGE");
+    const ownProfile = await putTestImage(`profile/${r.userId}/photos/ok.png`, makePng(420, 540), "image/png");
+    expect((await patch({ snapshotPhoto: ownProfile })).status).toBe(200);
+    await prisma.registration.update({ where: { id: r.id }, data: { snapshotPhoto: r.snapshotPhoto } });
 
     const refused = await patch({ snapshotPhoto: bad });
     expect(refused.status).toBe(422);

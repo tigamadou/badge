@@ -54,7 +54,7 @@ export const PATCH = withEventAuth(
 
     // Photo d'identite : relue seulement si elle change (pas de blocage retroactif).
     if (parsed.data.snapshotPhoto !== undefined && parsed.data.snapshotPhoto !== existing.snapshotPhoto) {
-      const rejected = await checkIdPhotoKey(parsed.data.snapshotPhoto);
+      const rejected = await checkIdPhotoKey(parsed.data.snapshotPhoto, [`events/${eventId}/`, `profile/${existing.userId}/`]);
       if (rejected) return rejected;
     }
 

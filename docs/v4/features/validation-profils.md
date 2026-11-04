@@ -102,7 +102,7 @@ La photo de profil et la photo d'une inscription sont des photos d'identité : r
 - **Chemins contrôlés côté serveur** : envoi du compte (`POST /api/account/upload?kind=photo`),
   envoi par l'admin d'évènement (`POST …/events/[eventId]/upload`), route historique
   `POST /api/upload`, `PUT /api/account/profile` et `PATCH …/registrations/[regId]` (snapshot).
-  Les deux derniers ne revérifient la photo que si sa clé change : **pas de blocage rétroactif**.
+  La clé de photo doit être sous `profile/<userId>/` (compte), ou `events/<eventId>/` / `profile/<userId de l'inscrit>/` (snapshot), sinon `400 INVALID_IMAGE`. Les deux derniers ne revérifient la photo que si sa clé change : **pas de blocage rétroactif**.
 - **Interface** : l'outil de recadrage 7:9 s'ouvre quand l'image n'est pas conforme (bouton
   « Recadrer » ensuite) ; les règles (fond blanc uni, visage de face et centré, tête nue, photo
   nette et récente, sans retouche, format et minimum) s'affichent près de l'envoi

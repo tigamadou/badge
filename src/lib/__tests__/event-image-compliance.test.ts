@@ -13,6 +13,7 @@ import {
   readStoredDimensions,
   validateImageBuffer,
   validateStoredImage,
+  keyHasPrefix,
 } from "../event-image-compliance";
 import { makeEvent, makeOrg, makeStaff, seedFactories } from "@/test/factories";
 import {
@@ -210,9 +211,20 @@ describe("validateImageBuffer", () => {
   });
 });
 
+const PREFIXES = { allowedPrefixes: ["test-2a/"] };
+
 describe("validateStoredImage / readStoredDimensions", () => {
+  it("refuse une cle hors des prefixes attendus, meme si le fichier existe", async () => {
+    const key = await store(makePng(420, 540));
+    expect(await validateStoredImage(key, null, { allowedPrefixes: ["profile/u1/"] })).toEqual({
+      ok: false, status: 400, code: "INVALID_IMAGE", message: "Image introuvable.",
+    });
+    expect(keyHasPrefix("profile/u1/../u2/a.png", ["profile/u1/"])).toBe(false);
+    expect(keyHasPrefix("profile/u1/a.png", ["profile/u1/"])).toBe(true);
+  });
+
   it("refuse une cle absente", async () => {
-    expect(await validateStoredImage("test-2a/absente.png", null)).toEqual({
+    expect(await validateStoredImage("test-2a/absente.png", null, PREFIXES)).toEqual({
       ok: false, status: 400, code: "INVALID_IMAGE", message: "Image introuvable.",
     });
     expect(await readStoredDimensions("test-2a/absente.png")).toBeNull();
@@ -220,15 +232,15 @@ describe("validateStoredImage / readStoredDimensions", () => {
 
   it("rend le verdict de validateImageBuffer pour une cle valide", async () => {
     const key = await store(makePng(420, 540));
-    expect(await validateStoredImage(key, ID_PHOTO_REQUIREMENT)).toEqual({ ok: true, width: 420, height: 540 });
+    expect(await validateStoredImage(key, ID_PHOTO_REQUIREMENT, PREFIXES)).toEqual({ ok: true, width: 420, height: 540 });
     expect(await readStoredDimensions(key)).toEqual({ width: 420, height: 540, format: "png" });
     const bad = await store(makePng(540, 540));
-    expect(await validateStoredImage(bad, ID_PHOTO_REQUIREMENT)).toMatchObject({ ok: false, code: "IMAGE_RATIO" });
+    expect(await validateStoredImage(bad, ID_PHOTO_REQUIREMENT, PREFIXES)).toMatchObject({ ok: false, code: "IMAGE_RATIO" });
   });
 
   it("refuse un contenu qui n'est pas une image", async () => {
     const key = await putTestImage(`test-2a/texte-${++seq}.png`, Buffer.from("texte"), "image/png");
-    expect(await validateStoredImage(key, null)).toMatchObject({ ok: false, status: 400, code: "INVALID_IMAGE" });
+    expect(await validateStoredImage(key, null, PREFIXES)).toMatchObject({ ok: false, status: 400, code: "INVALID_IMAGE" });
   });
 });
 

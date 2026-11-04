@@ -142,7 +142,7 @@ export async function PUT(req: NextRequest) {
     }
     // Photo d'identite : relue seulement si elle change (pas de blocage retroactif).
     if (data.photo !== undefined && data.photo !== before.photo) {
-      const rejected = await checkIdPhotoKey(data.photo);
+      const rejected = await checkIdPhotoKey(data.photo, [`profile/${session.id}/`]);
       if (rejected) return rejected;
     }
     const merged = { ...before, ...data };

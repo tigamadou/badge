@@ -75,7 +75,7 @@ describe("déclencheurs profils", () => {
     const s = await seedStaff();
     const u = await makeParticipant({ profileStatus: "INCOMPLETE" });
     // La photo est desormais controlee (7:9, 210 x 270 min) : une vraie image est deposee.
-    const photo = await putTestImage(`test-2a/triggers-profiles-${u.id}.png`, makePng(420, 540), "image/png");
+    const photo = await putTestImage(`profile/${u.id}/photos/triggers.png`, makePng(420, 540), "image/png");
     const res = await putAs(u, { photo });
     expect(res.status).toBe(200);
     const rows = await prisma.notification.findMany({ where: { type: "PROFILE_SUBMITTED" } });

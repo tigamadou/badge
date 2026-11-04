@@ -8,7 +8,7 @@ import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { notifyQuotaExceeded } from "@/lib/notifications/triggers";
-import { readStoredDimensions } from "@/lib/event-image-compliance";
+import { readStoredDimensions, keyHasPrefix } from "@/lib/event-image-compliance";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
@@ -159,6 +159,10 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
 
   // Dimensions du logo memorisees pour le controle de conformite ; un logo illisible
   // n'empeche pas la creation (il sera signale a la lecture).
+  // Une cle fournie par le client doit rester dans le dossier de l'organisation.
+  if (data.logo && !keyHasPrefix(data.logo, [`orgs/${orgId}/`])) {
+    return NextResponse.json({ error: "Image introuvable.", code: "INVALID_IMAGE" }, { status: 400 });
+  }
   const logoDimensions = data.logo ? await readStoredDimensions(data.logo) : null;
 
   try {

@@ -17,6 +17,7 @@ import {
   getEventImageRequirements,
   rejectionResponse,
   validateStoredImage,
+  keyHasPrefix,
   type ImageSlot,
 } from "@/lib/event-image-compliance";
 
@@ -126,6 +127,13 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
   // Images : relecture du fichier stocke seulement quand la cle CHANGE (le formulaire
   // renvoie toute la fiche : pas de blocage retroactif d'une image heritee).
   const changedImages: { slot: ImageSlot; removed: boolean }[] = [];
+  // Cles fournies par le client : uniquement celles de l'organisation ou de l'evenement.
+  const allowedPrefixes = [`orgs/${orgId}/`, `events/${eventId}/`];
+  for (const original of [parsed.data.logoOriginal, parsed.data.bannerOriginal]) {
+    if (original && !keyHasPrefix(original, allowedPrefixes)) {
+      return NextResponse.json({ error: "Image introuvable.", code: "INVALID_IMAGE" }, { status: 400 });
+    }
+  }
   if (parsed.data.logoOriginal !== undefined) data.logoOriginal = parsed.data.logoOriginal;
   if (parsed.data.bannerOriginal !== undefined) data.bannerOriginal = parsed.data.bannerOriginal;
   let requirements: Awaited<ReturnType<typeof getEventImageRequirements>> | null = null;
@@ -139,7 +147,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
     } else {
       if (changed) {
         requirements ??= await getEventImageRequirements({ badgeTemplateId: before.badgeTemplateId, orgId });
-        const verdict = await validateStoredImage(key, requirements[slot] ?? null, { engineFormatsOnly: true });
+        const verdict = await validateStoredImage(key, requirements[slot] ?? null, { engineFormatsOnly: true, allowedPrefixes });
         if (!verdict.ok) return rejectionResponse(verdict, { slot });
         Object.assign(data, { [cols.width]: verdict.width, [cols.height]: verdict.height });
       }
