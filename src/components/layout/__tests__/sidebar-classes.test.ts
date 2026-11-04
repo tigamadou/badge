@@ -33,7 +33,7 @@ describe("sidebar-classes", () => {
       "flex items-center gap-2.5 rounded-lg border-l-2 border-gold bg-mist px-2.5 py-2 text-sm font-medium text-navy",
     );
     expect(C.SIDEBAR_COUNT).toBe(
-      "ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-navy px-1.5 text-[11px] font-semibold leading-5 text-white",
+      "ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold leading-5 text-white",
     );
     expect(C.SIDEBAR_FOOTER_TEXT).toBe("truncate px-2 text-xs text-nav-muted");
     expect(C.SIDEBAR_ROLE_LABEL).toBe(
@@ -57,7 +57,7 @@ describe("sidebar-classes", () => {
   });
 
   it("compteur marine/blanc et bandeau marine", () => {
-    expect(C.SIDEBAR_COUNT).toContain("bg-navy");
+    expect(C.SIDEBAR_COUNT).toContain("bg-rose-600");
     expect(C.SIDEBAR_COUNT).toContain("text-white");
     expect(C.SHELL_BANNER).toContain("bg-navy");
   });

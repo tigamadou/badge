@@ -62,7 +62,7 @@ describe("SidebarNav", () => {
       <SidebarNav items={[{ group: "Impression" }, ...link(2)]} />,
     );
     expect(html).toMatch(/text-nav-muted">Impression</);
-    expect(html).toContain("bg-navy");
+    expect(html).toContain("bg-rose-600");
     expect(html).toContain("text-white");
   });
 

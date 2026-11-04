@@ -17,7 +17,7 @@ describe("TableFrame", () => {
     );
     expect(html).toContain("contenu");
     expect(html).toContain("overflow-x-auto");
-    expect(html).toContain("rounded-xl");
+    expect(html).not.toContain("rounded-xl");
     expect(html).not.toContain("overflow-hidden");
   });
 

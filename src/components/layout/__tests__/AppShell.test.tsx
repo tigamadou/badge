@@ -47,8 +47,8 @@ describe("AppShell", () => {
     expect(aside).not.toContain("bg-brand-navy");
     expect(aside).not.toContain("bg-navy");
     const main = /<main[^>]*class="([^"]*)"/.exec(html)![1];
-    expect(main).toContain("bg-white");
-    expect(main).not.toContain("bg-slate-50");
+    expect(main).toContain("bg-slate-100");
+    expect(main).not.toContain("bg-white");
     const close = /<button[^>]*aria-label="Fermer le menu"[^>]*class="([^"]*)"/.exec(html)![1];
     expect(close).not.toContain("text-slate-300");
   });
