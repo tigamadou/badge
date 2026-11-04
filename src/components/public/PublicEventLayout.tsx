@@ -32,7 +32,7 @@ export function PublicEventLayout({ event, organization, contact, children }: Pr
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Bannière marine — hero événement */}
-      <header className="bg-brand-navy py-7 text-white">
+      <header className="bg-navy py-7 text-white">
         <div className="mx-auto flex max-w-[720px] items-center gap-4 px-5">
           <div className="flex h-[52px] w-[52px] flex-none items-center justify-center rounded-xl bg-white/10">
             {logoKey ? (
@@ -66,7 +66,7 @@ export function PublicEventLayout({ event, organization, contact, children }: Pr
         {children}
       </main>
 
-      <footer className="border-t bg-white">
+      <footer className="border-t border-line bg-white">
         <div className="mx-auto max-w-[720px] px-5 py-4 text-center text-xs text-neutral-500">
           {(contact?.email || contact?.phone) && (
             <p>

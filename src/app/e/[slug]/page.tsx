@@ -91,7 +91,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
             {session?.user?.id ? (
               <Link
                 href={`/e/${slug}/register`}
-                className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                className="inline-flex items-center justify-center rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover"
               >
                 S&apos;inscrire à cet événement
               </Link>
@@ -99,13 +99,13 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
               <>
                 <Link
                   href={`/login?callbackUrl=/e/${slug}/register`}
-                  className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                  className="inline-flex items-center justify-center rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover"
                 >
                   Se connecter pour s&apos;inscrire
                 </Link>
                 <Link
                   href={`/register?next=/e/${slug}/register`}
-                  className="inline-flex items-center justify-center rounded-lg border border-green-600 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-50"
+                  className="inline-flex items-center justify-center rounded-lg border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-mist"
                 >
                   Créer un compte
                 </Link>
