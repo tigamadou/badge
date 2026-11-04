@@ -94,6 +94,29 @@ describe("resolvePaymentReturn", () => {
     expect(res).toEqual({ outcome: "APPROVED", planName: "pro", activationDate: null });
   });
 
+  it("montée en gamme au prorata : APPROVED (comparaison sur le prix plein)", async () => {
+    const { org, pro } = await seed();
+    await prisma.subscription.create({
+      data: { orgId: org.id, planId: pro.id, status: "ACTIVE", startDate: new Date(), endDate: new Date(Date.now() + 10 * 86400000) },
+    });
+    const dear = await prisma.plan.create({ data: { name: "dear", price: 20000 } });
+    await prisma.payment.update({
+      where: { fedapayTransactionId: 77 },
+      data: { planId: dear.id, amount: 12000, listPrice: 20000, prorataCredit: 8000 },
+    });
+    fetchMock.mockResolvedValue(txResponse("approved", 12000));
+    const res = await resolvePaymentReturn(org.id, "77");
+    expect(res).toEqual({ outcome: "APPROVED", planName: "dear", activationDate: null });
+  });
+
+  it("paiement remplacé (CANCELED) puis approuvé chez FedaPay : APPROVED", async () => {
+    const { org } = await seed();
+    await prisma.payment.update({ where: { fedapayTransactionId: 77 }, data: { status: "CANCELED" } });
+    fetchMock.mockResolvedValue(txResponse("approved"));
+    const res = await resolvePaymentReturn(org.id, "77");
+    expect(res.outcome).toBe("APPROVED");
+  });
+
   it("approuvé en mode SCHEDULED : SCHEDULED avec la date de fin d'abonnement", async () => {
     const { org, pro, basic } = await seed();
     const endDate = new Date(Date.now() + 10 * 86400000);

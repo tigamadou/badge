@@ -11,6 +11,7 @@ import {
   retrieveTransaction,
 } from "@/lib/fedapay";
 import {
+  coversFor,
   isRunning,
   loadProrataCredit,
   planChangeFor,
@@ -413,6 +414,9 @@ const CONFIRMABLE: PaymentStatus[] = ["PENDING", "EXPIRED"];
 // Commande d'impression : un paiement remplace (CANCELED) peut etre paye ensuite chez FedaPay ; l'argent
 // recu doit laisser une trace (PAID, ou PAYMENT_UNMATCHED + alerte du staff), jamais etre ignore.
 const CONFIRMABLE_PRINT: PaymentStatus[] = [...CONFIRMABLE, "CANCELED"];
+// Abonnement : un PENDING remplace par un autre checkout (CANCELED) peut etre paye ensuite chez
+// FedaPay ; l'argent recu est applique (la garde « CANCELED non approuve = sans effet » reste en amont).
+const CONFIRMABLE_SUBSCRIPTION: PaymentStatus[] = [...CONFIRMABLE, "CANCELED"];
 
 type PaymentRef = {
   id: string;
@@ -532,7 +536,7 @@ export async function confirmPayment(
     include: { plan: { select: PLAN_LITE_SELECT }, printRequest: { select: { id: true } } },
   });
   if (!payment) return null;
-  const confirmable = payment.purpose === "PRINT_REQUEST" ? CONFIRMABLE_PRINT : CONFIRMABLE;
+  const confirmable = payment.purpose === "PRINT_REQUEST" ? CONFIRMABLE_PRINT : CONFIRMABLE_SUBSCRIPTION;
   if (!confirmable.includes(payment.status)) return { status: payment.status, applied: false };
 
   // Règle : SUBSCRIPTION <=> plan seul, PRINT_REQUEST <=> commande seule. Avant tout appel FedaPay.
@@ -569,9 +573,10 @@ export async function confirmPayment(
     return confirmPrintRequestPayment({ ...payment, printRequestId: payment.printRequestId as string }, now);
   }
 
-  const mode = await prisma.$transaction(async (db): Promise<SubscriptionChangeMode | null> => {
+  type Applied = { mode: SubscriptionChangeMode; drift: { frozen: number; current: number } | null };
+  const applied = await prisma.$transaction(async (db): Promise<Applied | null> => {
     const { count } = await db.payment.updateMany({
-      where: { id: payment.id, status: { in: CONFIRMABLE } },
+      where: { id: payment.id, status: { in: CONFIRMABLE_SUBSCRIPTION } },
       data: { status: "APPROVED", approvedAt: now },
     });
     if (count !== 1) return null;
@@ -582,7 +587,17 @@ export async function confirmPayment(
       where: { orgId: payment.orgId },
       include: { plan: { select: PLAN_LITE_SELECT } },
     });
-    const change = planChangeFor(current, { ...plan, price: payment.amount }, now);
+    // Comparaison sur le prix plein : le montant paye est reduit du credit en cas de montee en gamme.
+    const planLite: PlanLite = { ...plan, price: payment.listPrice ?? payment.amount };
+    const change = planChangeFor(current, planLite, now);
+
+    // Le paiement est applique au montant fige ; un credit different a la confirmation est trace.
+    let drift: Applied["drift"] = null;
+    if (change.mode === "IMMEDIATE" && current && isRunning(current, now) && payment.listPrice !== null) {
+      const frozen = payment.prorataCredit ?? 0;
+      const recomputed = Math.min(await loadProrataCredit(db, payment.orgId, current.planId, now), payment.listPrice);
+      if (recomputed !== frozen) drift = { frozen, current: recomputed };
+    }
 
     if (change.mode === "IMMEDIATE") {
       await db.subscription.upsert({
@@ -593,26 +608,44 @@ export async function confirmPayment(
     } else {
       await db.subscription.update({ where: { orgId: payment.orgId }, data: change.data });
     }
-    await db.payment.update({ where: { id: payment.id }, data: { mode: change.mode } });
-    return change.mode;
+    await db.payment.update({
+      where: { id: payment.id },
+      data: { mode: change.mode, ...coversFor(change, current, planLite) },
+    });
+    return { mode: change.mode, drift };
   });
 
-  if (mode === null) return { status: "APPROVED", applied: false };
+  if (applied === null) return { status: "APPROVED", applied: false };
+  const { mode, drift } = applied;
 
   try {
+    const money = {
+      listPrice: payment.listPrice,
+      prorataCredit: payment.prorataCredit,
+      ...(drift ? { creditDrift: drift } : {}),
+    };
     await logActivity({
       type: "PAYMENT_APPROVED",
       userId: payment.userId ?? undefined,
       orgId: payment.orgId,
       targetId: payment.id,
-      details: { paymentId: payment.id, mode },
+      details: { paymentId: payment.id, mode, ...money },
     });
     await logActivity({
       type: "SUBSCRIPTION_UPDATED",
       userId: payment.userId ?? undefined,
       orgId: payment.orgId,
-      details: { source: "payment", paymentId: payment.id },
+      details: { source: "payment", paymentId: payment.id, ...money },
     });
+    if (drift) {
+      await logActivity({
+        type: "PAYMENT_PRORATA_MISMATCH",
+        userId: payment.userId ?? undefined,
+        orgId: payment.orgId,
+        targetId: payment.id,
+        details: drift,
+      });
+    }
     await notifySubscriptionChanged(payment.orgId, null);
   } catch (error) {
     console.error("[payment] journal/notification apres paiement en echec", error);

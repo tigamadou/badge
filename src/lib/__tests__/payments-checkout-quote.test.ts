@@ -106,12 +106,11 @@ describe("startCheckout : devis", () => {
   });
 
   it("refuse un second changement programmé", async () => {
-    const { user, org, pro, basic, sub } = await setup({ current: "pro", endInDays: 15 });
+    const { user, org, basic, sub } = await setup({ current: "pro", endInDays: 15 });
     await prisma.subscription.update({ where: { id: sub!.id }, data: { scheduledPlanId: basic.id } });
     await expect(startCheckout({ orgId: org.id, planId: basic.id, userId: user.id })).rejects.toMatchObject({
       code: "CHANGE_ALREADY_SCHEDULED",
     });
-    expect(pro.id).toBeTruthy();
   });
 
   it("période offerte par le staff : aucun crédit", async () => {
@@ -218,7 +217,7 @@ describe("startCheckout : devis", () => {
     await makeBillingPayment({
       orgId: org.id, planId: pro.id, amount: 15000, status: "PENDING", fedapayTransactionId: 778,
     });
-    fetchMock.mockImplementation(async (_url: string) =>
+    fetchMock.mockImplementation(async () =>
       new Response(JSON.stringify({ "v1/transaction": { id: 778, reference: "trx_778", amount: 15000, status: "approved", currency: { iso: "XOF" } } })),
     );
     await expect(startCheckout({ orgId: org.id, planId: pro.id, userId: user.id })).rejects.toMatchObject({
