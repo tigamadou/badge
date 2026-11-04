@@ -196,7 +196,7 @@ export function PrintThread({
                         href={`/api/files/${entry.attachmentKey}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 flex items-center gap-1.5 text-[13px] font-normal text-green-700 hover:underline"
+                        className="mt-1 flex items-center gap-1.5 text-[13px] font-normal text-navy hover:underline"
                       >
                         <Icon name="file" size={14} />
                         <span className="break-all">{attachmentName(entry.attachmentKey)}</span>
@@ -229,7 +229,7 @@ export function PrintThread({
             maxLength={5000}
             rows={3}
             placeholder={placeholder}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy"
           />
           {attachment ? (
             <div className="flex items-center gap-2 text-[13px] text-slate-600">

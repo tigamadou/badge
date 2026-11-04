@@ -100,7 +100,7 @@ export default async function OrgDetailPage({
           action={
             <Link
               href={`/platform/organizations/${org.id}/subscription`}
-              className="text-[13px] font-medium text-green-600 hover:underline"
+              className="text-[13px] font-medium text-navy hover:underline"
             >
               Gérer
             </Link>

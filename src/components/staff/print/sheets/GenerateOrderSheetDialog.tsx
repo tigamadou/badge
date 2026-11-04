@@ -97,7 +97,7 @@ export function GenerateOrderSheetDialog({
           <p className="text-sm text-slate-400">Aucun gabarit : créez-en un dans « Gabarits » avant de générer.</p>
         )}
         {regenerate && (
-          <p className="text-sm text-amber-700">La planche actuelle sera remplacée.</p>
+          <p className="text-sm text-warn">La planche actuelle sera remplacée.</p>
         )}
         {spec && <SheetPreview spec={spec} badgeMm={badgeMm} badgeCount={row.badgeCount} drawingClassName="h-auto w-full max-w-xs" />}
       </div>

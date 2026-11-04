@@ -202,7 +202,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
                   <button
                     type="button"
                     onClick={() => pick(r.id)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-mist"
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-slate-900">
@@ -260,7 +260,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
                 </div>
               )}
               {pdfUrl ? (
-                <a href={pdfUrl} target="_blank" rel="noreferrer" className="block text-[13px] font-medium text-green-700 hover:underline">
+                <a href={pdfUrl} target="_blank" rel="noreferrer" className="block text-[13px] font-medium text-navy hover:underline">
                   Ouvrir le PDF
                 </a>
               ) : null}

@@ -9,7 +9,7 @@ export function ProductGallery({ images }: { images: CatalogProduct["images"] })
   const current = images[index];
   return (
     <div>
-      <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-slate-400">
+      <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl bg-mist text-slate-400">
         {current ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/files/${current.storageKey}`} alt={current.alt} className="h-full w-full object-cover" />
@@ -27,7 +27,7 @@ export function ProductGallery({ images }: { images: CatalogProduct["images"] })
               aria-pressed={i === index}
               onClick={() => setIndex(i)}
               className={`h-14 w-14 overflow-hidden rounded-lg border-2 ${
-                i === index ? "border-green-600" : "border-transparent"
+                i === index ? "border-navy" : "border-transparent"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

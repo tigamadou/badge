@@ -40,7 +40,7 @@ export default async function PrintSheetsPage({
   return (
     <>
       {!generable && (
-        <p role="alert" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p role="alert" className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
           Les planches ne peuvent être générées que pour une commande payée, en production ou prête.
         </p>
       )}

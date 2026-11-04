@@ -35,16 +35,16 @@ export function useBadgeWitness(templates: TemplateOption[]): BadgeWitness {
 const TONE = {
   light: {
     label: "text-slate-700",
-    field: "border-slate-300 bg-white text-slate-900 focus:ring-green-500",
+    field: "border-slate-300 bg-white text-slate-900 focus:ring-navy",
     hint: "text-slate-500",
-    duplex: "bg-green-100 text-green-700",
+    duplex: "bg-turquoise-soft text-turquoise-strong",
     single: "bg-slate-100 text-slate-600",
   },
   dark: {
     label: "text-white/70",
-    field: "border-white/15 bg-white/5 text-white focus:ring-green-400 [&>option]:text-slate-900",
+    field: "border-white/15 bg-white/5 text-white focus:ring-gold [&>option]:text-slate-900",
     hint: "text-white/50",
-    duplex: "bg-green-400/15 text-green-300",
+    duplex: "bg-turquoise/15 text-turquoise",
     single: "bg-white/10 text-white/70",
   },
 };

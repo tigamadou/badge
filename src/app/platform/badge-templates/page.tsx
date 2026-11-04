@@ -73,7 +73,7 @@ export default async function PlatformBadgeTemplatesPage({
           <ul className="divide-y divide-slate-100">
             {templates.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-slate-50">
+                <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-mist">
                   <TemplatePreview src={templateImageUrl(t, "preview")} label={t.label} />
                 </div>
                 <div className="min-w-[220px] flex-1">
@@ -109,7 +109,7 @@ export default async function PlatformBadgeTemplatesPage({
                     <Icon name="archive" size={13} /> Archivé
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-turquoise-soft px-2.5 py-1 text-xs text-turquoise-strong">
                     <Icon name="check" size={13} /> Disponible
                   </span>
                 )}

@@ -43,7 +43,7 @@ export default async function OrgActivitySupervisionPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
               <th className="px-4 py-3">Auteur</th>
@@ -68,7 +68,7 @@ export default async function OrgActivitySupervisionPage({
                 </td>
                 <td className="px-4 py-3 text-[13px] text-slate-600">
                   {a.user?.email ?? "—"}
-                  {a.staffActor && <span className="ml-1 text-[11px] text-amber-600">(staff)</span>}
+                  {a.staffActor && <span className="ml-1 text-[11px] text-warn">(staff)</span>}
                 </td>
                 <td className="px-4 py-3 text-xs text-slate-400">
                   {a.eventId && <div>event : {a.eventId}</div>}

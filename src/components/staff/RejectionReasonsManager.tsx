@@ -186,7 +186,7 @@ export function RejectionReasonsManager({
                     <button
                       onClick={() => openEdit(r)}
                       disabled={busy}
-                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                      className="rounded-lg border border-slate-300 px-3 py-1 text-xs hover:bg-mist disabled:opacity-50"
                     >
                       Modifier
                     </button>

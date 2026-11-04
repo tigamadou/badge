@@ -13,7 +13,7 @@ export function RelatedRequestLinks({
   hrefOf: (requestId: string) => string;
 }) {
   if (!parent && supplements.length === 0) return null;
-  const cls = "font-medium text-green-700 hover:underline";
+  const cls = "font-medium text-navy hover:underline";
   return (
     <ul className="space-y-1 text-sm">
       {parent ? (

@@ -19,5 +19,11 @@ describe("entryTone", () => {
   it("expose une classe par ton", () => {
     expect(Object.keys(toneClasses).sort()).toEqual(["client", "event", "internal", "quote", "staff"]);
     expect(toneClasses.client).toContain("bg-slate-100");
+    expect(toneClasses.staff).toContain("bg-turquoise-soft");
+    expect(toneClasses.staff).toContain("ring-turquoise-strong/20");
+    expect(toneClasses.quote).toContain("bg-mist");
+    expect(toneClasses.quote).toContain("ring-line");
+    expect(toneClasses.internal).toContain("bg-gold-soft");
+    expect(toneClasses.internal).toContain("text-gold-strong");
   });
 });

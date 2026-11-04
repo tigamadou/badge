@@ -77,8 +77,8 @@ export default async function PlatformProfilesPage({
             href={`/platform/profiles?status=${t.value}${q ? `&q=${encodeURIComponent(q)}` : ""}&pageSize=${result.pageSize}`}
             className={`rounded-lg px-3.5 py-2 text-[13px] font-medium ${
               activeStatus === t.value
-                ? "bg-green-600 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-navy text-white"
+                : "bg-mist text-slate-700 hover:bg-slate-200"
             }`}
           >
             {t.label}
@@ -102,7 +102,7 @@ export default async function PlatformProfilesPage({
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded-lg bg-mist px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>
@@ -111,7 +111,7 @@ export default async function PlatformProfilesPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3">E-mail</th>
               <th className="px-4 py-3">Pièce</th>
@@ -128,11 +128,11 @@ export default async function PlatformProfilesPage({
               </tr>
             )}
             {users.map((u) => (
-              <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={u.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3">
                   <Link
                     href={`/platform/profiles/${u.id}`}
-                    className="text-sm font-medium text-slate-900 hover:text-green-600"
+                    className="text-sm font-medium text-slate-900 hover:text-navy"
                   >
                     {u.firstName} {u.lastName}
                   </Link>
@@ -149,7 +149,7 @@ export default async function PlatformProfilesPage({
                   <Link
                     href={`/platform/profiles/${u.id}`}
                     aria-label={`Ouvrir ${u.firstName} ${u.lastName}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                   >
                     <Icon name="chevron-right" size={16} />
                   </Link>

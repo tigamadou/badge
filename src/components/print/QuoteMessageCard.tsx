@@ -27,7 +27,7 @@ export function QuoteMessageCard({
         {lines ? (
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-indigo-700">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-navy">
                 <th className="px-2 py-1.5">Ligne</th>
                 <th className="px-2 py-1.5 text-right">Quantité</th>
                 <th className="px-2 py-1.5 text-right">Prix unitaire</th>
@@ -36,7 +36,7 @@ export function QuoteMessageCard({
             </thead>
             <tbody>
               {lines.map((line, i) => (
-                <tr key={i} className="border-t border-indigo-100">
+                <tr key={i} className="border-t border-line">
                   <td className="px-2 py-1.5 break-words">{line.label}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{line.quantity}</td>
                   <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">{formatFcfa(line.unitPrice)}</td>
@@ -48,7 +48,7 @@ export function QuoteMessageCard({
         ) : (
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-indigo-700">
+              <tr className="text-left text-[11px] uppercase tracking-wider text-navy">
                 <th className="px-2 py-1.5">Ligne</th>
                 <th className="px-2 py-1.5">Évolution</th>
               </tr>
@@ -57,7 +57,7 @@ export function QuoteMessageCard({
               {rows.map((row, i) => {
                 const [label, ...rest] = row.split(" : ");
                 return (
-                  <tr key={i} className="border-t border-indigo-100">
+                  <tr key={i} className="border-t border-line">
                     <td className="px-2 py-1.5 break-words">{rest.length ? label : "—"}</td>
                     <td className="px-2 py-1.5 break-words">{rest.length ? rest.join(" : ") : row}</td>
                   </tr>

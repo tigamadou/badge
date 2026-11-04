@@ -77,7 +77,7 @@ export function UserDetailActions({
             <select
               value={staffRole}
               onChange={(e) => setStaffRole(e.target.value as StaffRoleStr)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-navy"
             >
               <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
               <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>

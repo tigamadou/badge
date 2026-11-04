@@ -15,7 +15,7 @@ export function ProductCard({
   const image = product.images[0];
   const content = (
     <>
-      <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-t-xl bg-slate-100 text-slate-400">
+      <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-t-xl bg-mist text-slate-400">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/files/${image.storageKey}`} alt={image.alt} className="h-full w-full object-cover" />
@@ -40,8 +40,8 @@ export function ProductCard({
       type="button"
       aria-pressed={!!selected}
       onClick={onSelect}
-      className={`${base} transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 ${
-        selected ? "border-green-600 ring-2 ring-green-600" : "border-slate-200 hover:border-green-600"
+      className={`${base} transition-colors focus:outline-none focus:ring-2 focus:ring-navy ${
+        selected ? "border-navy ring-2 ring-navy" : "border-slate-200 hover:border-navy"
       }`}
     >
       {content}

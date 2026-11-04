@@ -248,7 +248,7 @@ export function GenerationForm({
                 <div>
                   <SearchInput value={search} onChange={setSearch} placeholder="Rechercher un nom ou un identifiant" />
                   {eventDetail?.truncated && (
-                    <p className="mb-2 text-sm text-amber-700">
+                    <p className="mb-2 text-sm text-warn">
                       Liste limitée aux 5 000 premières inscriptions : utilisez « Tous les approuvés » ou « Par
                       catégorie » pour imprimer les autres.
                     </p>
@@ -258,7 +258,7 @@ export function GenerationForm({
                       <Button
                         type="button"
                         variant="link"
-                        className="text-green-600"
+                        className="text-navy"
                         onClick={() =>
                           setRegistrationIds((l) => [...new Set([...l, ...filtered.map((r) => r.id)])])
                         }

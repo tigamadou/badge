@@ -4,13 +4,13 @@ import { PRINT_REQUEST_STATUS_LABELS } from "@/lib/print-requests/labels";
 // Tons par statut ; mêmes classes que StatusBadge / GenerationList.
 const TONE: Record<PrintRequestStatus, string> = {
   DRAFT: "bg-slate-100 text-slate-600",
-  SUBMITTED: "bg-amber-50 text-amber-700",
-  QUOTED: "bg-sky-50 text-sky-700",
-  ACCEPTED: "bg-blue-50 text-blue-700",
-  PAID: "bg-emerald-50 text-emerald-700",
-  IN_PRODUCTION: "bg-indigo-50 text-indigo-700",
-  READY: "bg-teal-50 text-teal-700",
-  COMPLETED: "bg-emerald-100 text-emerald-800",
+  SUBMITTED: "bg-gold-soft text-gold-strong",
+  QUOTED: "bg-mist text-navy",
+  ACCEPTED: "bg-mist text-navy",
+  PAID: "bg-turquoise-soft text-turquoise-strong",
+  IN_PRODUCTION: "bg-mist text-navy",
+  READY: "bg-turquoise-soft text-turquoise-strong",
+  COMPLETED: "bg-turquoise-soft text-turquoise-strong",
   REJECTED: "bg-rose-50 text-rose-700",
   CANCELLED: "bg-slate-100 text-slate-500",
 };

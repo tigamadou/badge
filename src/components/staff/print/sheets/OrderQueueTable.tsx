@@ -15,9 +15,9 @@ import { mergeRows } from "@/components/staff/print/sheets/merge-rows";
 export const ORDER_REFRESH_INTERVAL_MS = 5000;
 
 const SHEET_STATE = {
-  PENDING: { label: "En attente", className: "bg-amber-50 text-amber-700" },
-  RUNNING: { label: "En cours", className: "bg-sky-50 text-sky-700" },
-  DONE: { label: "Prête", className: "bg-emerald-50 text-emerald-700" },
+  PENDING: { label: "En attente", className: "bg-gold-soft text-gold-strong" },
+  RUNNING: { label: "En cours", className: "bg-mist text-navy" },
+  DONE: { label: "Prête", className: "bg-turquoise-soft text-turquoise-strong" },
   FAILED: { label: "Échec", className: "bg-rose-50 text-rose-700" },
 } as const;
 
@@ -82,7 +82,7 @@ export function OrderQueueTable({
       key: "reference",
       header: "Commande",
       render: (r: OrderQueueRow) => (
-        <Link href={`/platform/print/orders/${r.requestId}`} className="font-medium text-green-700 hover:underline">
+        <Link href={`/platform/print/orders/${r.requestId}`} className="font-medium text-navy hover:underline">
           {r.reference}
         </Link>
       ),
@@ -130,11 +130,11 @@ export function OrderQueueTable({
                   <a
                     href={r.sheet.downloadUrl}
                     download={`planche-${r.reference}.pdf`}
-                    className="text-[13px] font-medium text-green-600 hover:underline"
+                    className="text-[13px] font-medium text-navy hover:underline"
                   >
                     Télécharger
                   </a>
-                  <Button type="button" variant="link" className="text-green-600" onClick={() => setPreview(r)}>
+                  <Button type="button" variant="link" className="text-navy" onClick={() => setPreview(r)}>
                     Voir
                   </Button>
                 </>

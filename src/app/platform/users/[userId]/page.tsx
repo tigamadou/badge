@@ -112,7 +112,7 @@ export default async function UserDetailPage({
           ) : (
             user.orgMemberships.map((m) => (
               <div key={m.organization.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                <Link href={`/platform/organizations/${m.organization.id}`} className="text-slate-900 hover:text-green-600">
+                <Link href={`/platform/organizations/${m.organization.id}`} className="text-slate-900 hover:text-navy">
                   {m.organization.name}
                   {m.organization.archived && <span className="ml-2 text-xs text-slate-400">(archivée)</span>}
                 </Link>

@@ -2,7 +2,7 @@ import { Alert } from "@/components/ui/Feedback";
 import { counterView, type CounterTone } from "@/lib/print-requests/onsite-station-view";
 import type { OnsiteCounter } from "@/lib/print-requests/onsite-counter";
 
-const BAR: Record<CounterTone, string> = { ok: "bg-green-600", warn: "bg-amber-500", err: "bg-rose-600" };
+const BAR: Record<CounterTone, string> = { ok: "bg-turquoise", warn: "bg-warn", err: "bg-rose-600" };
 
 // Compteur de l'impression sur place : commandé, imprimé, plafond. Partagé staff / organisateur.
 export function OnsiteCounterCard({ counter }: { counter: OnsiteCounter }) {
@@ -15,7 +15,7 @@ export function OnsiteCounterCard({ counter }: { counter: OnsiteCounter }) {
           Plafond {counter.cap} · marge {counter.marginPercent} %
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+      <div className="h-2 overflow-hidden rounded-full bg-mist">
         <div className={`h-full rounded-full ${BAR[tone]}`} style={{ width: `${pct}%` }} />
       </div>
       {notice ? <Alert tone={tone === "err" ? "err" : "warn"}>{notice}</Alert> : null}

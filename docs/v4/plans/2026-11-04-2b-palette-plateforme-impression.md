@@ -29,16 +29,16 @@ logique modifiée.
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Vérifier le socle et fixer la table de correspondance | [ ] | | |
-| 2 | Statuts et tons d'impression (`PrintRequestStatusBadge`, `entry-tone`, `JobStatusBadge`) | [ ] | | |
-| 3 | Composants `src/components/print/**` (hors statuts) | [ ] | | |
-| 4 | `src/components/notifications/**` | [ ] | | |
-| 5 | Pages `src/app/platform/**` | [ ] | | |
-| 6 | Composants staff hors `print/` | [ ] | | |
-| 7 | Staff `print/` — listes, éditeurs, catalogue | [ ] | | |
-| 8 | Staff `print/` — gabarits, planches, commande, sur place | [ ] | | |
-| 9 | Passe de contrôle (grep) et tests existants | [ ] | | |
-| 10 | e2e, contrôle visuel, vérification | [ ] | | |
+| 1 | Vérifier le socle et fixer la table de correspondance | [x] | 2026-11-04 | 68 fichiers a migrer (mesure initiale), socle present |
+| 2 | Statuts et tons d'impression (`PrintRequestStatusBadge`, `entry-tone`, `JobStatusBadge`) | [x] | 2026-11-04 | ton interne (amber) classe or ; statuts reclasses par sens |
+| 3 | Composants `src/components/print/**` (hors statuts) | [x] | 2026-11-04 | compteur: barre ok turquoise, warn bg-warn |
+| 4 | `src/components/notifications/**` | [x] | 2026-11-04 | cloche sur fond blanc : ring navy |
+| 5 | Pages `src/app/platform/**` | [x] | 2026-11-04 | progression dashboard en marine ; pastilles neutres slate-100 conservees |
+| 6 | Composants staff hors `print/` | [x] | 2026-11-04 | classes mist/navy uniquement |
+| 7 | Staff `print/` — listes, éditeurs, catalogue | [x] | 2026-11-04 | Brouillon (catalogue, produit) = or (attente de publication) ; pastille Archive neutre conservee. Appliques aussi en bloc: OnsiteStation, OrderSheetPanel, OnsiteRequestPanel, OrderComposer/Conversation, OrderQueueTable, GenerationForm/List (task 8) |
+| 8 | Staff `print/` — gabarits, planches, commande, sur place | [x] | 2026-11-04 | LayoutEditor: legende de l'aside (sky-400/green-600) conservee car alignee sur SheetPreview (exclu, lecture seule) ; diagramme des marges en marine |
+| 9 | Passe de contrôle (grep) et tests existants | [x] | 2026-11-04 | grep residuel: SheetPreview (amber-300) et legende LayoutEditor (sky-400, green-600/100) seulement ; pastilles neutres slate-100 conservees |
+| 10 | e2e, contrôle visuel, vérification | [x] | 2026-11-04 | typecheck, lint et 27 fichiers de tests cibles verts ; e2e non lances (consigne) ; pastilles hex du formulaire de creation de compte migrees ; PlatformOrgMemberInviteForm deja migre |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task
 validée : statut `[x]` + date ; en cas d'interruption : `[~]`, date et état précis (step en

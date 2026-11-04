@@ -39,7 +39,7 @@ function Section({
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5">
       <div className="mb-4 flex items-start gap-3">
-        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-green-50 text-green-700">
+        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-turquoise-soft text-turquoise-strong">
           <Icon name={icon} size={16} />
         </span>
         <div>
@@ -86,13 +86,13 @@ function Tiles<V extends string>({
               onClick={() => onChange(o.value)}
               className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:cursor-not-allowed ${
                 on
-                  ? "border-green-500 bg-green-50 ring-1 ring-green-500"
-                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 disabled:hover:bg-white"
+                  ? "border-navy bg-mist ring-1 ring-navy"
+                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-mist disabled:hover:bg-white"
               }`}
             >
               {o.visual}
               <span className="min-w-0">
-                <span className={`block text-sm font-medium ${on ? "text-green-800" : "text-slate-900"}`}>{o.label}</span>
+                <span className={`block text-sm font-medium ${on ? "text-navy" : "text-slate-900"}`}>{o.label}</span>
                 {o.hint && <span className="block whitespace-nowrap text-xs text-slate-500">{o.hint}</span>}
               </span>
             </button>
@@ -109,7 +109,7 @@ function Paper({ w, h, on }: { w: number; h: number; on?: boolean }) {
   return (
     <span className="flex h-8 w-8 flex-none items-center justify-center">
       <span
-        className={`block rounded-[2px] border ${on ? "border-green-600 bg-white" : "border-slate-400 bg-white"}`}
+        className={`block rounded-[2px] border ${on ? "border-navy bg-white" : "border-slate-400 bg-white"}`}
         style={{ width: Math.round(w * s), height: Math.round(h * s) }}
       />
     </span>
@@ -145,7 +145,7 @@ function MmInput({
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm tabular-nums focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-slate-50 disabled:text-slate-500"
+          className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm tabular-nums focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy disabled:bg-mist disabled:text-slate-500"
         />
         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">mm</span>
       </span>
@@ -268,7 +268,7 @@ export function LayoutEditor({
               Archiver
             </ActionButton>
           )}
-          <Link href={LIST_HREF} className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200">
+          <Link href={LIST_HREF} className="rounded-lg bg-mist px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200">
             {canWrite ? "Annuler" : "Retour"}
           </Link>
           {canWrite && (
@@ -293,7 +293,7 @@ export function LayoutEditor({
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Aperçu en direct</h2>
             <span className="flex items-center gap-1.5 text-xs text-white/50">
-              <span className="h-2 w-2 rounded-full bg-green-400" /> Mis à jour à chaque saisie
+              <span className="h-2 w-2 rounded-full bg-turquoise" /> Mis à jour à chaque saisie
             </span>
           </div>
           <BadgeWitnessPicker witness={witness} templates={templates} tone="dark" />
@@ -383,13 +383,13 @@ export function LayoutEditor({
           </Section>
 
           <Section icon="sliders" title="Marges et espacements" hint="Distances au bord de la feuille et entre les badges.">
-            <div className="mb-4 rounded-xl bg-slate-50 p-4">
+            <div className="mb-4 rounded-xl bg-mist p-4">
               <div className="mx-auto grid max-w-md grid-cols-[1fr_minmax(0,1.2fr)_1fr] items-center gap-3">
                 <span />
                 <MmInput label={MARGINS[0].label} shortLabel={MARGINS[0].short} value={form.marginTop} disabled={readOnly} onChange={(v) => setMargin("marginTop", v)} />
                 <span />
                 <MmInput label={MARGINS[3].label} shortLabel={MARGINS[3].short} value={form.marginLeft} disabled={readOnly} onChange={(v) => setMargin("marginLeft", v)} />
-                <div className="flex aspect-[3/4] items-center justify-center rounded-md border-2 border-dashed border-sky-400 bg-white text-center text-xs font-medium text-sky-600">
+                <div className="flex aspect-[3/4] items-center justify-center rounded-md border-2 border-dashed border-navy bg-white text-center text-xs font-medium text-navy">
                   Zone
                   <br />
                   utile
