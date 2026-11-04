@@ -40,7 +40,7 @@ composant `ImageCropper` (ratio en paramètre) sert logo, bannière et photo.
 | 10 | Interface photo : compte, inscription, règles de la photo d'identité | [x] | 2026-11-04 | hook useCropFlow dans ImageCropper.tsx (envoi direct si conforme, WebP toujours cadre) |
 | 11 | Seed démo et fixtures e2e conformes | [x] | 2026-11-04 |  |
 | 12 | e2e Playwright et contrôle 375 / 1024 / 1280 px | [x] | 2026-11-04 | e2e ecrits ; verification sous forte charge, voir rapport |
-| 13 | e2e, doc, vérification | [x] | 2026-11-04 | docs, verification complete |
+| 13 | e2e, doc, vérification | [~] | 2026-11-04 | docs faites ; e2e du lot verts ; lint 0 erreur, typecheck OK ; make test-coverage non conclusif (runs parasites sur la stack) ; triggers-profiles.test.ts (hors liste) a corriger : voir rapport |
 
 ## Décisions du lot (à journaliser dans la spec en fin de lot)
 
