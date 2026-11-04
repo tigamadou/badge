@@ -409,13 +409,24 @@ describe("fil côté organisateur : détails filtrés (liste blanche)", () => {
     expect(organizer[0].body).toBe(`Ligne ajoutée : Cordon (100 × ${formatFcfa(450)})`);
   });
 
+  it("QUOTE_SENT avec des lignes illisibles n'expose aucune ligne", async () => {
+    const { request } = await seed();
+    const { organizer } = await entries(request, [{ eventType: "QUOTE_SENT", details: { version: 1, total: 0, lines: "x" } }]);
+    expect((organizer[0].details as { lines: unknown }).lines).toEqual([]);
+  });
+
   it("QUOTE_SENT garde le tableau des lignes pour l'organisateur", async () => {
     const { request } = await seed();
     const lines = [{ id: "l1", label: "Badge PVC", quantity: 100, unitPrice: 450 }];
     const { organizer, staff } = await entries(request, [
       { eventType: "QUOTE_SENT", details: { version: 2, total: 45000, lines, paymentId: "pay_1" } },
     ]);
-    expect(organizer[0].details).toEqual({ version: 2, total: 45000, lines });
+    expect(organizer[0].details).toEqual({
+      version: 2,
+      total: 45000,
+      lines: [{ label: "Badge PVC", quantity: 100, unitPrice: 450 }],
+    });
+    expect(JSON.stringify(organizer)).not.toContain('"l1"');
     expect(JSON.stringify(organizer)).not.toContain("pay_1");
     expect(staff[0].details).toMatchObject({ lines });
   });
