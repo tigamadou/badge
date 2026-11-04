@@ -37,7 +37,7 @@ ci-dessous en cas d'écart de signature : le signaler dans la progression).
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Fabriques de lot + règles pures de devis (prorata, fenêtre 7 j, périodes couvertes) | [ ] | | |
+| 1 | Fabriques de lot + règles pures de devis (prorata, fenêtre 7 j, périodes couvertes) | [x] | 2026-11-04 |  |
 | 2 | Extraire la résolution d'un paiement PENDING candidat (sans changement de comportement) | [ ] | | |
 | 3 | `startCheckout` : devis, garde PENDING, montée en gamme malgré un plan programmé | [ ] | | |
 | 4 | `confirmPayment` : montant figé, `coversFrom/To`, écart de crédit, paiement tardif | [ ] | | |

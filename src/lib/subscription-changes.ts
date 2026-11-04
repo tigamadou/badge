@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { notifySubscriptionChanged } from "@/lib/notifications/triggers";
 import { PERIOD_DAYS, computeSubscriptionDates } from "@/lib/subscription";
-import type { SubscriptionPeriod, SubscriptionStatus } from "@prisma/client";
+import type { Prisma, SubscriptionChangeMode, SubscriptionPeriod, SubscriptionStatus } from "@prisma/client";
 
 export type PlanLite = {
   id: string;
@@ -171,4 +171,112 @@ export async function settleSubscription(
     scheduled = null;
   }
   return applied;
+}
+
+// ---------------------------------------------------------------------------
+// Devis de changement de plan (prorata, fenetre de renouvellement, periodes couvertes)
+// ---------------------------------------------------------------------------
+
+export const RENEWAL_WINDOW_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export type CoveredPayment = { amount: number; coversFrom: Date | null; coversTo: Date | null };
+
+// Credit restant : somme, par paiement, de amount x restant / duree (plancher par paiement).
+// Calcul en BigInt : un gros montant x une annee en ms depasse 2^53.
+export function computeProrataCredit(payments: CoveredPayment[], now: Date): number {
+  let total = 0n;
+  for (const p of payments) {
+    if (!p.coversFrom || !p.coversTo || p.coversTo <= now) continue;
+    const duration = p.coversTo.getTime() - p.coversFrom.getTime();
+    if (duration <= 0) continue;
+    const remaining = p.coversTo.getTime() - Math.max(now.getTime(), p.coversFrom.getTime());
+    total += (BigInt(p.amount) * BigInt(remaining)) / BigInt(duration);
+  }
+  return Number(total);
+}
+
+// Credit des paiements d'abonnement approuves du plan courant dont la periode n'est pas echue.
+export async function loadProrataCredit(
+  db: Pick<Prisma.TransactionClient, "payment">,
+  orgId: string,
+  planId: string,
+  now: Date,
+): Promise<number> {
+  const payments = await db.payment.findMany({
+    where: {
+      orgId,
+      planId,
+      purpose: "SUBSCRIPTION",
+      status: "APPROVED",
+      coversTo: { gt: now },
+    },
+    select: { amount: true, coversFrom: true, coversTo: true },
+  });
+  return computeProrataCredit(payments, now);
+}
+
+export type CheckoutQuote =
+  | {
+      allowed: true;
+      mode: SubscriptionChangeMode;
+      listPrice: number;
+      credit: number;
+      amount: number;
+      daysLeft: number | null;
+    }
+  | { allowed: false; reason: "ALREADY_ACTIVE"; activeUntil: Date | null; renewableFrom: Date | null };
+
+// Devis a la creation d'un paiement : applique le blocage du meme plan (hors fenetre des
+// 7 derniers jours) et le prorata d'une montee en gamme. La confirmation, elle, n'applique
+// jamais ce blocage : l'argent recu est toujours applique (planChangeFor).
+export function quoteChange(
+  current: SubscriptionState | null,
+  target: PlanLite,
+  now: Date,
+  credit: number,
+): CheckoutQuote {
+  const listPrice = target.price ?? 0;
+  const running = current !== null && isRunning(current, now);
+
+  if (current && running && current.planId === target.id && current.endDate === null) {
+    return { allowed: false, reason: "ALREADY_ACTIVE", activeUntil: null, renewableFrom: null };
+  }
+
+  const change = planChangeFor(current, target, now);
+
+  if (change.mode === "EXTENSION" && current?.endDate) {
+    const renewableFrom = new Date(current.endDate.getTime() - RENEWAL_WINDOW_DAYS * DAY_MS);
+    if (now < renewableFrom) {
+      return { allowed: false, reason: "ALREADY_ACTIVE", activeUntil: current.endDate, renewableFrom };
+    }
+  }
+
+  if (change.mode === "IMMEDIATE" && running) {
+    const applied = Math.min(credit, listPrice);
+    const daysLeft = current.endDate
+      ? Math.max(0, Math.ceil((current.endDate.getTime() - now.getTime()) / DAY_MS))
+      : null;
+    return { allowed: true, mode: "IMMEDIATE", listPrice, credit: applied, amount: listPrice - applied, daysLeft };
+  }
+
+  return { allowed: true, mode: change.mode, listPrice, credit: 0, amount: listPrice, daysLeft: null };
+}
+
+// Periode achetee par un paiement, selon le changement applique.
+export function coversFor(
+  change: PlanChange,
+  current: SubscriptionState | null,
+  target: PlanLite,
+): { coversFrom: Date; coversTo: Date } {
+  if (change.mode === "IMMEDIATE") {
+    return { coversFrom: change.data.startDate, coversTo: change.data.endDate as Date };
+  }
+  if (change.mode === "EXTENSION") {
+    return { coversFrom: current!.endDate as Date, coversTo: change.data.endDate };
+  }
+  const coversFrom = current!.endDate as Date;
+  const coversTo = new Date(coversFrom);
+  coversTo.setUTCDate(coversTo.getUTCDate() + PERIOD_DAYS[target.period]);
+  return { coversFrom, coversTo };
 }
