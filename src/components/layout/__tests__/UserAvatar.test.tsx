@@ -53,6 +53,13 @@ describe("UserAvatar", () => {
     expect(html).toContain('data-testid="user-avatar"');
   });
 
+  it("utilise la palette mist / marine", () => {
+    const html = renderToStaticMarkup(<UserAvatar name="Awa Diallo" />);
+    expect(html).toContain("bg-mist");
+    expect(html).toContain("text-navy");
+    expect(html).not.toContain("bg-slate-200");
+  });
+
   it("nom absent : repli « ? » même sans photo", () => {
     expect(renderToStaticMarkup(<UserAvatar name={null} />)).toContain("?");
   });

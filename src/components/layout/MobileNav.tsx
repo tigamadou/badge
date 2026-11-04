@@ -96,7 +96,7 @@ export function MobileNavToggle() {
       aria-expanded={open}
       aria-controls={PANEL_ID}
       onClick={() => setOpen(true)}
-      className="-ml-1 flex h-10 w-10 flex-none items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 lg:hidden"
+      className="-ml-1 flex h-10 w-10 flex-none items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-mist lg:hidden"
     >
       <Icon name="menu" size={20} />
     </button>
@@ -133,7 +133,7 @@ export function MobileNavPanel({
       <aside
         id={PANEL_ID}
         inert={closed}
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-brand-navy shadow-2xl transition-[transform,visibility] duration-300 ease-out motion-reduce:transition-none lg:visible lg:static lg:z-auto lg:w-56 lg:flex-none lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-line bg-white shadow-2xl transition-[transform,visibility] duration-300 ease-out motion-reduce:transition-none lg:visible lg:static lg:z-auto lg:w-56 lg:flex-none lg:translate-x-0 lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full"
         } ${closed ? "invisible" : ""}`}
       >
@@ -144,7 +144,7 @@ export function MobileNavPanel({
             type="button"
             aria-label="Fermer le menu"
             onClick={() => setOpen(false)}
-            className="-mt-1 mb-1 ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
+            className="-mt-1 mb-1 ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-nav-muted transition-colors hover:bg-mist hover:text-navy lg:hidden"
           >
             <Icon name="x" size={20} />
           </button>
@@ -156,7 +156,7 @@ export function MobileNavPanel({
         </div>
         {/* Pied fixe : la déconnexion reste toujours visible */}
         {footer ? (
-          <div className="flex flex-none flex-col gap-1 border-t border-white/10 px-3 py-3">{footer}</div>
+          <div className="flex flex-none flex-col gap-1 border-t border-line px-3 py-3">{footer}</div>
         ) : null}
       </aside>
     </>

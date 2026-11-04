@@ -38,6 +38,31 @@ describe("AppShell", () => {
     expect(html).toContain("flex h-dvh overflow-hidden");
   });
 
+  it("le menu est clair", () => {
+    const html = render();
+    const aside = /<aside[^>]*class="([^"]*)"/.exec(html)![1];
+    expect(aside).toContain("bg-white");
+    expect(aside).toContain("border-r");
+    expect(aside).toContain("border-line");
+    expect(aside).not.toContain("bg-brand-navy");
+    expect(aside).not.toContain("bg-navy");
+    const main = /<main[^>]*class="([^"]*)"/.exec(html)![1];
+    expect(main).toContain("bg-white");
+    expect(main).not.toContain("bg-slate-50");
+    const close = /<button[^>]*aria-label="Fermer le menu"[^>]*class="([^"]*)"/.exec(html)![1];
+    expect(close).not.toContain("text-slate-300");
+  });
+
+  it("la zone de pied utilise le trait line", () => {
+    const html = renderToStaticMarkup(
+      <AppShell sidebar={<nav>Menu</nav>} sidebarFooter={<span>Pied</span>} header={<span>H</span>}>
+        <p>Contenu</p>
+      </AppShell>,
+    );
+    expect(html).toContain("border-t border-line");
+    expect(html).not.toContain("border-white/10");
+  });
+
   it("rend le bandeau seulement s'il est fourni", () => {
     expect(render()).not.toContain("Mode staff");
     expect(render(<div>Mode staff</div>)).toContain("Mode staff");
