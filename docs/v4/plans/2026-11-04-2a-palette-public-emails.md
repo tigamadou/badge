@@ -78,7 +78,7 @@ badge factice), `rgba(15,23,42,…)` d'ombre. Le garde-fou de la vague 3 ne couv
 |------|----------|--------|------|-------|
 | 1 | Vérifier le contrat du socle, état initial (tests et e2e du lot) | [x] | 2026-11-04 | contrat OK, etat initial vert |
 | 2 | Composants marketing partagés (`src/components/marketing/**`) | [x] | 2026-11-04 |  |
-| 3 | Pages du site public (`src/app/(marketing)/**`) | [ ] | | |
+| 3 | Pages du site public (`src/app/(marketing)/**`) | [x] | 2026-11-04 |  |
 | 4 | Pages publiques d'évènement et de vérification (`public`, `e`, `verify`) | [ ] | | |
 | 5 | Authentification (`auth`, login, register, mots de passe, `select`) | [ ] | | |
 | 6 | E-mails transactionnels `mail.ts` | [ ] | | |

@@ -30,7 +30,7 @@ export default function AProposPage() {
   return (
     <>
       {/* Hero navy */}
-      <section className="bg-brand-navy py-20 text-white">
+      <section className="bg-navy py-20 text-white">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading
             as="h1"
@@ -46,7 +46,7 @@ export default function AProposPage() {
       <section className="py-[88px]">
         <div className="mx-auto grid max-w-[1160px] items-center gap-14 px-7 md:grid-cols-2">
           <div>
-            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-600">Notre mission</p>
+            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-navy">Notre mission</p>
             <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[38px]">
               Un outil, pas un casse-tête
             </h2>
@@ -74,7 +74,7 @@ export default function AProposPage() {
             </div>
             <div className="flex h-[90px] items-end gap-[3px]">
               {CHART.map((h, i) => (
-                <span key={i} className="flex-1 rounded-t-[3px] bg-green-500/85" style={{ height: `${h}%` }} />
+                <span key={i} className="flex-1 rounded-t-[3px] bg-turquoise" style={{ height: `${h}%` }} />
               ))}
             </div>
           </BrowserMock>
@@ -82,13 +82,13 @@ export default function AProposPage() {
       </section>
 
       {/* Values */}
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading center eyebrow="Nos principes" title="Ce qui guide nos décisions" />
           <div className="mt-[52px] grid grid-cols-1 gap-[22px] md:grid-cols-3">
             {VALUES.map((v) => (
               <div key={v.title}>
-                <div className="mb-3.5 flex h-10 w-10 items-center justify-center rounded-[10px] bg-green-500/15 text-green-700">
+                <div className="mb-3.5 flex h-10 w-10 items-center justify-center rounded-[10px] bg-mist text-navy">
                   <Icon name={v.icon} size={20} />
                 </div>
                 <h3 className="mb-2 text-[17px] font-semibold text-slate-900">{v.title}</h3>
@@ -100,7 +100,7 @@ export default function AProposPage() {
       </section>
 
       {/* Metrics (navy) */}
-      <section className="bg-brand-navy py-16 text-white">
+      <section className="bg-navy py-16 text-white">
         <div className="mx-auto max-w-[1160px] px-7">
           <div className="grid grid-cols-2 gap-8 text-center md:grid-cols-4">
             {[
@@ -112,7 +112,7 @@ export default function AProposPage() {
               <div key={l}>
                 <div style={displayFont} className="text-[44px] font-bold tracking-tight">
                   {v}
-                  <span className="text-green-400">{u}</span>
+                  <span className="text-gold">{u}</span>
                 </div>
                 <div className="mt-1.5 text-sm text-white/70">{l}</div>
               </div>
@@ -130,7 +130,7 @@ export default function AProposPage() {
               <div key={m.name} className="text-center">
                 <div
                   style={displayFont}
-                  className="mx-auto mb-3.5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-slate-100 text-2xl font-bold text-brand-navy"
+                  className="mx-auto mb-3.5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-mist text-2xl font-bold text-navy"
                 >
                   {m.av}
                 </div>

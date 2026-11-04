@@ -53,7 +53,7 @@ const FAQ = [
 function Tick({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-3 text-[15px] leading-relaxed text-slate-600">
-      <span className="mt-px flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-green-500/15 text-green-700">
+      <span className="mt-px flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-mist text-navy">
         <Icon name="check" size={13} />
       </span>
       {children}
@@ -71,12 +71,12 @@ export default async function HomePage() {
   return (
     <>
       {/* HERO */}
-      <section className="border-b border-slate-200 bg-slate-50 pb-16 pt-[76px]">
+      <section className="border-b border-line bg-white pb-16 pt-[76px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
             <div>
               <span className="mb-[22px] inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-2 pr-3 text-[13px] font-medium text-slate-600">
-                <b className="rounded-full bg-green-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-green-700">
+                <b className="rounded-full bg-mist px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-navy">
                   Nouveau
                 </b>
                 Scanner QR hors-ligne sur mobile
@@ -130,7 +130,7 @@ export default async function HomePage() {
                       { n: "Léa Moreau", c: "Presse", cc: "#f59e0b", s: "approved" },
                       { n: "Thomas Girard", c: "Visiteur", cc: "#0ea5e9", s: "rejected" },
                     ].map((r) => (
-                      <tr key={r.n} className="border-t border-slate-100">
+                      <tr key={r.n} className="border-t border-line">
                         <td className="py-2">{r.n}</td>
                         <td className="py-2">
                           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-700">
@@ -140,12 +140,12 @@ export default async function HomePage() {
                         </td>
                         <td className="py-2 text-right">
                           {r.s === "approved" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-turquoise-soft px-2 py-0.5 text-xs font-medium text-turquoise-strong">
                               <Icon name="check" size={12} /> Approuvée
                             </span>
                           )}
                           {r.s === "pending" && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-xs font-medium text-gold-strong">
                               <Icon name="clock" size={12} /> En attente
                             </span>
                           )}
@@ -183,7 +183,7 @@ export default async function HomePage() {
               ["MV", "Meetup Ville"],
             ].map(([mk, name]) => (
               <div key={name} className="flex items-center gap-2.5 text-[15px] font-semibold text-slate-400">
-                <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-slate-100 text-[13px] font-bold text-brand-navy">
+                <span className="flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-mist text-[13px] font-bold text-navy">
                   {mk}
                 </span>
                 {name}
@@ -194,7 +194,7 @@ export default async function HomePage() {
       </section>
 
       {/* FEATURES */}
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading
             center
@@ -205,7 +205,7 @@ export default async function HomePage() {
           <div className="mt-[52px] grid grid-cols-1 gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-slate-200 bg-white p-[26px]">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] bg-green-500/15 text-green-700">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] bg-mist text-navy">
                   <Icon name={f.icon} size={22} />
                 </div>
                 <h3 className="mb-2 text-[17px] font-semibold text-slate-900">{f.title}</h3>
@@ -225,7 +225,7 @@ export default async function HomePage() {
               <div key={s.n}>
                 <div
                   style={displayFont}
-                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-[11px] bg-brand-navy text-[17px] font-bold text-white"
+                  className="mb-4 flex h-10 w-10 items-center justify-center rounded-[11px] bg-navy text-[17px] font-bold text-white"
                 >
                   {s.n}
                 </div>
@@ -238,11 +238,11 @@ export default async function HomePage() {
       </section>
 
       {/* SPLIT : badges */}
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <div className="grid items-center gap-14 md:grid-cols-2">
             <div>
-              <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-600">Badges</p>
+              <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-navy">Badges</p>
               <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[38px]">
                 Des credentials professionnels, sans effort de design
               </h2>
@@ -265,11 +265,11 @@ export default async function HomePage() {
       </section>
 
       {/* SPLIT : scanner (navy) */}
-      <section className="bg-brand-navy py-[88px] text-white">
+      <section className="bg-navy py-[88px] text-white">
         <div className="mx-auto max-w-[1160px] px-7">
           <div className="grid items-center gap-14 md:grid-cols-2">
             <div className="md:order-2">
-              <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-400">Contrôle d&apos;accès</p>
+              <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-gold">Contrôle d&apos;accès</p>
               <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight md:text-[38px]">
                 Vérifiez chaque entrée en une seconde
               </h2>
@@ -285,7 +285,7 @@ export default async function HomePage() {
                   "Vérification publique d'un badge par simple lien",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3 text-[15px] leading-relaxed text-white/80">
-                    <span className="mt-px flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-green-400/20 text-green-400">
+                    <span className="mt-px flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full bg-gold/20 text-gold">
                       <Icon name="check" size={13} />
                     </span>
                     {t}
@@ -307,7 +307,7 @@ export default async function HomePage() {
           <div className="mt-[52px] grid grid-cols-1 gap-[22px] md:grid-cols-3">
             {AUDIENCES.map((a) => (
               <div key={a.title} className="rounded-2xl border border-slate-200 bg-white p-[26px]">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-brand-navy/10 text-brand-navy">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-navy/10 text-navy">
                   <Icon name={a.icon} size={20} />
                 </div>
                 <h3 className="mb-2 text-[17px] font-semibold text-slate-900">{a.title}</h3>
@@ -319,7 +319,7 @@ export default async function HomePage() {
       </section>
 
       {/* METRICS (navy) */}
-      <section className="bg-brand-navy py-16 text-white">
+      <section className="bg-navy py-16 text-white">
         <div className="mx-auto max-w-[1160px] px-7">
           <div className="grid grid-cols-2 gap-8 text-center md:grid-cols-4">
             {[
@@ -331,7 +331,7 @@ export default async function HomePage() {
               <div key={l}>
                 <div style={displayFont} className="text-[44px] font-bold tracking-tight">
                   {v}
-                  <span className="text-green-400">{u}</span>
+                  <span className="text-gold">{u}</span>
                 </div>
                 <div className="mt-1.5 text-sm text-white/70">{l}</div>
               </div>
@@ -341,7 +341,7 @@ export default async function HomePage() {
       </section>
 
       {/* PRICING PREVIEW */}
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading
             center
@@ -353,7 +353,7 @@ export default async function HomePage() {
             <PricingCards />
           </div>
           <p className="mt-7 text-center">
-            <Link href="/tarifs" className="text-sm font-medium text-green-600 hover:underline">
+            <Link href="/tarifs" className="text-sm font-medium text-navy hover:underline">
               Comparer les offres en détail →
             </Link>
           </p>
