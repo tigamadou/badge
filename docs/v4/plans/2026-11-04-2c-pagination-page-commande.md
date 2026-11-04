@@ -23,7 +23,7 @@
 |------|----------|--------|------|-------|
 | 1 | Vérification du socle, helper `paginate`, helpers e2e | [x] | 2026-11-04 | UrlPagination = { page, totalPages, total, pageSize, pageSizeOptions? } (conforme) |
 | 2 | Espace évènement — badges et inscriptions | [x] | 2026-11-04 | RegistrationTable/BadgeListTable : etat dans l'URL (router.replace), page bornee cote client |
-| 3 | Espace évènement — catégories, membres, blocage, journal, impression | [ ] | | |
+| 3 | Espace évènement — catégories, membres, blocage, journal, impression | [x] | 2026-11-04 | listes a etat local : lignes en props + router.refresh(); onglets de blocage via ?tab=; allCategories charge hors tranche pour la reaffectation |
 | 4 | Espace organisation — évènements, membres, templates, journal | [ ] | | |
 | 5 | Espace plateforme — organisations (liste + 3 sous-pages) | [ ] | | |
 | 6 | Espace plateforme — profils, utilisateurs, templates, journal, emails | [ ] | | |

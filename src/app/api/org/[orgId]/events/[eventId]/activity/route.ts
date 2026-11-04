@@ -1,3 +1,4 @@
+import { parseListPage } from "@/lib/list-query";
 import { NextResponse } from "next/server";
 import type { Prisma, ActivityType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -42,8 +43,7 @@ export const GET = withEventAuth(
   async (req, { eventId, session, effectiveRole }) => {
     const url = new URL(req.url);
     const typeParam = url.searchParams.get("type");
-    const page = Math.max(1, Number(url.searchParams.get("page") ?? "1"));
-    const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "30")));
+    const { page, pageSize, skip, take } = parseListPage(url.searchParams);
 
     const where: Prisma.ActivityLogWhereInput = { eventId };
     if (typeParam && ALLOWED_TYPES.has(typeParam as ActivityType)) {
@@ -58,8 +58,8 @@ export const GET = withEventAuth(
       prisma.activityLog.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip,
+        take,
         select: {
           id: true,
           type: true,
@@ -73,6 +73,6 @@ export const GET = withEventAuth(
       prisma.activityLog.count({ where }),
     ]);
 
-    return NextResponse.json({ logs, total, page, limit });
+    return NextResponse.json({ logs, total, page, pageSize });
   },
 );

@@ -12,13 +12,19 @@ import { Icon } from "@/components/ui/Icon";
 import { logKind } from "@/lib/activity-labels";
 import { getEventOrgId } from "@/lib/event-org";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export default async function ActivityPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ eventId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { eventId } = await params;
+  const list = parseListPage(await searchParams);
   const orgId = await getEventOrgId(eventId);
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");
@@ -43,20 +49,26 @@ export default async function ActivityPage({
     where.type = "BADGE_SCANNED";
   }
 
-  const logs = await prisma.activityLog.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      type: true,
-      staffActor: true,
-      details: true,
-      targetId: true,
-      createdAt: true,
-      user: { select: { name: true, email: true } },
-    },
-  });
+  const result = await paginate(
+    list,
+    () => prisma.activityLog.count({ where }),
+    (range) =>
+      prisma.activityLog.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+        select: {
+          id: true,
+          type: true,
+          staffActor: true,
+          details: true,
+          targetId: true,
+          createdAt: true,
+          user: { select: { name: true, email: true } },
+        },
+      }),
+  );
+  const logs = result.rows;
 
   return (
     <div className="space-y-4">
@@ -111,6 +123,7 @@ export default async function ActivityPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

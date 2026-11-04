@@ -8,21 +8,38 @@ import { OrgPrintCreditCard } from "@/components/print/OrgPrintCreditCard";
 import { getOrgPrintCreditBalance, listOrgPrintCreditMovements } from "@/lib/print-requests/org-credit";
 import { unreadByRequest } from "@/lib/print-requests/read-state";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function PrintRequestsPage({ params }: { params: Promise<{ eventId: string }> }) {
+export default async function PrintRequestsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ eventId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { eventId } = await params;
+  const list = parseListPage(await searchParams);
   const { event, ctx, orgId } = await requirePrintAccess(eventId, "/print");
   const [creditBalance, creditMovements] = await Promise.all([
     getOrgPrintCreditBalance(orgId),
     listOrgPrintCreditMovements(orgId),
   ]);
-  const rows = await prisma.printRequest.findMany({
-    where: { eventId },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    include: { _count: { select: { items: true } } },
-  });
+  const result = await paginate(
+    list,
+    () => prisma.printRequest.count({ where: { eventId } }),
+    (range) =>
+      prisma.printRequest.findMany({
+        where: { eventId },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+        include: { _count: { select: { items: true } } },
+      }),
+  );
+  const rows = result.rows;
   // Le staff en consultation n'enregistre pas de lecture : pas de non-lus pour lui.
   const unread = ctx.isStaff ? {} : await unreadByRequest(ctx.user.id, "ORGANIZER", rows.map((r) => r.id));
   const data = rows.map((r) => ({
@@ -53,7 +70,7 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
         ) : null}
       </div>
       <OrgPrintCreditCard balance={creditBalance} movements={creditMovements} />
-      {data.length === 0 ? (
+      {result.total === 0 ? (
         <EmptyState icon="printer" title="Aucune commande d'impression pour cet évènement." />
       ) : (
         <Table
@@ -96,6 +113,7 @@ export default async function PrintRequestsPage({ params }: { params: Promise<{ 
           ]}
         />
       )}
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }
