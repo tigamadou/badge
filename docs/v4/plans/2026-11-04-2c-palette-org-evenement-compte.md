@@ -36,7 +36,7 @@ signaler dans la progression.
 | 1 | Shells et menu latéral clair (`SidebarNav`, `OrgShell`, 4 shells évènement) | [-] | 2026-11-04 | Déplacée au socle (tâche 4b) : navigation partagée avec StaffShell. Ne pas exécuter. |
 | 2 | Pages `src/app/org/**` | [x] | 2026-11-04 |  |
 | 3 | Pages `src/app/event/**` | [x] | 2026-11-04 |  |
-| 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [ ] | | |
+| 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [x] | 2026-11-04 |  |
 | 5 | `components/event` — formulaires, tableaux, actions, fonds | [x] | 2026-11-04 |  |
 | 6 | `components/event/print/**` — assistant et conversation | [x] | 2026-11-04 |  |
 | 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [x] | 2026-11-04 | Test ScannerFrame : non-regression text-rose-700 ajoutee. |
