@@ -65,7 +65,6 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
   }, [orgId, eventId, status, q, page, pageSize, router]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 

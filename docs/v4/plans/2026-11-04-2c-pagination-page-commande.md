@@ -25,7 +25,7 @@
 | 2 | Espace évènement — badges et inscriptions | [x] | 2026-11-04 | RegistrationTable/BadgeListTable : etat dans l'URL (router.replace), page bornee cote client |
 | 3 | Espace évènement — catégories, membres, blocage, journal, impression | [x] | 2026-11-04 | listes a etat local : lignes en props + router.refresh(); onglets de blocage via ?tab=; allCategories charge hors tranche pour la reaffectation |
 | 4 | Espace organisation — évènements, membres, templates, journal | [x] | 2026-11-04 | ownerCount (dernier OWNER) calcule cote serveur; archiver un evenement ne le retire pas de la liste (archives affichees) : pas de rabat de page a tester |
-| 5 | Espace plateforme — organisations (liste + 3 sous-pages) | [ ] | | |
+| 5 | Espace plateforme — organisations (liste + 3 sous-pages) | [x] | 2026-11-04 | pages organisations paginees |
 | 6 | Espace plateforme — profils, utilisateurs, templates, journal, emails | [ ] | | |
 | 7 | Espace plateforme — impression : commandes, gabarits, catalogue, planches | [ ] | | |
 | 8 | Compte participant | [ ] | | |

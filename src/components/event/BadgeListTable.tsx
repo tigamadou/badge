@@ -122,6 +122,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
       resetSelection();
     }, 300);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, q]);
 
   useEffect(() => {

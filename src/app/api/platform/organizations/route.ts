@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { parseListPage } from "@/lib/list-query";
 import { slugify } from "@/lib/slugify";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
@@ -14,11 +15,7 @@ export const GET = withStaffAuth(async (req) => {
   const q = searchParams.get("q")?.trim() ?? "";
   const archivedParam = searchParams.get("archived");
   const archived = archivedParam === "true";
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
-  const pageSize = Math.min(
-    100,
-    Math.max(1, parseInt(searchParams.get("pageSize") ?? "20", 10) || 20),
-  );
+  const { page, pageSize, skip, take } = parseListPage(searchParams);
 
   const where: Prisma.OrganizationWhereInput = {
     archived,
@@ -48,8 +45,8 @@ export const GET = withStaffAuth(async (req) => {
         },
       },
       orderBy: { name: "asc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip,
+      take,
     }),
     prisma.organization.count({ where }),
   ]);

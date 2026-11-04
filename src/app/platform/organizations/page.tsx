@@ -4,13 +4,19 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { OrganizationsTable } from "@/components/staff/OrganizationsTable";
 import { Icon } from "@/components/ui/Icon";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 export default async function StaffOrganizationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; archived?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { q, archived } = await searchParams;
+  const sp = await searchParams;
+  const q = typeof sp.q === "string" ? sp.q : undefined;
+  const archived = typeof sp.archived === "string" ? sp.archived : undefined;
+  const list = parseListPage(sp);
   const showArchived = archived === "true";
 
   const where: Prisma.OrganizationWhereInput = {
@@ -20,18 +26,23 @@ export default async function StaffOrganizationsPage({
     }),
   };
 
-  const organizations = await prisma.organization.findMany({
-    where,
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      archived: true,
-      _count: { select: { events: true, memberships: true } },
-    },
-    orderBy: { name: "asc" },
-    take: 100,
-  });
+  const result = await paginate(
+    list,
+    () => prisma.organization.count({ where }),
+    (range) =>
+      prisma.organization.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          archived: true,
+          _count: { select: { events: true, memberships: true } },
+        },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+        ...range,
+      }),
+  );
 
   return (
     <div className="space-y-4">
@@ -49,6 +60,8 @@ export default async function StaffOrganizationsPage({
       </div>
 
       <form method="get" className="flex flex-wrap items-center gap-2.5">
+        {/* Soumettre un filtre retire `page` (non envoye) mais conserve la taille de page. */}
+        <input type="hidden" name="pageSize" value={result.pageSize} />
         <div className="relative min-w-0 basis-full flex-1 sm:basis-auto sm:min-w-[200px]">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon name="search" size={16} />
@@ -72,7 +85,8 @@ export default async function StaffOrganizationsPage({
         </button>
       </form>
 
-      <OrganizationsTable organizations={organizations} />
+      <OrganizationsTable organizations={result.rows} />
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }
