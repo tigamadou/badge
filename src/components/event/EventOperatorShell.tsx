@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { UserAvatar } from "@/components/layout/UserAvatar";
+import {
+  SIDEBAR_CONTEXT_MUTED,
+  SIDEBAR_CONTEXT_TITLE,
+  SIDEBAR_FOOTER_TEXT,
+  SIDEBAR_LINK,
+} from "@/components/layout/sidebar-classes";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 type Event = { id: string; title: string };
@@ -24,26 +30,26 @@ export function EventOperatorShell({
     <AppShell
       sidebarHeader={
         <>
-          <div className="px-2 text-xs text-slate-400">{org.name}</div>
-          <div className="mb-3 px-2 text-sm font-semibold text-white">{event.title}</div>
+          <div className={SIDEBAR_CONTEXT_MUTED}>{org.name}</div>
+          <div className={`${SIDEBAR_CONTEXT_TITLE} mb-3`}>{event.title}</div>
         </>
       }
       sidebar={
         <>
           <nav className="flex flex-1 flex-col gap-1">
-            <Link href={`${base}/scan`} className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
+            <Link href={`${base}/scan`} className={SIDEBAR_LINK}>
               Scanner
             </Link>
-            <Link href={`${base}/notifications`} className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
+            <Link href={`${base}/notifications`} className={SIDEBAR_LINK}>
               Notifications
             </Link>
-            <Link href="/profile" className="flex items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
+            <Link href="/profile" className={SIDEBAR_LINK}>
               Profil
             </Link>
           </nav>
         </>
       }
-      sidebarFooter={<div className="truncate px-2 text-xs text-slate-400">{user.name}</div>}
+      sidebarFooter={<div className={SIDEBAR_FOOTER_TEXT}>{user.name}</div>}
       header={
         <>
           <div className="min-w-0 flex-1 truncate text-sm text-slate-500">
