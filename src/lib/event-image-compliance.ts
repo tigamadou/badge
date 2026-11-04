@@ -39,11 +39,13 @@ export const EVENT_IMAGE_SELECT = {
 
 export type EventImageSource = Prisma.EventGetPayload<{ select: typeof EVENT_IMAGE_SELECT }>;
 
-// Exigences d'image du template effectif ; un template absent ou illisible n'impose rien.
-export async function getEventImageRequirements(event: {
-  badgeTemplateId: string | null;
-  orgId: string;
-}): Promise<Partial<Record<ImageSlot, ImageRequirement>>> {
+// Exigences d'image du template effectif. Aucun template = aucune contrainte. Une erreur de lecture
+// (base, manifeste invalide) est relancee, pour qu'un controle bloquant n'echoue jamais en silence ;
+// `lenient` (affichage seulement) la journalise et ne contraint rien.
+export async function getEventImageRequirements(
+  event: { badgeTemplateId: string | null; orgId: string },
+  opts: { lenient?: boolean } = {},
+): Promise<Partial<Record<ImageSlot, ImageRequirement>>> {
   try {
     const row = await findEffectiveTemplateRow(await resolveEventTemplateId(event));
     if (!row) {
@@ -62,6 +64,7 @@ export async function getEventImageRequirements(event: {
     }
     return out;
   } catch (err) {
+    if (!opts.lenient) throw err;
     console.warn("[event-images] lecture du template impossible : aucune contrainte d'image", err);
     return {};
   }
@@ -88,14 +91,17 @@ export async function readStoredDimensions(key: string): Promise<StoredDimension
 
 // La conformite est calculee a la lecture (template effectif + dimensions memorisees),
 // jamais stockee : changer de template change le verdict sans ecriture en base.
-export async function evaluateEventImages(event: EventImageSource): Promise<ImageIssue[]> {
+export async function evaluateEventImages(
+  event: EventImageSource,
+  opts: { lenient?: boolean } = {},
+): Promise<ImageIssue[]> {
   const stored: Record<ImageSlot, { key: string | null; width: number | null; height: number | null }> = {
     logo: { key: event.logo, width: event.logoWidth, height: event.logoHeight },
     banner: { key: event.banner, width: event.bannerWidth, height: event.bannerHeight },
   };
   if (!stored.logo.key && !stored.banner.key) return [];
 
-  const requirements = await getEventImageRequirements(event);
+  const requirements = await getEventImageRequirements(event, opts);
   const issues: ImageIssue[] = [];
   for (const slot of SLOTS) {
     const expected = requirements[slot];

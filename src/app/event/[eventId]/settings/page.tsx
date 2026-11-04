@@ -52,8 +52,8 @@ export default async function EventSettingsPage({
     variables.map((variable) => [variable.name, effectiveOption(variable, stored) ?? null]),
   );
   const [imageRequirements, issues] = await Promise.all([
-    getEventImageRequirements(event),
-    evaluateEventImages(event),
+    getEventImageRequirements(event, { lenient: true }),
+    evaluateEventImages(event, { lenient: true }),
   ]);
   const imageIssues = Object.fromEntries(
     issues.map((i) => [i.slot, `À recadrer : ${i.message.charAt(0).toLowerCase()}${i.message.slice(1)}`]),

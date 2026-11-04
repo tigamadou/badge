@@ -107,7 +107,7 @@ export default async function EventDashboardPage({
     select: { id: true, name: true, color: true },
   });
 
-  const imageIssues = await evaluateEventImages(event);
+  const imageIssues = await evaluateEventImages(event, { lenient: true });
   const { maxParticipantsPerEvent: participantLimit } = await resolveOrgLimits(orgId);
   const quotaPct =
     participantLimit != null ? Math.round((quota30d / participantLimit) * 100) : null;

@@ -79,11 +79,16 @@ describe("getEventImageRequirements", () => {
     expect(await getEventImageRequirements(event)).toEqual({});
   });
 
-  it("rend {} sans exception pour un layout illisible", async () => {
+  it("relance l'erreur d'un layout illisible, et la tolere en mode lenient", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { event, template } = await setup();
     await prisma.installedBadgeTemplate.update({ where: { id: template.id }, data: { layout: "x" } });
-    expect(await getEventImageRequirements(event)).toEqual({});
+    await expect(getEventImageRequirements(event)).rejects.toThrow();
+    const logo = await store(makePng(136, 136));
+    await prisma.event.update({ where: { id: event.id }, data: { logo, logoWidth: 136, logoHeight: 136 } });
+    await expect(assertEventImagesCompliant(await load(event.id))).rejects.toThrow();
+    await expect(evaluateEventImages(await load(event.id), { lenient: true })).resolves.toEqual([]);
+    await expect(getEventImageRequirements(event, { lenient: true })).resolves.toEqual({});
     expect(warn).toHaveBeenCalled();
   });
 

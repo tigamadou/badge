@@ -40,7 +40,7 @@ export const GET = withEventAuth(
         const { document, templateId } = await renderBadgeHtml(registration);
         const headers: Record<string, string> = { "cache-control": "private, no-store", "x-template-id": templateId };
         // L'apercu n'est jamais bloque, mais signale les images a recadrer.
-        const issues = await evaluateEventImages(registration.event);
+        const issues = await evaluateEventImages(registration.event, { lenient: true });
         if (issues.length > 0) {
           headers["x-event-images"] = "noncompliant";
           headers["x-event-images-slots"] = issues.map((i) => i.slot).join(",");

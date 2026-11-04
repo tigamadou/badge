@@ -64,7 +64,7 @@ export default async function EventBadgeSettingsPage({
 
   const templates: TemplateSummary[] = await listAvailableTemplates();
   const lock = await findTemplateLock(eventId);
-  const imageIssues = await evaluateEventImages(event);
+  const imageIssues = await evaluateEventImages(event, { lenient: true });
 
   return (
     <div className="space-y-6">
