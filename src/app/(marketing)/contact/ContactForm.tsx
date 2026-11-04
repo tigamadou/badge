@@ -14,7 +14,7 @@ const SUBJECTS = [
 ];
 
 const inputClass =
-  "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600";
+  "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-navy focus:ring-1 focus:ring-navy";
 
 export function ContactForm() {
   const [done, setDone] = useState(false);
@@ -64,7 +64,7 @@ export function ContactForm() {
   if (done) {
     return (
       <div className="flex flex-col items-center py-8 text-center">
-        <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-green-600">
+        <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-turquoise-soft text-turquoise-strong">
           <Icon name="check-circle" size={30} />
         </span>
         <h3 className="text-lg font-semibold text-slate-900">Demande envoyée</h3>
@@ -132,13 +132,13 @@ export function ContactForm() {
       <label className="mt-4 flex items-start gap-2.5 text-sm text-slate-600">
         <input
           type="checkbox"
-          className="mt-0.5 h-4 w-4 accent-green-600"
+          className="mt-0.5 h-4 w-4 accent-navy"
           checked={form.consent}
           onChange={(e) => set("consent", e.target.checked)}
         />
         <span>
           J&apos;accepte que mes données soient utilisées pour être recontacté, conformément à la{" "}
-          <Link href="/confidentialite" className="font-medium text-green-600 hover:underline">
+          <Link href="/confidentialite" className="font-medium text-navy hover:underline">
             politique de confidentialité
           </Link>
           .

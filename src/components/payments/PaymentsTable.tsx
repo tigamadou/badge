@@ -33,7 +33,7 @@ export function PaymentsTable({
                     </span>
                   );
                   return orgHref ? (
-                    <Link href={orgHref(p)} className="text-blue-600 hover:underline">
+                    <Link href={orgHref(p)} className="text-navy hover:underline">
                       {name}
                     </Link>
                   ) : (
@@ -56,7 +56,7 @@ export function PaymentsTable({
           key: "detail",
           header: "",
           render: (p) => (
-            <Link href={detailHref(p)} className="text-sm font-medium text-blue-600 hover:underline">
+            <Link href={detailHref(p)} className="text-sm font-medium text-navy hover:underline">
               Voir
             </Link>
           ),

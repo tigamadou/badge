@@ -36,7 +36,7 @@ export default async function VerifyEmailPage({
         </p>
         <Link
           href={loginHref}
-          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700"
+          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-hover"
         >
           {target ? "Continuer mon inscription" : "Se connecter"}
         </Link>
@@ -47,10 +47,10 @@ export default async function VerifyEmailPage({
       <div className="space-y-4 text-center">
         <Alert tone="err">Ce lien de confirmation est invalide ou a expiré.</Alert>
         <div className="flex justify-center gap-4 text-sm">
-          <Link href="/register" className="text-green-600 hover:underline">
+          <Link href="/register" className="text-navy hover:underline">
             S&apos;inscrire à nouveau
           </Link>
-          <Link href="/login" className="text-green-600 hover:underline">
+          <Link href="/login" className="text-navy hover:underline">
             Se connecter
           </Link>
         </div>

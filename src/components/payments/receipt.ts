@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand-colors";
 import type { PaymentDetail } from "@/lib/payments-query";
 import { MODE_LABELS, PURPOSE_LABELS, fcfa, fmtDate } from "./status";
 
@@ -12,16 +13,16 @@ export function escapeHtml(value: string): string {
 
 const STYLE = `
 *{box-sizing:border-box}
-body{margin:0;padding:32px 16px;background:#f1f5f9;color:#0f172a;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.sheet{max-width:640px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:32px}
+body{margin:0;padding:32px 16px;background:${BRAND.mist};color:#0f172a;font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.sheet{max-width:640px;margin:0 auto;background:#fff;border:1px solid ${BRAND.line};border-radius:12px;padding:32px}
 h1{margin:0 0 4px;font-size:22px}
 .muted{color:#64748b}
 dl{display:grid;grid-template-columns:180px 1fr;margin:24px 0 0}
-dt,dd{margin:0;padding:10px 0;border-bottom:1px solid #f1f5f9}
+dt,dd{margin:0;padding:10px 0;border-bottom:1px solid ${BRAND.line}}
 dt{color:#64748b}
 .total{margin-top:24px;display:flex;justify-content:space-between;font-size:18px;font-weight:600}
 .actions{max-width:640px;margin:16px auto 0;text-align:right}
-button{border:0;border-radius:8px;background:#16a34a;color:#fff;padding:10px 18px;font-size:14px;cursor:pointer}
+button{border:0;border-radius:8px;background:${BRAND.navy};color:#fff;padding:10px 18px;font-size:14px;cursor:pointer}
 @page{margin:16mm}
 @media print{body{background:#fff;padding:0}.sheet{border:0;padding:0;max-width:none}.actions{display:none}}
 @media (max-width:480px){dl{grid-template-columns:1fr}dt{border-bottom:0;padding-bottom:0}}

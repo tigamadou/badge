@@ -20,7 +20,7 @@ export function SectionHeading({
     <div className={center ? "mx-auto max-w-[720px] text-center" : "max-w-[720px]"}>
       <p
         className={`mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] ${
-          onNavy ? "text-green-400" : "text-green-600"
+          onNavy ? "text-gold" : "text-navy"
         }`}
       >
         {eyebrow}

@@ -76,16 +76,16 @@ badge factice), `rgba(15,23,42,…)` d'ombre. Le garde-fou de la vague 3 ne couv
 
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
-| 1 | Vérifier le contrat du socle, état initial (tests et e2e du lot) | [ ] | | |
-| 2 | Composants marketing partagés (`src/components/marketing/**`) | [ ] | | |
-| 3 | Pages du site public (`src/app/(marketing)/**`) | [ ] | | |
-| 4 | Pages publiques d'évènement et de vérification (`public`, `e`, `verify`) | [ ] | | |
-| 5 | Authentification (`auth`, login, register, mots de passe, `select`) | [ ] | | |
-| 6 | E-mails transactionnels `mail.ts` | [ ] | | |
-| 7 | Notifications par e-mail, e-mail de contact, `mail-helpers` | [ ] | | |
-| 8 | Module paiements : composants et reçu HTML | [ ] | | |
-| 9 | Tests unitaires du lot mis à jour | [ ] | | |
-| 10 | e2e, contrôle visuel, vérification | [ ] | | |
+| 1 | Vérifier le contrat du socle, état initial (tests et e2e du lot) | [x] | 2026-11-04 | contrat OK, etat initial vert |
+| 2 | Composants marketing partagés (`src/components/marketing/**`) | [x] | 2026-11-04 |  |
+| 3 | Pages du site public (`src/app/(marketing)/**`) | [x] | 2026-11-04 |  |
+| 4 | Pages publiques d'évènement et de vérification (`public`, `e`, `verify`) | [x] | 2026-11-04 |  |
+| 5 | Authentification (`auth`, login, register, mots de passe, `select`) | [x] | 2026-11-04 |  |
+| 6 | E-mails transactionnels `mail.ts` | [x] | 2026-11-04 |  |
+| 7 | Notifications par e-mail, e-mail de contact, `mail-helpers` | [x] | 2026-11-04 |  |
+| 8 | Module paiements : composants et reçu HTML | [x] | 2026-11-04 |  |
+| 9 | Tests unitaires du lot mis à jour | [x] | 2026-11-04 |  |
+| 10 | e2e, contrôle visuel, vérification | [x] | 2026-11-04 | grep vide hors exceptions, typecheck, lint, tests cibles verts ; e2e non lances (consigne) |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task
 validée : statut `[x]` + date ; en cas d'interruption : `[~]`, date et état précis (step en

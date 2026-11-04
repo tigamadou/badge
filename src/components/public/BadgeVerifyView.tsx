@@ -57,7 +57,7 @@ export function BadgeVerifyView({ data }: Props) {
           <div className="mt-2.5 flex justify-center">
             <CatPill color={data.category.color} label={data.category.name} />
           </div>
-          <div className="my-4 border-t border-slate-100" />
+          <div className="my-4 border-t border-line" />
           <KeyValue
             items={[
               { label: "Événement", value: data.event.title },

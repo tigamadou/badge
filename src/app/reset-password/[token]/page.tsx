@@ -82,7 +82,7 @@ export default function ResetPasswordPage({
           </p>
           <Link
             href="/login"
-            className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700"
+            className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-navy px-4 py-2.5 text-sm font-medium text-white hover:bg-navy-hover"
           >
             Se connecter
           </Link>
@@ -104,7 +104,7 @@ export default function ResetPasswordPage({
             {password && (
               <p className="-mt-1 text-[13px] text-slate-500">
                 Robustesse :{" "}
-                <b className={pwScore(password) >= 3 ? "text-green-700" : "text-rose-700"}>{PW_LABEL[pwScore(password)]}</b>
+                <b className={pwScore(password) >= 3 ? "text-turquoise-strong" : "text-rose-700"}>{PW_LABEL[pwScore(password)]}</b>
               </p>
             )}
           </div>
