@@ -93,6 +93,25 @@ Toutes les décisions sont journalisées (`PROFILE_APPROVED`, `PROFILE_REJECTED`
   vérification plateforme, bouton Approuver désactivé si profil non validé, rejet via le
   catalogue). La pièce d'identité elle-même n'est jamais affichée à l'organisation.
 
+## Photo d'identité
+
+La photo de profil et la photo d'une inscription sont des photos d'identité : ratio **7:9**
+(35 × 45 mm), minimum **210 × 270 px** (`ID_PHOTO_REQUIREMENT` dans
+`src/lib/badge-templates/image-frames.ts`).
+
+- **Chemins contrôlés côté serveur** : envoi du compte (`POST /api/account/upload?kind=photo`),
+  envoi par l'admin d'évènement (`POST …/events/[eventId]/upload`), route historique
+  `POST /api/upload`, `PUT /api/account/profile` et `PATCH …/registrations/[regId]` (snapshot).
+  Les deux derniers ne revérifient la photo que si sa clé change : **pas de blocage rétroactif**.
+- **Interface** : l'outil de recadrage 7:9 s'ouvre quand l'image n'est pas conforme (bouton
+  « Recadrer » ensuite) ; les règles (fond blanc uni, visage de face et centré, tête nue, photo
+  nette et récente, sans retouche, format et minimum) s'affichent près de l'envoi
+  (`IdPhotoRules`).
+- **Motifs de rejet dédiés** : « Fond non blanc », « Visage non visible ou non centré »,
+  « Photo floue ou sombre », « Couvre-chef ou lunettes de soleil » sont créés par le seed. En
+  production, le staff les ajoute dans les paramètres plateforme (catalogue de motifs, portée
+  `PROFILE`).
+
 ## Photo validée comme avatar
 
 La photo de la **dernière soumission `APPROVED`** (et non `User.photo`) remplace les

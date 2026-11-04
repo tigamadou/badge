@@ -178,6 +178,38 @@ d'autre). Un document de plus de 20 Mo est refusé côté serveur avant l'appel
 (« document du badge trop volumineux »). Service arrêté ou lent : aperçu « Aperçu indisponible,
 réessayer », routes en 503.
 
+### Images de l'évènement
+
+Le logo et la bannière d'un évènement doivent respecter le **cadre** que le template effectif
+(cascade `Event → Org → Platform`) leur réserve.
+
+- **Lecture du cadre** (`src/lib/badge-templates/image-frames.ts`, module pur importable côté
+  client) : la liaison `bindings[nom] === "event.logoDataUrl"` (ou `event.bannerDataUrl`) désigne
+  une variable ; le cadre est le **premier bloc**, en ordre de document, dont `image.source` porte
+  ce nom, groupes parcourus. Son `w × h` donne le ratio attendu et la résolution minimale
+  (**2 × le cadre**). Sans cadre, aucune contrainte.
+- **Tolérance** : ratio à ± 2 % (`ratioMatches`).
+- **Formats** : JPEG et PNG pour le logo et la bannière (le moteur ne lit pas le WebP, qui est
+  refusé en `415 UNSUPPORTED_FORMAT`). Le WebP reste accepté pour la source d'un recadrage
+  (`purpose=original`) et repasse toujours par l'outil de recadrage, dont la sortie est en PNG.
+- **Envoi** : `POST /api/org/[orgId]/upload?purpose=logo|banner&eventId=…` contrôle l'image contre le
+  cadre et renvoie `{ storageKey, width, height }` ; `purpose=original` conserve la source telle
+  quelle. `PATCH …/events/[eventId]` mémorise `logoWidth/logoHeight` et
+  `bannerWidth/bannerHeight`, ainsi que `logoOriginal` / `bannerOriginal` (la source du
+  recadrage, pour « Recadrer » sans renvoyer de fichier). L'évènement créé par `POST …/events`
+  mémorise les dimensions de son logo.
+- **Conformité calculée, jamais stockée** : `evaluateEventImages` compare le template effectif aux
+  dimensions mémorisées. Changer de template peut donc rendre des images non conformes ; le
+  tableau de bord de l'évènement (hors opérateur) et les réglages affichent alors « Images à
+  recadrer ». Pas de blocage rétroactif : un `PATCH` ne revalide une image que si sa clé change.
+- **Points bloqués** (erreur `EventImagesNoncompliantError`, code `EVENT_IMAGES_NONCOMPLIANT`,
+  HTTP 422) : PDF d'un badge, export ZIP, planches d'impression, soumission d'une commande et
+  impression sur place. L'aperçu `?format=html` n'est **pas** bloqué : il porte les en-têtes
+  `x-event-images: noncompliant` et `x-event-images-slots`. Planches et commandes déjà générées
+  ne sont pas remises en cause.
+- **Outil de recadrage** : `ImageCropper` (`react-easy-crop`), commun au logo, à la bannière et à
+  la photo d'identité ; le format attendu est affiché avant l'envoi.
+
 ### Export ZIP asynchrone
 
 Le ZIP d'un lot (un PDF par badge) n'est plus produit pendant la requête : l'ancienne route
