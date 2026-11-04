@@ -84,6 +84,8 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PRINT_CREDIT_APPLIED: "Crédit d'impression appliqué",
   PRINT_CREDIT_EARNED: "Crédit d'impression acquis",
   PRINT_REQUEST_SUPPLEMENT_CREATED: "Commande d'impression complémentaire créée",
+  EVENT_IMAGE_UPDATED: "Image d'événement modifiée",
+  PAYMENT_PRORATA_MISMATCH: "Écart de prorata sur un paiement",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

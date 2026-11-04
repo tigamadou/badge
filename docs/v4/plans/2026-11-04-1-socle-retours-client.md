@@ -27,7 +27,7 @@ défaut), deux modules `src/lib/` purs (`image-dimensions.ts`, `list-query.ts`),
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Schéma Prisma + `ActivityType` + libellés | [ ] | | |
+| 1 | Schéma Prisma + `ActivityType` + libellés | [x] | 2026-11-04 | |
 | 2 | `src/lib/image-dimensions.ts` | [ ] | | |
 | 3 | `src/lib/list-query.ts` + réécriture de `badge-list-query.ts` | [ ] | | |
 | 4 | `Pagination.tsx` (options 10/20/50/100/500) + `UrlPagination` | [ ] | | |
