@@ -27,7 +27,7 @@ export default async function PlatformPlansPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Plans</h1>
+        <h1 className="text-xl font-semibold text-navy">Plans</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Catalogue des plans d&apos;abonnement (limites d&apos;events et de participants par event)
         </p>

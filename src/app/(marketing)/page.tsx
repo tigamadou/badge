@@ -229,7 +229,7 @@ export default async function HomePage() {
                 >
                   {s.n}
                 </div>
-                <h3 className="mb-2 text-lg font-semibold text-slate-900">{s.title}</h3>
+                <h3 className="mb-2 text-lg font-semibold text-navy">{s.title}</h3>
                 <p className="text-sm leading-relaxed text-slate-500">{s.desc}</p>
               </div>
             ))}

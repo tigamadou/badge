@@ -54,7 +54,7 @@ export default async function OrgBadgeSettingsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Modèle de badge</h1>
+        <h1 className="text-xl font-semibold text-navy">Modèle de badge</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Modèle appliqué par défaut aux événements de {organization.name}. Chaque événement peut le surcharger.
         </p>

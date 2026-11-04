@@ -87,7 +87,7 @@ export async function NotificationsView({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">Notifications</h1>
+        <h1 className="text-xl font-semibold text-navy">Notifications</h1>
         <MarkAllReadButton scope={scope} />
       </div>
       <nav aria-label="Filtre des notifications" className="flex flex-wrap gap-2">

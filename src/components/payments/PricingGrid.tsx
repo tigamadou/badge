@@ -23,7 +23,7 @@ export function PricingGrid({ plans }: { plans: PublicPlan[] }) {
   if (plans.length === 0) {
     return (
       <div className="mx-auto max-w-[520px] rounded-2xl border border-slate-200 bg-white p-[30px] text-center">
-        <p style={displayFont} className="text-2xl font-bold text-slate-900">
+        <p style={displayFont} className="text-2xl font-bold text-navy">
           Tarifs sur demande
         </p>
         <p className="mb-5 mt-2 text-sm text-slate-500">
@@ -76,7 +76,7 @@ export function PricingGrid({ plans }: { plans: PublicPlan[] }) {
                 Le plus choisi
               </span>
             )}
-            <div className="text-base font-semibold text-slate-900">{plan.name}</div>
+            <div className="text-base font-semibold text-navy">{plan.name}</div>
             <div className="mb-1 mt-4">
               {plan.price === null ? (
                 <span style={displayFont} className="text-[32px] font-bold tracking-tight text-slate-900">

@@ -109,7 +109,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
             {last.message && <p className="mt-1 text-sm text-slate-600">{last.message}</p>}
             {last.registration && (
               <div className="mt-3 space-y-2">
-                <div className="text-base font-semibold text-slate-900">
+                <div className="text-base font-semibold text-navy">
                   {last.registration.firstName} {last.registration.lastName}
                 </div>
                 <div className="flex items-center justify-center gap-2">
@@ -129,7 +129,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
         )}
 
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-slate-900">Historique de session</h3>
+          <h3 className="mb-2 text-sm font-semibold text-navy">Historique de session</h3>
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
             {history.length === 0 ? (
               <p className="px-4 py-3 text-sm text-slate-400">Aucun scan.</p>

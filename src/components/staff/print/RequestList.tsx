@@ -114,12 +114,12 @@ export function RequestList({
         <TableFrame>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-mist">
+              <tr className="border-b border-slate-200 bg-navy">
                 {["Référence", "Organisation", "Évènement", "Type", "Badges", "Total", "Statut", "Date souhaitée"].map(
                   (h) => (
                     <th
                       key={h}
-                      className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
+                      className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-white"
                     >
                       {h}
                     </th>

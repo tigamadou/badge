@@ -88,7 +88,7 @@ export function SettingsClient({
   return (
     <div className="max-w-2xl space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;organisation</h1>
+        <h1 className="text-xl font-semibold text-navy">Paramètres de l&apos;organisation</h1>
         <p className="mt-0.5 text-sm text-slate-400">Identité, adresse et contact public</p>
       </div>
       <Link

@@ -22,7 +22,7 @@ export function OrderSheetPanel({ sheet, sheetsHref }: { sheet: OrderSheetView |
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-slate-900">Planche</h3>
+        <h3 className="text-sm font-semibold text-navy">Planche</h3>
         <span className="text-xs font-medium text-slate-600">{STATE_LABEL[state]}</span>
       </div>
 

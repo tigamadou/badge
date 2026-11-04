@@ -43,7 +43,7 @@ function Section({
           <Icon name={icon} size={16} />
         </span>
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-sm font-semibold text-navy">{title}</h2>
           {hint && <p className="text-[13px] text-slate-400">{hint}</p>}
         </div>
       </div>
@@ -248,7 +248,7 @@ export function LayoutEditor({
           <Link href={LIST_HREF} className="inline-flex items-center gap-1 text-[13px] font-medium text-slate-500 hover:text-slate-900">
             <Icon name="arrow-left" size={14} /> Gabarits d&apos;impression
           </Link>
-          <h1 className="mt-1 truncate text-xl font-semibold text-slate-900">
+          <h1 className="mt-1 truncate text-xl font-semibold text-navy">
             {isNew ? "Nouveau gabarit" : form.name.trim() || "Gabarit sans nom"}
           </h1>
         </div>

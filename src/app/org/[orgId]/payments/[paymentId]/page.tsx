@@ -33,7 +33,7 @@ export default async function OrgPaymentPage({
         <Icon name="arrow-left" size={16} /> Paiements
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">Paiement</h1>
+        <h1 className="text-xl font-semibold text-navy">Paiement</h1>
         {payment.status === "APPROVED" && (
           <a
             href={`/org/${orgId}/payments/${payment.id}/receipt`}

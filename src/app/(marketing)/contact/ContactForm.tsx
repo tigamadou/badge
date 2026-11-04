@@ -67,7 +67,7 @@ export function ContactForm() {
         <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-turquoise-soft text-turquoise-strong">
           <Icon name="check-circle" size={30} />
         </span>
-        <h3 className="text-lg font-semibold text-slate-900">Demande envoyée</h3>
+        <h3 className="text-lg font-semibold text-navy">Demande envoyée</h3>
         <p className="mt-2 max-w-[320px] text-sm text-slate-500">
           Merci ! Notre équipe vous répond sous un jour ouvré.
         </p>

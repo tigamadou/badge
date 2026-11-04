@@ -287,7 +287,7 @@ export function ProductConfigurator({
     <div className="grid gap-6 md:grid-cols-2">
       <ProductGallery images={product.images} />
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">{product.name}</h2>
+        <h2 className="text-lg font-semibold text-navy">{product.name}</h2>
         {paragraphs.map((p, i) => (
           <p key={i} className="mt-2 whitespace-pre-line text-sm text-slate-600">{p}</p>
         ))}

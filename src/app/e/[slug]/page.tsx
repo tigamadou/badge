@@ -69,7 +69,7 @@ export default async function PublicEventPage({ params }: { params: Promise<{ sl
       <Card>
         <CardBody className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Inscription en ligne</h2>
+            <h2 className="text-lg font-semibold text-navy">Inscription en ligne</h2>
             <p className="mt-1 text-sm text-slate-600">
               L&apos;inscription nécessite un compte Badge. Vous pourrez ensuite consulter vos inscriptions et
               resoumettre votre dossier en cas de rejet.

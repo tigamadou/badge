@@ -41,7 +41,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Mon profil</h1>
+        <h1 className="text-2xl font-bold text-navy">Mon profil</h1>
         <p className="text-sm text-slate-600 mt-1">
           Ces informations sont enregistrées sur votre compte et utilisées pour vos inscriptions.
         </p>
@@ -93,7 +93,7 @@ export default async function ProfilePage() {
 
       {submissions.length > 0 && (
         <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <h2 className="text-sm font-semibold text-slate-900">Historique de mes soumissions</h2>
+          <h2 className="text-sm font-semibold text-navy">Historique de mes soumissions</h2>
           <ul className="mt-3 divide-y divide-slate-100 text-sm">
             {submissions.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">

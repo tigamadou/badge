@@ -45,7 +45,7 @@ export default async function SuccessPage({
           <SuccessRing>
             <Icon name="check" size={36} />
           </SuccessRing>
-          <h2 className="text-2xl font-semibold text-slate-900">Inscription enregistrée</h2>
+          <h2 className="text-2xl font-semibold text-navy">Inscription enregistrée</h2>
           <p className="mx-auto mt-2 max-w-[440px] text-sm text-slate-600">
             Votre inscription a bien été reçue et est en cours de vérification. Un e-mail de confirmation vient de vous
             être envoyé.

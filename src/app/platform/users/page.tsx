@@ -64,7 +64,7 @@ export default async function StaffUsersPage({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Utilisateurs</h1>
+          <h1 className="text-xl font-semibold text-navy">Utilisateurs</h1>
           <p className="mt-0.5 text-sm text-slate-400">Comptes staff et clients de la plateforme</p>
         </div>
         <Link
@@ -112,7 +112,7 @@ export default async function StaffUsersPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3 hidden md:table-cell">E-mail</th>
               <th className="px-4 py-3">Type</th>

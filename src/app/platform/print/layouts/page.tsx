@@ -35,7 +35,7 @@ export default async function PrintLayoutsPage({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Gabarits d&apos;impression</h1>
+          <h1 className="text-xl font-semibold text-navy">Gabarits d&apos;impression</h1>
           <p className="mt-0.5 text-sm text-slate-400">
             Formats de planche, marges et espacements utilisés pour imprimer les badges
           </p>

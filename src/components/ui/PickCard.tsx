@@ -42,7 +42,7 @@ export function PickCard({
     >
       {logo}
       <div>
-        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        <div className="text-sm font-semibold text-navy">{title}</div>
         {subtitle ? <div className="mt-0.5 text-xs text-slate-400">{subtitle}</div> : null}
       </div>
       {meta ? <div className="text-xs text-slate-400">{meta}</div> : null}

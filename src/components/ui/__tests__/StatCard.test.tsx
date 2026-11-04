@@ -16,8 +16,8 @@ describe("StatCard", () => {
     expect(html).toContain("text-turquoise-strong");
   });
 
-  it("puce d'icône mist", () => {
-    expect(renderToStaticMarkup(<StatCard label="a" value="1" icon="user-check" />)).toContain("bg-mist");
+  it("puce d'icône marine translucide et liseré or", () => {
+    expect(renderToStaticMarkup(<StatCard label="a" value="1" icon="user-check" />)).toContain("bg-navy/10");
   });
 
   it("delta down en rose", () => {

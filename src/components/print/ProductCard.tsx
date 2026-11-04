@@ -25,7 +25,7 @@ export function ProductCard({
       </div>
       <div className="px-4 py-3">
         {product.category ? <div className="text-xs text-slate-400">{product.category}</div> : null}
-        <div className="mt-0.5 text-sm font-semibold text-slate-900">{product.name}</div>
+        <div className="mt-0.5 text-sm font-semibold text-navy">{product.name}</div>
         <div className="mt-1 text-[13px] text-slate-700">{`À partir de ${formatFcfa(startingPrice(product))}`}</div>
         {product.leadTimeDays ? (
           <div className="mt-0.5 text-xs text-slate-400">{`Fabrication : ${product.leadTimeDays} jour${product.leadTimeDays > 1 ? "s" : ""}`}</div>

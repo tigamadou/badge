@@ -57,7 +57,7 @@ export default async function AccountHomePage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Bonjour {user?.name}</h1>
+        <h1 className="text-2xl font-bold text-navy">Bonjour {user?.name}</h1>
         <p className="text-sm text-slate-600 mt-1">
           Retrouvez ici vos inscriptions et votre profil.
         </p>
@@ -81,7 +81,7 @@ export default async function AccountHomePage({
       )}
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">Mes inscriptions</h2>
+        <h2 className="mb-3 text-lg font-semibold text-navy">Mes inscriptions</h2>
         {registrations.length === 0 ? (
           <Card>
             <EmptyState
@@ -108,7 +108,7 @@ export default async function AccountHomePage({
                   <div className="mt-0.5 text-[11px] uppercase text-slate-400">{fmtMonth(r.event.date)}</div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-slate-900">{r.event.title}</div>
+                  <div className="text-sm font-semibold text-navy">{r.event.title}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-400">
                     <span className="inline-flex items-center gap-1">
                       <Icon name="map-pin" size={12} /> {r.event.location}

@@ -157,7 +157,7 @@ export function EventCreationWizard({
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Nouvel événement</h1>
+      <h1 className="text-xl font-semibold text-navy">Nouvel événement</h1>
 
       <Stepper steps={STEPS} current={step - 1} />
 

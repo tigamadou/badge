@@ -18,9 +18,9 @@ export function Table<T>({ columns, data, keyExtractor }: TableProps<T>) {
     <TableFrame>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 bg-mist">
+          <tr className="border-b border-slate-200 bg-navy">
             {columns.map((col) => (
-              <th key={col.key} className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">
+              <th key={col.key} className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">
                 {col.header}
               </th>
             ))}

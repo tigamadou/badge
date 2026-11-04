@@ -98,7 +98,7 @@ export default async function PrintRequestDetailPage({
           <Icon name="arrow-left" size={14} /> Impression
         </Link>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="text-xl font-semibold text-slate-900">Commande d&apos;impression {request.reference}</h1>
+          <h1 className="text-xl font-semibold text-navy">Commande d&apos;impression {request.reference}</h1>
           <PrintRequestStatusBadge status={request.status} />
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {request.type === "ADVANCE" && badgeCount > 0 ? (

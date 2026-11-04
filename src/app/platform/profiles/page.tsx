@@ -64,7 +64,7 @@ export default async function PlatformProfilesPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Profils participants</h1>
+        <h1 className="text-xl font-semibold text-navy">Profils participants</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Validation des documents d&apos;identité par la plateforme
         </p>
@@ -111,7 +111,7 @@ export default async function PlatformProfilesPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3">E-mail</th>
               <th className="px-4 py-3">Pièce</th>

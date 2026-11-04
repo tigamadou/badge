@@ -20,14 +20,14 @@ export function StatCard({
   delta?: { dir: "up" | "down"; text: string };
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6">
+    <div className="rounded-xl border border-slate-200 border-t-2 border-t-gold bg-white p-6">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-mist text-slate-500">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy/10 text-navy">
           <Icon name={icon} size={18} />
         </span>
       </div>
-      <p className="mt-3 text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
+      <p className="mt-3 text-2xl font-semibold tabular-nums text-navy">{value}</p>
       {delta || sub ? (
         <p className="mt-1 text-[13px] text-slate-400">
           {delta ? (

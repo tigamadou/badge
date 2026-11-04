@@ -73,14 +73,14 @@ export default async function ActivityPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Journal d&apos;activité</h1>
+        <h1 className="text-xl font-semibold text-navy">Journal d&apos;activité</h1>
         <p className="mt-0.5 text-sm text-slate-400">Les actions réalisées sur cet événement</p>
       </div>
 
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
               <th className="px-4 py-3 hidden md:table-cell">Auteur</th>

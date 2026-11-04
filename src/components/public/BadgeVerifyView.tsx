@@ -50,7 +50,7 @@ export function BadgeVerifyView({ data }: Props) {
           {anonymous || !data.participant ? (
             <div className="text-base font-semibold italic text-slate-400">Nom masqué</div>
           ) : (
-            <div className="font-badge text-xl font-bold text-slate-900">
+            <div className="font-badge text-xl font-bold text-navy">
               {data.participant.firstName} {data.participant.lastName}
             </div>
           )}

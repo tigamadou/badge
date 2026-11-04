@@ -122,11 +122,11 @@ export function CatalogList({
         <TableFrame>
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-mist">
+              <tr className="border-b border-slate-200 bg-navy">
                 {["", "Nom", "Catégorie", "À partir de", "Statut", "Options"].map((h, i) => (
                   <th
                     key={i}
-                    className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider whitespace-nowrap"
+                    className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider whitespace-nowrap"
                   >
                     {h}
                   </th>

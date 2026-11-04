@@ -76,7 +76,7 @@ export function CategoryTable({
     <div className="max-w-3xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Catégories</h1>
+          <h1 className="text-xl font-semibold text-navy">Catégories</h1>
           <p className="mt-0.5 text-sm text-slate-400">Catégories de participation de l&apos;événement</p>
         </div>
         <div className="flex gap-2">
@@ -108,7 +108,7 @@ export function CategoryTable({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">N°</th>
               <th className="px-4 py-3">Catégorie</th>
               <th className="px-4 py-3">Options</th>
@@ -175,7 +175,7 @@ export function CategoryTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-navy">
                 {editing ? "Modifier la catégorie" : "Nouvelle catégorie"}
               </h3>
             </div>

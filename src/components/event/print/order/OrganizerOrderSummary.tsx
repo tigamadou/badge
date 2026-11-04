@@ -39,7 +39,7 @@ export function OrganizerOrderSummary({
     <aside className="space-y-4" aria-label="Résumé de la commande">
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">{request.reference}</span>
+          <span className="text-sm font-semibold text-navy">{request.reference}</span>
           <span data-testid="order-status">
             <PrintRequestStatusBadge status={request.status} />
           </span>

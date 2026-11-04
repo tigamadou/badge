@@ -65,7 +65,7 @@ export function MemberTable({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Membres</h1>
+          <h1 className="text-xl font-semibold text-navy">Membres</h1>
           <p className="mt-0.5 text-sm text-slate-400">L&apos;équipe de l&apos;événement et ses rôles</p>
         </div>
         <Button onClick={() => setInviting(true)}>
@@ -78,7 +78,7 @@ export function MemberTable({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Membre</th>
               <th className="px-4 py-3">Rôle</th>
               <th className="px-4 py-3">Depuis</th>
@@ -105,7 +105,7 @@ export function MemberTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-base font-semibold text-slate-900">Inviter un membre</h3>
+              <h3 className="text-base font-semibold text-navy">Inviter un membre</h3>
             </div>
             <div className="px-6 py-5">
               <MemberInviteForm orgId={orgId} eventId={eventId} onDone={refresh} onCancel={() => setInviting(false)} />

@@ -19,7 +19,7 @@ export default async function NewPrintRequestPage({ params }: { params: Promise<
       >
         <Icon name="arrow-left" size={14} /> Impression
       </Link>
-      <h1 className="text-xl font-semibold text-slate-900">Nouvelle commande d&apos;impression</h1>
+      <h1 className="text-xl font-semibold text-navy">Nouvelle commande d&apos;impression</h1>
       <NewPrintRequestForm orgId={orgId} eventId={eventId} />
     </div>
   );

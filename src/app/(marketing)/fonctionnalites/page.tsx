@@ -81,11 +81,11 @@ export default function FonctionnalitesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-start gap-3 rounded-xl border-[1.5px] border-navy bg-mist p-4">
                 <span className="mt-0.5 h-3.5 w-3.5 flex-none rounded" style={{ background: "#0ea5e9" }} />
-                <span className="text-sm font-semibold text-slate-900">Visiteur</span>
+                <span className="text-sm font-semibold text-navy">Visiteur</span>
               </div>
               <div className="flex items-start gap-3 rounded-xl border-[1.5px] border-slate-200 p-4">
                 <span className="mt-0.5 h-3.5 w-3.5 flex-none rounded" style={{ background: "#8b5cf6" }} />
-                <span className="text-sm font-semibold text-slate-900">Exposant</span>
+                <span className="text-sm font-semibold text-navy">Exposant</span>
               </div>
             </div>
             <button className="mt-3.5 w-full rounded-lg bg-navy py-2 text-sm font-medium text-white">

@@ -57,7 +57,7 @@ export default async function PrintRequestsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Impression</h1>
+          <h1 className="text-xl font-semibold text-navy">Impression</h1>
           <p className="mt-0.5 text-sm text-slate-400">Commandes d&apos;impression de badges et devis</p>
         </div>
         {!event.archived && !ctx.isStaff ? (

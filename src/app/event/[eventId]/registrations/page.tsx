@@ -12,7 +12,7 @@ export default async function RegistrationsListPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Inscriptions</h1>
+        <h1 className="text-xl font-semibold text-navy">Inscriptions</h1>
         <p className="mt-0.5 text-sm text-slate-400">Gérez et modérez les inscriptions de l&apos;événement</p>
       </div>
       <Suspense>

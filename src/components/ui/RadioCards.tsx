@@ -35,7 +35,7 @@ export function RadioCards({
           >
             {o.color ? <span className="mt-0.5 h-3.5 w-3.5 flex-none rounded" style={{ background: o.color }} /> : null}
             <span>
-              <span className="block text-sm font-semibold text-slate-900">{o.title}</span>
+              <span className="block text-sm font-semibold text-navy">{o.title}</span>
               {o.description ? (
                 <span className="mt-0.5 block text-xs leading-relaxed text-slate-400">{o.description}</span>
               ) : null}

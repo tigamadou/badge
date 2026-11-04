@@ -19,7 +19,7 @@ export default async function PlatformPaymentsPage({ searchParams }: { searchPar
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Paiements</h1>
+        <h1 className="text-xl font-semibold text-navy">Paiements</h1>
         <p className="mt-0.5 text-sm text-slate-400">Tous les paiements d&apos;abonnement et d&apos;impression</p>
       </div>
       <PaymentFilters

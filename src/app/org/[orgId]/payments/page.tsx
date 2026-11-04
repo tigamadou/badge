@@ -36,7 +36,7 @@ export default async function OrgPaymentsPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Paiements</h1>
+        <h1 className="text-xl font-semibold text-navy">Paiements</h1>
         <p className="mt-0.5 text-sm text-slate-400">Abonnements et commandes d&apos;impression de votre organisation</p>
       </div>
       <PaymentFilters

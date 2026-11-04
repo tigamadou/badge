@@ -85,7 +85,7 @@ export function OrderBadgesDialog({ open, onClose, fetchUrl }: { open: boolean; 
             <TableFrame>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-mist text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <tr className="border-b border-slate-200 bg-navy text-left text-xs font-semibold uppercase tracking-wider text-white">
                     <th className="px-4 py-2.5">Nom</th>
                     <th className="px-4 py-2.5">Catégorie</th>
                     <th className="px-4 py-2.5">Statut</th>

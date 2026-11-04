@@ -13,7 +13,7 @@ export function FormSection({
 }) {
   return (
     <section className="border-b border-slate-100 py-6 first:pt-0 last:border-b-0">
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <h3 className="text-sm font-semibold text-navy">{title}</h3>
       {description ? <p className="mb-4 mt-1 text-[13px] text-slate-400">{description}</p> : <div className="mb-4" />}
       {children}
     </section>

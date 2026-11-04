@@ -68,7 +68,7 @@ export default async function BadgeTemplateDetailPage({
           <Icon name="arrow-left" size={14} /> Templates de badge
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900">{template.label}</h1>
+          <h1 className="text-2xl font-bold text-navy">{template.label}</h1>
           {template.archived ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
               <Icon name="archive" size={13} /> Archivé
@@ -94,7 +94,7 @@ export default async function BadgeTemplateDetailPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Aperçu</h2>
+            <h2 className="text-sm font-semibold text-navy">Aperçu</h2>
             {apercu && (
               <a
                 href={apercu}
@@ -113,7 +113,7 @@ export default async function BadgeTemplateDetailPage({
 
         <div className="space-y-6">
           <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-slate-900">Utilisé par</h2>
+            <h2 className="text-sm font-semibold text-navy">Utilisé par</h2>
             {totalUsages === 0 ? (
               <p className="mt-2 text-sm text-slate-600">
                 Aucun évènement ni organisation n&apos;utilise cette version. Elle peut être
@@ -165,7 +165,7 @@ export default async function BadgeTemplateDetailPage({
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-sm font-semibold text-navy">
               Versions de la famille « {template.family} »
             </h2>
             <ul className="mt-3 divide-y divide-slate-100 text-sm">
@@ -191,7 +191,7 @@ export default async function BadgeTemplateDetailPage({
 
           {ressources.length > 0 && (
             <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <h2 className="text-sm font-semibold text-slate-900">Ressources embarquées</h2>
+              <h2 className="text-sm font-semibold text-navy">Ressources embarquées</h2>
               <ul className="mt-3 divide-y divide-slate-100 text-sm">
                 {ressources.map((o) => (
                   <li key={o.key} className="flex items-center justify-between py-2">
@@ -210,7 +210,7 @@ export default async function BadgeTemplateDetailPage({
       {/* Pleine largeur : du JSON indente a besoin de place pour rester lisible. */}
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-slate-900">Manifeste</h2>
+          <h2 className="text-sm font-semibold text-navy">Manifeste</h2>
           <ManifestDownloadButton
             json={manifeste}
             filename={`${template.family}-v${template.version}.json`}

@@ -37,7 +37,7 @@ export function BadgeTemplateTiles({ templates, value, onChange, inheritedLabel 
           </span>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">Hériter par défaut</h3>
+          <h3 className="text-sm font-semibold text-navy">Hériter par défaut</h3>
           <p className="mt-1 text-xs text-slate-500">
             Utilise le modèle de l&apos;organisation, sinon celui de la plateforme : {inheritedLabel}.
           </p>
@@ -61,7 +61,7 @@ export function BadgeTemplateTiles({ templates, value, onChange, inheritedLabel 
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-slate-900">{tpl.label}</h3>
+                <h3 className="text-sm font-semibold text-navy">{tpl.label}</h3>
                 {tpl.onsite && (
                   <span role="img" aria-label="Impression sur place" title="Impression sur place" className="text-slate-500">
                     <Icon name="printer" size={14} />

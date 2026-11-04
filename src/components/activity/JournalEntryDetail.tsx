@@ -51,7 +51,7 @@ export function JournalEntryDetail({
             <LogType kind={logKind(log.type)}>{log.type}</LogType>
             <span className="font-mono text-[13px] text-slate-400">ENTRÉE #{log.id}</span>
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">{describeActivity(log.type)}</h1>
+          <h1 className="text-xl font-semibold text-navy">{describeActivity(log.type)}</h1>
           <p className="mt-0.5 text-sm text-slate-400">{new Date(log.createdAt).toLocaleString("fr-FR")}</p>
         </div>
         <JournalEntryActions id={log.id} json={json} />

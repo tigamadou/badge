@@ -55,7 +55,7 @@ export function BadgeBatchLoader({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Impression par lot</h1>
+        <h1 className="text-xl font-semibold text-navy">Impression par lot</h1>
         {state.kind === "ready" && (
           <p className="mt-0.5 text-sm text-slate-400">{state.badges.length} badge(s) à imprimer</p>
         )}

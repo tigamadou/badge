@@ -112,7 +112,7 @@ export function RegistrationActions({
             }}
             className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-base font-semibold text-slate-900">Rejeter cette inscription</h3>
+              <h3 className="text-base font-semibold text-navy">Rejeter cette inscription</h3>
             </div>
             <div className="space-y-3 px-6 py-5">
               <select

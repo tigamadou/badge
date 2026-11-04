@@ -27,8 +27,8 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const photoUrl = await getApprovedPhotoUrl(session.user.id as string);
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-mist">
+      <header className="border-b-2 border-gold bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3 sm:gap-6">
             <Link href="/account" className="flex-none">

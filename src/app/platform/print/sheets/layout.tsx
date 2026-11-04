@@ -11,7 +11,7 @@ export default async function PrintSheetsLayout({ children }: { children: ReactN
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Planches d&apos;impression</h1>
+        <h1 className="text-xl font-semibold text-navy">Planches d&apos;impression</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Planches PDF prêtes à imprimer : une par commande payée, et la génération libre
         </p>

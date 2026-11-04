@@ -71,7 +71,7 @@ export default async function StaffDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Tableau de bord</h1>
+        <h1 className="text-2xl font-semibold text-navy">Tableau de bord</h1>
         <p className="mt-1 text-sm text-slate-400">Vue d&apos;ensemble de la plateforme</p>
       </div>
 

@@ -55,7 +55,7 @@ export function InstallSummaryStep({
           <TemplatePreview src={summary.preview ?? ""} label={summary.label} />
         </div>
         <div className="min-w-0">
-          <div className="text-base font-semibold text-slate-900">{summary.label}</div>
+          <div className="text-base font-semibold text-navy">{summary.label}</div>
           <div className="mt-0.5 text-xs text-slate-500">
             <code>{summary.family}</code> · {summary.pages} page(s) · version {summary.nextVersion}
           </div>

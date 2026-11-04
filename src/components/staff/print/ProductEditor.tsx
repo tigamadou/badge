@@ -149,7 +149,7 @@ export function ProductEditor({ product, canWrite }: { product: CatalogProduct; 
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">{product.name}</h1>
+          <h1 className="text-xl font-semibold text-navy">{product.name}</h1>
           <StatusPill product={product} />
         </div>
         {disabled ? null : (

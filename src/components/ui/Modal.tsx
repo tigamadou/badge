@@ -73,7 +73,7 @@ export function ModalPanel({
         className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
       >
         <div className="border-b border-slate-200 px-6 py-5">
-          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-base font-semibold text-navy">{title}</h3>
         </div>
         <div className="max-h-[70vh] overflow-y-auto px-6 py-5 text-sm text-slate-600">{children}</div>
         <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 px-6 py-4">

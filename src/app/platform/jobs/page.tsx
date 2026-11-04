@@ -48,7 +48,7 @@ export default async function PlatformJobsPage({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Emails</h1>
+        <h1 className="text-xl font-semibold text-navy">Emails</h1>
         <p className="mt-0.5 text-sm text-slate-400">File d&apos;envoi des emails de la plateforme</p>
       </div>
 
@@ -112,7 +112,7 @@ export default async function PlatformJobsPage({
         <TableFrame>
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
                 <th className="px-4 py-3">Date</th>
                 <th className="hidden px-4 py-3 md:table-cell">Type</th>
                 <th className="px-4 py-3">Destinataire</th>

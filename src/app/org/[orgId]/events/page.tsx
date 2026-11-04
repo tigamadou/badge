@@ -56,7 +56,7 @@ export default async function EventsListPage({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Événements</h1>
+          <h1 className="text-xl font-semibold text-navy">Événements</h1>
           <p className="mt-0.5 text-sm text-slate-400">Les événements de votre organisation</p>
         </div>
         <CreateEventButton orgId={orgId} canCreate={canCreate} subscriptionActive={access.active} />
@@ -65,7 +65,7 @@ export default async function EventsListPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Titre</th>
               <th className="px-4 py-3">Période</th>
               <th className="px-4 py-3">Lieu</th>

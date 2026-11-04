@@ -33,7 +33,7 @@ export default async function ProfileCompletePage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Compléter votre profil</h1>
+        <h1 className="text-2xl font-bold text-navy">Compléter votre profil</h1>
         <p className="text-sm text-slate-600 mt-1">
           Avant de pouvoir vous inscrire à un événement, nous avons besoin de quelques informations
           obligatoires (identité, structure, photo, pièce d&apos;identité). Ces données seront utilisées

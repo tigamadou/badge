@@ -115,7 +115,7 @@ export function NotificationPanel({
       className="fixed inset-0 z-50 flex flex-col bg-white sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-[70vh] sm:w-96 sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-lg"
     >
       <div className="flex flex-none items-center justify-between border-b border-slate-100 px-4 py-3">
-        <span className="text-sm font-semibold text-slate-900">Notifications</span>
+        <span className="text-sm font-semibold text-navy">Notifications</span>
         <button
           type="button"
           onClick={onClose}

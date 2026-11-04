@@ -83,7 +83,7 @@ export default async function UserDetailPage({
         </span>
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold text-slate-900">{user.name}</h1>
+            <h1 className="text-xl font-semibold text-navy">{user.name}</h1>
             {user.isStaff && user.staffRole && <RoleBadge tone="navy">{user.staffRole}</RoleBadge>}
             {user.archived && <Tag icon="archive">Archivé</Tag>}
           </div>

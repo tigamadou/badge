@@ -50,7 +50,7 @@ export default async function PlatformBadgeTemplatesPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Templates de badge</h1>
+        <h1 className="text-2xl font-bold text-navy">Templates de badge</h1>
         <p className="mt-1 text-sm text-slate-600">
           Installez un modèle de badge sous forme d&apos;archive. Chaque installation crée une
           version figée : les événements qui utilisent une version antérieure ne sont pas affectés.
@@ -61,7 +61,7 @@ export default async function PlatformBadgeTemplatesPage({
 
       <div className="rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">Catalogue</h2>
+          <h2 className="text-sm font-semibold text-navy">Catalogue</h2>
         </div>
 
         {templates.length === 0 ? (

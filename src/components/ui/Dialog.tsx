@@ -60,7 +60,7 @@ export function DialogPanel({
         className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-base font-semibold text-navy">{title}</h3>
           <button
             ref={closeRef}
             type="button"

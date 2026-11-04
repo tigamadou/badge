@@ -107,7 +107,7 @@ export default function BadgeTemplatePicker({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900">{tpl.label}</h3>
+                  <h3 className="text-sm font-semibold text-navy">{tpl.label}</h3>
                   {tpl.onsite && (
                     <span role="img" aria-label="Impression sur place" title="Impression sur place" className="text-slate-500">
                       <Icon name="printer" size={14} />

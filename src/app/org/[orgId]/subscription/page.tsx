@@ -107,7 +107,7 @@ export default async function OrgSubscriptionPage({
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Abonnement</h1>
+        <h1 className="text-xl font-semibold text-navy">Abonnement</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Plan, limites et paiements de votre organisation
         </p>

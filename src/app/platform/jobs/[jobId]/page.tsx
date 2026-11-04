@@ -37,7 +37,7 @@ export default async function PlatformJobDetailPage({
         >
           <Icon name="arrow-left" size={14} /> Emails
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-slate-900">{job.subject ?? job.kind}</h1>
+        <h1 className="mt-1 text-xl font-semibold text-navy">{job.subject ?? job.kind}</h1>
       </div>
 
       <Card>

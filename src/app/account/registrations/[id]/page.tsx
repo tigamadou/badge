@@ -95,7 +95,7 @@ export default async function RegistrationDetailPage({
           <Icon name="arrow-left" size={14} /> Retour
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900">{registration.event.title}</h1>
+          <h1 className="text-2xl font-bold text-navy">{registration.event.title}</h1>
           <StatusBadge status={registration.status} />
         </div>
         <p className="text-sm text-slate-600">

@@ -49,7 +49,7 @@ export default async function OrgDashboardPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Tableau de bord</h1>
+        <h1 className="text-xl font-semibold text-navy">Tableau de bord</h1>
         <p className="mt-0.5 text-sm text-slate-400">Vue d&apos;ensemble de votre organisation</p>
       </div>
 

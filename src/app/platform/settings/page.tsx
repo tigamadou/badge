@@ -60,7 +60,7 @@ export default async function StaffSettingsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Paramètres plateforme</h1>
+        <h1 className="text-xl font-semibold text-navy">Paramètres plateforme</h1>
         <p className="mt-0.5 text-sm text-slate-400">Configuration globale de la plateforme</p>
       </div>
       <Alert tone="info">

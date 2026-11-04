@@ -152,7 +152,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
         >
           ← Commande {reference}
         </Link>
-        <h1 className="mt-1 text-xl font-semibold text-slate-900">Poste d&apos;impression · {reference}</h1>
+        <h1 className="mt-1 text-xl font-semibold text-navy">Poste d&apos;impression · {reference}</h1>
         <p className="text-sm text-slate-500">
           {eventTitle}
           {location ? ` · ${location}` : ""}
@@ -225,7 +225,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
               <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
                 <DocumentPreview storageKey={card.snapshotPhoto} label="Photo" />
                 <div className="min-w-0 space-y-1">
-                  <div className="text-lg font-semibold text-slate-900">
+                  <div className="text-lg font-semibold text-navy">
                     {card.snapshotFirstName} {card.snapshotLastName}
                   </div>
                   <div className="truncate text-sm text-slate-500">{card.snapshotEmail}</div>

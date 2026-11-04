@@ -121,7 +121,7 @@ export function BadgeTemplateInstaller() {
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-900">Installer un template</h2>
+      <h2 className="text-sm font-semibold text-navy">Installer un template</h2>
       <p className="mt-1 text-xs text-slate-600">
         Archive ZIP contenant <code>manifest.json</code> à la racine, et si besoin les dossiers{" "}
         <code>assets/</code> (JPEG, PNG) et <code>fonts/</code> (TTF, OTF).
