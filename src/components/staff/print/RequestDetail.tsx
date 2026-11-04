@@ -6,8 +6,12 @@ import { useRouter } from "next/navigation";
 import type { StaffRole } from "@prisma/client";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { Alert } from "@/components/ui/Feedback";
-import { Card, CardBody, CardHead } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { FullHeightPage } from "@/components/layout/FullHeightPage";
+import { OrderModal } from "@/components/print/OrderModal";
+import { OrderTabs } from "@/components/print/OrderTabs";
+import { useIsWide } from "@/components/print/useIsWide";
 import type { PaymentHistoryItem } from "@/components/admin/PaymentHistory";
 import { toastApiError } from "@/lib/toast";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
@@ -17,6 +21,10 @@ import type { StaffCreditData } from "./RequestCreditPanel";
 import { OrderConversation } from "./order/OrderConversation";
 import { OrderQuoteColumn } from "./order/OrderQuoteColumn";
 import { OrderSummaryColumn } from "./order/OrderSummaryColumn";
+import { OrderBadgesButton } from "./order/OrderBadgesButton";
+import { QuoteEditor } from "./QuoteEditor";
+import { RequestStatusActions } from "./RequestStatusActions";
+import { canEditQuote } from "./request-actions";
 import { requestUrl } from "./request-fetch";
 import type { ProductOption, RequestDetailData } from "./request-types";
 
@@ -51,7 +59,8 @@ export function RequestDetail({
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [failed, setFailed] = useState(false);
   const [threadKey, setThreadKey] = useState(0);
-  const [showBadges, setShowBadges] = useState(false);
+  const [editQuote, setEditQuote] = useState(false);
+  const wide = useIsWide();
 
   const load = useCallback(async () => {
     try {
@@ -81,104 +90,107 @@ export function RequestDetail({
   const refreshMenu = useCallback(() => router.refresh(), [router]);
 
   if (!data) {
-    return failed ? (
-      <Alert tone="err">Cette commande est introuvable ou inaccessible.</Alert>
-    ) : (
-      <p className="text-sm text-slate-400">Chargement…</p>
+    return (
+      <FullHeightPage>
+        <div className="p-4">
+          {failed ? (
+            <Alert tone="err">Cette commande est introuvable ou inaccessible.</Alert>
+          ) : (
+            <p className="text-sm text-slate-400">Chargement…</p>
+          )}
+        </div>
+      </FullHeightPage>
     );
   }
 
   const { request, items } = data;
-  const printed = items.filter((i) => i.badgePrinted).length;
   const canPost = staffRoleAtLeast(role, "STAFF_SUPPORT");
+  const editable = canEditQuote(request.status, role);
+  const currentQuote = request.quoteVersion > 0 ? { version: request.quoteVersion, lines: data.lines } : undefined;
+
+  const summary = (
+    <OrderSummaryColumn data={data} acceptedTotal={request.acceptedTotal} parentRequest={parentRequest} supplements={supplements} />
+  );
+  const conversation = (
+    <OrderConversation
+      messagesUrl={requestUrl(requestId, "/messages")}
+      uploadUrl={`/api/platform/upload?context=print-request&requestId=${requestId}`}
+      canPost={canPost}
+      refreshKey={threadKey}
+      onFirstRead={refreshMenu}
+      currentQuote={currentQuote}
+    />
+  );
+  const quote = (
+    <OrderQuoteColumn
+      requestId={requestId}
+      role={role}
+      data={data}
+      payments={payments}
+      onsiteCounter={onsiteCounter}
+      credit={credit}
+      sheet={sheet}
+      onChanged={onChanged}
+    />
+  );
 
   return (
-    <div className="space-y-4">
-      <div>
+    <FullHeightPage>
+      <div className="flex-none border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
         <Link href="/platform/print/orders" className="inline-flex items-center gap-1 text-[13px] text-slate-500 hover:text-slate-800">
           <Icon name="arrow-left" size={14} /> Commandes
         </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
           <h1 className="text-xl font-semibold text-slate-900">{request.reference}</h1>
           <PrintRequestStatusBadge status={request.status} />
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {request.type === "ADVANCE" && items.length > 0 ? (
+              <OrderBadgesButton count={items.length} fetchUrl={requestUrl(requestId, "/items")} />
+            ) : null}
+            {editable ? (
+              <Button type="button" variant="secondary" onClick={() => setEditQuote(true)}>
+                Modifier le devis
+              </Button>
+            ) : null}
+            <RequestStatusActions
+              request={request}
+              eventId={data.event.id}
+              orgId={data.event.org.id}
+              items={items}
+              role={role}
+              onChanged={onChanged}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[300px_minmax(0,1fr)_380px]">
-        <div className="min-w-0 xl:col-span-2 2xl:col-span-1">
-          <OrderSummaryColumn
-            data={data}
-            acceptedTotal={request.acceptedTotal}
-            parentRequest={parentRequest}
-            supplements={supplements}
-          />
+      {wide ? (
+        <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)_340px] gap-4 p-4">
+          <div className="min-h-0 overflow-y-auto">{summary}</div>
+          <div className="flex min-h-0 flex-col">{conversation}</div>
+          <div className="min-h-0 overflow-y-auto">{quote}</div>
         </div>
-        <OrderConversation
-          messagesUrl={requestUrl(requestId, "/messages")}
-          uploadUrl={`/api/platform/upload?context=print-request&requestId=${requestId}`}
-          canPost={canPost}
-          refreshKey={threadKey}
-          onFirstRead={refreshMenu}
+      ) : (
+        <OrderTabs
+          defaultId="discussion"
+          tabs={[
+            { id: "infos", label: "Infos", panel: <div className="p-3">{summary}</div> },
+            { id: "discussion", label: "Discussion", panel: <div className="flex min-h-0 flex-1 flex-col p-3">{conversation}</div> },
+            { id: "quote", label: "Devis", panel: <div className="p-3">{quote}</div> },
+          ]}
         />
-        <OrderQuoteColumn
-          requestId={requestId}
-          role={role}
-          data={data}
-          products={products}
-          payments={payments}
-          onsiteCounter={onsiteCounter}
-          credit={credit}
-          sheet={sheet}
-          onChanged={onChanged}
-        />
-      </div>
-
-      {request.type === "ADVANCE" && (
-        <Card>
-          <CardHead
-            title="Badges"
-            subtitle={`${items.length} badge${items.length > 1 ? "s" : ""} · ${printed} imprimé${printed > 1 ? "s" : ""}`}
-            action={
-              items.length > 0 ? (
-                <button
-                  type="button"
-                  aria-expanded={showBadges}
-                  onClick={() => setShowBadges((v) => !v)}
-                  className="text-[13px] font-medium text-green-700 hover:underline"
-                >
-                  {showBadges ? "Replier la liste" : "Afficher la liste"}
-                </button>
-              ) : undefined
-            }
-          />
-          {showBadges && (
-            <CardBody className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wider text-slate-500">
-                    <th className="px-3 py-2 font-medium">Nom</th>
-                    <th className="px-3 py-2 font-medium">Catégorie</th>
-                    <th className="px-3 py-2 font-medium">Statut</th>
-                    <th className="px-3 py-2 font-medium">Imprimé</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((i) => (
-                    <tr key={i.registrationId} className="border-b border-slate-100">
-                      <td className="px-3 py-2">
-                        {i.firstName} {i.lastName}
-                      </td>
-                      <td className="px-3 py-2">{i.categoryName}</td>
-                      <td className="px-3 py-2">{i.status}</td>
-                      <td className="px-3 py-2">{i.badgePrinted ? "Oui" : "Non"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardBody>
-          )}
-        </Card>
       )}
-    </div>
+
+      <OrderModal open={editQuote} onClose={() => setEditQuote(false)} title="Modifier le devis" size="xl">
+        <QuoteEditor
+          requestId={requestId}
+          lines={data.lines}
+          canEdit={editable}
+          products={products}
+          onChanged={onChanged}
+          bare
+        />
+      </OrderModal>
+    </FullHeightPage>
   );
 }

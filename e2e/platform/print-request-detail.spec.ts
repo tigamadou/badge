@@ -16,6 +16,7 @@ import { loginAndEnter } from "../helpers/nav";
 import { loginAs } from "../helpers/auth";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
+import { expectNoHorizontalOverflow } from "../helpers/pagination";
 
 // Le support de badge doit être un produit BADGE du catalogue : sans lui, l'envoi du devis est refusé
 // (BADGE_PRODUCT_REQUIRED).
@@ -81,6 +82,11 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     await openRequest(page, request);
     await expect(statusBadge(page, request.reference)).toHaveText("Envoyée");
 
+    // L'édition du devis se fait dans une modale.
+    await page.getByRole("button", { name: "Modifier le devis" }).click();
+    const editor = page.getByRole("dialog", { name: "Modifier le devis" });
+    await expect(editor).toBeVisible();
+
     // Modification d'un prix : enregistrée à la sortie du champ.
     const price = page.getByLabel("Prix unitaire de Frais de dossier");
     await price.fill("6000");
@@ -99,6 +105,9 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     expect(added.unitPrice).toBe(2500);
     expect(added.addedBy).toBe("STAFF");
 
+    await editor.getByRole("button", { name: "Fermer" }).click();
+    await expect(editor).toHaveCount(0);
+
     // Chaque modification de ligne est une entrée interne du fil (jamais regroupée).
     const internalEvents = page.locator('[data-entry-kind="internal-event"]');
     await expect(internalEvents).toHaveCount(2);
@@ -109,9 +118,11 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     await page.getByRole("button", { name: "Envoyer le devis" }).click();
     await expect(toast(page, "Devis envoyé.")).toBeVisible();
     await expect(statusBadge(page, request.reference)).toHaveText("Devis envoyé");
-    await expect(page.getByText(/Devis v1 envoyé/)).toBeVisible();
-    // Récapitulatif du devis dans le fil, avec le nouveau total.
-    await expect(page.getByText(/Devis v1 : 3 ligne\(s\)/)).toBeVisible();
+    // Carte de devis dans le fil : tableau des lignes et nouveau total.
+    const card = page.getByTestId("quote-card");
+    await expect(card).toContainText("Devis v1");
+    await expect(card.getByRole("table")).toContainText("Frais de livraison");
+    await expect(card).toContainText("Total :");
     const quoted = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(quoted.status).toBe("QUOTED");
     expect(quoted.quoteVersion).toBe(1);
@@ -193,13 +204,15 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     await loginAndEnter(page, admin, { kind: "platform" });
     await openRequest(page, request);
 
+    await page.getByRole("button", { name: "Modifier le devis" }).click();
     const price = page.getByLabel("Prix unitaire de Frais de dossier");
     await price.fill("6000");
     await price.press("Tab");
     await expect(page.locator('[data-entry-kind="internal-event"]')).toHaveCount(1);
+    await page.getByRole("dialog", { name: "Modifier le devis" }).getByRole("button", { name: "Fermer" }).click();
     await page.getByRole("button", { name: "Envoyer le devis" }).click();
     await expect(toast(page, "Devis envoyé.")).toBeVisible();
-    await expect(page.getByText(/Devis v1 : 2 ligne\(s\)/)).toBeVisible();
+    await expect(page.getByTestId("quote-card")).toContainText("Devis v1");
 
     const seen = await organizerThread(browser, organizer, { orgId, eventId, requestId: request.id });
     const recap = seen.find((e) => e.kind === "MESSAGE");
@@ -270,7 +283,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
 
     // Commande envoyée : devis en lecture seule, ni ajout de ligne ni envoi du devis.
     await openRequest(page, submitted.request);
-    await expect(page.getByText("Lecture seule dans cet état.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Modifier le devis" })).toHaveCount(0);
     await expect(page.getByText("Ajouter une ligne")).toHaveCount(0);
     await expect(page.getByLabel("Prix unitaire de Frais de dossier")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Envoyer le devis" })).toHaveCount(0);
@@ -352,5 +365,72 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     const unchanged = await getDb().printRequest.findUniqueOrThrow({ where: { id: request.id } });
     expect(unchanged.status).toBe("ACCEPTED");
     expect(unchanged.paidAt).toBeNull();
+  });
+
+  test("Disposition : en-tête fixe, trois colonnes à 1280 px, composer collé en bas, page sans défilement", async ({ page }) => {
+    const { request } = await seedRequest("prd-layout", "SUBMITTED");
+    const admin = await createTestStaff({ scope: "prd-layout", role: "STAFF_ADMIN" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await loginAndEnter(page, admin, { kind: "platform" });
+    await openRequest(page, request);
+
+    const title = page.getByRole("heading", { name: request.reference });
+    const top = (await title.boundingBox())!.y;
+    await page.getByLabel("Fil de la commande").evaluate((el) => (el.scrollTop = el.scrollHeight));
+    expect((await title.boundingBox())!.y).toBe(top);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    const summary = (await page.getByRole("complementary", { name: "Résumé de la commande" }).boundingBox())!;
+    const thread = (await page.getByLabel("Fil de la commande").boundingBox())!;
+    const composer = (await page.getByLabel("Votre message").boundingBox())!;
+    expect(summary.x + summary.width).toBeLessThanOrEqual(thread.x);
+    expect(composer.y + composer.height).toBeGreaterThan(780 - 120);
+    await expect(page.getByRole("tablist")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("Onglets sous 1280 px (Discussion par défaut), sans débordement horizontal", async ({ page }) => {
+    const { request } = await seedRequest("prd-tabs", "SUBMITTED");
+    const admin = await createTestStaff({ scope: "prd-tabs", role: "STAFF_ADMIN" });
+    await loginAndEnter(page, admin, { kind: "platform" });
+    await openRequest(page, request);
+    for (const width of [1024, 375]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(`/platform/print/orders/${request.id}`);
+      await expect(page.getByRole("tab", { name: "Discussion" })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByLabel("Fil de la commande")).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+      await page.getByRole("tab", { name: "Devis" }).click();
+      await expect(page.getByRole("tab", { name: "Devis" })).toHaveAttribute("aria-selected", "true");
+      await expectNoHorizontalOverflow(page);
+      await page.getByRole("tab", { name: "Infos" }).click();
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
+  test("« Voir les badges (N) » ouvre une modale avec recherche et pagination", async ({ page }) => {
+    test.setTimeout(240_000);
+    const seeded = await seedRequest("prd-badges", "SUBMITTED", { registrations: 45 });
+    const admin = await createTestStaff({ scope: "prd-badges", role: "STAFF_ADMIN" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await loginAndEnter(page, admin, { kind: "platform" });
+    await openRequest(page, seeded.request);
+
+    await page.getByRole("button", { name: "Voir les badges (45)" }).click();
+    const dialog = page.getByRole("dialog", { name: "Badges de la commande" });
+    await expect(dialog.getByText("45 résultats", { exact: true })).toBeVisible();
+    await expect(dialog.getByRole("row")).toHaveCount(21);
+
+    await dialog.getByLabel("Nombre de résultats par page").selectOption("10");
+    await expect(dialog.getByRole("row")).toHaveCount(11);
+    await dialog.getByRole("button", { name: "Page suivante" }).click();
+    await expect(dialog.locator('button[aria-current="page"]')).toHaveText("2");
+
+    const first = (await getDb().registration.findFirstOrThrow({ where: { id: seeded.registrationIds[0] } })).snapshotLastName;
+    await dialog.getByLabel("Rechercher un badge").fill(first);
+    await expect(dialog.getByText(/résultats?$/)).toBeVisible();
+    await expect(dialog.getByRole("row").nth(1)).toContainText(first);
+    await dialog.getByRole("button", { name: "Fermer" }).click();
+    await expect(dialog).toHaveCount(0);
   });
 });

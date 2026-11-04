@@ -250,21 +250,19 @@ export function QuoteEditor({
   canEdit,
   products,
   onChanged,
+  bare = false,
 }: {
   requestId: string;
   lines: DetailLine[];
   canEdit: boolean;
   products: ProductOption[];
   onChanged: () => void;
+  // Sans Card : le devis est alors affiché dans une modale qui porte déjà son titre.
+  bare?: boolean;
 }) {
   const total = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-  return (
-    <Card>
-      <CardHead
-        title="Devis"
-        subtitle={canEdit ? "Modifiez une valeur puis quittez le champ pour l'enregistrer." : "Lecture seule dans cet état."}
-      />
-      <CardBody className="!px-3">
+  const content = (
+    <>
         {lines.length === 0 ? (
           <p className="text-sm text-slate-500">Aucune ligne.</p>
         ) : (
@@ -307,7 +305,16 @@ export function QuoteEditor({
           </div>
         )}
         {canEdit && <AddLineForm requestId={requestId} products={products} onChanged={onChanged} />}
-      </CardBody>
+    </>
+  );
+  if (bare) return <div>{content}</div>;
+  return (
+    <Card>
+      <CardHead
+        title="Devis"
+        subtitle={canEdit ? "Modifiez une valeur puis quittez le champ pour l'enregistrer." : "Lecture seule dans cet état."}
+      />
+      <CardBody className="!px-3">{content}</CardBody>
     </Card>
   );
 }
