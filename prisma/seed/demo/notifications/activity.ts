@@ -46,7 +46,7 @@ export async function cleanupActivity(opts: { keepBilling?: boolean } = {}): Pro
  * Types non seedés, volontairement : suppressions définitives (action staff explicite, jamais
  * jouée dans le monde de démo, où toute ligne seedée existe encore).
  */
-export const ACTIVITY_NOT_SEEDED: ActivityType[] = ["USER_DELETED", "ORG_DELETED", "REGISTRATION_DELETED"];
+export const ACTIVITY_NOT_SEEDED: ActivityType[] = ["USER_DELETED", "ORG_DELETED", "REGISTRATION_DELETED", "EVENT_IMAGE_UPDATED", "PAYMENT_PRORATA_MISMATCH"];
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
