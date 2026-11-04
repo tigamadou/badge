@@ -766,6 +766,15 @@ describe("PATCH /api/org/[orgId]/events/[eventId] : images", () => {
     expect(await prisma.activityLog.count({ where: { type: "EVENT_IMAGE_UPDATED" } })).toBe(0);
   });
 
+  it("accepte un original ancien hors périmètre renvoyé inchangé", async () => {
+    const { event, patch, row } = await setup();
+    const legacy = "legacy/ancien-logo-original.png";
+    await prisma.event.update({ where: { id: event.id }, data: { logoOriginal: legacy } });
+    const res = await patch({ logoOriginal: legacy, title: "Autre titre" });
+    expect(res.status).toBe(200);
+    expect((await row()).logoOriginal).toBe(legacy);
+  });
+
   it("efface la clé, les dimensions et l'original avec null", async () => {
     const { event, patch, put, row } = await setup();
     const logo = await put("rm", 136, 136);

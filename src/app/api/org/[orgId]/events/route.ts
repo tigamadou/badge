@@ -8,7 +8,7 @@ import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { notifyQuotaExceeded } from "@/lib/notifications/triggers";
-import { readStoredDimensions, keyHasPrefix } from "@/lib/event-image-compliance";
+import { getEventImageRequirements, rejectionResponse, validateStoredImage } from "@/lib/event-image-compliance";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
@@ -157,13 +157,17 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     return c;
   });
 
-  // Dimensions du logo memorisees pour le controle de conformite ; un logo illisible
-  // n'empeche pas la creation (il sera signale a la lecture).
-  // Une cle fournie par le client doit rester dans le dossier de l'organisation.
-  if (data.logo && !keyHasPrefix(data.logo, [`orgs/${orgId}/`])) {
-    return NextResponse.json({ error: "Image introuvable.", code: "INVALID_IMAGE" }, { status: 400 });
+  // Logo : meme controle que le PATCH (dossier de l'organisation, format du moteur, cadre du template).
+  let logoDimensions: { width: number; height: number } | null = null;
+  if (data.logo) {
+    const requirements = await getEventImageRequirements({ badgeTemplateId: data.badgeTemplateId ?? null, orgId });
+    const verdict = await validateStoredImage(data.logo, requirements.logo ?? null, {
+      engineFormatsOnly: true,
+      allowedPrefixes: [`orgs/${orgId}/`],
+    });
+    if (!verdict.ok) return rejectionResponse(verdict, { slot: "logo" });
+    logoDimensions = { width: verdict.width, height: verdict.height };
   }
-  const logoDimensions = data.logo ? await readStoredDimensions(data.logo) : null;
 
   try {
     const event = await prisma.event.create({

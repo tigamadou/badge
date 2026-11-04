@@ -101,6 +101,8 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
       templateOptions: true,
       logo: true,
       banner: true,
+      logoOriginal: true,
+      bannerOriginal: true,
       badgeTemplateId: true,
     },
   });
@@ -129,8 +131,13 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
   const changedImages: { slot: ImageSlot; removed: boolean }[] = [];
   // Cles fournies par le client : uniquement celles de l'organisation ou de l'evenement.
   const allowedPrefixes = [`orgs/${orgId}/`, `events/${eventId}/`];
-  for (const original of [parsed.data.logoOriginal, parsed.data.bannerOriginal]) {
-    if (original && !keyHasPrefix(original, allowedPrefixes)) {
+  // Un original inchange (renvoye tel quel par le formulaire, eventuellement ancien) n'est pas revalide.
+  const originals = [
+    [parsed.data.logoOriginal, before.logoOriginal],
+    [parsed.data.bannerOriginal, before.bannerOriginal],
+  ] as const;
+  for (const [original, current] of originals) {
+    if (original && original !== current && !keyHasPrefix(original, allowedPrefixes)) {
       return NextResponse.json({ error: "Image introuvable.", code: "INVALID_IMAGE" }, { status: 400 });
     }
   }

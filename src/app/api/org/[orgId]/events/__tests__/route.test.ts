@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureReferenceTemplates, familyTemplateId } from "@/lib/badge-templates/install";
-import { makePng, putTestImage } from "@/test/factories-2a";
+import { makeStaff } from "@/test/factories";
+import { makeFramedTemplate, makePng, makeWebpHeader, putTestImage } from "@/test/factories-2a";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -111,14 +112,30 @@ describe("POST /api/org/[orgId]/events : logo", () => {
     expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE" });
   });
 
-  it("cree l'evenement meme si le logo est introuvable", async () => {
+  it("refuse un logo introuvable, sans creer l'evenement", async () => {
     const { org } = await seedOwnerOrg();
     const res = await callPost(org.id, { ...base, logo: `orgs/${org.id}/images/absent.png` });
-    expect(res.status).toBe(201);
-    const { event } = (await res.json()) as { event: { id: string } };
-    expect(await prisma.event.findUnique({ where: { id: event.id } })).toMatchObject({
-      logoWidth: null,
-      logoHeight: null,
-    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ code: "INVALID_IMAGE", slot: "logo" });
+    expect(await prisma.event.count({ where: { orgId: org.id } })).toBe(0);
+  });
+
+  it("refuse un logo hors ratio du template, sans creer l'evenement", async () => {
+    const { org } = await seedOwnerOrg();
+    const staff = await makeStaff("SUPER_ADMIN");
+    const template = await makeFramedTemplate(staff.id, { logo: { w: 68, h: 68 } });
+    const logo = await putTestImage(`orgs/${org.id}/images/wide-${Date.now()}.png`, makePng(600, 100), "image/png");
+    const res = await callPost(org.id, { ...base, logo, badgeTemplateId: template.id });
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ code: "IMAGE_RATIO", slot: "logo" });
+    expect(await prisma.event.count({ where: { orgId: org.id } })).toBe(0);
+  });
+
+  it("refuse un logo WebP (non lu par le moteur)", async () => {
+    const { org } = await seedOwnerOrg();
+    const logo = await putTestImage(`orgs/${org.id}/images/w-${Date.now()}.webp`, makeWebpHeader(136, 136), "image/webp");
+    const res = await callPost(org.id, { ...base, logo });
+    expect(res.status).toBe(415);
+    expect(await res.json()).toMatchObject({ code: "UNSUPPORTED_FORMAT", slot: "logo" });
   });
 });
