@@ -96,7 +96,7 @@ export function BlockedEmailsForm({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">E-mail</th>
               <th className="px-4 py-3">Raison</th>
               <th className="px-4 py-3">Depuis</th>
@@ -112,7 +112,7 @@ export function BlockedEmailsForm({
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={r.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3 font-mono text-[13px] text-slate-900">{r.email}</td>
                 <td className="px-4 py-3 text-[13px] text-slate-500">{r.reason ?? "—"}</td>
                 <td className="px-4 py-3 text-xs tabular-nums text-slate-400">

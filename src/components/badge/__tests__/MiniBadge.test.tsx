@@ -8,6 +8,6 @@ describe("MiniBadge", () => {
       <MiniBadge name="A. Dupont" category="Visiteur" categoryColor="#2563eb" state="done" />,
     );
     expect(html).toContain("A. Dupont");
-    expect(html).toContain("bg-green-600");
+    expect(html).toContain("bg-turquoise");
   });
 });

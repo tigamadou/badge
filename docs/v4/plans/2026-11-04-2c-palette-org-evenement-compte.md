@@ -34,16 +34,16 @@ signaler dans la progression.
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
 | 1 | Shells et menu latéral clair (`SidebarNav`, `OrgShell`, 4 shells évènement) | [-] | 2026-11-04 | Déplacée au socle (tâche 4b) : navigation partagée avec StaffShell. Ne pas exécuter. |
-| 2 | Pages `src/app/org/**` | [ ] | | |
-| 3 | Pages `src/app/event/**` | [ ] | | |
-| 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [ ] | | |
-| 5 | `components/event` — formulaires, tableaux, actions, fonds | [ ] | | |
-| 6 | `components/event/print/**` — assistant et conversation | [ ] | | |
-| 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [ ] | | |
-| 8 | `components/admin` — hors shells | [ ] | | |
-| 9 | `components/badge` et test `MiniBadge` | [ ] | | |
-| 10 | Balayage final, contrôle des tests de classes | [ ] | | |
-| 11 | e2e, contrôle visuel, vérification | [ ] | | |
+| 2 | Pages `src/app/org/**` | [x] | 2026-11-04 |  |
+| 3 | Pages `src/app/event/**` | [x] | 2026-11-04 |  |
+| 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [x] | 2026-11-04 |  |
+| 5 | `components/event` — formulaires, tableaux, actions, fonds | [x] | 2026-11-04 |  |
+| 6 | `components/event/print/**` — assistant et conversation | [x] | 2026-11-04 |  |
+| 7 | Scanner (`ScannerFrame`, `QRScanner`) et tests | [x] | 2026-11-04 | Test ScannerFrame : non-regression text-rose-700 ajoutee. |
+| 8 | `components/admin` — hors shells | [x] | 2026-11-04 |  |
+| 9 | `components/badge` et test `MiniBadge` | [x] | 2026-11-04 | BadgeDocumentView garde bg-[#8b8b90]. |
+| 10 | Balayage final, contrôle des tests de classes | [x] | 2026-11-04 | Balayage vide hors exceptions. |
+| 11 | e2e, contrôle visuel, vérification | [-] | 2026-11-04 | Differee a la vague 3 (e2e et passes completes interdits au lot). |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task
 validée : statut `[x]` + date ; en cas d'interruption : `[~]`, date et état précis (step en

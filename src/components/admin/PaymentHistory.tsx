@@ -44,7 +44,7 @@ export function PaymentHistory({
                 key: "detail",
                 header: "",
                 render: (p: PaymentHistoryItem) => (
-                  <Link href={detailHref(p)} className="text-sm font-medium text-blue-600 hover:underline">
+                  <Link href={detailHref(p)} className="text-sm font-medium text-navy hover:underline">
                     Voir
                   </Link>
                 ),

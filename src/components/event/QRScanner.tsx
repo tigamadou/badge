@@ -137,7 +137,7 @@ export function QRScanner({ orgId, eventId }: { orgId: string; eventId: string }
               history.map((h, i) => (
                 <div key={i} className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 text-sm last:border-b-0">
                   <span className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${h.authorized ? "bg-green-500" : "bg-rose-500"}`} />
+                    <span className={`h-2 w-2 rounded-full ${h.authorized ? "bg-turquoise" : "bg-rose-500"}`} />
                     {h.registration ? `${h.registration.firstName} ${h.registration.lastName}` : h.error ?? "?"}
                   </span>
                   <span className="text-xs tabular-nums text-slate-400">{h.scannedAt.toLocaleTimeString("fr-FR")}</span>

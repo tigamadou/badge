@@ -51,7 +51,7 @@ export function PublicLinkCard({
           value={url}
           aria-label="Lien d'inscription public"
           onFocus={(e) => e.currentTarget.select()}
-          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[13px] text-slate-600"
+          className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-mist px-3 py-2 font-mono text-[13px] text-slate-600"
         />
         <Button variant="secondary" onClick={copy} className="flex items-center gap-1.5">
           <Icon name="copy" size={14} /> {copied ? "Copié" : "Copier"}
@@ -60,7 +60,7 @@ export function PublicLinkCard({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+          className="flex items-center gap-1.5 rounded-lg bg-mist px-4 py-2 text-sm font-medium text-navy transition-colors hover:bg-line"
         >
           <Icon name="external-link" size={14} /> Ouvrir
         </a>

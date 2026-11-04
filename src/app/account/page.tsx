@@ -72,7 +72,7 @@ export default async function AccountHomePage({
             </p>
             <Link
               href="/account/profile/complete"
-              className="mt-2 inline-flex rounded-lg bg-green-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-green-700"
+              className="mt-2 inline-flex rounded-lg bg-navy px-3 py-1.5 text-[13px] font-medium text-white hover:bg-navy-hover"
             >
               Compléter mon profil
             </Link>
@@ -103,7 +103,7 @@ export default async function AccountHomePage({
                     <EventCover bannerUrl={eventCoverUrl(r.event.banner)} title={r.event.title} variant="thumb" />
                   </div>
                 )}
-                <div className="w-14 flex-none rounded-lg border border-slate-200 bg-slate-50 py-2 text-center">
+                <div className="w-14 flex-none rounded-lg border border-slate-200 bg-mist py-2 text-center">
                   <div className="text-xl font-bold leading-none tabular-nums text-slate-900">{fmtDay(r.event.date)}</div>
                   <div className="mt-0.5 text-[11px] uppercase text-slate-400">{fmtMonth(r.event.date)}</div>
                 </div>

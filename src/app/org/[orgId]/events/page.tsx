@@ -65,7 +65,7 @@ export default async function EventsListPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Titre</th>
               <th className="px-4 py-3">Période</th>
               <th className="px-4 py-3">Lieu</th>
@@ -85,12 +85,12 @@ export default async function EventsListPage({
             {events.map((e) => (
               <tr
                 key={e.id}
-                className={`border-t border-slate-100 hover:bg-slate-50 ${e.archived ? "opacity-60" : ""}`}
+                className={`border-t border-slate-100 hover:bg-mist ${e.archived ? "opacity-60" : ""}`}
               >
                 <td className="px-4 py-3">
                   <Link
                     href={`/event/${e.id}`}
-                    className="text-sm font-medium text-slate-900 hover:text-green-600"
+                    className="text-sm font-medium text-slate-900 hover:text-navy hover:underline"
                   >
                     {e.title}
                   </Link>
@@ -107,11 +107,11 @@ export default async function EventsListPage({
                       Archivé
                     </span>
                   ) : e.registrationOpen ? (
-                    <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                    <span className="inline-flex rounded-full bg-turquoise-soft px-2.5 py-0.5 text-xs font-medium text-turquoise-strong">
                       Inscriptions ouvertes
                     </span>
                   ) : (
-                    <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                    <span className="inline-flex rounded-full bg-warn-soft px-2.5 py-0.5 text-xs font-medium text-warn">
                       Fermées
                     </span>
                   )}
@@ -120,7 +120,7 @@ export default async function EventsListPage({
                   <span className="inline-flex items-center gap-3">
                     <Link
                       href={`/event/${e.id}/settings`}
-                      className="text-[13px] font-medium text-green-600 hover:underline"
+                      className="text-[13px] font-medium text-navy hover:underline"
                     >
                       Configurer
                     </Link>

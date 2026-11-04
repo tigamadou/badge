@@ -66,7 +66,7 @@ export default function BadgeTemplatePicker({
         <div
           role="alert"
           data-testid="template-locked"
-          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-warn"
         >
           {lockedReason}
         </div>
@@ -79,7 +79,7 @@ export default function BadgeTemplatePicker({
         {canClearToInherit && currentValue !== null && (
           <Button
             variant="link"
-            className="text-green-600"
+            className="text-navy"
             onClick={() => save.run(null)}
             loading={pending}
             disabled={locked}
@@ -99,10 +99,10 @@ export default function BadgeTemplatePicker({
               data-testid={`template-card-${tpl.id}`}
               data-selected={isCurrent ? "true" : "false"}
               className={`space-y-3 rounded-xl border bg-white p-4 ${
-                isCurrent ? "border-green-600 ring-1 ring-green-600" : "border-slate-200"
+                isCurrent ? "border-navy ring-1 ring-navy" : "border-slate-200"
               }`}
             >
-              <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+              <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-mist">
                 <TemplatePreview src={tpl.previewSrc} label={tpl.label} />
               </div>
               <div>
@@ -129,7 +129,7 @@ export default function BadgeTemplatePicker({
                 >
                   {isCurrent ? "Sélectionné" : "Sélectionner"}
                 </Button>
-                {isEffective && !isCurrent && <span className="text-xs text-emerald-700">Hérité à ce niveau</span>}
+                {isEffective && !isCurrent && <span className="text-xs text-turquoise-strong">Hérité à ce niveau</span>}
               </div>
             </div>
           );

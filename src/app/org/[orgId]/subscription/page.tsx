@@ -191,7 +191,7 @@ export default async function OrgSubscriptionPage({
             detailHref={(p) => `/org/${orgId}/payments/${p.id}`}
           />
           <p className="mt-3 text-sm">
-            <Link href={`/org/${orgId}/payments`} className="font-medium text-blue-600 hover:underline">
+            <Link href={`/org/${orgId}/payments`} className="font-medium text-navy hover:underline">
               Voir tous les paiements
             </Link>
           </p>

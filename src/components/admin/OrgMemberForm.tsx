@@ -58,7 +58,7 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as "OWNER" | "MANAGER" | "AUDITOR")}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
             >
               <option value="OWNER">Propriétaire (OWNER) — pleins pouvoirs sur l&apos;organisation</option>
               <option value="MANAGER">Gestionnaire (MANAGER) — gère les événements</option>

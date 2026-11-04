@@ -12,7 +12,7 @@ export const ID_PHOTO_RULES = [
 // Règles d'une photo d'identité, affichées près de l'envoi de la photo.
 export function IdPhotoRules() {
   return (
-    <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+    <div className="mb-3 rounded-lg border border-slate-200 bg-mist px-4 py-3 text-[13px] text-slate-600">
       <p className="font-medium text-slate-700">Photo d&apos;identité</p>
       <ul className="mt-1 list-disc space-y-0.5 pl-5">
         {ID_PHOTO_RULES.map((rule) => (

@@ -88,7 +88,7 @@ export function RegistrationActions({
             <Icon name="check" size={16} /> Approuver
           </Button>
           {!profileApproved && (
-            <span className="text-xs text-amber-700">Profil non validé par la plateforme</span>
+            <span className="text-xs text-warn">Profil non validé par la plateforme</span>
           )}
           <Button variant="danger" onClick={() => setShowReject(true)} disabled={busy} className="flex items-center gap-1.5">
             <Icon name="x" size={16} /> Rejeter / Bloquer
@@ -119,7 +119,7 @@ export function RegistrationActions({
                 required
                 value={reasonId}
                 onChange={(e) => setReasonId(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
               >
                 <option value="">Sélectionner un motif…</option>
                 {reasons.map((r) => (
@@ -133,7 +133,7 @@ export function RegistrationActions({
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
                 placeholder="Détails complémentaires (optionnel)"
-                className="h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="h-24 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
               />
             </div>
             <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">

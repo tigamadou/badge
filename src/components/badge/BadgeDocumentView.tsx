@@ -73,7 +73,7 @@ export function BadgeDocumentView({ src, label, className }: { src: string; labe
           <button
             type="button"
             onClick={() => setAttempt((n) => n + 1)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+            className="rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-mist"
           >
             {PREVIEW_UNAVAILABLE}
           </button>

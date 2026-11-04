@@ -16,7 +16,7 @@ export function CreateEventButton({
     return (
       <Link
         href={`/org/${orgId}/events/new`}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
       >
         <Icon name="plus" size={16} /> Créer un événement
       </Link>
@@ -40,7 +40,7 @@ export function CreateEventButton({
         ) : (
           <>
             Abonnement inactif : la création d’événement est désactivée.{" "}
-            <Link href={`/org/${orgId}/subscription`} className="font-medium text-green-600 hover:underline">
+            <Link href={`/org/${orgId}/subscription`} className="font-medium text-navy hover:underline">
               Voir mon abonnement
             </Link>
           </>
