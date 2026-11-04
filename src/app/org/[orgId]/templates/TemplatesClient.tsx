@@ -57,7 +57,7 @@ export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: str
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">N°</th>
               <th className="px-4 py-3">Catégorie</th>
               <th className="px-4 py-3">Options</th>
@@ -73,7 +73,7 @@ export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: str
               </tr>
             )}
             {templates.map((t) => (
-              <tr key={t.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={t.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3 text-sm tabular-nums text-slate-400">{t.number}</td>
                 <td className="px-4 py-3">
                   <CatPill color={t.color} label={t.name} />
@@ -90,7 +90,7 @@ export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: str
                     <button
                       onClick={() => setEditing(t)}
                       aria-label="Éditer"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                     >
                       <Icon name="pencil" size={15} />
                     </button>

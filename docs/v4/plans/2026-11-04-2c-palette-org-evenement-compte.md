@@ -34,7 +34,7 @@ signaler dans la progression.
 | Task | Intitulé | Statut | Date | Notes |
 |------|----------|--------|------|-------|
 | 1 | Shells et menu latéral clair (`SidebarNav`, `OrgShell`, 4 shells évènement) | [-] | 2026-11-04 | Déplacée au socle (tâche 4b) : navigation partagée avec StaffShell. Ne pas exécuter. |
-| 2 | Pages `src/app/org/**` | [ ] | | |
+| 2 | Pages `src/app/org/**` | [x] | 2026-11-04 |  |
 | 3 | Pages `src/app/event/**` | [ ] | | |
 | 4 | Compte (`src/app/account/**`, `components/account`, `components/activity`) | [ ] | | |
 | 5 | `components/event` — formulaires, tableaux, actions, fonds | [ ] | | |
