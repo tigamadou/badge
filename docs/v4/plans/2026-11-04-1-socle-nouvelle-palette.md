@@ -34,7 +34,7 @@ rôle** (pas par teinte).
 |---|---|---|---|---|
 | 0 | Branche `feat/nouvelle-palette` | [x] | 2026-11-04 | |
 | 1 | `globals.css` : couleurs `@theme`, focus, `.legal-prose` | [x] | 2026-11-04 | |
-| 2 | `src/lib/brand-colors.ts` + tests (dont lisibilité WCAG) | [ ] | | |
+| 2 | `src/lib/brand-colors.ts` + tests (dont lisibilité WCAG) | [x] | 2026-11-04 | |
 | 3 | `sidebar-classes.ts`, `AppShell`, `MobileNav`, `UserAvatar` (menu clair, fond blanc) | [ ] | | |
 | 4 | `StaffShell` et `PlatformOrgShell` | [ ] | | |
 | 4b | Menu latéral clair : `SidebarNav`, `OrgShell`, shells d'évènement, `AccountNav` | [ ] | | |
