@@ -1,6 +1,6 @@
 # Spec v4 — Nouvelle palette « Deep Navy & Soft Gold »
 
-> **Statut** : validée — 2026-11-04 — plans rédigés et relus, en attente du lancement
+> **Statut** : implémentée — 2026-11-04 (PR ouverte)
 > **Type** : refonte visuelle (couleurs uniquement)
 > **Périmètre** : v4 — site public, pages publiques d'évènement et d'authentification, panel
 > (plateforme, organisation, évènement), compte, e-mails, reçu de paiement
@@ -194,6 +194,16 @@ Chantier `nouvelle-palette`, branche d'intégration **`feat/nouvelle-palette`** 
 
 - Navigation regroupée dans le socle (homogénéité du menu clair) ; tâche 1 du lot 2c abandonnée.
 - Contrat `brand-colors.ts` : l'export s'appelle `BRAND` (le plan 2a disait `BRAND_COLORS`, corrigé).
+
+### Journal d'exécution (2026-11-04)
+
+- Vague 1 (socle) : 11 commits, relue sans Critical ni Important. Deux Minor assumés (espacement du `SHELL_BANNER`, `mb-3` de `SIDEBAR_BRAND` dans `OrgShell`), conformes au contrat figé.
+- Vague 2 : lots 2a, 2b, 2c relus. Pastilles neutres restaurées en `bg-slate-100` (2a : avatars et espaces réservés ; 2c : pastille de `events/page.tsx`), conformément à l'arbitrage ci-dessus ; `PublicEventLayout` passé de `bg-neutral-50` à `bg-white`.
+- Tests : stratégie allégée après saturation de la machine (suites complètes lancées en parallèle par les lots) : tests ciblés par lot, lint et typecheck en fin de tâche, une seule passe complète (lint, typecheck, couverture) en vague 3. Aucun e2e relancé : aucun sélecteur de couleur dans `e2e/`, structure inchangée.
+- Vague 3 : fusions 2a, 2b, 2c sans conflit ; garde-fou `src/__tests__/palette-guard.test.ts` ; anciennes variables supprimées de `globals.css`.
+- Exceptions du garde-fou : `src/lib/badge-templates/` et `SheetPreview.tsx` (couleurs de données), `LayoutEditor.tsx` (légende miroir de `SheetPreview`, à migrer avec lui), `src/app/styleguide/page.tsx` (couleur de catégorie d'exemple).
+- Exceptions hors garde-fou, conservées : couleurs de catégories factices et fonds sombres des maquettes (2a), `#1D2128` et `#000000` de données (2b), `#0066cc`, `#1a3a7c`, `#8b8b90` (2c).
+- Minor reportés : `hover:underline` ajouté sur deux liens (2c), trois boutons secondaires en `bg-mist text-navy` (2c), pied d'e-mail `#94a3b8` peu contrasté (valeur d'avant), notes internes d'impression en `gold` ou `warn` selon le fichier.
 - `Button` gagne une variante `positive` (turquoise, texte marine) ; `RoleBadge` gagne un ton `warn`.
 - Focus or sur fond marine via `data-surface="navy"`.
 - En-tête du site public : déjà blanc, il le reste ; lien actif marine souligné or. Pied de page et

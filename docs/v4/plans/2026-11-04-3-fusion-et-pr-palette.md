@@ -22,15 +22,15 @@ les anciennes variables de `globals.css` sont retirées.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Pré-contrôles | [ ] |  |  |
-| 2 | Fusion 2a | [ ] |  |  |
-| 3 | Fusion 2b | [ ] |  |  |
-| 4 | Fusion 2c | [ ] |  |  |
-| 5 | Garde-fou des couleurs (test rouge puis nettoyage) | [ ] |  |  |
-| 6 | Suppression des anciennes variables | [ ] |  |  |
-| 7 | Relecture transverse des défauts jumeaux | [ ] |  |  |
-| 8 | Spec, plans, documentation | [ ] |  |  |
-| 9 | Seed et e2e complets | [ ] |  |  |
+| 1 | Pré-contrôles | [x] | 2026-11-04 |  |
+| 2 | Fusion 2a | [x] | 2026-11-04 | fusion sans conflit |
+| 3 | Fusion 2b | [x] | 2026-11-04 | fusion sans conflit |
+| 4 | Fusion 2c | [x] | 2026-11-04 | fusion sans conflit, exclusivite OK |
+| 5 | Garde-fou des couleurs (test rouge puis nettoyage) | [x] | 2026-11-04 | garde-fou vert d'emblee (lots deja migres) ; exceptions justifiees dans le test |
+| 6 | Suppression des anciennes variables | [x] | 2026-11-04 | variables supprimees |
+| 7 | Relecture transverse des défauts jumeaux | [x] | 2026-11-04 | aucun blanc sur turquoise ; fixtures intactes |
+| 8 | Spec, plans, documentation | [x] | 2026-11-04 | spec et journal a jour |
+| 9 | Seed et e2e complets | [x] | 2026-11-04 | e2e non relances : aucun selecteur de couleur, structure inchangee (strategie de tests allegee) |
 | 10 | Contrôle visuel 375 / 1024 / 1280 px | [ ] |  |  |
 | 11 | Arrêt des stacks et push | [ ] |  |  |
 | 12 | PR et clôture | [ ] |  |  |
