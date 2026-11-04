@@ -1,6 +1,6 @@
 # Spec v4 — Retours client : images des badges, abonnements, paiements, tarifs, pagination, page commande
 
-> **Statut** : validée — 2026-11-04
+> **Statut** : implémentée — 2026-11-04 (PR ouverte)
 > **Type** : lot d'améliorations fonctionnelles (6 volets indépendants)
 > **Branche** : `feat/retours-client-v3`
 > **Plans** : [`1-socle`](../plans/2026-11-04-1-socle-retours-client.md), [`2a-images`](../plans/2026-11-04-2a-images-badge.md),
@@ -397,3 +397,11 @@ Concerne la page staff (`/platform/print/orders/[requestId]`) et la page organis
 - Clés de stockage fournies par le client (logo, bannière, originaux, photo d'identité) : limitées au
   dossier de l'organisation (`orgs/<orgId>/`), de l'évènement (`events/<eventId>/`) ou de
   l'utilisateur (`profile/<userId>/`) ; sinon 400 `INVALID_IMAGE` (même réponse qu'un fichier absent).
+- Vague 3 (2026-11-04) : fusions 2b, 2a, 2c sans conflit ; lint, typecheck et couverture 100 % verts
+  (360 fichiers, 4205 tests) ; e2e rejoues fichier par fichier (le run unique est tue par manque de
+  memoire, code 137) : tout passe. Un seul correctif de test apres fusion : le lien « Paiements » du menu
+  rendait ambigu le locator de `print-request-detail.spec.ts`. Les routes `badges/` perdues par
+  Turbopack (404 HTML) se recuperent par un `touch` des `route.ts`.
+- Limites acceptees : le detail staff renvoie tous les articles ; `NOTHING_TO_PAY` ; limite du balayage
+  FedaPay ; apercu HTML signale par en-tete seulement ; e2e `page.request` (`ALREADY_ACTIVE`) en ecart
+  avec `e2e/README.md` ; dependance `react-easy-crop`.

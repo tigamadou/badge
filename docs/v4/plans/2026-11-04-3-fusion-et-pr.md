@@ -15,16 +15,16 @@ e2e, navigateur), pousser la branche et ouvrir une PR vers `development`, sans j
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Pré-contrôles | [ ] | | |
-| 2 | Fusion 2b | [ ] | | |
-| 3 | Fusion 2a | [ ] | | |
-| 4 | Fusion 2c | [ ] | | |
-| 5 | Seed et e2e complets | [ ] | | |
-| 6 | Contrôle navigateur | [ ] | | |
-| 7 | Relecture transverse | [ ] | | |
-| 8 | Spec, plans, documentation | [ ] | | |
-| 9 | Arrêt des stacks | [ ] | | |
-| 10 | Push et PR | [ ] | | |
+| 1 | Pré-contrôles | [x] | 2026-11-04 | ok |
+| 2 | Fusion 2b | [x] | 2026-11-04 | fusion e059488 |
+| 3 | Fusion 2a | [x] | 2026-11-04 | fusion 0ed0851 |
+| 4 | Fusion 2c | [x] | 2026-11-04 | fusion b932122, aucune liste de tailles concurrente |
+| 5 | Seed et e2e complets | [x] | 2026-11-04 | e2e rejoue par fichiers (OOM 137 en run unique), 1 locator corrige (32c0056) |
+| 6 | Contrôle navigateur | [x] | 2026-11-04 | 375/1024/1280 sans débordement ni 500 ; devis prorata non visible faute de crédit dans les données de démo |
+| 7 | Relecture transverse | [x] | 2026-11-04 | aucun defaut jumeau releve |
+| 8 | Spec, plans, documentation | [x] | 2026-11-04 | fait |
+| 9 | Arrêt des stacks | [ ] |  | a faire |
+| 10 | Push et PR | [ ] |  | a faire |
 
 ## Global Constraints
 
