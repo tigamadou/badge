@@ -10,7 +10,14 @@ import {
   isPaidStatus,
   retrieveTransaction,
 } from "@/lib/fedapay";
-import { planChangeFor } from "@/lib/subscription-changes";
+import {
+  isRunning,
+  loadProrataCredit,
+  planChangeFor,
+  quoteChange,
+  type PlanLite,
+  type SubscriptionState,
+} from "@/lib/subscription-changes";
 import {
   notifyPrintPaymentUnmatched,
   notifyPrintRequestPaid,
@@ -28,7 +35,9 @@ export type PaymentErrorCode =
   | "REQUEST_NOT_FOUND"
   | "REQUEST_NOT_PAYABLE"
   | "REQUEST_ALREADY_PAID"
-  | "PAYMENT_IN_PROGRESS";
+  | "PAYMENT_IN_PROGRESS"
+  | "ALREADY_ACTIVE"
+  | "NOTHING_TO_PAY";
 
 const HTTP_STATUS: Record<PaymentErrorCode, number> = {
   PLAN_NOT_FOR_SALE: 400,
@@ -39,14 +48,20 @@ const HTTP_STATUS: Record<PaymentErrorCode, number> = {
   REQUEST_NOT_PAYABLE: 409,
   REQUEST_ALREADY_PAID: 409,
   PAYMENT_IN_PROGRESS: 409,
+  ALREADY_ACTIVE: 409,
+  NOTHING_TO_PAY: 409,
 };
+
+export type PaymentErrorDetail = { activeUntil: Date | null; renewableFrom: Date | null };
 
 export class PaymentError extends Error {
   readonly code: PaymentErrorCode;
   readonly httpStatus: number;
+  readonly detail?: PaymentErrorDetail;
 
-  constructor(code: PaymentErrorCode) {
+  constructor(code: PaymentErrorCode, detail?: PaymentErrorDetail) {
     super(code);
+    this.detail = detail;
     this.name = "PaymentError";
     this.code = code;
     this.httpStatus = HTTP_STATUS[code];
@@ -95,6 +110,71 @@ async function openTransaction(
   }
 }
 
+// Un PENDING d'abonnement du meme plan, ouvert depuis moins de ce delai, est reutilise.
+const CHECKOUT_REUSE_MS = 30 * 60 * 1000;
+const SUBSCRIPTION_CHECKOUT_ATTEMPTS = 2;
+
+type SubscriptionCandidate = { id: string; fedapayTransactionId: number };
+
+// Sous le verrou de l'organisation : calcule le devis, refuse ce qui est interdit, puis cree le
+// Payment (montants figes) ou renvoie le PENDING a reutiliser. Un seul PENDING par organisation.
+async function prepareSubscriptionCheckout(input: {
+  orgId: string;
+  plan: PlanLite;
+  userId: string;
+}): Promise<
+  | { paymentId: string; amount: number; listPrice: number; prorataCredit: number }
+  | { candidate: SubscriptionCandidate }
+> {
+  const { orgId, plan, userId } = input;
+  return prisma.$transaction(async (db) => {
+    await db.$queryRaw`SELECT id FROM Organization WHERE id = ${orgId} FOR UPDATE`;
+    const now = new Date();
+    const current: SubscriptionState | null = await db.subscription.findUnique({
+      where: { orgId },
+      include: { plan: { select: PLAN_LITE_SELECT } },
+    });
+    const credit = current && isRunning(current, now) ? await loadProrataCredit(db, orgId, current.planId, now) : 0;
+    const quote = quoteChange(current, plan, now, credit);
+
+    if (!quote.allowed) {
+      throw new PaymentError("ALREADY_ACTIVE", {
+        activeUntil: quote.activeUntil,
+        renewableFrom: quote.renewableFrom,
+      });
+    }
+    if (quote.mode === "SCHEDULED" && current?.scheduledPlanId) {
+      throw new PaymentError("CHANGE_ALREADY_SCHEDULED");
+    }
+    if (quote.amount <= 0) throw new PaymentError("NOTHING_TO_PAY");
+
+    const pending = await db.payment.findFirst({
+      where: { orgId, purpose: "SUBSCRIPTION", status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (pending) {
+      const age = Date.now() - pending.createdAt.getTime();
+      if (pending.fedapayTransactionId && pending.planId === plan.id && age < CHECKOUT_REUSE_MS) {
+        return { candidate: { id: pending.id, fedapayTransactionId: pending.fedapayTransactionId } };
+      }
+      if (!pending.fedapayTransactionId && age < CHECKOUT_OPENING_MS) {
+        throw new PaymentError("PAYMENT_IN_PROGRESS");
+      }
+      // Autre plan, trop ancien ou checkout interrompu : remplace (un paiement approuve plus tard
+      // reste applique, voir CONFIRMABLE_SUBSCRIPTION).
+      await db.payment.updateMany({ where: { id: pending.id, status: "PENDING" }, data: { status: "CANCELED" } });
+    }
+
+    const created = await db.payment.create({
+      data: {
+        orgId, planId: plan.id, userId, purpose: "SUBSCRIPTION", currency: "XOF", status: "PENDING",
+        listPrice: quote.listPrice, prorataCredit: quote.credit, amount: quote.amount,
+      },
+    });
+    return { paymentId: created.id, amount: quote.amount, listPrice: quote.listPrice, prorataCredit: quote.credit };
+  });
+}
+
 export async function startCheckout(input: {
   orgId: string;
   planId: string;
@@ -108,14 +188,6 @@ export async function startCheckout(input: {
     throw new PaymentError("PLAN_NOT_FOR_SALE");
   }
 
-  const subscription = await prisma.subscription.findUnique({
-    where: { orgId },
-    select: { scheduledPlanId: true },
-  });
-  if (subscription?.scheduledPlanId) {
-    throw new PaymentError("CHANGE_ALREADY_SCHEDULED");
-  }
-
   const { configured } = getFedapayConfig();
   if (!configured) throw new PaymentError("PAYMENTS_DISABLED");
 
@@ -124,28 +196,40 @@ export async function startCheckout(input: {
     prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true, name: true } }),
   ]);
 
-  const payment = await prisma.payment.create({
-    data: { orgId, planId, userId, amount: plan.price, currency: "XOF", status: "PENDING" },
-  });
+  for (let attempt = 0; attempt < SUBSCRIPTION_CHECKOUT_ATTEMPTS; attempt += 1) {
+    const prepared = await prepareSubscriptionCheckout({
+      orgId,
+      plan: { id: plan.id, name: plan.name, period: plan.period, price: plan.price },
+      userId,
+    });
 
-  const url = await openTransaction(payment.id, {
-    description: `Abonnement ${plan.name} — ${org.name}`,
-    amount: plan.price,
-    callbackPath: `/org/${orgId}/subscription/return`,
-    customer: { email: user.email, firstname: user.name },
-    metadata: { paymentId: payment.id, orgId },
-  });
+    if ("paymentId" in prepared) {
+      const { paymentId, amount, listPrice, prorataCredit } = prepared;
+      const url = await openTransaction(paymentId, {
+        description: `Abonnement ${plan.name} — ${org.name}`,
+        amount,
+        callbackPath: `/org/${orgId}/subscription/return`,
+        customer: { email: user.email, firstname: user.name },
+        metadata: { paymentId, orgId },
+      });
 
-  await logActivity({
-    type: "PAYMENT_INITIATED",
-    userId,
-    orgId,
-    targetId: payment.id,
-    details: { paymentId: payment.id, planId, amount: plan.price },
-    req,
-  });
+      await logActivity({
+        type: "PAYMENT_INITIATED",
+        userId,
+        orgId,
+        targetId: paymentId,
+        details: { paymentId, planId, listPrice, prorataCredit, amount },
+        req,
+      });
 
-  return { paymentId: payment.id, url };
+      return { paymentId, url };
+    }
+
+    const resolved = await resolveCandidate(prepared.candidate, attempt);
+    if (resolved !== "RETRY") return { paymentId: prepared.candidate.id, url: resolved.url };
+    // Reprise : un candidat confirme change l'abonnement, le devis est recalcule.
+  }
+  throw new PaymentError("PAYMENT_IN_PROGRESS");
 }
 
 // Un Payment PENDING sans transaction plus jeune que ce delai : un autre checkout l'ouvre encore.

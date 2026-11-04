@@ -59,6 +59,8 @@ describe("payments", () => {
       expect(new PaymentError("CHANGE_ALREADY_SCHEDULED").httpStatus).toBe(409);
       expect(new PaymentError("PAYMENTS_DISABLED").httpStatus).toBe(503);
       expect(new PaymentError("PROVIDER_ERROR").httpStatus).toBe(502);
+      expect(new PaymentError("ALREADY_ACTIVE").httpStatus).toBe(409);
+      expect(new PaymentError("NOTHING_TO_PAY").httpStatus).toBe(409);
     });
   });
 
@@ -128,7 +130,7 @@ describe("payments", () => {
       await prisma.subscription.create({
         data: { orgId: org.id, planId: pro.id, endDate: new Date(Date.now() + 86400000), scheduledPlanId: basic.id },
       });
-      await expect(startCheckout({ orgId: org.id, planId: pro.id, userId: user.id })).rejects.toMatchObject({
+      await expect(startCheckout({ orgId: org.id, planId: basic.id, userId: user.id })).rejects.toMatchObject({
         code: "CHANGE_ALREADY_SCHEDULED",
         httpStatus: 409,
       });

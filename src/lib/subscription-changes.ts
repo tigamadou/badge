@@ -185,7 +185,7 @@ export type CoveredPayment = { amount: number; coversFrom: Date | null; coversTo
 // Credit restant : somme, par paiement, de amount x restant / duree (plancher par paiement).
 // Calcul en BigInt : un gros montant x une annee en ms depasse 2^53.
 export function computeProrataCredit(payments: CoveredPayment[], now: Date): number {
-  let total = 0n;
+  let total = BigInt(0);
   for (const p of payments) {
     if (!p.coversFrom || !p.coversTo || p.coversTo <= now) continue;
     const duration = p.coversTo.getTime() - p.coversFrom.getTime();
