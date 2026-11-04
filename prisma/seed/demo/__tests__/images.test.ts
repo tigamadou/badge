@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { getFile, listPrefix, MAX_UPLOAD_BYTES } from "@/lib/storage";
 import { createDemoContext } from "../context";
 import { buildImageReserve } from "../images";
@@ -9,6 +9,9 @@ const PREFIX = "demo/_test-images/";
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const newCtx = () => createDemoContext({ env: { BADGE_ENV: "dev" }, scale: 0.02, storagePrefix: PREFIX });
+
+// Les images aux dimensions des cadres sont plus longues a encoder : large marge sous charge.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 describe("reserve d'images de demo", () => {
   afterEach(async () => {
@@ -69,5 +72,5 @@ describe("reserve d'images de demo", () => {
     expect(second).toEqual(first);
     expect(bytes2.equals(bytes1)).toBe(true);
     expect(listing2).toEqual(listing1);
-  }, 60_000);
+  });
 });
