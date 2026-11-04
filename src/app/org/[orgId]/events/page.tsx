@@ -103,7 +103,7 @@ export default async function EventsListPage({
                 <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{e._count.registrations}</td>
                 <td className="px-4 py-3">
                   {e.archived ? (
-                    <span className="inline-flex rounded-full bg-mist px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
                       Archivé
                     </span>
                   ) : e.registrationOpen ? (
