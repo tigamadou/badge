@@ -35,7 +35,7 @@ function paint(ctx: Pick<DemoContext, "faker">, width: number, height: number) {
     const t = (cx + cy) / (width + height);
     return [0, 1, 2].map((i) => clamp(from[i] + (to[i] - from[i]) * t)) as [number, number, number];
   };
-  return (x: number, y: number): [number, number, number] => {
+  const pixel = (x: number, y: number): [number, number, number] => {
     const col = Math.floor(x / cell);
     const row = Math.floor(y / cell);
     const id = row * cols + col;
@@ -46,7 +46,11 @@ function paint(ctx: Pick<DemoContext, "faker">, width: number, height: number) {
     }
     return color;
   };
+  return { signature: `${width}x${height}:${from}:${to}:${accent}`, pixel };
 }
+
+// Les memes parametres redonnent le meme PNG : l'encodage (couteux sur les bannieres) n'est fait qu'une fois par processus.
+const encoded = new Map<string, Buffer>();
 
 /** Ecrit la reserve d'images partagee (sequentiellement) sous `<prefixe>images/` ; reecrit les memes cles. */
 export async function buildImageReserve(
@@ -56,7 +60,12 @@ export async function buildImageReserve(
   for (const group of Object.keys(KINDS) as Array<keyof typeof KINDS>) {
     const { name, count, width, height } = KINDS[group];
     for (let i = 1; i <= count; i++) {
-      const png = encodePng(width, height, paint(ctx, width, height));
+      const { signature, pixel } = paint(ctx, width, height);
+      let png = encoded.get(signature);
+      if (!png) {
+        png = encodePng(width, height, pixel);
+        encoded.set(signature, png);
+      }
       const key = ctx.storage.key("images", `${name}-${String(i).padStart(2, "0")}.png`);
       images[group].push(await ctx.storage.put(key, png, "image/png"));
     }
