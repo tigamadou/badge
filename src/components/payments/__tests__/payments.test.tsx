@@ -46,6 +46,8 @@ describe("PaymentsTable", () => {
     expect(html).toContain("Payé");
     expect(html).toContain("Abonnement");
     expect(html).toContain('href="/org/o1/payments/p1"');
+    expect(html).toContain("text-navy");
+    expect(html).not.toContain("blue-600");
     expect(html).toContain("trx_42");
     expect(html).not.toContain("Organisation");
   });

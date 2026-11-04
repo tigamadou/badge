@@ -24,7 +24,7 @@ export default async function TarifsPage() {
   const plans = await listPublicPlans();
   return (
     <>
-      <section className="border-b border-slate-200 bg-slate-50 py-[88px] pb-2">
+      <section className="border-b border-line bg-white py-[88px] pb-2">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading
             as="h1"
@@ -50,7 +50,7 @@ export default async function TarifsPage() {
         </section>
       )}
 
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <h2
             style={displayFont}

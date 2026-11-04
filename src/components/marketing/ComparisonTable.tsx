@@ -7,7 +7,7 @@ const limit = (n: number | null) => (n === null ? "Illimité" : amountFormat.for
 
 function Check({ yes }: { yes: boolean }) {
   return yes ? (
-    <span className="inline-flex text-green-600" role="img" aria-label="Inclus">
+    <span className="inline-flex text-turquoise-strong" role="img" aria-label="Inclus">
       <Icon name="check" size={16} />
     </span>
   ) : (
@@ -44,7 +44,7 @@ export function ComparisonTableView({ plans }: { plans: PublicPlan[] }) {
         </thead>
         <tbody className="text-sm">
           {baseRows.map((row) => (
-            <tr key={row.label} className="border-b border-slate-100">
+            <tr key={row.label} className="border-b border-line">
               <td className="px-[18px] py-3.5 text-slate-500">{row.label}</td>
               {plans.map((p) => (
                 <td key={p.id} className="px-[18px] py-3.5 text-center text-slate-700">
@@ -54,14 +54,14 @@ export function ComparisonTableView({ plans }: { plans: PublicPlan[] }) {
             </tr>
           ))}
           {features.length > 0 && (
-            <tr className="bg-slate-50">
+            <tr className="bg-mist">
               <td colSpan={cols} className="px-[18px] py-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-slate-900">
                 Fonctionnalités
               </td>
             </tr>
           )}
           {features.map((feature) => (
-            <tr key={feature} className="border-b border-slate-100">
+            <tr key={feature} className="border-b border-line">
               <td className="px-[18px] py-3.5 text-slate-500">{feature}</td>
               {plans.map((p) => (
                 <td key={p.id} className="px-[18px] py-3.5 text-center">

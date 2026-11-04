@@ -6,7 +6,17 @@ describe("JournalBlocks", () => {
   it("LogType rend son libelle et sa couleur de categorie", () => {
     const html = renderToStaticMarkup(<LogType kind="modification">Modification</LogType>);
     expect(html).toContain("Modification");
-    expect(html).toContain("text-indigo-600");
+    expect(html).toContain("bg-mist text-navy");
+  });
+
+  it.each([
+    ["creation", "bg-turquoise-soft text-turquoise-strong"],
+    ["systeme", "bg-gold-soft text-gold-strong"],
+    ["acces", "bg-navy/10 text-navy"],
+    ["connexion", "bg-slate-100 text-slate-600"],
+    ["suppression", "bg-rose-50 text-rose-700"],
+  ] as const)("LogType %s", (kind, classes) => {
+    expect(renderToStaticMarkup(<LogType kind={kind}>X</LogType>)).toContain(classes);
   });
 
   it("KeyValue rend chaque paire", () => {
@@ -19,6 +29,7 @@ describe("JournalBlocks", () => {
     const html = renderToStaticMarkup(<Diff oldValue="Presse" newValue="Presse (anonyme)" />);
     expect(html).toContain("Presse");
     expect(html).toContain("Presse (anonyme)");
+    expect(html).toContain("border-turquoise/30 bg-turquoise-soft");
   });
 
   it("Payload rend le JSON", () => {

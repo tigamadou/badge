@@ -13,7 +13,7 @@ export function FormSection({
 }) {
   return (
     <section className="border-b border-slate-100 py-6 first:pt-0 last:border-b-0">
-      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      <h3 className="text-sm font-semibold text-navy">{title}</h3>
       {description ? <p className="mb-4 mt-1 text-[13px] text-slate-400">{description}</p> : <div className="mb-4" />}
       {children}
     </section>
@@ -40,7 +40,7 @@ export function Switch({
     >
       <span
         className={`relative h-[22px] w-[38px] flex-none rounded-full transition-colors ${
-          checked ? "bg-green-600" : "bg-slate-300"
+          checked ? "bg-navy" : "bg-slate-300"
         }`}
       >
         <span
@@ -71,7 +71,7 @@ export function Checkbox({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`mt-px flex h-4 w-4 flex-none items-center justify-center rounded border ${
-          checked ? "border-green-600 bg-green-600 text-white" : "border-slate-300 bg-white"
+          checked ? "border-navy bg-navy text-white" : "border-slate-300 bg-white"
         }`}
       >
         {checked ? <Icon name="check" size={12} /> : null}

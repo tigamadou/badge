@@ -63,18 +63,18 @@ export default async function BadgeTemplateDetailPage({
       <div>
         <Link
           href="/platform/badge-templates"
-          className="inline-flex items-center gap-1 text-sm text-green-600 hover:underline"
+          className="inline-flex items-center gap-1 text-sm text-navy hover:underline"
         >
           <Icon name="arrow-left" size={14} /> Templates de badge
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-slate-900">{template.label}</h1>
+          <h1 className="text-2xl font-bold text-navy">{template.label}</h1>
           {template.archived ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600">
               <Icon name="archive" size={13} /> Archivé
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-turquoise-soft px-2.5 py-1 text-xs text-turquoise-strong">
               <Icon name="check" size={13} /> Disponible
             </span>
           )}
@@ -94,26 +94,26 @@ export default async function BadgeTemplateDetailPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Aperçu</h2>
+            <h2 className="text-sm font-semibold text-navy">Aperçu</h2>
             {apercu && (
               <a
                 href={apercu}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-green-600 hover:underline"
+                className="inline-flex items-center gap-1 text-sm text-navy hover:underline"
               >
                 <Icon name="external-link" size={14} /> Ouvrir en plein écran
               </a>
             )}
           </div>
-          <div className="mt-3 flex h-[520px] items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+          <div className="mt-3 flex h-[520px] items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-mist">
             <TemplatePreview src={apercu} label={template.label} />
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-slate-900">Utilisé par</h2>
+            <h2 className="text-sm font-semibold text-navy">Utilisé par</h2>
             {totalUsages === 0 ? (
               <p className="mt-2 text-sm text-slate-600">
                 Aucun évènement ni organisation n&apos;utilise cette version. Elle peut être
@@ -137,7 +137,7 @@ export default async function BadgeTemplateDetailPage({
                         <li key={o.id}>
                           <Link
                             href={`/platform/organizations/${o.id}`}
-                            className="text-green-700 hover:underline"
+                            className="text-navy hover:underline"
                           >
                             {o.name}
                           </Link>
@@ -165,7 +165,7 @@ export default async function BadgeTemplateDetailPage({
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-sm font-semibold text-navy">
               Versions de la famille « {template.family} »
             </h2>
             <ul className="mt-3 divide-y divide-slate-100 text-sm">
@@ -175,11 +175,11 @@ export default async function BadgeTemplateDetailPage({
                   <span className="text-slate-500">{formatDate(v.createdAt)}</span>
                   {v.archived && <span className="text-xs text-slate-500">archivée</span>}
                   {v.id === template.id ? (
-                    <span className="text-xs text-emerald-700">version affichée</span>
+                    <span className="text-xs text-turquoise-strong">version affichée</span>
                   ) : (
                     <Link
                       href={`/platform/badge-templates/${v.id}`}
-                      className="text-green-700 hover:underline"
+                      className="text-navy hover:underline"
                     >
                       Voir
                     </Link>
@@ -191,7 +191,7 @@ export default async function BadgeTemplateDetailPage({
 
           {ressources.length > 0 && (
             <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <h2 className="text-sm font-semibold text-slate-900">Ressources embarquées</h2>
+              <h2 className="text-sm font-semibold text-navy">Ressources embarquées</h2>
               <ul className="mt-3 divide-y divide-slate-100 text-sm">
                 {ressources.map((o) => (
                   <li key={o.key} className="flex items-center justify-between py-2">
@@ -210,13 +210,13 @@ export default async function BadgeTemplateDetailPage({
       {/* Pleine largeur : du JSON indente a besoin de place pour rester lisible. */}
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-slate-900">Manifeste</h2>
+          <h2 className="text-sm font-semibold text-navy">Manifeste</h2>
           <ManifestDownloadButton
             json={manifeste}
             filename={`${template.family}-v${template.version}.json`}
           />
         </div>
-        <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-slate-50 p-3 text-[12px] leading-relaxed text-slate-700">
+        <pre className="mt-3 max-h-96 overflow-auto rounded-lg bg-mist p-3 text-[12px] leading-relaxed text-slate-700">
           {manifeste}
         </pre>
       </div>

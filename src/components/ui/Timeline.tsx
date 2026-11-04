@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 
 const DOT: Record<string, string> = {
   default: "border-slate-300 bg-white",
-  ok: "border-green-600 bg-green-600",
-  warn: "border-amber-700 bg-white",
+  ok: "border-turquoise bg-turquoise",
+  warn: "border-warn bg-white",
   danger: "border-rose-600 bg-white",
 };
 

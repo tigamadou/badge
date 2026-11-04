@@ -33,9 +33,9 @@ export function BadgeCredential({
       style={displayFont}
       className="flex h-[360px] w-[257px] flex-col overflow-hidden rounded-[14px] border border-slate-200 bg-white"
     >
-      <div className="h-3 bg-brand-navy" />
+      <div className="h-3 bg-navy" />
       <div className="flex items-center gap-2.5 px-5 pt-[18px]">
-        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-slate-100 text-[11px] font-bold text-brand-navy">
+        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-slate-100 text-[11px] font-bold text-navy">
           {orgInitials}
         </span>
         <span className="text-xs font-semibold tracking-[0.02em] text-slate-600">{orgLabel}</span>

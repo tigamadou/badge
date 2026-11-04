@@ -70,7 +70,7 @@ export function DocumentPreview({
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-900">{label}</span>
               <div className="flex items-center gap-3">
-                <a href={url} target="_blank" rel="noreferrer" className="text-sm text-green-600 hover:underline">
+                <a href={url} target="_blank" rel="noreferrer" className="text-sm text-navy hover:underline">
                   Ouvrir dans un onglet
                 </a>
                 <button type="button" onClick={() => setOpen(false)} aria-label="Fermer">

@@ -3,6 +3,7 @@ import { SidebarNav, type NavEntry } from "@/components/admin/SidebarNav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { AppShell } from "@/components/layout/AppShell";
 import { UserAvatar } from "@/components/layout/UserAvatar";
+import { SIDEBAR_BRAND, SIDEBAR_LINK, SIDEBAR_ROLE_LABEL } from "@/components/layout/sidebar-classes";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 function buildNav(pendingPrintRequests: number): NavEntry[] {
@@ -50,23 +51,23 @@ export function StaffShell({
     <AppShell
       sidebarHeader={
         <>
-          <div className="mb-3 px-2 text-base font-semibold text-white">Badge</div>
+          <div className={SIDEBAR_BRAND}>Badge</div>
           {/* Le badge de rôle quitte l'en-tête sous sm : il est rappelé dans le tiroir */}
-          <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-300 sm:hidden">
+          <div className={SIDEBAR_ROLE_LABEL}>
             {ROLE_LABEL[user.staffRole]}
           </div>
         </>
       }
       sidebar={<SidebarNav items={buildNav(pendingPrintRequests)} />}
       sidebarFooter={
-        <LogoutButton className="flex w-full items-center gap-2.5 rounded-lg border-l-2 border-transparent px-2.5 py-2 text-sm text-slate-300 transition-colors hover:bg-white/10 hover:text-white" />
+        <LogoutButton className={`w-full ${SIDEBAR_LINK}`} />
       }
       header={
         <>
           <nav className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-            <span className="truncate text-slate-400">Staff</span>
+            <span className="truncate text-slate-500">Staff</span>
           </nav>
-          <span className="hidden items-center gap-1.5 rounded-full bg-brand-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-navy sm:inline-flex">
+          <span className="hidden items-center gap-1.5 rounded-full bg-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-navy sm:inline-flex">
             {ROLE_LABEL[user.staffRole]}
           </span>
           <NotificationBell scope={{ kind: "platform" }} />

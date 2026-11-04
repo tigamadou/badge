@@ -34,7 +34,7 @@ export function PaymentDetailView({
               {
                 label: payment.printRequest ? "Commande" : "Plan",
                 value: subjectLink ? (
-                  <Link href={subjectLink} className="text-blue-600 hover:underline">
+                  <Link href={subjectLink} className="text-navy hover:underline">
                     {subject}
                   </Link>
                 ) : (
@@ -58,7 +58,7 @@ export function PaymentDetailView({
                     {
                       label: "Organisation",
                       value: linkTo.org ? (
-                        <Link href={linkTo.org} className="text-blue-600 hover:underline">
+                        <Link href={linkTo.org} className="text-navy hover:underline">
                           {payment.orgName}
                         </Link>
                       ) : (

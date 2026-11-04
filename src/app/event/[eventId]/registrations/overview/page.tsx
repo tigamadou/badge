@@ -55,7 +55,7 @@ export default async function RegistrationsOverviewPage({ params }: Props) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Vue d&apos;ensemble</h1>
+        <h1 className="text-xl font-semibold text-navy">Vue d&apos;ensemble</h1>
         <p className="mt-0.5 text-sm text-slate-400">{event.title} — répartition non nominative</p>
       </div>
 

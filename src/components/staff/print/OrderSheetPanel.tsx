@@ -22,7 +22,7 @@ export function OrderSheetPanel({ sheet, sheetsHref }: { sheet: OrderSheetView |
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-slate-900">Planche</h3>
+        <h3 className="text-sm font-semibold text-navy">Planche</h3>
         <span className="text-xs font-medium text-slate-600">{STATE_LABEL[state]}</span>
       </div>
 
@@ -43,20 +43,20 @@ export function OrderSheetPanel({ sheet, sheetsHref }: { sheet: OrderSheetView |
           <>
             <a
               href={sheet.downloadUrl}
-              className="inline-flex rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+              className="inline-flex rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover"
             >
               Télécharger
             </a>
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
-              className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+              className="rounded-lg bg-mist px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
             >
               Voir la planche
             </button>
           </>
         ) : null}
-        <Link href={sheetsHref} className="text-[13px] font-medium text-green-700 hover:underline">
+        <Link href={sheetsHref} className="text-[13px] font-medium text-navy hover:underline">
           Gérer dans Planches
         </Link>
       </div>

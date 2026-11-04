@@ -53,7 +53,7 @@ describe("GET /api/platform/organizations", () => {
     expect(json.organizations[0].slug).toBe("active");
     expect(json.total).toBe(1);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(20);
+    expect(json.pageSize).toBe(10);
   });
 
   it("filters by archived=true", async () => {
@@ -194,7 +194,7 @@ describe("GET /api/platform/organizations", () => {
 
     expect(res.status).toBe(200);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(20);
+    expect(json.pageSize).toBe(10);
   });
 
   it("accepte 500, ramene une taille hors liste ou negative au defaut", async () => {
@@ -210,7 +210,7 @@ describe("GET /api/platform/organizations", () => {
 
     expect(res.status).toBe(200);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(20);
+    expect(json.pageSize).toBe(10);
 
     const big = await GET(new NextRequest("http://localhost/api/platform/organizations?pageSize=500"), {
       params: Promise.resolve({}),
@@ -219,6 +219,6 @@ describe("GET /api/platform/organizations", () => {
     const odd = await GET(new NextRequest("http://localhost/api/platform/organizations?pageSize=7"), {
       params: Promise.resolve({}),
     });
-    expect((await odd.json()).pageSize).toBe(20);
+    expect((await odd.json()).pageSize).toBe(10);
   });
 });

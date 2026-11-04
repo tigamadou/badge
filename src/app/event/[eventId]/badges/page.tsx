@@ -12,7 +12,7 @@ export default async function BadgesPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Badges</h1>
+        <h1 className="text-xl font-semibold text-navy">Badges</h1>
         <p className="mt-0.5 text-sm text-slate-400">Générez et imprimez les badges des inscriptions approuvées</p>
       </div>
       <Suspense>

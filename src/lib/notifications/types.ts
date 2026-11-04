@@ -6,7 +6,8 @@ import type {
   StaffRole,
 } from "@prisma/client";
 
-export type NotificationLink = { label: string; href: string };
+// anchor : sous-chaîne exacte du body à transformer en lien (absente : repli sur le titre).
+export type NotificationLink = { label: string; href: string; anchor?: string };
 
 export type NotificationContent = {
   title: string;
@@ -14,6 +15,8 @@ export type NotificationContent = {
   href: string;
   // Libellé du bouton du lien principal (« Voir l'inscription »…), stocké en links[0].
   primaryLabel: string;
+  // Ancre du lien principal dans le body.
+  anchor?: string;
   // Liens secondaires.
   links: NotificationLink[];
 };

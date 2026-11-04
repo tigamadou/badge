@@ -71,7 +71,7 @@ export default async function StaffDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Tableau de bord</h1>
+        <h1 className="text-2xl font-semibold text-navy">Tableau de bord</h1>
         <p className="mt-1 text-sm text-slate-400">Vue d&apos;ensemble de la plateforme</p>
       </div>
 
@@ -88,7 +88,7 @@ export default async function StaffDashboardPage() {
             title="Top organisations"
             subtitle="Par inscriptions ce mois-ci"
             action={
-              <Link href="/platform/organizations" className="text-[13px] font-medium text-green-600 hover:underline">
+              <Link href="/platform/organizations" className="text-[13px] font-medium text-navy hover:underline">
                 Tout voir
               </Link>
             }
@@ -104,9 +104,9 @@ export default async function StaffDashboardPage() {
                     {o.name}
                   </Link>
                   <div className="w-28">
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2 overflow-hidden rounded-full bg-mist">
                       <div
-                        className="h-full rounded-full bg-green-600"
+                        className="h-full rounded-full bg-navy"
                         style={{ width: `${Math.round((o.count / topMax) * 100)}%` }}
                       />
                     </div>
@@ -124,7 +124,7 @@ export default async function StaffDashboardPage() {
           <CardHead
             title="Activité récente"
             action={
-              <Link href="/platform/activity" className="text-[13px] font-medium text-green-600 hover:underline">
+              <Link href="/platform/activity" className="text-[13px] font-medium text-navy hover:underline">
                 Tout voir
               </Link>
             }

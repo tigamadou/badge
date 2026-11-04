@@ -50,7 +50,7 @@ export default async function PlatformBadgeTemplatesPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Templates de badge</h1>
+        <h1 className="text-2xl font-bold text-navy">Templates de badge</h1>
         <p className="mt-1 text-sm text-slate-600">
           Installez un modèle de badge sous forme d&apos;archive. Chaque installation crée une
           version figée : les événements qui utilisent une version antérieure ne sont pas affectés.
@@ -61,7 +61,7 @@ export default async function PlatformBadgeTemplatesPage({
 
       <div className="rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">Catalogue</h2>
+          <h2 className="text-sm font-semibold text-navy">Catalogue</h2>
         </div>
 
         {templates.length === 0 ? (
@@ -73,7 +73,7 @@ export default async function PlatformBadgeTemplatesPage({
           <ul className="divide-y divide-slate-100">
             {templates.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-slate-50">
+                <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-mist">
                   <TemplatePreview src={templateImageUrl(t, "preview")} label={t.label} />
                 </div>
                 <div className="min-w-[220px] flex-1">
@@ -109,7 +109,7 @@ export default async function PlatformBadgeTemplatesPage({
                     <Icon name="archive" size={13} /> Archivé
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-turquoise-soft px-2.5 py-1 text-xs text-turquoise-strong">
                     <Icon name="check" size={13} /> Disponible
                   </span>
                 )}

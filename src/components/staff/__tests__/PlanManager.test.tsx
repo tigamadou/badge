@@ -45,12 +45,10 @@ describe("publicSheetPayload", () => {
 describe("PlanManager", () => {
   const html = renderToStaticMarkup(<PlanManager plans={[plan, { ...plan, id: "p2", name: "Libre", publicVisible: false, highlighted: false }]} />);
 
-  it("formulaire de création : cases Visible sur /tarifs et Mis en avant, position, fonctionnalités", () => {
-    expect(html).toContain("Visible sur /tarifs");
-    expect(html).toContain("Mis en avant");
-    expect(html).toContain("Position (ordre d&#x27;affichage)");
-    expect(html).toContain("Fonctionnalités (une par ligne, 12 max)");
-    expect(html).toContain("<textarea");
+  it("création : bouton Nouveau plan, formulaire dans une modale fermée par défaut", () => {
+    expect(html).toContain("Nouveau plan");
+    expect(html).not.toContain('role="dialog"');
+    expect(html).not.toContain("Fonctionnalités (une par ligne, 12 max)");
   });
 
   it("tableau : colonne Public avec visibilité, position et mise en avant", () => {

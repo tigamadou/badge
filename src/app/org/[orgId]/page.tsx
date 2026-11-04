@@ -49,7 +49,7 @@ export default async function OrgDashboardPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Tableau de bord</h1>
+        <h1 className="text-xl font-semibold text-navy">Tableau de bord</h1>
         <p className="mt-0.5 text-sm text-slate-400">Vue d&apos;ensemble de votre organisation</p>
       </div>
 
@@ -76,7 +76,7 @@ export default async function OrgDashboardPage({
           <CardHead
             title="Derniers événements"
             action={
-              <Link href={`/org/${orgId}/events`} className="text-[13px] font-medium text-green-600 hover:underline">
+              <Link href={`/org/${orgId}/events`} className="text-[13px] font-medium text-navy hover:underline">
                 Tout voir
               </Link>
             }
@@ -91,7 +91,7 @@ export default async function OrgDashboardPage({
                 <Link
                   key={e.id}
                   href={`/event/${e.id}`}
-                  className="flex items-center justify-between gap-3 py-3 text-sm hover:text-green-600"
+                  className="flex items-center justify-between gap-3 py-3 text-sm hover:text-navy"
                 >
                   <span className="text-slate-900">{e.title}</span>
                   <span className="flex items-center gap-2 text-xs text-slate-400">

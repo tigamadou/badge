@@ -124,10 +124,10 @@ export function PlanCatalog({
               <div>
                 <p className="font-medium text-slate-900">
                   {plan.name}
-                  {plan.id === currentPlanId && <span className="ml-2 text-xs text-green-600">Plan actuel</span>}
+                  {plan.id === currentPlanId && <span className="ml-2 text-xs text-turquoise-strong">Plan actuel</span>}
                   {plan.id === scheduledPlanId && <span className="ml-2 text-xs text-slate-500">Programmé</span>}
                 </p>
-                <p className="mt-1 text-lg font-semibold text-slate-900">
+                <p className="mt-1 text-lg font-semibold text-navy">
                   {fcfa(plan.price)}
                   <span className="text-sm font-normal text-slate-400">
                     {" "}

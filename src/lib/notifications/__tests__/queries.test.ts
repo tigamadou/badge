@@ -139,6 +139,9 @@ describe("queries", () => {
       { label: "B", href: "/b" },
     ]);
     expect(toNotificationDTO({ ...ok, links: [null] }).links).toEqual([]);
+    expect(
+      toNotificationDTO({ ...ok, links: [{ label: "A", href: "/a", anchor: "Awa" }, { label: "B", href: "/b", anchor: 3 }, { label: "C", href: "/c", anchor: "" }] }).links,
+    ).toEqual([{ label: "A", href: "/a", anchor: "Awa" }, { label: "B", href: "/b" }, { label: "C", href: "/c" }]);
     expect(toNotificationDTO({ ...ok, readAt: new Date("2026-01-01T00:00:00Z") }).readAt).toBe("2026-01-01T00:00:00.000Z");
   });
 });

@@ -88,7 +88,7 @@ export function BadgeSelectionStep({
                   )}
                   <span className="text-xs text-slate-400">{c.categoryName}</span>
                   {c.printed ? (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                    <span className="rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-medium text-warn">
                       Déjà imprimé
                     </span>
                   ) : null}

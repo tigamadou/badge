@@ -69,7 +69,7 @@ export default async function EventBadgeSettingsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Modèle de badge</h1>
+        <h1 className="text-xl font-semibold text-navy">Modèle de badge</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Modèle utilisé pour {event.title}. Vous pouvez aussi hériter du modèle de l&apos;organisation ou de la
           plateforme.

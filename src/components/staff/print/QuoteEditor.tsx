@@ -19,7 +19,7 @@ const KIND_LABEL: Record<Kind, string> = {
   CUSTOM: "Ligne libre",
 };
 
-const CELL = "w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-green-500";
+const CELL = "w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-navy";
 
 // Montant affiché : une remise est saisie en positif (le signe est géré par signedUnitPrice).
 const shownPrice = (l: { kind: Kind; unitPrice: number }) => (l.kind === "DISCOUNT" ? Math.abs(l.unitPrice) : l.unitPrice);

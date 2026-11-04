@@ -31,12 +31,12 @@ export function PlatformOrgShell({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link href="/platform/organizations" className="text-sm text-slate-400 hover:text-slate-600">
+          <Link href="/platform/organizations" className="text-sm text-slate-500 hover:text-navy">
             ← Organisations
           </Link>
           <h1 className="text-xl font-semibold text-slate-800">{org.name}</h1>
         </div>
-        <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+        <span className="inline-flex items-center rounded-full bg-warn-soft px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-warn">
           Supervision — lecture seule
         </span>
       </div>
@@ -51,7 +51,7 @@ export function PlatformOrgShell({
               aria-current={active ? "page" : undefined}
               className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
                 active
-                  ? "border-brand-navy font-medium text-brand-navy"
+                  ? "border-navy font-medium text-navy"
                   : "border-transparent text-slate-500 hover:text-slate-700"
               }`}
             >

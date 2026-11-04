@@ -99,7 +99,7 @@ describe("GET /api/platform/activity", () => {
     expect(json.activities[2].type).toBe("USER_CREATED");
     expect(json.total).toBe(3);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(20);
+    expect(json.pageSize).toBe(10);
   });
 
   it("includes related user (id, email, name) in each entry", async () => {
@@ -344,7 +344,7 @@ describe("GET /api/platform/activity", () => {
 
     expect(res.status).toBe(200);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(20);
+    expect(json.pageSize).toBe(10);
   });
 
   it("returns 400 INVALID_TYPE for a malformed type param", async () => {

@@ -74,7 +74,7 @@ export function Pagination({
           className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
             page <= 1
               ? "opacity-50 cursor-not-allowed text-slate-600"
-              : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+              : "text-slate-600 hover:bg-mist cursor-pointer"
           }`}
           aria-label="Page précédente"
         >
@@ -94,10 +94,10 @@ export function Pagination({
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy ${
                 p === page
-                  ? "bg-green-600 text-white cursor-pointer"
-                  : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+                  ? "bg-navy text-white cursor-pointer"
+                  : "text-slate-600 hover:bg-mist cursor-pointer"
               }`}
               aria-current={p === page ? "page" : undefined}
             >
@@ -113,7 +113,7 @@ export function Pagination({
           className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
             page >= totalPages
               ? "opacity-50 cursor-not-allowed text-slate-600"
-              : "text-slate-600 hover:bg-slate-100 cursor-pointer"
+              : "text-slate-600 hover:bg-mist cursor-pointer"
           }`}
           aria-label="Page suivante"
         >
@@ -126,7 +126,7 @@ export function Pagination({
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-navy focus:border-transparent"
           aria-label="Nombre de résultats par page"
         >
           {pageSizeOptions.map((size) => (

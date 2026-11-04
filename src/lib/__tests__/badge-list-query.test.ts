@@ -9,15 +9,15 @@ import {
 
 describe("parseBadgePage", () => {
   it("constantes", () => {
-    expect(BADGE_PAGE_SIZE_DEFAULT).toBe(100);
+    expect(BADGE_PAGE_SIZE_DEFAULT).toBe(10);
     expect(BADGE_PAGE_SIZE_MAX).toBe(500);
   });
   it("defauts et valeurs valides", () => {
-    expect(parseBadgePage(new URLSearchParams())).toEqual({ page: 1, pageSize: 100 });
+    expect(parseBadgePage(new URLSearchParams())).toEqual({ page: 1, pageSize: 10 });
     expect(parseBadgePage(new URLSearchParams("page=2&pageSize=50"))).toEqual({ page: 2, pageSize: 50 });
   });
   it("taille hors liste -> defaut, page absurde -> plafonnee", () => {
-    expect(parseBadgePage(new URLSearchParams("pageSize=7")).pageSize).toBe(100);
+    expect(parseBadgePage(new URLSearchParams("pageSize=7")).pageSize).toBe(10);
     expect(parseBadgePage(new URLSearchParams("page=1e9")).page).toBe(BADGE_PAGE_MAX);
   });
 });

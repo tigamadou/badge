@@ -68,7 +68,7 @@ export function PrintRequestActions({
         {canEdit ? (
           <Link
             href={`/event/${eventId}/print/${requestId}/edit`}
-            className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+            className="rounded-lg bg-mist px-4 py-2 text-sm font-medium text-navy transition-colors hover:bg-line"
           >
             Modifier
           </Link>

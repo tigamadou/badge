@@ -158,7 +158,7 @@ export function BadgeBatchPanel({
   return (
     <div className="space-y-4">
       {ignored > 0 && (
-        <p className="text-[13px] text-amber-700">
+        <p className="text-[13px] text-warn">
           {ignored} identifiant(s) ignoré(s) : introuvables ou non approuvés.
         </p>
       )}
@@ -178,7 +178,7 @@ export function BadgeBatchPanel({
                       onClick={() => setCurrentId(b.id)}
                       aria-current={b.id === currentId ? "true" : undefined}
                       className={`flex w-full items-center justify-between gap-2 px-2 py-2 text-left text-[13px] ${
-                        b.id === currentId ? "bg-slate-100" : "hover:bg-slate-50"
+                        b.id === currentId ? "bg-mist" : "hover:bg-mist"
                       }`}
                     >
                       <span>
@@ -187,7 +187,7 @@ export function BadgeBatchPanel({
                       </span>
                       <span className="flex flex-col items-end gap-1">
                         <CatPill color={b.categoryColor} label={b.categoryName} />
-                        {printedIds.has(b.id) && <span className="text-[11px] text-emerald-700">Imprimé</span>}
+                        {printedIds.has(b.id) && <span className="text-[11px] text-turquoise-strong">Imprimé</span>}
                       </span>
                     </button>
                   </li>
@@ -203,7 +203,7 @@ export function BadgeBatchPanel({
                   <a
                     href={`/api/files/${exportState.fileKey}`}
                     download
-                    className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+                    className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-mist"
                   >
                     Télécharger le ZIP
                   </a>
@@ -227,7 +227,7 @@ export function BadgeBatchPanel({
                 </Button>
               </div>
               {exportState.kind === "pending" && pendingLong && (
-                <p role="status" className="text-[13px] text-amber-700">
+                <p role="status" className="text-[13px] text-warn">
                   Toujours en attente : le traitement peut être retardé. Vous pouvez fermer cette page et revenir
                   plus tard.
                 </p>

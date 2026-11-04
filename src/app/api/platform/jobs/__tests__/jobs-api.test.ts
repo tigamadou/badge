@@ -69,7 +69,7 @@ describe("read access", () => {
     expect(body).toMatchObject({
       total: 1,
       page: 1,
-      pageSize: 20,
+      pageSize: 10,
       counts: { pending: 0, failed: 1, sentLast24h: 0 },
     });
     expect(body.jobs[0].id).toBe(job.id);

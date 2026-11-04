@@ -195,8 +195,8 @@ describe("GET /api/org/[orgId]/events/[eventId]/activity", () => {
     expect(ten).not.toHaveProperty("limit");
 
     const fallback = await call("pageSize=3");
-    expect(fallback.pageSize).toBe(20);
-    expect(fallback.logs).toHaveLength(20);
+    expect(fallback.pageSize).toBe(10);
+    expect(fallback.logs).toHaveLength(10);
 
     const all = await call("pageSize=500");
     expect(all.logs).toHaveLength(25);

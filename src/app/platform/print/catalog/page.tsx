@@ -28,7 +28,7 @@ export default async function PrintCatalogPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Catalogue</h1>
+        <h1 className="text-xl font-semibold text-navy">Catalogue</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Supports de badge et accessoires proposés aux organisateurs
         </p>

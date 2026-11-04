@@ -31,7 +31,7 @@ const COLUMNS = [
 
 export function PublicSiteFooter() {
   return (
-    <footer className="bg-brand-navy text-white/70">
+    <footer className="bg-navy text-white/70">
       <div className="mx-auto max-w-[1160px] px-7 pb-8 pt-14">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr] md:gap-10">
           <div className="col-span-2 md:col-span-1">

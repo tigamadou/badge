@@ -48,12 +48,12 @@ export default async function StaffOrganizationsPage({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Organisations</h1>
+          <h1 className="text-xl font-semibold text-navy">Organisations</h1>
           <p className="mt-0.5 text-sm text-slate-400">Gérer les organisations de la plateforme</p>
         </div>
         <Link
           href="/platform/organizations/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
         >
           <Icon name="plus" size={16} /> Créer une organisation
         </Link>
@@ -74,12 +74,12 @@ export default async function StaffOrganizationsPage({
           />
         </div>
         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-600">
-          <input type="checkbox" name="archived" value="true" defaultChecked={showArchived} className="accent-green-600" />
+          <input type="checkbox" name="archived" value="true" defaultChecked={showArchived} className="accent-navy" />
           Afficher les archivées
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded-lg bg-mist px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>

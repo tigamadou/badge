@@ -62,7 +62,7 @@ export default async function OrgSubscriptionPage({
         <Icon name="arrow-left" size={16} /> Organisations
       </Link>
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Abonnement — {org.name}</h1>
+        <h1 className="text-xl font-semibold text-navy">Abonnement — {org.name}</h1>
         <p className="mt-0.5 text-sm text-slate-400">Assigner un plan et gérer le statut de l&apos;abonnement</p>
       </div>
       <SubscriptionForm

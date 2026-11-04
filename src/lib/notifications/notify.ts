@@ -1,5 +1,6 @@
 import type { NotificationType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { BRAND } from "@/lib/brand-colors";
 import { buildEmail, resolveTransporter } from "@/lib/mail";
 import { buildBaseUrl, escapeHtml } from "@/lib/mail-helpers";
 import { enqueueEmail } from "@/lib/jobs/enqueue-email";
@@ -36,7 +37,7 @@ function buildEmailBody(content: NotificationContent): string {
   const url = `${buildBaseUrl(process.env)}${content.href}`;
   return `
     <p style="margin:0 0 20px;">${escapeHtml(content.body)}</p>
-    <p style="margin:0;"><a href="${escapeHtml(url)}" style="display:inline-block;background-color:#16a34a;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;">${escapeHtml(content.primaryLabel)}</a></p>
+    <p style="margin:0;"><a href="${escapeHtml(url)}" style="display:inline-block;background-color:${BRAND.navy};color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;">${escapeHtml(content.primaryLabel)}</a></p>
   `;
 }
 
@@ -70,7 +71,10 @@ async function notifyOne(
       title: content.title,
       body: content.body,
       href: content.href,
-      links: [{ label: content.primaryLabel, href: content.href }, ...content.links],
+      links: [
+        { label: content.primaryLabel, href: content.href, ...(content.anchor ? { anchor: content.anchor } : {}) },
+        ...content.links,
+      ],
     })),
   });
   for (const r of recipients) served.add(r.id);

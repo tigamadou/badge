@@ -45,18 +45,18 @@ export default async function SuccessPage({
           <SuccessRing>
             <Icon name="check" size={36} />
           </SuccessRing>
-          <h2 className="text-2xl font-semibold text-slate-900">Inscription enregistrée</h2>
+          <h2 className="text-2xl font-semibold text-navy">Inscription enregistrée</h2>
           <p className="mx-auto mt-2 max-w-[440px] text-sm text-slate-600">
             Votre inscription a bien été reçue et est en cours de vérification. Un e-mail de confirmation vient de vous
             être envoyé.
           </p>
           {profileStatus === "PENDING" && (
-            <p className="mx-auto mt-3 max-w-[440px] text-sm text-sky-700">
+            <p className="mx-auto mt-3 max-w-[440px] text-sm text-navy">
               Vos pièces d&apos;identité sont en cours de vérification par la plateforme. Votre inscription
               sera examinée par l&apos;organisateur une fois cette vérification terminée.
             </p>
           )}
-          <div className="my-6 border-t border-slate-100" />
+          <div className="my-6 border-t border-line" />
           <div className="flex flex-wrap justify-center gap-4 text-left">
             <FileBox icon="clock" title="Statut : en attente" subtitle="Vous serez notifié dès traitement" />
             {id && <FileBox icon="id-card" title="Inscription enregistrée" subtitle={`N° ${id}`} />}
@@ -65,14 +65,14 @@ export default async function SuccessPage({
             {id && (
               <Link
                 href={`/account/registrations/${id}`}
-                className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                className="inline-flex items-center rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover"
               >
                 Voir le détail
               </Link>
             )}
             <Link
               href="/account"
-              className="inline-flex items-center rounded-lg border border-green-600 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-50"
+              className="inline-flex items-center rounded-lg border border-navy px-4 py-2 text-sm font-medium text-navy hover:bg-mist"
             >
               Mon compte
             </Link>
@@ -80,7 +80,7 @@ export default async function SuccessPage({
           {settings.contactEmail && (
             <p className="mt-6 text-sm text-slate-400">
               Pour toute question :{" "}
-              <a href={`mailto:${settings.contactEmail}`} className="text-green-600 hover:underline">
+              <a href={`mailto:${settings.contactEmail}`} className="text-navy hover:underline">
                 {settings.contactEmail}
               </a>
             </p>

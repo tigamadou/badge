@@ -19,7 +19,7 @@ describe("parseJobListFilters", () => {
   it("returns the defaults", () => {
     expect(parseJobListFilters(params(""))).toEqual({
       ok: true,
-      filters: { page: 1, pageSize: 20 },
+      filters: { page: 1, pageSize: 10 },
     });
   });
 
@@ -32,13 +32,13 @@ describe("parseJobListFilters", () => {
 
   it("clamps page and pageSize, ignores an invalid date", () => {
     const r = parseJobListFilters(params("page=-3&pageSize=999&from=pas-une-date&to=2026-13-45"));
-    expect(r).toEqual({ ok: true, filters: { page: 1, pageSize: 20 } });
+    expect(r).toEqual({ ok: true, filters: { page: 1, pageSize: 10 } });
   });
 
   it("accepte la liste commune de tailles (500) et refuse les autres (30)", () => {
     expect(parseJobListFilters(params("pageSize=500"))).toEqual({ ok: true, filters: { page: 1, pageSize: 500 } });
-    expect(parseJobListFilters(params("pageSize=30"))).toEqual({ ok: true, filters: { page: 1, pageSize: 20 } });
-    expect(parseJobListFilters(params("page=abc"))).toEqual({ ok: true, filters: { page: 1, pageSize: 20 } });
+    expect(parseJobListFilters(params("pageSize=30"))).toEqual({ ok: true, filters: { page: 1, pageSize: 10 } });
+    expect(parseJobListFilters(params("page=abc"))).toEqual({ ok: true, filters: { page: 1, pageSize: 10 } });
   });
 
   it("makes the `to` day inclusive and keeps the other filters", () => {

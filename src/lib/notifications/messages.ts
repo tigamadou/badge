@@ -46,7 +46,8 @@ export function registrationCreatedMessage(a: {
     body: `${a.participantName} s'est inscrit(e) à ${a.eventTitle} (catégorie ${a.categoryName}).`,
     href: `/event/${enc(a.eventId)}/registrations/${enc(a.registrationId)}`,
     primaryLabel: "Voir l'inscription",
-    links: [{ label: "Voir l'évènement", href: `/event/${enc(a.eventId)}` }],
+    anchor: a.participantName,
+    links: [{ label: "Voir l'évènement", href: `/event/${enc(a.eventId)}`, anchor: a.eventTitle }],
   };
 }
 
@@ -65,14 +66,16 @@ export function registrationResubmittedMessage(a: {
     body: `${a.participantName} a resoumis son inscription à ${a.eventTitle}.${change}`,
     href: `/event/${enc(a.eventId)}/registrations/${enc(a.registrationId)}`,
     primaryLabel: "Voir l'inscription",
-    links: [{ label: "Voir l'évènement", href: `/event/${enc(a.eventId)}` }],
+    anchor: a.participantName,
+    links: [{ label: "Voir l'évènement", href: `/event/${enc(a.eventId)}`, anchor: a.eventTitle }],
   };
 }
 
-function myRegistration(registrationId: string) {
+function myRegistration(registrationId: string, anchor: string) {
   return {
     href: `/account/registrations/${enc(registrationId)}`,
     primaryLabel: "Voir mon inscription",
+    anchor,
     links: [],
   };
 }
@@ -84,7 +87,7 @@ export function registrationApprovedMessage(a: {
   return {
     title: "Inscription approuvée",
     body: `Votre inscription à ${a.eventTitle} a été approuvée.`,
-    ...myRegistration(a.registrationId),
+    ...myRegistration(a.registrationId, `Votre inscription à ${a.eventTitle}`),
   };
 }
 
@@ -96,7 +99,7 @@ export function registrationRejectedMessage(a: {
   return {
     title: "Inscription rejetée",
     body: withReason(`Votre inscription à ${a.eventTitle} a été rejetée.`, a.reason),
-    ...myRegistration(a.registrationId),
+    ...myRegistration(a.registrationId, `Votre inscription à ${a.eventTitle}`),
   };
 }
 
@@ -107,7 +110,7 @@ export function badgePrintedMessage(a: {
   return {
     title: "Badge imprimé",
     body: `Votre badge pour ${a.eventTitle} a été imprimé.`,
-    ...myRegistration(a.registrationId),
+    ...myRegistration(a.registrationId, `Votre badge pour ${a.eventTitle}`),
   };
 }
 
@@ -120,6 +123,7 @@ export function profileSubmittedMessage(a: {
     body: `${a.userName} a déposé un profil en attente de validation.`,
     href: `/platform/profiles/${enc(a.userId)}`,
     primaryLabel: "Voir le profil",
+    anchor: a.userName,
     links: [],
   };
 }
@@ -130,6 +134,7 @@ export function profileApprovedMessage(): NotificationContent {
     body: "Votre profil a été validé.",
     href: "/account/profile",
     primaryLabel: "Voir mon profil",
+    anchor: "Votre profil",
     links: [],
   };
 }
@@ -140,6 +145,7 @@ export function profileRejectedMessage(a: { reason: string | null }): Notificati
     body: withReason("Les documents de votre profil ont été refusés.", a.reason),
     href: "/account/profile",
     primaryLabel: "Voir mon profil",
+    anchor: "votre profil",
     links: [],
   };
 }
@@ -154,6 +160,7 @@ export function orgMembershipAddedMessage(a: {
     body: `Vous avez été ajouté(e) à l'organisation ${a.orgName} avec le rôle ${ROLE_LABELS[a.role]}.`,
     href: `/org/${enc(a.orgId)}`,
     primaryLabel: "Ouvrir l'organisation",
+    anchor: a.orgName,
     links: [],
   };
 }
@@ -168,6 +175,7 @@ export function eventMembershipAddedMessage(a: {
     body: `Vous avez été ajouté(e) à l'évènement ${a.eventTitle} avec le rôle ${ROLE_LABELS[a.role]}.`,
     href: `/event/${enc(a.eventId)}`,
     primaryLabel: "Ouvrir l'évènement",
+    anchor: a.eventTitle,
     links: [],
   };
 }
@@ -186,6 +194,7 @@ export function membershipRoleChangedMessage(a: {
     body: `Votre rôle dans ${where} est passé de ${ROLE_LABELS[a.from]} à ${ROLE_LABELS[a.to]}.`,
     href: a.target.kind === "org" ? `/org/${enc(a.target.orgId)}` : `/event/${enc(a.target.eventId)}`,
     primaryLabel: isOrg ? "Ouvrir l'organisation" : "Ouvrir l'évènement",
+    anchor: a.target.name,
     links: [],
   };
 }
@@ -203,6 +212,7 @@ export function eventRegistrationToggledMessage(a: {
       : `Les inscriptions à ${a.eventTitle} sont fermées.`,
     href: `/event/${enc(a.eventId)}`,
     primaryLabel: "Ouvrir l'évènement",
+    anchor: a.eventTitle,
     links: [{ label: "Page publique", href: `/e/${enc(a.eventSlug)}` }],
   };
 }
@@ -213,6 +223,7 @@ export function orgCreatedMessage(a: { orgId: string; orgName: string }): Notifi
     body: `L'organisation ${a.orgName} vient d'être créée.`,
     href: `/platform/organizations/${enc(a.orgId)}`,
     primaryLabel: "Voir l'organisation",
+    anchor: a.orgName,
     links: [],
   };
 }
@@ -235,6 +246,7 @@ export function subscriptionChangedMessage(a: {
     body: `L'abonnement de ${a.orgName} est maintenant le plan ${a.planName} (${SUBSCRIPTION_STATUS_LABELS[a.status]}).`,
     href: subscriptionHref(a.orgId, a.audience),
     primaryLabel: "Voir l'abonnement",
+    anchor: `L'abonnement de ${a.orgName}`,
     links: [],
   };
 }
@@ -252,6 +264,7 @@ export function subscriptionExpiringMessage(a: {
     body: `L'abonnement ${a.planName} de ${a.orgName} arrive à échéance le ${a.endDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })}. À l'échéance, l'abonnement expire et il n'est plus possible de créer de nouvel évènement. Pour le renouveler, rendez-vous dans l'onglet Abonnement.`,
     href: subscriptionHref(a.orgId, "org"),
     primaryLabel: "Renouveler",
+    anchor: `L'abonnement ${a.planName} de ${a.orgName}`,
     links: [],
   };
 }
@@ -267,10 +280,11 @@ export function quotaExceededMessage(a: {
     body: `Un évènement a été créé pour ${a.orgName} au-delà du quota de son abonnement.`,
     href: subscriptionHref(a.orgId, a.audience),
     primaryLabel: "Voir l'abonnement",
+    anchor: a.orgName,
     links: [
       a.audience === "org"
-        ? { label: "Voir l'évènement", href: `/event/${enc(a.eventId)}` }
-        : { label: "Voir l'évènement", href: `/platform/organizations/${enc(a.orgId)}/events` },
+        ? { label: "Voir l'évènement", href: `/event/${enc(a.eventId)}`, anchor: "Un évènement" }
+        : { label: "Voir l'évènement", href: `/platform/organizations/${enc(a.orgId)}/events`, anchor: "Un évènement" },
     ],
   };
 }
@@ -287,6 +301,7 @@ export function emailFailedMessage(a: {
     body: `L'envoi de l'email ${a.kind}${to} a échoué après ${a.attempts} tentative(s).`,
     href: `/platform/jobs/${enc(a.jobId)}`,
     primaryLabel: "Voir l'envoi",
+    anchor: `L'envoi de l'email ${a.kind}`,
     links: [],
   };
 }
@@ -310,6 +325,7 @@ export function printRequestSubmittedMessage(a: {
     body: `${a.orgName} a envoyé la commande ${a.reference} (${PRINT_REQUEST_TYPE_LABELS[a.type].toLowerCase()}, ${a.badgeCount} badges) pour ${a.eventTitle}.`,
     href: staffPrintHref(a.requestId),
     primaryLabel: "Voir la commande",
+    anchor: a.reference,
     links: [],
   };
 }
@@ -327,6 +343,7 @@ export function printRequestQuotedMessage(a: {
     body: `Le devis v${a.version} de la commande ${a.reference} (${a.eventTitle}) s'élève à ${formatFcfa(a.total)}. Le propriétaire de l'organisation peut l'accepter.`,
     href: organizerPrintHref(a.eventId, a.requestId),
     primaryLabel: "Voir le devis",
+    anchor: `Le devis v${a.version}`,
     links: [],
   };
 }
@@ -346,6 +363,7 @@ export function printRequestMessageMessage(a: {
     body: `${a.authorName} : ${excerpt}`,
     href: a.toStaff ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
     primaryLabel: "Répondre",
+    anchor: a.authorName,
     links: [],
   };
 }
@@ -364,6 +382,7 @@ export function printRequestStatusChangedMessage(a: {
     body: `La commande d'impression ${a.reference} (${a.eventTitle}) est maintenant « ${label} ».`,
     href: a.toStaff ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
     primaryLabel: "Voir la commande",
+    anchor: a.reference,
     links: [],
   };
 }
@@ -384,6 +403,7 @@ export function printRequestPaidMessage(a: {
       : `Le paiement de ${formatFcfa(a.amount)} de la commande ${a.reference} (${a.eventTitle}) est reçu.`,
     href: a.audience === "platform" ? staffPrintHref(a.requestId) : organizerPrintHref(a.eventId, a.requestId),
     primaryLabel: "Voir la commande",
+    anchor: a.reference,
     links: [],
   };
 }
@@ -398,6 +418,7 @@ export function printPaymentUnmatchedMessage(a: {
     body: `Un paiement de ${formatFcfa(a.amount)} a été approuvé alors que la commande n'attendait plus ce paiement.`,
     href: staffPrintHref(a.requestId),
     primaryLabel: "Voir la commande",
+    anchor: `Un paiement de ${formatFcfa(a.amount)}`,
     links: [],
   };
 }

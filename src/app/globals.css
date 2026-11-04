@@ -1,30 +1,32 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Badge v2 — Design tokens (mirroir du bundle Claude Design :
-   colors_and_type.css + assets/badge.css). Migration reelle :
-   l'accent est green-600, la sidebar marine #004D74.
+   Badge — Design tokens. Palette « Deep Navy & Soft Gold » : marine,
+   or, turquoise, gris bleute.
    ============================================================ */
 
 @theme {
   /* Police UI par defaut = Inter ; Montserrat reserve aux badges. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  /* Couleur de marque non couverte par la palette Tailwind. */
-  --color-brand-navy: #004d74;
+
+  /* Palette Deep Navy & Soft Gold */
+  --color-navy: #081558;
+  --color-navy-hover: #121f6e;
+  --color-gold: #f4b942;
+  --color-gold-strong: #8a5a00;
+  --color-gold-soft: #fff4dc;
+  --color-turquoise: #16b8a6;
+  --color-turquoise-strong: #0e7c70;
+  --color-turquoise-soft: #e3f7f4;
+  --color-mist: #f5f7fc;
+  --color-line: #eef1f8;
+  --color-nav-muted: #5a6285;
+  --color-warn: #c2410c;
+  --color-warn-soft: #fff1e6;
 }
 
 :root {
-  /* Marque (logo) */
-  --brand-navy: #004d74;
-  --brand-green: rgb(54, 171, 88);
-
-  /* Accent interactif (= Tailwind green-600 / 700) */
-  --accent: #16a34a;
-  --accent-hover: #15803d;
-  --accent-nav: #4ade80; /* green-400 : texte nav active */
-  --accent-nav-bg: rgba(34, 197, 94, 0.15); /* green-500/15 */
-
   /* Police badge (rendu credential uniquement) */
   --font-badge: var(--font-montserrat), var(--font-sans);
 
@@ -35,8 +37,12 @@
 
 /* Accessibilite AA : focus clavier toujours visible. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-navy);
   outline-offset: 2px;
+}
+/* Sur fond marine, le contour de focus passe a l'or. */
+[data-surface="navy"] :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--color-gold);
 }
 
 /* Prose des pages legales/documentaires du site public (LegalLayout). */
@@ -66,7 +72,7 @@
 }
 .legal-prose a {
   font-weight: 500;
-  color: var(--accent);
+  color: var(--color-navy);
 }
 .legal-prose a:hover {
   text-decoration: underline;

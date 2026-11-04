@@ -18,9 +18,9 @@ export function Table<T>({ columns, data, keyExtractor }: TableProps<T>) {
     <TableFrame>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50">
+          <tr className="border-b border-slate-200 bg-navy">
             {columns.map((col) => (
-              <th key={col.key} className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase tracking-wider">
+              <th key={col.key} className="text-left px-4 py-3 font-semibold text-white text-xs uppercase tracking-wider">
                 {col.header}
               </th>
             ))}
@@ -28,7 +28,7 @@ export function Table<T>({ columns, data, keyExtractor }: TableProps<T>) {
         </thead>
         <tbody>
           {data.map((item) => (
-            <tr key={keyExtractor(item)} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
+            <tr key={keyExtractor(item)} className="border-b border-slate-100 transition-colors hover:bg-mist">
               {columns.map((col) => (
                 <td key={col.key} className="px-4 py-3">
                   {col.render(item)}

@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
       title={done ? "Vérifiez votre boîte mail" : "Mot de passe oublié"}
       subtitle={done ? undefined : "Saisissez votre e-mail pour recevoir un lien de réinitialisation."}
       footer={
-        <Link href="/login" className="inline-flex items-center gap-1 text-green-600 hover:underline">
+        <Link href="/login" className="inline-flex items-center gap-1 text-navy hover:underline">
           <Icon name="arrow-left" size={13} /> Retour à la connexion
         </Link>
       }

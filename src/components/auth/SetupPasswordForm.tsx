@@ -91,7 +91,7 @@ export default function SetupPasswordForm({ token }: Props) {
         {password && (
           <p className="-mt-1 text-[13px] text-slate-500">
             Robustesse :{" "}
-            <b className={pwScore(password) >= 3 ? "text-green-700" : "text-rose-700"}>{PW_LABEL[pwScore(password)]}</b>
+            <b className={pwScore(password) >= 3 ? "text-turquoise-strong" : "text-rose-700"}>{PW_LABEL[pwScore(password)]}</b>
           </p>
         )}
       </div>

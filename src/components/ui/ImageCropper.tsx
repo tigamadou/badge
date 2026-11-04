@@ -193,7 +193,7 @@ function CropperBody({ source, requirement, outputMime, onConfirm, onCancel }: C
         />
       </label>
       {tooSmall ? (
-        <p role="alert" className="mt-3 text-[13px] text-amber-700">
+        <p role="alert" className="mt-3 text-[13px] text-warn">
           Image trop petite pour ce cadre : envoyez-en une autre (minimum {requirement.minWidth} × {requirement.minHeight} px).
         </p>
       ) : null}

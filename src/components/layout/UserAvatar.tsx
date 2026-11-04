@@ -29,7 +29,7 @@ export function UserAvatarView({
     <span
       data-testid="user-avatar"
       aria-hidden={photoUrl ? undefined : "true"}
-      className="flex flex-none items-center justify-center overflow-hidden rounded-full bg-slate-200 text-xs font-semibold text-slate-600"
+      className="flex flex-none items-center justify-center overflow-hidden rounded-full bg-mist text-xs font-semibold text-navy"
       style={{ width: size, height: size }}
     >
       {photoUrl ? (

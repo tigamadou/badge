@@ -73,7 +73,7 @@ export function OrderBadgesDialog({ open, onClose, fetchUrl }: { open: boolean; 
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Rechercher par nom…"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy"
           />
         </label>
         {failed ? (
@@ -85,7 +85,7 @@ export function OrderBadgesDialog({ open, onClose, fetchUrl }: { open: boolean; 
             <TableFrame>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <tr className="border-b border-slate-200 bg-navy text-left text-xs font-semibold uppercase tracking-wider text-white">
                     <th className="px-4 py-2.5">Nom</th>
                     <th className="px-4 py-2.5">Catégorie</th>
                     <th className="px-4 py-2.5">Statut</th>

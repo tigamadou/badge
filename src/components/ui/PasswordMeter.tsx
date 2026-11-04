@@ -1,4 +1,4 @@
-const FILL = ["bg-rose-600", "bg-rose-600", "bg-amber-700", "bg-green-500", "bg-green-600"];
+const FILL = ["bg-rose-600", "bg-rose-600", "bg-warn", "bg-turquoise", "bg-turquoise-strong"];
 
 export function PasswordMeter({ score }: { score: 0 | 1 | 2 | 3 | 4 }) {
   return (

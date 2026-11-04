@@ -57,12 +57,12 @@ export default async function EventDashboardPage({
     return (
       <div className="max-w-xl space-y-6">
         <EventCover bannerUrl={coverUrl} title={event.title} variant="hero" />
-        <h1 className="text-xl font-semibold text-slate-900">Tableau de bord opérateur</h1>
+        <h1 className="text-xl font-semibold text-navy">Tableau de bord opérateur</h1>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatCard label="Mes scans" value={myScans} icon="scan-line" />
           <Link
             href={`/event/${eventId}/scan`}
-            className="flex items-center justify-center gap-2 rounded-xl bg-green-600 p-4 text-sm font-medium text-white hover:bg-green-700"
+            className="flex items-center justify-center gap-2 rounded-xl bg-navy p-4 text-sm font-medium text-white hover:bg-navy-hover"
           >
             <Icon name="scan-line" size={18} /> Ouvrir le scanner
           </Link>
@@ -116,7 +116,7 @@ export default async function EventDashboardPage({
     <div className="space-y-6">
       <EventCover bannerUrl={coverUrl} title={event.title} variant="hero" />
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">{event.title}</h1>
+        <h1 className="text-xl font-semibold text-navy">{event.title}</h1>
         <p className="mt-0.5 text-sm text-slate-400">Tableau de bord de l&apos;événement</p>
       </div>
 
@@ -173,7 +173,7 @@ export default async function EventDashboardPage({
           action={
             <Link
               href={`/event/${eventId}/registrations`}
-              className="text-[13px] font-medium text-green-600 hover:underline"
+              className="text-[13px] font-medium text-navy hover:underline"
             >
               Tout voir
             </Link>
@@ -189,7 +189,7 @@ export default async function EventDashboardPage({
               <Link
                 key={r.id}
                 href={`/event/${eventId}/registrations/${r.id}`}
-                className="flex items-center justify-between gap-3 py-3 text-sm hover:text-green-600"
+                className="flex items-center justify-between gap-3 py-3 text-sm hover:text-navy"
               >
                 <span>
                   <span className="font-medium text-slate-900">

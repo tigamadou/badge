@@ -156,8 +156,8 @@ describe("déclencheurs organisation et abonnement", () => {
     const ownerRow = await prisma.notification.findFirstOrThrow({ where: { userId: owner.id } });
     expect(ownerRow).toMatchObject({ type: "QUOTA_EXCEEDED", scope: "ORG", href: `/org/${org.id}/subscription` });
     expect(ownerRow.links).toEqual([
-      { label: "Voir l'abonnement", href: `/org/${org.id}/subscription` },
-      { label: "Voir l'évènement", href: `/event/${event.id}` },
+      { label: "Voir l'abonnement", href: `/org/${org.id}/subscription`, anchor: org.name },
+      { label: "Voir l'évènement", href: `/event/${event.id}`, anchor: "Un évènement" },
     ]);
     const staffRow = await prisma.notification.findFirstOrThrow({ where: { userId: staff2.id } });
     expect(staffRow.scope).toBe("PLATFORM");

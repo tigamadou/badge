@@ -18,7 +18,7 @@ function Tick({ children, onNavy }: { children: React.ReactNode; onNavy?: boolea
     <li className={`flex items-start gap-3 text-[15px] leading-relaxed ${onNavy ? "text-white/80" : "text-slate-600"}`}>
       <span
         className={`mt-px flex h-[22px] w-[22px] flex-none items-center justify-center rounded-full ${
-          onNavy ? "bg-green-400/20 text-green-400" : "bg-green-500/15 text-green-700"
+          onNavy ? "bg-gold/20 text-gold" : "bg-mist text-navy"
         }`}
       >
         <Icon name="check" size={13} />
@@ -40,7 +40,7 @@ const MORE: { icon: IconName; title: string; desc: string }[] = [
 export default function FonctionnalitesPage() {
   return (
     <>
-      <section className="border-b border-slate-200 bg-slate-50 py-[88px] pb-14">
+      <section className="border-b border-line bg-white py-[88px] pb-14">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading
             as="h1"
@@ -56,7 +56,7 @@ export default function FonctionnalitesPage() {
       <section className="py-[88px]">
         <div className="mx-auto grid max-w-[1160px] items-center gap-14 px-7 md:grid-cols-2">
           <div>
-            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-600">Inscriptions</p>
+            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-navy">Inscriptions</p>
             <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[38px]">
               Des formulaires publics sur mesure
             </h2>
@@ -79,16 +79,16 @@ export default function FonctionnalitesPage() {
             />
             <label className="mb-1 mt-3 block text-xs font-medium text-slate-500">Catégorie</label>
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-start gap-3 rounded-xl border-[1.5px] border-green-600 bg-emerald-50 p-4">
+              <div className="flex items-start gap-3 rounded-xl border-[1.5px] border-navy bg-mist p-4">
                 <span className="mt-0.5 h-3.5 w-3.5 flex-none rounded" style={{ background: "#0ea5e9" }} />
-                <span className="text-sm font-semibold text-slate-900">Visiteur</span>
+                <span className="text-sm font-semibold text-navy">Visiteur</span>
               </div>
               <div className="flex items-start gap-3 rounded-xl border-[1.5px] border-slate-200 p-4">
                 <span className="mt-0.5 h-3.5 w-3.5 flex-none rounded" style={{ background: "#8b5cf6" }} />
-                <span className="text-sm font-semibold text-slate-900">Exposant</span>
+                <span className="text-sm font-semibold text-navy">Exposant</span>
               </div>
             </div>
-            <button className="mt-3.5 w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white">
+            <button className="mt-3.5 w-full rounded-lg bg-navy py-2 text-sm font-medium text-white">
               S&apos;inscrire
             </button>
           </BrowserMock>
@@ -96,10 +96,10 @@ export default function FonctionnalitesPage() {
       </section>
 
       {/* Moderation */}
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto grid max-w-[1160px] items-center gap-14 px-7 md:grid-cols-2">
           <BrowserMock url="Inscriptions · 184 en attente">
-            <div className="flex items-center gap-3 rounded-lg bg-brand-navy px-4 py-2.5 text-sm text-white">
+            <div className="flex items-center gap-3 rounded-lg bg-navy px-4 py-2.5 text-sm text-white">
               <span className="font-semibold">12 sélectionnées</span>
               <span className="flex-1" />
               <span className="inline-flex items-center gap-1.5 rounded-md bg-white/15 px-2.5 py-1 text-[13px]">
@@ -116,15 +116,15 @@ export default function FonctionnalitesPage() {
                   ["Hugo Faure", "approved"],
                   ["Inès Petit", "pending"],
                 ].map(([n, s]) => (
-                  <tr key={n} className="border-t border-slate-100">
+                  <tr key={n} className="border-t border-line">
                     <td className="py-2">{n}</td>
                     <td className="py-2 text-right">
                       {s === "approved" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-turquoise-soft px-2 py-0.5 text-xs font-medium text-turquoise-strong">
                           <Icon name="check" size={12} /> Approuvée
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gold-soft px-2 py-0.5 text-xs font-medium text-gold-strong">
                           <Icon name="clock" size={12} /> En attente
                         </span>
                       )}
@@ -135,7 +135,7 @@ export default function FonctionnalitesPage() {
             </table>
           </BrowserMock>
           <div className="md:order-first">
-            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-600">Modération</p>
+            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-navy">Modération</p>
             <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[38px]">
               Approuvez ou rejetez en masse
             </h2>
@@ -156,7 +156,7 @@ export default function FonctionnalitesPage() {
       <section className="py-[88px]">
         <div className="mx-auto grid max-w-[1160px] items-center gap-14 px-7 md:grid-cols-2">
           <div>
-            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-600">Badges</p>
+            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-navy">Badges</p>
             <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[38px]">
               Des credentials générés automatiquement
             </h2>
@@ -178,10 +178,10 @@ export default function FonctionnalitesPage() {
       </section>
 
       {/* Scanner (navy) */}
-      <section className="bg-brand-navy py-[88px] text-white">
+      <section className="bg-navy py-[88px] text-white">
         <div className="mx-auto grid max-w-[1160px] items-center gap-14 px-7 md:grid-cols-2">
           <div className="md:order-2">
-            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-400">Contrôle d&apos;accès</p>
+            <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-gold">Contrôle d&apos;accès</p>
             <h2 style={displayFont} className="text-3xl font-bold leading-[1.08] tracking-tight md:text-[38px]">
               Un scanner mobile fiable
             </h2>
@@ -202,13 +202,13 @@ export default function FonctionnalitesPage() {
       </section>
 
       {/* More features */}
-      <section className="bg-slate-50 py-[88px]">
+      <section className="border-y border-line bg-white py-[88px]">
         <div className="mx-auto max-w-[1160px] px-7">
           <SectionHeading center eyebrow="Et aussi" title="Les fondations d'une plateforme sérieuse" />
           <div className="mt-[52px] grid grid-cols-1 gap-[22px] sm:grid-cols-2 lg:grid-cols-3">
             {MORE.map((f) => (
               <div key={f.title} className="rounded-2xl border border-slate-200 bg-white p-[26px]">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] bg-green-500/15 text-green-700">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] bg-mist text-navy">
                   <Icon name={f.icon} size={22} />
                 </div>
                 <h3 className="mb-2 text-[17px] font-semibold text-slate-900">{f.title}</h3>

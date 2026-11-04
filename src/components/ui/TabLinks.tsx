@@ -22,7 +22,7 @@ export function TabLinks({
             href={t.href}
             aria-current={on ? "page" : undefined}
             className={`-mb-px shrink-0 border-b-2 px-3.5 py-2.5 text-sm font-medium ${
-              on ? "border-green-600 text-green-600" : "border-transparent text-slate-400 hover:text-slate-600"
+              on ? "border-navy text-navy" : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
             {t.label}

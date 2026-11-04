@@ -283,7 +283,7 @@ describe("GET /api/platform/users", () => {
     ).toBeDefined();
   });
 
-  it("defaults page/pageSize to 1/20 when query params are not numeric", async () => {
+  it("defaults page/pageSize to 1/10 when query params are not numeric", async () => {
     await makeStaff();
     await prisma.user.create({
       data: { email: "p@x", password: "x", name: "P" },
@@ -298,6 +298,6 @@ describe("GET /api/platform/users", () => {
 
     expect(res.status).toBe(200);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(20);
+    expect(json.pageSize).toBe(10);
   });
 });

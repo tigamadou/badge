@@ -18,7 +18,8 @@
 //   le bouton « Fermer le menu » : il est ajouté en tête par le panneau.
 // - `header` se place à droite du bouton menu (masqué à partir de `lg`) ; il gère lui-même
 //   ses éléments compacts (`hidden sm:inline-flex`, `min-w-0 truncate`…).
-// - Le contenu de `sidebar` doit rester sur fond sombre (`bg-brand-navy`).
+// - Le menu latéral est clair (fond blanc, trait `line`) : utiliser les classes de
+//   `sidebar-classes.ts`.
 
 import type { ReactNode } from "react";
 import { MobileNavPanel, MobileNavProvider, MobileNavToggle } from "./MobileNav";
@@ -50,7 +51,7 @@ export function AppShell({
             <MobileNavToggle />
             {header}
           </header>
-          <main className="relative flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">{children}</main>
+          <main className="relative flex-1 overflow-y-auto bg-slate-100 p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </MobileNavProvider>

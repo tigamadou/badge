@@ -219,7 +219,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
           onClick={() => void selectAll()}
           disabled={selectingAll || total === 0}
           aria-busy={selectingAll || undefined}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 hover:bg-mist disabled:opacity-60"
         >
           {selected.size > 0 && selected.size === total ? "Tout désélectionner" : `Tout sélectionner (${total})`}
         </button>
@@ -237,7 +237,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="w-10 px-4 py-3" />
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3 hidden md:table-cell">Catégorie</th>
@@ -254,7 +254,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={r.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3">
                   <Checkbox
                     checked={selected.has(r.id)}
@@ -281,7 +281,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/event/${eventId}/badges/${r.id}`}
-                    className="inline-flex items-center gap-1 text-[13px] font-medium text-green-600 hover:underline"
+                    className="inline-flex items-center gap-1 text-[13px] font-medium text-navy hover:underline"
                   >
                     <Icon name="eye" size={14} /> Voir
                   </Link>

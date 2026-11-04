@@ -46,7 +46,7 @@ export default async function OrgMembersSupervisionPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3">E-mail</th>
               <th className="px-4 py-3">Rôle</th>

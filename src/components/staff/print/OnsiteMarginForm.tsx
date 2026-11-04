@@ -42,7 +42,7 @@ export function OnsiteMarginForm({
 
   return (
     <form onSubmit={submit} className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
-      <h3 className="text-sm font-semibold text-slate-900">Marge d&apos;impression</h3>
+      <h3 className="text-sm font-semibold text-navy">Marge d&apos;impression</h3>
       <div className="grid gap-3 sm:grid-cols-[120px_1fr_auto] sm:items-end">
         <Input
           label="Marge (%)"

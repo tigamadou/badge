@@ -18,6 +18,12 @@ import { EventOperatorShell } from "@/components/event/EventOperatorShell";
 import { EventPrinterShell } from "@/components/event/EventPrinterShell";
 import { EventViewerShell } from "@/components/event/EventViewerShell";
 
+function noDarkClasses(html: string) {
+  for (const banned of ["text-white", "text-slate-300", "text-slate-400", "hover:bg-white/10"]) {
+    expect(html).not.toContain(banned);
+  }
+}
+
 function bellScope(html: string): unknown {
   const m = /data-scope="([^"]*)"/.exec(html);
   return JSON.parse(m![1].replaceAll("&quot;", '"'));
@@ -132,5 +138,40 @@ describe.each([
 
   it("affiche désormais un avatar", () => {
     expect(html).toContain(">AD</span>");
+  });
+});
+
+describe("menu clair des shells d'évènement", () => {
+  const sidebarHtml = (node: React.ReactElement) => renderToStaticMarkup(node);
+
+  it("EventShell : titre marine, organisation grise, bandeau staff marine", () => {
+    const html = sidebarHtml(
+      <EventShell org={org} event={event} effectiveRole="ADMIN" isStaffMode={true} user={user}>
+        <p>x</p>
+      </EventShell>,
+    );
+    expect(html).toMatch(/<div class="[^"]*text-navy[^"]*">Salon<\/div>/);
+    expect(html).toContain("text-nav-muted");
+    expect(html).toContain("bg-navy/10");
+    // Bandeau staff : bande marine, texte blanc (seul usage de text-white).
+    expect(html).toMatch(/class="bg-navy[^"]*text-white[^"]*"[^>]*>\s*<strong/);
+    expect(html).not.toContain("bg-amber-50");
+    expect(html).not.toContain("text-slate-300 hover:bg-white/10");
+  });
+
+  it.each([
+    ["EventOperatorShell", EventOperatorShell],
+    ["EventPrinterShell", EventPrinterShell],
+    ["EventViewerShell", EventViewerShell],
+  ])("%s : titre marine, liens SIDEBAR_LINK, aucune classe sombre", (_n, Shell) => {
+    const html = sidebarHtml(
+      <Shell org={org} event={event} user={user}>
+        <p>x</p>
+      </Shell>,
+    );
+    expect(html).toMatch(/<div class="[^"]*text-navy[^"]*">Salon<\/div>/);
+    expect(html).toContain("px-2 text-xs text-nav-muted\">Acme");
+    expect(html).toContain("hover:bg-mist hover:text-navy");
+    noDarkClasses(html);
   });
 });

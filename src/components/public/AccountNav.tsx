@@ -30,7 +30,7 @@ export function AccountNav() {
             href={it.href}
             aria-current={active ? "page" : undefined}
             className={`${it.hideBelowSm ? "hidden sm:inline-flex " : ""}whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors ${
-              active ? "bg-green-500/15 text-green-700" : "text-slate-600 hover:text-slate-900"
+              active ? "bg-mist text-navy" : "text-slate-600 hover:text-navy"
             }`}
           >
             {it.shortLabel && <span className="sm:hidden">{it.shortLabel}</span>}

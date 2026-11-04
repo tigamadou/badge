@@ -87,7 +87,7 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Commandes d&apos;impression</h1>
+        <h1 className="text-xl font-semibold text-navy">Commandes d&apos;impression</h1>
         <p className="mt-0.5 text-sm text-slate-400">Devis, paiements et production des badges demandés par les organisateurs</p>
       </div>
       <RequestList

@@ -22,7 +22,7 @@ function Attachment({ fileKey }: { fileKey: string }) {
       href={`/api/files/${fileKey}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-1 flex items-center gap-1.5 text-[13px] text-green-700 hover:underline"
+      className="mt-1 flex items-center gap-1.5 text-[13px] text-navy hover:underline"
     >
       <Icon name="file" size={14} />
       <span className="break-all">{attachmentName(fileKey)}</span>
@@ -64,7 +64,7 @@ function Entry({
       <div className="flex justify-center" data-entry-kind={entry.internal ? "internal-event" : "event"}>
         <div
           className={`max-w-[90%] rounded-lg px-3 py-1.5 text-center text-[13px] ${
-            entry.internal ? "border border-amber-200 bg-amber-50 text-amber-900" : "bg-slate-100 text-slate-600"
+            entry.internal ? "border border-warn/30 bg-warn-soft text-warn" : "bg-slate-100 text-slate-600"
           }`}
         >
           {entry.internal ? <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide">Interne</span> : null}

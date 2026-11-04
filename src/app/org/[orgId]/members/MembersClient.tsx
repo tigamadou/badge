@@ -72,7 +72,7 @@ export function MembersClient({
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Membres</h1>
+        <h1 className="text-xl font-semibold text-navy">Membres</h1>
         <p className="mt-0.5 text-sm text-slate-400">Les membres de votre organisation et leurs rôles</p>
       </div>
 
@@ -82,7 +82,7 @@ export function MembersClient({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Membre</th>
               <th className="px-4 py-3">Rôle</th>
               <th className="px-4 py-3">Invité le</th>
@@ -138,7 +138,7 @@ function MemberRow({
   );
 
   return (
-    <tr className="border-t border-slate-100 hover:bg-slate-50">
+    <tr className="border-t border-slate-100 hover:bg-mist">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">

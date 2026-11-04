@@ -88,12 +88,12 @@ export function SettingsClient({
   return (
     <div className="max-w-2xl space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Paramètres de l&apos;organisation</h1>
+        <h1 className="text-xl font-semibold text-navy">Paramètres de l&apos;organisation</h1>
         <p className="mt-0.5 text-sm text-slate-400">Identité, adresse et contact public</p>
       </div>
       <Link
         href={`/org/${orgId}/settings/badge`}
-        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-green-500 hover:text-green-700"
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-navy hover:text-navy"
       >
         <Icon name="id-card" size={16} /> Modèle de badge par défaut
       </Link>

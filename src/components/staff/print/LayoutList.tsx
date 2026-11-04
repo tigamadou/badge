@@ -12,7 +12,7 @@ import { SheetDrawing } from "./SheetPreview";
 
 const NEW_HREF = "/platform/print/layouts/new";
 const NEW_BUTTON =
-  "inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700";
+  "inline-flex items-center gap-1.5 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover";
 
 function Chip({ children }: { children: ReactNode }) {
   return (
@@ -66,7 +66,7 @@ export function LayoutList({
             return (
               <li
                 key={l.id}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-green-300 hover:shadow-lg hover:shadow-slate-200/70"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-navy/40 hover:shadow-lg hover:shadow-slate-200/70"
               >
                 <Link href={href} className="block bg-[#1D2128] p-5" aria-label={`Ouvrir ${l.name}`}>
                   <SheetDrawing
@@ -93,7 +93,7 @@ export function LayoutList({
                   <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3">
                     <Link
                       href={href}
-                      className="inline-flex items-center gap-1 text-[13px] font-medium text-green-700 hover:underline"
+                      className="inline-flex items-center gap-1 text-[13px] font-medium text-navy hover:underline"
                     >
                       <Icon name={canWrite ? "pencil" : "eye"} size={14} />
                       {canWrite ? "Modifier" : "Voir"}

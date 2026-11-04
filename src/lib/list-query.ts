@@ -2,7 +2,7 @@
 // Fonctions pures : valeurs hostiles ramenees aux defauts ou plafonnees, jamais de skip negatif.
 
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 500];
-export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE = 10;
 // Borne haute de `page` : evite tout debordement de skip (Prisma/MySQL) sur une valeur absurde.
 export const LIST_PAGE_MAX = 100_000;
 

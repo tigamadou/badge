@@ -13,12 +13,12 @@ export function ScannerMock({ className }: { className?: string }) {
         }}
       />
       <div className="relative aspect-square w-[62%]">
-        <span className="absolute left-0 top-0 h-[30px] w-[30px] rounded-tl-[12px] border-l-[3px] border-t-[3px] border-green-400" />
-        <span className="absolute right-0 top-0 h-[30px] w-[30px] rounded-tr-[12px] border-r-[3px] border-t-[3px] border-green-400" />
-        <span className="absolute bottom-0 left-0 h-[30px] w-[30px] rounded-bl-[12px] border-b-[3px] border-l-[3px] border-green-400" />
-        <span className="absolute bottom-0 right-0 h-[30px] w-[30px] rounded-br-[12px] border-b-[3px] border-r-[3px] border-green-400" />
+        <span className="absolute left-0 top-0 h-[30px] w-[30px] rounded-tl-[12px] border-l-[3px] border-t-[3px] border-turquoise" />
+        <span className="absolute right-0 top-0 h-[30px] w-[30px] rounded-tr-[12px] border-r-[3px] border-t-[3px] border-turquoise" />
+        <span className="absolute bottom-0 left-0 h-[30px] w-[30px] rounded-bl-[12px] border-b-[3px] border-l-[3px] border-turquoise" />
+        <span className="absolute bottom-0 right-0 h-[30px] w-[30px] rounded-br-[12px] border-b-[3px] border-r-[3px] border-turquoise" />
       </div>
-      <div className="absolute left-[8%] right-[8%] top-1/2 h-0.5 bg-green-400 shadow-[0_0_12px_#4ade80]" />
+      <div className="absolute left-[8%] right-[8%] top-1/2 h-0.5 bg-turquoise shadow-[0_0_12px_var(--color-turquoise)]" />
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default function ContactPage() {
     <section className="py-[88px]">
       <div className="mx-auto grid max-w-[1160px] items-start gap-14 px-7 md:grid-cols-2">
         <div>
-          <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-green-600">Contact</p>
+          <p className="mb-3.5 text-xs font-semibold uppercase tracking-[0.1em] text-navy">Contact</p>
           <h1 style={displayFont} className="text-4xl font-bold leading-[1.08] tracking-tight text-slate-900 md:text-[44px]">
             Parlons de vos événements
           </h1>
@@ -30,13 +30,13 @@ export default function ContactPage() {
           <div className="mt-9 flex flex-col gap-6">
             {INFO.map((it) => (
               <div key={it.title} className="flex items-start gap-3.5">
-                <span className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-[11px] bg-green-500/15 text-green-700">
+                <span className="flex h-[42px] w-[42px] flex-none items-center justify-center rounded-[11px] bg-mist text-navy">
                   <Icon name={it.icon} size={20} />
                 </span>
                 <div>
                   <h3 className="text-[15px] font-semibold text-slate-900">{it.title}</h3>
                   {it.href ? (
-                    <a href={it.href} className="text-sm text-slate-500 hover:text-green-600">
+                    <a href={it.href} className="text-sm text-slate-500 hover:text-navy">
                       {it.value}
                     </a>
                   ) : (

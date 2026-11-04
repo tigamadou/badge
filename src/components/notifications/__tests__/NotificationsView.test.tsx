@@ -28,16 +28,37 @@ describe("NotificationsList", () => {
     expect(html).toContain('id="n-n1"');
     expect(html).toContain('id="n-n2"');
     expect(html).toContain("target:ring-2");
-    expect(html).toContain("target:ring-green-600");
+    expect(html).toContain("target:ring-navy");
   });
 
-  it("affiche le bouton du lien principal avec son libellé et les liens secondaires", () => {
-    const html = renderToStaticMarkup(<NotificationsList items={[dto({})]} now={now} />);
+  it("le nom dans le corps est le lien, sans bouton rempli", () => {
+    const html = renderToStaticMarkup(
+      <NotificationsList
+        items={[
+          dto({
+            body: "Awa s'est inscrite à Forum.",
+            links: [
+              { label: "Voir l'inscription", href: "/event/e1/registrations/r1", anchor: "Awa" },
+              { label: "Voir l'évènement", href: "/event/e1", anchor: "Forum" },
+            ],
+          }),
+        ]}
+        now={now}
+      />,
+    );
     expect(html).toContain('href="/event/e1/registrations/r1"');
-    expect(html).toContain("Voir l&#x27;inscription");
-    expect(html).toContain('href="/event/e1"');
-    expect(html).toContain("Voir l&#x27;évènement");
+    expect(html).toMatch(/<a [^>]*href="\/event\/e1\/registrations\/r1"[^>]*>Awa<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/event\/e1"[^>]*>Forum<\/a>/);
+    expect(html).not.toMatch(/<a [^>]*bg-navy/);
+    expect(html).not.toContain("Voir l&#x27;inscription");
     expect(html).toContain("il y a 5 min");
+  });
+
+  it("sans ancre exploitable : le titre devient le lien principal, lien secondaire en texte", () => {
+    const html = renderToStaticMarkup(<NotificationsList items={[dto({})]} now={now} />);
+    expect(html).toMatch(/<a [^>]*href="\/event\/e1\/registrations\/r1"[^>]*>Nouvelle inscription<\/a>/);
+    expect(html).toMatch(/<a [^>]*href="\/event\/e1"[^>]*>Voir l&#x27;évènement<\/a>/);
+    expect(html).not.toMatch(/<a [^>]*bg-navy/);
   });
 
   it("marque « Non lue » les notifications sans readAt", () => {

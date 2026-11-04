@@ -1,19 +1,19 @@
 import type { ComponentProps } from "react";
 import { Card, CardBody, CardHead } from "@/components/ui/Card";
-import { QuoteLinesTable } from "@/components/print/QuoteLinesTable";
+import { QuoteTotals } from "@/components/print/QuoteTotals";
 import { PaymentHistory } from "@/components/admin/PaymentHistory";
 
 type Payments = ComponentProps<typeof PaymentHistory>["payments"];
 
 // Colonne de droite : devis en lecture, total et paiements (les actions sont dans l'en-tête de la page).
 export function OrganizerQuoteColumn({
-  lines,
+  lineCount,
   total,
   badgeCount,
   quoteVersion,
   payments,
 }: {
-  lines: ComponentProps<typeof QuoteLinesTable>["lines"];
+  lineCount: number;
   total: number;
   badgeCount: number;
   quoteVersion: number;
@@ -24,7 +24,7 @@ export function OrganizerQuoteColumn({
       <Card>
         <CardHead title={quoteVersion > 0 ? `Devis v${quoteVersion}` : "Lignes de la commande"} />
         <CardBody className="space-y-3">
-          <QuoteLinesTable compact lines={lines} total={total} badgeCount={badgeCount} />
+          <QuoteTotals total={total} lineCount={lineCount} badgeCount={badgeCount} />
           <p className="text-xs text-slate-400">Le prix définitif est fixé par l&apos;équipe Badge dans le devis.</p>
         </CardBody>
       </Card>

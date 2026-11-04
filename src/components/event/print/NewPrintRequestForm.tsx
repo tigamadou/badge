@@ -54,7 +54,7 @@ export function NewPrintRequestForm({ orgId, eventId }: { orgId: string; eventId
         onChange={setType}
       />
       {onsite.showNotice ? (
-        <p className="mt-3 text-sm text-amber-700">
+        <p className="mt-3 text-sm text-warn">
           {ONSITE_NOT_ELIGIBLE_MESSAGE}{" "}
           <Link href={`/event/${eventId}/settings/badge`} className="font-medium underline">
             Changer le modèle de badge

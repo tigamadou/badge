@@ -82,9 +82,9 @@ export function OnsitePrintSettingsForm({
                     checked={selected.includes(t.id)}
                     onChange={(e) => toggle(t.id, e.target.checked)}
                     disabled={save.pending}
-                    className="h-4 w-4 shrink-0 accent-green-600"
+                    className="h-4 w-4 shrink-0 accent-navy"
                   />
-                  <span className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-slate-50">
+                  <span className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-100 bg-mist">
                     <TemplatePreview src={t.previewSrc} label={t.label} />
                   </span>
                   <span>
@@ -109,7 +109,7 @@ export function OnsitePrintSettingsForm({
           onChange={(e) => setNote(e.target.value)}
           disabled={save.pending}
           placeholder="Ex. : Zebra ZC300, cartes CR80"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-green-500"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-navy"
         />
       </div>
 

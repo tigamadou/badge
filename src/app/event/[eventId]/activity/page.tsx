@@ -73,14 +73,14 @@ export default async function ActivityPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Journal d&apos;activité</h1>
+        <h1 className="text-xl font-semibold text-navy">Journal d&apos;activité</h1>
         <p className="mt-0.5 text-sm text-slate-400">Les actions réalisées sur cet événement</p>
       </div>
 
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
               <th className="px-4 py-3 hidden md:table-cell">Auteur</th>
@@ -96,7 +96,7 @@ export default async function ActivityPage({
               </tr>
             )}
             {logs.map((l) => (
-              <tr key={l.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={l.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">
                   {new Date(l.createdAt).toLocaleString("fr-FR")}
                 </td>
@@ -113,7 +113,7 @@ export default async function ActivityPage({
                   <Link
                     href={`/event/${eventId}/activity/${l.id}`}
                     aria-label="Voir le détail"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                   >
                     <Icon name="chevron-right" size={16} />
                   </Link>

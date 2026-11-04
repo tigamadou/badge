@@ -22,7 +22,7 @@ export function ActionButton<T>({
   error?: string;
   confirm?: string;
   onSuccess?: (result: T) => void;
-  variant?: "primary" | "secondary" | "danger" | "link";
+  variant?: "primary" | "positive" | "secondary" | "danger" | "link";
   className?: string;
   disabled?: boolean;
   "aria-label"?: string;

@@ -1,15 +1,13 @@
 import type { ReactNode } from "react";
 
-// Note DS : le fond `modification` utilise indigo-500/10 comme couleur de
-// CATEGORIE de journal (pas comme accent d'action) — conforme a la contrainte
-// "accent vert unique". Palette reprise de `.log-type` du template.
+// Accent unique marine ; l'or est reserve a la categorie « systeme ».
 const LOG: Record<string, string> = {
-  creation: "bg-emerald-50 text-emerald-700",
-  modification: "bg-indigo-500/10 text-indigo-600",
+  creation: "bg-turquoise-soft text-turquoise-strong",
+  modification: "bg-mist text-navy",
   suppression: "bg-rose-50 text-rose-700",
-  systeme: "bg-amber-50 text-amber-700",
+  systeme: "bg-gold-soft text-gold-strong",
   connexion: "bg-slate-100 text-slate-600",
-  acces: "bg-brand-navy/10 text-brand-navy",
+  acces: "bg-navy/10 text-navy",
 };
 
 export function LogType({
@@ -49,7 +47,7 @@ export function Diff({ oldValue, newValue }: { oldValue: ReactNode; newValue: Re
         {oldValue}
       </div>
       <span className="justify-self-center text-slate-400">&rarr;</span>
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px]">
+      <div className="rounded-lg border border-turquoise/30 bg-turquoise-soft px-3 py-2.5 text-[13px]">
         <div className="mb-1 text-[11px] uppercase tracking-wide text-slate-400">Apres</div>
         {newValue}
       </div>

@@ -25,14 +25,14 @@ export function MiniBadge({
       </div>
       <span className="absolute right-2 top-2">
         {state === "done" ? (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-white">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-turquoise text-navy">
             <Icon name="check" size={12} />
           </span>
         ) : state === "generating" ? (
           <span
             role="status"
             aria-label="Generation"
-            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-green-600"
+            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-navy"
           />
         ) : null}
       </span>

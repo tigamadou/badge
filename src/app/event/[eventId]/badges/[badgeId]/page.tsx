@@ -83,7 +83,7 @@ export default async function BadgeDetailPage({
             />
             <Link
               href={`/event/${eventId}/registrations/${registration.id}`}
-              className="inline-flex text-[13px] font-medium text-green-600 hover:underline"
+              className="inline-flex text-[13px] font-medium text-navy hover:underline"
             >
               Voir l&apos;inscription
             </Link>

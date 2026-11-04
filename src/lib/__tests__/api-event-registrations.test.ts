@@ -152,8 +152,8 @@ describe("GET /registrations", () => {
     expect(ten).not.toHaveProperty("limit");
 
     const invalid = await call("pageSize=7");
-    expect(invalid.pageSize).toBe(20);
-    expect(invalid.registrations).toHaveLength(20);
+    expect(invalid.pageSize).toBe(10);
+    expect(invalid.registrations).toHaveLength(10);
 
     const big = await call("pageSize=500");
     expect(big.pageSize).toBe(500);

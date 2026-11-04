@@ -141,7 +141,7 @@ export function RequestDetail({
           <Icon name="arrow-left" size={14} /> Commandes
         </Link>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="text-xl font-semibold text-slate-900">{request.reference}</h1>
+          <h1 className="text-xl font-semibold text-navy">{request.reference}</h1>
           <PrintRequestStatusBadge status={request.status} />
           <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {request.type === "ADVANCE" && items.length > 0 ? (

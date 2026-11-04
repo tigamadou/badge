@@ -32,4 +32,12 @@ describe("AccountNav", () => {
     const html = renderToStaticMarkup(<AccountNav />);
     expect(linkTag(html, "/account")).toContain('aria-current="page"');
   });
+
+  it("lien actif mist / marine, inactif gris au survol marine", () => {
+    currentPath = "/account";
+    const html = renderToStaticMarkup(<AccountNav />);
+    expect(linkTag(html, "/account")).toContain("bg-mist text-navy");
+    expect(linkTag(html, "/account/profile")).toContain("text-slate-600 hover:text-navy");
+    expect(html).not.toContain("green-");
+  });
 });

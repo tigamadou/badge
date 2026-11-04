@@ -88,11 +88,11 @@ export default async function EventRegisterPage({
         </div>
 
         {existing ? (
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+          <div className="rounded-md bg-warn-soft border border-warn/30 p-3 text-sm text-warn">
             <p>Vous êtes déjà inscrit à cet événement.</p>
             <Link
               href={`/account/registrations/${existing.id}`}
-              className="mt-1 inline-block text-green-700 underline"
+              className="mt-1 inline-block text-navy underline"
             >
               Voir le détail de mon inscription
             </Link>

@@ -34,11 +34,11 @@ export function NotificationPanelList({
           <button
             type="button"
             onClick={() => onSelect(n.id)}
-            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:outline-none"
+            className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-mist focus-visible:bg-mist focus-visible:outline-none"
           >
             <span className="mt-1.5 flex h-2 w-2 flex-none">
               {n.readAt === null ? (
-                <span aria-label="Non lue" role="img" className="h-2 w-2 rounded-full bg-green-600" />
+                <span aria-label="Non lue" role="img" className="h-2 w-2 rounded-full bg-navy" />
               ) : null}
             </span>
             <span className="min-w-0 flex-1">
@@ -115,12 +115,12 @@ export function NotificationPanel({
       className="fixed inset-0 z-50 flex flex-col bg-white sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-[70vh] sm:w-96 sm:rounded-xl sm:border sm:border-slate-200 sm:shadow-lg"
     >
       <div className="flex flex-none items-center justify-between border-b border-slate-100 px-4 py-3">
-        <span className="text-sm font-semibold text-slate-900">Notifications</span>
+        <span className="text-sm font-semibold text-navy">Notifications</span>
         <button
           type="button"
           onClick={onClose}
           aria-label="Fermer les notifications"
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 sm:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-mist sm:hidden"
         >
           <X size={20} aria-hidden="true" />
         </button>
@@ -142,7 +142,7 @@ export function NotificationPanel({
         <button type="button" onClick={markAllRead} className="font-medium text-slate-600 hover:text-slate-900">
           Tout marquer comme lu
         </button>
-        <Link href={pagePath} onClick={onClose} className="font-medium text-green-700 hover:text-green-800">
+        <Link href={pagePath} onClick={onClose} className="font-medium text-navy hover:text-navy-hover">
           Voir toutes les notifications
         </Link>
       </div>

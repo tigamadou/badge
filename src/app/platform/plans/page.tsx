@@ -1,13 +1,26 @@
 import { prisma } from "@/lib/prisma";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
 import { PlanManager, type PlanRow } from "@/components/staff/PlanManager";
 
-export default async function PlatformPlansPage() {
-  const plans = await prisma.plan.findMany({
-    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
-    include: { _count: { select: { subscriptions: true } } },
-  });
+export default async function PlatformPlansPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const list = parseListPage(await searchParams);
+  const result = await paginate(
+    list,
+    () => prisma.plan.count(),
+    (range) =>
+      prisma.plan.findMany({
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        include: { _count: { select: { subscriptions: true } } },
+        ...range,
+      }),
+  );
 
-  const rows: PlanRow[] = plans.map((p) => ({
+  const rows: PlanRow[] = result.rows.map((p) => ({
     id: p.id,
     name: p.name,
     period: p.period,
@@ -27,12 +40,15 @@ export default async function PlatformPlansPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Plans</h1>
+        <h1 className="text-xl font-semibold text-navy">Plans</h1>
         <p className="mt-0.5 text-sm text-slate-400">
           Catalogue des plans d&apos;abonnement (limites d&apos;events et de participants par event)
         </p>
       </div>
-      <PlanManager plans={rows} />
+      <PlanManager
+        plans={rows}
+        pagination={{ page: result.page, totalPages: result.totalPages, total: result.total, pageSize: result.pageSize }}
+      />
     </div>
   );
 }

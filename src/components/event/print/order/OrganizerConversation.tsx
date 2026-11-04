@@ -24,7 +24,7 @@ function Attachment({ attachmentKey }: { attachmentKey: string }) {
       href={`/api/files/${attachmentKey}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-1 flex items-center gap-1.5 text-[13px] text-green-700 hover:underline"
+      className="mt-1 flex items-center gap-1.5 text-[13px] text-navy hover:underline"
     >
       <Icon name="file" size={14} />
       <span className="break-all">{attachmentName(attachmentKey)}</span>
@@ -57,7 +57,7 @@ function SystemEvent({
   }
   const changes = lineChangesOf(entry);
   return (
-    <div data-testid="thread-event" className="mx-auto max-w-[90%] rounded-lg bg-slate-50 px-3 py-1.5 text-center text-xs text-slate-500">
+    <div data-testid="thread-event" className="mx-auto max-w-[90%] rounded-lg bg-mist px-3 py-1.5 text-center text-xs text-slate-500">
       <span className="whitespace-pre-wrap break-words">{entry.body}</span>
       {changes.length > 1 ? (
         <ul className="mt-1 list-disc pl-4 text-left">
@@ -212,7 +212,7 @@ export function OrganizerConversation({
           <button
             type="button"
             onClick={scrollToEnd}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-green-600 px-3 py-1 text-xs font-medium text-white shadow hover:bg-green-700"
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-navy px-3 py-1 text-xs font-medium text-white shadow hover:bg-navy-hover"
           >
             Nouveaux messages
           </button>

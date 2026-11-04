@@ -31,7 +31,7 @@ describe("EventCover", () => {
       "max-h-72",
       "object-cover",
       "overflow-hidden",
-      "bg-slate-100",
+      "bg-mist",
       "rounded-xl",
     ]) {
       expect(html).toContain(s);
@@ -44,7 +44,7 @@ describe("EventCover", () => {
     );
     expect(html).toContain("aspect-video");
     expect(html).toContain("object-cover");
-    expect(html).toContain("bg-slate-100");
+    expect(html).toContain("bg-mist");
     expect(html).not.toContain("aspect-[3/1]");
   });
 

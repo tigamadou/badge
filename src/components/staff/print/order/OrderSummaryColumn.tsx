@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { OrderSteps } from "@/components/print/OrderSteps";
+import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { RelatedRequestLinks } from "@/components/print/RelatedRequestLinks";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 import { formatBadgeSize } from "../request-actions";
@@ -34,14 +34,12 @@ export function OrderSummaryColumn({
   const duplex = template ? template.pages > 1 : false;
   return (
     <aside aria-label="Résumé de la commande" className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-      <div className="space-y-2">
-        <p className="text-sm text-slate-500">{PRINT_REQUEST_TYPE_LABELS[request.type]}</p>
-        <OrderSteps status={request.status} type={request.type} />
+      <div className="flex flex-wrap items-center gap-2">
+        <PrintRequestStatusBadge status={request.status} />
+        <span className="text-sm text-slate-500">{PRINT_REQUEST_TYPE_LABELS[request.type]}</span>
       </div>
       <RelatedRequestLinks parent={parentRequest} supplements={supplements} hrefOf={(id) => `/platform/print/orders/${id}`} />
       <dl className="grid gap-3">
-        <Field label="Évènement">{event.title}</Field>
-        <Field label="Organisation">{event.org.name}</Field>
         <Field label="Badges">
           {items.length > 0 ? `${items.length} badge${items.length > 1 ? "s" : ""}` : request.estimatedQuantity?.toString() ?? ""}
         </Field>
@@ -62,9 +60,6 @@ export function OrderSummaryColumn({
               .join(" — ")}
           </Field>
         )}
-        <Field label="Contact de l'organisation">
-          {[event.org.contactEmail, event.org.contactPhone].filter(Boolean).join(" · ")}
-        </Field>
       </dl>
       <details className="group border-t border-slate-100 pt-3">
         <summary className="cursor-pointer text-[13px] font-medium text-slate-600 hover:text-slate-900">Détails</summary>

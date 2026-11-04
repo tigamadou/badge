@@ -8,11 +8,11 @@ import type { OnsiteCounter } from "@/lib/print-requests/onsite-counter";
 import type { OrderSheetView } from "@/lib/print-sheets/order-sheet";
 import { OrderSheetPanel } from "../OrderSheetPanel";
 import { OnsiteRequestPanel } from "../OnsiteRequestPanel";
-import { QuoteLinesTable } from "@/components/print/QuoteLinesTable";
+import { QuoteTotals } from "@/components/print/QuoteTotals";
 import { RequestCreditPanel, type StaffCreditData } from "../RequestCreditPanel";
 import type { RequestDetailData } from "../request-types";
 
-// Colonne droite : devis (lecture ; l'édition passe par la modale de l'en-tête), crédit, impression sur place, planche, paiements.
+// Colonne droite : organisation, devis (lecture ; l'édition passe par la modale de l'en-tête), crédit, impression sur place, planche, paiements.
 export function OrderQuoteColumn({
   requestId,
   role,
@@ -40,14 +40,31 @@ export function OrderQuoteColumn({
       {onsiteTemplate === "UNSUITABLE" && <OnsiteTemplateAlert side="STAFF" eventId={event.id} />}
 
       <Card>
+        <CardHead title="Organisation" />
+        <CardBody>
+          <dl className="grid gap-3 text-sm">
+            <div className="min-w-0">
+              <dt className="text-xs text-slate-400">Organisation</dt>
+              <dd className="mt-0.5 break-words text-slate-800">{event.org.name}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs text-slate-400">Évènement</dt>
+              <dd className="mt-0.5 break-words text-slate-800">{event.title}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-xs text-slate-400">Contact</dt>
+              <dd className="mt-0.5 break-words text-slate-800">
+                {[event.org.contactEmail, event.org.contactPhone].filter(Boolean).join(" · ") || "—"}
+              </dd>
+            </div>
+          </dl>
+        </CardBody>
+      </Card>
+
+      <Card>
         <CardHead title="Devis" />
-        <CardBody className="!px-3">
-          <QuoteLinesTable
-            compact
-            lines={lines.map((l) => ({ id: l.id, label: l.label, optionsSnapshot: null, quantity: l.quantity, unitPrice: l.unitPrice, lineTotal: l.lineTotal }))}
-            total={lines.reduce((sum, l) => sum + l.lineTotal, 0)}
-            badgeCount={items.length}
-          />
+        <CardBody>
+          <QuoteTotals total={lines.reduce((sum, l) => sum + l.lineTotal, 0)} lineCount={lines.length} badgeCount={items.length} />
         </CardBody>
       </Card>
 

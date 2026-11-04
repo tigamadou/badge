@@ -76,7 +76,7 @@ export function CategoryTable({
     <div className="max-w-3xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Catégories</h1>
+          <h1 className="text-xl font-semibold text-navy">Catégories</h1>
           <p className="mt-0.5 text-sm text-slate-400">Catégories de participation de l&apos;événement</p>
         </div>
         <div className="flex gap-2">
@@ -108,7 +108,7 @@ export function CategoryTable({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">N°</th>
               <th className="px-4 py-3">Catégorie</th>
               <th className="px-4 py-3">Options</th>
@@ -125,7 +125,7 @@ export function CategoryTable({
               </tr>
             )}
             {cats.map((c) => (
-              <tr key={c.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={c.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3 text-sm tabular-nums text-slate-400">{c.number}</td>
                 <td className="px-4 py-3">
                   <CatPill color={c.color} label={c.name} />
@@ -143,7 +143,7 @@ export function CategoryTable({
                     <button
                       onClick={() => setEditing(c)}
                       aria-label="Éditer"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                     >
                       <Icon name="pencil" size={15} />
                     </button>
@@ -175,7 +175,7 @@ export function CategoryTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-base font-semibold text-slate-900">
+              <h3 className="text-base font-semibold text-navy">
                 {editing ? "Modifier la catégorie" : "Nouvelle catégorie"}
               </h3>
             </div>

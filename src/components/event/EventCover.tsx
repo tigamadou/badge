@@ -4,8 +4,8 @@ export function eventCoverUrl(banner: string | null | undefined): string | null 
 }
 
 const VARIANT_CLASSES = {
-  hero: "aspect-[3/1] max-h-72 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-100",
-  thumb: "aspect-video w-full overflow-hidden rounded-lg bg-slate-100",
+  hero: "aspect-[3/1] max-h-72 w-full overflow-hidden rounded-xl border border-slate-200 bg-mist",
+  thumb: "aspect-video w-full overflow-hidden rounded-lg bg-mist",
 } as const;
 
 export function EventCover({

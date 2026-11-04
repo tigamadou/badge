@@ -11,9 +11,18 @@ describe("QuotaBar", () => {
   });
 
   it("colore la barre selon les seuils", () => {
-    expect(renderToStaticMarkup(<QuotaBar label="a" valueText="b" pct={50} />)).toContain("bg-green-600");
-    expect(renderToStaticMarkup(<QuotaBar label="a" valueText="b" pct={80} />)).toContain("bg-amber-700");
+    expect(renderToStaticMarkup(<QuotaBar label="a" valueText="b" pct={50} />)).toContain("bg-turquoise");
+    expect(renderToStaticMarkup(<QuotaBar label="a" valueText="b" pct={80} />)).toContain("bg-warn");
     expect(renderToStaticMarkup(<QuotaBar label="a" valueText="b" pct={95} />)).toContain("bg-rose-600");
+  });
+
+  it("piste mist", () => {
+    expect(renderToStaticMarkup(<QuotaBar label="a" valueText="b" pct={10} />)).toContain("bg-mist");
+  });
+
+  it("StorageAlert en avertissement orange", () => {
+    const html = renderToStaticMarkup(<StorageAlert pct={82}>x</StorageAlert>);
+    for (const c of ["border-warn/20", "bg-warn-soft", "text-warn"]) expect(html).toContain(c);
   });
 
   it("StorageAlert masque sous 75% et s'affiche au-dela", () => {

@@ -157,7 +157,7 @@ export function EventCreationWizard({
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Nouvel événement</h1>
+      <h1 className="text-xl font-semibold text-navy">Nouvel événement</h1>
 
       <Stepper steps={STEPS} current={step - 1} />
 
@@ -188,7 +188,7 @@ export function EventCreationWizard({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
               />
             </div>
             <div>

@@ -50,14 +50,14 @@ export function BadgeVerifyView({ data }: Props) {
           {anonymous || !data.participant ? (
             <div className="text-base font-semibold italic text-slate-400">Nom masqué</div>
           ) : (
-            <div className="font-badge text-xl font-bold text-slate-900">
+            <div className="font-badge text-xl font-bold text-navy">
               {data.participant.firstName} {data.participant.lastName}
             </div>
           )}
           <div className="mt-2.5 flex justify-center">
             <CatPill color={data.category.color} label={data.category.name} />
           </div>
-          <div className="my-4 border-t border-slate-100" />
+          <div className="my-4 border-t border-line" />
           <KeyValue
             items={[
               { label: "Événement", value: data.event.title },

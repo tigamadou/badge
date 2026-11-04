@@ -10,13 +10,13 @@ import {
 describe("constantes", () => {
   it("options officielles et defaut", () => {
     expect(PAGE_SIZE_OPTIONS).toEqual([10, 20, 50, 100, 500]);
-    expect(DEFAULT_PAGE_SIZE).toBe(20);
+    expect(DEFAULT_PAGE_SIZE).toBe(10);
   });
 });
 
 describe("parseListPage", () => {
   it("valeurs par defaut", () => {
-    expect(parseListPage(new URLSearchParams())).toEqual({ page: 1, pageSize: 20, skip: 0, take: 20 });
+    expect(parseListPage(new URLSearchParams())).toEqual({ page: 1, pageSize: 10, skip: 0, take: 10 });
   });
 
   it("lit page et pageSize", () => {
@@ -41,11 +41,11 @@ describe("parseListPage", () => {
   it.each(["1e9", "999999999"])("page=%s est plafonnee", (v) => {
     const r = parseListPage(new URLSearchParams({ page: v }));
     expect(r.page).toBe(LIST_PAGE_MAX);
-    expect(r.skip).toBe((LIST_PAGE_MAX - 1) * 20);
+    expect(r.skip).toBe((LIST_PAGE_MAX - 1) * 10);
   });
 
   it.each(["7", "0", "-10", "abc", "", "1000"])("pageSize=%j retombe au defaut", (v) => {
-    expect(parseListPage(new URLSearchParams({ pageSize: v })).pageSize).toBe(20);
+    expect(parseListPage(new URLSearchParams({ pageSize: v })).pageSize).toBe(10);
   });
 
   it("defaultSize personnalise", () => {

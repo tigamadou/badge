@@ -13,7 +13,17 @@ describe("Labels", () => {
   it("RoleBadge navy rend le libelle", () => {
     const html = renderToStaticMarkup(<RoleBadge tone="navy">SUPER_ADMIN</RoleBadge>);
     expect(html).toContain("SUPER_ADMIN");
-    expect(html).toContain("text-brand-navy");
+    expect(html).toContain("bg-navy/10");
+    expect(html).toContain("text-navy");
+  });
+
+  it.each([
+    ["green", "bg-turquoise-soft text-turquoise-strong"],
+    ["amber", "bg-gold-soft text-gold-strong"],
+    ["warn", "bg-warn-soft text-warn"],
+    ["slate", "bg-mist text-slate-600"],
+  ] as const)("RoleBadge %s", (tone, classes) => {
+    expect(renderToStaticMarkup(<RoleBadge tone={tone}>X</RoleBadge>)).toContain(classes);
   });
 
   it("Tag rend son contenu", () => {

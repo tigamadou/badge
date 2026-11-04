@@ -39,7 +39,7 @@ describe("messages", () => {
     expect(m.body).toContain("Presse");
     expect(m.href).toBe("/event/e1/registrations/r1");
     expect(m.primaryLabel).toBe("Voir l'inscription");
-    expect(m.links).toEqual([{ label: "Voir l'évènement", href: "/event/e1" }]);
+    expect(m.links).toEqual([{ label: "Voir l'évènement", href: "/event/e1", anchor: "Forum" }]);
   });
 
   it("registrationResubmitted", () => {
@@ -49,7 +49,7 @@ describe("messages", () => {
     expect(m.title).toBe("Inscription resoumise");
     expect(m.href).toBe("/event/e1/registrations/r1");
     expect(m.primaryLabel).toBe("Voir l'inscription");
-    expect(m.links).toEqual([{ label: "Voir l'évènement", href: "/event/e1" }]);
+    expect(m.links).toEqual([{ label: "Voir l'évènement", href: "/event/e1", anchor: "Forum" }]);
     expect(m.body).toContain("Awa Diallo");
   });
 
@@ -195,10 +195,10 @@ describe("messages", () => {
     expect(org.title).toBe("Quota dépassé");
     expect(org.href).toBe("/org/o1/subscription");
     expect(org.primaryLabel).toBe("Voir l'abonnement");
-    expect(org.links).toEqual([{ label: "Voir l'évènement", href: "/event/e1" }]);
+    expect(org.links).toEqual([{ label: "Voir l'évènement", href: "/event/e1", anchor: "Un évènement" }]);
     const pf = quotaExceededMessage({ orgId: "o1", orgName: "Acme", eventId: "e1", audience: "platform" });
     expect(pf.href).toBe("/platform/organizations/o1/subscription");
-    expect(pf.links).toEqual([{ label: "Voir l'évènement", href: "/platform/organizations/o1/events" }]);
+    expect(pf.links).toEqual([{ label: "Voir l'évènement", href: "/platform/organizations/o1/events", anchor: "Un évènement" }]);
   });
 
   it("emailFailed", () => {
@@ -327,6 +327,58 @@ describe("messages", () => {
       expect(org.primaryLabel).toBe("Voir la commande");
       expect(org.links).toEqual([]);
       expect(printRequestStatusChangedMessage({ ...base, toStaff: true }).href).toBe("/platform/print/orders/p1");
+    });
+  });
+
+  describe("ancres", () => {
+    const ids = { orgId: "o1", eventId: "e1", requestId: "p1", registrationId: "r1" };
+    const all: NotificationContent[] = [
+      registrationCreatedMessage({ ...ids, eventTitle: "Forum", participantName: "Awa Diallo", categoryName: "Presse" }),
+      registrationResubmittedMessage({ ...ids, eventTitle: "Forum", participantName: "Awa Diallo", categoryChanged: { from: "A", to: "B" } }),
+      registrationApprovedMessage({ ...ids, eventTitle: "Forum" }),
+      registrationRejectedMessage({ ...ids, eventTitle: "Forum", reason: "Photo floue" }),
+      badgePrintedMessage({ ...ids, eventTitle: "Forum" }),
+      profileSubmittedMessage({ userId: "u1", userName: "Awa Diallo" }),
+      profileApprovedMessage(),
+      profileRejectedMessage({ reason: null }),
+      orgMembershipAddedMessage({ ...ids, orgName: "Acme", role: "OWNER" }),
+      eventMembershipAddedMessage({ ...ids, eventTitle: "Forum", role: "ADMIN" }),
+      membershipRoleChangedMessage({ target: { kind: "org", orgId: "o1", name: "Acme" }, from: "OWNER", to: "MANAGER" }),
+      membershipRoleChangedMessage({ target: { kind: "event", eventId: "e1", name: "Forum" }, from: "ADMIN", to: "VIEWER" }),
+      eventRegistrationToggledMessage({ ...ids, eventTitle: "Forum", eventSlug: "forum", open: true }),
+      eventRegistrationToggledMessage({ ...ids, eventTitle: "Forum", eventSlug: "forum", open: false }),
+      orgCreatedMessage({ ...ids, orgName: "Acme" }),
+      subscriptionChangedMessage({ ...ids, orgName: "Acme", planName: "Pro", status: "ACTIVE", audience: "org" }),
+      subscriptionExpiringMessage({ ...ids, orgName: "Acme", planName: "Pro", daysBefore: 7, endDate: new Date("2026-12-01") }),
+      quotaExceededMessage({ ...ids, orgName: "Acme", audience: "org" }),
+      quotaExceededMessage({ ...ids, orgName: "Acme", audience: "platform" }),
+      emailFailedMessage({ jobId: "j1", kind: "REGISTRATION_APPROVED", recipient: "a@b.c", attempts: 3 }),
+      printRequestSubmittedMessage({ ...ids, reference: "IMP-1", eventTitle: "Forum", orgName: "Acme", type: "ADVANCE", badgeCount: 10 }),
+      printRequestQuotedMessage({ ...ids, reference: "IMP-1", eventTitle: "Forum", version: 2, total: 1000 }),
+      printRequestMessageMessage({ ...ids, reference: "IMP-1", authorName: "Awa", body: "Bonjour", toStaff: true }),
+      printRequestStatusChangedMessage({ ...ids, reference: "IMP-1", eventTitle: "Forum", status: "IN_PRODUCTION", toStaff: false }),
+      printRequestPaidMessage({ ...ids, reference: "IMP-1", eventTitle: "Forum", amount: 1000, manual: false, audience: "event" }),
+      printPaymentUnmatchedMessage({ requestId: "p1", reference: "IMP-1", amount: 150000 }),
+    ];
+
+    it("chaque message porte une ancre principale sous-chaîne du corps", () => {
+      for (const m of all) {
+        expect(m.anchor, m.title).toBeTruthy();
+        expect(m.body, m.title).toContain(m.anchor!);
+      }
+    });
+
+    it("les ancres des liens secondaires sont des sous-chaînes du corps", () => {
+      for (const m of all) {
+        for (const l of m.links) if (l.anchor) expect(m.body, m.title).toContain(l.anchor);
+      }
+    });
+
+    it("ancres attendues sur quelques messages", () => {
+      expect(all[0].anchor).toBe("Awa Diallo");
+      expect(all[5].anchor).toBe("Awa Diallo");
+      expect(all[2].anchor).toBe("Votre inscription à Forum");
+      expect(all[12].links[0].anchor).toBeUndefined();
     });
   });
 });

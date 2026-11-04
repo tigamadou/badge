@@ -35,7 +35,7 @@ export default async function PrintLayoutsPage({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Gabarits d&apos;impression</h1>
+          <h1 className="text-xl font-semibold text-navy">Gabarits d&apos;impression</h1>
           <p className="mt-0.5 text-sm text-slate-400">
             Formats de planche, marges et espacements utilisés pour imprimer les badges
           </p>
@@ -43,7 +43,7 @@ export default async function PrintLayoutsPage({
         {canWrite && (
           <Link
             href="/platform/print/layouts/new"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover"
           >
             <Icon name="plus" size={16} /> Nouveau gabarit
           </Link>

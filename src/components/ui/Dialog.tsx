@@ -60,13 +60,13 @@ export function DialogPanel({
         className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+          <h3 className="text-base font-semibold text-navy">{title}</h3>
           <button
             ref={closeRef}
             type="button"
             aria-label="Fermer"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+            className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-mist hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy"
           >
             <Icon name="x" size={18} />
           </button>

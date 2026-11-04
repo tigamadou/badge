@@ -83,7 +83,7 @@ export default async function UserDetailPage({
         </span>
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold text-slate-900">{user.name}</h1>
+            <h1 className="text-xl font-semibold text-navy">{user.name}</h1>
             {user.isStaff && user.staffRole && <RoleBadge tone="navy">{user.staffRole}</RoleBadge>}
             {user.archived && <Tag icon="archive">Archivé</Tag>}
           </div>
@@ -112,7 +112,7 @@ export default async function UserDetailPage({
           ) : (
             user.orgMemberships.map((m) => (
               <div key={m.organization.id} className="flex items-center justify-between gap-3 py-3 text-sm">
-                <Link href={`/platform/organizations/${m.organization.id}`} className="text-slate-900 hover:text-green-600">
+                <Link href={`/platform/organizations/${m.organization.id}`} className="text-slate-900 hover:text-navy">
                   {m.organization.name}
                   {m.organization.archived && <span className="ml-2 text-xs text-slate-400">(archivée)</span>}
                 </Link>

@@ -63,7 +63,7 @@ function FileField({
   const [failed, setFailed] = useState(false);
   if (!uploadFile) {
     return (
-      <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-[13px] text-slate-400">
+      <p className="rounded-lg border border-dashed border-slate-300 bg-mist px-3 py-2 text-[13px] text-slate-400">
         {"Téléversement disponible dans la commande d'impression"}
       </p>
     );
@@ -174,7 +174,7 @@ function OptionField({
                 onClick={() => onChange(nextColorChoice(option, selected, val.id))}
                 style={{ backgroundColor: val.colorHex ?? undefined }}
                 className={`h-8 w-8 rounded-full border border-slate-300 ${
-                  selected.includes(val.id) ? "ring-2 ring-green-600 ring-offset-2" : ""
+                  selected.includes(val.id) ? "ring-2 ring-navy ring-offset-2" : ""
                 }`}
               />
             ))}
@@ -287,7 +287,7 @@ export function ProductConfigurator({
     <div className="grid gap-6 md:grid-cols-2">
       <ProductGallery images={product.images} />
       <div>
-        <h2 className="text-lg font-semibold text-slate-900">{product.name}</h2>
+        <h2 className="text-lg font-semibold text-navy">{product.name}</h2>
         {paragraphs.map((p, i) => (
           <p key={i} className="mt-2 whitespace-pre-line text-sm text-slate-600">{p}</p>
         ))}
@@ -313,7 +313,7 @@ export function ProductConfigurator({
             onChange={(e) => onChange({ ...value, quantity: e.target.value === "" ? NaN : Number(e.target.value) })}
           />
         </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+        <div className="rounded-xl border border-slate-200 bg-mist p-4 text-sm">
           {showPrice ? (
             <>
               <div className="flex justify-between"><span>Prix unitaire estimé</span><strong>{formatFcfa(unit)}</strong></div>
@@ -321,7 +321,7 @@ export function ProductConfigurator({
             </>
           ) : null}
           {partial ? (
-            <p className="mt-2 text-xs text-amber-700">{"Estimation partielle : options obligatoires manquantes."}</p>
+            <p className="mt-2 text-xs text-warn">{"Estimation partielle : options obligatoires manquantes."}</p>
           ) : null}
           {orphanError ? <p className="mt-2 text-sm text-rose-600">{orphanError}</p> : null}
           <p className="mt-2 text-xs text-slate-400">{"Estimation : le prix définitif est fixé dans le devis."}</p>

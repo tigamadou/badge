@@ -41,7 +41,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Mon profil</h1>
+        <h1 className="text-2xl font-bold text-navy">Mon profil</h1>
         <p className="text-sm text-slate-600 mt-1">
           Ces informations sont enregistrées sur votre compte et utilisées pour vos inscriptions.
         </p>
@@ -56,18 +56,18 @@ export default async function ProfilePage() {
           <strong>Nom du compte :</strong> {user.name}
         </p>
         {user.profileStatus === "INCOMPLETE" && (
-          <p className="text-amber-700 mt-1">
+          <p className="text-warn mt-1">
             Profil incomplet : complétez tous les champs ci-dessous pour pouvoir vous inscrire.
           </p>
         )}
         {user.profileStatus === "PENDING" && (
-          <p className="text-sky-700 mt-1">
+          <p className="text-gold-strong mt-1">
             Vos documents sont en cours de vérification par la plateforme. Vous pourrez vous inscrire à un
             événement une fois votre profil validé.
           </p>
         )}
         {user.profileStatus === "APPROVED" && (
-          <p className="text-emerald-700 mt-1">Profil validé — vous pouvez vous inscrire aux événements.</p>
+          <p className="text-turquoise-strong mt-1">Profil validé — vous pouvez vous inscrire aux événements.</p>
         )}
         {user.profileStatus === "REJECTED" && (
           <p className="text-rose-700 mt-1">
@@ -93,7 +93,7 @@ export default async function ProfilePage() {
 
       {submissions.length > 0 && (
         <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <h2 className="text-sm font-semibold text-slate-900">Historique de mes soumissions</h2>
+          <h2 className="text-sm font-semibold text-navy">Historique de mes soumissions</h2>
           <ul className="mt-3 divide-y divide-slate-100 text-sm">
             {submissions.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-2">

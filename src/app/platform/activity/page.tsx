@@ -140,7 +140,7 @@ export default async function StaffActivityPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Journal d&apos;activité</h1>
+        <h1 className="text-xl font-semibold text-navy">Journal d&apos;activité</h1>
         <p className="mt-0.5 text-sm text-slate-400">Toutes les actions de la plateforme</p>
       </div>
 
@@ -183,7 +183,7 @@ export default async function StaffActivityPage({
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded-lg bg-mist px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>
@@ -192,7 +192,7 @@ export default async function StaffActivityPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-navy text-left text-[11px] font-semibold uppercase tracking-wider text-white">
               <th className="px-4 py-3">Horodatage</th>
               <th className="px-4 py-3">Action</th>
               <th className="px-4 py-3 hidden md:table-cell">Auteur</th>
@@ -209,7 +209,7 @@ export default async function StaffActivityPage({
               </tr>
             )}
             {activities.map((a) => (
-              <tr key={a.id} className="border-t border-slate-100 hover:bg-slate-50">
+              <tr key={a.id} className="border-t border-slate-100 hover:bg-mist">
                 <td className="px-4 py-3 font-mono text-xs text-slate-400">
                   {new Date(a.createdAt).toLocaleString("fr-FR")}
                 </td>
@@ -227,7 +227,7 @@ export default async function StaffActivityPage({
                   <Link
                     href={`/platform/activity/${a.id}`}
                     aria-label="Voir le détail"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                   >
                     <Icon name="chevron-right" size={16} />
                   </Link>
