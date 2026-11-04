@@ -15,6 +15,9 @@ vi.mock("@/lib/storage", async (importOriginal) => {
   return { ...actual, uploadFile: vi.fn(actual.uploadFile) };
 });
 import { uploadFile } from "@/lib/storage";
+import { makePng } from "@/test/factories-2a";
+
+const PHOTO = makePng(420, 540);
 
 function withSession(user: { id: string; email: string; name: string; isStaff: boolean }) {
   vi.mocked(getServerSession).mockResolvedValue({ user } as never);
@@ -143,14 +146,14 @@ describe("POST /api/account/upload", () => {
     withSession({ id: "u-7", email: "u7@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
-      makeReq("photo", { name: "p.jpg", type: "image/jpeg", bytes: Buffer.from("xxx") }),
+      makeReq("photo", { name: "p.png", type: "image/png", bytes: PHOTO }),
     );
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.storageKey).toMatch(/^profile\/u-7\/photos\/.+\.jpg$/);
-    expect(json.originalName).toBe("p.jpg");
+    expect(json.storageKey).toMatch(/^profile\/u-7\/photos\/.+\.png$/);
+    expect(json.originalName).toBe("p.png");
     expect(json.kind).toBe("photo");
-    expect(json.size).toBe(3);
+    expect(json.size).toBe(PHOTO.length);
   });
 
   it("accepts a valid PDF for kind=document and returns a profile storage key", async () => {
@@ -195,7 +198,7 @@ describe("POST /api/account/upload", () => {
     withSession({ id: "u-12", email: "u12@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
-      makeReq("photo", { type: "image/jpeg", bytes: Buffer.from("xxx") }),
+      makeReq("photo", { type: "image/png", bytes: PHOTO }),
     );
     expect(res.status).toBe(200);
     const json = await res.json();
@@ -207,7 +210,7 @@ describe("POST /api/account/upload", () => {
     vi.mocked(uploadFile).mockRejectedValueOnce(new Error("boom-upload"));
     const { POST } = await import("@/app/api/account/upload/route");
     await expect(
-      POST(makeReq("photo", { name: "p.jpg", type: "image/jpeg", bytes: Buffer.from("x") })),
+      POST(makeReq("photo", { name: "p.png", type: "image/png", bytes: PHOTO })),
     ).rejects.toThrow("boom-upload");
   });
 
@@ -224,5 +227,42 @@ describe("POST /api/account/upload", () => {
     const json = await lastRes!.json();
     expect(json.code).toBe("RATE_LIMITED");
     expect(lastRes!.headers.get("retry-after")).not.toBeNull();
+  });
+
+  async function sender(kind: "photo" | "document") {
+    withSession({ id: "u-2a", email: "u2a@v4-account-upload.test", name: "U", isStaff: false });
+    const { POST } = await import("@/app/api/account/upload/route");
+    return (file: { name: string; type: string; bytes: Buffer }) => POST(makeReq(kind, file));
+  }
+  const photoSender = () => sender("photo");
+  const documentSender = () => sender("document");
+
+  it("kind=photo : accepte 420x540, refuse hors ratio, trop petit ou non image", async () => {
+    const send = await photoSender();
+    const png = (w: number, h: number) => ({ name: "p.png", type: "image/png", bytes: makePng(w, h) });
+    expect((await send(png(420, 540))).status).toBe(200);
+
+    const square = await send(png(540, 540));
+    expect(square.status).toBe(422);
+    expect(await square.json()).toMatchObject({
+      code: "IMAGE_RATIO",
+      message: "Ratio attendu 7:9, par ex. 210 × 270 px.",
+    });
+
+    const tiny = await send(png(140, 180));
+    expect(tiny.status).toBe(422);
+    expect((await tiny.json()).code).toBe("IMAGE_RESOLUTION");
+
+    expect((await send(png(428, 540))).status).toBe(200);
+    expect((await send(png(429, 540))).status).toBe(422);
+
+    const text = await send({ name: "p.png", type: "image/png", bytes: Buffer.from("texte") });
+    expect(text.status).toBe(400);
+    expect((await text.json()).code).toBe("INVALID_IMAGE");
+  });
+
+  it("kind=document : une image quelconque reste acceptée", async () => {
+    const send = await documentSender();
+    expect((await send({ name: "d.png", type: "image/png", bytes: makePng(10, 10) })).status).toBe(200);
   });
 });

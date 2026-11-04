@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 const TABS: Array<{ value: ProfileStatus; label: string }> = [
   { value: "PENDING", label: "En attente" },
@@ -15,9 +18,12 @@ const TABS: Array<{ value: ProfileStatus; label: string }> = [
 export default async function PlatformProfilesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { status = "PENDING", q } = await searchParams;
+  const sp = await searchParams;
+  const status = typeof sp.status === "string" ? sp.status : "PENDING";
+  const q = typeof sp.q === "string" ? sp.q : undefined;
+  const list = parseListPage(sp);
   const activeStatus = (TABS.find((t) => t.value === status)?.value ?? "PENDING") as ProfileStatus;
 
   const where: Prisma.UserWhereInput = {
@@ -33,21 +39,27 @@ export default async function PlatformProfilesPage({
     }),
   };
 
-  const users = await prisma.user.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-      structure: true,
-      profileStatus: true,
-      idDocumentType: true,
-      idDocumentNumber: true,
-    },
-  });
+  const result = await paginate(
+    list,
+    () => prisma.user.count({ where }),
+    (range) =>
+      prisma.user.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        ...range,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          structure: true,
+          profileStatus: true,
+          idDocumentType: true,
+          idDocumentNumber: true,
+        },
+      }),
+  );
+  const users = result.rows;
 
   return (
     <div className="space-y-4">
@@ -62,7 +74,7 @@ export default async function PlatformProfilesPage({
         {TABS.map((t) => (
           <Link
             key={t.value}
-            href={`/platform/profiles?status=${t.value}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            href={`/platform/profiles?status=${t.value}${q ? `&q=${encodeURIComponent(q)}` : ""}&pageSize=${result.pageSize}`}
             className={`rounded-lg px-3.5 py-2 text-[13px] font-medium ${
               activeStatus === t.value
                 ? "bg-green-600 text-white"
@@ -76,6 +88,7 @@ export default async function PlatformProfilesPage({
 
       <form method="get" className="flex flex-wrap items-center gap-2.5">
         <input type="hidden" name="status" value={activeStatus} />
+        <input type="hidden" name="pageSize" value={result.pageSize} />
         <div className="relative min-w-[220px] flex-1">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
             <Icon name="search" size={16} />
@@ -146,6 +159,7 @@ export default async function PlatformProfilesPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

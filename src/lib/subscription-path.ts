@@ -6,9 +6,11 @@ export function isSubscriptionPath(pathname: string, orgId: string): boolean {
 }
 
 // Pages toujours accessibles hors réglage des droits : l'onglet Abonnement (et ses
-// pages de retour) et la liste des évènements (exactement, avec ou sans « / » final).
+// pages de retour), le module Paiements (lecture seule) et la liste des évènements (exactement, avec ou sans « / » final).
 export function isAlwaysAllowedOrgPath(pathname: string, orgId: string): boolean {
   if (isSubscriptionPath(pathname, orgId)) return true;
+  const payments = `/org/${orgId}/payments`;
+  if (pathname === payments || pathname.startsWith(`${payments}/`)) return true;
   const events = `/org/${orgId}/events`;
   return pathname === events || pathname === `${events}/`;
 }

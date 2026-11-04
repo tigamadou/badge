@@ -6,6 +6,14 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Switch } from "@/components/ui/FormControls";
 import { Dropzone, FileBox } from "@/components/ui/FileBox";
+import {
+  ImageCropper,
+  isConforming,
+  outputMimeFor,
+  readImageSize,
+  type CropSource,
+} from "@/components/ui/ImageCropper";
+import type { ImageRequirement } from "@/lib/badge-templates/image-frames";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { linesToInstructions } from "@/lib/security-instructions";
@@ -23,6 +31,8 @@ type Initial = {
     slug: string;
     logo: string | null;
     banner: string | null;
+    logoOriginal: string | null;
+    bannerOriginal: string | null;
     securityInstructions: string[];
     registrationOpen: boolean;
   };
@@ -33,25 +43,190 @@ type Initial = {
   storedOptions: Record<string, unknown>;
 };
 
+type ImageSlot = "logo" | "banner";
+type ImageValue = { key: string | null; original: string | null };
+
+const EXTENSION: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
+
+async function postImage(orgId: string, eventId: string, file: Blob, purpose: ImageSlot | "original") {
+  const fd = new FormData();
+  fd.append("file", file, `image.${EXTENSION[file.type] ?? "png"}`);
+  const query = purpose === "original" ? "purpose=original" : `purpose=${purpose}&eventId=${eventId}`;
+  const res = await fetch(`/api/org/${orgId}/upload?${query}`, { method: "POST", body: fd });
+  if (!res.ok) throw res;
+  return (await res.json()) as { storageKey: string };
+}
+
+function formatHint(requirement: ImageRequirement | undefined) {
+  if (!requirement) return "Aucune contrainte de format pour le modèle de badge actuel — JPEG ou PNG, 5 Mo max";
+  return (
+    `Format attendu : ${requirement.ratioLabel}, par ex. ${requirement.exampleWidth} × ${requirement.exampleHeight} px ` +
+    `(minimum ${requirement.minWidth} × ${requirement.minHeight}) — JPEG, PNG ou WebP, 5 Mo max`
+  );
+}
+
+// Logo ou bannière : cadrage au ratio du template avant l'envoi, original conserve pour recadrer plus tard.
+function EventImageField({
+  orgId,
+  eventId,
+  slot,
+  label,
+  fileTitle,
+  dropTitle,
+  requirement,
+  warning,
+  value,
+  onChange,
+  onBusyChange,
+}: {
+  orgId: string;
+  eventId: string;
+  slot: ImageSlot;
+  label: string;
+  fileTitle: string;
+  dropTitle: string;
+  requirement: ImageRequirement | undefined;
+  warning: string | null;
+  value: ImageValue;
+  onChange: (value: ImageValue) => void;
+  onBusyChange: (busy: boolean) => void;
+}) {
+  const [uploading, setUploadingState] = useState(false);
+  // Le formulaire parent désactive « Enregistrer » pendant l'envoi : sinon l'ancienne clé partirait.
+  const setUploading = (busy: boolean) => {
+    setUploadingState(busy);
+    onBusyChange(busy);
+  };
+  // Source en cours de cadrage ; `pendingOriginal` est le fichier choisi, a envoyer comme original.
+  const [cropSource, setCropSource] = useState<CropSource | null>(null);
+  const [pendingOriginal, setPendingOriginal] = useState<File | null>(null);
+
+  async function send(task: () => Promise<ImageValue>, fallback: string) {
+    setUploading(true);
+    try {
+      onChange(await task());
+    } catch (err) {
+      await toastApiError(err, fallback);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const failure = `Échec de l'envoi : ${label.toLowerCase()}.`;
+
+  async function onFiles(files: FileList) {
+    const file = files[0];
+    if (!file) return;
+    // WebP : le moteur ne le lit pas, il passe toujours par le cadrage (sortie PNG).
+    const needsCrop =
+      requirement !== undefined &&
+      (file.type === "image/webp" || !isConforming(await readImageSize(file).catch(() => ({ width: 0, height: 0 })), requirement));
+    if (needsCrop) {
+      setPendingOriginal(file);
+      setCropSource(file);
+      return;
+    }
+    await send(async () => {
+      const { storageKey } = await postImage(orgId, eventId, file, slot);
+      return { key: storageKey, original: storageKey };
+    }, failure);
+  }
+
+  function openRecrop() {
+    if (!value.key) return;
+    setPendingOriginal(null);
+    setCropSource(`/api/files/${value.original ?? value.key}`);
+  }
+
+  async function onCropped(blob: Blob) {
+    const original = pendingOriginal;
+    setCropSource(null);
+    setPendingOriginal(null);
+    await send(async () => {
+      const originalKey = original ? (await postImage(orgId, eventId, original, "original")).storageKey : (value.original ?? value.key);
+      const { storageKey } = await postImage(orgId, eventId, blob, slot);
+      return { key: storageKey, original: originalKey };
+    }, failure);
+  }
+
+  function closeCropper() {
+    setCropSource(null);
+    setPendingOriginal(null);
+  }
+
+  return (
+    <div className="space-y-2">
+      <span className="block text-sm font-medium text-slate-700">{label}</span>
+      {value.key ? (
+        <FileBox
+          icon="file"
+          thumbUrl={`/api/files/${value.key}`}
+          title={fileTitle}
+          subtitle={value.key}
+          warning={warning}
+          action={
+            <div className="flex flex-wrap justify-end gap-2">
+              {requirement ? (
+                <Button type="button" variant="secondary" onClick={openRecrop} disabled={uploading}>
+                  Recadrer
+                </Button>
+              ) : null}
+              <Button type="button" variant="secondary" onClick={() => onChange({ key: null, original: null })}>
+                Retirer
+              </Button>
+            </div>
+          }
+        />
+      ) : (
+        <Dropzone
+          onFiles={onFiles}
+          accept="image/jpeg,image/png,image/webp"
+          title={uploading ? "Envoi…" : dropTitle}
+          subtitle={formatHint(requirement)}
+        />
+      )}
+      {requirement && value.key ? <p className="text-xs text-slate-400">{formatHint(requirement)}</p> : null}
+      {requirement ? (
+        <ImageCropper
+          open={cropSource !== null}
+          title={`Recadrer : ${label.toLowerCase()}`}
+          source={cropSource}
+          requirement={requirement}
+          outputMime={pendingOriginal ? outputMimeFor(pendingOriginal) : "image/png"}
+          onConfirm={onCropped}
+          onCancel={closeCropper}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function EventSettingsForm({
   orgId,
   eventId,
   initial,
+  imageRequirements,
+  imageIssues,
 }: {
   orgId: string;
   eventId: string;
   initial: Initial;
+  imageRequirements: Partial<Record<ImageSlot, ImageRequirement>>;
+  imageIssues: Partial<Record<ImageSlot, string>>;
 }) {
   const [title, setTitle] = useState(initial.event.title);
   const [location, setLocation] = useState(initial.event.location);
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
   const [endDate, setEndDate] = useState(initial.event.endDate?.slice(0, 10) ?? "");
   const [description, setDescription] = useState(initial.event.description ?? "");
-  const [logo, setLogo] = useState<string | null>(initial.event.logo);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [banner, setBanner] = useState<string | null>(initial.event.banner);
-  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [logo, setLogo] = useState<ImageValue>({ key: initial.event.logo, original: initial.event.logoOriginal });
+  const [banner, setBanner] = useState<ImageValue>({
+    key: initial.event.banner,
+    original: initial.event.bannerOriginal,
+  });
   const [optionValues, setOptionValues] = useState(initial.optionValues);
+  const [busySlots, setBusySlots] = useState<Record<ImageSlot, boolean>>({ logo: false, banner: false });
+  const imageBusy = busySlots.logo || busySlots.banner;
   const [registrationOpen, setRegistrationOpen] = useState(initial.event.registrationOpen);
   // Brouillon brut : re-deriver la zone de texte depuis la liste nettoyee
   // effacerait la ligne vide qu'on vient d'ouvrir avec Entree.
@@ -65,35 +240,6 @@ export function EventSettingsForm({
     securityInstructions?: string;
     templateOptions?: string;
   }>({});
-
-  // Motif F : l'indicateur « Envoi… » sert de loader, la FileBox affiche le succès ; seule l'erreur donne un toast.
-  async function upload(
-    files: FileList,
-    setUploading: (v: boolean) => void,
-    setter: (key: string) => void,
-    fallback: string,
-  ) {
-    const file = files[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`/api/org/${orgId}/upload`, { method: "POST", body: fd });
-      if (!res.ok) throw res;
-      const { storageKey } = await res.json();
-      setter(storageKey);
-    } catch (err) {
-      await toastApiError(err, fallback);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  const uploadLogo = (files: FileList) =>
-    upload(files, setUploadingLogo, setLogo, "Échec de l'envoi du logo.");
-  const uploadBanner = (files: FileList) =>
-    upload(files, setUploadingBanner, setBanner, "Échec de l'envoi de la bannière.");
 
   async function uploadOptionImage(file: File): Promise<string | null> {
     try {
@@ -121,8 +267,10 @@ export function EventSettingsForm({
           date,
           endDate: endDate || null,
           description: description || null,
-          logo,
-          banner,
+          logo: logo.key,
+          banner: banner.key,
+          logoOriginal: logo.original,
+          bannerOriginal: banner.original,
           securityInstructions: linesToInstructions(instructionsDraft),
           registrationOpen,
           ...(initial.options.length > 0
@@ -219,52 +367,32 @@ export function EventSettingsForm({
                 className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
-            <div className="space-y-2">
-              <span className="block text-sm font-medium text-slate-700">Logo</span>
-              {logo ? (
-                <FileBox
-                  icon="file"
-                  thumbUrl={`/api/files/${logo}`}
-                  title="Logo de l'événement"
-                  subtitle={logo}
-                  action={
-                    <Button type="button" variant="secondary" onClick={() => setLogo(null)}>
-                      Retirer
-                    </Button>
-                  }
-                />
-              ) : (
-                <Dropzone
-                  onFiles={uploadLogo}
-                  accept="image/jpeg,image/png,image/webp"
-                  title={uploadingLogo ? "Envoi…" : "Déposer un logo ou cliquer"}
-                  subtitle="Format carré, 512 × 512 px conseillé (PNG à fond transparent idéal) — JPEG, PNG ou WebP, 5 Mo max"
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <span className="block text-sm font-medium text-slate-700">Bannière</span>
-              {banner ? (
-                <FileBox
-                  icon="file"
-                  thumbUrl={`/api/files/${banner}`}
-                  title="Bannière de l'événement"
-                  subtitle={banner}
-                  action={
-                    <Button type="button" variant="secondary" onClick={() => setBanner(null)}>
-                      Retirer
-                    </Button>
-                  }
-                />
-              ) : (
-                <Dropzone
-                  onFiles={uploadBanner}
-                  accept="image/jpeg,image/png,image/webp"
-                  title={uploadingBanner ? "Envoi…" : "Déposer une bannière ou cliquer"}
-                  subtitle="Format paysage 3:1, 1500 × 500 px conseillé — JPEG, PNG ou WebP, 5 Mo max"
-                />
-              )}
-            </div>
+            <EventImageField
+              orgId={orgId}
+              eventId={eventId}
+              slot="logo"
+              label="Logo"
+              fileTitle="Logo de l'événement"
+              dropTitle="Déposer un logo ou cliquer"
+              requirement={imageRequirements.logo}
+              warning={logo.key === initial.event.logo ? (imageIssues.logo ?? null) : null}
+              value={logo}
+              onChange={setLogo}
+              onBusyChange={(busy) => setBusySlots((b) => ({ ...b, logo: busy }))}
+            />
+            <EventImageField
+              orgId={orgId}
+              eventId={eventId}
+              slot="banner"
+              label="Bannière"
+              fileTitle="Bannière de l'événement"
+              dropTitle="Déposer une bannière ou cliquer"
+              requirement={imageRequirements.banner}
+              warning={banner.key === initial.event.banner ? (imageIssues.banner ?? null) : null}
+              value={banner}
+              onChange={setBanner}
+              onBusyChange={(busy) => setBusySlots((b) => ({ ...b, banner: busy }))}
+            />
             <div className="space-y-1">
               <label htmlFor="event-security-instructions" className="block text-sm font-medium text-slate-700">
                 Consignes de sécurité (optionnelles)
@@ -291,7 +419,7 @@ export function EventSettingsForm({
               uniquement)
             </p>
             <div className="flex justify-end">
-              <Button type="submit" loading={saveEvent.pending}>
+              <Button type="submit" loading={saveEvent.pending} disabled={imageBusy}>
                 Enregistrer
               </Button>
             </div>

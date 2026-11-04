@@ -1,13 +1,17 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { getFile, listPrefix, MAX_UPLOAD_BYTES } from "@/lib/storage";
 import { createDemoContext } from "../context";
 import { buildImageReserve } from "../images";
+import { readImageDimensions } from "@/lib/image-dimensions";
 import { encodePng } from "../png";
 
 const PREFIX = "demo/_test-images/";
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const newCtx = () => createDemoContext({ env: { BADGE_ENV: "dev" }, scale: 0.02, storagePrefix: PREFIX });
+
+// Les images aux dimensions des cadres sont plus longues a encoder : large marge sous charge.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 describe("reserve d'images de demo", () => {
   afterEach(async () => {
@@ -31,10 +35,21 @@ describe("reserve d'images de demo", () => {
       const file = await getFile(key);
       expect(file.contentType).toBe("image/png");
       expect(file.body.length).toBeGreaterThan(0);
-      expect(file.body.length).toBeLessThan(10_000);
+      expect(file.body.length).toBeLessThan(50_000);
       expect(file.body.length).toBeLessThan(MAX_UPLOAD_BYTES);
       expect(file.body.subarray(0, 8).equals(PNG_SIGNATURE)).toBe(true);
     }
+  });
+
+  it("respecte les dimensions des cadres : photo 210x270, logo 136x136, banniere 1500x500", async () => {
+    const images = await buildImageReserve(await newCtx());
+    const dims = async (key: string) => {
+      const d = readImageDimensions((await getFile(key)).body);
+      return d && [d.width, d.height];
+    };
+    for (const key of images.photos) expect(await dims(key)).toEqual([210, 270]);
+    for (const key of images.logos) expect(await dims(key)).toEqual([136, 136]);
+    for (const key of images.banners) expect(await dims(key)).toEqual([1500, 500]);
   });
 
   it("createDemoContext expose la reserve", async () => {

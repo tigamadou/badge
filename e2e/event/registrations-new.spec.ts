@@ -79,9 +79,10 @@ test.describe("Event — Inscription manuelle", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations/new`);
-    await page.locator('input[type="file"][accept*="image"]').first().setInputFiles(fixtures.jpeg);
+    await page.locator('input[type="file"][accept*="image"]').first().setInputFiles(fixtures.photo);
 
-    // L'upload aboutit : un apercu / bouton de retrait apparait.
+    // Photo 7:9 (420 x 540) : envoyee directement, sans cadrage.
+    await expect(page.getByRole("button", { name: "Valider le cadrage" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /retirer/i }).first()).toBeVisible({
       timeout: 15_000,
     });

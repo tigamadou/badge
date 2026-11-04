@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -15,29 +16,22 @@ type Row = { id: string; documentNumber: string; reason: string | null; createdA
 export function BlockedDocumentsForm({
   orgId,
   eventId,
-  initial,
+  rows,
+  footer,
 }: {
   orgId: string;
   eventId: string;
-  initial: Row[];
+  rows: Row[];
+  footer?: ReactNode;
 }) {
-  const [rows, setRows] = useState<Row[]>(initial);
+  const router = useRouter();
   const [doc, setDoc] = useState("");
   const [reason, setReason] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
 
+  // Les lignes viennent de la page serveur (tranche de l'URL) : on la relit apres chaque mutation.
   async function refresh() {
-    const res = await fetch(`/api/org/${orgId}/events/${eventId}/blocked-documents`);
-    if (!res.ok) return;
-    const j = (await res.json()) as {
-      blocked: Array<{ id: string; documentNumber: string; reason: string | null; createdAt: string }>;
-    };
-    setRows(
-      j.blocked.map((b) => ({
-        ...b,
-        createdAt: typeof b.createdAt === "string" ? b.createdAt : new Date(b.createdAt).toISOString(),
-      })),
-    );
+    router.refresh();
   }
 
   // Motif C : « déjà bloqué » (409) est rattaché au champ ; le reste lève une exception (toast).
@@ -143,6 +137,7 @@ export function BlockedDocumentsForm({
           </tbody>
         </table>
       </TableFrame>
+      {footer}
     </div>
   );
 }

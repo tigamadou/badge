@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { useVisibleInterval } from "@/hooks/useVisibleInterval";
 import type { ThreadEntryDTO } from "@/lib/print-requests/thread";
+import { formatFcfa } from "@/lib/print-requests/labels";
+import { entryTone, toneClasses } from "@/components/print/entry-tone";
+import { indexQuoteEntries, parseQuoteMessage } from "@/components/print/quote-message";
+import { QuoteMessageCard, type QuoteCardLine } from "@/components/print/QuoteMessageCard";
+import { quoteCardOf } from "@/components/print/PrintThread";
 import { OrganizerComposer } from "./OrganizerComposer";
 import { POLL_MS, attachmentName, entriesUrlAfter, lineChangesOf, mergeEntries } from "./thread-sync";
 
@@ -27,7 +32,29 @@ function Attachment({ attachmentKey }: { attachmentKey: string }) {
   );
 }
 
-function SystemEvent({ entry }: { entry: ThreadEntryDTO }) {
+function SystemEvent({
+  entry,
+  recapRows,
+  currentQuote,
+}: {
+  entry: ThreadEntryDTO;
+  recapRows: Map<number, string[]>;
+  currentQuote?: { version: number; lines: QuoteCardLine[] };
+}) {
+  const card = quoteCardOf(entry, currentQuote);
+  if (card) {
+    return (
+      <div data-testid="thread-quote" className="mx-auto w-full max-w-[95%]">
+        <QuoteMessageCard
+          version={card.version}
+          total={formatFcfa(card.total)}
+          rows={recapRows.get(card.version) ?? []}
+          lines={card.lines ?? undefined}
+        />
+        <div className="mt-0.5 text-center text-[11px] text-slate-400">{formatDateTime(entry.createdAt)}</div>
+      </div>
+    );
+  }
   const changes = lineChangesOf(entry);
   return (
     <div data-testid="thread-event" className="mx-auto max-w-[90%] rounded-lg bg-slate-50 px-3 py-1.5 text-center text-xs text-slate-500">
@@ -46,24 +73,21 @@ function SystemEvent({ entry }: { entry: ThreadEntryDTO }) {
 
 function Bubble({ entry }: { entry: ThreadEntryDTO }) {
   const mine = entry.side === "ORGANIZER";
+  const tone = toneClasses[entryTone(entry, "ORGANIZER")];
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <div
         data-testid={mine ? "bubble-organizer" : "bubble-staff"}
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${
-          mine ? "rounded-br-sm bg-green-600 text-white" : "rounded-bl-sm bg-slate-100 text-slate-900"
-        }`}
+        className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "rounded-br-sm" : "rounded-bl-sm"} ${tone}`}
       >
-        <div className={`mb-0.5 text-[11px] font-medium ${mine ? "text-green-100" : "text-slate-500"}`}>
+        <div className="mb-0.5 text-[11px] font-medium text-slate-500">
           {entry.authorName ?? (mine ? "Vous" : "Équipe Badge")}
         </div>
         {entry.body ? <div className="whitespace-pre-wrap break-words">{entry.body}</div> : null}
         {entry.attachmentKey ? (
-          <div className={mine ? "[&_a]:text-white" : ""}>
-            <Attachment attachmentKey={entry.attachmentKey} />
-          </div>
+          <Attachment attachmentKey={entry.attachmentKey} />
         ) : null}
-        <div className={`mt-0.5 text-[11px] ${mine ? "text-green-100" : "text-slate-400"}`}>
+        <div className="mt-0.5 text-[11px] text-slate-400">
           {formatDateTime(entry.createdAt)}
         </div>
       </div>
@@ -78,11 +102,14 @@ export function OrganizerConversation({
   postUrl,
   uploadUrl,
   initialEntries,
+  currentQuote,
 }: {
   entriesUrl: string;
   postUrl: string | null;
   uploadUrl: string;
   initialEntries: ThreadEntryDTO[];
+  // Lignes du devis courant : repli de la carte quand l'évènement n'embarque pas ses lignes.
+  currentQuote?: { version: number; lines: QuoteCardLine[] };
 }) {
   const [entries, setEntries] = useState<ThreadEntryDTO[]>(initialEntries);
   const [unseen, setUnseen] = useState(false);
@@ -156,8 +183,10 @@ export function OrganizerConversation({
     setUnseen(false);
   }
 
+  const { versions: quoteVersions, rows: recapRows } = indexQuoteEntries(entries);
+
   return (
-    <div className="flex h-[70vh] min-h-[420px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white lg:h-[calc(100vh-15rem)]">
+    <div className="flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="relative min-h-0 flex-1">
         <div
           ref={listRef}
@@ -168,9 +197,15 @@ export function OrganizerConversation({
           {entries.length === 0 ? (
             <p className="text-sm text-slate-400">Aucun échange pour le moment.</p>
           ) : (
-            entries.map((entry) =>
-              entry.kind === "MESSAGE" ? <Bubble key={entry.id} entry={entry} /> : <SystemEvent key={entry.id} entry={entry} />,
-            )
+            entries.map((entry) => {
+              if (entry.kind === "EVENT") {
+                return <SystemEvent key={entry.id} entry={entry} recapRows={recapRows} currentQuote={currentQuote} />;
+              }
+              // Le récapitulatif d'une version annoncée est porté par la carte de l'évènement.
+              const recap = parseQuoteMessage(entry.body);
+              if (recap && quoteVersions.has(recap.version)) return null;
+              return <Bubble key={entry.id} entry={entry} />;
+            })
           )}
         </div>
         {unseen ? (

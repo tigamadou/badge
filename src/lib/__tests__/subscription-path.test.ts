@@ -24,6 +24,13 @@ describe("isAlwaysAllowedOrgPath", () => {
     expect(isAlwaysAllowedOrgPath("/org/o1/subscription", "o1")).toBe(true);
     expect(isAlwaysAllowedOrgPath("/org/o1/subscription/return", "o1")).toBe(true);
   });
+  it("accepte le module Paiements, sa fiche et son reçu", () => {
+    expect(isAlwaysAllowedOrgPath("/org/o1/payments", "o1")).toBe(true);
+    expect(isAlwaysAllowedOrgPath("/org/o1/payments/p1", "o1")).toBe(true);
+    expect(isAlwaysAllowedOrgPath("/org/o1/payments/p1/receipt", "o1")).toBe(true);
+    expect(isAlwaysAllowedOrgPath("/org/o1/paymentsX", "o1")).toBe(false);
+    expect(isAlwaysAllowedOrgPath("/org/o2/payments", "o1")).toBe(false);
+  });
   it("accepte la liste des évènements, avec ou sans slash final", () => {
     expect(isAlwaysAllowedOrgPath("/org/o1/events", "o1")).toBe(true);
     expect(isAlwaysAllowedOrgPath("/org/o1/events/", "o1")).toBe(true);

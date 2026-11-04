@@ -8,6 +8,7 @@ import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { notifyQuotaExceeded } from "@/lib/notifications/triggers";
+import { getEventImageRequirements, rejectionResponse, validateStoredImage } from "@/lib/event-image-compliance";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
@@ -156,6 +157,18 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     return c;
   });
 
+  // Logo : meme controle que le PATCH (dossier de l'organisation, format du moteur, cadre du template).
+  let logoDimensions: { width: number; height: number } | null = null;
+  if (data.logo) {
+    const requirements = await getEventImageRequirements({ badgeTemplateId: data.badgeTemplateId ?? null, orgId });
+    const verdict = await validateStoredImage(data.logo, requirements.logo ?? null, {
+      engineFormatsOnly: true,
+      allowedPrefixes: [`orgs/${orgId}/`],
+    });
+    if (!verdict.ok) return rejectionResponse(verdict, { slot: "logo" });
+    logoDimensions = { width: verdict.width, height: verdict.height };
+  }
+
   try {
     const event = await prisma.event.create({
       data: {
@@ -167,6 +180,8 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
         endDate: data.endDate ? new Date(data.endDate) : null,
         description: data.description ?? null,
         logo: data.logo ?? null,
+        logoWidth: logoDimensions?.width ?? null,
+        logoHeight: logoDimensions?.height ?? null,
         badgeTemplateId: data.badgeTemplateId ?? null,
         registrationOpen: false,
         categories: {

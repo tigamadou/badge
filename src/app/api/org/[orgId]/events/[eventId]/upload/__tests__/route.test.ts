@@ -28,6 +28,8 @@ function noSession() {
   vi.mocked(getServerSession).mockResolvedValue(null as never);
 }
 
+import { makePng } from "@/test/factories-2a";
+
 const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
 async function seedEventWithMember(role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER" = "ADMIN") {
@@ -158,11 +160,11 @@ describe("POST /api/org/[orgId]/events/[eventId]/upload", () => {
   it("accepts a valid JPEG for kind=photo and returns an events/.../photos storage key", async () => {
     const { org, event } = await seedEventWithMember();
     const { POST } = await import("../route");
-    const req = makeReq(org.id, event.id, "photo", { name: "p.jpg", type: "image/jpeg", bytes: Buffer.from("xxx") });
+    const req = makeReq(org.id, event.id, "photo", { name: "p.png", type: "image/png", bytes: makePng(420, 540) });
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.storageKey).toMatch(new RegExp(`^events/${event.id}/photos/.+\\.jpg$`));
+    expect(json.storageKey).toMatch(new RegExp(`^events/${event.id}/photos/.+\\.png$`));
   });
 
   it("accepts a valid PDF for kind=document and returns an events/.../idDocuments storage key", async () => {
@@ -189,5 +191,43 @@ describe("POST /api/org/[orgId]/events/[eventId]/upload", () => {
     });
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
     expect(res.status).toBe(415);
+  });
+
+  async function sender(kind: "photo" | "document") {
+    const { org, event } = await seedEventWithMember();
+    const { POST } = await import("../route");
+    return (file: { name: string; type: string; bytes: Buffer }) =>
+      POST(makeReq(org.id, event.id, kind, file), { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+  }
+  const photoSender = () => sender("photo");
+  const documentSender = () => sender("document");
+
+  it("kind=photo : accepte 420x540, refuse hors ratio, trop petit ou non image", async () => {
+    const send = await photoSender();
+    const png = (w: number, h: number) => ({ name: "p.png", type: "image/png", bytes: makePng(w, h) });
+    expect((await send(png(420, 540))).status).toBe(200);
+
+    const square = await send(png(540, 540));
+    expect(square.status).toBe(422);
+    expect(await square.json()).toMatchObject({
+      code: "IMAGE_RATIO",
+      message: "Ratio attendu 7:9, par ex. 210 × 270 px.",
+    });
+
+    const tiny = await send(png(140, 180));
+    expect(tiny.status).toBe(422);
+    expect((await tiny.json()).code).toBe("IMAGE_RESOLUTION");
+
+    expect((await send(png(428, 540))).status).toBe(200);
+    expect((await send(png(429, 540))).status).toBe(422);
+
+    const text = await send({ name: "p.png", type: "image/png", bytes: Buffer.from("texte") });
+    expect(text.status).toBe(400);
+    expect((await text.json()).code).toBe("INVALID_IMAGE");
+  });
+
+  it("kind=document : une image quelconque reste acceptée", async () => {
+    const send = await documentSender();
+    expect((await send({ name: "d.png", type: "image/png", bytes: makePng(10, 10) })).status).toBe(200);
   });
 });

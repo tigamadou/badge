@@ -10,7 +10,7 @@ import {
   parseJobListFilters,
 } from "@/lib/jobs/admin";
 import { JOB_STATUS_LABELS, JobStatusBadge } from "./_components/JobStatusBadge";
-import { JobsPagination } from "./_components/JobsPagination";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 const FIELD_CLASS =
   "block rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-700";
@@ -61,6 +61,7 @@ export default async function PlatformJobsPage({
       {invalidStatus && <Alert tone="warn">Statut inconnu : filtre ignoré.</Alert>}
 
       <form method="get" className="flex flex-wrap items-end gap-2.5">
+        <input type="hidden" name="pageSize" value={pageSize} />
         <label className="text-[13px] text-slate-500">
           <div className="mb-1">Statut</div>
           <select name="status" defaultValue={filters.status ?? ""} className={FIELD_CLASS}>
@@ -159,7 +160,7 @@ export default async function PlatformJobsPage({
         </TableFrame>
       )}
 
-      <JobsPagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} />
+      <UrlPagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} />
     </div>
   );
 }

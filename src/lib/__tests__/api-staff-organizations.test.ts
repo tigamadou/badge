@@ -102,7 +102,7 @@ describe("GET /api/platform/organizations", () => {
 
   it("paginates results with page and pageSize", async () => {
     await makeStaff();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 15; i++) {
       await prisma.organization.create({
         data: { name: `Org ${i.toString().padStart(2, "0")}`, slug: `org-${i}` },
       });
@@ -110,19 +110,19 @@ describe("GET /api/platform/organizations", () => {
 
     const { GET } = await import("@/app/api/platform/organizations/route");
     const req = new NextRequest(
-      "http://localhost/api/platform/organizations?page=2&pageSize=2",
+      "http://localhost/api/platform/organizations?page=2&pageSize=10",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.organizations).toHaveLength(2);
-    expect(json.total).toBe(5);
+    expect(json.organizations).toHaveLength(5);
+    expect(json.total).toBe(15);
     expect(json.page).toBe(2);
-    expect(json.pageSize).toBe(2);
-    // Order by name asc -> page 2 with size 2 starts at "Org 02"
-    expect(json.organizations[0].slug).toBe("org-2");
-    expect(json.organizations[1].slug).toBe("org-3");
+    expect(json.pageSize).toBe(10);
+    // Tri par nom asc : la page 2 de taille 10 commence a "Org 10"
+    expect(json.organizations[0].slug).toBe("org-10");
+    expect(json.organizations[4].slug).toBe("org-14");
   });
 
   it("returns counts of events and memberships per organization", async () => {
@@ -197,7 +197,7 @@ describe("GET /api/platform/organizations", () => {
     expect(json.pageSize).toBe(20);
   });
 
-  it("clamps zero/negative page and pageSize to a minimum of 1", async () => {
+  it("accepte 500, ramene une taille hors liste ou negative au defaut", async () => {
     await makeStaff();
     await prisma.organization.create({ data: { name: "Active", slug: "active" } });
 
@@ -210,6 +210,15 @@ describe("GET /api/platform/organizations", () => {
 
     expect(res.status).toBe(200);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(1);
+    expect(json.pageSize).toBe(20);
+
+    const big = await GET(new NextRequest("http://localhost/api/platform/organizations?pageSize=500"), {
+      params: Promise.resolve({}),
+    });
+    expect((await big.json()).pageSize).toBe(500);
+    const odd = await GET(new NextRequest("http://localhost/api/platform/organizations?pageSize=7"), {
+      params: Promise.resolve({}),
+    });
+    expect((await odd.json()).pageSize).toBe(20);
   });
 });

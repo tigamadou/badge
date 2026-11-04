@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { LIST_PAGE_MAX, PAGE_SIZE_OPTIONS, parseListPage } from "@/lib/list-query";
 
 // Filtres de la liste des badges, partages par `GET …/badges` (page) et
 // `GET …/badges/ids` (tout selectionner) : les deux doivent designer exactement les memes lignes.
@@ -7,9 +8,8 @@ export const BADGE_FILTERS = ["all", "unprinted", "printed", "allaccess"] as con
 export type BadgeFilter = (typeof BADGE_FILTERS)[number];
 
 export const BADGE_PAGE_SIZE_DEFAULT = 100;
-export const BADGE_PAGE_SIZE_MAX = 500;
-// Borne haute de `page` : evite tout debordement de skip (Prisma/MySQL) sur une valeur absurde.
-export const BADGE_PAGE_MAX = 100_000;
+export const BADGE_PAGE_SIZE_MAX = PAGE_SIZE_OPTIONS[PAGE_SIZE_OPTIONS.length - 1];
+export const BADGE_PAGE_MAX = LIST_PAGE_MAX;
 
 // Tri stable (l'id departage les homonymes) : indispensable pour paginer sans doublon ni trou.
 export const BADGE_LIST_ORDER: Prisma.RegistrationOrderByWithRelationInput[] = [
@@ -18,16 +18,9 @@ export const BADGE_LIST_ORDER: Prisma.RegistrationOrderByWithRelationInput[] = [
   { id: "asc" },
 ];
 
-function positiveInt(raw: string | null, fallback: number): number {
-  const n = Number(raw);
-  return Number.isInteger(n) && n > 0 ? n : fallback;
-}
-
 export function parseBadgePage(params: URLSearchParams): { page: number; pageSize: number } {
-  return {
-    page: Math.min(positiveInt(params.get("page"), 1), BADGE_PAGE_MAX),
-    pageSize: Math.min(positiveInt(params.get("pageSize"), BADGE_PAGE_SIZE_DEFAULT), BADGE_PAGE_SIZE_MAX),
-  };
+  const { page, pageSize } = parseListPage(params, { defaultSize: BADGE_PAGE_SIZE_DEFAULT });
+  return { page, pageSize };
 }
 
 // Inscriptions APPROVED de l'evenement correspondant aux filtres. `eventId` vient toujours de la

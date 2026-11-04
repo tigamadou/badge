@@ -50,7 +50,7 @@ export function AppShell({
             <MobileNavToggle />
             {header}
           </header>
-          <main className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">{children}</main>
+          <main className="relative flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </MobileNavProvider>

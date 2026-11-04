@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { createZipExport, GenerationError } from "@/lib/print-sheets/generations";
+import { EventImagesNoncompliantError, eventImagesErrorResponse } from "@/lib/event-image-compliance";
 import { exportView } from "./view";
 
 export const runtime = "nodejs";
@@ -37,6 +38,7 @@ export const POST = withEventAuth(
       });
       return NextResponse.json({ export: exportView(generation) }, { status: 201 });
     } catch (err) {
+      if (err instanceof EventImagesNoncompliantError) return eventImagesErrorResponse(err);
       if (err instanceof GenerationError) {
         return NextResponse.json({ error: err.code, message: err.message }, { status: err.httpStatus });
       }

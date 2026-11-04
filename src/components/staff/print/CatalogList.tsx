@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
@@ -37,6 +37,7 @@ export function CatalogList({
   canWrite: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ kind: "BADGE", name: "", basePrice: "0" });
 
@@ -46,6 +47,9 @@ export function CatalogList({
     const a = next.archived === undefined ? archived : next.archived;
     if (k) q.set("kind", k);
     if (a) q.set("archived", "true");
+    // Changer de filtre retire `page` mais conserve la taille de page.
+    const pageSize = searchParams.get("pageSize");
+    if (pageSize) q.set("pageSize", pageSize);
     const qs = q.toString();
     router.push(`/platform/print/catalog${qs ? `?${qs}` : ""}`);
   }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
+import { OrderSteps } from "@/components/print/OrderSteps";
 import { RelatedRequestLinks } from "@/components/print/RelatedRequestLinks";
 import { PRINT_REQUEST_TYPE_LABELS, formatFcfa } from "@/lib/print-requests/labels";
 import { formatBadgeSize } from "../request-actions";
@@ -35,19 +35,15 @@ export function OrderSummaryColumn({
   return (
     <aside aria-label="Résumé de la commande" className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <div className="space-y-2">
-        <PrintRequestStatusBadge status={request.status} />
         <p className="text-sm text-slate-500">{PRINT_REQUEST_TYPE_LABELS[request.type]}</p>
+        <OrderSteps status={request.status} type={request.type} />
       </div>
       <RelatedRequestLinks parent={parentRequest} supplements={supplements} hrefOf={(id) => `/platform/print/orders/${id}`} />
-      <dl className="grid gap-3 lg:grid-cols-3 2xl:grid-cols-1">
+      <dl className="grid gap-3">
         <Field label="Évènement">{event.title}</Field>
         <Field label="Organisation">{event.org.name}</Field>
         <Field label="Badges">
           {items.length > 0 ? `${items.length} badge${items.length > 1 ? "s" : ""}` : request.estimatedQuantity?.toString() ?? ""}
-        </Field>
-        <Field label="Impression">{template ? (duplex ? "Recto-verso" : "Recto seul") : ""}</Field>
-        <Field label="Template">
-          {template ? `${template.label} · ${formatBadgeSize(template.widthPx, template.heightPx)}` : ""}
         </Field>
         {request.type === "ADVANCE" ? (
           <Field label="Livraison">
@@ -66,17 +62,26 @@ export function OrderSummaryColumn({
               .join(" — ")}
           </Field>
         )}
-        <Field label="Date souhaitée">{fmtDate(request.wantedBy)}</Field>
-        <Field label="Envoyée le">{request.submittedAt ? dateTimeFmt.format(new Date(request.submittedAt)) : ""}</Field>
-        <Field label="Total du devis">{formatFcfa(request.total)}</Field>
-        <Field label="Total accepté">{acceptedTotal !== null ? formatFcfa(acceptedTotal) : ""}</Field>
         <Field label="Contact de l'organisation">
           {[event.org.contactEmail, event.org.contactPhone].filter(Boolean).join(" · ")}
         </Field>
-        <Field label="Remarques">
-          <span className="whitespace-pre-wrap">{request.notes}</span>
-        </Field>
       </dl>
+      <details className="group border-t border-slate-100 pt-3">
+        <summary className="cursor-pointer text-[13px] font-medium text-slate-600 hover:text-slate-900">Détails</summary>
+        <dl className="mt-3 grid gap-3">
+          <Field label="Impression">{template ? (duplex ? "Recto-verso" : "Recto seul") : ""}</Field>
+          <Field label="Template">
+            {template ? `${template.label} · ${formatBadgeSize(template.widthPx, template.heightPx)}` : ""}
+          </Field>
+          <Field label="Date souhaitée">{fmtDate(request.wantedBy)}</Field>
+          <Field label="Envoyée le">{request.submittedAt ? dateTimeFmt.format(new Date(request.submittedAt)) : ""}</Field>
+          <Field label="Total du devis">{formatFcfa(request.total)}</Field>
+          <Field label="Total accepté">{acceptedTotal !== null ? formatFcfa(acceptedTotal) : ""}</Field>
+          <Field label="Remarques">
+            <span className="whitespace-pre-wrap">{request.notes}</span>
+          </Field>
+        </dl>
+      </details>
     </aside>
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makePng, putTestImage } from "@/test/factories-2a";
 
 // Cleanup post-fichier pour eviter de polluer les fichiers de tests suivants.
 afterAll(async () => {
@@ -133,6 +134,33 @@ describe("GET /registrations", () => {
     const json = await res.json();
     expect(json.registrations).toHaveLength(1);
     expect(json.registrations[0].status).toBe("PENDING");
+  });
+
+  it("pagine par pageSize (liste commune) et renvoie pageSize", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    for (let i = 0; i < 22; i++) await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/route");
+    const call = async (qs: string) => {
+      const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/registrations?${qs}`);
+      return (await GET(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) })).json();
+    };
+
+    const ten = await call("pageSize=10");
+    expect(ten.registrations).toHaveLength(10);
+    expect(ten).toMatchObject({ total: 22, page: 1, pageSize: 10 });
+    expect(ten).not.toHaveProperty("limit");
+
+    const invalid = await call("pageSize=7");
+    expect(invalid.pageSize).toBe(20);
+    expect(invalid.registrations).toHaveLength(20);
+
+    const big = await call("pageSize=500");
+    expect(big.pageSize).toBe(500);
+    expect(big.registrations).toHaveLength(22);
+
+    const p3 = await call("pageSize=10&page=3");
+    expect(p3.registrations).toHaveLength(2);
   });
 
   it("searches by q on email/firstName/lastName/document", async () => {
@@ -934,6 +962,43 @@ describe("PATCH /registrations/[regId]", () => {
     expect(after?.snapshotFirstName).toBe("New");
     const log = await prisma.activityLog.findFirst({ where: { type: "REGISTRATION_UPDATED", targetId: r.id } });
     expect(log).not.toBeNull();
+  });
+
+  it("controle la photo du snapshot : conforme, hors ratio, inchangee", async () => {
+    const { u, org, event, cat } = await seedAdmin();
+    const r = await mkReg(event.id, cat.id);
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    const good = await putTestImage(`events/${event.id}/photos/reg-good-${r.id}.png`, makePng(420, 540), "image/png");
+    const bad = await putTestImage(`events/${event.id}/photos/reg-bad-${r.id}.png`, makePng(540, 540), "image/png");
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/registrations/[regId]/route");
+    const patch = (body: unknown) =>
+      PATCH(
+        new NextRequest("http://localhost/x", {
+          method: "PATCH",
+          body: JSON.stringify(body),
+          headers: { "content-type": "application/json" },
+        }),
+        { params: Promise.resolve({ orgId: org.id, eventId: event.id, regId: r.id } as never) },
+      );
+
+    const foreign = await putTestImage("profile/autre/photos/ok.png", makePng(420, 540), "image/png");
+    const outside = await patch({ snapshotPhoto: foreign });
+    expect(outside.status).toBe(400);
+    expect((await outside.json()).code).toBe("INVALID_IMAGE");
+    const ownProfile = await putTestImage(`profile/${r.userId}/photos/ok.png`, makePng(420, 540), "image/png");
+    expect((await patch({ snapshotPhoto: ownProfile })).status).toBe(200);
+    await prisma.registration.update({ where: { id: r.id }, data: { snapshotPhoto: r.snapshotPhoto } });
+
+    const refused = await patch({ snapshotPhoto: bad });
+    expect(refused.status).toBe(422);
+    expect((await refused.json()).code).toBe("IMAGE_RATIO");
+    expect((await prisma.registration.findUniqueOrThrow({ where: { id: r.id } })).snapshotPhoto).toBe(r.snapshotPhoto);
+
+    expect((await patch({ snapshotPhoto: good })).status).toBe(200);
+    // Photo inchangee (meme non conforme) : pas de blocage retroactif.
+    await prisma.registration.update({ where: { id: r.id }, data: { snapshotPhoto: bad } });
+    expect((await patch({ snapshotPhoto: bad, snapshotFirstName: "Autre" })).status).toBe(200);
   });
 
   it("returns 400 when the JSON body is malformed (req.json() rejects)", async () => {

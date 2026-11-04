@@ -178,6 +178,13 @@ model Event {
   // Banniere de l'evenement (chemin de fichier, comme `logo`), source
   // event.bannerDataUrl des templates.
   banner               String?
+  // Cle de l'original avant recadrage ; dimensions de la version recadree, memorisees a l'enregistrement.
+  logoOriginal         String?
+  bannerOriginal       String?
+  logoWidth            Int?
+  logoHeight           Int?
+  bannerWidth          Int?
+  bannerHeight         Int?
   // Options des templates de badge : { nomDeVariable: valeur }, reglees par
   // evenement. Nullable (pas de defaut JSON sous MySQL) : null vaut « aucune ».
   templateOptions      Json?
@@ -527,6 +534,9 @@ model ActivityLog {
 }
 
 enum ActivityType {
+  // Retours client
+  EVENT_IMAGE_UPDATED
+  PAYMENT_PRORATA_MISMATCH
   // Demandes d'impression et devis
   PRINT_REQUEST_SUBMITTED
   PRINT_REQUEST_UPDATED
@@ -652,10 +662,17 @@ model Plan {
   archived                Boolean            @default(false)
   // Prix en XOF (entier) ; null = plan non payable en ligne (ex. free).
   price                   Int?
+  publicVisible           Boolean            @default(false)
+  position                Int                @default(0)
+  description             String?            @db.Text
+  features                Json?
+  highlighted             Boolean            @default(false)
   createdAt               DateTime           @default(now())
   subscriptions           Subscription[]
   scheduledSubscriptions  Subscription[]     @relation("ScheduledPlan")
   payments                Payment[]
+
+  @@index([publicVisible, position])
 }
 
 enum SubscriptionStatus {
@@ -737,6 +754,11 @@ model Payment {
   fedapayTransactionId Int?                    @unique
   fedapayReference     String?
   mode                 SubscriptionChangeMode?
+  // Prix plein, credit deduit et periode achetee, fixes a la creation / a l'application.
+  listPrice            Int?
+  prorataCredit        Int?
+  coversFrom           DateTime?
+  coversTo             DateTime?
   approvedAt           DateTime?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt

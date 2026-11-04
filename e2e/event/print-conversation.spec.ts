@@ -74,7 +74,7 @@ test.describe("Event — Conversation d'une commande d'impression", () => {
     await expect(page.getByText("Note secrète du staff")).toHaveCount(0);
   });
 
-  test("mobile 375 px : colonnes empilées, saisie accessible sous le fil", async ({ page }) => {
+  test("mobile 375 px : onglets, saisie accessible sous le fil", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "print-conv-mobile" });
     const admin = await makeEventAdminUser({ scope: "print-conv-mobile", eventId, orgId });
     const request = await createTestPrintRequest({ eventId, orgId, createdById: admin.id, status: "SUBMITTED", lines: LINES });
@@ -87,7 +87,10 @@ test.describe("Event — Conversation d'une commande d'impression", () => {
     const list = await page.getByTestId("thread-list").boundingBox();
     const input = await composer.boundingBox();
     expect(input!.y).toBeGreaterThanOrEqual(list!.y + list!.height - 1);
-    await expect(page.getByLabel("Devis")).toBeVisible();
+    // Le devis est dans son propre onglet.
+    await expect(page.getByRole("complementary", { name: "Devis" })).toHaveCount(0);
+    await page.getByRole("tab", { name: "Devis" }).click();
+    await expect(page.getByRole("complementary", { name: "Devis" })).toBeVisible();
     const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
     expect(noOverflow).toBe(true);
   });

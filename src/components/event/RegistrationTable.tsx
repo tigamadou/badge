@@ -2,41 +2,83 @@
 
 import { useEffect, useState, useCallback, useTransition } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CatPill, Tag } from "@/components/ui/Labels";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Icon } from "@/components/ui/Icon";
 import type { RegistrationListDTO } from "@/lib/registration-dto";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { Pagination } from "@/components/ui/Pagination";
+import { DEFAULT_PAGE_SIZE, parseListPage } from "@/lib/list-query";
 
 // createdAt est serialise en chaine par NextResponse.json : le Omit rend cette
 // difference explicite au lieu de la laisser implicite.
 type Row = Omit<RegistrationListDTO, "createdAt"> & { createdAt: string };
 
 export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Statut, recherche, page et taille vivent dans l'URL (rechargement et lien partageable).
+  const { page, pageSize } = parseListPage(searchParams);
+  const status = searchParams.get("status") ?? "";
+  const q = searchParams.get("q") ?? "";
+
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<string>("");
-  const [q, setQ] = useState("");
+  const [search, setSearch] = useState(q);
   const [busy, startTransition] = useTransition();
+
+  // Ecrit des parametres dans l'URL sans empiler l'historique ni remonter la page.
+  function updateUrl(patch: Record<string, string | null>) {
+    // URL courante (pas le rendu figé) : une recherche différée ne doit pas écraser un filtre changé entre-temps.
+    const next = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null) next.delete(key);
+      else next.set(key, value);
+    }
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   const load = useCallback(async () => {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (q) params.set("q", q);
     params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/registrations?${params}`);
     const json = (await res.json()) as { registrations: Row[]; total: number };
     startTransition(() => {
       setRows(json.registrations);
       setTotal(json.total);
     });
-  }, [orgId, eventId, status, q, page]);
+    // La page demandee n'existe plus : derniere page non vide.
+    const lastPage = Math.max(1, Math.ceil(json.total / pageSize));
+    if (page > lastPage) {
+      const next = new URLSearchParams(window.location.search);
+      if (lastPage > 1) next.set("page", String(lastPage));
+      else next.delete("page");
+      const qs = next.toString();
+      router.replace(qs ? `${window.location.pathname}?${qs}` : window.location.pathname, { scroll: false });
+    }
+  }, [orgId, eventId, status, q, page, pageSize, router]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // La recherche n'interroge le serveur qu'une fois la frappe terminee.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = search.trim();
+      if (next === q) return;
+      updateUrl({ q: next || null, page: null });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, q]);
 
   function exportCsv() {
     window.location.href = `/api/org/${orgId}/events/${eventId}/registrations/export`;
@@ -51,8 +93,8 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
           </span>
           <input
             type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && load()}
             placeholder="Rechercher (nom, e-mail, document)…"
             className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400"
@@ -60,7 +102,8 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
         </div>
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          aria-label="Filtrer par statut"
+          onChange={(e) => updateUrl({ status: e.target.value || null, page: null })}
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] font-medium text-slate-700"
         >
           <option value="">Tous statuts</option>
@@ -140,20 +183,16 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
         </table>
       </TableFrame>
 
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-400">
-          {total} inscription{total > 1 ? "s" : ""}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-            Précédent
-          </Button>
-          <span className="px-2 text-[13px] tabular-nums text-slate-500">Page {page}</span>
-          <Button variant="secondary" onClick={() => setPage((p) => p + 1)} disabled={rows.length < 25}>
-            Suivant
-          </Button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalPages={Math.max(1, Math.ceil(total / pageSize))}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={(next) => updateUrl({ page: next > 1 ? String(next) : null })}
+        onPageSizeChange={(size) =>
+          updateUrl({ pageSize: size === DEFAULT_PAGE_SIZE ? null : String(size), page: null })
+        }
+      />
     </div>
   );
 }

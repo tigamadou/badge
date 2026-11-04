@@ -195,7 +195,7 @@ describe("GET /api/platform/users", () => {
 
   it("paginates results with page and pageSize", async () => {
     await makeStaff();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 12; i++) {
       await prisma.user.create({
         data: {
           email: `p${i}@x`,
@@ -207,16 +207,23 @@ describe("GET /api/platform/users", () => {
 
     const { GET } = await import("@/app/api/platform/users/route");
     const req = new NextRequest(
-      "http://localhost/api/platform/users?type=client&page=1&pageSize=3",
+      "http://localhost/api/platform/users?type=client&page=1&pageSize=10",
     );
     const res = await GET(req, { params: Promise.resolve({}) });
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.users.length).toBe(3);
-    expect(json.total).toBe(5);
+    expect(json.users.length).toBe(10);
+    expect(json.total).toBe(12);
     expect(json.page).toBe(1);
-    expect(json.pageSize).toBe(3);
+    expect(json.pageSize).toBe(10);
+
+    const big = await GET(new NextRequest("http://localhost/api/platform/users?type=client&pageSize=500"), {
+      params: Promise.resolve({}),
+    });
+    const bigJson = await big.json();
+    expect(bigJson.pageSize).toBe(500);
+    expect(bigJson.users.length).toBe(12);
   });
 
   it("filters archived=true", async () => {

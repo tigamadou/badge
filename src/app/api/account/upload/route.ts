@@ -10,6 +10,7 @@ import {
   type UploadKind,
 } from "@/lib/storage";
 import { requireAuth, AuthError } from "@/lib/auth-participant";
+import { checkIdPhotoBuffer } from "@/lib/event-image-compliance";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -60,6 +61,11 @@ export async function POST(req: NextRequest) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     assertWithinSizeLimit(buffer.length);
+
+    if (kind === "photo") {
+      const rejected = checkIdPhotoBuffer(buffer, mime);
+      if (rejected) return rejected;
+    }
 
     const origName = file.name;
     const ext = extOf(origName, mime === "application/pdf" ? ".pdf" : ".bin");

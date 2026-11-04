@@ -10,6 +10,7 @@ import { Table } from "@/components/ui/Table";
 import type { LayoutOption } from "@/components/staff/print/GenerationForm";
 import { GenerateOrderSheetDialog } from "@/components/staff/print/sheets/GenerateOrderSheetDialog";
 import type { OrderQueueRow } from "@/lib/print-sheets/order-queue";
+import { mergeRows } from "@/components/staff/print/sheets/merge-rows";
 
 export const ORDER_REFRESH_INTERVAL_MS = 5000;
 
@@ -50,7 +51,11 @@ export function OrderQueueTable({
     inFlight.current = true;
     try {
       const res = await fetch("/api/platform/print/sheets/orders");
-      if (res.ok) setPolled({ from: initial, rows: (await res.json()).orders });
+      if (res.ok) {
+        // L'API renvoie la file complete : seules les lignes de la page affichee sont mises a jour.
+        const fresh = (await res.json()).orders as OrderQueueRow[];
+        setPolled({ from: initial, rows: mergeRows(initial, fresh, (r) => r.requestId) });
+      }
     } catch {
       // Réseau coupé : le prochain tick réessaie.
     } finally {

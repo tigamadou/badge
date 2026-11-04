@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { CategoryTemplateForm } from "@/components/admin/CategoryTemplateForm";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
@@ -20,17 +21,14 @@ type Tpl = {
   createdAt: string;
 };
 
-type TplApi = Omit<Tpl, "createdAt"> & { createdAt: string };
-
-export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tpl[] }) {
-  const [templates, setTemplates] = useState(initial);
+export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: string; rows: Tpl[]; footer?: ReactNode }) {
+  const router = useRouter();
   const [editing, setEditing] = useState<Tpl | null>(null);
   const [adding, setAdding] = useState(false);
 
+  // Les lignes viennent de la page serveur (tranche de l'URL) : on la relit apres chaque mutation.
   async function refresh() {
-    const res = await fetch(`/api/org/${orgId}/templates`);
-    const json = (await res.json()) as { templates: TplApi[] };
-    setTemplates(json.templates.map((t) => ({ ...t, createdAt: t.createdAt })));
+    router.refresh();
     setEditing(null);
     setAdding(false);
   }
@@ -115,6 +113,7 @@ export function TemplatesClient({ orgId, initial }: { orgId: string; initial: Tp
           </tbody>
         </table>
       </TableFrame>
+      {footer}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">

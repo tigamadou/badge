@@ -121,14 +121,49 @@ Application des droits :
 
 ## Changements de plan (paiement)
 
-Regles dans `planChangeFor` (`src/lib/subscription-changes.ts`) :
+Deux couches pures dans `src/lib/subscription-changes.ts` :
 
-- **Meme plan** (renouvellement) : `endDate` prolongee d'une periode a partir de la fin de
-  la periode en cours (mode `EXTENSION`).
-- **Plan plus cher**, ou abonnement non en cours / (cas historique : sans echeance) : bascule
-  **immediate**, nouvelle periode a partir du paiement, sans prorata (mode `IMMEDIATE`).
-- **Plan moins cher** : changement **programme** a l'echeance (`scheduledPlanId`, mode
-  `SCHEDULED`). Un seul changement programme a la fois.
+- `planChangeFor(state, plan, now)` decide le **mode** et les dates (inchange).
+- `quoteChange(state, plan, now, credit)` en tire le **devis** (prix plein, credit, montant a payer) ou le
+  refus ; `computeProrataCredit` (BigInt, plancher applique par paiement) et `coversFor` (periode achetee).
+
+Regles :
+
+- **Meme plan** (renouvellement, mode `EXTENSION`) : `endDate` prolongee d'une periode a partir de la fin de la
+  periode en cours. Autorise seulement dans la **fenetre de renouvellement de 7 jours** avant l'echeance
+  (`RENEWAL_WINDOW_DAYS`). Hors fenetre : refus `ALREADY_ACTIVE` (409) avec `activeUntil` et `renewableFrom`.
+  Un abonnement sans echeance n'est pas renouvelable (meme refus, sans dates).
+- **Plan plus cher** : bascule **immediate** (`IMMEDIATE`), nouvelle periode a partir du paiement, avec un
+  **credit au prorata** : pour chaque paiement approuve du plan courant dont la periode n'est pas echue,
+  `montant paye x temps restant / duree de la periode couverte` (plancher par paiement, credit plafonne au
+  prix du nouveau plan). `prix plein - credit = montant a payer`. Un montant a payer <= 0 est refuse :
+  `NOTHING_TO_PAY` (409, le credit couvre deja le plan ; a traiter par le support).
+- **Plan moins cher** : changement **programme** a l'echeance (`scheduledPlanId`, `SCHEDULED`), sans credit.
+  Un seul changement programme a la fois (`CHANGE_ALREADY_SCHEDULED`). Une montee en gamme immediate remet
+  `scheduledPlanId` a `null` (le plan programme est abandonne).
+- Chaque paiement approuve enregistre la periode qu'il achete (`coversFrom` / `coversTo`) : c'est la base du
+  credit des changements suivants.
+
+### Garde des paiements en attente
+
+`startCheckout` s'execute sous un verrou de ligne (`FOR UPDATE`) sur l'organisation :
+
+- un `PENDING` du meme plan **avec transaction** de moins de 30 minutes est reutilise (meme URL de paiement) ;
+- un `PENDING` **sans transaction** de moins de 2 minutes donne `PAYMENT_IN_PROGRESS` (409) ;
+- tout autre `PENDING` est remplace (passe `CANCELED`). Un paiement `CANCELED` d'abonnement approuve ensuite
+  par FedaPay reste confirmable (voir [`paiements-fedapay.md`](paiements-fedapay.md)).
+
+## Fiche publique des plans et page `/tarifs`
+
+Champs du plan (staff, `PATCH /api/platform/plans/[planId]`, journalises dans `PLAN_UPDATED`) :
+`publicVisible`, `highlighted` (« Le plus choisi »), `position` (tri croissant, puis date de creation),
+`description` (300 car. max), `features` (liste de textes, 12 max).
+
+`/tarifs` est **dynamique** (`unstable_noStore` dans `listPublicPlans()`, `src/lib/public-plans.ts`) : elle
+affiche les plans `publicVisible` non archives. Bascule mensuel / annuel seulement si des plans payants des deux
+periodes existent. Un plan sans prix affiche « Sur devis » et « Nous contacter ». Sans plan visible : etat vide
+« Tarifs sur demande ». Le tableau comparatif n'apparait que s'il y a des plans. Une limite nulle s'affiche
+« illimite ».
 
 ## Rappels d'echeance
 
@@ -162,12 +197,14 @@ liste des evenements et `/events/new` (qui redirige lui-meme si `CREATE_EVENT` e
 
 ## UI
 
-- Plateforme : CRUD des plans (nom, **periode**, limites) + assignation d'un plan
+- Plateforme : CRUD des plans (nom, **periode**, limites, fiche publique) + assignation d'un plan
   a une org (plan, statut, overrides ; la periode est affichee d'apres le plan et
   les dates sont calculees automatiquement).
 - Org : vue de son abonnement (plan, statut, **periode du plan**, dates, limites effectives),
   catalogue des plans vendus avec l'action possible (« Passer à ce plan », « Renouveler »,
-  « Programmer à l'échéance ») reservee a l'`OWNER`, et historique des paiements.
+  « Programmer à l'échéance ») reservee a l'`OWNER`, apercu du prorata (« Prix plein … − crédit … = … à payer »),
+  message d'echeance (« actif jusqu'au …, renouvelable à partir du … ») quand le renouvellement est bloque,
+  et historique des paiements avec lien vers le module Paiements (`/org/[orgId]/payments`).
   `MANAGER` : lecture seule.
 - Plateforme : l'onglet « Abonnements » de `/platform/settings` porte la matrice des droits (voir « Droits selon l'abonnement »).
 - Plateforme : le prix du plan se saisit dans le CRUD des plans ; l'historique des paiements

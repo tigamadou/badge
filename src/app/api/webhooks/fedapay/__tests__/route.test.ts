@@ -73,6 +73,18 @@ describe("POST /api/webhooks/fedapay", () => {
     expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe("APPROVED");
   });
 
+  it("transaction.approved sur un paiement d'abonnement remplacé (CANCELED) : appliqué", async () => {
+    const { payment, org } = await seedPayment();
+    await prisma.payment.update({ where: { id: payment.id }, data: { status: "CANCELED" } });
+    fetchMock.mockResolvedValue(txResponse("approved"));
+
+    const res = await POST(signed({ name: "transaction.approved", entity: { id: 77 } }));
+
+    expect(res.status).toBe(200);
+    expect((await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe("APPROVED");
+    expect(await prisma.subscription.count({ where: { orgId: org.id } })).toBe(1);
+  });
+
   it("rejoué : 200 et une seule application", async () => {
     const { payment, org } = await seedPayment();
     fetchMock.mockResolvedValue(txResponse("approved"));

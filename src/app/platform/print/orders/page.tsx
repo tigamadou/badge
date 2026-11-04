@@ -4,8 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { unreadByRequest } from "@/lib/print-requests/read-state";
 import { RequestList, type RequestFilters } from "@/components/staff/print/RequestList";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
-const PAGE_SIZE = 50;
 const STATUSES = [
   "SUBMITTED",
   "QUOTED",
@@ -19,7 +21,7 @@ const STATUSES = [
 ] as const;
 const DAY_MS = 86_400_000;
 
-type Search = Partial<Record<"status" | "orgId" | "type" | "wantedFrom" | "wantedTo" | "page", string>>;
+type Search = Partial<Record<"status" | "orgId" | "type" | "wantedFrom" | "wantedTo" | "page" | "pageSize", string>>;
 
 const isDay = (v: string | undefined): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
 
@@ -32,7 +34,7 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
     wantedFrom: isDay(sp.wantedFrom) ? sp.wantedFrom : "",
     wantedTo: isDay(sp.wantedTo) ? sp.wantedTo : "",
   };
-  const page = Math.min(100_000, Math.max(1, Math.floor(Number(sp.page)) || 1));
+  const list = parseListPage(sp);
 
   const wantedBy: Prisma.DateTimeNullableFilter = {};
   if (filters.wantedFrom) wantedBy.gte = new Date(`${filters.wantedFrom}T00:00:00Z`);
@@ -45,32 +47,36 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
     ...(filters.wantedFrom || filters.wantedTo ? { wantedBy } : {}),
   };
 
-  const [rows, total, orgs] = await Promise.all([
-    prisma.printRequest.findMany({
-      where,
-      orderBy: [{ submittedAt: "desc" }, { id: "desc" }],
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      select: {
-        id: true,
-        reference: true,
-        type: true,
-        status: true,
-        wantedBy: true,
-        estimatedQuantity: true,
-        total: true,
-        event: { select: { id: true, title: true } },
-        org: { select: { id: true, name: true } },
-        _count: { select: { items: true } },
-      },
-    }),
-    prisma.printRequest.count({ where }),
+  const [result, orgs] = await Promise.all([
+    paginate(
+      list,
+      () => prisma.printRequest.count({ where }),
+      (range) =>
+        prisma.printRequest.findMany({
+          where,
+          orderBy: [{ submittedAt: "desc" }, { id: "desc" }],
+          ...range,
+          select: {
+            id: true,
+            reference: true,
+            type: true,
+            status: true,
+            wantedBy: true,
+            estimatedQuantity: true,
+            total: true,
+            event: { select: { id: true, title: true } },
+            org: { select: { id: true, name: true } },
+            _count: { select: { items: true } },
+          },
+        }),
+    ),
     prisma.organization.findMany({
       where: { printRequests: { some: { status: { not: "DRAFT" } } } },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
   ]);
+  const rows = result.rows;
 
   // Le layout /platform garantit une session staff ; la garde sert le typage.
   const session = await getServerSession(authOptions);
@@ -91,9 +97,9 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
           badgeCount: r.type === "ADVANCE" ? _count.items : (estimatedQuantity ?? 0),
           unread: unread[r.id] ?? 0,
         }))}
-        total={total}
-        page={page}
-        pageSize={PAGE_SIZE}
+        pagination={<UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />}
+        pageSize={result.pageSize}
+        total={result.total}
         filters={filters}
         orgs={orgs}
       />

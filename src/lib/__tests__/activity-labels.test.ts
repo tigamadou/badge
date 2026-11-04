@@ -63,6 +63,8 @@ const ALL_ACTIVITY_TYPES = [
   "SUBSCRIPTION_CREATED",
   "SUBSCRIPTION_UPDATED",
   "QUOTA_BYPASS",
+  "EVENT_IMAGE_UPDATED",
+  "PAYMENT_PRORATA_MISMATCH",
 ] as const;
 
 const as = (s: string) => s as ActivityType;
@@ -303,5 +305,16 @@ describe("extractDiff", () => {
       },
     });
     expect(rows).toEqual([{ field: "photo", from: "—", to: "—" }]);
+  });
+});
+
+describe("types retours client", () => {
+  it("EVENT_IMAGE_UPDATED : modification, libelle FR", () => {
+    expect(logKind(as("EVENT_IMAGE_UPDATED"))).toBe("modification");
+    expect(describeActivity(as("EVENT_IMAGE_UPDATED"))).toBe("Image d'événement modifiée");
+  });
+  it("PAYMENT_PRORATA_MISMATCH : systeme, libelle FR", () => {
+    expect(logKind(as("PAYMENT_PRORATA_MISMATCH"))).toBe("systeme");
+    expect(describeActivity(as("PAYMENT_PRORATA_MISMATCH"))).toBe("Écart de prorata sur un paiement");
   });
 });

@@ -3,13 +3,14 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
+import { publicFieldsData, publicFieldsLog, publicFieldsSchema } from "./public-fields";
 
 export const GET = withStaffAuth(async (req) => {
   const { searchParams } = new URL(req.url);
   const archived = searchParams.get("archived") === "true";
   const plans = await prisma.plan.findMany({
     where: { archived },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ position: "asc" }, { createdAt: "asc" }],
     include: { _count: { select: { subscriptions: true } } },
   });
   return NextResponse.json({ plans });
@@ -21,6 +22,7 @@ const createSchema = z.object({
   maxEvents: z.number().int().min(0).nullable().optional(),
   maxParticipantsPerEvent: z.number().int().min(0).nullable().optional(),
   price: z.number().int().min(100).max(10_000_000).nullable().optional(),
+  ...publicFieldsSchema,
 });
 
 export const POST = withStaffAuth(
@@ -43,13 +45,21 @@ export const POST = withStaffAuth(
           maxEvents: maxEvents ?? null,
           maxParticipantsPerEvent: maxParticipantsPerEvent ?? null,
           price: price ?? null,
+          ...publicFieldsData(parsed.data),
         },
       });
       await logActivity({
         type: "PLAN_CREATED",
         userId: session.user.id,
         targetId: plan.id,
-        details: { name: plan.name, period: plan.period, maxEvents: plan.maxEvents, maxParticipantsPerEvent: plan.maxParticipantsPerEvent, price: plan.price },
+        details: {
+          name: plan.name,
+          period: plan.period,
+          maxEvents: plan.maxEvents,
+          maxParticipantsPerEvent: plan.maxParticipantsPerEvent,
+          price: plan.price,
+          ...publicFieldsLog(plan),
+        },
         req,
       });
       return NextResponse.json({ plan }, { status: 201 });

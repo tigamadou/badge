@@ -32,7 +32,7 @@ describe("runMinimalSeed", () => {
     expect(await prisma.plan.count({ where: { name: "Standard" } })).toBe(1);
     expect(await prisma.plan.count()).toBe(2);
     expect(await prisma.plan.count({ where: { name: "free" } })).toBe(1);
-    expect(await prisma.rejectionReason.count()).toBe(9);
+    expect(await prisma.rejectionReason.count()).toBe(13);
     expect(await prisma.printSheetLayout.count({ where: { name: "A3 standard" } })).toBe(1);
     expect(await prisma.printProduct.count({ where: { kind: "ACCESSORY", published: true } })).toBe(5);
     expect(await prisma.installedBadgeTemplate.count()).toBeGreaterThan(0);
@@ -62,6 +62,43 @@ describe("runMinimalSeed", () => {
     expect(await counts()).toEqual(first);
     const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@badge.local" } });
     expect(await compare("123456", admin.password)).toBe(true);
+  });
+
+  it("pose les 4 motifs de photo d'identite, sans doublon", async () => {
+    const labels = [
+      "Fond non blanc",
+      "Visage non visible ou non centré",
+      "Photo floue ou sombre",
+      "Couvre-chef ou lunettes de soleil",
+    ];
+    await runMinimalSeed(DEV);
+    await runMinimalSeed(DEV);
+
+    for (const label of labels) {
+      const rows = await prisma.rejectionReason.findMany({ where: { label } });
+      expect(rows).toHaveLength(1);
+      expect(rows[0].scope).toBe("PROFILE");
+      expect(typeof rows[0].sortOrder).toBe("number");
+    }
+  });
+
+  it("rend les plans free et Standard visibles publiquement", async () => {
+    await runMinimalSeed(DEV);
+
+    const free = await prisma.plan.findUniqueOrThrow({ where: { name: "free" } });
+    const standard = await prisma.plan.findUniqueOrThrow({ where: { name: "Standard" } });
+    expect([free.publicVisible, free.position]).toEqual([true, 0]);
+    expect([standard.publicVisible, standard.position, standard.highlighted]).toEqual([true, 1, true]);
+  });
+
+  it("respecte les reglages du staff sur les plans", async () => {
+    await runMinimalSeed(DEV);
+    await prisma.plan.update({ where: { name: "Standard" }, data: { publicVisible: false, position: 5 } });
+
+    await runMinimalSeed(DEV);
+
+    const standard = await prisma.plan.findUniqueOrThrow({ where: { name: "Standard" } });
+    expect([standard.publicVisible, standard.position]).toEqual([false, 5]);
   });
 
   it("utilise les variables SEED_SUPER_ADMIN_* hors dev", async () => {

@@ -2,31 +2,44 @@ import { prisma } from "@/lib/prisma";
 import { countCountableRegistrations } from "@/lib/subscription";
 import { Tag } from "@/components/ui/Labels";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { parseListPage } from "@/lib/list-query";
+import { paginate } from "@/lib/paginate";
+import { UrlPagination } from "@/components/ui/Pagination";
 
 // v4 Bloc B : liste read-only des evenements d'une org, pour la supervision staff.
 // Aucun lien vers l'espace org : le staff agit via l'API (pouvoir staff), pas via /org.
 export default async function OrgEventsSupervisionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
-  const events = await prisma.event.findMany({
-    where: { orgId },
-    orderBy: { date: "desc" },
-    select: {
-      id: true,
-      title: true,
-      date: true,
-      registrationOpen: true,
-      archived: true,
-    },
-  });
+  const list = parseListPage(await searchParams);
+  const result = await paginate(
+    list,
+    () => prisma.event.count({ where: { orgId } }),
+    (range) =>
+      prisma.event.findMany({
+        where: { orgId },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+        ...range,
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          registrationOpen: true,
+          archived: true,
+        },
+      }),
+  );
+  const events = result.rows;
   const countable = await Promise.all(events.map((e) => countCountableRegistrations(e.id)));
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-semibold text-slate-800">Événements ({events.length})</h2>
+      <h2 className="text-base font-semibold text-slate-800">Événements ({result.total})</h2>
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
@@ -65,6 +78,7 @@ export default async function OrgEventsSupervisionPage({
           </tbody>
         </table>
       </TableFrame>
+      <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );
 }

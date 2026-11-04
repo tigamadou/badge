@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
+import { checkIdPhotoKey } from "@/lib/event-image-compliance";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
@@ -49,6 +50,12 @@ export const PATCH = withEventAuth(
     const existing = await prisma.registration.findUnique({ where: { id: regId } });
     if (!existing || existing.eventId !== eventId) {
       return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    }
+
+    // Photo d'identite : relue seulement si elle change (pas de blocage retroactif).
+    if (parsed.data.snapshotPhoto !== undefined && parsed.data.snapshotPhoto !== existing.snapshotPhoto) {
+      const rejected = await checkIdPhotoKey(parsed.data.snapshotPhoto, [`events/${eventId}/`, `profile/${existing.userId}/`]);
+      if (rejected) return rejected;
     }
 
     if (parsed.data.categoryId) {

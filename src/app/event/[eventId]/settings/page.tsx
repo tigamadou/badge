@@ -7,6 +7,7 @@ import { getEventOrgId } from "@/lib/event-org";
 import { readSecurityInstructions } from "@/lib/security-instructions";
 import { resolveEventTemplateVariables } from "@/lib/badge-templates/event-template-variables";
 import { optionVariables, readTemplateOptions, effectiveOption } from "@/lib/badge-templates/template-options";
+import { evaluateEventImages, getEventImageRequirements } from "@/lib/event-image-compliance";
 
 export default async function EventSettingsPage({
   params,
@@ -27,6 +28,12 @@ export default async function EventSettingsPage({
       slug: true,
       logo: true,
       banner: true,
+      logoOriginal: true,
+      bannerOriginal: true,
+      logoWidth: true,
+      logoHeight: true,
+      bannerWidth: true,
+      bannerHeight: true,
       templateOptions: true,
       badgeTemplateId: true,
       orgId: true,
@@ -44,6 +51,13 @@ export default async function EventSettingsPage({
   const optionValues = Object.fromEntries(
     variables.map((variable) => [variable.name, effectiveOption(variable, stored) ?? null]),
   );
+  const [imageRequirements, issues] = await Promise.all([
+    getEventImageRequirements(event, { lenient: true }),
+    evaluateEventImages(event, { lenient: true }),
+  ]);
+  const imageIssues = Object.fromEntries(
+    issues.map((i) => [i.slot, `À recadrer : ${i.message.charAt(0).toLowerCase()}${i.message.slice(1)}`]),
+  );
   return (
     <div className="space-y-4">
       <Link
@@ -55,6 +69,8 @@ export default async function EventSettingsPage({
       <EventSettingsForm
         orgId={orgId}
         eventId={eventId}
+        imageRequirements={imageRequirements}
+        imageIssues={imageIssues}
         initial={{
           event: {
             id: event.id,
@@ -64,6 +80,8 @@ export default async function EventSettingsPage({
             slug: event.slug,
             logo: event.logo,
             banner: event.banner,
+            logoOriginal: event.logoOriginal,
+            bannerOriginal: event.bannerOriginal,
             registrationOpen: event.registrationOpen,
             securityInstructions: readSecurityInstructions(event.securityInstructions),
             date: event.date.toISOString(),
