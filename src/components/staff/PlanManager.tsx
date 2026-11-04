@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
+import { UrlPagination } from "@/components/ui/Pagination";
 import { TableFrame } from "@/components/ui/TableFrame";
 import { toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -293,8 +295,11 @@ function PlanRowView({ plan }: { plan: PlanRow }) {
   );
 }
 
-export function PlanManager({ plans }: { plans: PlanRow[] }) {
+export type PlanPagination = { page: number; totalPages: number; total: number; pageSize: number };
+
+export function PlanManager({ plans, pagination }: { plans: PlanRow[]; pagination?: PlanPagination }) {
   const router = useRouter();
+  const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [period, setPeriod] = useState<PlanPeriod>("MONTHLY");
   const [maxEvents, setMaxEvents] = useState("");
@@ -350,6 +355,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
         setMaxParticipants("");
         setPrice("");
         setSheet({ publicVisible: false, highlighted: false, position: "0", description: "", featuresText: "" });
+        setCreating(false);
         toastSuccess("Plan créé.");
         router.refresh();
       },
@@ -358,13 +364,35 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button type="button" onClick={() => setCreating(true)}>
+          Nouveau plan
+        </Button>
+      </div>
+
+      <Dialog
+        open={creating}
+        title="Nouveau plan"
+        onClose={() => setCreating(false)}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setCreating(false)}>
+              Annuler
+            </Button>
+            <Button type="submit" form="plan-create-form" loading={createPlan.pending}>
+              Créer le plan
+            </Button>
+          </>
+        }
+      >
       <form
+        id="plan-create-form"
         onSubmit={(e) => {
           e.preventDefault();
           setNameError(null);
           void createPlan.run();
         }}
-        className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4"
+        className="flex flex-wrap items-end gap-3"
       >
         <label className="flex w-full flex-col gap-1 text-sm sm:w-auto">
           <span className="text-slate-600">Nom</span>
@@ -421,10 +449,9 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
         <div className="w-full">
           <PublicSheetFields sheet={sheet} onChange={setSheet} />
         </div>
-        <Button type="submit" loading={createPlan.pending} className="w-full sm:w-auto">
-          Créer le plan
-        </Button>
       </form>
+
+      </Dialog>
 
       <TableFrame>
       <table className="w-full text-sm">
@@ -454,6 +481,7 @@ export function PlanManager({ plans }: { plans: PlanRow[] }) {
         </tbody>
       </table>
       </TableFrame>
+      {pagination && <UrlPagination {...pagination} />}
     </div>
   );
 }
