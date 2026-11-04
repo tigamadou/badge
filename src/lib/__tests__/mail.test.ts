@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
+import { BRAND } from "@/lib/brand-colors";
 import {
   resolveTransporter,
   buildEmail,
@@ -172,6 +173,8 @@ describe("buildEmail", () => {
     expect(html).toContain("c@x.com");
     expect(html).toContain("+225 0101");
     expect(html).toContain("Salon 2026");
+    expect(html).toContain(`background-color:${BRAND.navy}`);
+    expect(html).toContain(`background-color:${BRAND.mist}`);
   });
 
   it("uses fallback Badge header when no eventTitle and no logo", () => {

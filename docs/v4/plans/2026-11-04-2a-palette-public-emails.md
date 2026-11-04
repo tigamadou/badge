@@ -84,7 +84,7 @@ badge factice), `rgba(15,23,42,…)` d'ombre. Le garde-fou de la vague 3 ne couv
 | 6 | E-mails transactionnels `mail.ts` | [x] | 2026-11-04 |  |
 | 7 | Notifications par e-mail, e-mail de contact, `mail-helpers` | [x] | 2026-11-04 |  |
 | 8 | Module paiements : composants et reçu HTML | [x] | 2026-11-04 |  |
-| 9 | Tests unitaires du lot mis à jour | [ ] | | |
+| 9 | Tests unitaires du lot mis à jour | [x] | 2026-11-04 |  |
 | 10 | e2e, contrôle visuel, vérification | [ ] | | |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task

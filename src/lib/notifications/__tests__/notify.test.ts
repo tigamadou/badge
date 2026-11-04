@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
+import { BRAND } from "@/lib/brand-colors";
 import { __mailTesting, type ResolvedTransport } from "@/lib/mail";
 import { enqueueEmail } from "@/lib/jobs/enqueue-email";
 import { notify, notifyAll, withNotificationGuard, EMAIL_BY_TYPE } from "../notify";
@@ -93,6 +94,7 @@ describe("notify", () => {
     expect(msg.html).toContain("Voir l&#39;inscription");
     expect(msg.html).toContain("Awa &lt;b&gt;");
     expect(msg.html).not.toContain("Awa <b>");
+    expect(msg.html).toContain(`background-color:${BRAND.navy};color:#ffffff`);
   });
 
   it("utilise l'URL de base par défaut et une seule résolution de transport par entrée", async () => {
