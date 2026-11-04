@@ -13,6 +13,18 @@ import {
   readSecurityInstructions,
 } from "@/lib/security-instructions";
 import { readTemplateOptions, templateOptionsSchema } from "@/lib/badge-templates/template-options";
+import {
+  getEventImageRequirements,
+  validateStoredImage,
+  type ImageSlot,
+} from "@/lib/event-image-compliance";
+
+// Colonnes associees a chaque image d'evenement.
+const IMAGE_COLUMNS = {
+  logo: { key: "logo", original: "logoOriginal", width: "logoWidth", height: "logoHeight" },
+  banner: { key: "banner", original: "bannerOriginal", width: "bannerWidth", height: "bannerHeight" },
+} as const;
+const IMAGE_SLOTS: ImageSlot[] = ["logo", "banner"];
 
 export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
   // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
@@ -60,6 +72,8 @@ const patchSchema = z.object({
   description: z.string().max(5000).nullable().optional(),
   logo: z.string().nullable().optional(),
   banner: z.string().nullable().optional(),
+  logoOriginal: z.string().max(500).nullable().optional(),
+  bannerOriginal: z.string().max(500).nullable().optional(),
   templateOptions: templateOptionsSchema.optional(),
   registrationOpen: z.boolean().optional(),
   securityInstructions: z
@@ -76,9 +90,17 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
     return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
   }
 
-  const before = await prisma.event.findUnique({
+  const before = await prisma.event.findUniqueOrThrow({
     where: { id: eventId },
-    select: { registrationOpen: true, date: true, securityInstructions: true, templateOptions: true },
+    select: {
+      registrationOpen: true,
+      date: true,
+      securityInstructions: true,
+      templateOptions: true,
+      logo: true,
+      banner: true,
+      badgeTemplateId: true,
+    },
   });
 
   // v4 (plan 07) : la date de fin se compare a la date effective apres patch.
@@ -100,8 +122,35 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
   if (parsed.data.endDate !== undefined) {
     data.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
   }
-  if (parsed.data.logo !== undefined) data.logo = parsed.data.logo;
-  if (parsed.data.banner !== undefined) data.banner = parsed.data.banner;
+  // Images : relecture du fichier stocke seulement quand la cle CHANGE (le formulaire
+  // renvoie toute la fiche : pas de blocage retroactif d'une image heritee).
+  const changedImages: { slot: ImageSlot; removed: boolean }[] = [];
+  if (parsed.data.logoOriginal !== undefined) data.logoOriginal = parsed.data.logoOriginal;
+  if (parsed.data.bannerOriginal !== undefined) data.bannerOriginal = parsed.data.bannerOriginal;
+  let requirements: Awaited<ReturnType<typeof getEventImageRequirements>> | null = null;
+  for (const slot of IMAGE_SLOTS) {
+    const cols = IMAGE_COLUMNS[slot];
+    const key = parsed.data[cols.key];
+    if (key === undefined) continue;
+    const changed = key !== before[cols.key];
+    if (key === null) {
+      Object.assign(data, { [cols.key]: null, [cols.original]: null, [cols.width]: null, [cols.height]: null });
+    } else {
+      if (changed) {
+        requirements ??= await getEventImageRequirements({ badgeTemplateId: before.badgeTemplateId, orgId });
+        const verdict = await validateStoredImage(key, requirements[slot] ?? null, { engineFormatsOnly: true });
+        if (!verdict.ok) {
+          return NextResponse.json(
+            { error: verdict.message, code: verdict.code, message: verdict.message, slot },
+            { status: verdict.status },
+          );
+        }
+        Object.assign(data, { [cols.width]: verdict.width, [cols.height]: verdict.height });
+      }
+      data[cols.key] = key;
+    }
+    if (changed) changedImages.push({ slot, removed: key === null });
+  }
   if (parsed.data.templateOptions !== undefined) {
     // Les listes sont nettoyees comme les consignes (espaces, lignes vides).
     const cleanedOptions = Object.fromEntries(
@@ -140,6 +189,17 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
       details: { changedFields: Object.keys(data) },
       req,
     });
+
+    for (const image of changedImages) {
+      await logActivity({
+        type: "EVENT_IMAGE_UPDATED",
+        userId: session.user.id,
+        orgId,
+        eventId,
+        details: image,
+        req,
+      });
+    }
 
     if (parsed.data.registrationOpen !== undefined && before?.registrationOpen !== parsed.data.registrationOpen) {
       await logActivity({

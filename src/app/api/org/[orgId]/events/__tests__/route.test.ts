@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureReferenceTemplates, familyTemplateId } from "@/lib/badge-templates/install";
+import { makePng, putTestImage } from "@/test/factories-2a";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -81,5 +82,35 @@ describe("POST /api/org/[orgId]/events — template de badge", () => {
     expect(json.error).toBe("VALIDATION");
     expect(json.issues[0].path).toEqual(["badgeTemplateId"]);
     expect(await prisma.event.count({ where: { orgId: org.id } })).toBe(0);
+  });
+});
+
+describe("POST /api/org/[orgId]/events : logo", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  it("memorise les dimensions d'un logo valide", async () => {
+    const { org } = await seedOwnerOrg();
+    const logo = await putTestImage(`test-2a/create-logo-${Date.now()}.png`, makePng(136, 136), "image/png");
+    const res = await callPost(org.id, { ...base, logo });
+    expect(res.status).toBe(201);
+    const { event } = (await res.json()) as { event: { id: string } };
+    expect(await prisma.event.findUnique({ where: { id: event.id } })).toMatchObject({
+      logo,
+      logoWidth: 136,
+      logoHeight: 136,
+    });
+  });
+
+  it("cree l'evenement meme si le logo est introuvable", async () => {
+    const { org } = await seedOwnerOrg();
+    const res = await callPost(org.id, { ...base, logo: "test-2a/absent.png" });
+    expect(res.status).toBe(201);
+    const { event } = (await res.json()) as { event: { id: string } };
+    expect(await prisma.event.findUnique({ where: { id: event.id } })).toMatchObject({
+      logoWidth: null,
+      logoHeight: null,
+    });
   });
 });

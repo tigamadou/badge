@@ -8,6 +8,7 @@ import { assertCanCreateEvent, SubscriptionError } from "@/lib/subscription";
 import { uniqueEventSlug } from "@/lib/slugify-event";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { notifyQuotaExceeded } from "@/lib/notifications/triggers";
+import { readStoredDimensions } from "@/lib/event-image-compliance";
 
 export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
   const url = new URL(req.url);
@@ -156,6 +157,10 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
     return c;
   });
 
+  // Dimensions du logo memorisees pour le controle de conformite ; un logo illisible
+  // n'empeche pas la creation (il sera signale a la lecture).
+  const logoDimensions = data.logo ? await readStoredDimensions(data.logo) : null;
+
   try {
     const event = await prisma.event.create({
       data: {
@@ -167,6 +172,8 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
         endDate: data.endDate ? new Date(data.endDate) : null,
         description: data.description ?? null,
         logo: data.logo ?? null,
+        logoWidth: logoDimensions?.width ?? null,
+        logoHeight: logoDimensions?.height ?? null,
         badgeTemplateId: data.badgeTemplateId ?? null,
         registrationOpen: false,
         categories: {

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { withOrgAuth } from "@/lib/with-org-auth";
+import { prisma } from "@/lib/prisma";
 import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES } from "@/lib/storage";
+import {
+  EVENT_IMAGE_SELECT,
+  getEventImageRequirements,
+  validateImageBuffer,
+  type ImageSlot,
+} from "@/lib/event-image-compliance";
 
 // v4 Task 5.4 : upload d'images org-scoped (logos d'organisation et d'evenement).
 // Images uniquement (JPEG/PNG/WebP). Reserve aux membres MANAGER+ de l'org.
@@ -11,7 +18,17 @@ const EXT: Record<string, string> = {
   "image/webp": ".webp",
 };
 
+const PURPOSES = new Set(["logo", "banner", "original"]);
+
+// Sans `purpose` : comportement historique (logo d'organisation, images d'options du
+// template). `logo` / `banner` : image d'evenement controlee contre le cadre du template ;
+// `original` : source de recadrage conservee telle quelle (WebP accepte).
 export const POST = withOrgAuth("MANAGER", async (req, { orgId }) => {
+  const url = new URL(req.url);
+  const purpose = url.searchParams.get("purpose");
+  if (purpose !== null && !PURPOSES.has(purpose)) {
+    return NextResponse.json({ error: "Usage inconnu", code: "BAD_PURPOSE" }, { status: 400 });
+  }
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof Blob)) {
@@ -28,8 +45,30 @@ export const POST = withOrgAuth("MANAGER", async (req, { orgId }) => {
     );
   }
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  let dimensions: { width: number; height: number } | null = null;
+  if (purpose !== null) {
+    let requirement = null;
+    if (purpose !== "original") {
+      const eventId = url.searchParams.get("eventId");
+      const event = eventId
+        ? await prisma.event.findFirst({ where: { id: eventId, orgId }, select: EVENT_IMAGE_SELECT })
+        : null;
+      if (!event) return NextResponse.json({ error: "Introuvable", code: "NOT_FOUND" }, { status: 404 });
+      requirement = (await getEventImageRequirements(event))[purpose as ImageSlot] ?? null;
+    }
+    const verdict = validateImageBuffer(buffer, mime, requirement, { engineFormatsOnly: purpose !== "original" });
+    if (!verdict.ok) {
+      return NextResponse.json(
+        { error: verdict.message, code: verdict.code, message: verdict.message },
+        { status: verdict.status },
+      );
+    }
+    dimensions = purpose === "original" ? null : { width: verdict.width, height: verdict.height };
+  }
+
   // mime est deja restreint aux cles de EXT par isAllowedMime ci-dessus.
   const storageKey = `orgs/${orgId}/images/${randomUUID()}${EXT[mime]}`;
   await uploadFile(storageKey, buffer, mime);
-  return NextResponse.json({ storageKey });
+  return NextResponse.json(dimensions ? { storageKey, ...dimensions } : { storageKey });
 });
