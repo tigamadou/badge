@@ -64,7 +64,7 @@ function Entry({
       <div className="flex justify-center" data-entry-kind={entry.internal ? "internal-event" : "event"}>
         <div
           className={`max-w-[90%] rounded-lg px-3 py-1.5 text-center text-[13px] ${
-            entry.internal ? "border border-warn/30 bg-warn-soft text-warn" : "bg-mist text-slate-600"
+            entry.internal ? "border border-warn/30 bg-warn-soft text-warn" : "bg-slate-100 text-slate-600"
           }`}
         >
           {entry.internal ? <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide">Interne</span> : null}

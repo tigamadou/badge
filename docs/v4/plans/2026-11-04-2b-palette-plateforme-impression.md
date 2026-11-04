@@ -37,7 +37,7 @@ logique modifiée.
 | 6 | Composants staff hors `print/` | [x] | 2026-11-04 | classes mist/navy uniquement |
 | 7 | Staff `print/` — listes, éditeurs, catalogue | [x] | 2026-11-04 | Brouillon (catalogue, produit) = or (attente de publication) ; pastille Archive neutre conservee. Appliques aussi en bloc: OnsiteStation, OrderSheetPanel, OnsiteRequestPanel, OrderComposer/Conversation, OrderQueueTable, GenerationForm/List (task 8) |
 | 8 | Staff `print/` — gabarits, planches, commande, sur place | [x] | 2026-11-04 | LayoutEditor: legende de l'aside (sky-400/green-600) conservee car alignee sur SheetPreview (exclu, lecture seule) ; diagramme des marges en marine |
-| 9 | Passe de contrôle (grep) et tests existants | [ ] | | |
+| 9 | Passe de contrôle (grep) et tests existants | [x] | 2026-11-04 | grep residuel: SheetPreview (amber-300) et legende LayoutEditor (sky-400, green-600/100) seulement ; pastilles neutres slate-100 conservees |
 | 10 | e2e, contrôle visuel, vérification | [ ] | | |
 
 Statuts : `[ ]` à faire, `[~]` en cours, `[x]` terminé, `[-]` abandonné. Après chaque task
