@@ -212,6 +212,24 @@ describe("startCheckout : devis", () => {
     expect((await prisma.payment.findUniqueOrThrow({ where: { id: old.id } })).status).toBe("CANCELED");
   });
 
+  it("la reprise n'a lieu qu'une fois : deux candidats refusés de suite donnent PAYMENT_IN_PROGRESS", async () => {
+    const { user, org, pro } = await setup({ current: null });
+    const first = await makeBillingPayment({
+      orgId: org.id, planId: pro.id, amount: 15000, status: "PENDING", fedapayTransactionId: 880,
+      createdAt: new Date(Date.now() - 2000),
+    });
+    const second = await makeBillingPayment({
+      orgId: org.id, planId: pro.id, amount: 15000, status: "PENDING", fedapayTransactionId: 881,
+    });
+    mockFedapay(fetchMock, { status: "declined" });
+    await expect(startCheckout({ orgId: org.id, planId: pro.id, userId: user.id })).rejects.toMatchObject({
+      code: "PAYMENT_IN_PROGRESS",
+    });
+    for (const id of [first.id, second.id]) {
+      expect((await prisma.payment.findUniqueOrThrow({ where: { id } })).status).toBe("DECLINED");
+    }
+  });
+
   it("un candidat déjà payé chez FedaPay est confirmé puis le devis refait (ALREADY_ACTIVE)", async () => {
     const { user, org, pro } = await setup({ current: null });
     await makeBillingPayment({
