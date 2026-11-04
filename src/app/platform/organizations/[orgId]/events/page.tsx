@@ -43,7 +43,7 @@ export default async function OrgEventsSupervisionPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Événement</th>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Inscriptions</th>

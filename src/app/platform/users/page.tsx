@@ -69,7 +69,7 @@ export default async function StaffUsersPage({
         </div>
         <Link
           href="/platform/users/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-green-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
         >
           <Icon name="plus" size={16} /> Créer un utilisateur
         </Link>
@@ -98,12 +98,12 @@ export default async function StaffUsersPage({
           <option value="client">Clients</option>
         </select>
         <label className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[13px] text-slate-600">
-          <input type="checkbox" name="archived" value="true" defaultChecked={showArchived} className="accent-green-600" />
+          <input type="checkbox" name="archived" value="true" defaultChecked={showArchived} className="accent-navy" />
           Archivés
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded-lg bg-mist px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>
@@ -112,7 +112,7 @@ export default async function StaffUsersPage({
       <TableFrame>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <th className="px-4 py-3">Nom</th>
               <th className="px-4 py-3 hidden md:table-cell">E-mail</th>
               <th className="px-4 py-3">Type</th>
@@ -131,7 +131,7 @@ export default async function StaffUsersPage({
             {users.map((u) => (
               <tr
                 key={u.id}
-                className={`border-t border-slate-100 hover:bg-slate-50 ${u.archived ? "opacity-60" : ""}`}
+                className={`border-t border-slate-100 hover:bg-mist ${u.archived ? "opacity-60" : ""}`}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
@@ -140,7 +140,7 @@ export default async function StaffUsersPage({
                     </span>
                     <Link
                       href={`/platform/users/${u.id}`}
-                      className="text-sm font-medium text-slate-900 hover:text-green-600"
+                      className="text-sm font-medium text-slate-900 hover:text-navy"
                     >
                       {u.name}
                     </Link>
@@ -160,7 +160,7 @@ export default async function StaffUsersPage({
                   <Link
                     href={`/platform/users/${u.id}`}
                     aria-label={`Ouvrir ${u.name}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                   >
                     <Icon name="chevron-right" size={16} />
                   </Link>

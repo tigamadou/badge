@@ -33,7 +33,7 @@ logique modifiée.
 | 2 | Statuts et tons d'impression (`PrintRequestStatusBadge`, `entry-tone`, `JobStatusBadge`) | [x] | 2026-11-04 | ton interne (amber) classe or ; statuts reclasses par sens |
 | 3 | Composants `src/components/print/**` (hors statuts) | [x] | 2026-11-04 | compteur: barre ok turquoise, warn bg-warn |
 | 4 | `src/components/notifications/**` | [x] | 2026-11-04 | cloche sur fond blanc : ring navy |
-| 5 | Pages `src/app/platform/**` | [ ] | | |
+| 5 | Pages `src/app/platform/**` | [x] | 2026-11-04 | progression dashboard en marine ; pastilles neutres slate-100 conservees |
 | 6 | Composants staff hors `print/` | [ ] | | |
 | 7 | Staff `print/` — listes, éditeurs, catalogue | [ ] | | |
 | 8 | Staff `print/` — gabarits, planches, commande, sur place | [ ] | | |

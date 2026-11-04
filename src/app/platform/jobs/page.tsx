@@ -98,7 +98,7 @@ export default async function PlatformJobsPage({
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-slate-100 px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          className="rounded-lg bg-mist px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           Filtrer
         </button>
@@ -112,7 +112,7 @@ export default async function PlatformJobsPage({
         <TableFrame>
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <tr className="bg-mist text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 <th className="px-4 py-3">Date</th>
                 <th className="hidden px-4 py-3 md:table-cell">Type</th>
                 <th className="px-4 py-3">Destinataire</th>
@@ -124,7 +124,7 @@ export default async function PlatformJobsPage({
             </thead>
             <tbody>
               {jobs.map((job) => (
-                <tr key={job.id} className="border-t border-slate-100 hover:bg-slate-50">
+                <tr key={job.id} className="border-t border-slate-100 hover:bg-mist">
                   <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-400">
                     {job.createdAt.toLocaleString("fr-FR")}
                   </td>
@@ -148,7 +148,7 @@ export default async function PlatformJobsPage({
                     <Link
                       href={`/platform/jobs/${job.id}`}
                       aria-label="Voir le détail"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-mist hover:text-slate-600"
                     >
                       <Icon name="chevron-right" size={16} />
                     </Link>

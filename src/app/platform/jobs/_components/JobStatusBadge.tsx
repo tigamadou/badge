@@ -5,7 +5,7 @@ const STATUS: Record<JobStatus, { label: string; tone: string }> = {
   RUNNING: { label: "En cours", tone: "bg-mist text-navy" },
   SUCCEEDED: { label: "Envoyé", tone: "bg-turquoise-soft text-turquoise-strong" },
   FAILED: { label: "En échec", tone: "bg-rose-50 text-rose-700" },
-  CANCELLED: { label: "Annulé", tone: "bg-slate-100 text-slate-600" },
+  CANCELLED: { label: "Annulé", tone: "bg-mist text-slate-600" },
 };
 
 export function JobStatusBadge({ status }: { status: JobStatus }) {

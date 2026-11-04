@@ -43,7 +43,7 @@ export default async function PrintLayoutsPage({
         {canWrite && (
           <Link
             href="/platform/print/layouts/new"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-hover"
           >
             <Icon name="plus" size={16} /> Nouveau gabarit
           </Link>
