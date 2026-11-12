@@ -36,7 +36,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, ev
   await notifyMembershipRoleChanged({
     userId: updated.userId,
     eventId,
-    from: existing.role,
+    from: existing.role ?? "VIEWER",
     to: parsed.data.role,
     actorId: session.user.id,
   });

@@ -25,7 +25,9 @@ export function logKind(t: ActivityType): LogKind {
     s.endsWith("SETTINGS_UPDATED") ||
     s === "USER_PASSWORD_SET" ||
     s === "PRINT_REQUEST_MARGIN_RAISED" ||
-    s === "PRINT_CREDIT_APPLIED"
+    s === "PRINT_CREDIT_APPLIED" ||
+    s === "USER_PERMISSIONS_CHANGED" ||
+    s === "ROLE_RESTORED"
   )
     return "modification";
   return "systeme";
@@ -86,6 +88,11 @@ const DESCRIPTIONS: Partial<Record<ActivityType, string>> = {
   PRINT_REQUEST_SUPPLEMENT_CREATED: "Commande d'impression complémentaire créée",
   EVENT_IMAGE_UPDATED: "Image d'événement modifiée",
   PAYMENT_PRORATA_MISMATCH: "Écart de prorata sur un paiement",
+  ROLE_CREATED: "Rôle créé",
+  ROLE_UPDATED: "Rôle modifié",
+  ROLE_ARCHIVED: "Rôle archivé",
+  ROLE_RESTORED: "Rôle restauré",
+  USER_PERMISSIONS_CHANGED: "Permissions d'un utilisateur modifiées",
 };
 
 // Libelle humain (FR) d'un type d'action ; fallback sur le type brut.

@@ -77,7 +77,7 @@ export async function PATCH(req: NextRequest, { params }: Params): Promise<Respo
   await notifyMembershipRoleChanged({
     userId,
     orgId,
-    from: existing.role,
+    from: existing.role ?? "AUDITOR",
     to: nextRole,
     actorId: session.user.id,
   });

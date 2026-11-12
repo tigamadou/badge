@@ -42,7 +42,7 @@ export default async function MembersPage({
     email: m.user.email,
     name: m.user.name,
     archived: m.user.archived,
-    role: m.role,
+    role: m.role ?? "AUDITOR",
     invitedAt: m.createdAt.toISOString(),
   }));
 

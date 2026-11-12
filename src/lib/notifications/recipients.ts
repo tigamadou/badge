@@ -77,8 +77,8 @@ export async function resolveRecipients(
         user: { id: u.id, email: u.email, name: u.name },
         isStaff: false,
         staffRole: null,
-        orgMemberships: u.orgMemberships,
-        eventMemberships: u.eventMemberships,
+        orgMemberships: u.orgMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role }] : [])),
+        eventMemberships: u.eventMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role }] : [])),
       };
       return roles.includes(effectiveEventRole(ctx, eventId, event.orgId) as EventRole);
     })

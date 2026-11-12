@@ -68,7 +68,7 @@ export async function seedNotifications(ctx: DemoContext, world: DemoWorld, jobs
       id: m.user.id, email: m.user.email, name: m.user.name, staffRole: m.user.staffRole,
       blocked: m.user.blocked, archived: m.user.archived, createdAt: m.user.createdAt,
     };
-    eventMembers.set(m.eventId, [...(eventMembers.get(m.eventId) ?? []), { user, role: m.role }]);
+    eventMembers.set(m.eventId, [...(eventMembers.get(m.eventId) ?? []), { user, role: m.role ?? "VIEWER" }]);
   }
   const orgRecipients = (org: WorldOrg) => uniqueUsers([...org.owners, ...org.members]).filter(active);
   const eventRecipients = (eventId: string): WorldUser[] => {
@@ -188,7 +188,7 @@ export async function seedNotifications(ctx: DemoContext, world: DemoWorld, jobs
   const roleChange: Record<OrgRole, OrgRole> = { OWNER: "MANAGER", MANAGER: "AUDITOR", AUDITOR: "MANAGER" };
   for (const m of faker.helpers.arrayElements(orgMemberships.filter((x) => x.role !== "OWNER"), Math.max(2, Math.round(orgMemberships.length / 3)))) {
     add("MEMBERSHIP_ROLE_CHANGED", "ORG", m.user,
-      membershipRoleChangedMessage({ target: { kind: "org", orgId: m.orgId, name: m.organization.name }, from: roleChange[m.role], to: m.role }),
+      membershipRoleChangedMessage({ target: { kind: "org", orgId: m.orgId, name: m.organization.name }, from: roleChange[m.role ?? "AUDITOR"], to: m.role ?? "AUDITOR" }),
       when(), { orgId: m.orgId });
   }
   for (const m of eventMembersRows) {
@@ -196,7 +196,7 @@ export async function seedNotifications(ctx: DemoContext, world: DemoWorld, jobs
     const event = org?.events.find((e) => e.id === m.eventId);
     if (!org || !event || !active(eventMembers.get(m.eventId)!.find((x) => x.user.id === m.userId)!.user)) continue;
     add("EVENT_MEMBERSHIP_ADDED", "EVENT", m.user,
-      eventMembershipAddedMessage({ eventId: event.id, eventTitle: event.title, role: m.role }), when(), { orgId: org.id, eventId: event.id });
+      eventMembershipAddedMessage({ eventId: event.id, eventTitle: event.title, role: m.role ?? "VIEWER" }), when(), { orgId: org.id, eventId: event.id });
   }
   for (const org of world.orgs.filter((o) => !o.archived)) {
     for (const event of org.events.filter((e) => !e.archived && eventRecipients(e.id).length > 0)) {

@@ -39,7 +39,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Schéma Prisma, reset de test, types de journal | [ ] | | |
+| 1 | Schéma Prisma, reset de test, types de journal | [x] | 2026-11-13 | Correctifs mécaniques (`role` facultatif) : `prisma/seed/demo/notifications/notifications.ts`, `prisma/seed/demo/notifications/activity.ts` (5 types ajoutés à `ACTIVITY_NOT_SEEDED`), `src/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route.ts`, `src/app/api/org/[orgId]/members/[userId]/route.ts`, `src/app/api/platform/organizations/[orgId]/owners/route.ts`, `src/app/event/[eventId]/members/page.tsx`, `src/app/org/[orgId]/members/page.tsx`, `src/app/platform/organizations/[orgId]/members/page.tsx`, `src/lib/notifications/recipients.ts`, `src/lib/user-context.ts` |
 | 2 | Catalogue des permissions et libellés | [ ] | | |
 | 3 | Rôles système (permissions en code) | [ ] | | |
 | 4 | Contexte utilisateur enrichi et repli sur les enums | [ ] | | |

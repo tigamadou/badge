@@ -31,6 +31,6 @@ export default async function MembersPage({
         },
       }),
   );
-  const serialised = result.rows.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }));
+  const serialised = result.rows.map((m) => ({ ...m, role: m.role ?? "VIEWER", createdAt: m.createdAt.toISOString() }));
   return <MemberTable orgId={orgId} eventId={eventId} rows={serialised} footer={<UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />} />;
 }

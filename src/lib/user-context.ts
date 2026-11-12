@@ -22,7 +22,7 @@ export async function loadUserContext(userId: string): Promise<UserContext | nul
     user: { id: user.id, email: user.email, name: user.name },
     isStaff: user.isStaff,
     staffRole: user.staffRole,
-    orgMemberships: user.orgMemberships,
-    eventMemberships: user.eventMemberships,
+    orgMemberships: user.orgMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role }] : [])),
+    eventMemberships: user.eventMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role }] : [])),
   };
 }

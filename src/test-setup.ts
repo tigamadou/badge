@@ -46,6 +46,8 @@ beforeEach(async () => {
   await prisma.categoryTemplate.deleteMany();
   await prisma.orgMembership.deleteMany();
   await prisma.organization.deleteMany();
+  await prisma.role.deleteMany();
   await prisma.printProduct.deleteMany();
+  await prisma.userPermissionOverride.deleteMany();
   await prisma.user.deleteMany();
 });

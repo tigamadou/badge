@@ -65,6 +65,11 @@ const ALL_ACTIVITY_TYPES = [
   "QUOTA_BYPASS",
   "EVENT_IMAGE_UPDATED",
   "PAYMENT_PRORATA_MISMATCH",
+  "ROLE_CREATED",
+  "ROLE_UPDATED",
+  "ROLE_ARCHIVED",
+  "ROLE_RESTORED",
+  "USER_PERMISSIONS_CHANGED",
 ] as const;
 
 const as = (s: string) => s as ActivityType;
@@ -122,6 +127,24 @@ describe("logKind", () => {
     expect(logKind(as("REGISTRATION_RESUBMITTED"))).toBe("systeme");
     expect(logKind(as("QUOTA_BYPASS"))).toBe("systeme");
     expect(logKind(as("USER_EMAIL_VERIFIED"))).toBe("systeme");
+  });
+});
+
+describe("types de roles et permissions", () => {
+  it("classe les types de roles", () => {
+    expect(logKind(as("ROLE_CREATED"))).toBe("creation");
+    expect(logKind(as("ROLE_UPDATED"))).toBe("modification");
+    expect(logKind(as("USER_PERMISSIONS_CHANGED"))).toBe("modification");
+    expect(logKind(as("ROLE_ARCHIVED"))).toBe("suppression");
+    expect(logKind(as("ROLE_RESTORED"))).toBe("modification");
+  });
+
+  it("a un libelle francais pour chaque type", () => {
+    for (const t of ["ROLE_CREATED", "ROLE_UPDATED", "ROLE_ARCHIVED", "ROLE_RESTORED", "USER_PERMISSIONS_CHANGED"]) {
+      const label = describeActivity(as(t));
+      expect(label).not.toBe("");
+      expect(label).not.toBe(t);
+    }
   });
 });
 

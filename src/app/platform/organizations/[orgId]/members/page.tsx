@@ -65,7 +65,7 @@ export default async function OrgMembersSupervisionPage({
               <tr key={m.id} className="border-t border-slate-100">
                 <td className="px-4 py-3 text-slate-900">{m.user.name}</td>
                 <td className="px-4 py-3 text-slate-500">{m.user.email}</td>
-                <td className="px-4 py-3 text-slate-500">{ROLE_LABEL[m.role] ?? m.role}</td>
+                <td className="px-4 py-3 text-slate-500">{(m.role ? ROLE_LABEL[m.role] : null) ?? m.role ?? "—"}</td>
                 <td className="px-4 py-3 tabular-nums text-slate-400">
                   {new Date(m.createdAt).toLocaleDateString("fr-FR")}
                 </td>

@@ -130,7 +130,7 @@ export const POST = withStaffAuth(
       await notifyMembershipRoleChanged({
         userId: user.id,
         orgId,
-        from: existing.role,
+        from: existing.role ?? "AUDITOR",
         to: role,
         actorId: session.user.id,
       });
