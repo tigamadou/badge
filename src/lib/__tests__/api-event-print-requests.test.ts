@@ -351,6 +351,17 @@ describe("inscriptions, badges, produits", () => {
     const body = await ok.json();
     expect(body.lines).toHaveLength(1);
     expect(body.total).toBe(1500);
+    const forced = await call(products.PUT as Handler, "PUT", {
+      requestId: r.id,
+      body: {
+        products: [
+          { productId: fx.badgeProduct.id, quantity: null, choices: [] },
+          { productId: fx.lanyard.id, quantity: 999, choices: [] },
+        ],
+      },
+    });
+    expect(forced.status).toBe(200);
+    expect((await forced.json()).lines[1].quantity).toBe(1);
     expect((await call(products.PUT as Handler, "PUT", { requestId: r.id, body: { products: "x" } })).status).toBe(400);
     const missing = await call(products.PUT as Handler, "PUT", {
       requestId: r.id,

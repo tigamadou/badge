@@ -117,9 +117,9 @@ async function organizerProducts(state: PrintState, index: number, badges: numbe
   ];
   if (withAccessory !== null) {
     const accessory = pick(state.products.accessories, withAccessory);
-    const quantity = Math.max(accessory.minQuantity, badges);
-    const accChoices = await productConfig(accessory, quantity);
-    if (accChoices) products.push({ productId: accessory.id, quantity, choices: accChoices });
+    // Le serveur impose la quantité = nombre de badges (spec 39) : pas d'accessoire sous son minimum.
+    const accChoices = badges >= accessory.minQuantity ? await productConfig(accessory, badges) : null;
+    if (accChoices) products.push({ productId: accessory.id, quantity: badges, choices: accChoices });
   }
   return products;
 }

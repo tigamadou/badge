@@ -479,9 +479,10 @@ export async function setOrganizerProducts(input: {
     const moves: { id: string; position: number }[] = [];
 
     for (const [position, { product, entry }] of ordered.entries()) {
-      const derivedQuantity = product.kind === "BADGE" || entry.quantity === null;
+      // La quantité d'un accessoire est toujours le nombre de badges (spec 39) : `entry.quantity`
+      // reste accepté pour la rétrocompatibilité des clients mais est ignoré.
       const line = byProduct.get(product.id);
-      const quantity = product.kind === "BADGE" ? badgeCount : (entry.quantity ?? badgeCount);
+      const quantity = badgeCount;
       let choices = normalizeChoices(product, entry.choices);
 
       if (!line) {
@@ -492,9 +493,9 @@ export async function setOrganizerProducts(input: {
       const storedChoices = normalizeChoices(product, (line.choices ?? []) as unknown as OptionChoice[]);
       const sameChoices = canonical(storedChoices) === canonical(choices);
       const locked = line.priceOverridden || line.quantityOverridden;
-      // Quantité non saisie sur une ligne fixée par le staff : l'organisateur ne la conteste pas
+      // Quantité toujours dérivée sur une ligne fixée par le staff : l'organisateur ne la conteste pas
       // (le suivi du nombre de badges appartient à followBadgeCount).
-      const effectiveQuantity = derivedQuantity && locked ? line.quantity : quantity;
+      const effectiveQuantity = locked ? line.quantity : quantity;
       if (sameChoices && effectiveQuantity === line.quantity) {
         if (line.position !== position) moves.push({ id: line.id, position });
         continue;

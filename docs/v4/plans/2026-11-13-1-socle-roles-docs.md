@@ -53,7 +53,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 12 | Logique d'impression partagée | [x] | 2026-11-13 | `assertOwner` : staff acteur seulement refusé (staff membre OWNER accepté, changement assumé). `canApplyCredit`/`canSetOnsiteMargin` : branche `StaffRole` @deprecated compat. `lifecycle.ts` inchangé (n'appelle qu'`assertOwner`). Seul appelant hors `route.ts` de `assertNotStaff` : aucun. Tests : `print-requests-route`, `guard` ajoutés. |
 | 13 | Découplage de `OnsiteStation` | [x] | 2026-11-13 | Props `apiBase?`/`backHref?` ; `requestUrl(…, apiBase?)`. Page plateforme inchangée (défauts). Tests : `request-fetch`, `OnsiteStation` (rendu statique). |
 | 14 | Consommateurs transverses | [x] | 2026-11-13 | Contrôle smoke extrait en `platformChecks` (staff + « Rôles système présents », 14 lignes) ; tests ajoutés pour la page marketing |
-| 15 | Spec 39 : quantité des accessoires côté serveur | [ ] | | |
+| 15 | Spec 39 : quantité des accessoires côté serveur | [x] | 2026-11-13 | `setOrganizerProducts` : quantité = nombre de badges pour tout produit (`entry.quantity` ignoré). Tests produits/API adaptés ; seed démo `prisma/seed/demo/print/orders.ts` ajusté (accessoire ajouté seulement si badges ≥ minQuantity). |
 | 16 | Spec 40 : ancrages de la documentation | [ ] | | |
 | 17 | e2e, doc, vérification | [ ] | | |
 
@@ -829,7 +829,7 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
 - Consumes : `requestBadgeCount` (existant). Produit : pour tout produit non `BADGE`, la quantité de la ligne
   de l'organisateur = nombre de badges, quelle que soit `entry.quantity`.
 
-- [ ] **Step 1 : tests rouges** : demande de 10 badges ; `products: [badge, accessoire { quantity: 3 }]` → ligne accessoire
+- [x] **Step 1 : tests rouges** : demande de 10 badges ; `products: [badge, accessoire { quantity: 3 }]` → ligne accessoire
   `quantity === 10` et `lineTotal` calculé sur 10 (paliers de prix inclus) ; `quantity: null` ou absent → 10 ;
   appel API direct (route `PUT …/products`, test d'intégration existant du dossier `print-requests`) avec `quantity: 999` →
   10 ; brouillon existant avec une ligne accessoire à 3 : au prochain enregistrement la ligne passe à 10 sans erreur
@@ -837,13 +837,13 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
   aujourd'hui pour une quantité non saisie) ; changement du nombre de badges puis nouvel enregistrement → la ligne suit.
   **Adapter** les tests existants qui attendent une quantité d'accessoire choisie par le client (changement d'exigence de la
   spec 39, pas un contournement).
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter** — dans la boucle de `setOrganizerProducts`, la quantité dérivée est `badgeCount` pour tous les
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter** — dans la boucle de `setOrganizerProducts`, la quantité dérivée est `badgeCount` pour tous les
   produits : `derivedQuantity` vaut toujours vrai et `quantity = badgeCount` ; le champ `entry.quantity` reste accepté par
   `OrganizerProductInput` (rétrocompatibilité des clients) mais est ignoré (commentaire en français : « la quantité d'un
   accessoire est toujours le nombre de badges (spec 39) »). Ne pas toucher à `PrintRequestWizard` (lot 2b).
-- [ ] **Step 4 : lancer** `make test FILE=src/lib` (sous-ensemble impression) et les tests API `print-requests` → vert.
-- [ ] **Step 5 : commit** : `feat(impression): quantite des accessoires egale au nombre de badges (serveur)`.
+- [x] **Step 4 : lancer** `make test FILE=src/lib` (sous-ensemble impression) et les tests API `print-requests` → vert.
+- [x] **Step 5 : commit** : `feat(impression): quantite des accessoires egale au nombre de badges (serveur)`.
 
 ### Task 16: Spec 40 — ancrages de la documentation
 
