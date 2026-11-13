@@ -132,7 +132,7 @@ describe("PATCH /api/org/[orgId]/templates/[id]", () => {
     expect(log).not.toBeNull();
   });
 
-  it("rethrows a non-AuthError from requireOrgRole", async () => {
+  it("rethrows a non-AuthError from requirePermission", async () => {
     const { org } = await seedOrgWithMember("MANAGER");
     const tpl = await prisma.categoryTemplate.create({
       data: { orgId: org.id, name: "T", color: "#000000", number: 1 },

@@ -12,7 +12,7 @@ import {
 } from "@/lib/event-image-compliance";
 
 // v4 Task 5.4 : upload d'images org-scoped (logos d'organisation et d'evenement).
-// Images uniquement (JPEG/PNG/WebP). Reserve aux membres MANAGER+ de l'org.
+// Images uniquement (JPEG/PNG/WebP). Reserve a la permission `org.upload`.
 const EXT: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -24,7 +24,7 @@ const PURPOSES = new Set(["logo", "banner", "original"]);
 // Sans `purpose` : comportement historique (logo d'organisation, images d'options du
 // template). `logo` / `banner` : image d'evenement controlee contre le cadre du template ;
 // `original` : source de recadrage conservee telle quelle (WebP accepte).
-export const POST = withOrgAuth("MANAGER", async (req, { orgId }) => {
+export const POST = withOrgAuth("org.upload", async (req, { orgId }) => {
   const url = new URL(req.url);
   const purpose = url.searchParams.get("purpose");
   if (purpose !== null && !PURPOSES.has(purpose)) {

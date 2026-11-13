@@ -5,7 +5,7 @@ import { PaymentError, startCheckout } from "@/lib/payments";
 
 const schema = z.object({ planId: z.string().min(1) });
 
-export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
+export const POST = withOrgAuth("billing.subscription.pay", async (req, { orgId, session }) => {
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "INVALID_BODY" }, { status: 400 });

@@ -10,7 +10,7 @@ import { templateExists } from "@/lib/badge-templates/resolve";
 import { notifyQuotaExceeded } from "@/lib/notifications/triggers";
 import { getEventImageRequirements, rejectionResponse, validateStoredImage } from "@/lib/event-image-compliance";
 
-export const GET = withOrgAuth("AUDITOR", async (req, { orgId }) => {
+export const GET = withOrgAuth("org.events.list", async (req, { orgId }) => {
   const url = new URL(req.url);
   const archived = url.searchParams.get("archived");
   const registrationOpen = url.searchParams.get("registrationOpen");
@@ -78,8 +78,7 @@ type CatInput = {
   anonymous?: boolean;
 };
 
-// ADR 2026-06-01 (v2-14 Task 2) : MANAGER autorise a creer un event (spec espace-organisation).
-export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
+export const POST = withOrgAuth("org.events.create", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) {
