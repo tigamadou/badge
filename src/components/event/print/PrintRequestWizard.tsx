@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +9,13 @@ import { RadioCards } from "@/components/ui/RadioCards";
 import { Stepper } from "@/components/ui/Stepper";
 import { ProductCard } from "@/components/print/ProductCard";
 import { ProductConfigurator, type ProductConfiguration } from "@/components/print/ProductConfigurator";
-import { withBadgeQuantity } from "./accessory-quantity";
+import {
+  accessoryBlockedReason,
+  belowBadgeCountWarning,
+  capConfiguration,
+  capQuantity,
+  followedQuantity,
+} from "./accessory-quantity";
 import { QuoteLinesTable, type QuoteLineView } from "@/components/print/QuoteLinesTable";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { ActionError, toastSuccess } from "@/lib/toast";
@@ -104,6 +110,22 @@ export function PrintRequestWizard({
   const [accessoryIds, setAccessoryIds] = useState<string[]>([]);
   const [configs, setConfigs] = useState<Record<string, ProductConfiguration>>({});
   const [orphans, setOrphans] = useState<string[]>([]);
+  // Spec 39 : quand le nombre de badges change, une quantité égale à l'ancien nombre suit le nouveau,
+  // une quantité devenue supérieure y est ramenée, une quantité inférieure est conservée.
+  const previousBadgeCount = useRef(0);
+  useEffect(() => {
+    const previous = previousBadgeCount.current;
+    previousBadgeCount.current = badgeCount;
+    if (previous === 0 || previous === badgeCount) return;
+    setConfigs((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([id, cfg]) => {
+          const isBadge = badgeId === id;
+          return [id, isBadge ? cfg : { ...cfg, quantity: followedQuantity(cfg.quantity, previous, badgeCount) }];
+        }),
+      ),
+    );
+  }, [badgeCount, badgeId]);
 
   const [delivery, setDelivery] = useState<"PICKUP" | "DELIVERY" | null>(null);
   const [address, setAddress] = useState("");
@@ -178,9 +200,9 @@ export function PrintRequestWizard({
             missing.push(line.label);
             continue;
           }
-          // La quantité d'un accessoire suit le nombre de badges (spec 39), pas la ligne enregistrée.
+          // Spec 39 : la quantité enregistrée d'un accessoire est reprise, ramenée au nombre de badges.
           nextConfigs[product.id] = {
-            quantity: product.kind === "BADGE" ? line.quantity : data.badgeCount,
+            quantity: product.kind === "BADGE" ? line.quantity : capQuantity(line.quantity, data.badgeCount),
             choices: pruneChoices(product, (line.choices ?? []) as OptionChoice[]),
           };
           if (product.kind === "BADGE") badge = product.id;
@@ -247,8 +269,11 @@ export function PrintRequestWizard({
     if (!badge) throw new ActionError("Choisissez un support de badge.");
     const entries = [badge, ...accessoryIds.map((id) => productById.get(id)).filter((p): p is CatalogProduct => !!p)];
     return entries.map((product) => {
-      const cfg = withBadgeQuantity(configOf(product), badgeCount);
-      const check = validateChoices(product, cfg.choices, cfg.quantity);
+      const cfg = configOf(product);
+      if (product.kind !== "BADGE" && cfg.quantity > badgeCount) {
+        throw new ActionError(`${product.name} : la quantité ne peut pas dépasser le nombre de badges (${badgeCount}).`);
+      }
+      const check = validateChoices(product, cfg.choices, product.kind === "BADGE" ? badgeCount : cfg.quantity);
       if (!check.ok) throw new ActionError(`${product.name} : ${choiceErrorMessage(check.code)}`);
       return { productId: product.id, quantity: product.kind === "BADGE" ? null : cfg.quantity, choices: cfg.choices };
     });
@@ -384,7 +409,7 @@ export function PrintRequestWizard({
                 selected={product.id === badgeId}
                 onSelect={() => {
                   setBadgeId(product.id);
-                  if (!configs[product.id]) setConfig(product.id, defaultConfiguration(product));
+                  if (!configs[product.id]) setConfig(product.id, { ...defaultConfiguration(product), quantity: badgeCount });
                 }}
               />
             ))}
@@ -410,11 +435,12 @@ export function PrintRequestWizard({
                 key={product.id}
                 product={product}
                 selected={accessoryIds.includes(product.id)}
+                disabledReason={accessoryBlockedReason(product, badgeCount)}
                 onSelect={() => {
                   setAccessoryIds((ids) =>
                     ids.includes(product.id) ? ids.filter((i) => i !== product.id) : [...ids, product.id],
                   );
-                  if (!configs[product.id]) setConfig(product.id, defaultConfiguration(product));
+                  if (!configs[product.id]) setConfig(product.id, { ...defaultConfiguration(product), quantity: badgeCount });
                 }}
               />
             ))}
@@ -426,12 +452,14 @@ export function PrintRequestWizard({
               <div key={id} className="rounded-xl border border-slate-200 bg-white p-4">
                 <ProductConfigurator
                   product={product}
-                  value={withBadgeQuantity(configOf(product), badgeCount)}
-                  onChange={(v) => setConfig(id, { quantity: badgeCount, choices: v.choices })}
+                  value={configOf(product)}
+                  onChange={(v) => setConfig(id, capConfiguration(v, badgeCount))}
                   uploadFile={uploadFile}
-                  quantityLocked
+                  maxQuantity={badgeCount}
                 />
-                <p className="mt-2 text-xs text-slate-500">Calculée sur le nombre de badges ({badgeCount}).</p>
+                {belowBadgeCountWarning(configOf(product).quantity, badgeCount) ? (
+                  <Alert tone="warn">{belowBadgeCountWarning(configOf(product).quantity, badgeCount)}</Alert>
+                ) : null}
               </div>
             );
           })}

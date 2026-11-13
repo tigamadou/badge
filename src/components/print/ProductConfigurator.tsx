@@ -255,12 +255,15 @@ export function ProductConfigurator({
   onChange,
   uploadFile,
   quantityLocked,
+  maxQuantity,
 }: {
   product: CatalogProduct;
   value: ProductConfiguration;
   onChange: (next: ProductConfiguration) => void;
   uploadFile?: (file: File) => Promise<string>;
   quantityLocked?: boolean;
+  /** Plafond de la quantité (accessoires : nombre de badges). */
+  maxQuantity?: number;
 }) {
   // Les choix perimes sont ecartes au rendu et le parent est nettoye une fois.
   const cleaned = prunedConfiguration(product, incoming);
@@ -307,6 +310,7 @@ export function ProductConfigurator({
             type="number"
             label="Quantité"
             min={product.minQuantity}
+            max={maxQuantity}
             value={Number.isNaN(value.quantity) ? "" : value.quantity}
             readOnly={quantityLocked}
             error={quantityError}
