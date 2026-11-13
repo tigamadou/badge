@@ -178,3 +178,21 @@ pages `…/docs/**` des quatre espaces, cibles `Makefile` `docs-check` / `docs-s
   - **Effectifs de pages** (hors pages `docs`) : 89 — plateforme 41, organisation 18, évènement 25, compte 5.
   - **Pilote `/org`** (18 docs) : un bloc `:::permission` n'est justifié que si l'écran masque réellement la
     section ; une page sans garde n'a pas de `access` — reporté dans la consigne de `CLAUDE.md`.
+
+- **2026-11-13 — vague 5 : rédaction complète, tampon, relecture**
+  - Fusion du lot 4a (e577c5d0). `docs-check` avant rédaction : 71 docs manquantes (plateforme 41, évènement 25,
+    compte 5 ; organisation 18 complète). Après : 89 docs, tout à jour, 0 obsolète, 0 orpheline, 0 format.
+  - Rédaction par trois sous-agents (un par espace), tampon unique (`make docs-stamp PAGES="platform event account"`),
+    re-tampon `all` : aucun diff supplémentaire.
+  - Relecture : recherche de motifs sensibles (aucun résultat ; seul `email@exemple.fr` = libellé de l'écran) ;
+    contrôle automatique que chaque clé de bloc `:::permission` existe dans le code des sources ou la condition de
+    l'écran (onglets de `platform-settings-tabs.ts`, `canWriteLayouts`, `canSetOnsiteMargin` vérifiés à la main) ;
+    comptes spot-checkés contre le code. Contrôle navigateur non fait (pas de compte seed à mot de passe connu) :
+    relecture contre le code des pages ; e2e `page-docs` couvre panneau et viewports.
+  - **Écarts de code relevés (non corrigés dans cette vague)** — plateforme : fiche utilisateur sans garde
+    `users.read` ; bouton « Créer un utilisateur » toujours visible ; stat « OWNERs » = tous les membres ;
+    « Modifier le prix » visible sans `plans.manage` ; filtre de type du journal incomplet ; libellés anglais
+    (« Override max events », « Site key », « Secret key »). Évènement : `blocked-documents` atterrit sur l'onglet
+    E-mails ; « (PENDING + APPROVED) » brut ; « Rejeter / Bloquer » ne fait que rejeter ; `event.registration_toggle`
+    seul ne permet pas d'enregistrer ; carte « Actions avancées » possiblement vide. Compte : « snapshot » en
+    anglais ; pas de toast sur `/profile/complete`. Détails : `.superpowers/sdd/roles-permissions/docs-*-report.md`.
