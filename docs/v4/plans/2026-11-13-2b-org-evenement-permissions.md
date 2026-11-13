@@ -40,7 +40,7 @@ contrôle) · [35 — impression pendant l'évènement](../specs/2026-11-01-35-v
 | 5 | Espace organisation : layout, `/select`, redirection, `OrgShell`, pages | [x] | 2026-11-13 | Menu Documentation conserve (org.read). src/components/layout/__tests__/space-shells.test.tsx adapte (teste OrgShell/EventShell). accessibleOrgIds/accessibleEventIds exportes de org-redirect (utilises par /select); l'orgId d'un evenement est inconnu du contexte: ajustements d'organisation ignores pour l'atterrissage. |
 | 6 | `EventShell` unique, layout et atterrissage | [x] | 2026-11-13 | EventShell unique, layout, atterrissage |
 | 7 | Pages d'évènement gardées, boutons par permission, tableau de bord | [x] | 2026-11-13 | pages evenement gardees |
-| 8 | Pages AGENT du poste sur place | [ ] | | |
+| 8 | Pages AGENT du poste sur place | [x] | 2026-11-13 | pages poste sur place agent, canAccept par permission |
 | 9 | Quantité automatique des accessoires (spec 39) | [ ] | | |
 | 10 | Documentation (spec 35, impression sur place, rôles et permissions) | [ ] | | |
 | 11 | e2e, doc, vérification | [ ] | | |

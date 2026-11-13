@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { loadMemberPermissions } from "@/lib/auth-guards";
 import { updateDetails } from "@/lib/print-requests/content";
 import { detailsPatchSchema } from "@/lib/print-requests/inputs";
 import { onsiteTemplateStatus } from "@/lib/print-requests/onsite";
@@ -7,15 +8,15 @@ import { afterEdit, json, organizerRoute, parseBody, toOrganizerDTO, toLineDTO }
 
 export const GET = organizerRoute({ allowArchived: true }, async (_req, { orgId, eventId, requestId, session }) => {
   const request = await loadRequest(requestId, { eventId });
-  const [lines, badgeCount, owner] = await Promise.all([
+  const [lines, badgeCount, memberPermissions] = await Promise.all([
     prisma.printQuoteLine.findMany({
       where: { requestId, removedAt: null },
       orderBy: [{ position: "asc" }, { id: "asc" }],
     }),
     requestBadgeCount(prisma, request),
-    prisma.orgMembership.findFirst({ where: { userId: session.user.id, orgId, role: "OWNER" }, select: { userId: true } }),
+    loadMemberPermissions(session.user.id, { kind: "org", orgId }),
   ]);
-  const canAccept = !session.user.isStaff && owner !== null && request.status === "QUOTED";
+  const canAccept = !session.user.isStaff && memberPermissions.has("print.quote.accept") && request.status === "QUOTED";
   const onsiteTemplate = await onsiteTemplateStatus(request);
   return json({ request: { ...toOrganizerDTO(request), onsiteTemplate }, lines: lines.map(toLineDTO), badgeCount, canAccept });
 });
