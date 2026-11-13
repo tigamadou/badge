@@ -17,6 +17,7 @@ vi.mock("@/components/page-docs/PageDocButton", () => ({
 
 import { StaffShell } from "@/components/staff/StaffShell";
 import { OrgShell } from "@/components/admin/OrgShell";
+import { systemRolePermissions } from "@/lib/permissions";
 import { EventShell } from "@/components/event/EventShell";
 import { EventOperatorShell } from "@/components/event/EventOperatorShell";
 import { EventPrinterShell } from "@/components/event/EventPrinterShell";
@@ -87,7 +88,7 @@ describe("StaffShell", () => {
 
 describe("OrgShell", () => {
   const html = renderToStaticMarkup(
-    <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} orgRole="AUDITOR">
+    <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} permissions={[...systemRolePermissions("AUDITOR")]}>
       <p>x</p>
     </OrgShell>,
   );
@@ -196,7 +197,7 @@ describe("ancrage de la documentation", () => {
 
   it.each(["OWNER", "MANAGER", "AUDITOR"] as const)("OrgShell %s : lien Documentation", (role) => {
     const html = renderToStaticMarkup(
-      <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} orgRole={role}>
+      <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} permissions={[...systemRolePermissions(role)]}>
         <p>x</p>
       </OrgShell>,
     );

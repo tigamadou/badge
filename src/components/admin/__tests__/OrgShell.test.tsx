@@ -42,14 +42,15 @@ vi.mock("@/components/notifications/NotificationBell", () => ({ NotificationBell
 
 import { OrgShell } from "../OrgShell";
 import { SIDEBAR_LINK } from "@/components/layout/sidebar-classes";
+import { systemRolePermissions } from "@/lib/permissions";
 
-function nav(role: "OWNER" | "MANAGER" | "AUDITOR"): string {
+function nav(role: "OWNER" | "MANAGER" | "AUDITOR" | "AGENT"): string {
   return renderToStaticMarkup(
     <OrgShell
       org={{ id: "o1", name: "Org", slug: "org" }}
       user={{ name: "U", email: "u@x.test", isStaff: false }}
       orgs={[]}
-      orgRole={role}
+      permissions={[...systemRolePermissions(role)]}
     >
       contenu
     </OrgShell>,
@@ -69,6 +70,26 @@ describe("OrgShell : entrée Paiements", () => {
     const html = nav("AUDITOR");
     expect(html).not.toContain("/org/o1/payments");
     expect(html).not.toContain("/org/o1/subscription");
+  });
+});
+
+const labels = (html: string) => [...html.matchAll(/<a href="\/org\/o1[^"]*">([^<]+)<\/a>/g)].map((m) => m[1]);
+
+describe("OrgShell : entrées par permission", () => {
+  it("OWNER voit Rôles, vers /org/o1/roles ; MANAGER non", () => {
+    expect(nav("OWNER")).toContain('<a href="/org/o1/roles">Rôles</a>');
+    expect(nav("MANAGER")).not.toContain("/org/o1/roles");
+  });
+
+  it("AUDITOR : aucune entrée d'écriture (ni Paramètres, ni Rôles)", () => {
+    const l = labels(nav("AUDITOR"));
+    expect(l).not.toContain("Paramètres");
+    expect(l).not.toContain("Rôles");
+    expect(l).toEqual(expect.arrayContaining(["Tableau de bord", "Événements", "Journal"]));
+  });
+
+  it("AGENT : tableau de bord, notifications, évènements et documentation seulement", () => {
+    expect(labels(nav("AGENT"))).toEqual(["Tableau de bord", "Notifications", "Événements", "Documentation"]);
   });
 });
 

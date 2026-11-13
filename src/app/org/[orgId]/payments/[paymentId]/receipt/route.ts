@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { hasPermission } from "@/lib/permissions";
 import { loadPayment } from "@/lib/payments-query";
 import { renderReceiptHtml } from "@/components/payments/receipt";
 
-// Reçu imprimable d'un paiement approuvé de l'organisation (MANAGER ou plus, comme la page Paiements).
+// Reçu imprimable d'un paiement approuvé de l'organisation (permission `billing.payments.read`, comme la page Paiements).
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ orgId: string; paymentId: string }> },
@@ -15,7 +15,7 @@ export async function GET(
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const ctx = await loadUserContext(session.user.id);
-  if (!ctx || !hasOrgRole(ctx, orgId, "MANAGER")) {
+  if (!ctx || !hasPermission(ctx, "billing.payments.read", { kind: "org", orgId })) {
     return NextResponse.json({ error: "ORG_FORBIDDEN" }, { status: 403 });
   }
 

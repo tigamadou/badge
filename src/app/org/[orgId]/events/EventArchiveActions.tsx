@@ -5,7 +5,7 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { ActionError } from "@/lib/toast";
 
 // Archive / restaure un evenement depuis la liste de l'organisation.
-// L'action est reservee a MANAGER+ : la page ne rend ce controle que dans ce cas
+// L'action exige `org.events.archive` : la page ne rend ce controle que dans ce cas
 // (la route API garde de son cote).
 export function EventArchiveActions({
   orgId,

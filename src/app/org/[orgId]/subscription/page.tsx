@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { loadUserContext } from "@/lib/user-context";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { resolveOrgLimits } from "@/lib/subscription";
 import { loadProrataCredit, isRunning, quoteChange, type SubscriptionState } from "@/lib/subscription-changes";
 import type { QuoteView } from "@/components/admin/PlanCatalog";
@@ -30,11 +27,7 @@ export default async function OrgSubscriptionPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/org/${orgId}/subscription`);
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-  if (!hasOrgRole(ctx, orgId, "MANAGER")) redirect(`/org/${orgId}`);
+  const { permissions } = await requireOrgPagePermission(orgId, "billing.subscription.read", `/org/${orgId}/subscription`);
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -57,7 +50,7 @@ export default async function OrgSubscriptionPage({
 
   const limits = await resolveOrgLimits(orgId);
   const sub = org.subscription;
-  const canPay = hasOrgRole(ctx, orgId, "OWNER");
+  const canPay = permissions.has("billing.subscription.pay");
 
   const [catalog, payments] = await Promise.all([
     prisma.plan.findMany({

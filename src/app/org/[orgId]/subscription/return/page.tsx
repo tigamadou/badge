@@ -1,9 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { resolvePaymentReturn } from "@/lib/payment-return";
 import { Card, CardBody } from "@/components/ui/Card";
 import { Alert } from "@/components/ui/Feedback";
@@ -17,11 +13,7 @@ export default async function PaymentReturnPage({
 }) {
   const { orgId } = await params;
   const { id } = await searchParams;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/org/${orgId}/subscription`);
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-  if (!hasOrgRole(ctx, orgId, "MANAGER")) redirect(`/org/${orgId}`);
+  await requireOrgPagePermission(orgId, "billing.subscription.read", `/org/${orgId}/subscription`);
 
   const { outcome, planName, activationDate } = await resolvePaymentReturn(orgId, id);
 

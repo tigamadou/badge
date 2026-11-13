@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
+import { effectivePermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { CreateEventButton } from "@/components/admin/CreateEventButton";
 import { formatEventPeriod } from "@/lib/format-date";
@@ -23,10 +21,10 @@ export default async function EventsListPage({
 }) {
   const { orgId } = await params;
   const list = parseListPage(await searchParams);
-  // Archiver/restaurer est reserve a MANAGER+ : on masque le controle sinon.
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const canManage = ctx ? hasOrgRole(ctx, orgId, "MANAGER") : false;
+  const { ctx, permissions } = await requireOrgPagePermission(orgId, "org.events.list", `/org/${orgId}/events`);
+  // Les controles d'ecriture suivent les permissions que les routes exigent.
+  const canArchive = permissions.has("org.events.archive");
+  const canCreateByRole = permissions.has("org.events.create");
   const access = await getOrgAccess(orgId);
   const canCreate = can(access, "CREATE_EVENT");
   const result = await paginate(
@@ -59,7 +57,9 @@ export default async function EventsListPage({
           <h1 className="text-xl font-semibold text-navy">Événements</h1>
           <p className="mt-0.5 text-sm text-slate-400">Les événements de votre organisation</p>
         </div>
-        <CreateEventButton orgId={orgId} canCreate={canCreate} subscriptionActive={access.active} />
+        {canCreateByRole && (
+          <CreateEventButton orgId={orgId} canCreate={canCreate} subscriptionActive={access.active} />
+        )}
       </div>
 
       <TableFrame>
@@ -118,13 +118,15 @@ export default async function EventsListPage({
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className="inline-flex items-center gap-3">
-                    <Link
-                      href={`/event/${e.id}/settings`}
-                      className="text-[13px] font-medium text-navy hover:underline"
-                    >
-                      Configurer
-                    </Link>
-                    {canManage && (
+                    {effectivePermissions(ctx, { kind: "event", eventId: e.id, orgId }).has("event.settings.update") && (
+                      <Link
+                        href={`/event/${e.id}/settings`}
+                        className="text-[13px] font-medium text-navy hover:underline"
+                      >
+                        Configurer
+                      </Link>
+                    )}
+                    {canArchive && (
                       <EventArchiveActions orgId={orgId} eventId={e.id} archived={e.archived} />
                     )}
                   </span>

@@ -1,8 +1,4 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { parseListPage } from "@/lib/list-query";
 import { listPayments, parsePaymentFilters } from "@/lib/payments-query";
 import { UrlPagination } from "@/components/ui/Pagination";
@@ -21,11 +17,7 @@ export default async function OrgPaymentsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const { orgId } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/org/${orgId}/payments`);
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-  if (!hasOrgRole(ctx, orgId, "MANAGER")) redirect(`/org/${orgId}`);
+  await requireOrgPagePermission(orgId, "billing.payments.read", `/org/${orgId}/payments`);
 
   const sp = await searchParams;
   const filters = parsePaymentFilters(sp, { allowOrg: false });

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
+import { accessibleEventIds, accessibleOrgIds } from "@/lib/org-redirect";
 import { OrgLogo, PickCard, PickCardDashed } from "@/components/ui/PickCard";
 import { Tag } from "@/components/ui/Labels";
 
@@ -19,32 +20,23 @@ export default async function SelectPage() {
   if (!ctx) redirect("/login");
 
   const orgs = await prisma.organization.findMany({
-    where: {
-      memberships: {
-        some: { userId: ctx.user.id, role: { in: ["OWNER", "MANAGER", "AUDITOR"] } },
-      },
-    },
+    where: { id: { in: accessibleOrgIds(ctx) } },
     select: { id: true, name: true, slug: true, archived: true },
     orderBy: { name: "asc" },
   });
 
-  // Evenements dont l'utilisateur est membre direct (role event dedie), affiches
+  // Evenements dont l'utilisateur est membre direct avec au moins une permission, affiches
   // comme workspaces a part entiere meme sans membership org.
-  const eventMemberships = await prisma.eventMembership.findMany({
-    where: { userId: ctx.user.id },
+  const events = await prisma.event.findMany({
+    where: { id: { in: accessibleEventIds(ctx) } },
     select: {
-      event: {
-        select: {
-          id: true,
-          title: true,
-          archived: true,
-          organization: { select: { name: true } },
-        },
-      },
+      id: true,
+      title: true,
+      archived: true,
+      organization: { select: { name: true } },
     },
-    orderBy: { event: { title: "asc" } },
+    orderBy: { title: "asc" },
   });
-  const events = eventMemberships.map((m) => m.event);
 
   const targets = [
     ...(ctx.isStaff ? ["/platform"] : []),

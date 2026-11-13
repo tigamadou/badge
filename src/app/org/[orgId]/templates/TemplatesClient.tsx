@@ -21,7 +21,18 @@ type Tpl = {
   createdAt: string;
 };
 
-export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: string; rows: Tpl[]; footer?: ReactNode }) {
+export function TemplatesClient({
+  orgId,
+  rows: templates,
+  footer,
+  canManage,
+}: {
+  orgId: string;
+  rows: Tpl[];
+  footer?: ReactNode;
+  /** `org.templates.manage` : sans elle, la liste est en lecture seule. */
+  canManage: boolean;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<Tpl | null>(null);
   const [adding, setAdding] = useState(false);
@@ -47,11 +58,13 @@ export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: str
           <h1 className="text-xl font-semibold text-navy">Modèles de catégories</h1>
           <p className="mt-0.5 text-sm text-slate-400">Catégories réutilisables lors de la création d&apos;événements</p>
         </div>
-        <Button onClick={() => setAdding(true)}>
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="plus" size={16} /> Ajouter
-          </span>
-        </Button>
+        {canManage && (
+          <Button onClick={() => setAdding(true)}>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="plus" size={16} /> Ajouter
+            </span>
+          </Button>
+        )}
       </div>
 
       <TableFrame>
@@ -86,6 +99,7 @@ export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: str
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">
+                  {canManage && (
                   <div className="inline-flex gap-1">
                     <button
                       onClick={() => setEditing(t)}
@@ -107,6 +121,7 @@ export function TemplatesClient({ orgId, rows: templates, footer }: { orgId: str
                       <Icon name="trash-2" size={15} />
                     </ActionButton>
                   </div>
+                  )}
                 </td>
               </tr>
             ))}
