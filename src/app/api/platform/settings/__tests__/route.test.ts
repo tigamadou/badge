@@ -88,7 +88,7 @@ describe("PATCH /api/platform/settings", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 403 for STAFF_OBSERVER (below STAFF_ADMIN)", async () => {
+  it("returns 403 for STAFF_OBSERVER (no settings update permission)", async () => {
     await makeStaff("STAFF_OBSERVER");
     const { PATCH } = await import("../route");
     const req = makeReq({ smtpHost: "smtp.example.com" });
