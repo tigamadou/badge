@@ -83,7 +83,7 @@ export function hasOrgRole(
 ): boolean {
   if (opts.allowStaff && ctx.isStaff) return true;
   return ctx.orgMemberships.some(
-    (m) => m.orgId === orgId && orgRoleAtLeast(m.role, role),
+    (m) => m.orgId === orgId && m.role !== null && orgRoleAtLeast(m.role, role),
   );
 }
 

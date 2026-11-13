@@ -380,8 +380,10 @@ describe("POST /api/platform/users", () => {
       isStaff: true,
       staffRole: "STAFF_ADMIN",
       archived: false,
+      platformRole: null,
       orgMemberships: [],
       eventMemberships: [],
+      permissionOverrides: [],
     } as never);
 
     const { POST } = await import("@/app/api/platform/users/route");

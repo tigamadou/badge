@@ -77,8 +77,10 @@ export async function resolveRecipients(
         user: { id: u.id, email: u.email, name: u.name },
         isStaff: false,
         staffRole: null,
-        orgMemberships: u.orgMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role }] : [])),
-        eventMemberships: u.eventMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role }] : [])),
+        platformRole: null,
+        overrides: [],
+        orgMemberships: u.orgMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role, roleId: null, roleRef: null }] : [])),
+        eventMemberships: u.eventMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role, roleId: null, roleRef: null }] : [])),
       };
       return roles.includes(effectiveEventRole(ctx, eventId, event.orgId) as EventRole);
     })

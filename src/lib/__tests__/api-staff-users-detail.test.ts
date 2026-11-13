@@ -359,8 +359,10 @@ describe("PATCH /api/platform/users/[userId]", () => {
       isStaff: true,
       staffRole: "STAFF_ADMIN",
       archived: false,
+      platformRole: null,
       orgMemberships: [],
       eventMemberships: [],
+      permissionOverrides: [],
     } as never);
 
     const { PATCH } = await import("@/app/api/platform/users/[userId]/route");

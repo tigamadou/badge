@@ -11,8 +11,10 @@ function makeCtx(partial: {
     user: { id: "u1", email: "u@x.test", name: "U" },
     isStaff: partial.isStaff,
     staffRole: partial.isStaff ? "STAFF_SUPPORT" : null,
-    orgMemberships: partial.orgMemberships ?? [],
-    eventMemberships: partial.eventMemberships ?? [],
+    platformRole: null,
+    overrides: [],
+    orgMemberships: (partial.orgMemberships ?? []).map((m) => ({ ...m, roleId: null, roleRef: null })),
+    eventMemberships: (partial.eventMemberships ?? []).map((m) => ({ ...m, roleId: null, roleRef: null })),
   };
 }
 

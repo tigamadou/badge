@@ -42,7 +42,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 1 | Schéma Prisma, reset de test, types de journal | [x] | 2026-11-13 | Correctifs mécaniques (`role` facultatif) : `prisma/seed/demo/notifications/notifications.ts`, `prisma/seed/demo/notifications/activity.ts` (5 types ajoutés à `ACTIVITY_NOT_SEEDED`), `src/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route.ts`, `src/app/api/org/[orgId]/members/[userId]/route.ts`, `src/app/api/platform/organizations/[orgId]/owners/route.ts`, `src/app/event/[eventId]/members/page.tsx`, `src/app/org/[orgId]/members/page.tsx`, `src/app/platform/organizations/[orgId]/members/page.tsx`, `src/lib/notifications/recipients.ts`, `src/lib/user-context.ts` |
 | 2 | Catalogue des permissions et libellés | [x] | 2026-11-13 | 98 clés (56/18/20/4). Union `PermissionDomain` figée : access, roles, users, organizations, members, subscriptions, plans, payments, profiles, blocklist, settings, rejection_reasons, badge_templates, email_jobs, activity, print_requests, print_catalog, print_layouts, print_sheets, org, events, billing, scan, registrations, badges, print_event, account (`print.onsite.margin.update` et `print.quote.accept` dans `print_requests`; `org.events.*` dans `events`; `org.members.*` dans `members`). |
 | 3 | Rôles système (permissions en code) | [x] | 2026-11-13 | `system-roles.ts` : grants typés `Record<Permission, …>` (une permission sans attribution ne compile pas). `index.ts` ré-exporte catalog, system-roles, labels (resolve en Task 5). |
-| 4 | Contexte utilisateur enrichi et repli sur les enums | [ ] | | |
+| 4 | Contexte utilisateur enrichi et repli sur les enums | [x] | 2026-11-13 | Correctifs mécaniques : `auth-helpers.ts` (garde `m.role !== null`), `recipients.ts` (champs de compat du contexte, Task 11 refait), tests `auth-helpers`, `org-redirect`, `api-staff-users-post/detail` (formes de contexte / lignes mockées). `print-requests/service.ts` inchangé (typecheck vert). Appartenance sans `roleId` ni enum ignorée (fermé par défaut). |
 | 5 | Résolution des permissions effectives | [ ] | | |
 | 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [ ] | | |
 | 7 | Wrappers de routes et garde participant | [ ] | | |
@@ -448,7 +448,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   directs dans le test **tant que `makeCustomRole` n'existe pas** — puis les remplacer en Task 9).
 - Produces : `UserContext` enrichi, `USER_CONTEXT_SELECT`, `buildUserContext`, `loadUserContext`, `getUserContext`.
 
-- [ ] **Step 1 : tests rouges** (`user-context.test.ts`, base réelle) :
+- [x] **Step 1 : tests rouges** (`user-context.test.ts`, base réelle) :
   - rôle plateforme **système via `roleId`** (`SUPER_ADMIN`) → `platformRole.systemKey === "SUPER_ADMIN"`,
     `platformRole.permissions` = `systemRolePermissions("SUPER_ADMIN")`, `staffRole === "SUPER_ADMIN"` ;
   - **repli** : `staffRole: "STAFF_ADMIN"` en colonne sans `roleId` → même résultat que le rôle système
@@ -463,10 +463,10 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   - ajustements chargés (`overrides`) avec `orgId` nul ou non, clés inconnues ignorées ;
   - utilisateur absent ou `archived` → `null` ;
   - `getUserContext` renvoie la même valeur que `loadUserContext`.
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : `src/types/auth.ts`** — types du bloc « Contrats » (`ResolvedRole`, `PermissionOverrideLite`,
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : `src/types/auth.ts`** — types du bloc « Contrats » (`ResolvedRole`, `PermissionOverrideLite`,
   `OrgMembershipLite`, `EventMembershipLite`, `UserContext`, `EffectiveEventRole` inchangé).
-- [ ] **Step 4 : `user-context.ts`** — `USER_CONTEXT_SELECT` : champs identité, `isStaff`, `archived`, `staffRole`,
+- [x] **Step 4 : `user-context.ts`** — `USER_CONTEXT_SELECT` : champs identité, `isStaff`, `archived`, `staffRole`,
   `platformRole { id systemKey scope name archived permissions { permission } }`,
   `orgMemberships { orgId role roleId roleRef {…même forme} }`, `eventMemberships { eventId role roleId roleRef }`,
   `permissionOverrides { orgId permission effect }`. `buildUserContext(row)` : résolution d'un rôle = `roleRef` non
@@ -476,10 +476,10 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   ADMIN/OPERATOR/PRINTER/VIEWER. `loadUserContext` = `findUnique` + `buildUserContext` (non mémoïsé : les routes
   qui modifient un rôle puis relisent ne doivent pas voir un contexte périmé) ; `getUserContext = cache(loadUserContext)`
   (`react`, comme `src/lib/org-access.ts`).
-- [ ] **Step 5 : lancer** `make test FILE=src/lib/__tests__/user-context.test.ts` → vert. Puis
+- [x] **Step 5 : lancer** `make test FILE=src/lib/__tests__/user-context.test.ts` → vert. Puis
   `make typecheck` : corriger mécaniquement les consommateurs de `UserContext` (ex. `recipients.ts` construit un
   `UserContext` à la main : traité en Task 11 ; `src/lib/print-requests/service.ts:53` lit `m.role`).
-- [ ] **Step 6 : commit** : `feat(roles): contexte utilisateur enrichi avec repli sur les enums`.
+- [x] **Step 6 : commit** : `feat(roles): contexte utilisateur enrichi avec repli sur les enums`.
 
 ### Task 5: Résolution des permissions effectives
 

@@ -7,14 +7,22 @@ import {
   hasEventPermission,
 } from "@/lib/auth-helpers";
 import type { UserContext } from "@/types/auth";
-import type { OrgRole } from "@prisma/client";
+import type { EventRole, OrgRole } from "@prisma/client";
 
-const baseCtx = (over: Partial<UserContext> = {}): UserContext => ({
+type LegacyOver = Omit<Partial<UserContext>, "orgMemberships" | "eventMemberships"> & {
+  orgMemberships?: { orgId: string; role: OrgRole }[];
+  eventMemberships?: { eventId: string; role: EventRole }[];
+};
+
+// Les tests décrivent les appartenances par l'enum ; le contexte les porte avec leurs champs de rôle.
+const baseCtx = ({ orgMemberships = [], eventMemberships = [], ...over }: LegacyOver = {}): UserContext => ({
   user: { id: "u1", email: "u@x", name: "U" },
   isStaff: false,
   staffRole: null,
-  orgMemberships: [],
-  eventMemberships: [],
+  platformRole: null,
+  overrides: [],
+  orgMemberships: orgMemberships.map((m) => ({ ...m, roleId: null, roleRef: null })),
+  eventMemberships: eventMemberships.map((m) => ({ ...m, roleId: null, roleRef: null })),
   ...over,
 });
 
