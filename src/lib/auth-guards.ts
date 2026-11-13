@@ -7,7 +7,8 @@ import {
   effectiveEventRole as effectiveEventRolePure,
   type EventPermission,
 } from "@/lib/auth-helpers";
-import { loadUserContext } from "@/lib/user-context";
+import { loadUserContext, getUserContext } from "@/lib/user-context";
+import { effectivePermissions, hasPermission, eventTargetOf, type Permission, type PermissionTarget } from "@/lib/permissions";
 import type { EffectiveEventRole } from "@/types/auth";
 
 export class AuthError extends Error {
@@ -19,6 +20,7 @@ export class AuthError extends Error {
       | "ORG_FORBIDDEN"
       | "EVENT_FORBIDDEN"
       | "EVENT_NOT_FOUND"
+      | "PERMISSION_DENIED"
       | "LAST_OWNER"
       | "LAST_SUPER_ADMIN",
     public httpStatus: 401 | 403 | 404 | 409 = 403,
@@ -26,6 +28,34 @@ export class AuthError extends Error {
   ) {
     super(message ?? code);
   }
+}
+
+// Garde par permission (spec 37). Une liste signifie "au moins une".
+export async function requirePermission(
+  userId: string,
+  permission: Permission | readonly Permission[],
+  target: PermissionTarget,
+): Promise<void> {
+  const ctx = await loadUserContext(userId);
+  if (!ctx) throw new AuthError("NOT_AUTHENTICATED", 401);
+  const list: readonly Permission[] = typeof permission === "string" ? [permission] : permission;
+  if (!list.some((p) => hasPermission(ctx, p, target))) {
+    throw new AuthError("PERMISSION_DENIED", 403);
+  }
+}
+
+// Permissions effectives pour les Server Components (contexte memoise par requete).
+export async function loadPermissions(userId: string, target: PermissionTarget): Promise<Set<Permission>> {
+  const ctx = await getUserContext(userId);
+  return ctx ? effectivePermissions(ctx, target) : new Set();
+}
+
+export async function loadEventTarget(
+  eventId: string,
+): Promise<Extract<PermissionTarget, { kind: "event" }>> {
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
+  if (!event) throw new AuthError("EVENT_NOT_FOUND", 404);
+  return eventTargetOf({ eventId, orgId: event.orgId });
 }
 
 export async function requireStaff(userId: string, minRole: StaffRole): Promise<void> {
@@ -134,7 +164,7 @@ export async function assertNotLastOwner(
   const remainingOwners = await prisma.orgMembership.count({
     where: {
       orgId,
-      role: "OWNER",
+      OR: [{ roleRef: { systemKey: "OWNER" } }, { roleId: null, role: "OWNER" }],
       userId: { not: userIdBeingRemoved },
       user: { archived: false },
     },
@@ -150,7 +180,7 @@ export async function assertNotLastSuperAdmin(userIdBeingChanged: string): Promi
   const remaining = await prisma.user.count({
     where: {
       id: { not: userIdBeingChanged },
-      staffRole: "SUPER_ADMIN",
+      OR: [{ platformRole: { systemKey: "SUPER_ADMIN" } }, { platformRoleId: null, staffRole: "SUPER_ADMIN" }],
       archived: false,
     },
   });

@@ -8,8 +8,14 @@ import {
   getEffectiveEventRole,
   assertNotLastOwner,
   assertNotLastSuperAdmin,
+  requirePermission,
+  loadPermissions,
+  loadEventTarget,
   AuthError,
 } from "@/lib/auth-guards";
+import type { SystemRoleKey } from "@/lib/permissions";
+import { SYSTEM_ROLES } from "@/lib/permissions";
+import { makeEvent, makeOrg, makeStaff, makeUser } from "@/test/factories";
 
 async function setupOrgEvent() {
   const org = await prisma.organization.create({
@@ -371,5 +377,178 @@ describe("guards - branches d'entree (contexte / event manquants)", () => {
       code: "EVENT_NOT_FOUND",
       httpStatus: 404,
     });
+  });
+});
+
+// Role systeme ecrit en base (les roles sont effaces entre deux tests par le setup global).
+async function sysRoleId(key: SystemRoleKey): Promise<string> {
+  const def = SYSTEM_ROLES[key];
+  const r = await prisma.role.upsert({
+    where: { systemKey: key },
+    update: {},
+    create: { systemKey: key, scope: def.scope, name: def.name },
+  });
+  return r.id;
+}
+
+describe("requirePermission", () => {
+  beforeEach(resetAll);
+
+  it("401 NOT_AUTHENTICATED si le contexte est nul", async () => {
+    await expect(
+      requirePermission("missing", "event.read.aggregated", { kind: "platform" }),
+    ).rejects.toMatchObject({ code: "NOT_AUTHENTICATED", httpStatus: 401 });
+  });
+
+  it("403 PERMISSION_DENIED si la permission est absente", async () => {
+    const u = await makeUser();
+    await expect(
+      requirePermission(u.id, "event.read.aggregated", { kind: "platform" }),
+    ).rejects.toMatchObject({ code: "PERMISSION_DENIED", httpStatus: 403 });
+  });
+
+  it("resout si la permission est presente", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const staff = await makeStaff("STAFF_ADMIN");
+    await expect(
+      requirePermission(staff.id, "registration.delete", { kind: "event", eventId: event.id, orgId: org.id }),
+    ).resolves.toBeUndefined();
+  });
+
+  it("STAFF_OBSERVER refuse sur registration.delete, accepte sur event.read.aggregated", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const obs = await makeStaff("STAFF_OBSERVER");
+    const target = { kind: "event", eventId: event.id, orgId: org.id } as const;
+    await expect(requirePermission(obs.id, "registration.delete", target)).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
+    });
+    await expect(requirePermission(obs.id, "event.read.aggregated", target)).resolves.toBeUndefined();
+  });
+
+  it("liste : satisfaite par la seconde cle seulement", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const obs = await makeStaff("STAFF_OBSERVER");
+    const target = { kind: "event", eventId: event.id, orgId: org.id } as const;
+    await expect(
+      requirePermission(obs.id, ["registration.delete", "event.read.aggregated"], target),
+    ).resolves.toBeUndefined();
+  });
+
+  it("liste : aucune cle satisfaite -> PERMISSION_DENIED", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const obs = await makeStaff("STAFF_OBSERVER");
+    const target = { kind: "event", eventId: event.id, orgId: org.id } as const;
+    await expect(
+      requirePermission(obs.id, ["registration.delete", "registration.create"], target),
+    ).rejects.toMatchObject({ code: "PERMISSION_DENIED", httpStatus: 403 });
+  });
+});
+
+describe("loadPermissions", () => {
+  beforeEach(resetAll);
+
+  it("renvoie l'ensemble des permissions effectives", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const obs = await makeStaff("STAFF_OBSERVER");
+    const perms = await loadPermissions(obs.id, { kind: "event", eventId: event.id, orgId: org.id });
+    expect(perms.size).toBeGreaterThan(0);
+    expect(perms.has("event.read.aggregated")).toBe(true);
+    expect(perms.has("registration.delete")).toBe(false);
+  });
+
+  it("Set vide pour un utilisateur inconnu", async () => {
+    const perms = await loadPermissions("missing", { kind: "platform" });
+    expect(perms.size).toBe(0);
+  });
+});
+
+describe("loadEventTarget", () => {
+  beforeEach(resetAll);
+
+  it("404 EVENT_NOT_FOUND si l'evenement est absent", async () => {
+    await expect(loadEventTarget("missing")).rejects.toMatchObject({ code: "EVENT_NOT_FOUND", httpStatus: 404 });
+  });
+
+  it("renvoie la cible evenement", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    await expect(loadEventTarget(event.id)).resolves.toEqual({ kind: "event", eventId: event.id, orgId: org.id });
+  });
+});
+
+describe("compatibilite : roles sans equivalent herite", () => {
+  beforeEach(resetAll);
+
+  it("STAFF_PRINTER (roleId) est refuse par requireStaff(STAFF_OBSERVER)", async () => {
+    const u = await makeUser({ isStaff: true, platformRoleId: await sysRoleId("STAFF_PRINTER") });
+    await expect(requireStaff(u.id, "STAFF_OBSERVER")).rejects.toMatchObject({ code: "NOT_STAFF" });
+  });
+
+  it("STAFF_PRINTER (roleId) est refuse par requireOrgRole(AUDITOR) meme avec allowStaff", async () => {
+    const org = await makeOrg();
+    const u = await makeUser({ isStaff: true, platformRoleId: await sysRoleId("STAFF_PRINTER") });
+    await expect(requireOrgRole(u.id, org.id, "AUDITOR")).rejects.toMatchObject({ code: "ORG_FORBIDDEN" });
+  });
+
+  it("un membre AGENT est refuse par requireOrgRole(AUDITOR) et n'a pas de role d'evenement effectif", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const u = await makeUser();
+    await prisma.orgMembership.create({
+      data: { userId: u.id, orgId: org.id, roleId: await sysRoleId("AGENT") },
+    });
+    await expect(requireOrgRole(u.id, org.id, "AUDITOR")).rejects.toMatchObject({ code: "ORG_FORBIDDEN" });
+    await expect(getEffectiveEventRole(u.id, event.id)).resolves.toBeNull();
+  });
+});
+
+describe("derniers titulaires : roleId ou colonne d'enum", () => {
+  beforeEach(resetAll);
+
+  it("un OWNER via roleId seul compte", async () => {
+    const org = await makeOrg();
+    const a = await makeUser();
+    const b = await makeUser();
+    const ownerId = await sysRoleId("OWNER");
+    await prisma.orgMembership.create({ data: { userId: a.id, orgId: org.id, roleId: ownerId } });
+    await prisma.orgMembership.create({ data: { userId: b.id, orgId: org.id, roleId: ownerId } });
+    await expect(assertNotLastOwner(org.id, a.id)).resolves.toBeUndefined();
+  });
+
+  it("un AGENT n'est pas OWNER", async () => {
+    const org = await makeOrg();
+    const a = await makeUser();
+    const b = await makeUser();
+    await prisma.orgMembership.create({ data: { userId: a.id, orgId: org.id, roleId: await sysRoleId("OWNER") } });
+    await prisma.orgMembership.create({ data: { userId: b.id, orgId: org.id, roleId: await sysRoleId("AGENT") } });
+    await expect(assertNotLastOwner(org.id, a.id)).rejects.toMatchObject({ code: "LAST_OWNER" });
+  });
+
+  it("un OWNER par colonne d'enum seule compte encore", async () => {
+    const org = await makeOrg();
+    const a = await makeUser();
+    const b = await makeUser();
+    await prisma.orgMembership.create({ data: { userId: a.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: b.id, orgId: org.id, role: "OWNER" } });
+    await expect(assertNotLastOwner(org.id, a.id)).resolves.toBeUndefined();
+  });
+
+  it("assertNotLastSuperAdmin compte un SUPER_ADMIN via roleId seul", async () => {
+    const a = await makeUser({ isStaff: true, platformRoleId: await sysRoleId("SUPER_ADMIN") });
+    const b = await makeUser({ isStaff: true, platformRoleId: await sysRoleId("SUPER_ADMIN") });
+    await expect(assertNotLastSuperAdmin(a.id)).resolves.toBeUndefined();
+    await prisma.user.update({ where: { id: b.id }, data: { platformRoleId: await sysRoleId("STAFF_ADMIN") } });
+    await expect(assertNotLastSuperAdmin(a.id)).rejects.toMatchObject({ code: "LAST_SUPER_ADMIN" });
+  });
+
+  it("assertNotLastSuperAdmin compte un SUPER_ADMIN par colonne d'enum seule", async () => {
+    const a = await makeStaff("SUPER_ADMIN");
+    await makeStaff("SUPER_ADMIN");
+    await expect(assertNotLastSuperAdmin(a.id)).resolves.toBeUndefined();
   });
 });

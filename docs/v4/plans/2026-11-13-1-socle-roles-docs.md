@@ -44,7 +44,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 3 | Rôles système (permissions en code) | [x] | 2026-11-13 | `system-roles.ts` : grants typés `Record<Permission, …>` (une permission sans attribution ne compile pas). `index.ts` ré-exporte catalog, system-roles, labels (resolve en Task 5). |
 | 4 | Contexte utilisateur enrichi et repli sur les enums | [x] | 2026-11-13 | Correctifs mécaniques : `auth-helpers.ts` (garde `m.role !== null`), `recipients.ts` (champs de compat du contexte, Task 11 refait), tests `auth-helpers`, `org-redirect`, `api-staff-users-post/detail` (formes de contexte / lignes mockées). `print-requests/service.ts` inchangé (typecheck vert). Appartenance sans `roleId` ni enum ignorée (fermé par défaut). |
 | 5 | Résolution des permissions effectives | [x] | 2026-11-13 | `resolve.ts` pur ; `eventTargetOf` accepte `{ id, orgId }` ou `{ eventId, orgId }`. Les règles « jamais le staff » sont laissées aux gardes. |
-| 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [ ] | | |
+| 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [x] | 2026-11-13 | `requirePermission` accepte une liste ; `hasOrgRole`/`effectiveEventRole` : un staff sans rôle hérité (STAFF_PRINTER, personnalisé) n'obtient plus le contournement staff ; `getEventTarget` testé dans `event-org-target.test.ts` (base réelle, `event-org.test.ts` mocke Prisma) |
 | 7 | Wrappers de routes et garde participant | [ ] | | |
 | 8 | Rôles système en base, migration, `make migrate-roles` | [ ] | | |
 | 9 | Fabriques, reset global et helpers e2e | [ ] | | |
@@ -524,7 +524,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Consumes : `getUserContext`/`loadUserContext`, `hasPermission`, `eventTargetOf`.
 - Produces : `requirePermission`, `loadPermissions`, `loadEventTarget`, `getEventTarget`, `AuthError` + `PERMISSION_DENIED`.
 
-- [ ] **Step 1 : tests rouges** (base réelle, fabriques ; `makeStaff` actuelle écrit encore l'enum : suffisant) :
+- [x] **Step 1 : tests rouges** (base réelle, fabriques ; `makeStaff` actuelle écrit encore l'enum : suffisant) :
   - `requirePermission` : contexte nul → `NOT_AUTHENTICATED` 401 ; permission absente → `PERMISSION_DENIED` 403 ; présente → résout ;
     STAFF_OBSERVER refusé sur `registration.delete` d'un évènement mais accepté sur `event.read.aggregated` ;
   - `loadPermissions` renvoie l'ensemble ; `Set` vide pour un utilisateur inconnu ;
@@ -536,8 +536,8 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
     → `null` ;
   - `assertNotLastOwner` compte les titulaires du rôle système `OWNER` **par `roleId` ou par colonne d'enum** (un OWNER
     via `roleId` seul compte ; un AGENT n'est pas OWNER) ; `assertNotLastSuperAdmin` idem (`roleId` ou `staffRole`).
-- [ ] **Step 2 : lancer** → échec sur les nouveaux cas.
-- [ ] **Step 3 : implémenter** — `AuthError` : ajouter `"PERMISSION_DENIED"` à l'union ; `requirePermission` (charge
+- [x] **Step 2 : lancer** → échec sur les nouveaux cas.
+- [x] **Step 3 : implémenter** — `AuthError` : ajouter `"PERMISSION_DENIED"` à l'union ; `requirePermission` (charge
   `loadUserContext`, 401 si nul, `hasPermission` sinon `PERMISSION_DENIED`) ; `loadPermissions` (via `getUserContext`) ;
   `loadEventTarget` (lookup `orgId`). Compatibilité : `requireStaff`, `requireOrgRole`/`hasOrgRole`, `requireEventRole`,
   `effectiveEventRole`, `hasEventPermission`, `requireEventPermission` gardent leur logique et lisent les champs hérités
@@ -545,8 +545,8 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   `"event.archive"` du type `EventPermission` et de `EVENT_PERMISSION_ROLES` (clé renommée `org.events.archive`, aucun
   usage). `assertNotLastOwner`/`assertNotLastSuperAdmin` : `where` en `OR` entre `roleRef: { systemKey }` et
   `{ roleId: null, role|staffRole: <enum> }`. `getEventTarget(eventId)` dans `event-org.ts` (`notFound()` si absent).
-- [ ] **Step 4 : lancer** `make test FILE=src/lib/__tests__/auth-guards.test.ts` et `auth-helpers`, `event-org` → vert.
-- [ ] **Step 5 : commit** : `feat(roles): requirePermission et gardes compatibles`.
+- [x] **Step 4 : lancer** `make test FILE=src/lib/__tests__/auth-guards.test.ts` et `auth-helpers`, `event-org` → vert.
+- [x] **Step 5 : commit** : `feat(roles): requirePermission et gardes compatibles`.
 
 ### Task 7: Wrappers de routes et garde participant
 

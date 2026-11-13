@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { eventTargetOf, type PermissionTarget } from "@/lib/permissions";
 
 // v4 Bloc D : l'espace evenement est une route top-level `/event/[eventId]`, sans
 // param `orgId` dans l'URL. Les pages qui construisent des URLs API scopees org
@@ -12,4 +13,9 @@ export async function getEventOrgId(eventId: string): Promise<string> {
   });
   if (!event) notFound();
   return event.orgId;
+}
+
+// Cible de permission d'un évènement (pages) : notFound() si absent.
+export async function getEventTarget(eventId: string): Promise<Extract<PermissionTarget, { kind: "event" }>> {
+  return eventTargetOf({ eventId, orgId: await getEventOrgId(eventId) });
 }

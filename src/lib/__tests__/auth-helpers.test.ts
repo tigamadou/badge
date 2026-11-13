@@ -148,6 +148,10 @@ describe("effectiveEventRole", () => {
     });
     expect(effectiveEventRole(ctx, "e1", "o1")).toBe("STAFF");
   });
+  it("isStaff sans role herite (STAFF_PRINTER, personnalise) n'est pas STAFF", () => {
+    const ctx = baseCtx({ isStaff: true, staffRole: null });
+    expect(effectiveEventRole(ctx, "e1", "o1")).toBeNull();
+  });
   it("falls through to event membership when the org role is unrecognized", () => {
     // Branche defensive l.106 (else) : org membership present mais role hors enum
     // (ni OWNER/MANAGER ni AUDITOR) => on ne derive rien de l'org et on lit l'event.
@@ -247,5 +251,12 @@ describe("hasEventPermission", () => {
 
   it("no rights returns false", () => {
     expect(hasEventPermission(baseCtx(), "e1", "o1", "event.read.aggregated")).toBe(false);
+  });
+});
+
+describe("hasOrgRole : staff sans role herite", () => {
+  it("allowStaff n'accorde rien a un staff sans role herite", () => {
+    const ctx = baseCtx({ isStaff: true, staffRole: null });
+    expect(hasOrgRole(ctx, "o1", "AUDITOR", { allowStaff: true })).toBe(false);
   });
 });

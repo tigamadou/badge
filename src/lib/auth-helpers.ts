@@ -30,7 +30,6 @@ export type EventPermission =
   | "badge.print"
   | "scan.check-in"
   | "event.update"
-  | "event.archive"
   | "event.registration_toggle"
   | "event.settings.update"
   | "event.categories.manage"
@@ -52,7 +51,6 @@ const EVENT_PERMISSION_ROLES: Record<EventPermission, ReadonlyArray<EventRole>> 
   "badge.print":               ["ADMIN", "OPERATOR", "PRINTER"],
   "scan.check-in":             ["ADMIN", "OPERATOR"],
   "event.update":              ["ADMIN"],
-  "event.archive":             ["ADMIN"],
   "event.registration_toggle": ["ADMIN"],
   "event.settings.update":     ["ADMIN"],
   "event.categories.manage":   ["ADMIN"],
@@ -81,7 +79,7 @@ export function hasOrgRole(
   role: OrgRole,
   opts: { allowStaff?: boolean } = {},
 ): boolean {
-  if (opts.allowStaff && ctx.isStaff) return true;
+  if (opts.allowStaff && ctx.isStaff && ctx.staffRole !== null) return true;
   return ctx.orgMemberships.some(
     (m) => m.orgId === orgId && m.role !== null && orgRoleAtLeast(m.role, role),
   );
@@ -98,7 +96,7 @@ export function effectiveEventRole(
   eventId: string,
   orgId: string,
 ): EffectiveEventRole {
-  if (ctx.isStaff) return "STAFF";
+  if (ctx.isStaff && ctx.staffRole !== null) return "STAFF";
 
   const orgMembership = ctx.orgMemberships.find((m) => m.orgId === orgId);
   if (orgMembership) {
