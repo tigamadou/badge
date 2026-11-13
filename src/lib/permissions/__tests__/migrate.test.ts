@@ -8,7 +8,8 @@ beforeEach(() => seedFactories(8));
 
 async function seedLegacy() {
   const ids = await ensureSystemRoles(prisma);
-  const staff = await makeUser({ isStaff: false, staffRole: "STAFF_ADMIN" });
+  const staff = await makeUser({ isStaff: true, staffRole: "STAFF_ADMIN" });
+  const inconsistent = await makeUser({ isStaff: false, staffRole: "STAFF_ADMIN" });
   const plain = await makeUser();
   const owner = await makeUser();
   const viewer = await makeUser();
@@ -18,20 +19,25 @@ async function seedLegacy() {
   const eventMembership = await prisma.eventMembership.create({
     data: { userId: viewer.id, eventId: event.id, role: "VIEWER" },
   });
-  return { ids, staff, plain, orgMembership, eventMembership };
+  return { ids, staff, inconsistent, plain, orgMembership, eventMembership };
 }
 
 describe("migrateRoles", () => {
   it("renseigne roleId depuis les colonnes d'enum, sans les toucher", async () => {
-    const { ids, staff, plain, orgMembership, eventMembership } = await seedLegacy();
+    const { ids, staff, inconsistent, plain, orgMembership, eventMembership } = await seedLegacy();
 
     const report = await migrateRoles(prisma);
-    expect(report).toMatchObject({ users: 1, orgMemberships: 1, eventMemberships: 1 });
+    expect(report).toMatchObject({ users: 1, orgMemberships: 1, eventMemberships: 1, inconsistentStaff: 1 });
 
     const u = await prisma.user.findUniqueOrThrow({ where: { id: staff.id } });
     expect(u.platformRoleId).toBe(ids.STAFF_ADMIN);
     expect(u.isStaff).toBe(true);
     expect(u.staffRole).toBe("STAFF_ADMIN");
+    // Un compte non staff portant un staffRole n'est ni migré ni promu : il est seulement compté.
+    const i = await prisma.user.findUniqueOrThrow({ where: { id: inconsistent.id } });
+    expect(i.platformRoleId).toBeNull();
+    expect(i.isStaff).toBe(false);
+    expect(i.staffRole).toBe("STAFF_ADMIN");
     const p = await prisma.user.findUniqueOrThrow({ where: { id: plain.id } });
     expect(p.platformRoleId).toBeNull();
     expect(p.isStaff).toBe(false);
@@ -48,16 +54,15 @@ describe("migrateRoles", () => {
     await seedLegacy();
     await migrateRoles(prisma);
     const report = await migrateRoles(prisma);
-    expect(report).toMatchObject({ users: 0, orgMemberships: 0, eventMemberships: 0 });
+    expect(report).toMatchObject({ users: 0, orgMemberships: 0, eventMemberships: 0, inconsistentStaff: 1 });
     expect(report.alreadyDone).toBeGreaterThan(0);
   });
 
   it("dryRun n'écrit rien mais renvoie les mêmes compteurs", async () => {
     const { staff, orgMembership, eventMembership } = await seedLegacy();
     const report = await migrateRoles(prisma, { dryRun: true });
-    expect(report).toMatchObject({ users: 1, orgMemberships: 1, eventMemberships: 1 });
+    expect(report).toMatchObject({ users: 1, orgMemberships: 1, eventMemberships: 1, inconsistentStaff: 1 });
     expect((await prisma.user.findUniqueOrThrow({ where: { id: staff.id } })).platformRoleId).toBeNull();
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: staff.id } })).isStaff).toBe(false);
     expect((await prisma.orgMembership.findUniqueOrThrow({ where: { id: orgMembership.id } })).roleId).toBeNull();
     expect((await prisma.eventMembership.findUniqueOrThrow({ where: { id: eventMembership.id } })).roleId).toBeNull();
   });

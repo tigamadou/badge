@@ -1,8 +1,15 @@
-// Migration des colonnes d'enum vers `roleId` (idempotente ; ne modifie jamais les colonnes d'enum).
+// Migration des colonnes d'enum vers `roleId` (idempotente ; ne modifie jamais les colonnes d'enum ni `isStaff`).
 import type { EventRole, OrgRole, PrismaClient, StaffRole } from "@prisma/client";
 import { ensureSystemRoles } from "./db";
 
-export type MigrateReport = { users: number; orgMemberships: number; eventMemberships: number; alreadyDone: number };
+export type MigrateReport = {
+  users: number;
+  orgMemberships: number;
+  eventMemberships: number;
+  alreadyDone: number;
+  /** Comptes `isStaff = false` portant un `staffRole` : non migrés, à trancher par un humain. */
+  inconsistentStaff: number;
+};
 
 const STAFF_ROLES: StaffRole[] = ["SUPER_ADMIN", "STAFF_ADMIN", "STAFF_SUPPORT", "STAFF_OBSERVER"];
 const ORG_ROLES: OrgRole[] = ["OWNER", "MANAGER", "AUDITOR"];
@@ -16,14 +23,15 @@ export async function migrateRoles(db: PrismaClient, opts: { dryRun?: boolean } 
       (await tx.user.count({ where: { platformRoleId: { not: null } } })) +
       (await tx.orgMembership.count({ where: { roleId: { not: null } } })) +
       (await tx.eventMembership.count({ where: { roleId: { not: null } } }));
-    const report: MigrateReport = { users: 0, orgMemberships: 0, eventMemberships: 0, alreadyDone };
+    const inconsistentStaff = await tx.user.count({ where: { isStaff: false, staffRole: { not: null } } });
+    const report: MigrateReport = { users: 0, orgMemberships: 0, eventMemberships: 0, alreadyDone, inconsistentStaff };
     // En simulation, rien n'est écrit (pas même les rôles système).
     const ids = dryRun ? null : await ensureSystemRoles(tx as unknown as PrismaClient);
 
     for (const key of STAFF_ROLES) {
-      const where = { staffRole: key, platformRoleId: null };
+      const where = { isStaff: true, staffRole: key, platformRoleId: null };
       if (dryRun) report.users += await tx.user.count({ where });
-      else report.users += (await tx.user.updateMany({ where, data: { platformRoleId: ids![key], isStaff: true } })).count;
+      else report.users += (await tx.user.updateMany({ where, data: { platformRoleId: ids![key] } })).count;
     }
     for (const key of ORG_ROLES) {
       const where = { role: key, roleId: null };
@@ -37,5 +45,5 @@ export async function migrateRoles(db: PrismaClient, opts: { dryRun?: boolean } 
     }
 
     return report;
-  });
+  }, { timeout: 60_000, maxWait: 10_000 });
 }

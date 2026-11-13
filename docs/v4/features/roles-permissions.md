@@ -180,8 +180,11 @@ ne reçoit plus les messages d'impression.
   que les lignes sans `roleId`. `ARGS=--dry-run` simule (aucune écriture, pas même les rôles
   système). Le rapport donne les utilisateurs staff, membres d'organisation, membres
   d'évènement migrés et le nombre de lignes déjà migrées ; un second passage doit donner zéro.
-- Un compte avec `staffRole` renseigné mais `isStaff = 0` est promu `isStaff = 1` par la
-  migration (`isStaff = platformRoleId != null`). Contrôle préalable :
-  `SELECT COUNT(*) FROM User WHERE isStaff = 0 AND staffRole IS NOT NULL`.
+- Seuls les comptes `isStaff = 1` sont migrés, et la migration n'écrit jamais `isStaff`
+  (invariant : `isStaff = platformRoleId != null`). Un compte avec `staffRole` renseigné mais
+  `isStaff = 0` n'est **pas** promu : il est compté dans le rapport (« comptes incohérents ») pour
+  qu'un humain tranche. Requête de contrôle à lancer avant la migration :
+  `SELECT id, email FROM User WHERE isStaff = 0 AND staffRole IS NOT NULL`.
+- La transaction de migration a un délai de 60 s (`timeout`) et 10 s d'attente (`maxWait`).
 - Le déploiement n'entre pas dans le périmètre du chantier : migration sur la base de dev
   seulement.
