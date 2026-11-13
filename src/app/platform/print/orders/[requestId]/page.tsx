@@ -28,13 +28,16 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
     : [];
 
   // Paiements de cette commande (FedaPay), du plus récent au plus ancien.
-  const payments = (
-    await prisma.payment.findMany({
-      where: { printRequestId: requestId },
-      orderBy: { createdAt: "desc" },
-      select: PAYMENT_HISTORY_SELECT,
-    })
-  ).map(toPaymentHistoryItem);
+  // Réservés à `payments.read` : une commande lisible ne donne pas accès aux paiements.
+  const payments = permissions.has("payments.read")
+    ? (
+        await prisma.payment.findMany({
+          where: { printRequestId: requestId },
+          orderBy: { createdAt: "desc" },
+          select: PAYMENT_HISTORY_SELECT,
+        })
+      ).map(toPaymentHistoryItem)
+    : [];
 
   // Commande, crédit de l'organisation et liens vers la commande principale / les compléments.
   const request = await prisma.printRequest.findUnique({
@@ -50,14 +53,16 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
   });
   if (!request) notFound();
   const canOperateOnsite = (await loadPermissions(userId, eventTargetOf(request))).has("print.onsite.operate");
+  // Le crédit de l'organisation n'est chargé que pour qui peut l'appliquer.
+  const canSeeCredit = permissions.has("print.requests.credit.apply");
   const [lines, balance, available, movements, sheet] = await Promise.all([
     prisma.printQuoteLine.findMany({
       where: { requestId, removedAt: null },
       select: { lineTotal: true, usesOrgCredit: true },
     }),
-    getOrgPrintCreditBalance(request.orgId),
-    getAvailableOrgPrintCredit(request.orgId, requestId),
-    listOrgPrintCreditMovements(request.orgId),
+    canSeeCredit ? getOrgPrintCreditBalance(request.orgId) : 0,
+    canSeeCredit ? getAvailableOrgPrintCredit(request.orgId, requestId) : 0,
+    canSeeCredit ? listOrgPrintCreditMovements(request.orgId) : [],
     getOrderSheet(requestId),
   ]);
   const applied = -lines.filter((l) => l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
@@ -84,7 +89,7 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
       payments={payments}
       onsiteCounter={onsiteCounter}
       sheet={sheet}
-      credit={{ balance, available, applied, grossTotal, movements }}
+      credit={canSeeCredit ? { balance, available, applied, grossTotal, movements } : null}
       parentRequest={request.parentRequest}
       supplements={request.childRequests}
     />
