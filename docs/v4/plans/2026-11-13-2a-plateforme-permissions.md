@@ -34,7 +34,7 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Prérequis : contrats du socle, helpers de lot, matrice de refus | [ ] | | |
+| 1 | Prérequis : contrats du socle, helpers de lot, matrice de refus | [x] | 2026-11-13 | contrats du socle conformes ; ligne de sonde dans la matrice |
 | 2 | Shell, layout et tableau de bord filtrés (STAFF_PRINTER) | [ ] | | |
 | 3 | Organisations, abonnements, plans | [ ] | | |
 | 4 | Profils et listes de blocage | [ ] | | |
