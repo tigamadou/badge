@@ -16,7 +16,7 @@ export default async function OrgActivitySupervisionPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
-  await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}/activity`);
+  await requirePlatformPage("activity.read", `/platform/organizations/${orgId}/activity`);
   const list = parseListPage(await searchParams);
   const result = await paginate(
     list,

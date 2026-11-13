@@ -27,12 +27,14 @@ export default async function OrgSubscriptionPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true, period: true },
     }),
-    prisma.payment.findMany({
-      where: { orgId },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      select: PAYMENT_HISTORY_SELECT,
-    }),
+    permissions.has("payments.read")
+      ? prisma.payment.findMany({
+          where: { orgId },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          select: PAYMENT_HISTORY_SELECT,
+        })
+      : null,
     org.subscription?.scheduledPlanId
       ? prisma.plan.findUnique({
           where: { id: org.subscription.scheduledPlanId },
@@ -76,15 +78,17 @@ export default async function OrgSubscriptionPage({
         canEdit={permissions.has("subscriptions.update")}
         scheduledPlanName={sub?.scheduledPlanId ? (scheduledPlan?.name ?? "—") : null}
       />
-      <Card>
-        <CardHead title="Historique des paiements" />
-        <CardBody>
-          <PaymentHistory
-            payments={payments.map(toPaymentHistoryItem)}
-            detailHref={(p) => `/platform/payments/${p.id}`}
-          />
-        </CardBody>
-      </Card>
+      {payments && (
+        <Card>
+          <CardHead title="Historique des paiements" />
+          <CardBody>
+            <PaymentHistory
+              payments={payments.map(toPaymentHistoryItem)}
+              detailHref={(p) => `/platform/payments/${p.id}`}
+            />
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }

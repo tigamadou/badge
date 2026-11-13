@@ -11,7 +11,7 @@ export default async function PlatformOrgLayout({
   children: React.ReactNode;
 }) {
   const { orgId } = await params;
-  await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}`);
+  const { permissions } = await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}`);
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -19,5 +19,5 @@ export default async function PlatformOrgLayout({
   });
   if (!org) notFound();
 
-  return <PlatformOrgShell org={org}>{children}</PlatformOrgShell>;
+  return <PlatformOrgShell org={org} canReadActivity={permissions.has("activity.read")}>{children}</PlatformOrgShell>;
 }
