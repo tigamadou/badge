@@ -1,27 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { defaultRoleId, readOrThrow } from "@/components/permissions/logic";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
 // v4 Task 4.2 : le staff invite un membre d'org (role choisi) sans entrer dans /org.
 // POST vers l'endpoint plateforme owners (generalise a tous les roles org).
-export function PlatformOrgMemberInviteForm({ orgId }: { orgId: string }) {
+// Les rôles attribuables sont relus par l'API (la page appelante ne passe que `orgId`) ; `roles` les précalcule si connus.
+export function PlatformOrgMemberInviteForm({ orgId, roles: initialRoles }: { orgId: string; roles?: AssignableRoleRow[] }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"OWNER" | "MANAGER" | "AUDITOR">("OWNER");
+  const [roles, setRoles] = useState<AssignableRoleRow[]>(initialRoles ?? []);
+  const [roleId, setRoleId] = useState(initialRoles ? defaultRoleId(initialRoles, "OWNER") : "");
+
+  useEffect(() => {
+    if (initialRoles) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch(`/api/platform/roles/assignable?scope=ORG&orgId=${encodeURIComponent(orgId)}`);
+      if (!res.ok || cancelled) return;
+      const list = ((await res.json()) as { roles: AssignableRoleRow[] }).roles;
+      setRoles(list);
+      setRoleId(defaultRoleId(list, "OWNER"));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, initialRoles]);
 
   const invite = useAsyncAction(
     async () => {
       const res = await fetch(`/api/platform/organizations/${orgId}/owners`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, name, role }),
+        body: JSON.stringify({ email, name, roleId }),
       });
-      if (!res.ok) throw res;
+      await readOrThrow(res);
     },
     {
       success: "Invitation envoyée.",
@@ -29,7 +49,7 @@ export function PlatformOrgMemberInviteForm({ orgId }: { orgId: string }) {
       onSuccess: () => {
         setEmail("");
         setName("");
-        setRole("OWNER");
+        setRoleId(defaultRoleId(roles, "OWNER"));
         router.refresh();
       },
     },
@@ -53,17 +73,9 @@ export function PlatformOrgMemberInviteForm({ orgId }: { orgId: string }) {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as "OWNER" | "MANAGER" | "AUDITOR")}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
-        >
-          <option value="OWNER">Propriétaire (OWNER)</option>
-          <option value="MANAGER">Gestionnaire (MANAGER)</option>
-          <option value="AUDITOR">Auditeur (AUDITOR)</option>
-        </select>
+        <RoleSelect name="roleId" label="Rôle" roles={roles} value={roleId} onChange={setRoleId} />
       </div>
-      <Button type="submit" loading={invite.pending}>
+      <Button type="submit" loading={invite.pending} disabled={!roleId}>
         Inviter
       </Button>
     </form>

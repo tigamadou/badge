@@ -5,21 +5,26 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { defaultRoleId } from "@/components/permissions/logic";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
 export function MemberInviteForm({
   orgId,
   eventId,
+  roles,
   onDone,
   onCancel,
 }: {
   orgId: string;
   eventId: string;
+  roles: AssignableRoleRow[];
   onDone: () => void;
   onCancel: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER">("OPERATOR");
+  const [roleId, setRoleId] = useState(() => defaultRoleId(roles, "OPERATOR"));
   const [emailError, setEmailError] = useState<string | null>(null);
 
   // Motif C : ALREADY_MEMBER est rattaché au champ e-mail ; le reste lève une exception (toast).
@@ -28,7 +33,7 @@ export function MemberInviteForm({
       const res = await fetch(`/api/org/${orgId}/events/${eventId}/members`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, name: name || undefined, role }),
+        body: JSON.stringify({ email, name: name || undefined, roleId }),
       });
       if (!res.ok) {
         const j = await res.clone().json().catch(() => ({}));
@@ -76,21 +81,12 @@ export function MemberInviteForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <select
-        value={role}
-        onChange={(e) => setRole(e.target.value as "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER")}
-        className="border rounded px-2 py-1 text-sm"
-      >
-        <option value="ADMIN">Administrateur (tous droits)</option>
-        <option value="OPERATOR">Opérateur (scan + impression)</option>
-        <option value="PRINTER">Imprimeur (impression badges)</option>
-        <option value="VIEWER">Observateur (vue agrégée)</option>
-      </select>
+      <RoleSelect name="roleId" roles={roles} value={roleId} onChange={setRoleId} />
       <div className="flex gap-2 justify-end">
         <Button variant="secondary" type="button" onClick={onCancel} disabled={busy}>
           Annuler
         </Button>
-        <Button type="submit" loading={busy}>
+        <Button type="submit" loading={busy} disabled={!roleId}>
           Inviter
         </Button>
       </div>
