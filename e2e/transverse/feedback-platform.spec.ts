@@ -69,7 +69,8 @@ test.describe("Feedback — /platform", () => {
     const plan = await getDb().plan.create({ data: { name: planName, period: "MONTHLY" } });
     const patches = countRequests(page, "PATCH", `/api/platform/plans/${plan.id}`);
 
-    await page.goto("/platform/plans");
+    // Liste paginee (10 par defaut) : le plan neuf est classe en fin de catalogue.
+    await page.goto("/platform/plans?pageSize=500");
     await page.locator("tr", { hasText: planName }).getByRole("button", { name: "Archiver" }).dblclick();
 
     await expect(toast(page, "Plan archivé.")).toBeVisible();
