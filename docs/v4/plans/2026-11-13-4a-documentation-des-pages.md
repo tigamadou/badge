@@ -39,7 +39,7 @@ coordination : [`spec 36`](../specs/2026-11-13-36-v4-chantier-roles-docs-coordin
 | 4 | Cibles `docs-check` / `docs-stamp` et intégration à `lint` | [x] | 2026-11-13 | `docs-check` : 89 manquantes (état attendu avant Task 11) ; `make lint` rouge jusque-là |
 | 5 | Logique serveur : appariement, cibles, blocs, rendu | [x] | 2026-11-13 | `src/lib/page-docs` 100 % ; `match.ts` (client-safe) séparé de `index.ts` ; `loadDocById` et `summaryOf` ajoutés ; tests sur modules générés mockés (fixtures) |
 | 6 | Route `GET /api/page-docs` | [x] | 2026-11-13 | `docsHref` = liste de l'espace (`…/docs`) ; 100 % sur la route |
-| 7 | `PageDocButton` réel et panneau latéral | [ ] | | |
+| 7 | `PageDocButton` réel et panneau latéral | [x] | 2026-11-13 | panneau propre (portail, focus piégé, Échap) car `Dialog` est une modale centrée ; interactions couvertes en e2e (pas de jsdom) ; contrôle navigateur reporté à la Task 12 (aucune doc avant la Task 11) |
 | 8 | Pages Documentation des quatre espaces | [ ] | | |
 | 9 | Consignes IA : `CLAUDE.md`, `AGENTS.md`, template, skill chantier | [ ] | | |
 | 10 | Doc de feature `documentation-pages.md` | [ ] | | |
