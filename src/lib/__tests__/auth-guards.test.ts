@@ -353,6 +353,20 @@ describe("assertNotLastSuperAdmin", () => {
   });
 });
 
+describe("assertNotLastSuperAdmin - ligne incoherente", () => {
+  beforeEach(resetAll);
+
+  it("une ligne isStaff=false portant SUPER_ADMIN ne protege pas le dernier SUPER_ADMIN effectif", async () => {
+    const u = await prisma.user.create({
+      data: { email: "sa-real@x", password: "x", name: "SA", isStaff: true, staffRole: "SUPER_ADMIN" },
+    });
+    await prisma.user.create({
+      data: { email: "sa-ghost@x", password: "x", name: "Ghost", isStaff: false, staffRole: "SUPER_ADMIN" },
+    });
+    await expect(assertNotLastSuperAdmin(u.id)).rejects.toMatchObject({ code: "LAST_SUPER_ADMIN" });
+  });
+});
+
 describe("guards - branches d'entree (contexte / event manquants)", () => {
   beforeEach(resetAll);
 

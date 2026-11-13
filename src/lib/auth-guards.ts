@@ -186,6 +186,7 @@ export async function assertNotLastSuperAdmin(userIdBeingChanged: string): Promi
   const remaining = await prisma.user.count({
     where: {
       id: { not: userIdBeingChanged },
+      isStaff: true,
       OR: [{ platformRole: { systemKey: "SUPER_ADMIN" } }, { platformRoleId: null, staffRole: "SUPER_ADMIN" }],
       archived: false,
     },
