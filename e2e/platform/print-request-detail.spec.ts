@@ -349,14 +349,24 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
       status: "APPROVED",
       settle: true,
     });
-    const support = await createTestStaff({ scope: "prd-payments", role: "STAFF_PRINTER" });
-    await loginAndEnter(page, support, { kind: "platform" });
+    const admin = await createTestStaff({ scope: "prd-payments", role: "STAFF_ADMIN" });
+    await loginAndEnter(page, admin, { kind: "platform" });
     await openRequest(page, request);
 
     await expect(page.getByRole("heading", { name: "Paiements", exact: true })).toBeVisible();
     const row = page.getByRole("row", { name: new RegExp(`Impression ${request.reference}`) });
     await expect(row).toContainText("20 000 FCFA");
     await expect(row).toContainText("Payé");
+  });
+
+  test("L'Imprimeur ne voit pas la carte « Paiements » d'une commande payée", async ({ page }) => {
+    const { orgId, request, organizer } = await seedRequest("prd-payments-printer", "PAID");
+    await createTestPrintPayment({ orgId, requestId: request.id, userId: organizer.id, amount: 20000, status: "APPROVED", settle: true });
+    const printer = await createTestStaff({ scope: "prd-payments-printer", role: "STAFF_PRINTER" });
+    await loginAndEnter(page, printer, { kind: "platform" });
+    await openRequest(page, request);
+    await expect(page.getByRole("heading", { name: "Détail de la commande" }).or(page.getByText(request.reference).first())).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Paiements", exact: true })).toHaveCount(0);
   });
 
   test("« Marquer payée » est refusé tant qu'un paiement FedaPay est en cours", async ({ page }) => {
