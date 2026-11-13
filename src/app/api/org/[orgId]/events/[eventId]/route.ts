@@ -181,8 +181,8 @@ export const PATCH = withEventAuth({ permission: ["event.update", "event.registr
     }
   }
   // Le formulaire renvoie toute la fiche : seul un changement réel exige event.registration_toggle.
-  if (parsed.data.registrationOpen !== undefined && parsed.data.registrationOpen !== before.registrationOpen) {
-    if (!permissions.has("event.registration_toggle")) {
+  if (parsed.data.registrationOpen !== undefined) {
+    if (parsed.data.registrationOpen !== before.registrationOpen && !permissions.has("event.registration_toggle")) {
       return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
     }
     data.registrationOpen = parsed.data.registrationOpen;
