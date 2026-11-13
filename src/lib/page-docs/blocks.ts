@@ -6,8 +6,9 @@ const OPEN_RE = /^:::permission(?:\s+(.*))?$/;
  * Applique les blocs `:::permission <clé>` … `:::` d'un corps Markdown.
  * `decide(clé)` : true = garder le contenu, false = retirer le bloc entier, undefined = garder le
  * contenu avec la mention « Réservé… » (portée différente de la cible évaluée).
- * Un bloc mal formé (non fermé, imbriqué, clé vide, marqueur isolé) ne casse jamais le rendu :
- * le texte est conservé et les marqueurs sont retirés.
+ * Échoue fermé : un bloc non fermé ou imbriqué masque tout jusqu'à la fin du texte, quelle que soit
+ * la décision, pour ne jamais révéler un contenu réservé (`docs-check` les refuse à la source).
+ * Un marqueur isolé, inconnu ou sans clé est retiré seul, le texte est conservé.
  */
 export function filterPermissionBlocks(body: string, decide: (key: string) => boolean | undefined): string {
   const lines = body.split("\n");
@@ -29,10 +30,7 @@ export function filterPermissionBlocks(body: string, decide: (key: string) => bo
     let end = i + 1;
     while (end < lines.length && !lines[end].trim().startsWith(":::")) end++;
     const closed = end < lines.length && lines[end].trim() === ":::";
-    if (!closed) {
-      i++; // non fermé ou imbriqué : seul le marqueur d'ouverture est retiré
-      continue;
-    }
+    if (!closed) break; // non fermé ou imbriqué : le reste est masqué
     const inner = lines.slice(i + 1, end);
     const decision = decide(key);
     if (decision === true) out.push(...inner);

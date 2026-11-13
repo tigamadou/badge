@@ -32,12 +32,29 @@ describe("filterPermissionBlocks", () => {
     expect(out).toBe("DEUX");
   });
 
-  it("bloc mal formé : texte conservé, marqueurs retirés, aucune exception", () => {
-    expect(filterPermissionBlocks("a\n:::permission org.update\nb", () => false)).toBe("a\nb");
+  it("marqueur isolé, inconnu ou sans clé : retiré seul, texte conservé", () => {
     expect(filterPermissionBlocks("a\n:::\nb", () => false)).toBe("a\nb");
     expect(filterPermissionBlocks("a\n:::permission\nb\n:::\nc", () => false)).toBe("a\nb\nc");
     expect(filterPermissionBlocks("a\n:::note\nb", () => false)).toBe("a\nb");
-    expect(filterPermissionBlocks(":::permission x.y\n:::permission org.update\nN\n:::\nT\n:::", () => true)).toBe("N\nT");
+  });
+
+  it("bloc non fermé : échoue fermé, tout jusqu'à la fin est masqué", () => {
+    for (const decision of [false, true, undefined]) {
+      const out = filterPermissionBlocks("a\n:::permission org.update\nSECRET\nsuite", () => decision);
+      expect(out).toBe("a");
+      expect(out).not.toContain("SECRET");
+    }
+  });
+
+  it("bloc imbriqué : échoue fermé, rien du bloc externe ni de l'interne ne fuit", () => {
+    for (const decision of [false, true, undefined]) {
+      const out = filterPermissionBlocks(":::permission x.y\nSECRET1\n:::permission org.update\nSECRET2\n:::\nSECRET3\n:::\nfin", () => decision);
+      expect(out).not.toContain("SECRET");
+    }
+  });
+
+  it("un bloc valide avant un bloc mal formé reste filtré normalement", () => {
+    expect(filterPermissionBlocks(":::permission a.b\nUN\n:::\nmilieu\n:::permission c.d\nSECRET", () => true)).toBe("UN\nmilieu");
   });
 
   it("laisse un texte sans bloc intact", () => {

@@ -94,6 +94,7 @@ export async function listDocsForUser(userId: string, space: PageDocSpace, param
   // La portée des permissions ne dépend que du premier segment de la route : `/<espace>` suffit.
   const perms = await permissionsForRoute(userId, `/${space}`, params);
   if (perms.size === 0) return [];
+  const decide = blockDecider(perms, docTargetScope(`/${space}`));
   return PAGE_DOCS.filter((d) => d.space === space)
     .filter((d) => !d.access || perms.has(d.access as Permission))
     .map((d) => {
@@ -103,7 +104,7 @@ export async function listDocsForUser(userId: string, space: PageDocSpace, param
         slug,
         section: slug === "index" ? "Accueil" : slug.split("/")[0],
         title: d.title,
-        summary: summaryOf(d.body),
+        summary: summaryOf(filterPermissionBlocks(d.body, decide)),
         updatedAt: d.updatedAt,
       };
     });

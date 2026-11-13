@@ -27,4 +27,10 @@ describe("renderDocHtml", () => {
     expect(html).toContain('href="./page"');
     expect(html).toContain('href="#ancre"');
   });
+
+  it("refuse les liens protocole-relatif et n'affiche aucune image", () => {
+    const html = renderDocHtml("[x](//evil.example/a) ![pixel](https://evil.example/p.png)");
+    expect(html).not.toContain('href="//');
+    expect(html).not.toContain("<img");
+  });
 });

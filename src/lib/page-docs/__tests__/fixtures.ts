@@ -45,7 +45,7 @@ export const FIXTURE_DOCS: PageDocEntry[] = [
     route: "/org/[orgId]/events/new",
     title: "Créer un évènement",
     access: "org.events.create",
-    body: "Créez un évènement.\n",
+    body: ":::permission org.update\nPhrase réservée.\n:::\n\nCréez un évènement.\n",
   }),
   entry({
     id: "org/index",

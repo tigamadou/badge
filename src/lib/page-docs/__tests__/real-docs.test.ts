@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PAGE_DOCS } from "@/content/page-docs/manifest.generated";
 import { PAGE_DOC_INDEX } from "@/content/page-docs/index.generated";
+import { PERMISSION_KEYS } from "@/lib/permissions/catalog";
+import { validateBlocks } from "../../../../scripts/page-docs/format";
 import { filterPermissionBlocks, renderDocHtml, summaryOf } from "../index";
 
 // Docs réelles du dépôt : elles se filtrent et se rendent sans erreur, sans marqueur résiduel.
@@ -10,6 +12,7 @@ describe("docs réelles", () => {
   });
 
   it.each(PAGE_DOCS.map((d) => [d.id, d] as const))("%s se rend", (_id, doc) => {
+    expect(validateBlocks(doc.body, PERMISSION_KEYS)).toEqual([]);
     for (const decision of [true, false, undefined]) {
       const html = renderDocHtml(filterPermissionBlocks(doc.body, () => decision));
       expect(html).not.toContain(":::");

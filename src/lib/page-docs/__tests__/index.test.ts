@@ -112,6 +112,16 @@ describe("listDocsForUser", () => {
     expect(forAgent.map((d) => d.id)).toEqual(["org/events", "org/index"]);
   });
 
+  it("le résumé est calculé sur le corps filtré : pas de phrase d'un bloc non détenu", async () => {
+    const org = await makeOrg();
+    const manager = await makeOrgMember(org.id, "MANAGER");
+    const owner = await makeOrgMember(org.id, "OWNER");
+    const summaryFor = async (id: string) =>
+      (await listDocsForUser(id, "org", { orgId: org.id })).find((d) => d.id === "org/events/new")?.summary;
+    expect(await summaryFor(manager.id)).toBe("Créez un évènement.");
+    expect(await summaryFor(owner.id)).toBe("Phrase réservée.");
+  });
+
   it("liste vide : espace sans doc, aucun droit sur la cible", async () => {
     const org = await makeOrg();
     const owner = await makeOrgMember(org.id, "OWNER");
