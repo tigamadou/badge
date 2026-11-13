@@ -46,7 +46,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 5 | Résolution des permissions effectives | [x] | 2026-11-13 | `resolve.ts` pur ; `eventTargetOf` accepte `{ id, orgId }` ou `{ eventId, orgId }`. Les règles « jamais le staff » sont laissées aux gardes. |
 | 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [x] | 2026-11-13 | `requirePermission` accepte une liste ; `hasOrgRole`/`effectiveEventRole` : un staff sans rôle hérité (STAFF_PRINTER, personnalisé) n'obtient plus le contournement staff ; `getEventTarget` testé dans `event-org-target.test.ts` (base réelle, `event-org.test.ts` mocke Prisma) |
 | 7 | Wrappers de routes et garde participant | [x] | 2026-11-13 | Code écrit avant les tests (RED prouvé ensuite par stash des sources). Assertions EVENT_FORBIDDEN -> PERMISSION_DENIED mises à jour dans api-event-badge-exports.test.ts et badges/[badgeId]/__tests__/route.test.ts (tests seulement). assertNotStaff hors tâche. |
-| 8 | Rôles système en base, migration, `make migrate-roles` | [ ] | | |
+| 8 | Rôles système en base, migration, `make migrate-roles` | [x] | 2026-11-13 | `make migrate-roles ARGS=--dry-run` sur la base de dev : 0 staff, 0 membre d'org, 0 membre d'évènement, 0 déjà migré (dev vide d'enums à migrer). `dryRun` n'écrit rien, pas même les rôles système. |
 | 9 | Fabriques, reset global et helpers e2e | [ ] | | |
 | 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [ ] | | |
 | 11 | Notifications ciblées par permission | [ ] | | |
@@ -596,7 +596,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Consumes : `SYSTEM_ROLES`, `prisma`.
 - Produces : `ensureSystemRoles`, `systemRoleId`, `legacyKeyOf`, `migrateRoles`.
 
-- [ ] **Step 1 : tests rouges** :
+- [x] **Step 1 : tests rouges** :
   - `ensureSystemRoles(prisma)` crée 14 lignes (`systemKey` unique, `scope`, `name`, `orgId` nul) ; deuxième appel
     n'en crée aucune et ne change pas les ids ; renvoie l'id de chaque clé ; met à jour `name`/`description` si le code a changé ;
   - `systemRoleId` renvoie l'id ; `legacyKeyOf("STAFF_PRINTER")`/`("AGENT")` → `null`, `("OWNER")` → `"OWNER"` ;
@@ -605,16 +605,16 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
     `EventMembership.roleId` = `VIEWER`, rapport `{ users:1, orgMemberships:1, eventMemberships:1 }` ; **deuxième appel**
     → rapport à 0 et `alreadyDone` > 0 ; `dryRun: true` n'écrit rien mais renvoie les mêmes compteurs ; une ligne dont `roleId`
     est déjà posé n'est pas modifiée ; ne touche jamais aux colonnes d'enum.
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter** `db.ts` (upsert par `systemKey`, transaction ; paramètre `RoleDb` structurel pour pouvoir
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter** `db.ts` (upsert par `systemKey`, transaction ; paramètre `RoleDb` structurel pour pouvoir
   passer un `PrismaClient` d'e2e) et `migrate.ts` (`updateMany` par clé d'enum, dans une transaction, en ne ciblant que
   `roleId: null`). `scripts/migrate-roles.ts` : lit `--dry-run`, crée `new PrismaClient()`, appelle `migrateRoles`, affiche
   le rapport en français, `process.exit(1)` en cas d'erreur. `Makefile` : cible
   `migrate-roles: $(DEV_COMPOSE) exec app yarn tsx scripts/migrate-roles.ts $(ARGS)` avec un commentaire (idempotent ;
   `ARGS=--dry-run` pour prévisualiser ; dev uniquement dans ce chantier).
-- [ ] **Step 4 : lancer** `make test FILE=src/lib/permissions` → vert, 100 %. Puis `make migrate-roles ARGS=--dry-run`
+- [x] **Step 4 : lancer** `make test FILE=src/lib/permissions` → vert, 100 %. Puis `make migrate-roles ARGS=--dry-run`
   sur la base de dev et noter le rapport dans les Notes ; **ne pas** lancer sans `--dry-run` avant la Task 17.
-- [ ] **Step 5 : commit** : `feat(roles): roles systeme en base et script migrate-roles`.
+- [x] **Step 5 : commit** : `feat(roles): roles systeme en base et script migrate-roles`.
 
 ### Task 9: Fabriques, reset global et helpers e2e
 
