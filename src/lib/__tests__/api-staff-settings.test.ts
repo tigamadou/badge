@@ -12,6 +12,7 @@ vi.mock("@/lib/mail", async (importOriginal) => {
   return { ...actual, sendSmtpTest: vi.fn(async () => undefined) };
 });
 import { sendSmtpTest } from "@/lib/mail";
+import { makeStaff as createStaff } from "@/test/factories";
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
@@ -27,15 +28,7 @@ function withSession(user: {
 async function makeStaff(staffRole: StaffRoleStr = "STAFF_ADMIN") {
   // Email valide (regex sendSmtpTest exige `*@*.*`) pour permettre le fallback
   // session.user.email lors du test test-smtp sans body.to.
-  const u = await prisma.user.create({
-    data: {
-      email: `staff-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.test`,
-      password: "x",
-      name: "Staff",
-      isStaff: true,
-      staffRole,
-    },
-  });
+  const u = await createStaff(staffRole);
   withSession({ id: u.id, email: u.email, name: u.name, isStaff: true });
   return u;
 }

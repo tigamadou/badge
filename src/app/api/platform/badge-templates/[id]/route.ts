@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { requireStaff, AuthError } from "@/lib/auth-guards";
+import { withStaffAuth } from "@/lib/with-staff-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -12,20 +10,8 @@ export const runtime = "nodejs";
 // par convention. Une tentative de modifier layout, family ou assetPrefix est refusee.
 const bodySchema = z.object({ archived: z.boolean() }).strict();
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
-  }
-  try {
-    await requireStaff(session.user.id, "STAFF_ADMIN");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-    }
-    throw err;
-  }
-
+export const PATCH = withStaffAuth<{ id: string }>(
+  async (req: NextRequest, { session }, ctx) => {
   const { id } = await ctx.params;
   const raw = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(raw);
@@ -58,4 +44,6 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   });
 
   return NextResponse.json({ ok: true, archived });
-}
+},
+  { permission: "badge_templates.manage" },
+);

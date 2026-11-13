@@ -5,17 +5,10 @@ import { getOnsitePrintSettings } from "@/lib/settings";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff } from "@/test/factories";
 
 async function asStaff(role: "STAFF_ADMIN" | "STAFF_SUPPORT") {
-  const u = await prisma.user.create({
-    data: {
-      email: `staff-${role}-${Date.now()}-${Math.random()}@x`,
-      password: "x",
-      name: "S",
-      isStaff: true,
-      staffRole: role,
-    },
-  });
+  const u = await makeStaff(role);
   vi.mocked(getServerSession).mockResolvedValue({
     user: { id: u.id, email: u.email, name: u.name, isStaff: true },
   } as never);

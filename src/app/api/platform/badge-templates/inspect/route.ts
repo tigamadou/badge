@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { requireStaff, AuthError } from "@/lib/auth-guards";
+import { withStaffAuth } from "@/lib/with-staff-auth";
 import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
 import type { VariableDeclaration } from "@tigamadou/pdf-engine";
 import { prisma } from "@/lib/prisma";
@@ -16,20 +14,8 @@ function badRequest(errors: string[]) {
 // Lecture seule, volontairement separee de l'installation : rien n'est ecrit
 // tant que l'administrateur n'a pas vu le recapitulatif. L'archive
 // transite deux fois, ce que MAX_ARCHIVE_BYTES borne deja.
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
-  }
-  try {
-    await requireStaff(session.user.id, "STAFF_ADMIN");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-    }
-    throw err;
-  }
-
+export const POST = withStaffAuth(
+  async (req: NextRequest, { session }) => {
   const form = await req.formData().catch(() => null);
   const file = form?.get("archive");
   if (!(file instanceof File)) {
@@ -67,4 +53,6 @@ export async function POST(req: NextRequest) {
     options: manifest.variables.filter((v) => bindings[v.name] === OPTION_BINDING).map(describe),
     bindings,
   });
-}
+},
+  { permission: "badge_templates.manage" },
+);

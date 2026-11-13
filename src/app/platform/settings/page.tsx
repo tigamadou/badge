@@ -42,6 +42,7 @@ export default async function StaffSettingsPage({
   const session = await getServerSession(authOptions);
   // Garde-fou ADR 2026-06-01 : les secrets (smtpPassword, recaptchaSecretKey) relèvent de `settings.secrets.update`.
   const canEditSecrets = permissions.has("settings.secrets.update");
+  const canEdit = permissions.has("settings.update");
 
   // Construction de la vue publique : on ne passe JAMAIS les valeurs secretes au
   // composant client. Les booleans *Set indiquent simplement leur presence.
@@ -81,16 +82,18 @@ export default async function StaffSettingsPage({
       {tab === "email" && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="col-span-1">
-            <PlatformSettingsForm section="smtp" initial={safe} canEditSecrets={canEditSecrets} />
+            <PlatformSettingsForm section="smtp" initial={safe} canEdit={canEdit} canEditSecrets={canEditSecrets} />
           </div>
           <div className="col-span-1">
-            <TestSmtpForm defaultEmail={session?.user?.email ?? undefined} />
+            {permissions.has("settings.smtp.test") && (
+              <TestSmtpForm defaultEmail={session?.user?.email ?? undefined} />
+            )}
           </div>
         </div>
       )}
 
       {tab === "security" && (
-        <PlatformSettingsForm section="recaptcha" initial={safe} canEditSecrets={canEditSecrets} />
+        <PlatformSettingsForm section="recaptcha" initial={safe} canEdit={canEdit} canEditSecrets={canEditSecrets} />
       )}
 
       {tab === "subscriptions" && (

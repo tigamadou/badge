@@ -6,6 +6,7 @@ import { DEFAULT_RIGHTS } from "@/lib/subscription-rights";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff as createStaff } from "@/test/factories";
 
 // Tests Plan v2-14 Task 1 : PATCH /api/platform/settings -- garde SUPER_ADMIN sur
 // smtpPassword et recaptchaSecretKey (ADR 2026-06-01 operator-approve-permissions
@@ -60,16 +61,7 @@ async function setupPlatform(
 
 async function makeStaff(staffRole: StaffRoleStr) {
   const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  const user = await prisma.user.create({
-    data: {
-      email: `staff-${suffix}@v2-14.test`,
-      password: "x",
-      name: "Staff User",
-      isStaff: true,
-      staffRole,
-      emailVerifiedAt: new Date(),
-    },
-  });
+  const user = await createStaff(staffRole, { emailVerifiedAt: new Date() });
   withSession({ id: user.id, email: user.email, name: user.name, isStaff: true });
   return user;
 }

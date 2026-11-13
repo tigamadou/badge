@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { requireStaff, AuthError } from "@/lib/auth-guards";
+import { withStaffAuth } from "@/lib/with-staff-auth";
 import { prisma } from "@/lib/prisma";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
@@ -15,20 +13,8 @@ const bodySchema = z.object({
   badgeTemplateId: z.string().min(1),
 });
 
-export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
-  }
-  try {
-    await requireStaff(session.user.id, "STAFF_ADMIN");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-    }
-    throw err;
-  }
-
+export const PATCH = withStaffAuth(
+  async (req: NextRequest, { session }) => {
   const raw = await req.json().catch(() => null);
   const parsed = bodySchema.safeParse(raw);
   if (!parsed.success) {
@@ -59,4 +45,6 @@ export async function PATCH(req: NextRequest) {
   });
 
   return NextResponse.json({ ok: true, badgeTemplateId });
-}
+},
+  { permission: "settings.badge_template.update" },
+);

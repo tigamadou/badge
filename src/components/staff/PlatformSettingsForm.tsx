@@ -24,15 +24,17 @@ export type PublicSettings = {
 export function PlatformSettingsForm({
   section,
   initial,
+  canEdit = false,
   canEditSecrets = false,
 }: {
   /** Onglet de /platform/settings : seul le bloc de la section est rendu et enregistre. */
   section: "smtp" | "recaptcha";
   initial: PublicSettings;
+  /** Clé `settings.update` : sans elle, le formulaire est en lecture seule (aucun bouton d'enregistrement). */
+  canEdit?: boolean;
   /**
-   * ADR 2026-06-01 : smtpPassword et recaptchaSecretKey sont editables uniquement
-   * par SUPER_ADMIN. Pour les autres roles staff, les champs sont desactives et
-   * un avertissement est affiche.
+   * ADR 2026-06-01 : smtpPassword et recaptchaSecretKey relèvent de `settings.secrets.update`.
+   * Sans elle, les champs sont désactivés et un avertissement est affiché.
    */
   canEditSecrets?: boolean;
 }) {
@@ -90,11 +92,14 @@ export function PlatformSettingsForm({
   );
 
   return (
-    <div className="max-w-2xl space-y-4">
-      {!canEditSecrets && (
+    <fieldset disabled={!canEdit} className="m-0 min-w-0 max-w-2xl space-y-4 border-0 p-0">
+      {!canEdit && (
+        <Alert tone="info">Ces paramètres sont affichés en lecture seule : vous n&apos;avez pas le droit de les modifier.</Alert>
+      )}
+      {canEdit && !canEditSecrets && (
         <Alert tone="warn">
           Le champ <strong>{section === "smtp" ? "Mot de passe SMTP" : "Secret key reCAPTCHA"}</strong> est réservé
-          au rôle SUPER_ADMIN. Vous pouvez modifier les autres paramètres normalement.
+          au super administrateur. Vous pouvez modifier les autres paramètres normalement.
         </Alert>
       )}
 
@@ -109,11 +114,11 @@ export function PlatformSettingsForm({
           <Input label="Expéditeur (From)" type="email" value={form.smtpFrom} onChange={(e) => setForm((f) => ({ ...f, smtpFrom: e.target.value }))} />
           <Input label="Utilisateur SMTP" value={form.smtpUser} onChange={(e) => setForm((f) => ({ ...f, smtpUser: e.target.value }))} />
           <Input
-            label={`Mot de passe SMTP ${initial.smtpPasswordSet ? "(rempli — saisir pour remplacer)" : ""}${canEditSecrets ? "" : " (réservé SUPER_ADMIN)"}`}
+            label={`Mot de passe SMTP ${initial.smtpPasswordSet ? "(rempli — saisir pour remplacer)" : ""}${canEditSecrets ? "" : " (réservé au super administrateur)"}`}
             type={showSecrets ? "text" : "password"}
             value={form.smtpPassword}
             onChange={(e) => setForm((f) => ({ ...f, smtpPassword: e.target.value }))}
-            disabled={!canEditSecrets}
+            disabled={!canEdit || !canEditSecrets}
           />
           <Switch checked={form.smtpSecure} onChange={(v) => setForm((f) => ({ ...f, smtpSecure: v }))} label="TLS (connexion sécurisée)" />
         </CardBody>
@@ -131,11 +136,11 @@ export function PlatformSettingsForm({
           />
           <Input label="Site key" value={form.recaptchaSiteKey} onChange={(e) => setForm((f) => ({ ...f, recaptchaSiteKey: e.target.value }))} />
           <Input
-            label={`Secret key ${initial.recaptchaSecretKeySet ? "(rempli — saisir pour remplacer)" : ""}${canEditSecrets ? "" : " (réservé SUPER_ADMIN)"}`}
+            label={`Secret key ${initial.recaptchaSecretKeySet ? "(rempli — saisir pour remplacer)" : ""}${canEditSecrets ? "" : " (réservé au super administrateur)"}`}
             type={showSecrets ? "text" : "password"}
             value={form.recaptchaSecretKey}
             onChange={(e) => setForm((f) => ({ ...f, recaptchaSecretKey: e.target.value }))}
-            disabled={!canEditSecrets}
+            disabled={!canEdit || !canEditSecrets}
           />
         </CardBody>
       </Card>
@@ -143,11 +148,13 @@ export function PlatformSettingsForm({
 
       <Switch checked={showSecrets} onChange={setShowSecrets} label="Afficher les valeurs masquées pendant la saisie" />
 
-      <div className="flex justify-end">
-        <Button onClick={save.run} loading={save.pending}>
-          Enregistrer les paramètres
-        </Button>
-      </div>
-    </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button onClick={save.run} loading={save.pending}>
+            Enregistrer les paramètres
+          </Button>
+        </div>
+      )}
+    </fieldset>
   );
 }

@@ -38,7 +38,7 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 | 2 | Shell, layout et tableau de bord filtrés (STAFF_PRINTER) | [x] | 2026-11-13 | tabs de paramètres et page paramètres (garde) faits ici ; entrée Documentation hors groupe |
 | 3 | Organisations, abonnements, plans | [x] | 2026-11-13 | e2e verts (1 flaky sous charge, repasse) |
 | 4 | Profils et listes de blocage | [x] | 2026-11-13 | |
-| 5 | Paramètres, motifs de rejet, templates de badge | [ ] | | |
+| 5 | Paramètres, motifs de rejet, templates de badge | [x] | 2026-11-13 | |
 | 6 | Jobs e-mail, journal, upload, paiements | [ ] | | |
 | 7 | Impression : commandes et poste sur place | [ ] | | |
 | 8 | Impression : catalogue, gabarits, planches (gardes) | [ ] | | |

@@ -80,7 +80,7 @@ function requestWith(archive: Buffer, bindings?: string): NextRequest {
 
 async function post(archive: Buffer, bindings?: string) {
   const { POST } = await import("../route");
-  return POST(requestWith(archive, bindings));
+  return POST(requestWith(archive, bindings), { params: Promise.resolve({}) });
 }
 
 describe("POST /api/platform/badge-templates", () => {
@@ -167,6 +167,7 @@ describe("POST /api/platform/badge-templates", () => {
         method: "POST",
         body: new FormData(),
       }),
+      { params: Promise.resolve({}) },
     );
     expect(res.status).toBe(400);
   });
@@ -235,6 +236,7 @@ describe("POST /api/platform/badge-templates", () => {
         body: "pas un formulaire",
         headers: { "content-type": "multipart/form-data; boundary=xxx" },
       }),
+      { params: Promise.resolve({}) },
     );
     expect(res.status).toBe(400);
     expect((await res.json()).errors.join()).toMatch(/fichier manquant/i);
@@ -253,6 +255,7 @@ describe("POST /api/platform/badge-templates", () => {
         method: "POST",
         body: form,
       }),
+      { params: Promise.resolve({}) },
     );
     expect(res.status).toBe(400);
     expect((await res.json()).errors.join()).toMatch(/taille/i);
@@ -354,7 +357,7 @@ describe("GET /api/platform/badge-templates", () => {
     });
 
     const { GET } = await import("../route");
-    const res = await GET();
+    const res = await GET(new NextRequest("http://localhost/api/platform/x"), { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
     expect((await res.json()).templates).toHaveLength(1);
   });
@@ -362,7 +365,7 @@ describe("GET /api/platform/badge-templates", () => {
   it("refuse sans session (401)", async () => {
     noSession();
     const { GET } = await import("../route");
-    expect((await GET()).status).toBe(401);
+    expect((await GET(new NextRequest("http://localhost/api/platform/x"), { params: Promise.resolve({}) })).status).toBe(401);
   });
 
   it("refuse un utilisateur non staff (403)", async () => {
@@ -377,7 +380,7 @@ describe("GET /api/platform/badge-templates", () => {
     withSession({ id: client.id, email: client.email, name: client.name, isStaff: false });
 
     const { GET } = await import("../route");
-    expect((await GET()).status).toBe(403);
+    expect((await GET(new NextRequest("http://localhost/api/platform/x"), { params: Promise.resolve({}) })).status).toBe(403);
   });
 
   it("propage une erreur non-AuthError levee pendant le controle de role", async () => {
@@ -386,7 +389,7 @@ describe("GET /api/platform/badge-templates", () => {
     const spy = vi.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("boom-get"));
 
     const { GET } = await import("../route");
-    await expect(GET()).rejects.toThrow("boom-get");
+    await expect(GET(new NextRequest("http://localhost/api/platform/x"), { params: Promise.resolve({}) })).rejects.toThrow("boom-get");
     spy.mockRestore();
   });
 });
