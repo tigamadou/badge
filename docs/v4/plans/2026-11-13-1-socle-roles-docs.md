@@ -40,7 +40,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Schéma Prisma, reset de test, types de journal | [x] | 2026-11-13 | Correctifs mécaniques (`role` facultatif) : `prisma/seed/demo/notifications/notifications.ts`, `prisma/seed/demo/notifications/activity.ts` (5 types ajoutés à `ACTIVITY_NOT_SEEDED`), `src/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route.ts`, `src/app/api/org/[orgId]/members/[userId]/route.ts`, `src/app/api/platform/organizations/[orgId]/owners/route.ts`, `src/app/event/[eventId]/members/page.tsx`, `src/app/org/[orgId]/members/page.tsx`, `src/app/platform/organizations/[orgId]/members/page.tsx`, `src/lib/notifications/recipients.ts`, `src/lib/user-context.ts` |
-| 2 | Catalogue des permissions et libellés | [ ] | | |
+| 2 | Catalogue des permissions et libellés | [x] | 2026-11-13 | 98 clés (56/18/20/4). Union `PermissionDomain` figée : access, roles, users, organizations, members, subscriptions, plans, payments, profiles, blocklist, settings, rejection_reasons, badge_templates, email_jobs, activity, print_requests, print_catalog, print_layouts, print_sheets, org, events, billing, scan, registrations, badges, print_event, account (`print.onsite.margin.update` et `print.quote.accept` dans `print_requests`; `org.events.*` dans `events`; `org.members.*` dans `members`). |
 | 3 | Rôles système (permissions en code) | [ ] | | |
 | 4 | Contexte utilisateur enrichi et repli sur les enums | [ ] | | |
 | 5 | Résolution des permissions effectives | [ ] | | |
@@ -365,7 +365,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   Record<PermissionDomain, string>`, `domainOf(key: Permission): PermissionDomain`,
   `groupByDomain(keys: readonly Permission[]): { domain: PermissionDomain; label: string; permissions: PermissionDef[] }[]`.
 
-- [ ] **Step 1 : tests rouges** (`catalog.test.ts`) :
+- [x] **Step 1 : tests rouges** (`catalog.test.ts`) :
   - le catalogue contient **exactement** les clés des tableaux « Niveau PLATFORM » (56 clés),
     « Niveau ORG » (18), « Niveau EVENT » (20) et « Niveau PARTICIPANT » (4) de la spec 37 : comparer à une
     liste littérale par niveau écrite dans le test (copiée des tableaux de la spec, ordre indifférent) ;
@@ -375,8 +375,8 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
     `org.members.permissions.manage` et ce sont les seules `reserved` ;
   - `isPermission("event.archive") === false` (renommée `org.events.archive`) ; `isPermission("org.events.archive")`.
   `labels.test.ts` : chaque domaine du catalogue a un libellé ; `groupByDomain` regroupe et conserve l'ordre du catalogue.
-- [ ] **Step 2 : lancer** `make test FILE=src/lib/permissions` → échec (module absent).
-- [ ] **Step 3 : implémenter `catalog.ts`** — `PERMISSION_CATALOG` en `as const satisfies readonly PermissionDef[]`,
+- [x] **Step 2 : lancer** `make test FILE=src/lib/permissions` → échec (module absent).
+- [x] **Step 3 : implémenter `catalog.ts`** — `PERMISSION_CATALOG` en `as const satisfies readonly PermissionDef[]`,
   transcription fidèle des quatre tableaux de la spec 37 (clé, niveau, `reserved`) ; le `label` et la
   `description` sont ceux de la colonne « Description » de la spec (libellé court + phrase) ; choisir
   l'union `PermissionDomain` (un domaine par préfixe fonctionnel : `access`, `roles`, `organizations`,
@@ -384,9 +384,9 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   `badge_templates`, `email_jobs`, `activity`, `print_requests`, `print_catalog`, `print_layouts`, `print_sheets`,
   `org`, `members`, `billing`, `events`, `registrations`, `scan`, `badges`, `print_event`, `account` — ajuster si
   besoin, **puis figer** et noter l'union finale dans les Notes pour les lots).
-- [ ] **Step 4 : implémenter `labels.ts`** (libellés FR des domaines, `domainOf`, `groupByDomain`).
-- [ ] **Step 5 : lancer** `make test FILE=src/lib/permissions` → vert, couverture des deux fichiers à 100 %.
-- [ ] **Step 6 : commit** : `feat(roles): catalogue des permissions et libelles par domaine`.
+- [x] **Step 4 : implémenter `labels.ts`** (libellés FR des domaines, `domainOf`, `groupByDomain`).
+- [x] **Step 5 : lancer** `make test FILE=src/lib/permissions` → vert, couverture des deux fichiers à 100 %.
+- [x] **Step 6 : commit** : `feat(roles): catalogue des permissions et libelles par domaine`.
 
 ### Task 3: Rôles système (permissions en code)
 
