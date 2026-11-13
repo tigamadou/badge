@@ -15,6 +15,7 @@ import {
   capConfiguration,
   capQuantity,
   followedQuantity,
+  trackBadgeCount,
 } from "./accessory-quantity";
 import { QuoteLinesTable, type QuoteLineView } from "@/components/print/QuoteLinesTable";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -114,9 +115,10 @@ export function PrintRequestWizard({
   // une quantité devenue supérieure y est ramenée, une quantité inférieure est conservée.
   const previousBadgeCount = useRef(0);
   useEffect(() => {
-    const previous = previousBadgeCount.current;
-    previousBadgeCount.current = badgeCount;
-    if (previous === 0 || previous === badgeCount) return;
+    const tracking = trackBadgeCount(previousBadgeCount.current, badgeCount);
+    previousBadgeCount.current = tracking.tracked;
+    if (!tracking.follow) return;
+    const previous = tracking.previous!;
     setConfigs((current) =>
       Object.fromEntries(
         Object.entries(current).map(([id, cfg]) => {

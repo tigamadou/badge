@@ -33,3 +33,16 @@ export function belowBadgeCountWarning(quantity: number, badgeCount: number): st
     ? `Quantité inférieure au nombre de badges de la commande (${badgeCount}).`
     : null;
 }
+
+/**
+ * Référence de suivi du nombre de badges. Un nombre invalide (0, vide) laisse la référence intacte :
+ * 100 -> 0 -> 50 fait suivre 50 aux quantités restées à 100.
+ */
+export function trackBadgeCount(
+  tracked: number,
+  badgeCount: number,
+): { tracked: number; follow: boolean; previous?: number } {
+  if (!(badgeCount > 0)) return { tracked, follow: false };
+  if (tracked === 0 || tracked === badgeCount) return { tracked: badgeCount, follow: false };
+  return { tracked: badgeCount, follow: true, previous: tracked };
+}
