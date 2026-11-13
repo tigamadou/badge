@@ -33,7 +33,7 @@ contrôle) · [35 — impression pendant l'évènement](../specs/2026-11-01-35-v
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Modèles de menu et gardes de page (org, évènement) | [ ] | | |
+| 1 | Modèles de menu et gardes de page (org, évènement) | [x] | 2026-11-13 | Entree Documentation du socle conservee (avant le groupe Administration); SidebarNav n'active que l'entree la plus specifique. |
 | 2 | Routes API `org/[orgId]/**` hors évènement | [ ] | | |
 | 3 | Routes API d'évènement | [ ] | | |
 | 4 | Routes AGENT du poste sur place | [ ] | | |
