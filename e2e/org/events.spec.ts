@@ -249,15 +249,15 @@ test.describe("Org — Evenements", () => {
     await expect(page.getByText(/votre abonnement est inactif\. pour le renouveler/i)).toHaveCount(0);
   });
   
-  test("AUDITOR atteint le wizard mais la creation echoue", async ({ page }) => {
+  test("AUDITOR : la page de creation est gardee (retour au tableau de bord), rien n'est cree", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "ev-aud" });
     const auditor = await createTestOrgMember({ scope: "ev-aud-user", orgId, role: "AUDITOR" });
     await loginAndEnter(page, auditor, { kind: "org", id: orgId });
 
-    // La page /events/new n'a pas de garde : elle s'affiche.
-    await submitWizard(page, orgId, "Event interdit");
-
-    // Reponse attendue — ECHEC : rien n'est cree.
+    // org.events.create absente : la garde de page renvoie au tableau de bord de l'organisation.
+    await page.goto(`/org/${orgId}/events/new`);
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}$`));
     expect(await getDb().event.count({ where: { orgId } })).toBe(0);
   });
+
 });
