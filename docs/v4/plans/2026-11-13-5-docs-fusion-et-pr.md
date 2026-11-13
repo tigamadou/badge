@@ -36,8 +36,8 @@ relecture de l'orchestrateur contre les écrans ; vérification complète ; push
 | 4 | Tampon et `make docs-check` | [x] | 2026-11-13 | 71 tamponnées, docs-check vert, stamp déterministe |
 | 5 | Relecture de l'orchestrateur | [x] | 2026-11-13 | relecture contre le code (navigateur non utilisé) ; écarts journalisés dans la spec 40 |
 | 6 | e2e, doc, vérification complète | [x] | 2026-11-13 | lint (docs-check inclus) 0 erreur, typecheck OK, couverture 100 % (448 fichiers, 5266 tests), e2e par dossier vert ; cause des 404 e2e : cache Turbopack corrompu (`.next/dev/cache` vidé) ; 2 tests e2e obsolètes mis à jour |
-| 7 | Arrêt des stacks d'agents | [ ] | | |
-| 8 | Push et PR | [ ] | | |
+| 7 | Arrêt des stacks d'agents | [x] | 2026-11-13 | stacks 2a, 2b, 2c, 4a arrêtées ; worktrees, branches et bases conservés |
+| 8 | Push et PR | [x] | 2026-11-13 | PR https://github.com/tigamadou/badge/pull/30 vers development, non fusionnée |
 
 ## Fichiers du lot (exclusifs)
 
