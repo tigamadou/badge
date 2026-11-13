@@ -314,6 +314,22 @@ describe("resolveAssignableRole et assertCanAssignRole", () => {
     expect(() => assertCanAssignRole(owner, viewer, target)).not.toThrow();
   });
 
+  it("un staff non membre attribue un rôle système d'organisation, pas un rôle personnalisé qu'il ne détient pas", async () => {
+    const org = await makeOrg();
+    const admin = await ctxOf((await makeStaff("STAFF_ADMIN")).id);
+    const roles = await listRoles({ scope: "ORG" });
+    const ownerRole = roles.find((r) => r.systemKey === "OWNER")!;
+    const target = { kind: "org", orgId: org.id } as const;
+    expect(() => assertCanAssignRole(admin, ownerRole, target)).not.toThrow();
+    // le staff membre de l'organisation n'a pas l'exception
+    const member = await makeStaff("STAFF_ADMIN");
+    await prisma.orgMembership.create({ data: { userId: member.id, orgId: org.id, roleId: ownerRole.id } });
+    const memberCtx = await ctxOf(member.id);
+    expect(() => assertCanAssignRole(memberCtx, ownerRole, target)).not.toThrow();
+    const custom = await createRole(await ctxOf((await makeStaff("SUPER_ADMIN")).id), { scope: "ORG", orgId: org.id }, { name: "Payeur", permissions: ["billing.subscription.pay"] });
+    expect((await rejection(() => assertCanAssignRole(admin, custom, target))).code).toBe("PERMISSION_NOT_HELD");
+  });
+
   it("un staff SUPER_ADMIN attribue un rôle plateforme ; un STAFF_ADMIN pas SUPER_ADMIN", async () => {
     const sa = await ctxOf((await makeStaff("SUPER_ADMIN")).id);
     const admin = await ctxOf((await makeStaff("STAFF_ADMIN")).id);

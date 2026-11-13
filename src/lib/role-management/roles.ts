@@ -7,6 +7,7 @@ import {
   ROLE_SCOPE_ALLOWS,
   SYSTEM_ROLES,
   isPermission,
+  isStaffActor,
   permissionDef,
   permissionScopeOf,
   type Permission,
@@ -341,9 +342,45 @@ export async function resolveAssignableRole(roleId: string, expected: RoleLevel)
   return toDTO(row);
 }
 
+/**
+ * Première permission du rôle que l'acteur ne détient pas sur la cible.
+ * Exception : le staff qui agit sur une organisation ou un évènement sans en être membre (gestionnaire de
+ * membres, sans les droits « côté client » : abonnement, devis) peut attribuer un rôle SYSTÈME, dont le contenu
+ * est figé par le code. Les rôles personnalisés restent soumis à la règle stricte.
+ */
+export function missingPermission(
+  actor: UserContext,
+  role: Pick<RoleDTO, "permissions" | "systemKey">,
+  target: PermissionTarget,
+): Permission | undefined {
+  if (role.systemKey !== null && target.kind !== "platform" && isStaffActor(actor, target)) return undefined;
+  const held = heldOn(actor, target);
+  return role.permissions.find((p) => !held.has(p));
+}
+
 /** Refuse l'attribution d'un rôle dont l'acteur ne détient pas toutes les permissions sur la cible. */
 export function assertCanAssignRole(actor: UserContext, role: RoleDTO, target: PermissionTarget): void {
-  const held = heldOn(actor, target);
-  const missing = role.permissions.find((p) => !held.has(p));
+  const missing = missingPermission(actor, role, target);
   if (missing) throw new RoleError("PERMISSION_NOT_HELD", missing);
+}
+
+export type AssignableRole = Pick<RoleDTO, "id" | "name" | "systemKey" | "scope" | "description"> & {
+  assignable: boolean;
+  reason?: string;
+};
+
+/** Rôles proposables dans un sélecteur, avec leur attribuabilité par l'acteur (sans liste de permissions). */
+export async function listAssignableRoles(
+  actor: UserContext,
+  scope: { scope: RoleScope; orgId?: string | null },
+  target: PermissionTarget,
+): Promise<AssignableRole[]> {
+  const roles = await listRoles(scope);
+  return roles.map((r) => {
+    const missing = missingPermission(actor, r, target);
+    const base = { id: r.id, name: r.name, systemKey: r.systemKey, scope: r.scope, description: r.description };
+    return missing
+      ? { ...base, assignable: false, reason: `Vous ne détenez pas la permission « ${permissionDef(missing).label} ».` }
+      : { ...base, assignable: true };
+  });
 }
