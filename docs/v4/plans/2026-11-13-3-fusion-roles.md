@@ -320,3 +320,12 @@ son jumeau dans les deux autres) :
    `src/lib/permissions` ; repli sur l'enum (`roleId` nul) **conservé** jusqu'au changement
    ultérieur de suppression des enums (ne pas le retirer à la fusion) ; double écriture des
    enums conservée pour la même raison.
+
+## Amendements de la revue finale du socle (2026-11-13)
+
+> Ces amendements **priment** sur le reste du plan en cas de contradiction.
+
+1. **`memberPermissions`** est publié par le socle : `memberPermissions(ctx: UserContext, target: PermissionTarget): ReadonlySet<Permission>` (`src/lib/permissions/resolve.ts`, exporté par `@/lib/permissions`), plus `loadMemberPermissions(userId, target)` dans `src/lib/auth-guards.ts`. C'est l'ensemble effectif **sans** le rôle plateforme ni ses ajustements : les droits « côté organisateur » d'un membre. Pour un non-staff, il est égal à `effectivePermissions`. Tout contrôle « jamais le staff » ou « côté organisateur » (écriture d'une demande d'impression, acceptation de devis, paiement d'abonnement, destinataires de notification sans `includeStaff`) l'utilise **en plus** du refus de `isStaffActor`. Un staff membre d'une organisation n'agit plus côté organisateur avec ses droits plateforme.
+2. **`effectivePermissions`** n'applique le rôle plateforme que si `ctx.isStaff` (invariant `isStaff = platformRoleId != null`). Le résolveur ignore les clés `reserved` d'un rôle non système ou d'un ajustement, et un `roleRef` de niveau incompatible avec la place de la membership.
+3. Les quatre routes de changement de rôle (`platform/users/[userId]`, `org/[orgId]/members/[userId]`, `org/[orgId]/events/[eventId]/members/[membershipId]`, `platform/organizations/[orgId]/owners`) écrivent désormais `roleId` / `platformRoleId` en plus de la colonne d'enum (marqueur `@deprecated compat`). Le lot qui les reprend conserve cette double écriture jusqu'au plan 3.
+4. `migrate-roles` ne migre que les comptes `isStaff = true`, n'écrit jamais `isStaff` et signale les lignes incohérentes (`isStaff = 0 AND staffRole IS NOT NULL`).

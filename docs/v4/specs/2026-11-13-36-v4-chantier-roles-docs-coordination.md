@@ -177,3 +177,9 @@ test-coverage`, e2e), PR vers `development`.
   perd planches, exports de badges et production ; l'Observateur perd planches et exports ;
   le PRINTER d'évènement ne reçoit plus l'ouverture/fermeture des inscriptions. Le nombre
   de pages documentées dépasse 79 (pages de rôles, de permissions et AGENT).
+- 2026-11-13 — Revue finale du socle (1 Critical, 2 Important) corrigée avant la vague 2 :
+  `memberPermissions(ctx, target)` publié comme contrat (droits côté organisateur d'un staff
+  membre, sans son rôle plateforme) pour `assertOwner`, `organizerRoute` et les notifications ;
+  rôle plateforme appliqué seulement si `isStaff` ; double écriture `roleId` / `platformRoleId`
+  dans les 4 routes de changement de rôle (reprises par 2a et 2c) ; `migrate-roles` ne promeut
+  plus de compte en staff. Amendements reportés en fin des plans 2a, 2b, 2c et 3.
