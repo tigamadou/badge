@@ -346,6 +346,20 @@ describe("setOrganizerProducts — comparaison avec les lignes existantes", () =
     expect(await thread(r.id)).toHaveLength(before);
   });
 
+  it("réordonner en ajoutant un produit : les positions sont mises à jour et l'ajout est tracé", async () => {
+    const r = await requestWithBadges("SUBMITTED");
+    const a = await prisma.printProduct.create({
+      data: { kind: "ACCESSORY", name: "Stylo", slug: `stylo-mv-${Date.now()}`, basePrice: 100, published: true },
+    });
+    const b = await prisma.printProduct.create({
+      data: { kind: "ACCESSORY", name: "Porte-clés", slug: `pc-mv-${Date.now()}`, basePrice: 100, published: true },
+    });
+    await set(r.id, [badge(), lanyard(), lanyard({ productId: a.id })]);
+    const res = await set(r.id, [badge(), lanyard({ productId: a.id }), lanyard(), lanyard({ productId: b.id })]);
+    expect(res.lines.map((l) => l.label)).toEqual(["Support badge PVC", "Stylo", "Cordon", "Porte-clés"]);
+    expect((await thread(r.id)).map((e) => e.body)).toContain("Ligne ajoutée : Porte-clés (3 × " + formatFcfa(100) + ")");
+  });
+
   it("un produit déjà en ligne mais archivé depuis, inchangé, ne bloque pas l'enregistrement", async () => {
     const r = await requestWithBadges("SUBMITTED");
     await set(r.id, [badge(), lanyard()]);

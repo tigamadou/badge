@@ -568,6 +568,26 @@ describe("PATCH /api/org/[orgId]/members/[userId]", () => {
     expect(res.status).toBe(401);
   });
 
+  it("traite une appartenance sans rôle comme AUDITOR dans la notification de changement", async () => {
+    const o = await prisma.user.create({ data: { email: "own-norole@x", password: "x", name: "O" } });
+    const target = await prisma.user.create({ data: { email: "target-norole@x", password: "x", name: "T" } });
+    const org = await prisma.organization.create({ data: { name: "O", slug: "patch-norole" } });
+    await prisma.orgMembership.create({ data: { userId: o.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: target.id, orgId: org.id, role: null } });
+    await withSession({ id: o.id, email: o.email, name: o.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/members/[userId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/members/${target.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: "MANAGER" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ orgId: org.id, userId: target.id }) });
+    expect(res.status).toBe(200);
+    const updated = await prisma.orgMembership.findUnique({ where: { userId_orgId: { userId: target.id, orgId: org.id } } });
+    expect(updated?.role).toBe("MANAGER");
+  });
+
   it("returns 403 for a non-OWNER caller (MANAGER)", async () => {
     const m = await prisma.user.create({ data: { email: "mgr-patch@x", password: "x", name: "M" } });
     const target = await prisma.user.create({ data: { email: "target-patch@x", password: "x", name: "T" } });

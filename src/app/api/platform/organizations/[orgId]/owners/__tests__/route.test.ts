@@ -360,6 +360,27 @@ describe("POST /api/platform/organizations/[orgId]/owners", () => {
     expect(roleChangedLog).toBeNull();
   });
 
+  it("traite une appartenance sans rôle comme AUDITOR dans la notification de changement", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    const existingUser = await prisma.user.create({
+      data: { email: "norole@x.com", password: "x", name: "NoRole" },
+    });
+    await prisma.orgMembership.create({
+      data: { userId: existingUser.id, orgId: org.id, role: null },
+    });
+
+    const { POST } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
+    const req = new NextRequest(`http://localhost/api/platform/organizations/${org.id}/owners`, {
+      method: "POST",
+      body: JSON.stringify({ email: "norole@x.com", name: "NoRole", role: "OWNER" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, upgraded: true });
+  });
+
   it("upgrades the existing membership role and logs MEMBERSHIP_ROLE_CHANGED", async () => {
     const staff = await makeStaff("STAFF_ADMIN");
     const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });

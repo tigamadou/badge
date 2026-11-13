@@ -259,6 +259,25 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/members/[membershipId]", () =>
     expect((log?.details as { from?: string; to?: string } | null)?.to).toBe("OPERATOR");
   });
 
+  it("traite une appartenance sans rôle comme VIEWER dans la notification de changement", async () => {
+    const { u, org, event } = await seedAdmin();
+    const x = await prisma.user.create({ data: { email: "norole@x.test", password: "x", name: "N" } });
+    const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: null } });
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+
+    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
+    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: "OPERATOR" }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await PATCH(req, {
+      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()).membership.role).toBe("OPERATOR");
+  });
+
   it("returns 400 on malformed JSON body", async () => {
     const { u, org, event } = await seedAdmin();
     const x = await prisma.user.create({ data: { email: "malformed@x.test", password: "x", name: "R" } });

@@ -55,7 +55,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 14 | Consommateurs transverses | [x] | 2026-11-13 | Contrôle smoke extrait en `platformChecks` (staff + « Rôles système présents », 14 lignes) ; tests ajoutés pour la page marketing |
 | 15 | Spec 39 : quantité des accessoires côté serveur | [x] | 2026-11-13 | `setOrganizerProducts` : quantité = nombre de badges pour tout produit (`entry.quantity` ignoré). Tests produits/API adaptés ; seed démo `prisma/seed/demo/print/orders.ts` ajusté (accessoire ajouté seulement si badges ≥ minQuantity). |
 | 16 | Spec 40 : ancrages de la documentation | [x] | 2026-11-13 | `PageDocButton` (null), entrée de menu « Documentation » (icône `file` : `book-open` absente de `Icon.tsx`) dans StaffShell/OrgShell/EventShell/AccountNav (libellé court « Docs »), 4 pages d'attente `docs`. |
-| 17 | e2e, doc, vérification | [ ] | | |
+| 17 | e2e, doc, vérification | [x] | 2026-11-13 | Doc `docs/v4/features/roles-permissions.md` (section Socle rédigée, sections des lots 2a/2b/2c à rédiger, Migration et exploitation) ; e2e `e2e/transverse/roles-socle.spec.ts` (4 tests verts). Contrôle préalable base de dev : 0 utilisateur `isStaff = 0 AND staffRole IS NOT NULL` (1 utilisateur, 1 staff). `make migrate-roles` x2 sur la base de dev : rapport 1 = staff 0, org 0, évènement 0, déjà migrées 1 ; rapport 2 identique (zéro, base déjà migrée par le seed). Couverture : le gate 100 % échouait sur 5 branches du socle, comblées par des tests seulement (null de `existing.role` dans les 3 routes de changement de rôle ; réordonnancement avec ajout dans `setOrganizerProducts` ; contenu de notification sans ancre) ; 382 fichiers, 4536 tests passés. Union `PermissionDomain` finale : voir Task 2. e2e complets : 486 passés, 22 échoués, 2 instables (repassés au retry), 0 ignorés ; échecs hors socle (taille de page par défaut 10 depuis b72805b alors que les specs de pagination, plans, inscriptions, détail de commande attendent 20 / la 1re page). Step 5 (contrôle visuel) laissé au contrôleur, non coché. |
 
 ## Fichiers du lot (exclusifs)
 
@@ -883,25 +883,25 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
 - Modify: `e2e/transverse/*.spec.ts` (adaptations aux helpers si nécessaire), spec de coordination : **non** (journal tenu par l'orchestrateur)
 - Test: `e2e/transverse/roles-socle.spec.ts` (nouveau)
 
-- [ ] **Step 1 : squelette `docs/v4/features/roles-permissions.md`**, en français avec accents, en-tête de statut « En construction —
+- [x] **Step 1 : squelette `docs/v4/features/roles-permissions.md`**, en français avec accents, en-tête de statut « En construction —
   chantier `roles-permissions` » et **une section par lot** (titres exacts, chaque lot remplit la sienne) : « Socle : modèle,
   catalogue et résolution » (remplie ici : rôles en base + catalogue en code, rôles système figés, niveaux et « Qui peut porter
   quoi », ordre de résolution, règle de cible, repli sur les enums, `migrate-roles`, gardes et contexte `EventAuthCtx`,
   notifications par permission, fabriques et helpers e2e), « Plateforme (lot 2a) », « Organisation et évènement (lot 2b) »,
   « Gestion des droits (lot 2c) » (trois sections avec une ligne « À rédiger par le lot 2x »), « Migration et exploitation »
   (`make migrate-roles`, ordre : `db-push` puis `migrate-roles`, colonnes d'enum conservées jusqu'à un changement ultérieur).
-- [ ] **Step 2 : e2e `roles-socle.spec.ts`** (helpers du socle, base de dev, fixtures préfixées) : (a) un `STAFF_ADMIN` créé par
+- [x] **Step 2 : e2e `roles-socle.spec.ts`** (helpers du socle, base de dev, fixtures préfixées) : (a) un `STAFF_ADMIN` créé par
   `createTestStaff` se connecte et voit `/platform` ; (b) un `STAFF_OBSERVER` voit `/platform` ; (c) un `OWNER` d'organisation voit
   `/org/{id}` et le lien « Documentation » mène à la page « Bientôt disponible » ; (d) un compte `STAFF_PRINTER` créé par le helper
   existe, se connecte (pas d'erreur 500 ; la page d'atterrissage n'est pas exigée avant le lot 2a).
-- [ ] **Step 3 : migration de dev** : `make migrate-roles` (base de dev, après `ARGS=--dry-run` de la Task 8) puis
+- [x] **Step 3 : migration de dev** : `make migrate-roles` (base de dev, après `ARGS=--dry-run` de la Task 8) puis
   `make migrate-roles` une seconde fois : le second rapport doit être à zéro. Noter les compteurs dans les Notes.
-- [ ] **Step 4 : vérification complète** : `make lint && make typecheck && make test-coverage` → 0 erreur, seuils de couverture à
+- [x] **Step 4 : vérification complète** : `make lint && make typecheck && make test-coverage` → 0 erreur, seuils de couverture à
   100 % respectés. Puis e2e **complets** (`make test-e2e`) : rien n'est écarté ; si le smoke SMTP échoue en masse, voir la
   mémoire projet (`make db-seed` répare le SMTP du dev) avant de conclure à une régression.
 - [ ] **Step 5 : contrôle visuel** (navigateur) : `/platform`, `/org/{id}`, `/event/{id}`, `/account` aux largeurs 375, 1024 et 1280 px ;
   entrée « Documentation » visible et sans débordement dans les quatre en-têtes/menus ; pas de bouton parasite.
-- [ ] **Step 6 : mise à jour de la Progression** (tous les `[x]` datés, Notes : fichiers touchés pour typage, union
+- [x] **Step 6 : mise à jour de la Progression** (tous les `[x]` datés, Notes : fichiers touchés pour typage, union
   `PermissionDomain` finale, compteurs de migration) puis **commit** : `docs(roles): squelette de la doc roles-permissions et verification du socle`.
 
 ## Amendements de la relecture croisée (2026-11-13)
