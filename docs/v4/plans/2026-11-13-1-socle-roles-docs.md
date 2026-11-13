@@ -41,7 +41,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 |---|---|---|---|---|
 | 1 | Schéma Prisma, reset de test, types de journal | [x] | 2026-11-13 | Correctifs mécaniques (`role` facultatif) : `prisma/seed/demo/notifications/notifications.ts`, `prisma/seed/demo/notifications/activity.ts` (5 types ajoutés à `ACTIVITY_NOT_SEEDED`), `src/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route.ts`, `src/app/api/org/[orgId]/members/[userId]/route.ts`, `src/app/api/platform/organizations/[orgId]/owners/route.ts`, `src/app/event/[eventId]/members/page.tsx`, `src/app/org/[orgId]/members/page.tsx`, `src/app/platform/organizations/[orgId]/members/page.tsx`, `src/lib/notifications/recipients.ts`, `src/lib/user-context.ts` |
 | 2 | Catalogue des permissions et libellés | [x] | 2026-11-13 | 98 clés (56/18/20/4). Union `PermissionDomain` figée : access, roles, users, organizations, members, subscriptions, plans, payments, profiles, blocklist, settings, rejection_reasons, badge_templates, email_jobs, activity, print_requests, print_catalog, print_layouts, print_sheets, org, events, billing, scan, registrations, badges, print_event, account (`print.onsite.margin.update` et `print.quote.accept` dans `print_requests`; `org.events.*` dans `events`; `org.members.*` dans `members`). |
-| 3 | Rôles système (permissions en code) | [ ] | | |
+| 3 | Rôles système (permissions en code) | [x] | 2026-11-13 | `system-roles.ts` : grants typés `Record<Permission, …>` (une permission sans attribution ne compile pas). `index.ts` ré-exporte catalog, system-roles, labels (resolve en Task 5). |
 | 4 | Contexte utilisateur enrichi et repli sur les enums | [ ] | | |
 | 5 | Résolution des permissions effectives | [ ] | | |
 | 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [ ] | | |
@@ -399,7 +399,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Produces : `SYSTEM_ROLES`, `SystemRoleKey`, `RoleScope`, `isSystemRoleKey`, `systemRolePermissions`,
   `ROLE_SCOPE_ALLOWS` ; `index.ts` ré-exporte `catalog`, `system-roles`, `resolve`, `labels`.
 
-- [ ] **Step 1 : tests rouges** (`system-roles.test.ts`), tous écrits sur la spec 37 :
+- [x] **Step 1 : tests rouges** (`system-roles.test.ts`), tous écrits sur la spec 37 :
   - invariants : chaque permission d'un rôle système est dans le catalogue ; son niveau est autorisé par
     `ROLE_SCOPE_ALLOWS[role.scope]` (PLATFORM → PLATFORM/ORG/EVENT ; ORG → ORG/EVENT ; EVENT → EVENT ;
     PARTICIPANT → PARTICIPANT) ; les 4 clés `reserved` n'apparaissent que dans `SUPER_ADMIN` et `OWNER`
@@ -424,8 +424,8 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
     `users.permissions.manage`, `org.roles.manage`, `org.members.permissions.manage`, `billing.subscription.pay`,
     `print.quote.accept` (dériver la liste complète attendue des tableaux de la spec) ;
   - `MANAGER` ne contient pas `org.update`, `org.members.manage`, `billing.subscription.pay`, `print.quote.accept`.
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter `system-roles.ts`** — `SYSTEM_ROLES` : une entrée par clé (scope, `name` FR :
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter `system-roles.ts`** — `SYSTEM_ROLES` : une entrée par clé (scope, `name` FR :
   « Super administrateur », « Administrateur », « Support », « Imprimeur », « Observateur »,
   « Propriétaire », « Gestionnaire », « Auditeur », « Agent », « Administrateur d'évènement »,
   « Opérateur », « Imprimeur d'évènement », « Lecteur », « Participant » ; `description` d'une phrase).
@@ -433,8 +433,8 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   ead eop epr evi / PA). Les clés EVENT d'un rôle plateforme ou d'organisation viennent des colonnes « Staff » et
   « Rôles org (tous évènements) » du tableau EVENT. `SUPER_ADMIN` calculé (toutes sauf PARTICIPANT).
   `index.ts` ré-exporte (le `resolve` arrive en Task 5 : l'export est ajouté alors).
-- [ ] **Step 4 : lancer** → vert ; couverture 100 %.
-- [ ] **Step 5 : commit** : `feat(roles): roles systeme et leurs permissions dans le code`.
+- [x] **Step 4 : lancer** → vert ; couverture 100 %.
+- [x] **Step 5 : commit** : `feat(roles): roles systeme et leurs permissions dans le code`.
 
 ### Task 4: Contexte utilisateur enrichi et repli sur les enums
 
