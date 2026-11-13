@@ -360,8 +360,23 @@ describe("inscriptions, badges, produits", () => {
         ],
       },
     });
-    expect(forced.status).toBe(200);
-    expect((await forced.json()).lines[1].quantity).toBe(1);
+    expect(forced.status).toBe(400);
+    expect(await forced.json()).toMatchObject({
+      error: "ACCESSORY_QUANTITY_ABOVE_BADGES",
+      productId: fx.lanyard.id,
+      badgeCount: 1,
+      message: expect.stringContaining("nombre de badges"),
+    });
+    const zero = await call(products.PUT as Handler, "PUT", {
+      requestId: r.id,
+      body: {
+        products: [
+          { productId: fx.badgeProduct.id, quantity: null, choices: [] },
+          { productId: fx.lanyard.id, quantity: 0, choices: [] },
+        ],
+      },
+    });
+    expect(zero.status).toBe(400);
     expect((await call(products.PUT as Handler, "PUT", { requestId: r.id, body: { products: "x" } })).status).toBe(400);
     const missing = await call(products.PUT as Handler, "PUT", {
       requestId: r.id,
