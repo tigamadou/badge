@@ -26,7 +26,7 @@ les routes participant sur `requireParticipantPermission`.
 | 5 | API utilisateurs et propriétaires plateforme par `roleId` | [x] | 2026-11-13 | owners POST: roleId optionnel (OWNER par defaut). Anciens tests api-staff-users-{post,detail} reecrits. withRoleErrors traduit aussi AuthError. notifications.ts (role-management) pour roles sans enum. Journal: from/to = cle systeme sinon nom. |
 | 6 | API membres d'organisation et d'évènement par `roleId` | [x] | 2026-11-13 | GET/POST/PATCH/DELETE par permission (org.members.*, event.members.manage). OWNER_PROTECTED hors users.permissions.manage; SELF_MODIFICATION; LAST_OWNER. Tests org deplaces dans api-org-members.test.ts. |
 | 7 | Routes participant | [x] | 2026-11-13 | PUT profil, upload, resubmit, register via requireParticipantPermission. Compte inexistant/archive: 401; bloque: 403 ACCOUNT_BLOCKED. Tests 404 fantome devenus 401 + spy cible pour la branche defensive. Nouveau participant-guard.test.ts. |
-| 8 | Composants `src/components/permissions/**` | [ ] | | |
+| 8 | Composants `src/components/permissions/**` | [x] | 2026-11-13 | Logique pure dans logic.ts (testee sans DOM: renderToStaticMarkup + fonctions). UserPermissionsEditor prend `levels` en prop plutot qu'un orgId (+ heldPermissions, scopes, sendOrgId). Erreurs d'API mappees en francais (readOrThrow). |
 | 9 | Pages `/platform/roles` et `/org/[orgId]/roles` | [ ] | | |
 | 10 | Pages d'ajustement et liens d'entrée | [ ] | | |
 | 11 | Formulaires et pages de membres / utilisateurs | [ ] | | |
