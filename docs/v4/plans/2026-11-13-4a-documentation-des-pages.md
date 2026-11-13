@@ -36,7 +36,7 @@ coordination : [`spec 36`](../specs/2026-11-13-36-v4-chantier-roles-docs-coordin
 | 1 | Pré-contrôles et inventaire des pages | [x] | 2026-11-13 | pages hors docs : plateforme 41, organisation 18, évènement 25, compte 5 (89) |
 | 2 | Outil : découverte, chemins de doc, sources, empreinte | [x] | 2026-11-13 | `index` réservé à la racine d'un espace ; `assignDocIds` désambiguïse les collisions réelles (`event/print/requestId/onsite`) |
 | 3 | Outil : format (frontmatter, blocs), vérification, manifestes | [x] | 2026-11-13 | portée des clés = portée de l'espace (platform → PLATFORM même sous `/platform/organizations/[orgId]`) ; pas de `eslint-disable` dans les modules générés (avertissement « unused ») ; `updatedAt` conservé si rien n'a changé |
-| 4 | Cibles `docs-check` / `docs-stamp` et intégration à `lint` | [ ] | | |
+| 4 | Cibles `docs-check` / `docs-stamp` et intégration à `lint` | [x] | 2026-11-13 | `docs-check` : 89 manquantes (état attendu avant Task 11) ; `make lint` rouge jusque-là |
 | 5 | Logique serveur : appariement, cibles, blocs, rendu | [ ] | | |
 | 6 | Route `GET /api/page-docs` | [ ] | | |
 | 7 | `PageDocButton` réel et panneau latéral | [ ] | | |

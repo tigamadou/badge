@@ -6,7 +6,7 @@
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
         preprod-db-reset preprod-reload-demo \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
-        test test-db test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
+        test test-db test-unit test-coverage test-all ci test-e2e test-e2e-ui lint docs-check docs-stamp typecheck build logs \
         db-push db-seed db-studio db-generate db-reset migrate-roles \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates migrate-installed-templates-preprod migrate-installed-templates-prod \
         validate-badge-templates-preprod validate-badge-templates-prod \
@@ -519,6 +519,16 @@ migrate-badge-template-refs:
 
 lint:
 	$(DEV_COMPOSE) exec app yarn lint
+	@$(MAKE) --no-print-directory docs-check
+
+# Docs des pages (spec 40) : verification hors ligne (obsoletes, manquantes, orphelines, format)
+# et tampon apres mise a jour du texte (PAGES = identifiants, routes, espaces ou all).
+docs-check:
+	$(DEV_COMPOSE) exec app yarn --silent tsx scripts/page-docs/cli.ts check
+
+docs-stamp:
+	@test -n "$(PAGES)" || { echo "Usage : make docs-stamp PAGES=\"org/events/new platform\" (identifiants, routes, espaces ou all)"; exit 1; }
+	$(DEV_COMPOSE) exec app yarn --silent tsx scripts/page-docs/cli.ts stamp $(PAGES)
 
 typecheck:
 	$(DEV_COMPOSE) exec app yarn tsc --noEmit
