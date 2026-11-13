@@ -31,13 +31,13 @@ test.describe("Platform — Nouvel utilisateur", () => {
 
   // --- Actions UI ---------------------------------------------------------
 
-  test("STAFF_SUPPORT cree un client rattache a une org (AUDITOR)", async ({ page }) => {
+  test("STAFF_ADMIN cree un client rattache a une org (AUDITOR) — organizations.members.manage", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "unew-client" });
     const org = await getDb().organization.findUnique({
       where: { id: orgId },
       select: { name: true },
     });
-    await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "unew-client-actor" });
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "unew-client-actor" });
     await mailpit.clear();
 
     const email = `e2e-unew-client-${Date.now()}@v2-11-e2e.test`;

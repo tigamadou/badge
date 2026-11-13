@@ -145,18 +145,15 @@ test.describe("Org — Parametres", () => {
 
   
   
-  test("MANAGER voit la page Parametres (mutation refusee cote API)", async ({ page }) => {
+  test("MANAGER (sans org.update) est renvoye au tableau de bord depuis les Parametres", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "set-mgr" });
     const manager = await createTestOrgMember({ scope: "set-mgr-user", orgId, role: "MANAGER" });
     await loginAs(page, manager);
 
-    // La page /settings n'a pas de garde : le formulaire est visible.
+    // La page /settings est gardee par org.update (OWNER) : retour au tableau de bord.
     await page.goto(`/org/${orgId}/settings`);
-    await expect(
-      page.getByRole("heading", { name: /paramètres de l.organisation/i }),
-    ).toBeVisible();
-
-    // La mutation reste refusee cote API (garde couverte en integration).
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}$`));
+    await expect(page.getByRole("link", { name: /paramètres/i })).toHaveCount(0);
   });
 
   test("MANAGER choisit un modele de badge via l'UI (autorise)", async ({ page }) => {

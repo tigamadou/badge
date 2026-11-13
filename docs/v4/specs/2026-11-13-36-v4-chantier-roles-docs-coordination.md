@@ -214,4 +214,4 @@ test-coverage`, e2e), PR vers `development`.
   les ajustements propres à une organisation pour un membre d'évènement (`orgId: ""`), d'où une
   boucle possible `/select` ↔ `/event/E` si un ajustement `REVOKE` d'organisation retire toutes ses
   permissions d'évènement.
-
+- 2026-11-13 — Vérification finale (tâche 9) : e2e complet vert ; trois specs org (membres, paramètres, modèles) et `platform/user-new` (rattacher un client à une organisation exige `organizations.members.manage`, donc STAFF_ADMIN) alignées sur le catalogue. Échecs résiduels uniquement d'environnement (expirations, base injoignable sous charge). Contrôle visuel navigateur par rôle non réalisé.

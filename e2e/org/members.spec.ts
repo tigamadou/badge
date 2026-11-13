@@ -195,7 +195,7 @@ test.describe("Org — Membres", () => {
     await expect(page.getByPlaceholder("email@exemple.fr")).toHaveCount(0);
   });
 
-  test("AUDITOR ne voit pas l'entree Membres dans la nav", async ({ page }) => {
+  test("AUDITOR voit la liste des membres (org.members.read) sans pouvoir inviter", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "mem-aud-nonav" });
     const auditor = await createTestOrgMember({
       scope: "mem-aud-nonav-user",
@@ -204,6 +204,8 @@ test.describe("Org — Membres", () => {
     });
     await loginAndEnter(page, auditor, { kind: "org", id: orgId });
 
-    await expect(page.getByRole("link", { name: /membres/i })).toHaveCount(0);
+    await page.getByRole("link", { name: /membres/i }).first().click();
+    await expect(page).toHaveURL(new RegExp(`/org/${orgId}/members`));
+    await expect(page.getByPlaceholder("email@exemple.fr")).toHaveCount(0);
   });
 });

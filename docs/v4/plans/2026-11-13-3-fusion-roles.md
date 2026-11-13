@@ -40,7 +40,7 @@ et [`specs/2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs/2026-
 | 6 | Cohérence catalogue ↔ gardes ↔ menus ↔ docs | [x] | 2026-11-13 | Test catalog-usage ; 3 pages de membres sans garde corrigées. Parcours navigateur : voir rapport. |
 | 7 | Relecture transverse des défauts jumeaux | [x] | 2026-11-13 | Jumeaux : 3 pages de membres sans garde, boucle /platform → / → /platform ; voir rapport. |
 | 8 | Architecture, `CLAUDE.md`, doc de feature, tracker | [x] | 2026-11-13 | Journal de la spec 36, statuts 37-39, points à relire (spec 37). |
-| 9 | e2e, doc, vérification complète | [ ] | | |
+| 9 | e2e, doc, vérification complète | [x] | 2026-11-13 | lint 0 erreur (34 warnings, aucun nouveau), typecheck 0, test-coverage 5067 tests / 100 % ; e2e complet vert après relances ciblées (instabilités d'environnement : charge de l'hôte Docker) ; vérification navigateur non faite |
 
 ## Fichiers du lot (exclusifs)
 
