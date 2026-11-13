@@ -54,7 +54,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 13 | Découplage de `OnsiteStation` | [x] | 2026-11-13 | Props `apiBase?`/`backHref?` ; `requestUrl(…, apiBase?)`. Page plateforme inchangée (défauts). Tests : `request-fetch`, `OnsiteStation` (rendu statique). |
 | 14 | Consommateurs transverses | [x] | 2026-11-13 | Contrôle smoke extrait en `platformChecks` (staff + « Rôles système présents », 14 lignes) ; tests ajoutés pour la page marketing |
 | 15 | Spec 39 : quantité des accessoires côté serveur | [x] | 2026-11-13 | `setOrganizerProducts` : quantité = nombre de badges pour tout produit (`entry.quantity` ignoré). Tests produits/API adaptés ; seed démo `prisma/seed/demo/print/orders.ts` ajusté (accessoire ajouté seulement si badges ≥ minQuantity). |
-| 16 | Spec 40 : ancrages de la documentation | [ ] | | |
+| 16 | Spec 40 : ancrages de la documentation | [x] | 2026-11-13 | `PageDocButton` (null), entrée de menu « Documentation » (icône `file` : `book-open` absente de `Icon.tsx`) dans StaffShell/OrgShell/EventShell/AccountNav (libellé court « Docs »), 4 pages d'attente `docs`. |
 | 17 | e2e, doc, vérification | [ ] | | |
 
 ## Fichiers du lot (exclusifs)
@@ -861,20 +861,20 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
   « Documentation » (icône `book-open` si présente dans `Icon.tsx`, sinon `file`) vers `/platform/docs`, `/org/{id}/docs`,
   `/event/{id}/docs`, `/account/docs` ; pages d'attente `EmptyState` « Bientôt disponible ».
 
-- [ ] **Step 1 : tests rouges** : chaque shell rend le lien « Documentation » avec le bon `href` (StaffShell, OrgShell pour tout
+- [x] **Step 1 : tests rouges** : chaque shell rend le lien « Documentation » avec le bon `href` (StaffShell, OrgShell pour tout
   rôle, EventShell, AccountNav y compris sous `sm` — libellé court « Docs » via `shortLabel`) ; `PageDocButton` rend `null` ;
   chaque page `docs` rend le titre « Documentation » et le texte « Bientôt disponible » (rendu statique des pages serveur,
   `params` simulés) ; le bouton est placé dans l'en-tête avant la cloche (test d'ordre sur le HTML de `StaffShell`).
-- [ ] **Step 2 : lancer** `make test FILE=src/components` → échec.
-- [ ] **Step 3 : implémenter** — insérer `<PageDocButton />` juste avant `<NotificationBell …/>` dans les trois shells et dans
+- [x] **Step 2 : lancer** `make test FILE=src/components` → échec.
+- [x] **Step 3 : implémenter** — insérer `<PageDocButton />` juste avant `<NotificationBell …/>` dans les trois shells et dans
   `src/app/account/layout.tsx` ; ajouter l'entrée de menu en fin de liste (OrgShell : `minRole: "AUDITOR"` ; StaffShell : dans le
   groupe « Plateforme » ; EventShell : groupe « Administration », sans condition de rôle — **les shells `EventOperatorShell`,
   `EventPrinterShell`, `EventViewerShell` ne sont pas modifiés**, ils disparaissent en 2b) ; pages d'attente avec
   `EmptyState icon="file" title="Bientôt disponible" description="La documentation de cet espace arrive prochainement."`.
   Les pages ne vérifient aucune permission (les layouts d'espace protègent déjà l'accès).
-- [ ] **Step 4 : lancer** `make test FILE=src/components` → vert ; `make typecheck`. Contrôle visuel du bouton absent (rendu
+- [x] **Step 4 : lancer** `make test FILE=src/components` → vert ; `make typecheck`. Contrôle visuel du bouton absent (rendu
   `null`) et de l'entrée de menu à 375, 1024 et 1280 px (voir Task 17).
-- [ ] **Step 5 : commit** : `feat(docs): ancrages de la documentation des pages (bouton nul, menu, pages d'attente)`.
+- [x] **Step 5 : commit** : `feat(docs): ancrages de la documentation des pages (bouton nul, menu, pages d'attente)`.
 
 ### Task 17: e2e, doc, vérification
 

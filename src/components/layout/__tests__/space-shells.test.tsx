@@ -11,6 +11,10 @@ vi.mock("@/components/notifications/NotificationBell", () => ({
   ),
 }));
 
+vi.mock("@/components/page-docs/PageDocButton", () => ({
+  PageDocButton: () => <i data-testid="doc-button" />,
+}));
+
 import { StaffShell } from "@/components/staff/StaffShell";
 import { OrgShell } from "@/components/admin/OrgShell";
 import { EventShell } from "@/components/event/EventShell";
@@ -173,5 +177,43 @@ describe("menu clair des shells d'évènement", () => {
     expect(html).toContain("px-2 text-xs text-nav-muted\">Acme");
     expect(html).toContain("hover:bg-mist hover:text-navy");
     noDarkClasses(html);
+  });
+});
+
+describe("ancrage de la documentation", () => {
+  it("StaffShell : lien Documentation vers /platform/docs, bouton avant la cloche", () => {
+    const html = renderToStaticMarkup(
+      <StaffShell user={{ ...user, staffRole: "STAFF_OBSERVER" }} pendingPrintRequests={0}>
+        <p>x</p>
+      </StaffShell>,
+    );
+    expect(html).toContain('href="/platform/docs"');
+    expect(html).toContain("Documentation");
+    expect(html.indexOf("/platform/docs")).toBeGreaterThan(html.indexOf(">Plateforme<"));
+    expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
+  });
+
+  it.each(["OWNER", "MANAGER", "AUDITOR"] as const)("OrgShell %s : lien Documentation", (role) => {
+    const html = renderToStaticMarkup(
+      <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} orgRole={role}>
+        <p>x</p>
+      </OrgShell>,
+    );
+    expect(html).toContain('href="/org/o1/docs"');
+    expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
+  });
+
+  it("EventShell : lien Documentation, dans Administration, bouton avant la cloche", () => {
+    const html = renderToStaticMarkup(
+      <EventShell org={org} event={event} effectiveRole="VIEWER" isStaffMode={false} user={user}>
+        <p>x</p>
+      </EventShell>,
+    );
+    expect(html).toContain('href="/event/e1/docs"');
+    expect(html.indexOf("Administration")).toBeLessThan(html.indexOf('href="/event/e1/docs"'));
+    expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
   });
 });

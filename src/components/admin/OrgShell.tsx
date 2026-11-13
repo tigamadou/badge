@@ -12,6 +12,7 @@ import {
   SIDEBAR_LINK,
 } from "@/components/layout/sidebar-classes";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageDocButton } from "@/components/page-docs/PageDocButton";
 
 type Org = { id: string; name: string; slug: string };
 
@@ -43,6 +44,7 @@ export function OrgShell({
     { href: `/org/${org.id}/payments`, label: "Paiements", icon: "file", minRole: "MANAGER" },
     { href: `/org/${org.id}/settings`, label: "Paramètres", icon: "settings", minRole: "OWNER" },
     { href: `/org/${org.id}/activity`, label: "Journal", icon: "scroll-text", minRole: "AUDITOR" },
+    { href: `/org/${org.id}/docs`, label: "Documentation", icon: "file", minRole: "AUDITOR" },
   ];
   const nav: NavEntry[] = navByRole
     .filter((n) => orgRoleAtLeast(orgRole, n.minRole))
@@ -69,6 +71,7 @@ export function OrgShell({
             <span className="truncate font-medium text-slate-700">{org.name}</span>
           </nav>
           <OrgSelector currentOrgId={org.id} orgs={orgs} isStaff={user.isStaff} />
+          <PageDocButton />
           <NotificationBell scope={{ kind: "org", orgId: org.id }} />
           <UserAvatar name={user.name} photoUrl={photoUrl ?? null} size={30} />
         </>

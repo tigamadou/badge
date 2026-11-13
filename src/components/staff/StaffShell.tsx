@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { SIDEBAR_BRAND, SIDEBAR_LINK, SIDEBAR_ROLE_LABEL } from "@/components/layout/sidebar-classes";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageDocButton } from "@/components/page-docs/PageDocButton";
 
 function buildNav(pendingPrintRequests: number): NavEntry[] {
   return [
@@ -25,6 +26,7 @@ function buildNav(pendingPrintRequests: number): NavEntry[] {
     { href: "/platform/jobs", label: "Emails", icon: "mail" },
     { href: "/platform/settings", label: "Paramètres", icon: "settings" },
     { href: "/platform/activity", label: "Journal", icon: "scroll-text" },
+    { href: "/platform/docs", label: "Documentation", icon: "file" },
   ];
 }
 
@@ -70,6 +72,7 @@ export function StaffShell({
           <span className="hidden items-center gap-1.5 rounded-full bg-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-navy sm:inline-flex">
             {ROLE_LABEL[user.staffRole]}
           </span>
+          <PageDocButton />
           <NotificationBell scope={{ kind: "platform" }} />
           <div className="flex items-center gap-2">
             <span className="hidden text-sm text-slate-600 sm:inline">{user.name}</span>

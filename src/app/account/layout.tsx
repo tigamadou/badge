@@ -9,6 +9,7 @@ import { AccountNav } from "@/components/public/AccountNav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageDocButton } from "@/components/page-docs/PageDocButton";
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -38,6 +39,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-slate-600 sm:inline">{user.name}</span>
+            <PageDocButton />
             <NotificationBell scope={{ kind: "participant" }} />
             <UserAvatar name={user.name} photoUrl={photoUrl} />
             <LogoutButton

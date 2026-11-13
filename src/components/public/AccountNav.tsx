@@ -16,6 +16,7 @@ const ITEMS: Item[] = [
   { href: "/account/profile", label: "Profil", shortLabel: "Profil", exact: false },
   // Sous sm, la cloche donne déjà accès à la page : un libellé de plus ferait déborder l'en-tête.
   { href: "/account/notifications", label: "Notifications", hideBelowSm: true, exact: false },
+  { href: "/account/docs", label: "Documentation", shortLabel: "Docs", exact: false },
 ];
 
 export function AccountNav() {

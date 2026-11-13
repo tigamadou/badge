@@ -40,4 +40,12 @@ describe("AccountNav", () => {
     expect(linkTag(html, "/account/profile")).toContain("text-slate-600 hover:text-navy");
     expect(html).not.toContain("green-");
   });
+
+  it("ajoute l'entrée Documentation avec libellé court Docs sous sm", () => {
+    currentPath = "/account";
+    const html = renderToStaticMarkup(<AccountNav />);
+    const tag = linkTag(html, "/account/docs");
+    expect(tag).not.toContain("hidden sm:inline-flex");
+    expect(html).toMatch(/<span class="sm:hidden">Docs<\/span><span class="hidden sm:inline">Documentation<\/span>/);
+  });
 });

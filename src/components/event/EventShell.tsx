@@ -11,6 +11,7 @@ import {
   SIDEBAR_FOOTER_TEXT,
 } from "@/components/layout/sidebar-classes";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageDocButton } from "@/components/page-docs/PageDocButton";
 
 type Event = { id: string; title: string; slug: string; date: Date; archived: boolean; registrationOpen: boolean };
 type Org = { id: string; name: string };
@@ -51,6 +52,7 @@ export function EventShell({
     { group: "Administration" },
     { href: `${base}/settings`, label: "Paramètres", icon: "settings" },
     { href: `${base}/activity`, label: "Journal", icon: "scroll-text" },
+    { href: `${base}/docs`, label: "Documentation", icon: "file" },
   ];
 
   return (
@@ -90,6 +92,7 @@ export function EventShell({
           <span className="hidden items-center gap-1.5 rounded-full bg-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-navy sm:inline-flex">
             {effectiveRole}
           </span>
+          <PageDocButton />
           <NotificationBell scope={{ kind: "event", eventId: event.id }} />
           <UserAvatar name={user.name} photoUrl={photoUrl ?? null} size={30} />
         </>
