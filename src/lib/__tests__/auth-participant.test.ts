@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { AuthError, requireRegistrationOwner } from "@/lib/auth-participant";
+import { AuthError, requireRegistrationOwner, requireParticipantPermission } from "@/lib/auth-participant";
 
 vi.mock("next-auth", () => ({
   getServerSession: vi.fn(),
@@ -97,5 +97,59 @@ describe("requireRegistrationOwner", () => {
   it("uses AuthError for the thrown errors", async () => {
     mockSession(null);
     await expect(requireRegistrationOwner("reg-x")).rejects.toBeInstanceOf(AuthError);
+  });
+});
+
+describe("requireParticipantPermission", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  it("401 NOT_AUTHENTICATED sans session", async () => {
+    mockSession(null);
+    await expect(requireParticipantPermission("registration.self.create")).rejects.toMatchObject({
+      code: "NOT_AUTHENTICATED",
+      httpStatus: 401,
+    });
+  });
+
+  it("401 pour un compte archivé", async () => {
+    const u = await prisma.user.create({ data: { email: "pa@x", password: "x", name: "A", archived: true } });
+    mockSession({ id: u.id, email: u.email, name: u.name });
+    await expect(requireParticipantPermission("registration.self.create")).rejects.toMatchObject({
+      code: "NOT_AUTHENTICATED",
+      httpStatus: 401,
+    });
+  });
+
+  it("403 ACCOUNT_BLOCKED pour un compte bloqué", async () => {
+    const u = await prisma.user.create({ data: { email: "pb@x", password: "x", name: "B", blocked: true } });
+    mockSession({ id: u.id, email: u.email, name: u.name });
+    await expect(requireParticipantPermission("registration.self.create")).rejects.toMatchObject({
+      code: "ACCOUNT_BLOCKED",
+      httpStatus: 403,
+    });
+  });
+
+  it("403 FORBIDDEN quand un REVOKE plateforme retire la permission", async () => {
+    const u = await prisma.user.create({ data: { email: "pr@x", password: "x", name: "R" } });
+    await prisma.userPermissionOverride.create({
+      data: { userId: u.id, orgId: null, permission: "registration.self.create", effect: "REVOKE" },
+    });
+    mockSession({ id: u.id, email: u.email, name: u.name });
+    await expect(requireParticipantPermission("registration.self.create")).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      httpStatus: 403,
+    });
+  });
+
+  it("retourne le SessionUser pour un compte normal", async () => {
+    const u = await prisma.user.create({ data: { email: "pn@x", password: "x", name: "N" } });
+    mockSession({ id: u.id, email: u.email, name: u.name });
+    await expect(requireParticipantPermission("registration.self.create")).resolves.toEqual({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+    });
   });
 });

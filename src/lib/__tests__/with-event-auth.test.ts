@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { withEventAuth } from "@/lib/with-event-auth";
+import { withEventAuth, type EventAuthCtx } from "@/lib/with-event-auth";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -34,6 +34,7 @@ describe("withEventAuth", () => {
     await prisma.event.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.role.deleteMany();
     vi.mocked(getServerSession).mockReset();
   });
 
@@ -309,6 +310,114 @@ describe("withEventAuth", () => {
       });
       mockSession({ id: s.id, email: s.email, name: s.name, isStaff: true });
       expect((await call("DELETE", org.id, event.id)).status).toBe(200);
+    });
+  });
+
+  describe("option permission", () => {
+    async function run(
+      opts: Parameters<typeof withEventAuth>[0],
+      user: { id: string; email: string; name: string },
+      isStaff: boolean,
+      ids: { orgId: string; eventId: string },
+      capture?: (ctx: EventAuthCtx) => void,
+    ) {
+      mockSession({ id: user.id, email: user.email, name: user.name, isStaff });
+      const handler = withEventAuth(opts, async (_req, ctx) => {
+        capture?.(ctx);
+        return new Response("ok");
+      });
+      return handler(new NextRequest(`http://localhost/api/org/${ids.orgId}/events/${ids.eventId}`), {
+        params: Promise.resolve(ids),
+      });
+    }
+
+    async function eventMember(role: "OPERATOR" | "VIEWER" | "ADMIN") {
+      const { org, event } = await setup();
+      const u = await prisma.user.create({ data: { email: `${role}@x`, password: "x", name: role } });
+      await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role } });
+      return { org, event, u, ids: { orgId: org.id, eventId: event.id } };
+    }
+
+    it("OPERATOR : 200 sur scan.check-in", async () => {
+      const { u, ids } = await eventMember("OPERATOR");
+      expect((await run({ permission: "scan.check-in" }, u, false, ids)).status).toBe(200);
+    });
+
+    it("VIEWER : 403 PERMISSION_DENIED", async () => {
+      const { u, ids } = await eventMember("VIEWER");
+      const res = await run({ permission: "scan.check-in" }, u, false, ids);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
+    });
+
+    it("AGENT de l'org : 200 sur scan.check-in", async () => {
+      const { org, event } = await setup();
+      const agent = await prisma.role.create({ data: { scope: "ORG", systemKey: "AGENT", name: "Agent" } });
+      const u = await prisma.user.create({ data: { email: "ag@x", password: "x", name: "Ag" } });
+      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: agent.id } });
+      expect((await run({ permission: "scan.check-in" }, u, false, { orgId: org.id, eventId: event.id })).status).toBe(200);
+    });
+
+    it("staff SUPER_ADMIN : 200, isStaffActor vrai, effectiveRole STAFF", async () => {
+      const { org, event } = await setup();
+      const s = await prisma.user.create({
+        data: { email: "sa@x", password: "x", name: "S", isStaff: true, staffRole: "SUPER_ADMIN" },
+      });
+      let got: EventAuthCtx | null = null;
+      const res = await run({ permission: "scan.check-in" }, s, true, { orgId: org.id, eventId: event.id }, (c) => (got = c));
+      expect(res.status).toBe(200);
+      const ctx = got as unknown as EventAuthCtx;
+      expect(ctx.isStaffActor).toBe(true);
+      expect(ctx.effectiveRole).toBe("STAFF");
+      expect(ctx.permissions.has("scan.check-in")).toBe(true);
+    });
+
+    it("ctx : permissions effectives, event présent, isStaffActor faux pour un OWNER", async () => {
+      const { org, event } = await setup();
+      const u = await prisma.user.create({ data: { email: "ow@x", password: "x", name: "O" } });
+      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
+      let got: EventAuthCtx | null = null;
+      await run({ permission: "event.read.detailed" }, u, false, { orgId: org.id, eventId: event.id }, (c) => (got = c));
+      const ctx = got as unknown as EventAuthCtx;
+      expect(ctx.isStaffActor).toBe(false);
+      expect(ctx.event).toMatchObject({ id: event.id, orgId: org.id, archived: false });
+      expect(ctx.permissions.has("event.read.detailed")).toBe(true);
+      expect(ctx.permissions.has("scan.check-in")).toBe(true);
+      expect(ctx.effectiveRole).toBe("ADMIN");
+    });
+
+    it("liste : satisfaite par la seconde clé seulement", async () => {
+      const { u, ids } = await eventMember("VIEWER");
+      expect((await run({ permission: ["event.update", "event.read.aggregated"] }, u, false, ids)).status).toBe(200);
+      const res = await run({ permission: ["event.update", "scan.check-in"] }, u, false, ids);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
+    });
+
+    it("compte archivé : 401 NOT_AUTHENTICATED", async () => {
+      const { u, ids } = await eventMember("OPERATOR");
+      await prisma.user.update({ where: { id: u.id }, data: { archived: true } });
+      const res = await run({ permission: "scan.check-in" }, u, false, ids);
+      expect(res.status).toBe(401);
+    });
+
+    it("minRole : ctx complet fourni aussi", async () => {
+      const { u, ids } = await eventMember("OPERATOR");
+      let got: EventAuthCtx | null = null;
+      await run({ minRole: "OPERATOR" }, u, false, ids, (c) => (got = c));
+      const ctx = got as unknown as EventAuthCtx;
+      expect(ctx.effectiveRole).toBe("OPERATOR");
+      expect(ctx.permissions.has("scan.check-in")).toBe(true);
+    });
+
+    it("minRole et permission ensemble : erreur de configuration", () => {
+      expect(() =>
+        withEventAuth({ minRole: "OPERATOR", permission: "scan.check-in" }, async () => new Response("ok")),
+      ).toThrow("exclusifs");
+    });
+
+    it("permission d'un autre niveau : erreur de configuration", () => {
+      expect(() => withEventAuth({ permission: "org.members.read" }, async () => new Response("ok"))).toThrow("EVENT");
     });
   });
 });

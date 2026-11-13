@@ -1,6 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { loadUserContext } from "@/lib/user-context";
+import { hasPermission, type Permission } from "@/lib/permissions";
 
 export class AuthError extends Error {
   constructor(
@@ -50,4 +52,16 @@ export async function requireRegistrationOwner(registrationId: string): Promise<
   if (!registration) throw new AuthError("FORBIDDEN", 403);
   if (registration.userId !== user.id) throw new AuthError("FORBIDDEN", 403);
   return { user, registration };
+}
+
+// Garde participant par permission (spec 37) : session valide, compte actif et non bloqué,
+// puis permission effective sur la cible participant (les ajustements plateforme peuvent la retirer).
+export async function requireParticipantPermission(permission: Permission): Promise<SessionUser> {
+  const user = await requireAuth();
+  const ctx = await loadUserContext(user.id);
+  if (!ctx) throw new AuthError("NOT_AUTHENTICATED", 401);
+  const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { blocked: true } });
+  if (row.blocked) throw new AuthError("ACCOUNT_BLOCKED", 403);
+  if (!hasPermission(ctx, permission, { kind: "participant" })) throw new AuthError("FORBIDDEN", 403);
+  return user;
 }

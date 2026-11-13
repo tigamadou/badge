@@ -15,6 +15,7 @@ describe("withOrgAuth", () => {
     await prisma.orgMembership.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.role.deleteMany();
     vi.mocked(getServerSession).mockReset();
   });
 
@@ -85,5 +86,61 @@ describe("withOrgAuth", () => {
     const req = new NextRequest(`http://localhost/api/org/${org.id}`);
     const res = await handler(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(200);
+  });
+
+  describe("garde par permission", () => {
+    async function call(guard: Parameters<typeof withOrgAuth>[0], user: { id: string; email: string; name: string }, orgId: string, isStaff = false) {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: user.id, email: user.email, name: user.name, isStaff },
+      } as never);
+      const handler = withOrgAuth(guard, async () => new Response("ok"));
+      return handler(new NextRequest(`http://localhost/api/org/${orgId}`), { params: Promise.resolve({ orgId }) });
+    }
+
+    async function member(slug: string, role: "OWNER" | "AUDITOR") {
+      const u = await prisma.user.create({ data: { email: `${slug}@x`, password: "x", name: slug } });
+      const org = await prisma.organization.create({ data: { name: "O", slug } });
+      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role } });
+      return { u, org };
+    }
+
+    it("OWNER : 200 sur org.members.read", async () => {
+      const { u, org } = await member("pm1", "OWNER");
+      expect((await call("org.members.read", u, org.id)).status).toBe(200);
+    });
+
+    it("AGENT : 403 PERMISSION_DENIED", async () => {
+      const agent = await prisma.role.create({ data: { scope: "ORG", systemKey: "AGENT", name: "Agent" } });
+      const u = await prisma.user.create({ data: { email: "ag@x", password: "x", name: "Ag" } });
+      const org = await prisma.organization.create({ data: { name: "O", slug: "pm2" } });
+      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: agent.id } });
+      const res = await call("org.members.read", u, org.id);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
+    });
+
+    it("staff SUPER_ADMIN sans appartenance : 200", async () => {
+      const s = await prisma.user.create({
+        data: { email: "sa@x", password: "x", name: "S", isStaff: true, staffRole: "SUPER_ADMIN" },
+      });
+      const org = await prisma.organization.create({ data: { name: "O", slug: "pm3" } });
+      expect((await call("org.members.read", s, org.id, true)).status).toBe(200);
+    });
+
+    it("liste : satisfaite par la seconde clé seulement", async () => {
+      const { u, org } = await member("pm4", "AUDITOR");
+      expect((await call(["org.members.manage", "org.members.read"], u, org.id)).status).toBe(200);
+      expect((await call(["org.members.manage", "org.update"], u, org.id)).status).toBe(403);
+    });
+
+    it("le rôle hérité AUDITOR reste accepté", async () => {
+      const { u, org } = await member("pm5", "AUDITOR");
+      expect((await call("AUDITOR", u, org.id)).status).toBe(200);
+      expect((await call("OWNER", u, org.id)).status).toBe(403);
+    });
+
+    it("permission d'un autre niveau : erreur de configuration", () => {
+      expect(() => withOrgAuth("print.sheets.read", async () => new Response("ok"))).toThrow("ORG");
+    });
   });
 });

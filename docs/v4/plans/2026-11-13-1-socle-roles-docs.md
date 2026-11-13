@@ -45,7 +45,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 4 | Contexte utilisateur enrichi et repli sur les enums | [x] | 2026-11-13 | Correctifs mécaniques : `auth-helpers.ts` (garde `m.role !== null`), `recipients.ts` (champs de compat du contexte, Task 11 refait), tests `auth-helpers`, `org-redirect`, `api-staff-users-post/detail` (formes de contexte / lignes mockées). `print-requests/service.ts` inchangé (typecheck vert). Appartenance sans `roleId` ni enum ignorée (fermé par défaut). |
 | 5 | Résolution des permissions effectives | [x] | 2026-11-13 | `resolve.ts` pur ; `eventTargetOf` accepte `{ id, orgId }` ou `{ eventId, orgId }`. Les règles « jamais le staff » sont laissées aux gardes. |
 | 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [x] | 2026-11-13 | `requirePermission` accepte une liste ; `hasOrgRole`/`effectiveEventRole` : un staff sans rôle hérité (STAFF_PRINTER, personnalisé) n'obtient plus le contournement staff ; `getEventTarget` testé dans `event-org-target.test.ts` (base réelle, `event-org.test.ts` mocke Prisma) |
-| 7 | Wrappers de routes et garde participant | [ ] | | |
+| 7 | Wrappers de routes et garde participant | [x] | 2026-11-13 | Code écrit avant les tests (RED prouvé ensuite par stash des sources). Assertions EVENT_FORBIDDEN -> PERMISSION_DENIED mises à jour dans api-event-badge-exports.test.ts et badges/[badgeId]/__tests__/route.test.ts (tests seulement). assertNotStaff hors tâche. |
 | 8 | Rôles système en base, migration, `make migrate-roles` | [ ] | | |
 | 9 | Fabriques, reset global et helpers e2e | [ ] | | |
 | 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [ ] | | |
@@ -558,7 +558,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Consumes : `requirePermission`, `loadEventTarget`, `getUserContext`, `effectivePermissions`, `isStaffActor`.
 - Produces : wrappers et `EventAuthCtx` du bloc « Contrats », `requireParticipantPermission`.
 
-- [ ] **Step 1 : tests rouges** :
+- [x] **Step 1 : tests rouges** :
   - `withStaffAuth(h, { permission: "print.sheets.read" })` : STAFF_PRINTER 200 ; STAFF_OBSERVER 403
     `PERMISSION_DENIED` ; non staff 403 `NOT_STAFF` ; sans option = `minRole` STAFF_OBSERVER hérité (STAFF_PRINTER **403**) ;
     `permission` + `minRole` ensemble → erreur de configuration levée à la construction ; permission de niveau ≠ PLATFORM →
@@ -572,18 +572,18 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   - `requireParticipantPermission("registration.self.create")` : sans session → 401 `NOT_AUTHENTICATED` ; compte archivé →
     401 ; compte bloqué → 403 `ACCOUNT_BLOCKED` ; permission retirée par un `REVOKE` plateforme → 403 `FORBIDDEN` ;
     compte normal → `SessionUser`.
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter** — wrappers : discriminer `Permission` d'un `OrgRole` avec `isPermission` ; vérifier le
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter** — wrappers : discriminer `Permission` d'un `OrgRole` avec `isPermission` ; vérifier le
   niveau de la clé (`PLATFORM` pour staff, `ORG` pour org, `EVENT` pour évènement) à la construction ; `withEventAuth`
   charge `ctx` une fois (`loadUserContext`), calcule `permissions = effectivePermissions(ctx, target)` et
   `isStaffActor`, garde `effectiveRole` via `getEffectiveEventRole` ; les réponses d'erreur restent
   `{ error: err.code }` avec le statut de l'`AuthError`. `requireParticipantPermission` dans `auth-participant.ts`
   (`requireAuth`, lecture `archived`/`blocked` en base, puis `hasPermission` sur la cible `participant`).
-- [ ] **Step 4 : lancer** les 5 fichiers → vert. Lancer ensuite les tests des 8 routes qui utilisent déjà l'option
+- [x] **Step 4 : lancer** les 5 fichiers → vert. Lancer ensuite les tests des 8 routes qui utilisent déjà l'option
   `permission` (`src/app/api/org/[orgId]/events/[eventId]/{badges,registrations/print,print-requests/upload}/**`) :
   si l'un échoue à cause d'un changement de sémantique (staff Observateur/Support), **s'arrêter et signaler**
   (ne pas modifier le code de production pour le test).
-- [ ] **Step 5 : commit** : `feat(roles): wrappers de routes par permission et garde participant`.
+- [x] **Step 5 : commit** : `feat(roles): wrappers de routes par permission et garde participant`.
 
 ### Task 8: Rôles système en base, migration, `make migrate-roles`
 

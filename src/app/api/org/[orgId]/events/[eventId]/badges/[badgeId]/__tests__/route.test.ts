@@ -165,7 +165,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     expect(res.headers.get("x-template-id")).toBe(defaultId);
   }, 30_000);
 
-  it("retourne 403 EVENT_FORBIDDEN pour un VIEWER (pas de permission badge.print)", async () => {
+  it("retourne 403 PERMISSION_DENIED pour un VIEWER (pas de permission badge.print)", async () => {
     // VIEWER pur (sans OrgMembership OWNER) : n'a pas badge.print -> 403.
     const { org, event, reg } = await setupFixtures("VIEWER", { orgOwner: false });
     const { GET } = await import("../route");
@@ -177,7 +177,7 @@ describe("GET /api/org/[orgId]/events/[eventId]/badges/[badgeId]", () => {
     const json = await res.json();
     // Garde par permission badge.print via withEventAuth : code standard des
     // routes event (remplace le "FORBIDDEN" ad-hoc de l'ancien double-verrou).
-    expect(json.error).toBe("EVENT_FORBIDDEN");
+    expect(json.error).toBe("PERMISSION_DENIED");
   });
 
   const url = (org: { id: string }, event: { id: string }, reg: { id: string }, query = "") =>

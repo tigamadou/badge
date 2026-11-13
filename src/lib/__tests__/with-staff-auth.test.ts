@@ -13,6 +13,7 @@ describe("withStaffAuth", () => {
   beforeEach(async () => {
     await prisma.activityLog.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.role.deleteMany();
     vi.mocked(getServerSession).mockReset();
   });
 
@@ -83,5 +84,85 @@ describe("withStaffAuth", () => {
     const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
+  });
+
+  describe("option permission", () => {
+    async function platformRole(key: "STAFF_PRINTER") {
+      return prisma.role.upsert({
+        where: { systemKey: key },
+        update: {},
+        create: { scope: "PLATFORM", systemKey: key, name: key },
+      });
+    }
+
+    async function call(opts: Parameters<typeof withStaffAuth>[1], user: { id: string; email: string; name: string }, isStaff: boolean) {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { id: user.id, email: user.email, name: user.name, isStaff },
+      } as never);
+      const handler = withStaffAuth(async () => new Response("ok"), opts);
+      return handler(new NextRequest("http://localhost/api/platform/x"), { params: Promise.resolve({}) });
+    }
+
+    it("STAFF_PRINTER passe sur print.sheets.read", async () => {
+      const role = await platformRole("STAFF_PRINTER");
+      const u = await prisma.user.create({
+        data: { email: "p@x", password: "x", name: "P", isStaff: true, platformRoleId: role.id },
+      });
+      expect((await call({ permission: "print.sheets.read" }, u, true)).status).toBe(200);
+    });
+
+    it("STAFF_OBSERVER : 403 PERMISSION_DENIED", async () => {
+      const u = await prisma.user.create({
+        data: { email: "o2@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_OBSERVER" },
+      });
+      const res = await call({ permission: "print.sheets.read" }, u, true);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
+    });
+
+    it("non staff : 403 NOT_STAFF", async () => {
+      const u = await prisma.user.create({ data: { email: "n@x", password: "x", name: "N" } });
+      const res = await call({ permission: "print.sheets.read" }, u, false);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "NOT_STAFF" });
+    });
+
+    it("compte archivé : 401 NOT_AUTHENTICATED", async () => {
+      const u = await prisma.user.create({
+        data: { email: "arch@x", password: "x", name: "A", isStaff: true, staffRole: "SUPER_ADMIN", archived: true },
+      });
+      const res = await call({ permission: "print.sheets.read" }, u, true);
+      expect(res.status).toBe(401);
+      expect(await res.json()).toEqual({ error: "NOT_AUTHENTICATED" });
+    });
+
+    it("sans option : STAFF_PRINTER refusé (minRole hérité STAFF_OBSERVER)", async () => {
+      const role = await platformRole("STAFF_PRINTER");
+      const u = await prisma.user.create({
+        data: { email: "p2@x", password: "x", name: "P", isStaff: true, platformRoleId: role.id },
+      });
+      expect((await call(undefined, u, true)).status).toBe(403);
+    });
+
+    it("liste : satisfaite par la seconde clé seulement", async () => {
+      const role = await platformRole("STAFF_PRINTER");
+      const u = await prisma.user.create({
+        data: { email: "p3@x", password: "x", name: "P", isStaff: true, platformRoleId: role.id },
+      });
+      expect((await call({ permission: ["users.archive", "print.sheets.read"] }, u, true)).status).toBe(200);
+      const res = await call({ permission: ["users.archive", "users.create"] }, u, true);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
+    });
+
+    it("permission + minRole : erreur de configuration", () => {
+      expect(() => withStaffAuth(async () => new Response("ok"), { permission: "print.sheets.read", minRole: "STAFF_ADMIN" })).toThrow(
+        "exclusifs",
+      );
+    });
+
+    it("permission d'un autre niveau : erreur de configuration", () => {
+      expect(() => withStaffAuth(async () => new Response("ok"), { permission: "org.members.read" })).toThrow("PLATFORM");
+    });
   });
 });
