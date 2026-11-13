@@ -34,13 +34,18 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
     orgId = ev?.orgId ?? undefined;
   }
 
+  // Staff « acteur » : staff sans appartenance à l'org (ni à l'évènement) du journal (aligné sur isStaffActor).
   let staffActor = false;
   if (userId && orgId) {
     const u = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isStaff: true },
+      select: {
+        isStaff: true,
+        orgMemberships: { where: { orgId }, select: { orgId: true } },
+        ...(eventId ? { eventMemberships: { where: { eventId }, select: { eventId: true } } } : {}),
+      },
     });
-    staffActor = !!u?.isStaff;
+    staffActor = !!u?.isStaff && u.orgMemberships.length === 0 && !(u.eventMemberships?.length ?? 0);
   }
 
   const meta = extractRequestMeta(req);

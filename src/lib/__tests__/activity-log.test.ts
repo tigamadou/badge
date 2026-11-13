@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import { makeEvent, makeOrg, makeOrgMember, makeEventMember, makeStaff } from "@/test/factories";
 
 describe("logActivity", () => {
   beforeEach(async () => {
@@ -58,5 +59,35 @@ describe("logActivity", () => {
     await logActivity({ type: "ORG_UPDATED", userId: owner.id, orgId: org.id });
     const log = await prisma.activityLog.findFirst({ where: { type: "ORG_UPDATED" } });
     expect(log?.staffActor).toBe(false);
+  });
+
+  it("staffActor=true pour un staff sans membership dans l'org du journal", async () => {
+    const staff = await makeStaff("STAFF_ADMIN");
+    const org = await makeOrg();
+    await logActivity({ type: "ORG_UPDATED", userId: staff.id, orgId: org.id });
+    expect((await prisma.activityLog.findFirst())?.staffActor).toBe(true);
+  });
+
+  it("staffActor=false pour un staff membre de l'org du journal", async () => {
+    const org = await makeOrg();
+    const staff = await makeOrgMember(org.id, "OWNER", { isStaff: true });
+    await logActivity({ type: "ORG_UPDATED", userId: staff.id, orgId: org.id });
+    expect((await prisma.activityLog.findFirst())?.staffActor).toBe(false);
+  });
+
+  it("staffActor=false pour un staff membre de l'évènement du journal", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const staff = await makeEventMember(event.id, "OPERATOR", { isStaff: true });
+    await logActivity({ type: "ORG_UPDATED", userId: staff.id, eventId: event.id });
+    expect((await prisma.activityLog.findFirst())?.staffActor).toBe(false);
+  });
+
+  it("staffActor=true pour un staff sans membership sur l'évènement", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const staff = await makeStaff("STAFF_SUPPORT");
+    await logActivity({ type: "ORG_UPDATED", userId: staff.id, eventId: event.id });
+    expect((await prisma.activityLog.findFirst())?.staffActor).toBe(true);
   });
 });

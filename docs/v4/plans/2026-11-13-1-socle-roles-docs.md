@@ -52,7 +52,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 11 | Notifications ciblées par permission | [x] | 2026-11-13 | `RecipientSpec` = `users` ou `permission`+`target`(+`includeStaff`) ; résolution par `USER_CONTEXT_SELECT`/`buildUserContext`/`hasPermission` (repli enum conservé, memberships à rôle nul écartées par `buildUserContext`). Arbitrages voulus : le PRINTER d'évènement n'est plus notifié sur `notifyEventRegistrationToggled` ; le SUPPORT ne reçoit plus les messages d'impression (Admin et Imprimeur oui). `billing.subscription.pay` : SUPER_ADMIN non membre non notifié (testé). `seed/demo/organizations.ts` inchangé (variables locales homonymes). |
 | 12 | Logique d'impression partagée | [x] | 2026-11-13 | `assertOwner` : staff acteur seulement refusé (staff membre OWNER accepté, changement assumé). `canApplyCredit`/`canSetOnsiteMargin` : branche `StaffRole` @deprecated compat. `lifecycle.ts` inchangé (n'appelle qu'`assertOwner`). Seul appelant hors `route.ts` de `assertNotStaff` : aucun. Tests : `print-requests-route`, `guard` ajoutés. |
 | 13 | Découplage de `OnsiteStation` | [x] | 2026-11-13 | Props `apiBase?`/`backHref?` ; `requestUrl(…, apiBase?)`. Page plateforme inchangée (défauts). Tests : `request-fetch`, `OnsiteStation` (rendu statique). |
-| 14 | Consommateurs transverses | [ ] | | |
+| 14 | Consommateurs transverses | [x] | 2026-11-13 | Contrôle smoke extrait en `platformChecks` (staff + « Rôles système présents », 14 lignes) ; tests ajoutés pour la page marketing |
 | 15 | Spec 39 : quantité des accessoires côté serveur | [ ] | | |
 | 16 | Spec 40 : ancrages de la documentation | [ ] | | |
 | 17 | e2e, doc, vérification | [ ] | | |
@@ -805,19 +805,19 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
 **Interfaces:**
 - Produces : `JournalEntryDetail` accepte `user.platformRole?: { name: string } | null` en plus de `staffRole?`.
 
-- [ ] **Step 1 : tests rouges** : `JournalEntryDetail` affiche `platformRole.name` (« Imprimeur ») quand fourni, sinon l'ancien
+- [x] **Step 1 : tests rouges** : `JournalEntryDetail` affiche `platformRole.name` (« Imprimeur ») quand fourni, sinon l'ancien
   `staffRole`, sinon rien ; `logActivity` : `staffActor` vrai pour un staff **sans** membership dans l'org du journal, faux
   pour un staff membre de cette org (aligné sur `isStaffActor`), faux pour un non staff ; le smoke test accepte un staff
   identifié par `platformRoleId` ou `isStaff` et vérifie la présence des rôles système en base (nouveau contrôle « Rôles
   système présents », 14 lignes) ; la page d'accueil marketing mentionne les rôles personnalisés.
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter** — `JournalEntryDetail` : prop et affichage ; `activity-log.ts` : sélectionner
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter** — `JournalEntryDetail` : prop et affichage ; `activity-log.ts` : sélectionner
   `isStaff` + `orgMemberships { where: { orgId } }` (+ `eventMemberships` si `eventId`) et dériver `staffActor` ;
   `scripts/smoke-tests.ts` : nouveau contrôle ; marketing : libellé de la carte « Rôles & permissions » (« …et rôles
   personnalisés selon votre organisation »). Les pages `activity/[logId]` qui sélectionnent `staffRole` (plateforme : lot 2a ;
   org/évènement : lot 2b) ne sont **pas** modifiées : elles passent `platformRole` en vague 2.
-- [ ] **Step 4 : lancer** les trois fichiers de test → vert.
-- [ ] **Step 5 : commit** : `feat(roles): consommateurs transverses (journal, audit, smoke)`.
+- [x] **Step 4 : lancer** les trois fichiers de test → vert.
+- [x] **Step 5 : commit** : `feat(roles): consommateurs transverses (journal, audit, smoke)`.
 
 ### Task 15: Spec 39 — quantité des accessoires côté serveur
 

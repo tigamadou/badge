@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { assert, SmokeError, dataChecks, runChecks } from "../smoke-tests";
+import { assert, SmokeError, dataChecks, platformChecks, runChecks } from "../smoke-tests";
 import { prisma } from "@/lib/prisma";
-import { makeEvent, makeOrg, makeStaff, seedFactories } from "@/test/factories";
+import { ensureSystemRoles } from "@/lib/permissions/db";
+import { makeUser, makeEvent, makeOrg, makeStaff, seedFactories } from "@/test/factories";
 import { DEMO_BADGE_LOCAL_EMAILS, DEMO_SLUG_PREFIX } from "../../prisma/seed/constants";
 
 describe("smoke-tests helpers", () => {
@@ -83,5 +84,34 @@ describe("dataChecks", () => {
 describe("runChecks", () => {
   it.each([undefined, "", "staging"])("BADGE_ENV %j : erreur explicite", async (value) => {
     await expect(runChecks({ BADGE_ENV: value })).rejects.toThrow(/BADGE_ENV/);
+  });
+});
+
+describe("platformChecks", () => {
+  beforeEach(() => seedFactories(20261113));
+
+  it("sans staff ni rôles système : deux échecs", async () => {
+    const results = await platformChecks(prisma);
+    expect(results.map((r) => r.ok)).toEqual([false, false]);
+    expect(results[1].name).toBe("Rôles système présents");
+  });
+
+  it("staff identifié par platformRoleId, 14 rôles système : tout est ok", async () => {
+    await makeStaff("STAFF_PRINTER");
+    const results = await platformChecks(prisma);
+    expect(results.every((r) => r.ok)).toBe(true);
+  });
+
+  it("staff identifié par isStaff seul, rôles présents : ok", async () => {
+    await ensureSystemRoles(prisma);
+    await makeUser({ isStaff: true });
+    expect((await platformChecks(prisma)).every((r) => r.ok)).toBe(true);
+  });
+
+  it("un rôle système manquant fait échouer", async () => {
+    await makeStaff("SUPER_ADMIN");
+    await prisma.role.deleteMany({ where: { systemKey: "VIEWER" } });
+    const results = await platformChecks(prisma);
+    expect(results.find((r) => r.name === "Rôles système présents")?.ok).toBe(false);
   });
 });

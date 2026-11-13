@@ -19,7 +19,7 @@ export type JournalEntry = {
   userAgent: string | null;
   details: unknown;
   targetId: string | null;
-  user: { id: string; name: string | null; email: string; staffRole: StaffRoleStr | null } | null;
+  user: { id: string; name: string | null; email: string; staffRole?: StaffRoleStr | null; platformRole?: { name: string } | null } | null;
 };
 
 // Vue detail d'une entree de journal (lecture seule), partagee staff / org / event.
@@ -106,7 +106,9 @@ export function JournalEntryDetail({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-slate-900">{log.user.name ?? log.user.email}</span>
-                    {log.user.staffRole && <RoleBadge tone="navy">{log.user.staffRole}</RoleBadge>}
+                    {(log.user.platformRole?.name ?? log.user.staffRole) && (
+                      <RoleBadge tone="navy">{log.user.platformRole?.name ?? log.user.staffRole}</RoleBadge>
+                    )}
                   </div>
                   <KeyValue
                     items={[
