@@ -111,6 +111,19 @@ describe("withStaffAuth", () => {
       expect((await call({ permission: "print.sheets.read" }, u, true)).status).toBe(200);
     });
 
+    it("charge le contexte utilisateur une seule fois", async () => {
+      const u = await prisma.user.create({
+        data: { email: "one@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_ADMIN" },
+      });
+      const spy = vi.spyOn(prisma.user, "findUnique");
+      try {
+        expect((await call({ permission: "print.sheets.read" }, u, true)).status).toBe(200);
+        expect(spy).toHaveBeenCalledTimes(1);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it("STAFF_OBSERVER : 403 PERMISSION_DENIED", async () => {
       const u = await prisma.user.create({
         data: { email: "o2@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_OBSERVER" },

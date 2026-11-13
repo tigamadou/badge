@@ -32,6 +32,8 @@ et retires du depot une fois implementes.
 
 - [Spec 30 — Plan gratuit d'un mois et droits selon l'abonnement](specs/2026-11-01-30-v4-abonnement-essai-droits.md) · [Plan](plans/2026-11-01-abonnement-essai-droits.md) · [Feature](features/abonnements.md) — `free` = essai de 30 jours sans repli, echeance → `EXPIRED`, droits reglables dans `/platform/settings` (creation d'evenement, inscriptions, gestion des evenements en cours, espace org). Sur la branche `feat/paiement-fedapay`, avant sa fusion. En attente de relecture.
 
+- [Spec 37 — Rôles et permissions](specs/2026-11-13-37-v4-roles-et-permissions.md) · [Plan socle](plans/2026-11-13-1-socle-roles-docs.md) · [Feature](features/roles-permissions.md) — catalogue de permissions, rôles système et personnalisés, ajustements par utilisateur. Chantier en cours (socle).
+
 ### Chantiers livres
 
 Les plans correspondants ont ete **supprimes du depot** apres implementation (demande du

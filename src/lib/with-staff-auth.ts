@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import type { StaffRole } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
-import { requireStaff, requirePermission, AuthError } from "@/lib/auth-guards";
+import { requireStaff, AuthError } from "@/lib/auth-guards";
 import { loadUserContext } from "@/lib/user-context";
-import { permissionScopeOf, type Permission } from "@/lib/permissions";
+import { hasPermission, permissionScopeOf, type Permission } from "@/lib/permissions";
 
 export type StaffAuthCtx = {
   session: Session;
@@ -41,11 +41,14 @@ export function withStaffAuth<P extends Record<string, string> = Record<string, 
     }
 
     try {
-      if (options?.permission !== undefined) {
+      if (permissions) {
+        // Un seul chargement du contexte : la permission est évaluée dessus.
         const ctx = await loadUserContext(session.user.id);
         if (!ctx) throw new AuthError("NOT_AUTHENTICATED", 401);
         if (!ctx.isStaff) throw new AuthError("NOT_STAFF", 403);
-        await requirePermission(session.user.id, options.permission, { kind: "platform" });
+        if (!permissions.some((p) => hasPermission(ctx, p, { kind: "platform" }))) {
+          throw new AuthError("PERMISSION_DENIED", 403);
+        }
       } else {
         await requireStaff(session.user.id, minRole);
       }
