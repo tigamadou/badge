@@ -30,10 +30,10 @@ relecture de l'orchestrateur contre les écrans ; vérification complète ; push
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Pré-contrôles | [ ] | | |
-| 2 | Rebase et fusion 4a | [ ] | | |
-| 3 | Rédaction des docs par espace (sous-agents) | [ ] | | |
-| 4 | Tampon et `make docs-check` | [ ] | | |
+| 1 | Pré-contrôles | [x] | 2026-11-13 | OK |
+| 2 | Rebase et fusion 4a | [x] | 2026-11-13 | fusion e577c5d0 ; docs-check : 71 manquantes (platform 41, event 25, account 5), org complet |
+| 3 | Rédaction des docs par espace (sous-agents) | [x] | 2026-11-13 | 3 sous-agents Sonnet, 71 docs |
+| 4 | Tampon et `make docs-check` | [x] | 2026-11-13 | 71 tamponnées, docs-check vert, stamp déterministe |
 | 5 | Relecture de l'orchestrateur | [ ] | | |
 | 6 | e2e, doc, vérification complète | [ ] | | |
 | 7 | Arrêt des stacks d'agents | [ ] | | |
