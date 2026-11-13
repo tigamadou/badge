@@ -16,6 +16,12 @@ describe("resolveHomeRedirect", () => {
     expect(resolveHomeRedirect(null)).toBe("/login");
   });
 
+  it("staff dont le rôle n'a pas platform.access : pas de /platform (le layout le renverrait vers / : boucle)", async () => {
+    const role = await makeCustomRole({ scope: "PLATFORM", permissions: ["organizations.read"] });
+    const staff = await makeUser({ isStaff: true, platformRoleId: role.id });
+    expect(resolveHomeRedirect(await ctxOf(staff.id))).toBe("/account");
+  });
+
   it("staff seul : /platform", async () => {
     const staff = await makeStaff("STAFF_SUPPORT");
     expect(resolveHomeRedirect(await ctxOf(staff.id))).toBe("/platform");

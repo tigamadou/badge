@@ -38,7 +38,7 @@ et [`specs/2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs/2026-
 | 4 | Rebase et fusion 2c | [x] | 2026-11-13 | Fusion --no-ff sans rebase (c2832b1b) ; import en double corrigé (65a3edea). |
 | 5 | Retrait de la compatibilité et des helpers dépréciés | [x] | 2026-11-13 | auth-helpers.ts supprimé ; repli sur l'enum et double écriture conservés (amendements). |
 | 6 | Cohérence catalogue ↔ gardes ↔ menus ↔ docs | [x] | 2026-11-13 | Test catalog-usage ; 3 pages de membres sans garde corrigées. Parcours navigateur : voir rapport. |
-| 7 | Relecture transverse des défauts jumeaux | [ ] | | |
+| 7 | Relecture transverse des défauts jumeaux | [x] | 2026-11-13 | Jumeaux : 3 pages de membres sans garde, boucle /platform → / → /platform ; voir rapport. |
 | 8 | Architecture, `CLAUDE.md`, doc de feature, tracker | [ ] | | |
 | 9 | e2e, doc, vérification complète | [ ] | | |
 

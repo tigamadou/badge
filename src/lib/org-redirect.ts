@@ -29,7 +29,8 @@ export function resolveHomeRedirect(ctx: UserContext | null): string {
   if (!ctx) return "/login";
 
   const targets: string[] = [];
-  if (ctx.isStaff) targets.push("/platform");
+  // Le layout plateforme renvoie vers « / » sans platform.access : l'y envoyer ici ferait une boucle.
+  if (ctx.isStaff && hasPermission(ctx, "platform.access", { kind: "platform" })) targets.push("/platform");
   for (const orgId of accessibleOrgIds(ctx)) targets.push(`/org/${orgId}`);
   for (const eventId of accessibleEventIds(ctx)) targets.push(`/event/${eventId}`);
 

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { accessibleEventIds, accessibleOrgIds } from "@/lib/org-redirect";
+import { hasPermission } from "@/lib/permissions";
 import { OrgLogo, PickCard, PickCardDashed } from "@/components/ui/PickCard";
 import { Tag } from "@/components/ui/Labels";
 
@@ -38,8 +39,10 @@ export default async function SelectPage() {
     orderBy: { title: "asc" },
   });
 
+  // Sans platform.access, le layout plateforme renverrait vers « / » : pas de carte, pas de boucle.
+  const platformOpen = ctx.isStaff && hasPermission(ctx, "platform.access", { kind: "platform" });
   const targets = [
-    ...(ctx.isStaff ? ["/platform"] : []),
+    ...(platformOpen ? ["/platform"] : []),
     ...orgs.map((o) => `/org/${o.id}`),
     ...events.map((e) => `/event/${e.id}`),
   ];
@@ -55,7 +58,7 @@ export default async function SelectPage() {
           Accédez à l&apos;espace de gestion de votre choix.
         </p>
 
-        {ctx.isStaff && (
+        {platformOpen && (
           <section className="mb-8">
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Plateforme</h2>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
