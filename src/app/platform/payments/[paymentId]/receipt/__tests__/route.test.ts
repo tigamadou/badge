@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 import { GET } from "../route";
-import { makeOrg, makeStaff, makeUser } from "@/test/factories";
+import { makeOrg, makeOverride, makeStaff, makeUser } from "@/test/factories";
 import { makeBillingPayment, makeBillingPlan } from "@/test/factories-billing";
 
 const call = (paymentId: string) => GET(new Request("http://localhost/x"), { params: Promise.resolve({ paymentId }) });
@@ -23,6 +23,14 @@ describe("GET /platform/payments/[paymentId]/receipt", () => {
     const user = await makeUser();
     vi.mocked(getServerSession).mockResolvedValue({ user: { id: user.id } } as never);
     expect((await call("p")).status).toBe(403);
+  });
+
+  it("un non staff avec un ajustement GRANT payments.read reste refusé (403)", async () => {
+    const user = await makeUser();
+    await makeOverride({ userId: user.id, permission: "payments.read", effect: "GRANT" });
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: user.id } } as never);
+    const res = await call((await payment()).id);
+    expect(res.status).toBe(403);
   });
 
   it("utilisateur inexistant → 401", async () => {
