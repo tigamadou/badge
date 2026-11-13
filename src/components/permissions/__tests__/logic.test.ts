@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { Permission } from "@/lib/permissions/catalog";
 import { RESERVED_PERMISSIONS } from "@/lib/permissions/catalog";
 import {
+  defaultRoleId,
   editablePermissions,
   effectiveSet,
+  grantablePermissions,
   groupedPermissions,
   overridesToRows,
   readOrThrow,
@@ -94,5 +96,26 @@ describe("erreurs d'API", () => {
     expect(err.message).toContain("attribué");
     const bad = (await readOrThrow(new Response("x", { status: 500 })).catch((e: Error) => e)) as Error;
     expect(bad.message).toContain("Une erreur");
+  });
+});
+
+describe("grantablePermissions", () => {
+  it("ajoute les droits participant à ce que l'acteur détient", () => {
+    const result = grantablePermissions(["org.read"]);
+    expect(result).toContain("org.read");
+    expect(result).toContain("registration.self.create");
+    expect(result).not.toContain("org.update");
+  });
+});
+
+describe("defaultRoleId", () => {
+  const role = (id: string, systemKey: string | null, assignable: boolean) =>
+    ({ id, name: id, systemKey, scope: "ORG", description: null, assignable }) as const;
+
+  it("préfère le rôle système demandé s'il est attribuable, sinon le premier attribuable, sinon vide", () => {
+    expect(defaultRoleId([role("a", "AGENT", true), role("o", "OWNER", true)], "OWNER")).toBe("o");
+    expect(defaultRoleId([role("a", "AGENT", true), role("o", "OWNER", false)], "OWNER")).toBe("a");
+    expect(defaultRoleId([role("o", "OWNER", false)], "OWNER")).toBe("");
+    expect(defaultRoleId([], "OWNER")).toBe("");
   });
 });

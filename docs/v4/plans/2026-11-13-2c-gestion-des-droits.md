@@ -28,7 +28,7 @@ les routes participant sur `requireParticipantPermission`.
 | 7 | Routes participant | [x] | 2026-11-13 | PUT profil, upload, resubmit, register via requireParticipantPermission. Compte inexistant/archive: 401; bloque: 403 ACCOUNT_BLOCKED. Tests 404 fantome devenus 401 + spy cible pour la branche defensive. Nouveau participant-guard.test.ts. |
 | 8 | Composants `src/components/permissions/**` | [x] | 2026-11-13 | Logique pure dans logic.ts (testee sans DOM: renderToStaticMarkup + fonctions). UserPermissionsEditor prend `levels` en prop plutot qu'un orgId (+ heldPermissions, scopes, sendOrgId). Erreurs d'API mappees en francais (readOrThrow). |
 | 9 | Pages `/platform/roles` et `/org/[orgId]/roles` | [x] | 2026-11-13 | Pages serveur; RoleTable recoit des modeles d'URL `:id` (fonctions non serialisables vers un composant client). Gardes: redirection /platform ou /org/[orgId]. Verifie navigateur: creation d'un role plateforme. Controle responsive regroupe en Task 12. |
-| 10 | Pages d'ajustement et liens d'entrée | [ ] | | |
+| 10 | Pages d'ajustement et liens d'entrée | [x] | 2026-11-13 | Pages d'ajustement (plateforme: un editeur par niveau; org). Fiche utilisateur: lien Permissions, role par platformRole.name, actions par permissions (users.staff.assign_role/archive/password.reset). MembersClient/OrgMemberForm (RoleSelect compact) embarques ici car deja relies aux pages. |
 | 11 | Formulaires et pages de membres / utilisateurs | [ ] | | |
 | 12 | e2e, doc, vérification | [ ] | | |
 

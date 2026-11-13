@@ -1,7 +1,7 @@
 import { PERMISSION_CATALOG, type Permission, type PermissionDef } from "@/lib/permissions/catalog";
 import { groupByDomain } from "@/lib/permissions/labels";
 import { ActionError } from "@/lib/toast";
-import type { MatrixLevels, OverrideEffect, OverrideRow } from "./types";
+import type { AssignableRoleRow, MatrixLevels, OverrideEffect, OverrideRow } from "./types";
 
 /** Permissions proposées à l'édition : celles des niveaux demandés, jamais les clés réservées. */
 export function editablePermissions(levels: MatrixLevels): Permission[] {
@@ -89,4 +89,20 @@ export async function readOrThrow<T>(res: Response): Promise<T> {
   if (res.ok) return (await res.json().catch(() => ({}))) as T;
   const body = (await res.json().catch(() => null)) as { error?: string } | null;
   throw new ActionError(roleErrorMessage(body?.error));
+}
+
+/**
+ * Permissions qu'un acteur peut ajouter en ajustement : celles qu'il détient, plus toutes celles du niveau
+ * participant (les droits du compte participant s'accordent au niveau plateforme sans les détenir).
+ */
+export function grantablePermissions(held: Iterable<Permission>): Permission[] {
+  const result = new Set(held);
+  for (const p of PERMISSION_CATALOG as readonly PermissionDef[]) if (p.scope === "PARTICIPANT") result.add(p.key as Permission);
+  return [...result];
+}
+
+/** Identifiant du rôle système `systemKey` s'il est attribuable, sinon du premier rôle attribuable (chaîne vide si aucun). */
+export function defaultRoleId(roles: readonly AssignableRoleRow[], systemKey: string): string {
+  const wanted = roles.find((r) => r.systemKey === systemKey && r.assignable);
+  return (wanted ?? roles.find((r) => r.assignable))?.id ?? "";
 }

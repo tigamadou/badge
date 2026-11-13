@@ -4,7 +4,8 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { loadUserContext } from "@/lib/user-context";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import { hasPermission } from "@/lib/permissions";
+import { listAssignableRoles } from "@/lib/role-management";
 import { prisma } from "@/lib/prisma";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { RoleBadge, Tag } from "@/components/ui/Labels";
@@ -30,12 +31,11 @@ export default async function UserDetailPage({
   const { userId } = await params;
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const canAdmin =
-    !!ctx && ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_ADMIN");
-  const canEditTopRoles = ctx?.staffRole === "SUPER_ADMIN";
-  const canResetPassword =
-    !!ctx && ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT");
+  const platform = { kind: "platform" } as const;
+  const can = (permission: Parameters<typeof hasPermission>[1]) => !!ctx && hasPermission(ctx, permission, platform);
   const isSelf = ctx?.user.id === userId;
+  const canManagePermissions = can("users.permissions.manage");
+  const canAssignRole = can("users.staff.assign_role");
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -45,24 +45,29 @@ export default async function UserDetailPage({
       name: true,
       isStaff: true,
       staffRole: true,
+      platformRoleId: true,
+      platformRole: { select: { name: true } },
       archived: true,
       archivedAt: true,
       createdAt: true,
       orgMemberships: {
         select: {
           role: true,
+          roleRef: { select: { name: true } },
           organization: { select: { id: true, name: true, slug: true, archived: true } },
         },
       },
       eventMemberships: {
         select: {
           role: true,
+          roleRef: { select: { name: true } },
           event: { select: { id: true, title: true, slug: true, orgId: true } },
         },
       },
     },
   });
   if (!user) notFound();
+  const platformRoles = ctx && canAssignRole && user.isStaff ? await listAssignableRoles(ctx, { scope: "PLATFORM" }, platform) : [];
 
   const recentActivity = await prisma.activityLog.findMany({
     where: { OR: [{ userId }, { targetId: userId }] },
@@ -84,12 +89,23 @@ export default async function UserDetailPage({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl font-semibold text-navy">{user.name}</h1>
-            {user.isStaff && user.staffRole && <RoleBadge tone="navy">{user.staffRole}</RoleBadge>}
+            {user.isStaff && (user.platformRole?.name ?? user.staffRole) && (
+              <RoleBadge tone="navy">{user.platformRole?.name ?? user.staffRole}</RoleBadge>
+            )}
             {user.archived && <Tag icon="archive">Archivé</Tag>}
           </div>
           <div className="text-sm text-slate-400">{user.email}</div>
         </div>
       </div>
+
+      {canManagePermissions && !isSelf ? (
+        <Link
+          href={`/platform/users/${user.id}/permissions`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-navy hover:bg-mist"
+        >
+          <Icon name="lock" size={14} /> Permissions
+        </Link>
+      ) : null}
 
       <Card>
         <CardHead title="Informations" />
@@ -116,7 +132,7 @@ export default async function UserDetailPage({
                   {m.organization.name}
                   {m.organization.archived && <span className="ml-2 text-xs text-slate-400">(archivée)</span>}
                 </Link>
-                <RoleBadge tone="slate">{m.role}</RoleBadge>
+                <RoleBadge tone="slate">{m.roleRef?.name ?? m.role}</RoleBadge>
               </div>
             ))
           )}
@@ -132,7 +148,7 @@ export default async function UserDetailPage({
             user.eventMemberships.map((m) => (
               <div key={m.event.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <span className="text-slate-900">{m.event.title}</span>
-                <RoleBadge tone="slate">{m.role}</RoleBadge>
+                <RoleBadge tone="slate">{m.roleRef?.name ?? m.role}</RoleBadge>
               </div>
             ))
           )}
@@ -143,12 +159,13 @@ export default async function UserDetailPage({
         user={{
           id: user.id,
           isStaff: user.isStaff,
-          staffRole: user.staffRole,
+          platformRoleId: user.platformRoleId,
           archived: user.archived,
         }}
-        canAdmin={canAdmin}
-        canEditTopRoles={canEditTopRoles}
-        canResetPassword={canResetPassword}
+        platformRoles={platformRoles}
+        canAssignRole={canAssignRole}
+        canArchive={can("users.archive")}
+        canResetPassword={can("users.password.reset")}
         isSelf={isSelf}
       />
 

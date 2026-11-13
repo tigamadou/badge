@@ -70,6 +70,15 @@ describe("RoleSelect", () => {
   });
 });
 
+describe("RoleSelect compact", () => {
+  it("n'affiche pas d'étiquette visible mais garde un nom accessible", () => {
+    const role: AssignableRoleRow = { id: "1", name: "Agent", systemKey: "AGENT", scope: "ORG", description: null, assignable: true };
+    const html = renderToStaticMarkup(<RoleSelect roles={[role]} value="1" onChange={() => undefined} name="r" label="Rôle de a@b.fr" compact />);
+    expect(html).not.toContain("<label");
+    expect(html).toContain('aria-label="Rôle de a@b.fr"');
+  });
+});
+
 describe("RoleTable", () => {
   const base: RoleRow = { id: "r", scope: "ORG", systemKey: null, name: "Perso", description: "Desc", orgId: "o", archived: false, permissions: ["org.read"], assignedCount: 2 };
   const sys: RoleRow = { ...base, id: "s", systemKey: "OWNER", name: "Propriétaire", description: null, assignedCount: undefined, permissions: [] };
