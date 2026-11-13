@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { prisma } from "@/lib/prisma";
-import { requireStaff, AuthError } from "@/lib/auth-guards";
+import type { Permission } from "@/lib/permissions";
+import { permissionDenied } from "../permission-response";
 import { uploadFile, isAllowedMime, MAX_UPLOAD_BYTES, type UploadKind } from "@/lib/storage";
 
-// Plan 32 : televersement plateforme (staff). `print-product` = image du catalogue (STAFF_ADMIN,
-// public) ; `print-request` = fichier joint a une commande d'impression (STAFF_SUPPORT, prive),
+// Plan 32 : televersement plateforme (staff). `print-product` = image du catalogue
+// (`print.catalog.manage`, public) ; `print-request` = fichier joint a une commande d'impression
+// (`print.requests.messages.send`, prive),
 // range sous `print-requests/staff/{requestId}/` : la cle est liee a la commande (parametre
 // `requestId` obligatoire), donc /api/files en deduit l'evenement et le message ne peut pas
 // reprendre la cle d'une autre commande.
@@ -18,9 +20,14 @@ const EXT: Record<string, string> = {
   "application/pdf": ".pdf",
 };
 
-const CONTEXTS: Record<string, { kind: UploadKind; prefix: string; admin: boolean; perRequest?: boolean }> = {
-  "print-product": { kind: "photo", prefix: "platform/print-products", admin: true },
-  "print-request": { kind: "document", prefix: "print-requests/staff", admin: false, perRequest: true },
+const CONTEXTS: Record<string, { kind: UploadKind; prefix: string; permission: Permission; perRequest?: boolean }> = {
+  "print-product": { kind: "photo", prefix: "platform/print-products", permission: "print.catalog.manage" },
+  "print-request": {
+    kind: "document",
+    prefix: "print-requests/staff",
+    permission: "print.requests.messages.send",
+    perRequest: true,
+  },
 };
 
 export const POST = withStaffAuth(
@@ -31,16 +38,8 @@ export const POST = withStaffAuth(
     if (!context) {
       return NextResponse.json({ error: "Contexte invalide", code: "BAD_CONTEXT" }, { status: 400 });
     }
-    if (context.admin) {
-      try {
-        await requireStaff(session.user.id, "STAFF_ADMIN");
-      } catch (err) {
-        if (err instanceof AuthError) {
-          return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-        }
-        throw err;
-      }
-    }
+    const denied = await permissionDenied(session.user.id, context.permission);
+    if (denied) return denied;
 
     let prefix = context.prefix;
     if (context.perRequest) {
@@ -73,5 +72,5 @@ export const POST = withStaffAuth(
     await uploadFile(storageKey, buffer, mime);
     return NextResponse.json({ storageKey });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "platform.access" },
 );

@@ -39,7 +39,7 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 | 3 | Organisations, abonnements, plans | [x] | 2026-11-13 | e2e verts (1 flaky sous charge, repasse) |
 | 4 | Profils et listes de blocage | [x] | 2026-11-13 | |
 | 5 | Paramètres, motifs de rejet, templates de badge | [x] | 2026-11-13 | |
-| 6 | Jobs e-mail, journal, upload, paiements | [ ] | | |
+| 6 | Jobs e-mail, journal, upload, paiements | [x] | 2026-11-13 | |
 | 7 | Impression : commandes et poste sur place | [ ] | | |
 | 8 | Impression : catalogue, gabarits, planches (gardes) | [ ] | | |
 | 9 | `/api/files` par permission | [ ] | | |

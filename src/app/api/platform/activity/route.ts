@@ -80,4 +80,4 @@ export const GET = withStaffAuth(async (req) => {
     page,
     pageSize,
   });
-});
+}, { permission: "activity.read" });

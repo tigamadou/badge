@@ -32,5 +32,5 @@ export const POST = withStaffAuth<{ jobId: string }>(
     });
     return NextResponse.json({ job: result.job });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "email_jobs.manage" },
 );

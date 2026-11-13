@@ -32,11 +32,13 @@ test.describe("Platform — Acces a l'espace", () => {
   });
 
 
-  test("Le plancher d'acces est STAFF_OBSERVER", async ({ page }) => {
-    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pacc-observer" });
+  test("Tout role porteur de platform.access entre dans /platform", async ({ page }) => {
+    for (const role of ["STAFF_OBSERVER", "STAFF_PRINTER"] as const) {
+      await loginAsStaff(page, { role, scope: `pacc-${role.toLowerCase()}` });
 
-    await page.goto("/platform");
-    await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
+      await page.goto("/platform");
+      await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
+    }
   });
 
   test("La nav plateforme expose les sections principales", async ({ page }) => {

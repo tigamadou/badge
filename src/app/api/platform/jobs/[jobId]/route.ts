@@ -7,4 +7,4 @@ export const GET = withStaffAuth<{ jobId: string }>(async (_req, _ctx, { params 
   const job = await getJobDetail(jobId);
   if (!job) return NextResponse.json({ code: "NOT_FOUND", error: "Job introuvable." }, { status: 404 });
   return NextResponse.json({ job });
-});
+}, { permission: "email_jobs.read" });

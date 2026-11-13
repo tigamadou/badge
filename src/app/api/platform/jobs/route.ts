@@ -10,4 +10,4 @@ export const GET = withStaffAuth(async (req) => {
   }
   const [list, counts] = await Promise.all([listJobs(parsed.filters), getJobCounts()]);
   return NextResponse.json({ ...list, counts });
-});
+}, { permission: "email_jobs.read" });

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff as createStaff } from "@/test/factories";
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
@@ -17,15 +18,7 @@ function withSession(user: {
 }
 
 async function makeStaff(staffRole: StaffRoleStr = "STAFF_OBSERVER") {
-  const u = await prisma.user.create({
-    data: {
-      email: `s-${Date.now()}-${Math.random()}@x`,
-      password: "x",
-      name: "Staff",
-      isStaff: true,
-      staffRole,
-    },
-  });
+  const u = await createStaff(staffRole);
   withSession({ id: u.id, email: u.email, name: u.name, isStaff: true });
   return u;
 }
@@ -198,15 +191,7 @@ describe("GET /api/platform/activity", () => {
 
   it("filters by staffActor=true", async () => {
     await makeStaff();
-    const staffUser = await prisma.user.create({
-      data: {
-        email: `actor-${Date.now()}@x`,
-        password: "x",
-        name: "Actor",
-        isStaff: true,
-        staffRole: "STAFF_ADMIN",
-      },
-    });
+    const staffUser = await createStaff("STAFF_ADMIN");
     const org = await prisma.organization.create({
       data: { name: "O", slug: uniqueSlug("o") },
     });

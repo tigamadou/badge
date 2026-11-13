@@ -9,19 +9,12 @@ import { POST as cancel } from "@/app/api/platform/jobs/[jobId]/cancel/route";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff as createStaff } from "@/test/factories";
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
 async function makeStaff(staffRole: StaffRoleStr) {
-  const u = await prisma.user.create({
-    data: {
-      email: `s-${Date.now()}-${Math.random()}@x`,
-      password: "x",
-      name: "Staff",
-      isStaff: true,
-      staffRole,
-    },
-  });
+  const u = await createStaff(staffRole);
   vi.mocked(getServerSession).mockResolvedValue({
     user: { id: u.id, email: u.email, name: u.name, isStaff: true },
   } as never);

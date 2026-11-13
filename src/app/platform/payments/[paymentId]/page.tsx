@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadPayment } from "@/lib/payments-query";
@@ -6,6 +7,7 @@ import { PaymentDetailView } from "@/components/payments/PaymentDetailView";
 
 export default async function PlatformPaymentPage({ params }: { params: Promise<{ paymentId: string }> }) {
   const { paymentId } = await params;
+  await requirePlatformPage("payments.read", `/platform/payments/${paymentId}`);
   const payment = await loadPayment(paymentId, {});
   if (!payment) notFound();
 
