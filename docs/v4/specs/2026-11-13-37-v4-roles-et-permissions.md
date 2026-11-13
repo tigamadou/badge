@@ -1,6 +1,6 @@
 # Spec v4 — Rôles et permissions configurables (spec 37)
 
-> **Statut** : implémentée — 2026-11-13 (branche `feat/roles-imprimeur-support`), validée — 2026-11-13
+> **Statut** : implémentée — 2026-11-13 (PR ouverte, branche `feat/roles-imprimeur-support`), validée — 2026-11-13
 > **Type** : refonte transverse (autorisation) + nouvelles fonctionnalités
 > **Périmètre** : v4 — tous les espaces (plateforme, organisation, évènement, participant)
 > **Source** : `Todo.md` du 2026-11-12 (items 1 et 2) + échanges avec l'utilisateur des 2026-11-12/13

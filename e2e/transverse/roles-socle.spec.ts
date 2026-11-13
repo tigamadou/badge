@@ -24,14 +24,14 @@ test.describe("Transverse — Socle rôles et permissions", () => {
     await expect(page.getByRole("button", { name: /^déconnexion$/i })).toBeVisible();
   });
 
-  test("Un OWNER voit /org/{id} et la Documentation mène à la page d'attente", async ({ page }) => {
+  test("Un OWNER voit /org/{id} et la Documentation mène à la liste des docs", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "socle-owner" });
     await loginAs(page, owner);
     await page.goto(`/org/${orgId}`);
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}`));
     await page.getByRole("link", { name: /^documentation$/i }).first().click();
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/docs`));
-    await expect(page.getByText("Bientôt disponible")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Documentation", level: 1 })).toBeVisible();
   });
 
   test("Un compte STAFF_PRINTER se connecte sans erreur serveur", async ({ page }) => {

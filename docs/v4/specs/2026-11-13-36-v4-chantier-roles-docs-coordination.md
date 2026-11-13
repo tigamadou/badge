@@ -1,6 +1,6 @@
 # Spec v4 — Chantier « rôles, permissions et documentation » : coordination (spec 36)
 
-> **Statut** : validée — 2026-11-13
+> **Statut** : implémentée — 2026-11-13 (PR ouverte), validée — 2026-11-13
 > **Type** : spec de coordination (découpage, contrats partagés, ordre de fusion)
 > **Périmètre** : v4 — specs 37 à 40
 > **Source** : `Todo.md` du 2026-11-12 + échanges avec l'utilisateur des 2026-11-12/13

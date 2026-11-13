@@ -1,6 +1,6 @@
 # Spec v4 — Quantité automatique des accessoires (spec 39)
 
-> **Statut** : implémentée — 2026-11-13 (branche `feat/roles-imprimeur-support`), validée — 2026-11-13, révisée le 2026-11-13 (quantité plafonnée, non imposée)
+> **Statut** : implémentée — 2026-11-13 (PR ouverte, branche `feat/roles-imprimeur-support`), validée — 2026-11-13, révisée le 2026-11-13 (quantité plafonnée, non imposée)
 > **Type** : amélioration UI + règle de calcul
 > **Périmètre** : v4 — assistant de commande d'impression de l'organisateur
 > **Source** : `Todo.md` du 2026-11-12 (item 4)

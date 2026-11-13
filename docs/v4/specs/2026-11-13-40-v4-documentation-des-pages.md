@@ -1,6 +1,6 @@
 # Spec v4 — Documentation contextuelle des pages, tenue à jour par les agents (spec 40)
 
-> **Statut** : implémentée — 2026-11-13 (outil, interface, consignes, pilote `/org` ; docs des autres espaces en vague 5)
+> **Statut** : implémentée — 2026-11-13 (PR ouverte ; 89 docs rédigées)
 > **Type** : nouvelle fonctionnalité + outillage de développement
 > **Périmètre** : v4 — espaces connectés (`/platform`, `/org`, `/event`, `/account`), outillage
 > `scripts/`, `Makefile`, consignes des agents IA
@@ -196,3 +196,9 @@ pages `…/docs/**` des quatre espaces, cibles `Makefile` `docs-check` / `docs-s
     E-mails ; « (PENDING + APPROVED) » brut ; « Rejeter / Bloquer » ne fait que rejeter ; `event.registration_toggle`
     seul ne permet pas d'enregistrer ; carte « Actions avancées » possiblement vide. Compte : « snapshot » en
     anglais ; pas de toast sur `/profile/complete`. Détails : `.superpowers/sdd/roles-permissions/docs-*-report.md`.
+  - **Vérification complète (vague 5)** : `make lint` 0 erreur (docs-check inclus), typecheck OK, `make test-coverage`
+    448 fichiers / 5266 tests, 100 % lib + API ; e2e par dossier : platform, org (90), event, public + transverse (147)
+    verts après rejeu. Deux tests e2e devenus obsolètes (`page-docs.spec.ts` : liste plateforme non vide ;
+    `roles-socle.spec.ts` : la Documentation n'affiche plus « Bientôt disponible ») mis à jour. Les échecs en masse
+    (404 sur routes API existantes, kill 137) venaient d'un cache Turbopack corrompu (`.next/dev/cache`), pas du code.
+    Contrôle navigateur manuel non fait (e2e de viewport 375/1024/1280 px en remplacement).

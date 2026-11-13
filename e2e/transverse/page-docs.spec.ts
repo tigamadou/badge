@@ -77,7 +77,7 @@ test.describe("Documentation des pages", () => {
     const platform = await staffPage.goto("/platform/docs");
     expect(platform?.status()).toBe(200);
     await expect(staffPage.getByRole("heading", { name: "Documentation", level: 1 })).toBeVisible();
-    await expect(staffPage.getByText("Aucune documentation disponible pour votre profil")).toBeVisible();
+    await expect(staffPage.locator("main a[href^='/platform/docs/']").first()).toBeVisible();
     expect((await staffPage.goto("/platform/docs/inexistante"))?.status()).toBe(404);
 
     const { orgId, eventId } = await createTestEvent({ scope: "pd-event" });
