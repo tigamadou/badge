@@ -4,7 +4,7 @@ import { eventTargetOf, type PermissionTarget } from "@/lib/permissions";
 
 // v4 Bloc D : l'espace evenement est une route top-level `/event/[eventId]`, sans
 // param `orgId` dans l'URL. Les pages qui construisent des URLs API scopees org
-// (`/api/org/${orgId}/events/${eventId}/...`) ou qui appellent `hasEventPermission`
+// (`/api/org/${orgId}/events/${eventId}/...`) ou qui appellent `hasPermission` sur une cible evenement
 // resolvent l'orgId depuis l'evenement via ce helper.
 export async function getEventOrgId(eventId: string): Promise<string> {
   const event = await prisma.event.findUnique({

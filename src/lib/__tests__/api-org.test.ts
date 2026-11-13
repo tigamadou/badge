@@ -896,7 +896,7 @@ describe("Archive/Restore events", () => {
     expect(res.status).toBe(403);
   });
 
-  it("rethrows a non-AuthError from requireOrgRole", async () => {
+  it("rethrows a non-AuthError from the permission guard", async () => {
     const u = await prisma.user.create({ data: { email: "arch-rethrow@x", password: "x", name: "R" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "arch-rethrow" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });

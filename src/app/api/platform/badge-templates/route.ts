@@ -70,7 +70,7 @@ export const POST = withStaffAuth(
 );
 
 export const GET = withStaffAuth(
-  async (_req: NextRequest) => {
+  async () => {
   const templates = await prisma.installedBadgeTemplate.findMany({
     orderBy: [{ family: "asc" }, { version: "desc" }],
     select: {

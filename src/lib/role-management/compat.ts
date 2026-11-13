@@ -3,7 +3,7 @@ import { legacyKeyOf } from "@/lib/permissions/db";
 import { SYSTEM_ROLES, isSystemRoleKey, type SystemRoleKey } from "@/lib/permissions";
 import type { RoleDTO } from "./roles";
 
-// @deprecated compat chantier roles-permissions (retiré à la fusion, plan 3) : double écriture de la colonne
+// @deprecated compat chantier roles-permissions (conservé jusqu'à la suppression des colonnes d'enum) : double écriture de la colonne
 // d'enum à côté de `roleId` / `platformRoleId`, tant que des lecteurs de l'enum subsistent.
 
 type RoleKeyRef = Pick<RoleDTO, "id" | "systemKey">;

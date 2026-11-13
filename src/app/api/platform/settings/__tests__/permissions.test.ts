@@ -1,6 +1,7 @@
 // PATCH /api/platform/settings : contrôle par champ, aucune écriture partielle.
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SUBSCRIPTION_RIGHTS } from "@/lib/subscription-rights";
 import type { Permission } from "@/lib/permissions";
@@ -34,6 +35,11 @@ async function patch(body: unknown) {
 async function settings() {
   return prisma.platformSettings.findUniqueOrThrow({ where: { id: "singleton" } });
 }
+
+// Les droits d'abonnement écrits par ces tests ne doivent pas survivre au fichier (les gardes d'écriture des autres fichiers les lisent).
+afterAll(async () => {
+  await prisma.platformSettings.updateMany({ data: { subscriptionRights: Prisma.DbNull } });
+});
 
 describe("PATCH /api/platform/settings : permissions par champ", () => {
   beforeEach(async () => {

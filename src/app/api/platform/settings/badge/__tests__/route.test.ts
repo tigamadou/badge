@@ -9,7 +9,7 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 import { makeStaff as createStaff } from "@/test/factories";
 
-// Tests Plan v2-12 : PATCH platformSettings.badgeTemplateId. requireStaff STAFF_ADMIN.
+// Tests Plan v2-12 : PATCH platformSettings.badgeTemplateId. Garde par permission staff.
 // Racine de la cascade -- NOT NULL en BDD ; null refuse par Zod.
 
 type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";

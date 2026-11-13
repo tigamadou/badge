@@ -1,4 +1,3 @@
-import type { StaffRole, OrgRole, EventRole } from "@prisma/client";
 import type { Permission } from "@/lib/permissions/catalog";
 import type { RoleScope, SystemRoleKey } from "@/lib/permissions/system-roles";
 
@@ -29,16 +28,12 @@ export type OrgMembershipLite = {
   orgId: string;
   roleId: string | null;
   roleRef: ResolvedRole | null;
-  /** @deprecated compat chantier roles-permissions (retiré à la fusion) */
-  role: OrgRole | null;
 };
 
 export type EventMembershipLite = {
   eventId: string;
   roleId: string | null;
   roleRef: ResolvedRole | null;
-  /** @deprecated compat chantier roles-permissions (retiré à la fusion) */
-  role: EventRole | null;
 };
 
 export type UserContext = {
@@ -48,8 +43,4 @@ export type UserContext = {
   orgMemberships: OrgMembershipLite[];
   eventMemberships: EventMembershipLite[];
   overrides: PermissionOverrideLite[];
-  /** @deprecated compat chantier roles-permissions (retiré à la fusion) : clé héritée, null pour STAFF_PRINTER/personnalisé */
-  staffRole: StaffRole | null;
 };
-
-export type EffectiveEventRole = EventRole | "STAFF" | null;

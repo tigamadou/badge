@@ -22,6 +22,11 @@ import { getServerSession } from "next-auth";
 
 seedFactories(2206);
 
+// Le faux exporteur est un singleton : une trace laissée par un autre fichier ne doit pas fausser « aucun rendu ».
+beforeEach(() => {
+  fakeExporter.reset();
+});
+
 async function brokenFixtures() {
   const fx = await createBadgeFixtures();
   const reg = await fx.addRegistration();

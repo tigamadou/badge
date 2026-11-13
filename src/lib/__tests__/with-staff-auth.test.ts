@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
+import type { Permission } from "@/lib/permissions";
 
 vi.mock("next-auth", () => ({
   getServerSession: vi.fn(),
@@ -19,7 +20,7 @@ describe("withStaffAuth", () => {
 
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const handler = withStaffAuth(async () => new Response("ok"));
+    const handler = withStaffAuth(async () => new Response("ok"), { permission: "platform.access" });
     const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
@@ -28,31 +29,16 @@ describe("withStaffAuth", () => {
   it("returns 403 when user is not staff", async () => {
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
     vi.mocked(getServerSession).mockResolvedValue({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       user: { id: u.id, email: u.email, name: u.name, isStaff: false },
     } as never);
 
-    const handler = withStaffAuth(async () => new Response("ok"));
+    const handler = withStaffAuth(async () => new Response("ok"), { permission: "platform.access" });
     const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
 
-  it("returns 403 when staff role is below minRole", async () => {
-    const u = await prisma.user.create({
-      data: { email: "o@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_OBSERVER" },
-    });
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: u.id, email: u.email, name: u.name, isStaff: true },
-    } as never);
-
-    const handler = withStaffAuth(async () => new Response("ok"), { minRole: "STAFF_ADMIN" });
-    const req = new NextRequest("http://localhost/api/platform/organizations");
-    const res = await handler(req, { params: Promise.resolve({}) });
-    expect(res.status).toBe(403);
-  });
-
-  it("passes for STAFF_OBSERVER on read-only handler (default minRole)", async () => {
+  it("passes the session to the handler for a staff member holding the permission", async () => {
     const u = await prisma.user.create({
       data: { email: "o@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_OBSERVER" },
     });
@@ -61,29 +47,18 @@ describe("withStaffAuth", () => {
     } as never);
 
     let received: { userId: string; isStaff: boolean } | null = null;
-    const handler = withStaffAuth(async (_req, ctx) => {
-      received = { userId: ctx.session.user.id, isStaff: ctx.session.user.isStaff };
-      return new Response("ok");
-    });
+    const handler = withStaffAuth(
+      async (_req, ctx) => {
+        received = { userId: ctx.session.user.id, isStaff: ctx.session.user.isStaff };
+        return new Response("ok");
+      },
+      { permission: "platform.access" },
+    );
     const req = new NextRequest("http://localhost/api/platform/organizations");
     const res = await handler(req, { params: Promise.resolve({}) });
 
     expect(res.status).toBe(200);
     expect(received).toEqual({ userId: u.id, isStaff: true });
-  });
-
-  it("passes for STAFF_ADMIN when minRole=STAFF_ADMIN", async () => {
-    const u = await prisma.user.create({
-      data: { email: "a@x", password: "x", name: "A", isStaff: true, staffRole: "STAFF_ADMIN" },
-    });
-    vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: u.id, email: u.email, name: u.name, isStaff: true },
-    } as never);
-
-    const handler = withStaffAuth(async () => new Response("ok"), { minRole: "STAFF_ADMIN" });
-    const req = new NextRequest("http://localhost/api/platform/organizations");
-    const res = await handler(req, { params: Promise.resolve({}) });
-    expect(res.status).toBe(200);
   });
 
   describe("option permission", () => {
@@ -95,7 +70,7 @@ describe("withStaffAuth", () => {
       });
     }
 
-    async function call(opts: Parameters<typeof withStaffAuth>[1], user: { id: string; email: string; name: string }, isStaff: boolean) {
+    async function call(opts: { permission: Permission | readonly Permission[] }, user: { id: string; email: string; name: string }, isStaff: boolean) {
       vi.mocked(getServerSession).mockResolvedValue({
         user: { id: user.id, email: user.email, name: user.name, isStaff },
       } as never);
@@ -149,14 +124,6 @@ describe("withStaffAuth", () => {
       expect(await res.json()).toEqual({ error: "NOT_AUTHENTICATED" });
     });
 
-    it("sans option : STAFF_PRINTER refusé (minRole hérité STAFF_OBSERVER)", async () => {
-      const role = await platformRole("STAFF_PRINTER");
-      const u = await prisma.user.create({
-        data: { email: "p2@x", password: "x", name: "P", isStaff: true, platformRoleId: role.id },
-      });
-      expect((await call(undefined, u, true)).status).toBe(403);
-    });
-
     it("liste : satisfaite par la seconde clé seulement", async () => {
       const role = await platformRole("STAFF_PRINTER");
       const u = await prisma.user.create({
@@ -166,12 +133,6 @@ describe("withStaffAuth", () => {
       const res = await call({ permission: ["users.archive", "users.create"] }, u, true);
       expect(res.status).toBe(403);
       expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
-    });
-
-    it("permission + minRole : erreur de configuration", () => {
-      expect(() => withStaffAuth(async () => new Response("ok"), { permission: "print.sheets.read", minRole: "STAFF_ADMIN" })).toThrow(
-        "exclusifs",
-      );
     });
 
     it("permission d'un autre niveau : erreur de configuration", () => {

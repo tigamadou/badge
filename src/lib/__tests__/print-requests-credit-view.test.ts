@@ -46,13 +46,12 @@ describe("visibilité", () => {
     expect(showsCreditOffer("ACCEPTED", 5)).toBe(false);
     expect(showsCreditOffer("DRAFT", 5)).toBe(false);
   });
-  it("application : STAFF_ADMIN, statut ouvert, crédit à appliquer", () => {
-    expect(canApplyCredit("SUBMITTED", "STAFF_ADMIN", 100, 500)).toBe(true);
-    expect(canApplyCredit("QUOTED", "SUPER_ADMIN", 100, 500)).toBe(true);
-    expect(canApplyCredit("QUOTED", "STAFF_SUPPORT", 100, 500)).toBe(false);
-    expect(canApplyCredit("ACCEPTED", "STAFF_ADMIN", 100, 500)).toBe(false);
-    expect(canApplyCredit("QUOTED", "STAFF_ADMIN", 0, 500)).toBe(false);
-    expect(canApplyCredit("QUOTED", "STAFF_ADMIN", 100, 0)).toBe(false);
+  it("application : statut ouvert, crédit et lignes à couvrir", () => {
+    const granted = new Set<Permission>(["print.requests.credit.apply"]);
+    expect(canApplyCredit("SUBMITTED", granted, 100, 500)).toBe(true);
+    expect(canApplyCredit("ACCEPTED", granted, 100, 500)).toBe(false);
+    expect(canApplyCredit("QUOTED", granted, 0, 500)).toBe(false);
+    expect(canApplyCredit("QUOTED", granted, 100, 0)).toBe(false);
   });
   it("application avec un ensemble de permissions : vrai ssi `print.requests.credit.apply`", () => {
     const granted = new Set<Permission>(["print.requests.credit.apply"]);

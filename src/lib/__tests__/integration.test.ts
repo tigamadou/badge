@@ -2,14 +2,13 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import {
-  requireStaff,
-  requireOrgRole,
-  requireEventPermission,
+  requirePermission,
   assertNotLastOwner,
   assertNotLastSuperAdmin,
   AuthError,
 } from "@/lib/auth-guards";
 import { loadUserContext } from "@/lib/user-context";
+import { eventTargetOf } from "@/lib/permissions";
 
 describe("v2 RBAC integration", () => {
   beforeEach(async () => {
@@ -34,11 +33,11 @@ describe("v2 RBAC integration", () => {
     });
     const org = await prisma.organization.create({ data: { name: "O", slug: "int-o" } });
 
-    await expect(requireStaff(staff.id, "STAFF_OBSERVER")).resolves.toBeUndefined();
-    await expect(requireOrgRole(staff.id, org.id, "OWNER")).resolves.toBeUndefined();
+    await expect(requirePermission(staff.id, "platform.access", { kind: "platform" })).resolves.toBeUndefined();
+    await expect(requirePermission(staff.id, "org.update", { kind: "org", orgId: org.id })).resolves.toBeUndefined();
   });
 
-  it("SUPER_ADMIN passes requireStaff(SUPER_ADMIN) and toutes les operations sensibles", async () => {
+  it("SUPER_ADMIN passes toutes les operations sensibles", async () => {
     const sa = await prisma.user.create({
       data: {
         email: "sa@x",
@@ -53,17 +52,17 @@ describe("v2 RBAC integration", () => {
     });
     const org = await prisma.organization.create({ data: { name: "O", slug: "int-sa" } });
 
-    await expect(requireStaff(sa.id, "SUPER_ADMIN")).resolves.toBeUndefined();
-    await expect(requireStaff(sa.id, "STAFF_ADMIN")).resolves.toBeUndefined();
-    await expect(requireOrgRole(sa.id, org.id, "OWNER")).resolves.toBeUndefined();
+    await expect(requirePermission(sa.id, "platform.roles.manage", { kind: "platform" })).resolves.toBeUndefined();
+    await expect(requirePermission(sa.id, "users.update", { kind: "platform" })).resolves.toBeUndefined();
+    await expect(requirePermission(sa.id, "org.update", { kind: "org", orgId: org.id })).resolves.toBeUndefined();
     await expect(assertNotLastSuperAdmin(sa.id)).resolves.toBeUndefined();
   });
 
-  it("STAFF_ADMIN ne satisfait pas requireStaff(SUPER_ADMIN)", async () => {
+  it("STAFF_ADMIN ne gere pas les roles de la plateforme", async () => {
     const a = await prisma.user.create({
       data: { email: "a@x", password: "x", name: "A", isStaff: true, staffRole: "STAFF_ADMIN" },
     });
-    await expect(requireStaff(a.id, "SUPER_ADMIN")).rejects.toBeInstanceOf(AuthError);
+    await expect(requirePermission(a.id, "platform.roles.manage", { kind: "platform" })).rejects.toBeInstanceOf(AuthError);
   });
 
   it("OWNER scoped to its org only", async () => {
@@ -74,9 +73,9 @@ describe("v2 RBAC integration", () => {
     const orgB = await prisma.organization.create({ data: { name: "B", slug: "int-b" } });
     await prisma.orgMembership.create({ data: { userId: owner.id, orgId: orgA.id, role: "OWNER" } });
 
-    await expect(requireOrgRole(owner.id, orgA.id, "OWNER")).resolves.toBeUndefined();
-    await expect(requireOrgRole(owner.id, orgB.id, "OWNER")).rejects.toMatchObject({
-      code: "ORG_FORBIDDEN",
+    await expect(requirePermission(owner.id, "org.update", { kind: "org", orgId: orgA.id })).resolves.toBeUndefined();
+    await expect(requirePermission(owner.id, "org.update", { kind: "org", orgId: orgB.id })).rejects.toMatchObject({
+      code: "PERMISSION_DENIED",
     });
   });
 
@@ -88,10 +87,11 @@ describe("v2 RBAC integration", () => {
     });
     await prisma.orgMembership.create({ data: { userId: mgr.id, orgId: org.id, role: "MANAGER" } });
 
-    await expect(requireEventPermission(mgr.id, event.id, "event.update")).resolves.toBeUndefined();
-    await expect(requireEventPermission(mgr.id, event.id, "registration.delete")).resolves.toBeUndefined();
-    await expect(requireOrgRole(mgr.id, org.id, "OWNER")).rejects.toMatchObject({ code: "ORG_FORBIDDEN" });
-    await expect(requireOrgRole(mgr.id, org.id, "MANAGER")).resolves.toBeUndefined();
+    const target = eventTargetOf({ eventId: event.id, orgId: org.id });
+    await expect(requirePermission(mgr.id, "event.update", target)).resolves.toBeUndefined();
+    await expect(requirePermission(mgr.id, "registration.delete", target)).resolves.toBeUndefined();
+    await expect(requirePermission(mgr.id, "org.update", { kind: "org", orgId: org.id })).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    await expect(requirePermission(mgr.id, "org.events.create", { kind: "org", orgId: org.id })).resolves.toBeUndefined();
   });
 
   it("AUDITOR sees aggregated event data but no detail nor mutation", async () => {
@@ -102,11 +102,12 @@ describe("v2 RBAC integration", () => {
     });
     await prisma.orgMembership.create({ data: { userId: aud.id, orgId: org.id, role: "AUDITOR" } });
 
-    await expect(requireOrgRole(aud.id, org.id, "AUDITOR")).resolves.toBeUndefined();
-    await expect(requireOrgRole(aud.id, org.id, "MANAGER")).rejects.toMatchObject({ code: "ORG_FORBIDDEN" });
-    await expect(requireEventPermission(aud.id, event.id, "event.read.aggregated")).resolves.toBeUndefined();
-    await expect(requireEventPermission(aud.id, event.id, "event.read.detailed")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
-    await expect(requireEventPermission(aud.id, event.id, "registration.approve")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+    const target = eventTargetOf({ eventId: event.id, orgId: org.id });
+    await expect(requirePermission(aud.id, "org.read", { kind: "org", orgId: org.id })).resolves.toBeUndefined();
+    await expect(requirePermission(aud.id, "org.events.create", { kind: "org", orgId: org.id })).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    await expect(requirePermission(aud.id, "event.read.aggregated", target)).resolves.toBeUndefined();
+    await expect(requirePermission(aud.id, "event.read.detailed", target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    await expect(requirePermission(aud.id, "registration.approve", target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
   });
 
   it("PRINTER can print badges but cannot approve registrations", async () => {
@@ -117,9 +118,10 @@ describe("v2 RBAC integration", () => {
     });
     await prisma.eventMembership.create({ data: { userId: printer.id, eventId: event.id, role: "PRINTER" } });
 
-    await expect(requireEventPermission(printer.id, event.id, "badge.print")).resolves.toBeUndefined();
-    await expect(requireEventPermission(printer.id, event.id, "registration.approve")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
-    await expect(requireEventPermission(printer.id, event.id, "scan.check-in")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+    const target = eventTargetOf({ eventId: event.id, orgId: org.id });
+    await expect(requirePermission(printer.id, "badge.print", target)).resolves.toBeUndefined();
+    await expect(requirePermission(printer.id, "registration.approve", target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    await expect(requirePermission(printer.id, "scan.check-in", target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
   });
 
   it("VIEWER sees aggregated only, no detail, no badge print", async () => {
@@ -130,9 +132,10 @@ describe("v2 RBAC integration", () => {
     });
     await prisma.eventMembership.create({ data: { userId: vw.id, eventId: event.id, role: "VIEWER" } });
 
-    await expect(requireEventPermission(vw.id, event.id, "event.read.aggregated")).resolves.toBeUndefined();
-    await expect(requireEventPermission(vw.id, event.id, "event.read.detailed")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
-    await expect(requireEventPermission(vw.id, event.id, "badge.print")).rejects.toMatchObject({ code: "EVENT_FORBIDDEN" });
+    const target = eventTargetOf({ eventId: event.id, orgId: org.id });
+    await expect(requirePermission(vw.id, "event.read.aggregated", target)).resolves.toBeUndefined();
+    await expect(requirePermission(vw.id, "event.read.detailed", target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+    await expect(requirePermission(vw.id, "badge.print", target)).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
   });
 
   it("assertNotLastOwner blocks removing the last active OWNER", async () => {

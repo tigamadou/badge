@@ -1,5 +1,5 @@
 import { cache } from "react";
-import type { EventRole, OrgRole, Prisma, StaffRole } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isPermission, permissionDef, type Permission } from "@/lib/permissions/catalog";
 import {
@@ -42,11 +42,6 @@ type RoleRow = {
   permissions: { permission: string }[];
 };
 
-/** @deprecated compat chantier roles-permissions (retiré à la fusion) : clés d'enum héritées. */
-const STAFF_KEYS: ReadonlySet<string> = new Set<StaffRole>(["SUPER_ADMIN", "STAFF_ADMIN", "STAFF_SUPPORT", "STAFF_OBSERVER"]);
-const ORG_KEYS: ReadonlySet<string> = new Set<OrgRole>(["OWNER", "MANAGER", "AUDITOR"]);
-const EVENT_KEYS: ReadonlySet<string> = new Set<EventRole>(["ADMIN", "OPERATOR", "PRINTER", "VIEWER"]);
-
 function systemRole(key: SystemRoleKey, id: string | null): ResolvedRole {
   const def = SYSTEM_ROLES[key];
   return { id, systemKey: key, scope: def.scope, name: def.name, permissions: systemRolePermissions(key) };
@@ -79,23 +74,18 @@ function resolveRole(ref: RoleRow | null, legacyKey: string | null, place: RoleP
   return null;
 }
 
-/** @deprecated compat chantier roles-permissions (retiré à la fusion) */
-function legacy<T extends string>(role: ResolvedRole | null, keys: ReadonlySet<string>): T | null {
-  return role?.systemKey && keys.has(role.systemKey) ? (role.systemKey as T) : null;
-}
-
 export function buildUserContext(row: Prisma.UserGetPayload<{ select: typeof USER_CONTEXT_SELECT }>): UserContext {
   const platformRole = resolveRole(row.platformRole, row.staffRole, "PLATFORM");
 
   const orgMemberships = row.orgMemberships.flatMap((m) => {
     const roleRef = resolveRole(m.roleRef, m.roleId === null ? m.role : null, "ORG");
     if (!roleRef && m.roleId === null && m.role === null) return [];
-    return [{ orgId: m.orgId, roleId: m.roleId, roleRef, role: legacy<OrgRole>(roleRef, ORG_KEYS) }];
+    return [{ orgId: m.orgId, roleId: m.roleId, roleRef }];
   });
   const eventMemberships = row.eventMemberships.flatMap((m) => {
     const roleRef = resolveRole(m.roleRef, m.roleId === null ? m.role : null, "EVENT");
     if (!roleRef && m.roleId === null && m.role === null) return [];
-    return [{ eventId: m.eventId, roleId: m.roleId, roleRef, role: legacy<EventRole>(roleRef, EVENT_KEYS) }];
+    return [{ eventId: m.eventId, roleId: m.roleId, roleRef }];
   });
 
   const overrides = row.permissionOverrides.flatMap((o) =>
@@ -109,7 +99,6 @@ export function buildUserContext(row: Prisma.UserGetPayload<{ select: typeof USE
     orgMemberships,
     eventMemberships,
     overrides,
-    staffRole: legacy<StaffRole>(platformRole, STAFF_KEYS),
   };
 }
 

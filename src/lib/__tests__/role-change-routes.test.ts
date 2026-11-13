@@ -3,7 +3,6 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { systemRoleId } from "@/lib/permissions/db";
 import { loadUserContext } from "@/lib/user-context";
-import { effectiveEventRole, hasOrgRole, staffRoleAtLeast } from "@/lib/auth-helpers";
 import { eventTargetOf, hasPermission } from "@/lib/permissions";
 import { makeEvent, makeEventMember, makeOrg, makeOrgMember, makeStaff, seedFactories } from "@/test/factories";
 
@@ -48,8 +47,6 @@ describe("changement de rôle sur des lignes migrées", () => {
     expect((await PATCH(patch(url, { platformRoleId: await systemRoleId(prisma, "STAFF_OBSERVER") }), params)).status).toBe(200);
     let ctx = await ctxOf(target.id);
     expect(ctx.platformRole?.systemKey).toBe("STAFF_OBSERVER");
-    expect(ctx.staffRole).toBe("STAFF_OBSERVER");
-    expect(staffRoleAtLeast(ctx.staffRole!, "STAFF_ADMIN")).toBe(false);
     expect(hasPermission(ctx, "users.update", { kind: "platform" })).toBe(false);
 
     expect((await PATCH(patch(url, { platformRoleId: null }), params)).status).toBe(200);
@@ -58,7 +55,6 @@ describe("changement de rôle sur des lignes migrées", () => {
     expect(row.platformRoleId).toBeNull();
     expect(ctx.isStaff).toBe(false);
     expect(ctx.platformRole).toBeNull();
-    expect(ctx.staffRole).toBeNull();
   });
 
   it("PATCH /api/org/[orgId]/members/[userId] : MANAGER -> AUDITOR perd ses droits", async () => {
@@ -77,8 +73,6 @@ describe("changement de rôle sur des lignes migrées", () => {
     const ctx = await ctxOf(member.id);
     expect(ctx.orgMemberships[0].roleRef?.systemKey).toBe("AUDITOR");
     expect(hasPermission(ctx, "org.events.create", orgTarget)).toBe(false);
-    expect(hasOrgRole(ctx, org.id, "MANAGER")).toBe(false);
-    expect(hasOrgRole(ctx, org.id, "AUDITOR")).toBe(true);
   });
 
   it("PATCH /api/org/[orgId]/events/[eventId]/members/[membershipId] : OPERATOR -> VIEWER perd ses droits", async () => {
@@ -100,7 +94,6 @@ describe("changement de rôle sur des lignes migrées", () => {
     const ctx = await ctxOf(operator.id);
     expect(ctx.eventMemberships[0].roleRef?.systemKey).toBe("VIEWER");
     expect(hasPermission(ctx, "scan.check-in", target)).toBe(false);
-    expect(effectiveEventRole(ctx, event.id, org.id)).toBe("VIEWER");
   });
 
   it("POST /api/platform/organizations/[orgId]/owners : le staff change le rôle d'un membre existant", async () => {
@@ -124,6 +117,5 @@ describe("changement de rôle sur des lignes migrées", () => {
     const ctx = await ctxOf(member.id);
     expect(ctx.orgMemberships[0].roleRef?.systemKey).toBe("OWNER");
     expect(hasPermission(ctx, "org.update", orgTarget)).toBe(true);
-    expect(hasOrgRole(ctx, org.id, "OWNER")).toBe(true);
   });
 });

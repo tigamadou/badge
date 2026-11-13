@@ -15,7 +15,7 @@ function badRequest(errors: string[]) {
 // tant que l'administrateur n'a pas vu le recapitulatif. L'archive
 // transite deux fois, ce que MAX_ARCHIVE_BYTES borne deja.
 export const POST = withStaffAuth(
-  async (req: NextRequest, { session }) => {
+  async (req: NextRequest) => {
   const form = await req.formData().catch(() => null);
   const file = form?.get("archive");
   if (!(file instanceof File)) {

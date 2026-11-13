@@ -32,11 +32,11 @@ et [`specs/2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs/2026-
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Pré-contrôles | [ ] | | |
-| 2 | Rebase et fusion 2a | [ ] | | |
-| 3 | Rebase et fusion 2b | [ ] | | |
-| 4 | Rebase et fusion 2c | [ ] | | |
-| 5 | Retrait de la compatibilité et des helpers dépréciés | [ ] | | |
+| 1 | Pré-contrôles | [x] | 2026-11-13 | Fait par l'orchestrateur. |
+| 2 | Rebase et fusion 2a | [x] | 2026-11-13 | Fusion --no-ff sans rebase (fc73b38b), sans conflit. |
+| 3 | Rebase et fusion 2b | [x] | 2026-11-13 | Fusion --no-ff sans rebase (d93f9e47), sans conflit. |
+| 4 | Rebase et fusion 2c | [x] | 2026-11-13 | Fusion --no-ff sans rebase (c2832b1b) ; import en double corrigé (65a3edea). |
+| 5 | Retrait de la compatibilité et des helpers dépréciés | [x] | 2026-11-13 | auth-helpers.ts supprimé ; repli sur l'enum et double écriture conservés (amendements). |
 | 6 | Cohérence catalogue ↔ gardes ↔ menus ↔ docs | [ ] | | |
 | 7 | Relecture transverse des défauts jumeaux | [ ] | | |
 | 8 | Architecture, `CLAUDE.md`, doc de feature, tracker | [ ] | | |

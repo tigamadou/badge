@@ -25,7 +25,6 @@ describe("loadUserContext", () => {
     expect(ctx?.platformRole?.id).toBe(roleId);
     expect(ctx?.platformRole?.systemKey).toBe("SUPER_ADMIN");
     expect(ctx?.platformRole?.permissions).toEqual(systemRolePermissions("SUPER_ADMIN"));
-    expect(ctx?.staffRole).toBe("SUPER_ADMIN");
     expect(ctx?.orgMemberships).toEqual([]);
     expect(ctx?.eventMemberships).toEqual([]);
     expect(ctx?.overrides).toEqual([]);
@@ -37,7 +36,6 @@ describe("loadUserContext", () => {
     expect(ctx?.platformRole?.id).toBeNull();
     expect(ctx?.platformRole?.systemKey).toBe("STAFF_ADMIN");
     expect(ctx?.platformRole?.permissions).toEqual(systemRolePermissions("STAFF_ADMIN"));
-    expect(ctx?.staffRole).toBe("STAFF_ADMIN");
   });
 
   it("roleId l'emporte sur la colonne staffRole", async () => {
@@ -46,7 +44,6 @@ describe("loadUserContext", () => {
     const ctx = await loadUserContext(u.id);
     expect(ctx?.platformRole?.systemKey).toBe("STAFF_PRINTER");
     expect(ctx?.platformRole?.permissions).toEqual(systemRolePermissions("STAFF_PRINTER"));
-    expect(ctx?.staffRole).toBeNull();
   });
 
   it("utilisateur client sans rôle : aucun rôle plateforme", async () => {
@@ -54,7 +51,6 @@ describe("loadUserContext", () => {
     const ctx = await loadUserContext(u.id);
     expect(ctx?.isStaff).toBe(false);
     expect(ctx?.platformRole).toBeNull();
-    expect(ctx?.staffRole).toBeNull();
   });
 
   it("replie OrgMembership.role et EventMembership.role sur les rôles système", async () => {
@@ -66,12 +62,12 @@ describe("loadUserContext", () => {
     const ctx = await loadUserContext(u.id);
     expect(ctx?.orgMemberships).toHaveLength(1);
     const om = ctx!.orgMemberships[0];
-    expect(om).toMatchObject({ orgId: org.id, roleId: null, role: "OWNER" });
+    expect(om).toMatchObject({ orgId: org.id, roleId: null });
     expect(om.roleRef?.id).toBeNull();
     expect(om.roleRef?.systemKey).toBe("OWNER");
     expect(om.roleRef?.permissions).toEqual(systemRolePermissions("OWNER"));
     const em = ctx!.eventMemberships[0];
-    expect(em).toMatchObject({ eventId: event.id, roleId: null, role: "OPERATOR" });
+    expect(em).toMatchObject({ eventId: event.id, roleId: null });
     expect(em.roleRef?.systemKey).toBe("OPERATOR");
   });
 
@@ -85,12 +81,10 @@ describe("loadUserContext", () => {
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN", roleId: printerId } });
     const ctx = await loadUserContext(u.id);
     expect(ctx!.orgMemberships[0].roleRef?.systemKey).toBe("AGENT");
-    expect(ctx!.orgMemberships[0].role).toBeNull();
     expect(ctx!.eventMemberships[0].roleRef?.systemKey).toBe("PRINTER");
-    expect(ctx!.eventMemberships[0].role).toBe("PRINTER");
   });
 
-  it("rôle personnalisé : permissions filtrées, rôles hérités nuls", async () => {
+  it("rôle personnalisé : permissions filtrées", async () => {
     const org = await makeOrg();
     const event = await makeEvent(org.id);
     const custom = await makeCustomRole({
@@ -106,13 +100,10 @@ describe("loadUserContext", () => {
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, roleId: customEvent.id } });
     const ctx = await loadUserContext(u.id);
     const om = ctx!.orgMemberships[0];
-    expect(om.role).toBeNull();
     expect(om.roleRef).toMatchObject({ id: custom.id, systemKey: null, scope: "ORG", name: "Comptable" });
     expect([...om.roleRef!.permissions]).toEqual(["org.read"]);
-    expect(ctx!.eventMemberships[0].role).toBeNull();
     expect(ctx!.platformRole?.systemKey).toBeNull();
     expect([...ctx!.platformRole!.permissions]).toEqual(["platform.access"]);
-    expect(ctx!.staffRole).toBeNull();
   });
 
   it("rôle archivé : traité comme aucun rôle", async () => {
@@ -125,9 +116,8 @@ describe("loadUserContext", () => {
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER", roleId: archived.id } });
     const ctx = await loadUserContext(u.id);
     expect(ctx?.platformRole).toBeNull();
-    expect(ctx?.staffRole).toBeNull();
     expect(ctx!.orgMemberships).toEqual([
-      { orgId: org.id, roleId: archived.id, roleRef: null, role: null },
+      { orgId: org.id, roleId: archived.id, roleRef: null },
     ]);
   });
 

@@ -149,7 +149,7 @@ export const POST = withStaffAuth(
         }
         await prisma.orgMembership.update({
           where: { id: existing.id },
-          // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+          // @deprecated compat chantier roles-permissions (conservé jusqu'à la suppression des colonnes d'enum) : roleId double l'enum.
           data: orgRoleColumns(role),
         });
         const from = existing.roleRef ?? { systemKey: existing.role, name: existing.role ?? "Aucun rôle" };

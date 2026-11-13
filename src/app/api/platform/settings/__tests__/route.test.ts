@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -73,6 +73,11 @@ function makeReq(body: unknown): NextRequest {
     headers: { "content-type": "application/json" },
   });
 }
+
+// Les droits d'abonnement écrits par ces tests ne doivent pas survivre au fichier (les gardes d'écriture des autres fichiers les lisent).
+afterAll(async () => {
+  await prisma.platformSettings.updateMany({ data: { subscriptionRights: Prisma.DbNull } });
+});
 
 describe("PATCH /api/platform/settings", () => {
   beforeEach(async () => {

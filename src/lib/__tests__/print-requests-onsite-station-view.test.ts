@@ -98,12 +98,6 @@ describe("statuts", () => {
     for (const s of ["PAID", "IN_PRODUCTION", "READY"]) expect(canOpenOnsiteStation(s)).toBe(true);
     expect(canOpenOnsiteStation("COMPLETED")).toBe(false);
   });
-  it("marge réglable par STAFF_ADMIN sur une commande ouverte", () => {
-    expect(canSetOnsiteMargin("READY", "STAFF_ADMIN")).toBe(true);
-    expect(canSetOnsiteMargin("READY", "SUPER_ADMIN")).toBe(true);
-    expect(canSetOnsiteMargin("READY", "STAFF_SUPPORT")).toBe(false);
-    expect(canSetOnsiteMargin("COMPLETED", "STAFF_ADMIN")).toBe(false);
-  });
   it("marge avec un ensemble de permissions : vrai ssi `print.onsite.margin.update`", () => {
     const granted = new Set<Permission>(["print.onsite.margin.update"]);
     expect(canSetOnsiteMargin("READY", granted)).toBe(true);

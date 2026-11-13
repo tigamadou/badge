@@ -46,8 +46,8 @@ describe("POST /api/org/[orgId]/events/[eventId]/restore", () => {
     vi.restoreAllMocks();
   });
 
-  it("rethrows a non-AuthError raised inside requireOrgRole (rethrow branch)", async () => {
-    // requireOrgRole() delegue a loadUserContext() -> prisma.user.findUnique(). En faisant
+  it("rethrows a non-AuthError raised inside the permission guard (rethrow branch)", async () => {
+    // requirePermission() delegue a loadUserContext() -> prisma.user.findUnique(). En faisant
     // echouer cet appel avec une erreur ordinaire (pas une AuthError), on force le `throw err`
     // de la l.22 (branche non couverte : err instanceof AuthError est false).
     const { user, org, event } = await seedArchivedEvent("MANAGER");
@@ -90,8 +90,8 @@ describe("POST /api/org/[orgId]/events/[eventId]/restore", () => {
 
   it("returns 404 when the event does not belong to the org in the URL", async () => {
     // Le user doit avoir le role MANAGER sur `otherOrg` (l'orgId de l'URL) pour que
-    // requireOrgRole passe et que le test exerce bien la verification interne de la
-    // route (event.orgId !== orgId), et non le 403 de requireOrgRole.
+    // la garde par permission passe et que le test exerce bien la verification interne de la
+    // route (event.orgId !== orgId), et non le 403 de la garde.
     const { user, event } = await seedArchivedEvent("MANAGER");
     const otherOrg = await prisma.organization.create({
       data: { name: "Other", slug: `other-${stamp()}` },

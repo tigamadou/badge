@@ -1,5 +1,4 @@
-import type { OrgPrintCreditKind, PrintRequestStatus, StaffRole } from "@prisma/client";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import type { OrgPrintCreditKind, PrintRequestStatus } from "@prisma/client";
 import type { Permission } from "@/lib/permissions/catalog";
 import { formatFcfa } from "@/lib/print-catalog/pricing-core";
 
@@ -40,16 +39,13 @@ export const showsCreditOffer = (status: PrintRequestStatus, available: number):
 
 // Bouton « Appliquer le crédit » : permission `print.requests.credit.apply`, commande ouverte, et
 // quelque chose à appliquer (crédit libre et lignes à couvrir).
-// `access` : ensemble de permissions ; la branche `StaffRole` est @deprecated compat chantier roles-permissions (retiré à la fusion).
 export function canApplyCredit(
   status: PrintRequestStatus,
-  access: StaffRole | ReadonlySet<Permission>,
+  access: ReadonlySet<Permission>,
   available: number,
   grossTotal: number,
 ): boolean {
-  const allowed =
-    typeof access === "string" ? staffRoleAtLeast(access, "STAFF_ADMIN") : access.has("print.requests.credit.apply");
-  return OPEN.includes(status) && allowed && available > 0 && grossTotal > 0;
+  return OPEN.includes(status) && access.has("print.requests.credit.apply") && available > 0 && grossTotal > 0;
 }
 
 // Montant pré-rempli : le plus grand crédit applicable à la commande.

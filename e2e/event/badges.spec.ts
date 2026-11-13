@@ -16,8 +16,7 @@ import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
 
 // Notes : le parcours badges (liste, apercu HTML, PDF, marquage imprime) est garde par la
-// permission `badge.print` (ADMIN, OPERATOR, PRINTER) et non par la hierarchie
-// minRole, qui ne satisfait jamais un PRINTER pur. La liste passe par l'endpoint
+// permission `badge.print` (ADMIN, OPERATOR, PRINTER). La liste passe par l'endpoint
 // dedie GET /badges (DTO minimal, sans email ni structure).
 // Page Badges — /event/[eventId]/badges (liste), /badges/[badgeId] (detail PDF),
 // /badges/print (apercu par lot).

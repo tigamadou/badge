@@ -22,7 +22,7 @@ describe("withOrgAuth", () => {
 
   it("returns 401 when no session", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
-    const handler = withOrgAuth("OWNER", async () => new Response("ok"));
+    const handler = withOrgAuth("org.update", async () => new Response("ok"));
     const req = new NextRequest("http://localhost/api/org/org-1");
     const res = await handler(req, { params: Promise.resolve({ orgId: "org-1" }) });
     expect(res.status).toBe(401);
@@ -33,7 +33,7 @@ describe("withOrgAuth", () => {
       user: { id: "u1", email: "u@x", name: "U", isStaff: false },
     } as never);
 
-    const handler = withOrgAuth("OWNER", async () => new Response("ok"));
+    const handler = withOrgAuth("org.update", async () => new Response("ok"));
     const req = new NextRequest("http://localhost/api/org/");
     const res = await handler(req, { params: Promise.resolve({ orgId: "" }) });
     expect(res.status).toBe(400);
@@ -41,20 +41,20 @@ describe("withOrgAuth", () => {
     expect(json.error).toBe("Missing orgId");
   });
 
-  it("returns 403 when user is not OWNER and not staff", async () => {
+  it("returns 403 when user lacks the permission and is not staff", async () => {
     const u = await prisma.user.create({ data: { email: "u@x", password: "x", name: "U" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "o1" } });
     vi.mocked(getServerSession).mockResolvedValue({
       user: { id: u.id, email: u.email, name: u.name, isStaff: false },
     } as never);
 
-    const handler = withOrgAuth("OWNER", async () => new Response("ok"));
+    const handler = withOrgAuth("org.update", async () => new Response("ok"));
     const req = new NextRequest(`http://localhost/api/org/${org.id}`);
     const res = await handler(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(403);
   });
 
-  it("passes for OWNER and exposes ctx", async () => {
+  it("passes for a holder of the permission and exposes ctx", async () => {
     const u = await prisma.user.create({ data: { email: "o@x", password: "x", name: "O" } });
     const org = await prisma.organization.create({ data: { name: "O", slug: "o2" } });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER" } });
@@ -63,7 +63,7 @@ describe("withOrgAuth", () => {
     } as never);
 
     let received: { orgId: string; userId: string; isStaff: boolean } | null = null;
-    const handler = withOrgAuth("OWNER", async (_req, ctx) => {
+    const handler = withOrgAuth("org.update", async (_req, ctx) => {
       received = { orgId: ctx.orgId, userId: ctx.session.user.id, isStaff: ctx.session.user.isStaff };
       return new Response("ok");
     });
@@ -74,16 +74,16 @@ describe("withOrgAuth", () => {
     expect(received).toEqual({ orgId: org.id, userId: u.id, isStaff: false });
   });
 
-  it("passes for staff without OrgMembership", async () => {
+  it("passes for staff (SUPER_ADMIN) without OrgMembership", async () => {
     const s = await prisma.user.create({
-      data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_SUPPORT" },
+      data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "SUPER_ADMIN" },
     });
     const org = await prisma.organization.create({ data: { name: "O", slug: "o3" } });
     vi.mocked(getServerSession).mockResolvedValue({
       user: { id: s.id, email: s.email, name: s.name, isStaff: true },
     } as never);
 
-    const handler = withOrgAuth("OWNER", async () => new Response("ok"));
+    const handler = withOrgAuth("org.update", async () => new Response("ok"));
     const req = new NextRequest(`http://localhost/api/org/${org.id}`);
     const res = await handler(req, { params: Promise.resolve({ orgId: org.id }) });
     expect(res.status).toBe(200);
@@ -130,12 +130,6 @@ describe("withOrgAuth", () => {
       const { u, org } = await member("pm4", "AUDITOR");
       expect((await call(["org.members.manage", "org.members.read"], u, org.id)).status).toBe(200);
       expect((await call(["org.members.manage", "org.update"], u, org.id)).status).toBe(403);
-    });
-
-    it("le rôle hérité AUDITOR reste accepté", async () => {
-      const { u, org } = await member("pm5", "AUDITOR");
-      expect((await call("AUDITOR", u, org.id)).status).toBe(200);
-      expect((await call("OWNER", u, org.id)).status).toBe(403);
     });
 
     it("permission d'un autre niveau : erreur de configuration", () => {

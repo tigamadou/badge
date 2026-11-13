@@ -45,7 +45,7 @@ export const PATCH = withEventAuth({ permission: "event.members.manage" }, (req,
 
     const updated = await prisma.eventMembership.update({
       where: { id: membershipId },
-      // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+      // @deprecated compat chantier roles-permissions (conservé jusqu'à la suppression des colonnes d'enum) : roleId double l'enum.
       data: eventRoleColumns(next),
     });
     const from = roleView(existing.roleRef, existing.role);

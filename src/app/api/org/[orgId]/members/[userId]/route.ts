@@ -70,7 +70,7 @@ export const PATCH = withOrgAuth("org.members.manage", (req, { orgId, session },
 
     const updated = await prisma.orgMembership.update({
       where: { id: existing.id },
-      // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+      // @deprecated compat chantier roles-permissions (conservé jusqu'à la suppression des colonnes d'enum) : roleId double l'enum.
       data: orgRoleColumns(next),
     });
 
