@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { makeStaff } from "@/test/factories";
+import { makeOrgMember, makeStaff } from "@/test/factories";
 import { systemRoleId } from "@/lib/permissions/db";
 import { formatFcfa } from "@/lib/print-requests/labels";
 import { PrintRequestError } from "@/lib/print-requests/errors";
@@ -173,6 +173,11 @@ describe("assertOwner", () => {
     const roleId = await systemRoleId(prisma, "OWNER");
     await prisma.orgMembership.create({ data: { userId: staffOwner.id, orgId: fx.org.id, role: "OWNER", roleId } });
     await expect(assertOwner(staffOwner.id, fx.org.id)).resolves.toBeUndefined();
+  });
+  it("SUPER_ADMIN membre AGENT de l'organisation -> OWNER_REQUIRED (le rôle plateforme ne compte pas)", async () => {
+    const sa = await makeOrgMember(fx.org.id, "AGENT", { isStaff: true, staffRole: "SUPER_ADMIN" });
+    const refused = await reject(assertOwner(sa.id, fx.org.id));
+    expect([refused?.code, refused?.status]).toEqual(["OWNER_REQUIRED", 403]);
   });
   it("OWNER d'une autre organisation, ou utilisateur inconnu -> OWNER_REQUIRED", async () => {
     const other = await seedPrintFixture();

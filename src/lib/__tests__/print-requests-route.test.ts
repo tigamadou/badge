@@ -28,11 +28,16 @@ describe("organizerRoute", () => {
     return route(req, { params: Promise.resolve({ orgId, eventId, requestId: "r1" }) });
   }
 
-  it("staff non membre : GET passe, POST -> 403 STAFF_FORBIDDEN ; membre de l'organisation : POST passe", async () => {
-    const org = await prisma.organization.create({ data: { name: "Org", slug: `org-${Date.now()}` } });
+  async function seed() {
+    const org = await prisma.organization.create({ data: { name: "Org", slug: `org-${Date.now()}-${Math.random()}` } });
     const event = await prisma.event.create({
-      data: { orgId: org.id, title: "Evt", slug: `evt-${Date.now()}`, location: "L", date: new Date() },
+      data: { orgId: org.id, title: "Evt", slug: `evt-${Date.now()}-${Math.random()}`, location: "L", date: new Date() },
     });
+    return { org, event };
+  }
+
+  it("staff non membre : GET passe, POST -> 403 STAFF_FORBIDDEN ; propriétaire de l'organisation : POST passe", async () => {
+    const { org, event } = await seed();
     const sa = await makeStaff("SUPER_ADMIN");
     expect((await call(sa.id, "GET", org.id, event.id)).status).toBe(200);
     const denied = await call(sa.id, "POST", org.id, event.id);
@@ -41,5 +46,20 @@ describe("organizerRoute", () => {
 
     const owner = await makeOrgMember(org.id, "OWNER");
     expect((await call(owner.id, "POST", org.id, event.id)).status).toBe(200);
+  });
+
+  it("staff membre sans le droit côté organisateur : GET passe, POST -> 403 PERMISSION_DENIED ; avec le droit : POST passe", async () => {
+    const { org, event } = await seed();
+    const observer = await makeOrgMember(org.id, "AUDITOR", { isStaff: true, staffRole: "STAFF_OBSERVER" });
+    expect((await call(observer.id, "GET", org.id, event.id)).status).toBe(200);
+    const denied = await call(observer.id, "POST", org.id, event.id);
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error).toBe("PERMISSION_DENIED");
+
+    const superAdmin = await makeOrgMember(org.id, "AGENT", { isStaff: true, staffRole: "SUPER_ADMIN" });
+    expect((await call(superAdmin.id, "POST", org.id, event.id)).status).toBe(403);
+
+    const manager = await makeOrgMember(org.id, "MANAGER", { isStaff: true, staffRole: "STAFF_OBSERVER" });
+    expect((await call(manager.id, "POST", org.id, event.id)).status).toBe(200);
   });
 });

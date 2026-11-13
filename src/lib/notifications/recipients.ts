@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions/resolve";
+import { hasPermission, memberPermissions } from "@/lib/permissions/resolve";
 import { USER_CONTEXT_SELECT, buildUserContext } from "@/lib/user-context";
 import type { RecipientSpec } from "./types";
 
@@ -54,7 +54,12 @@ export async function resolveRecipients(
     select: USER_CONTEXT_SELECT,
     orderBy,
   });
+  // Sans `includeStaff`, seuls comptent les droits de membre : le rôle plateforme d'un staff membre ne notifie pas.
+  const memberOnly = target.kind !== "platform" && !spec.includeStaff;
   return rows
-    .filter((row) => hasPermission(buildUserContext(row), permission, target))
+    .filter((row) => {
+      const ctx = buildUserContext(row);
+      return memberOnly ? memberPermissions(ctx, target).has(permission) : hasPermission(ctx, permission, target);
+    })
     .map(({ id, email, name }) => ({ id, email, name }));
 }

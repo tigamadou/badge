@@ -8,7 +8,7 @@ import {
   type EventPermission,
 } from "@/lib/auth-helpers";
 import { loadUserContext, getUserContext } from "@/lib/user-context";
-import { effectivePermissions, hasPermission, eventTargetOf, type Permission, type PermissionTarget } from "@/lib/permissions";
+import { effectivePermissions, hasPermission, eventTargetOf, memberPermissions, type Permission, type PermissionTarget } from "@/lib/permissions";
 import type { EffectiveEventRole } from "@/types/auth";
 
 export class AuthError extends Error {
@@ -48,6 +48,12 @@ export async function requirePermission(
 export async function loadPermissions(userId: string, target: PermissionTarget): Promise<Set<Permission>> {
   const ctx = await getUserContext(userId);
   return ctx ? effectivePermissions(ctx, target) : new Set();
+}
+
+// Droits « côté organisateur » (sans le rôle plateforme d'un staff) ; ensemble vide si contexte nul.
+export async function loadMemberPermissions(userId: string, target: PermissionTarget): Promise<ReadonlySet<Permission>> {
+  const ctx = await loadUserContext(userId);
+  return ctx ? memberPermissions(ctx, target) : new Set();
 }
 
 export async function loadEventTarget(

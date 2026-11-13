@@ -124,6 +124,31 @@ describe("resolveRecipients", () => {
       expect(res).toEqual([]);
     });
 
+    it("un GRANT d'une autre organisation et un membre d'un autre évènement sont exclus", async () => {
+      const org = await makeOrg();
+      const other = await makeOrg();
+      const ev = await makeEvent(org.id);
+      const otherEv = await makeEvent(org.id);
+      const granted = await makeUser();
+      await makeOverride({ userId: granted.id, orgId: other.id, permission: "registration.approve", effect: "GRANT" });
+      await makeEventMember(otherEv.id, "ADMIN");
+      const res = await resolveRecipients(
+        { permission: "registration.approve", target: { kind: "event", eventId: ev.id, orgId: org.id } },
+        {},
+      );
+      expect(res).toEqual([]);
+    });
+
+    it("un staff membre AUDITOR n'est pas notifié par son rôle plateforme sans includeStaff, il l'est avec", async () => {
+      const org = await makeOrg();
+      const ev = await makeEvent(org.id);
+      const ad = await makeOrgMember(org.id, "AUDITOR", { isStaff: true, staffRole: "STAFF_ADMIN" });
+      const target = { kind: "event", eventId: ev.id, orgId: org.id } as const;
+      expect(await resolveRecipients({ permission: "registration.approve", target }, {})).toEqual([]);
+      const withStaff = await resolveRecipients({ permission: "registration.approve", target, includeStaff: true }, {});
+      expect(ids(withStaff)).toEqual([ad.id]);
+    });
+
     it("un OWNER d'org également ADMIN de l'évènement n'apparaît qu'une fois", async () => {
       const org = await makeOrg();
       const ev = await makeEvent(org.id);
@@ -180,6 +205,29 @@ describe("resolveRecipients", () => {
         {},
       );
       expect(ids(res)).toEqual([owner.id]);
+    });
+
+    it("un SUPER_ADMIN membre AGENT n'est pas notifié de la facturation", async () => {
+      const org = await makeOrg();
+      const owner = await makeOrgMember(org.id, "OWNER");
+      await makeOrgMember(org.id, "AGENT", { isStaff: true, staffRole: "SUPER_ADMIN" });
+      const res = await resolveRecipients(
+        { permission: "billing.subscription.pay", target: { kind: "org", orgId: org.id } },
+        {},
+      );
+      expect(ids(res)).toEqual([owner.id]);
+    });
+
+    it("un GRANT d'une autre organisation n'ajoute personne", async () => {
+      const org = await makeOrg();
+      const other = await makeOrg();
+      const granted = await makeUser();
+      await makeOverride({ userId: granted.id, orgId: other.id, permission: "billing.subscription.pay", effect: "GRANT" });
+      const res = await resolveRecipients(
+        { permission: "billing.subscription.pay", target: { kind: "org", orgId: org.id } },
+        {},
+      );
+      expect(res).toEqual([]);
     });
 
     it("OWNER replié sur l'enum résolu", async () => {

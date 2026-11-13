@@ -4,6 +4,8 @@ import type { z } from "zod";
 import type { PrintQuoteLine, PrintRequest, PrintRequestStatus } from "@prisma/client";
 import { logActivity } from "@/lib/activity-log";
 import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
+import { eventTargetOf } from "@/lib/permissions";
+import { loadMemberPermissions } from "@/lib/auth-guards";
 import { withEventAuth, type EventAuthCtx } from "@/lib/with-event-auth";
 import { PrintRequestError } from "./errors";
 import { onsiteOrPrintErrorResponse } from "./onsite";
@@ -33,7 +35,14 @@ export function organizerRoute(
     { permission: "print.request", allowArchived: options.allowArchived },
     async (req, ctx, extra) => {
       try {
-        if (req.method.toUpperCase() !== "GET") assertNotStaff(ctx);
+        if (req.method.toUpperCase() !== "GET") {
+          assertNotStaff(ctx);
+          // Écriture : le droit doit venir du rôle de membre, pas du rôle plateforme d'un staff membre.
+          const member = await loadMemberPermissions(ctx.session.user.id, eventTargetOf(ctx.event));
+          if (!member.has("print.request")) {
+            return json({ error: "PERMISSION_DENIED" }, 403);
+          }
+        }
         const params = (await extra.params) as { requestId?: string };
         return await handler(req, { ...ctx, requestId: params.requestId ?? "" });
       } catch (err) {

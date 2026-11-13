@@ -10,12 +10,13 @@ import {
   assertNotLastSuperAdmin,
   requirePermission,
   loadPermissions,
+  loadMemberPermissions,
   loadEventTarget,
   AuthError,
 } from "@/lib/auth-guards";
 import type { SystemRoleKey } from "@/lib/permissions";
 import { SYSTEM_ROLES } from "@/lib/permissions";
-import { makeEvent, makeOrg, makeStaff, makeUser } from "@/test/factories";
+import { makeEvent, makeOrg, makeOrgMember, makeStaff, makeUser } from "@/test/factories";
 
 async function setupOrgEvent() {
   const org = await prisma.organization.create({
@@ -464,6 +465,21 @@ describe("loadPermissions", () => {
   it("Set vide pour un utilisateur inconnu", async () => {
     const perms = await loadPermissions("missing", { kind: "platform" });
     expect(perms.size).toBe(0);
+  });
+});
+
+describe("loadMemberPermissions", () => {
+  beforeEach(resetAll);
+
+  it("écarte le rôle plateforme d'un staff membre ; ensemble vide pour un utilisateur inconnu", async () => {
+    const org = await makeOrg();
+    const sa = await makeOrgMember(org.id, "AGENT", { isStaff: true, staffRole: "SUPER_ADMIN" });
+    const target = { kind: "org", orgId: org.id } as const;
+    expect((await loadPermissions(sa.id, target)).has("print.quote.accept")).toBe(true);
+    const member = await loadMemberPermissions(sa.id, target);
+    expect(member.has("print.quote.accept")).toBe(false);
+    expect(member.has("org.read")).toBe(true);
+    expect((await loadMemberPermissions("missing", target)).size).toBe(0);
   });
 });
 
