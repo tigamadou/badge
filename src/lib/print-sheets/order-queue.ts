@@ -55,10 +55,17 @@ const queueWhere = (generation: Prisma.PrintSheetGenerationNullableScalarRelatio
   generation,
 });
 
-// « À traiter » : aucune planche (une génération en cours, terminée ou en échec relève de « Générées »).
+// « À traiter » : aucune planche, ou une génération pas encore terminée (en attente, en cours ou en
+// échec) ; la commande ne quitte la file qu'à `DONE`, et sa ligne porte l'état de la génération.
+const toGenerateWhere: Prisma.PrintRequestWhereInput = {
+  type: "ADVANCE",
+  status: { in: QUEUE_STATUSES },
+  OR: [{ generation: { is: null } }, { generation: { is: { status: { not: "DONE" } } } }],
+};
+
 export async function listOrdersToGenerate(): Promise<OrderQueueRow[]> {
   const orders = await prisma.printRequest.findMany({
-    where: queueWhere({ is: null }),
+    where: toGenerateWhere,
     orderBy: [{ paidAt: "asc" }, { id: "asc" }],
     select: orderSelect,
   });
@@ -77,5 +84,5 @@ export async function listOrdersWithSheet(): Promise<OrderQueueRow[]> {
 
 // Compteur de l'onglet « À traiter ».
 export function countOrdersToGenerate(): Promise<number> {
-  return prisma.printRequest.count({ where: queueWhere({ is: null }) });
+  return prisma.printRequest.count({ where: toGenerateWhere });
 }

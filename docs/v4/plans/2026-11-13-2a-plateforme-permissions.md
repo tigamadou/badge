@@ -43,7 +43,7 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 | 7 | Impression : commandes et poste sur place | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
 | 8 | Impression : catalogue, gabarits, planches (gardes) | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
 | 9 | `/api/files` par permission | [x] | 2026-11-13 |  |
-| 10 | Spec 38 : loader des planches en génération | [ ] | | |
+| 10 | Spec 38 : loader des planches en génération | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
 | 11 | e2e, doc, vérification | [ ] | | |
 
 ## Fichiers du lot (exclusifs)
