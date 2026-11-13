@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { requirePlatformPage } from "../page-guard";
 import { prisma } from "@/lib/prisma";
 import { listAvailableTemplates, templateImageUrl } from "@/lib/badge-templates/resolve";
 import { getOnsitePrintSettings } from "@/lib/settings";
@@ -25,6 +27,11 @@ export default async function StaffSettingsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  // Un onglet visible suffit pour entrer ; sinon retour au tableau de bord.
+  const { permissions } = await requirePlatformPage("platform.access", "/platform/settings");
+  const tab = resolveSettingsTab((await searchParams).tab, permissions);
+  if (tab === null) redirect("/platform");
+
   let s = await prisma.platformSettings.findUnique({
     where: { id: "singleton" },
   });
@@ -33,15 +40,8 @@ export default async function StaffSettingsPage({
   }
 
   const session = await getServerSession(authOptions);
-  const me = session?.user?.id
-    ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { staffRole: true } })
-    : null;
-  // Garde-fou ADR 2026-06-01 : les secrets (smtpPassword, recaptchaSecretKey) sont reserves SUPER_ADMIN.
-  const canEditSecrets = me?.staffRole === "SUPER_ADMIN";
-  // v4 (plan 08) : motifs de rejet, droits d'abonnement et template de badge sont reserves STAFF_ADMIN+.
-  const isStaffAdmin = canEditSecrets || me?.staffRole === "STAFF_ADMIN";
-
-  const tab = resolveSettingsTab((await searchParams).tab, isStaffAdmin);
+  // Garde-fou ADR 2026-06-01 : les secrets (smtpPassword, recaptchaSecretKey) relèvent de `settings.secrets.update`.
+  const canEditSecrets = permissions.has("settings.secrets.update");
 
   // Construction de la vue publique : on ne passe JAMAIS les valeurs secretes au
   // composant client. Les booleans *Set indiquent simplement leur presence.
@@ -71,7 +71,7 @@ export default async function StaffSettingsPage({
       <TabLinks
         label="Sections des paramètres"
         value={tab}
-        tabs={visibleSettingsTabs(isStaffAdmin).map((t) => ({
+        tabs={visibleSettingsTabs(permissions).map((t) => ({
           value: t.value,
           label: t.label,
           href: `/platform/settings?tab=${t.value}`,
@@ -100,7 +100,7 @@ export default async function StaffSettingsPage({
             subtitle="Ce qu'une organisation peut faire selon que son abonnement est actif ou non. Les quotas du plan s'appliquent en plus."
           />
           <CardBody>
-            <SubscriptionRightsForm initial={parseRights(s.subscriptionRights)} canManage={isStaffAdmin} />
+            <SubscriptionRightsForm initial={parseRights(s.subscriptionRights)} canManage={permissions.has("settings.subscription_rights.update")} />
           </CardBody>
         </Card>
       )}
@@ -118,7 +118,7 @@ export default async function StaffSettingsPage({
                 orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
                 select: { id: true, label: true, scope: true, sortOrder: true },
               })}
-              canManage={isStaffAdmin}
+              canManage={permissions.has("rejection_reasons.manage")}
             />
           </CardBody>
         </Card>

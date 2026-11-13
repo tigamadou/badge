@@ -6,43 +6,59 @@ import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Timeline, TimelineItem } from "@/components/ui/Timeline";
 import { OrgLogo } from "@/components/ui/PickCard";
 import { EmptyState } from "@/components/ui/Feedback";
+import { getSubmittedPrintRequestCount } from "@/lib/print-requests/staff-api";
+import { countOrdersToGenerate } from "@/lib/print-sheets/order-queue";
+import { requirePlatformPage } from "./page-guard";
+import { PrintDashboardBlock } from "./_components/PrintDashboardBlock";
 
 export default async function StaffDashboardPage() {
+  const { permissions } = await requirePlatformPage("platform.access");
+  const canSeeOrganizations = permissions.has("organizations.read");
+  const canSeeActivity = permissions.has("activity.read");
+  const canReadRequests = permissions.has("print.requests.read");
+  const canReadSheets = permissions.has("print.sheets.read");
+  // Le bloc impression n'est montré qu'à qui n'a pas la vue d'ensemble des organisations (l'Imprimeur).
+  const showPrintBlock = !canSeeOrganizations && (canReadRequests || canReadSheets);
+  const [ordersToProcess, sheetsToGenerate] = showPrintBlock
+    ? await Promise.all([
+        canReadRequests ? getSubmittedPrintRequestCount() : null,
+        canReadSheets ? countOrdersToGenerate() : null,
+      ])
+    : [null, null];
+
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-  const [
-    orgsActive,
-    orgsArchived,
-    eventsActive,
-    registrationsTotal,
-    topOrgsRaw,
-    recentActivity,
-  ] = await Promise.all([
-    prisma.organization.count({ where: { archived: false } }),
-    prisma.organization.count({ where: { archived: true } }),
-    prisma.event.count({ where: { archived: false } }),
-    prisma.registration.count(),
-    prisma.registration.groupBy({
-      by: ["eventId"],
-      where: { createdAt: { gte: monthStart } },
-      _count: { _all: true },
-      orderBy: { _count: { eventId: "desc" } },
-      take: 20,
-    }),
-    prisma.activityLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: {
-        id: true,
-        type: true,
-        createdAt: true,
-        staffActor: true,
-        orgId: true,
-        eventId: true,
-        userId: true,
-      },
-    }),
-  ]);
+  const overview = canSeeOrganizations
+    ? await Promise.all([
+        prisma.organization.count({ where: { archived: false } }),
+        prisma.organization.count({ where: { archived: true } }),
+        prisma.event.count({ where: { archived: false } }),
+        prisma.registration.count(),
+        prisma.registration.groupBy({
+          by: ["eventId"],
+          where: { createdAt: { gte: monthStart } },
+          _count: { _all: true },
+          orderBy: { _count: { eventId: "desc" } },
+          take: 20,
+        }),
+      ])
+    : null;
+  const [orgsActive, orgsArchived, eventsActive, registrationsTotal, topOrgsRaw] = overview ?? [0, 0, 0, 0, []];
+  const recentActivity = canSeeActivity
+    ? await prisma.activityLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          type: true,
+          createdAt: true,
+          staffActor: true,
+          orgId: true,
+          eventId: true,
+          userId: true,
+        },
+      })
+    : [];
 
   const eventIds = topOrgsRaw.map((r) => r.eventId);
   const events =
@@ -75,14 +91,22 @@ export default async function StaffDashboardPage() {
         <p className="mt-1 text-sm text-slate-400">Vue d&apos;ensemble de la plateforme</p>
       </div>
 
+      {canSeeOrganizations && (
       <StatGrid cols={4}>
         <StatCard label="Organisations actives" value={orgsActive} icon="building-2" />
         <StatCard label="Organisations archivées" value={orgsArchived} icon="archive" />
         <StatCard label="Événements actifs" value={eventsActive} icon="calendar" />
         <StatCard label="Inscriptions cumulées" value={registrationsTotal.toLocaleString("fr-FR")} icon="user-check" />
       </StatGrid>
+      )}
 
+      {showPrintBlock && (
+        <PrintDashboardBlock ordersToProcess={ordersToProcess} sheetsToGenerate={sheetsToGenerate} />
+      )}
+
+      {(canSeeOrganizations || canSeeActivity) && (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {canSeeOrganizations && (
         <Card>
           <CardHead
             title="Top organisations"
@@ -119,7 +143,9 @@ export default async function StaffDashboardPage() {
             )}
           </CardBody>
         </Card>
+        )}
 
+        {canSeeActivity && (
         <Card>
           <CardHead
             title="Activité récente"
@@ -146,7 +172,9 @@ export default async function StaffDashboardPage() {
             )}
           </CardBody>
         </Card>
+        )}
       </div>
+      )}
     </div>
   );
 }
