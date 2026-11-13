@@ -1,12 +1,18 @@
 import { hash } from "bcryptjs";
 import { Faker, fr, en, base } from "@faker-js/faker";
 import { Prisma } from "@prisma/client";
-import type { EventRole, OrgRole, RegistrationStatus, StaffRole } from "@prisma/client";
+import type { RegistrationStatus } from "@prisma/client";
+import type { SystemRoleKey } from "../../../src/lib/permissions/system-roles";
 import { prisma } from "../../../src/lib/prisma";
 import { assertDemoSeedAllowed } from "../../../src/lib/badge-env";
 import { deleteFile, deletePrefix, getFile, uploadFile } from "../../../src/lib/storage";
 import { buildImageReserve } from "./images";
 import { DEMO_FAKER_SEED, DEMO_PASSWORD, DEMO_STORAGE_PREFIX } from "../constants";
+
+/** Clés de rôle système portées par le staff, les membres d'organisation et d'évènement. */
+export type PlatformRoleKey = Extract<SystemRoleKey, "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_PRINTER" | "STAFF_OBSERVER">;
+export type OrgRoleKey = Extract<SystemRoleKey, "OWNER" | "MANAGER" | "AUDITOR" | "AGENT">;
+export type EventRoleKey = Extract<SystemRoleKey, "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER">;
 
 export type OrgSize = "huge" | "medium" | "small" | "archived";
 export type EventPhase = "past" | "ongoing" | "upcoming";
@@ -38,9 +44,9 @@ export type DemoRegistrationRef = {
 };
 
 export type DemoRegistry = {
-  staff: Record<StaffRole, DemoUser[]>;
-  orgMembers: Map<string /* orgId */, Record<OrgRole, DemoUser[]>>;
-  eventMembers: Map<string /* eventId */, Record<EventRole, DemoUser[]>>;
+  staff: Record<PlatformRoleKey, DemoUser[]>;
+  orgMembers: Map<string /* orgId */, Record<OrgRoleKey, DemoUser[]>>;
+  eventMembers: Map<string /* eventId */, Record<EventRoleKey, DemoUser[]>>;
   participants: DemoUser[];
   special: Partial<Record<DemoSpecialCase, DemoUser>>;
   orgs: DemoOrg[];
@@ -50,9 +56,9 @@ export type DemoRegistry = {
   eventsByOrg: Map<string /* orgId */, DemoEvent[]>;
   registrations: Map<string /* eventId */, Record<RegistrationStatus, DemoRegistrationRef[]>>;
   /** Rattachements d'organisation à créer par la Task 6 (organisations connues par leur slug complet). */
-  pendingOrgMembers: Array<{ user: DemoUser; role: OrgRole; orgSlug: string }>;
+  pendingOrgMembers: Array<{ user: DemoUser; role: OrgRoleKey; orgSlug: string }>;
   /** Rattachements d'évènement à créer par la Task 6 (évènement de l'organisation, choisi par phase). */
-  pendingEventMembers: Array<{ user: DemoUser; role: EventRole; orgSlug: string; phase: EventPhase | "any" }>;
+  pendingEventMembers: Array<{ user: DemoUser; role: EventRoleKey; orgSlug: string; phase: EventPhase | "any" }>;
 };
 
 export type DemoSeedOptions = {
@@ -112,7 +118,7 @@ function assertSafeKey(key: string): void {
 
 function emptyRegistry(): DemoRegistry {
   return {
-    staff: { SUPER_ADMIN: [], STAFF_ADMIN: [], STAFF_SUPPORT: [], STAFF_OBSERVER: [] },
+    staff: { SUPER_ADMIN: [], STAFF_ADMIN: [], STAFF_SUPPORT: [], STAFF_PRINTER: [], STAFF_OBSERVER: [] },
     orgMembers: new Map(),
     eventMembers: new Map(),
     participants: [],

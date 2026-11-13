@@ -3,6 +3,7 @@ import { prisma } from "../../src/lib/prisma";
 import { ensureReferenceTemplates, defaultTemplateId } from "../../src/lib/badge-templates/install";
 import { DEFAULT_PLAN_NAME } from "../../src/lib/subscription";
 import { readBadgeEnv } from "../../src/lib/badge-env";
+import { ensureSystemRoles } from "../../src/lib/permissions/db";
 import { seedSuperAdmin } from "../../src/lib/seed-super-admin";
 import { DEMO_PASSWORD, DEV_SUPER_ADMIN_EMAIL } from "./constants";
 
@@ -152,6 +153,7 @@ type Env = Record<string, string | undefined>;
 // Dev : admin@badge.local, mot de passe de demo ; ailleurs : variables SEED_SUPER_ADMIN_*.
 async function ensureSuperAdmin(env: Env): Promise<string | null> {
   if (readBadgeEnv(env) === "dev") {
+    const platformRoleId = (await ensureSystemRoles(prisma)).SUPER_ADMIN;
     const passwordHash = await hash(DEMO_PASSWORD, 12);
     const user = await prisma.user.upsert({
       where: { email: DEV_SUPER_ADMIN_EMAIL },
@@ -161,12 +163,14 @@ async function ensureSuperAdmin(env: Env): Promise<string | null> {
         name: "Super Admin",
         isStaff: true,
         staffRole: "SUPER_ADMIN",
+        platformRoleId,
         emailVerifiedAt: new Date(),
       },
       update: {
         password: passwordHash,
         isStaff: true,
         staffRole: "SUPER_ADMIN",
+        platformRoleId,
         archived: false,
         archivedAt: null,
         emailVerifiedAt: new Date(),
@@ -179,13 +183,15 @@ async function ensureSuperAdmin(env: Env): Promise<string | null> {
   else if (result.status === "exists") console.log("SUPER_ADMIN deja present, rien a faire");
   else console.warn(`Seed SUPER_ADMIN ignore : ${result.reason}`);
   const admin = await prisma.user.findFirst({
-    where: { isStaff: true, staffRole: "SUPER_ADMIN", archived: false },
+    where: { isStaff: true, archived: false, OR: [{ platformRole: { systemKey: "SUPER_ADMIN" } }, { staffRole: "SUPER_ADMIN" }] },
     select: { id: true },
   });
   return admin?.id ?? null;
 }
 
 export async function runMinimalSeed(env: Env = process.env): Promise<void> {
+  // 0. Roles systeme (prealable au SUPER_ADMIN et aux rattachements)
+  await ensureSystemRoles(prisma);
   // 1. PlatformSettings
   // Le SMTP est reecrit a chaque seed : les tests e2e et les essais manuels
   // dans l'UI plateforme peuvent l'avoir pointe ailleurs que sur mailpit.

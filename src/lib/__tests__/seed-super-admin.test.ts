@@ -21,6 +21,8 @@ describe("seedSuperAdmin", () => {
     const user = await prisma.user.findUniqueOrThrow({ where: { email: "root@badge.test" } });
     expect(user.isStaff).toBe(true);
     expect(user.staffRole).toBe("SUPER_ADMIN");
+    const role = await prisma.role.findUniqueOrThrow({ where: { systemKey: "SUPER_ADMIN" } });
+    expect(user.platformRoleId).toBe(role.id);
     expect(user.name).toBe("Super Admin");
     expect(user.emailVerifiedAt).not.toBeNull();
     expect(await compare("secret123", user.password)).toBe(true);
@@ -69,6 +71,17 @@ describe("seedSuperAdmin", () => {
       },
     });
     expect((await seedSuperAdmin(ENV)).status).toBe("created");
+  });
+
+  it("ne fait rien si un SUPER_ADMIN existe par roleId seulement (sans colonne d'enum)", async () => {
+    const role = await prisma.role.create({
+      data: { systemKey: "SUPER_ADMIN", scope: "PLATFORM", name: "Super administrateur" },
+    });
+    await prisma.user.create({
+      data: { email: "roleid@badge.test", password: "x", name: "Par roleId", isStaff: true, platformRoleId: role.id },
+    });
+    expect(await seedSuperAdmin(ENV)).toEqual({ status: "exists" });
+    expect(await prisma.user.count()).toBe(1);
   });
 
   it("ne compte pas un autre role staff comme SUPER_ADMIN", async () => {

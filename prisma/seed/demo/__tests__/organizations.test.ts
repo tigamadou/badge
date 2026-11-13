@@ -151,15 +151,24 @@ describe("seedOrganizationsAndEvents", () => {
     const { pendingOrgMembers, pendingEventMembers, orgs, eventsByOrg } = ctx.registry;
     for (const m of pendingOrgMembers) {
       const org = orgs.find((o) => o.slug === m.orgSlug)!;
-      const row = await prisma.orgMembership.findUnique({ where: { userId_orgId: { userId: m.user.id, orgId: org.id } } });
-      expect(row?.role).toBe(m.role);
+      const row = await prisma.orgMembership.findUnique({
+        where: { userId_orgId: { userId: m.user.id, orgId: org.id } },
+        include: { roleRef: true },
+      });
+      // roleId pour tous ; colonne d'enum seulement pour les roles herites (AGENT n'en a pas)
+      expect(row?.roleRef?.systemKey).toBe(m.role);
+      expect(row?.role).toBe(m.role === "AGENT" ? null : m.role);
     }
     for (const m of pendingEventMembers) {
       const org = orgs.find((o) => o.slug === m.orgSlug)!;
       expect(org.archived).toBe(false);
       const evIds = eventsByOrg.get(org.id)!.map((e) => e.id);
-      const rows = await prisma.eventMembership.findMany({ where: { userId: m.user.id, eventId: { in: evIds }, role: m.role } });
+      const rows = await prisma.eventMembership.findMany({
+        where: { userId: m.user.id, eventId: { in: evIds }, role: m.role },
+        include: { roleRef: true },
+      });
       expect(rows.length).toBeGreaterThanOrEqual(1);
+      for (const r of rows) expect(r.roleRef?.systemKey).toBe(m.role);
       if (m.phase !== "any") {
         const phases = rows.map((r) => eventsByOrg.get(org.id)!.find((e) => e.id === r.eventId)!.phase);
         expect(phases).toContain(m.phase);

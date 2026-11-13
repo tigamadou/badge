@@ -44,6 +44,9 @@ describe("runMinimalSeed", () => {
     expect(users).toHaveLength(1);
     expect(users[0].email).toBe("admin@badge.local");
     expect(users[0].staffRole).toBe("SUPER_ADMIN");
+    const roles = await prisma.role.findMany({ where: { systemKey: { not: null } } });
+    expect(roles).toHaveLength(14);
+    expect(users[0].platformRoleId).toBe(roles.find((r) => r.systemKey === "SUPER_ADMIN")!.id);
     expect(await compare("123456", users[0].password)).toBe(true);
     expect(await prisma.organization.count()).toBe(0);
     expect(await prisma.event.count()).toBe(0);

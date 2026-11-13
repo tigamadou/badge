@@ -1,5 +1,6 @@
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { ensureSystemRoles } from "@/lib/permissions/db";
 import { logActivity } from "@/lib/activity-log";
 
 export type SeedSuperAdminResult =
@@ -16,7 +17,11 @@ export async function seedSuperAdmin(
   env: Record<string, string | undefined> = process.env,
 ): Promise<SeedSuperAdminResult> {
   const superAdmin = await prisma.user.findFirst({
-    where: { isStaff: true, staffRole: "SUPER_ADMIN", archived: false },
+    where: {
+      isStaff: true,
+      archived: false,
+      OR: [{ platformRole: { systemKey: "SUPER_ADMIN" } }, { staffRole: "SUPER_ADMIN" }],
+    },
     select: { id: true },
   });
   if (superAdmin) return { status: "exists" };
@@ -38,6 +43,7 @@ export async function seedSuperAdmin(
   }
 
   const name = env.SEED_SUPER_ADMIN_NAME?.trim() || DEFAULT_NAME;
+  const platformRoleId = (await ensureSystemRoles(prisma)).SUPER_ADMIN;
   const user = await prisma.user.create({
     data: {
       email,
@@ -45,6 +51,7 @@ export async function seedSuperAdmin(
       name,
       isStaff: true,
       staffRole: "SUPER_ADMIN",
+      platformRoleId,
       emailVerifiedAt: new Date(),
     },
   });

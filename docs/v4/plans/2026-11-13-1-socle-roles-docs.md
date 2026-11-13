@@ -48,7 +48,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 7 | Wrappers de routes et garde participant | [x] | 2026-11-13 | Code écrit avant les tests (RED prouvé ensuite par stash des sources). Assertions EVENT_FORBIDDEN -> PERMISSION_DENIED mises à jour dans api-event-badge-exports.test.ts et badges/[badgeId]/__tests__/route.test.ts (tests seulement). assertNotStaff hors tâche. |
 | 8 | Rôles système en base, migration, `make migrate-roles` | [x] | 2026-11-13 | `make migrate-roles ARGS=--dry-run` sur la base de dev : 0 staff, 0 membre d'org, 0 membre d'évènement, 0 déjà migré (dev vide d'enums à migrer). `dryRun` n'écrit rien, pas même les rôles système. |
 | 9 | Fabriques, reset global et helpers e2e | [x] | 2026-11-13 | Reset global (`src/test-setup.ts`) supprimait déjà rôles et ajustements. `createTestStaff`/`OrgMember`/`OrgWithOwner`/`EventMember` écrivent `roleId` (rôles système permanents via `ensureSystemRoles`) + enum hérité ; cleanup supprime ajustements et rôles personnalisés des orgs e2e. `user-context.test.ts` : rôles provisoires remplacés. Fabriques écrites avant le test (RED non rejoué). |
-| 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [ ] | | |
+| 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [x] | 2026-11-13 | `ensureSystemRoles` au début du seed minimal ; SUPER_ADMIN (dev et `seedSuperAdmin`) avec `platformRoleId` + enum, détection `exists` par rôle ou enum. Démo : `staff-printer` (`printer@demo.local`), `agent.grosse-org`; registre `PlatformRoleKey`/`OrgRoleKey`/`EventRoleKey` (+ `STAFF_PRINTER`, `AGENT`). `roleId` + enum hérité (null pour AGENT) pour les membres. Tests écrits après le code (RED non rejoué). `make db-seed` dev : 14 rôles, admin@badge.local avec `platformRoleId`. |
 | 11 | Notifications ciblées par permission | [ ] | | |
 | 12 | Logique d'impression partagée | [ ] | | |
 | 13 | Découplage de `OnsiteStation` | [ ] | | |
@@ -658,23 +658,23 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Consumes : `ensureSystemRoles`, `systemRoleId`, `legacyKeyOf`.
 - Produces : rôles système présents après tout seed ; comptes démo `staff-printer` (Imprimeur) et `agent` (AGENT).
 
-- [ ] **Step 1 : tests rouges** : `runMinimalSeed` crée les 14 rôles système et un SUPER_ADMIN avec `platformRoleId` ;
+- [x] **Step 1 : tests rouges** : `runMinimalSeed` crée les 14 rôles système et un SUPER_ADMIN avec `platformRoleId` ;
   `seedSuperAdmin` : `exists` si un SUPER_ADMIN existe par `roleId` **ou** par colonne d'enum ; création avec `platformRoleId`
   (+ colonne d'enum) et `isStaff` ; le seed démo crée un compte Imprimeur plateforme (`platformRole.systemKey ===
   "STAFF_PRINTER"`) et un compte AGENT d'une organisation démo (`roleRef.systemKey === "AGENT"`) ; chaque membre démo a
   `roleId` ET colonne d'enum pour les rôles hérités (les lectures actuelles des seeds de notifications/billing, qui lisent
   `staffRole`/`role`, restent vertes).
-- [ ] **Step 2 : lancer** `make test FILE=prisma/seed src/lib/__tests__/seed-super-admin.test.ts` → échec.
-- [ ] **Step 3 : implémenter** — appeler `ensureSystemRoles(prisma)` au début du seed minimal (et du démo, idempotent) ;
+- [x] **Step 2 : lancer** `make test FILE=prisma/seed src/lib/__tests__/seed-super-admin.test.ts` → échec.
+- [x] **Step 3 : implémenter** — appeler `ensureSystemRoles(prisma)` au début du seed minimal (et du démo, idempotent) ;
   poser `platformRoleId` aux côtés de `staffRole` partout où le seed crée un staff (`minimal.ts`, `context.ts#ensureSuperAdmin`,
   `seed-super-admin.ts`, `accounts.ts#staff`) ; poser `roleId` aux côtés de `role` pour les memberships
   (`organizations.ts`, `print/orders.ts`). Étendre `Seed.staffRole` en `PlatformSystemKey` (clé de rôle) avec `legacyKeyOf` pour
   la colonne ; ajouter `staff("printer", "STAFF_PRINTER", "Imprimeur plateforme (menu Impression)", …)` et
   `orgMember("agent.grosse-org", "AGENT", "Agent de la grosse organisation (poste sur place)", [{ slug: GROSSE, role: "AGENT" }])`.
   Mettre à jour le registre des comptes (fichier `.demo/comptes-demo.md` généré, aucun changement manuel).
-- [ ] **Step 4 : lancer** les mêmes tests → vert. Puis `make db-seed` (base de dev, seed minimal) et vérifier que
+- [x] **Step 4 : lancer** les mêmes tests → vert. Puis `make db-seed` (base de dev, seed minimal) et vérifier que
   `admin@badge.local` a toujours accès à `/platform` (curl authentifié non nécessaire : test e2e en Task 17).
-- [ ] **Step 5 : commit** : `feat(roles): seed des roles systeme et comptes Imprimeur et Agent`.
+- [x] **Step 5 : commit** : `feat(roles): seed des roles systeme et comptes Imprimeur et Agent`.
 
 ### Task 11: Notifications ciblées par permission
 
