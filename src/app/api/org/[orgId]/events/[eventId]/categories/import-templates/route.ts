@@ -8,7 +8,7 @@ const schema = z.object({
   templateIds: z.array(z.string().min(1)).min(1).max(50),
 });
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
+export const POST = withEventAuth({ permission: "event.categories.manage" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) {

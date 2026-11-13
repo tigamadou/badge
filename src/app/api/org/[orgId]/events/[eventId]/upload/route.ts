@@ -20,7 +20,7 @@ const EXT: Record<string, string> = {
   "application/pdf": ".pdf",
 };
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { eventId }) => {
+export const POST = withEventAuth({ permission: "event.update" }, async (req, { eventId }) => {
   const kind = new URL(req.url).searchParams.get("kind");
   if (kind !== "photo" && kind !== "document") {
     return NextResponse.json({ error: "Type de fichier invalide", code: "BAD_KIND" }, { status: 400 });

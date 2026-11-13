@@ -4,7 +4,7 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { toRegistrationCsv } from "@/lib/registration-csv";
 
-export const GET = withEventAuth({ minRole: "ADMIN", allowArchived: true }, async (req, { orgId, eventId, session }) => {
+export const GET = withEventAuth({ permission: "registration.export", allowArchived: true }, async (req, { orgId, eventId, session }) => {
   const regs = await prisma.registration.findMany({
     where: { eventId },
     orderBy: { createdAt: "desc" },

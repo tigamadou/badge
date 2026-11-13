@@ -8,7 +8,7 @@ type Params = { orgId: string; eventId: string; regId: string };
 
 const schema = z.object({ reason: z.string().max(500).optional() });
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+export const POST = withEventAuth({ permission: "registration.block" }, async (req, { orgId, eventId, session }, extra) => {
   const { regId } = (await extra.params) as Params;
   const json = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(json);

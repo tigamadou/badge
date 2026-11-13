@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/activity-log";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
-export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, eventId, session }, extra) => {
+export const POST = withEventAuth({ permission: "scan.check-in" }, async (req, { orgId, eventId, session }, extra) => {
   const { regId } = (await extra.params) as Params;
   const reg = await prisma.registration.findUnique({
     where: { id: regId },

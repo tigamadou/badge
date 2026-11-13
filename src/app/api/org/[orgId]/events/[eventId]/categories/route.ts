@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 
-export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
+export const GET = withEventAuth({ permission: "event.read.detailed", allowArchived: true }, async (_req, { eventId }) => {
   const categories = await prisma.category.findMany({
     where: { eventId },
     orderBy: [{ number: "asc" }, { name: "asc" }],
@@ -29,7 +29,7 @@ const createSchema = z.object({
   anonymous: z.boolean().optional(),
 });
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
+export const POST = withEventAuth({ permission: "event.categories.manage" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) {

@@ -11,7 +11,7 @@ import { canRegisterToEvent } from "@/lib/profile-review";
 import { toRegistrationListDTO } from "@/lib/registration-dto";
 import { parseListPage } from "@/lib/list-query";
 
-export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (req, { eventId }) => {
+export const GET = withEventAuth({ permission: "event.read.detailed", allowArchived: true }, async (req, { eventId }) => {
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const categoryId = url.searchParams.get("categoryId");
@@ -73,7 +73,7 @@ const createSchema = z.object({
   message: "userId or email required",
 });
 
-export const POST = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
+export const POST = withEventAuth({ permission: "registration.create" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(json);
   if (!parsed.success) {

@@ -28,7 +28,7 @@ const IMAGE_COLUMNS = {
 } as const;
 const IMAGE_SLOTS: ImageSlot[] = ["logo", "banner"];
 
-export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
+export const GET = withEventAuth({ permission: "event.read.detailed", allowArchived: true }, async (_req, { eventId }) => {
   // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
   const event = await prisma.event.findUniqueOrThrow({
     where: { id: eventId },
@@ -85,7 +85,7 @@ const patchSchema = z.object({
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
 });
 
-export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, async (req, { orgId, eventId, session }) => {
+export const PATCH = withEventAuth({ permission: "event.update", allowArchived: false }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {

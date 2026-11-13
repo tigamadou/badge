@@ -132,7 +132,7 @@ describe("POST /registrations/[regId]/all-access", () => {
     expect(res.status).toBe(401);
   });
 
-  it("OPERATOR cannot toggle all-access (403, minRole=ADMIN)", async () => {
+  it("OPERATOR cannot toggle all-access (403, sans registration.all_access)", async () => {
     const { u, org, event, cat } = await seedEvent("OPERATOR");
     const r = await mkReg(event.id, cat.id);
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });

@@ -4,7 +4,7 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 
 export const DELETE = withEventAuth(
-  { minRole: "ADMIN" },
+  { permission: "registration.block" },
   async (req, { orgId, eventId, session }, extra) => {
     const { id } = (await extra.params) as { orgId: string; eventId: string; id: string };
     const existing = await prisma.blockedDocument.findUnique({ where: { id } });

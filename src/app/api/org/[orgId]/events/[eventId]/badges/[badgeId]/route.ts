@@ -13,8 +13,7 @@ export const runtime = "nodejs";
 
 type Params = { orgId: string; eventId: string; badgeId: string };
 
-// Garde par la permission atomique `badge.print` (cf. matrice multi-tenancy-rbac.md) :
-// la hierarchie minRole ne satisfait jamais un PRINTER pur. Aucun controle de statut :
+// Garde par la permission `badge.print`. Aucun controle de statut :
 // l'apercu reste permis pour toute inscription de l'evenement (seul le marquage
 // "imprime" exige une inscription approuvee).
 //

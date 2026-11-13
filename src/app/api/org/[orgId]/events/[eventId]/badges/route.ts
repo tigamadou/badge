@@ -5,9 +5,7 @@ import { BADGE_LIST_ORDER, buildBadgeWhere, parseBadgePage } from "@/lib/badge-l
 
 // Liste paginee des badges a imprimer (inscriptions APPROVED).
 // Filtres : filter=all|unprinted|printed|allaccess, q (nom/prenom/id), categoryId.
-// Garde par la permission `badge.print` et non par `minRole` : la hierarchie
-// des roles ne satisfait jamais un PRINTER "pur", alors que c'est precisement
-// le role dont c'est le metier. DTO volontairement minimal (moindre privilege) :
+// Garde par la permission `badge.print`. DTO volontairement minimal (moindre privilege) :
 // ni email ni structure, seulement ce qu'exige l'impression du badge.
 // Pas de logActivity(BADGE_SCANNED) ici : lire la liste n'est pas un scan.
 export const GET = withEventAuth(

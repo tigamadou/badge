@@ -130,7 +130,7 @@ describe("POST /registrations/[regId]/block-document", () => {
     expect(res.status).toBe(401);
   });
 
-  it("OPERATOR cannot block a document (403, minRole=ADMIN)", async () => {
+  it("OPERATOR cannot block a document (403, sans registration.block)", async () => {
     const { u, org, event, cat } = await seedEvent("OPERATOR");
     const r = await mkReg(event.id, cat.id);
     withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
