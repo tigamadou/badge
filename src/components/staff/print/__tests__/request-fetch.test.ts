@@ -4,7 +4,7 @@ const toastError = vi.fn();
 const toastApiError = vi.fn();
 vi.mock("@/lib/toast", () => ({ toastError: (m: string) => toastError(m), toastApiError: (r: unknown) => toastApiError(r) }));
 
-import { staffRequest } from "../request-fetch";
+import { requestUrl, staffRequest } from "../request-fetch";
 
 const MESSAGES = { PAYMENT_IN_PROGRESS: "Un paiement FedaPay est en cours sur cette commande." };
 
@@ -35,5 +35,18 @@ describe("staffRequest", () => {
   it("renvoie la réponse en cas de succès", async () => {
     respond(200, {});
     expect(await staffRequest("/x", "POST")).not.toBeNull();
+  });
+});
+
+describe("requestUrl", () => {
+  it("garde la base plateforme par défaut", () => {
+    expect(requestUrl("r1", "/onsite/lookup")).toBe("/api/platform/print/requests/r1/onsite/lookup");
+    expect(requestUrl("r1")).toBe("/api/platform/print/requests/r1");
+  });
+
+  it("utilise la base fournie", () => {
+    const base = "/api/org/o1/events/e1/print-requests/r1";
+    expect(requestUrl("r1", "/onsite/lookup", base)).toBe(`${base}/onsite/lookup`);
+    expect(requestUrl("r1", "", base)).toBe(base);
   });
 });

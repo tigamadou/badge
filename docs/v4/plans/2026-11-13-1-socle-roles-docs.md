@@ -51,7 +51,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [x] | 2026-11-13 | `ensureSystemRoles` au début du seed minimal ; SUPER_ADMIN (dev et `seedSuperAdmin`) avec `platformRoleId` + enum, détection `exists` par rôle ou enum. Démo : `staff-printer` (`printer@demo.local`), `agent.grosse-org`; registre `PlatformRoleKey`/`OrgRoleKey`/`EventRoleKey` (+ `STAFF_PRINTER`, `AGENT`). `roleId` + enum hérité (null pour AGENT) pour les membres. Tests écrits après le code (RED non rejoué). `make db-seed` dev : 14 rôles, admin@badge.local avec `platformRoleId`. |
 | 11 | Notifications ciblées par permission | [x] | 2026-11-13 | `RecipientSpec` = `users` ou `permission`+`target`(+`includeStaff`) ; résolution par `USER_CONTEXT_SELECT`/`buildUserContext`/`hasPermission` (repli enum conservé, memberships à rôle nul écartées par `buildUserContext`). Arbitrages voulus : le PRINTER d'évènement n'est plus notifié sur `notifyEventRegistrationToggled` ; le SUPPORT ne reçoit plus les messages d'impression (Admin et Imprimeur oui). `billing.subscription.pay` : SUPER_ADMIN non membre non notifié (testé). `seed/demo/organizations.ts` inchangé (variables locales homonymes). |
 | 12 | Logique d'impression partagée | [x] | 2026-11-13 | `assertOwner` : staff acteur seulement refusé (staff membre OWNER accepté, changement assumé). `canApplyCredit`/`canSetOnsiteMargin` : branche `StaffRole` @deprecated compat. `lifecycle.ts` inchangé (n'appelle qu'`assertOwner`). Seul appelant hors `route.ts` de `assertNotStaff` : aucun. Tests : `print-requests-route`, `guard` ajoutés. |
-| 13 | Découplage de `OnsiteStation` | [ ] | | |
+| 13 | Découplage de `OnsiteStation` | [x] | 2026-11-13 | Props `apiBase?`/`backHref?` ; `requestUrl(…, apiBase?)`. Page plateforme inchangée (défauts). Tests : `request-fetch`, `OnsiteStation` (rendu statique). |
 | 14 | Consommateurs transverses | [ ] | | |
 | 15 | Spec 39 : quantité des accessoires côté serveur | [ ] | | |
 | 16 | Spec 40 : ancrages de la documentation | [ ] | | |
@@ -788,12 +788,12 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
   `OnsiteStation` sans `backHref` rend le lien `/platform/print/orders/r1` ; avec `backHref="/event/e1/print/r1"` rend ce lien.
   (le rendu statique ne déclenche pas les `fetch` : tester les URL de `fetch` en extrayant la construction dans une fonction
   exportée `onsiteUrls(requestId, apiBase)` du même fichier, testée à part, si le composant reste intestable en statique.)
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter** — ajouter `apiBase` et `backHref` (facultatifs, défauts ci-dessus) à `OnsiteStationProps` ;
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter** — ajouter `apiBase` et `backHref` (facultatifs, défauts ci-dessus) à `OnsiteStationProps` ;
   les trois `fetch` utilisent `requestUrl(requestId, path, apiBase)` ; le lien de retour utilise `backHref`. **Aucun changement
   visible** pour `/platform/print/orders/[requestId]/onsite` (la page n'est pas modifiée : défauts).
-- [ ] **Step 4 : lancer** `make test FILE=src/components/staff/print` → vert.
-- [ ] **Step 5 : commit** : `refactor(impression): poste sur place decouple de /platform`.
+- [x] **Step 4 : lancer** `make test FILE=src/components/staff/print` → vert.
+- [x] **Step 5 : commit** : `refactor(impression): poste sur place decouple de /platform`.
 
 ### Task 14: Consommateurs transverses
 

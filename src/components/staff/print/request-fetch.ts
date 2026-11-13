@@ -37,4 +37,6 @@ export async function staffRequest(
   }
 }
 
-export const requestUrl = (requestId: string, path = "") => `/api/platform/print/requests/${requestId}${path}`;
+// `apiBase` remplace la base plateforme (ex. route d'un événement) ; `path` s'y ajoute tel quel.
+export const requestUrl = (requestId: string, path = "", apiBase?: string) =>
+  `${apiBase ?? `/api/platform/print/requests/${requestId}`}${path}`;
