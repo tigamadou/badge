@@ -18,7 +18,6 @@ vi.mock("@/components/page-docs/PageDocButton", () => ({
 import { StaffShell } from "@/components/staff/StaffShell";
 import { systemRolePermissions } from "@/lib/permissions";
 import { OrgShell } from "@/components/admin/OrgShell";
-import { systemRolePermissions } from "@/lib/permissions";
 import { EventShell } from "@/components/event/EventShell";
 
 function noDarkClasses(html: string) {
