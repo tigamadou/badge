@@ -6,6 +6,7 @@ import { eventTargetOf, hasPermission } from "@/lib/permissions";
 import { listAssignableRoles } from "@/lib/role-management";
 import { MemberTable } from "@/components/event/MemberTable";
 import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../_lib/page-access";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { UrlPagination } from "@/components/ui/Pagination";
@@ -18,6 +19,7 @@ export default async function MembersPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { eventId } = await params;
+  await requireEventPagePermission(eventId, "event.members.manage", `/event/${eventId}/members`);
   const list = parseListPage(await searchParams);
   const orgId = await getEventOrgId(eventId);
   const session = await getServerSession(authOptions);

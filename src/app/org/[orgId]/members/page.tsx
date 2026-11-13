@@ -4,6 +4,7 @@ import { loadUserContext } from "@/lib/user-context";
 import { hasPermission } from "@/lib/permissions";
 import { listAssignableRoles } from "@/lib/role-management";
 import { prisma } from "@/lib/prisma";
+import { requireOrgPagePermission } from "../_lib/page-access";
 import { MembersClient } from "./MembersClient";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
@@ -17,6 +18,7 @@ export default async function MembersPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
+  await requireOrgPagePermission(orgId, "org.members.read", `/org/${orgId}/members`);
   const list = parseListPage(await searchParams);
   // Inviter, changer un rôle et retirer exigent `org.members.manage` ; sinon la liste reste en lecture seule.
   const session = await getServerSession(authOptions);
