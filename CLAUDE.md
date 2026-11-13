@@ -114,7 +114,9 @@ puis le corps :
 - Une section qui n'a de sens qu'avec une permission se place entre `:::permission <clé>` et
   `:::` (clé du catalogue `src/lib/permissions/catalog.ts`, de la **portée de l'espace** :
   `/platform` (y compris `/platform/organizations/[orgId]/…`) → clés PLATFORM ; `/org` → ORG ;
-  `/event` → EVENT ; `/account` → PARTICIPANT ; pas de blocs imbriqués).
+  `/event` → EVENT ; `/account` → PARTICIPANT ; pas de blocs imbriqués). Un bloc n'est justifié que si
+  l'écran masque réellement la section sans la permission (vérifie la condition d'affichage dans le
+  code) ; sinon décris le droit en texte. Une page sans garde de permission n'a pas de `access`.
 
 **Rédaction** : français avec accents, vouvoiement, ton du guide utilisateur ; public =
 organisateurs et staff ; n'explique que ce que l'écran montre, avec les libellés exacts de

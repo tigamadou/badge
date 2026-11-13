@@ -43,7 +43,7 @@ coordination : [`spec 36`](../specs/2026-11-13-36-v4-chantier-roles-docs-coordin
 | 8 | Pages Documentation des quatre espaces | [x] | 2026-11-13 | `docs-session.ts` (garde de session) ajouté ; contrôle navigateur 375/1024/1280 reporté à la Task 12 (les docs n'existent qu'après la Task 11) |
 | 9 | Consignes IA : `CLAUDE.md`, `AGENTS.md`, template, skill chantier | [x] | 2026-11-13 | portée des blocs = portée de l'espace (écart au plan, voir spec 40) ; `AGENTS.md` reste un lien vers `CLAUDE.md` |
 | 10 | Doc de feature `documentation-pages.md` | [x] | 2026-11-13 | lien ajouté dans `docs/v4/README.md` |
-| 11 | Pilote : docs des pages `/org` | [ ] | | |
+| 11 | Pilote : docs des pages `/org` | [x] | 2026-11-13 | 18 docs (720 lignes), rédigées par un sous-agent Sonnet ; relecture navigateur OWNER/MANAGER/AUDITOR faite en Task 12 |
 | 12 | e2e, doc, vérification | [ ] | | |
 
 ## Fichiers du lot (exclusifs)
