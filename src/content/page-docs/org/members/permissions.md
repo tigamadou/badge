@@ -5,6 +5,7 @@ audience: organisateur
 access: org.members.permissions.manage
 sources:
   - src/app/org/[orgId]/members/[userId]/permissions/page.tsx
+  - src/components/permissions/PermissionSpaces.tsx
   - src/components/permissions/UserPermissionsEditor.tsx
   - src/components/permissions/logic.ts
   - src/components/permissions/types.ts
@@ -12,7 +13,7 @@ sources:
   - src/components/ui/Feedback.tsx
   - src/components/ui/Icon.tsx
   - src/components/ui/Labels.tsx
-sourceHash: sha256:aa2bf88ea6d46770fd030f801985d13f6ba8a1e869766741c42e0c1867d41b78
+sourceHash: sha256:7e2480f75a2e716f38eedcabd226ca3f63ba7429593ac9fd17c22e2d557d8e08
 updatedAt: 2026-11-13
 ---
 
@@ -24,14 +25,10 @@ Vous ne pouvez pas ajuster vos propres permissions, ni celles d'un autre propri�
 
 ## Le rôle du membre
 
-Le nom de l'organisation et le rôle du membre sont rappelés au-dessus de la matrice.
+Le nom de l'organisation et le rôle du membre sont rappelés au-dessus des permissions.
 
-## La matrice des permissions
+## Les permissions
 
-Les permissions sont regroupées par domaine. Pour chacune :
-- le libellé et l'état **Effectif** ou **Non effectif** (résultat après ajustements) ;
-- un sélecteur « Ajustement » à trois valeurs : **Hérité** (comportement du rôle, par défaut), **Ajouté** (accorde la permission) et **Retiré** (la retire).
-
-Vous ne pouvez ajouter que des permissions que vous détenez vous-même : les autres affichent « (non détenue) » et ne sont pas sélectionnables.
+Les permissions sont présentées en un onglet par espace (organisation, évènement), chacun avec son nombre de permissions actives, puis en un tableau par domaine, répartis sur plusieurs colonnes selon la largeur de l'écran. Pour chaque permission, un interrupteur indique si la permission est active pour ce membre, compte tenu de son rôle et des ajustements. Activer une permission que le rôle n'accorde pas l'ajoute à ce membre ; désactiver une permission que le rôle accorde la lui retire ; remettre l'interrupteur dans la position du rôle supprime l'ajustement. Vous ne pouvez activer une permission que le rôle n'accorde pas que si vous la détenez vous-même : sinon l'interrupteur est grisé, avec l'indication « Vous ne détenez pas cette permission. ».
 
 Le bouton **Enregistrer** applique les ajustements (« Permissions enregistrées. »).

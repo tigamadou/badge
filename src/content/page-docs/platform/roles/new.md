@@ -6,12 +6,13 @@ access: platform.roles.manage
 sources:
   - src/app/platform/roles/new/page.tsx
   - src/components/permissions/PermissionMatrix.tsx
+  - src/components/permissions/PermissionSpaces.tsx
   - src/components/permissions/RoleEditor.tsx
   - src/components/permissions/logic.ts
   - src/components/permissions/types.ts
   - src/components/ui/Button.tsx
   - src/components/ui/Input.tsx
-sourceHash: sha256:8a0a9db12261f46d1645f844508ae311a5f8fe4ee2c0e209d64ceef76d4b8490
+sourceHash: sha256:edc5e02c3d16c08165d13faa93e1b8d6f09f66e175ea7a829d7bbb683aa8e20d
 updatedAt: 2026-11-13
 ---
 
@@ -24,9 +25,9 @@ Cet écran crée un rôle personnalisé de la plateforme. Si vous arrivez par **
 - **Nom du rôle** : obligatoire, de 2 à 60 caractères.
 - **Description (facultative)** : 500 caractères au plus.
 
-## La matrice des permissions
+## Le tableau des permissions
 
-Les permissions sont regroupées par domaine, chacune avec son libellé et sa description. Cochez celles que le rôle doit accorder. Vous ne pouvez cocher que des permissions que vous détenez vous-même ; les autres sont grisées avec l'indication « Vous ne détenez pas cette permission. ». Lors d'une duplication, seules les permissions que vous pouvez accorder sont reprises.
+Les permissions sont présentées en un onglet par espace (plateforme, organisation, évènement, selon le niveau du rôle), chacun avec son nombre de permissions actives, puis en un tableau par domaine, répartis sur plusieurs colonnes selon la largeur de l'écran ; chaque permission a son libellé, sa description et un interrupteur, et chaque domaine indique combien sont actives. Activez celles que le rôle doit accorder. Vous ne pouvez activer que des permissions que vous détenez vous-même ; les autres sont grisées avec l'indication « Vous ne détenez pas cette permission. ». Lors d'une duplication, seules les permissions que vous pouvez accorder sont reprises.
 
 ## Valider
 

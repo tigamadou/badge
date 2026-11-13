@@ -6,12 +6,13 @@ access: org.roles.manage
 sources:
   - src/app/org/[orgId]/roles/new/page.tsx
   - src/components/permissions/PermissionMatrix.tsx
+  - src/components/permissions/PermissionSpaces.tsx
   - src/components/permissions/RoleEditor.tsx
   - src/components/permissions/logic.ts
   - src/components/permissions/types.ts
   - src/components/ui/Button.tsx
   - src/components/ui/Input.tsx
-sourceHash: sha256:7a05c3180025bcebe2e8c4ae42cd574b41e86850a9bd629dd02cd5cd9995748a
+sourceHash: sha256:b5d528fe370b56ddd7a201776a9f97e976dfa6308dff5f2e66eca3d6260ea4d1
 updatedAt: 2026-11-13
 ---
 
@@ -24,9 +25,9 @@ Cet écran crée un rôle personnalisé d'organisation ou d'évènement, selon l
 - **Nom du rôle** : obligatoire, de 2 à 60 caractères.
 - **Description (facultative)** : 500 caractères au plus.
 
-## La matrice des permissions
+## Le tableau des permissions
 
-Les permissions sont regroupées par domaine, chacune avec son libellé et sa description. Cochez celles que le rôle doit accorder. Vous ne pouvez cocher que des permissions que vous détenez vous-même ; les autres sont grisées avec l'indication « Vous ne détenez pas cette permission. ». Lors d'une duplication, seules les permissions que vous pouvez accorder sont reprises.
+Les permissions sont présentées en un onglet par espace (plateforme, organisation, évènement, selon le niveau du rôle), chacun avec son nombre de permissions actives, puis en un tableau par domaine, répartis sur plusieurs colonnes selon la largeur de l'écran ; chaque permission a son libellé, sa description et un interrupteur, et chaque domaine indique combien sont actives. Activez celles que le rôle doit accorder. Vous ne pouvez activer que des permissions que vous détenez vous-même ; les autres sont grisées avec l'indication « Vous ne détenez pas cette permission. ». Lors d'une duplication, seules les permissions que vous pouvez accorder sont reprises.
 
 ## Valider
 

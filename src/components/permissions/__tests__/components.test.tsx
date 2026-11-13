@@ -6,6 +6,7 @@ import { RoleSelect } from "../RoleSelect";
 import { RoleTable } from "../RoleTable";
 import { RoleEditor } from "../RoleEditor";
 import { UserPermissionsEditor } from "../UserPermissionsEditor";
+import { LevelSwitcher } from "../LevelSwitcher";
 import type { AssignableRoleRow, PermissionLevelRow, RoleRow } from "../types";
 
 // Balise <input> d'une permission dans le rendu statique (l'ordre des attributs est celui de React).
@@ -18,8 +19,19 @@ describe("PermissionMatrix", () => {
     const html = renderToStaticMarkup(<PermissionMatrix levels={["PLATFORM", "ORG", "EVENT"]} selected={new Set()} />);
     expect(html).not.toContain("platform.roles.manage");
     expect(html).not.toContain("users.permissions.manage");
-    expect(html).toContain("<legend");
+    expect(html.match(/<table/g)!.length).toBeGreaterThan(1);
+    expect(html).toContain("Espace plateforme");
+    expect(html).toContain("Espace organisation");
+    expect(html).toContain("Espace évènement");
+    expect(html.match(/role="tab"/g)).toHaveLength(3);
+    expect(html.match(/role="tabpanel"[^>]*hidden/g)).toHaveLength(2);
     expect(html).toContain("org.update");
+  });
+
+  it("rend un interrupteur par permission et compte les actives par domaine", () => {
+    const html = renderToStaticMarkup(<PermissionMatrix levels={["ORG"]} selected={new Set<Permission>(["org.read"])} />);
+    expect(inputOf(html, "org.read")).toContain('role="switch"');
+    expect(html).toMatch(/>1\/\d+</);
   });
 
   it("coche la sélection ; une case désactivée porte la raison en infobulle", () => {
@@ -163,9 +175,39 @@ describe("UserPermissionsEditor", () => {
     expect(html).toContain("Acme");
     expect(html).toContain("Administrateur");
     expect(html).not.toContain("platform.roles.manage");
-    expect(html).toContain("(non détenue)");
-    expect(html).toContain("Effectif");
-    expect(html).toContain("Non effectif");
+    expect(html).toContain("Vous ne détenez pas cette permission.");
+    expect(inputOf(html, "org.read")).toContain('role="switch"');
+    expect(inputOf(html, "org.read")).toContain("checked");
+    expect(inputOf(html, "org.update")).toContain("checked");
+    expect(html).toContain('id="platform-org-read"');
+    expect(html).toContain('id="o-org-read"');
     expect(html).toContain("Enregistrer");
+  });
+
+  it("présente les espaces en onglets", () => {
+    const html = renderToStaticMarkup(
+      <UserPermissionsEditor levels={[org]} endpoint="/api/e" heldPermissions={["org.read"]} scopes={["ORG", "EVENT"]} sendOrgId={false} />,
+    );
+    expect(html).toContain("Espace organisation");
+    expect(html).toContain("Espace évènement");
+    expect(html.match(/role="tab"/g)).toHaveLength(2);
+  });
+});
+
+describe("LevelSwitcher", () => {
+  it("un seul niveau : pas de sélecteur ; plusieurs : seul le premier est visible", () => {
+    const one = renderToStaticMarkup(<LevelSwitcher items={[{ value: "a", label: "A", content: <p>contenu A</p> }]} />);
+    expect(one).toBe("<p>contenu A</p>");
+    const two = renderToStaticMarkup(
+      <LevelSwitcher
+        items={[
+          { value: "a", label: "Plateforme", content: <p>A</p> },
+          { value: "b", label: "Acme", content: <p>B</p> },
+        ]}
+      />,
+    );
+    expect(two).toContain("Plateforme");
+    expect(two).toContain("Acme");
+    expect(two.match(/<div hidden="">/g)).toHaveLength(1);
   });
 });

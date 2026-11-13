@@ -9,6 +9,7 @@ import { heldOn, loadPlatformLevels } from "@/lib/role-management";
 import { Alert } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
 import { UserPermissionsEditor } from "@/components/permissions/UserPermissionsEditor";
+import { LevelSwitcher } from "@/components/permissions/LevelSwitcher";
 import { grantablePermissions } from "@/components/permissions/logic";
 
 export const dynamic = "force-dynamic";
@@ -43,20 +44,25 @@ export default async function UserPermissionsPage({ params }: { params: Promise<
         Vous ne pouvez ajouter que des permissions que vous détenez vous-même. Les permissions réservées aux rôles
         système ne sont pas ajustables.
       </Alert>
-      {levels.map((level) => {
-        const isPlatform = level.target.kind === "platform";
-        const orgId = level.target.kind === "org" ? level.target.orgId : null;
-        return (
-          <UserPermissionsEditor
-            key={orgId ?? "platform"}
-            levels={[level]}
-            endpoint={`/api/platform/users/${userId}/permissions`}
-            heldPermissions={grantablePermissions(heldOn(ctx, orgId ? { kind: "org", orgId } : { kind: "platform" }))}
-            scopes={isPlatform ? ["PLATFORM", "ORG", "EVENT", "PARTICIPANT"] : ["ORG", "EVENT"]}
-            sendOrgId
-          />
-        );
-      })}
+      <LevelSwitcher
+        items={levels.map((level) => {
+          const isPlatform = level.target.kind === "platform";
+          const orgId = level.target.kind === "org" ? level.target.orgId : null;
+          return {
+            value: orgId ?? "platform",
+            label: level.target.kind === "org" ? level.target.orgName : "Plateforme",
+            content: (
+              <UserPermissionsEditor
+                levels={[level]}
+                endpoint={`/api/platform/users/${userId}/permissions`}
+                heldPermissions={grantablePermissions(heldOn(ctx, orgId ? { kind: "org", orgId } : { kind: "platform" }))}
+                scopes={isPlatform ? ["PLATFORM", "ORG", "EVENT", "PARTICIPANT"] : ["ORG", "EVENT"]}
+                sendOrgId
+              />
+            ),
+          };
+        })}
+      />
     </div>
   );
 }

@@ -20,9 +20,9 @@ test.describe("Org — Permissions d'un membre", () => {
     await page.locator("tr", { hasText: manager.email }).getByRole("link", { name: /^permissions$/i }).click();
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/members/${manager.id}/permissions`), { timeout: 20000 });
 
-    const select = page.getByLabel("Ajustement : Gérer les membres", { exact: true });
-    await expect(select).toHaveValue("inherited");
-    await select.selectOption("granted");
+    const toggle = page.getByRole("switch", { name: "Gérer les membres", exact: true });
+    await expect(toggle).not.toBeChecked();
+    await toggle.check();
     await page.getByRole("button", { name: /^enregistrer$/i }).click();
     await expect(toast(page, /permissions enregistrées/i)).toBeVisible();
 

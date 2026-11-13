@@ -14,7 +14,7 @@ sources:
   - src/components/ui/Input.tsx
   - src/components/ui/Pagination.tsx
   - src/components/ui/TableFrame.tsx
-sourceHash: sha256:e1f6da597ae57182033d37e3d646e1a17604d41e3598e790c3e70bf167674128
+sourceHash: sha256:601799b522e77e24665b26532c683d2e8d169f89b911bd5d4cd5c2acafcdf094
 updatedAt: 2026-11-13
 ---
 

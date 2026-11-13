@@ -21,9 +21,9 @@ test.describe("Platform — Permissions d'un utilisateur", () => {
     await expect(page).toHaveURL(new RegExp(`/platform/users/${cible.id}/permissions`), { timeout: 20000 });
     await expect(page.getByRole("heading", { name: /permissions de/i })).toBeVisible();
 
-    const select = page.getByLabel("Ajustement : Consulter les profils", { exact: true });
-    await expect(select).toHaveValue("inherited");
-    await select.selectOption("revoked");
+    const toggle = page.getByRole("switch", { name: "Consulter les profils", exact: true });
+    await expect(toggle).toBeChecked();
+    await toggle.uncheck();
     await page.getByRole("button", { name: /^enregistrer$/i }).first().click();
     await expect(toast(page, /permissions enregistrées/i)).toBeVisible();
 
@@ -33,7 +33,7 @@ test.describe("Platform — Permissions d'un utilisateur", () => {
     await expectLastActivity({ type: "USER_PERMISSIONS_CHANGED", targetId: cible.id, userId: actor.id });
 
     await page.reload();
-    await expect(page.getByLabel("Ajustement : Consulter les profils", { exact: true })).toHaveValue("revoked");
+    await expect(page.getByRole("switch", { name: "Consulter les profils", exact: true })).not.toBeChecked();
   });
 
   test("Un STAFF_ADMIN est redirigé vers la fiche ; la fiche n'offre pas le lien", async ({ page }) => {

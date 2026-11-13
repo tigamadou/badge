@@ -14,7 +14,7 @@ sources:
   - src/components/ui/JournalBlocks.tsx
   - src/components/ui/Labels.tsx
   - src/components/ui/Timeline.tsx
-sourceHash: sha256:f1f2d796329415bbfe55b2c0adb407efb12c0e4bea6a5820adbf510dde964b43
+sourceHash: sha256:e293a99401119accf38880a7fe57fbf55dce35b52beba1a208cc0a847547b6fe
 updatedAt: 2026-11-13
 ---
 

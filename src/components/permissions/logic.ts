@@ -1,4 +1,4 @@
-import { PERMISSION_CATALOG, type Permission, type PermissionDef } from "@/lib/permissions/catalog";
+import { PERMISSION_CATALOG, type Permission, type PermissionDef, type PermissionScope } from "@/lib/permissions/catalog";
 import { groupByDomain } from "@/lib/permissions/labels";
 import { ActionError } from "@/lib/toast";
 import type { AssignableRoleRow, MatrixLevels, OverrideEffect, OverrideRow } from "./types";
@@ -12,6 +12,26 @@ export function editablePermissions(levels: MatrixLevels): Permission[] {
 
 export function groupedPermissions(levels: MatrixLevels) {
   return groupByDomain(editablePermissions(levels));
+}
+
+const SCOPE_LABELS: Record<PermissionScope, string> = {
+  PLATFORM: "Espace plateforme",
+  ORG: "Espace organisation",
+  EVENT: "Espace évènement",
+  PARTICIPANT: "Espace participant",
+};
+
+/** Permissions éditables regroupées par espace (niveau), puis par domaine ; les espaces vides sont omis. */
+export function permissionsBySpace(levels: MatrixLevels) {
+  const keys = editablePermissions(levels);
+  const scopeOf = new Map((PERMISSION_CATALOG as readonly PermissionDef[]).map((p) => [p.key, p.scope]));
+  return levels
+    .map((scope) => ({
+      scope,
+      label: SCOPE_LABELS[scope],
+      groups: groupByDomain(keys.filter((k) => scopeOf.get(k) === scope)),
+    }))
+    .filter((space) => space.groups.length > 0);
 }
 
 /** Bascule une permission ; une permission désactivée ne change jamais la sélection. */
@@ -44,6 +64,19 @@ export function setOverrideState(
   if (state === "inherited") next.delete(key);
   else next.set(key, state === "granted" ? "GRANT" : "REVOKE");
   return next;
+}
+
+/**
+ * Bascule l'état effectif d'une permission : revenir à la valeur du rôle supprime l'ajustement,
+ * s'en écarter pose un ajout ou un retrait.
+ */
+export function toggleOverride(
+  inherited: ReadonlySet<Permission>,
+  overrides: ReadonlyMap<Permission, OverrideEffect>,
+  key: Permission,
+): Map<Permission, OverrideEffect> {
+  const nextOn = !effectiveSet(inherited, overrides).has(key);
+  return setOverrideState(overrides, key, nextOn === inherited.has(key) ? "inherited" : nextOn ? "granted" : "revoked");
 }
 
 /** Ensemble effectif : l'héritage, plus les ajouts, moins les retraits (les retraits l'emportent). */

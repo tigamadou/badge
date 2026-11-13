@@ -6,6 +6,7 @@ access: org.roles.manage
 sources:
   - src/app/org/[orgId]/roles/[roleId]/page.tsx
   - src/components/permissions/PermissionMatrix.tsx
+  - src/components/permissions/PermissionSpaces.tsx
   - src/components/permissions/RoleEditor.tsx
   - src/components/permissions/logic.ts
   - src/components/permissions/types.ts
@@ -13,7 +14,7 @@ sources:
   - src/components/ui/Feedback.tsx
   - src/components/ui/Icon.tsx
   - src/components/ui/Input.tsx
-sourceHash: sha256:5f8b1a1134f24319f406f0a476e3f1f41bbf847472d696891fb18b24135878d6
+sourceHash: sha256:15c4110912c803b80cbb3eda8049f764224b179e12a502cbd9764d7bb4429fb7
 updatedAt: 2026-11-13
 ---
 
@@ -23,12 +24,12 @@ Cet écran affiche le contenu d'un rôle et, pour un rôle personnalisé, permet
 
 ## Rôle système ou archivé
 
-Un rôle système, ou un rôle archivé, s'affiche en lecture seule : un message l'explique (« Rôle système : son contenu est fixé par le code. Vous pouvez le dupliquer pour créer un rôle personnalisé. » ou « Ce rôle est archivé : restaurez-le pour le modifier. »), suivi de la matrice des permissions cochées, sans possibilité de changement.
+Un rôle système, ou un rôle archivé, s'affiche en lecture seule : un message l'explique (« Rôle système : son contenu est fixé par le code. Vous pouvez le dupliquer pour créer un rôle personnalisé. » ou « Ce rôle est archivé : restaurez-le pour le modifier. »), suivi du tableau des permissions, dont les interrupteurs montrent celles qui sont actives, sans possibilité de changement.
 
 ## Rôle personnalisé
 
 - **Nom du rôle** (2 à 60 caractères) et **Description (facultative)** (500 caractères au plus).
-- La matrice des permissions, groupées par domaine : cochez ou décochez. Les permissions que vous ne détenez pas ne peuvent pas être ajoutées (« Vous ne détenez pas cette permission. »), mais celles déjà portées par le rôle restent décochables.
+- Les permissions, présentées en un onglet par espace (plateforme, organisation, évènement), chacun avec son nombre de permissions actives ; dans chaque onglet, un tableau par domaine, répartis sur plusieurs colonnes selon la largeur de l'écran : activez ou désactivez l'interrupteur de chaque ligne. Les permissions que vous ne détenez pas ne peuvent pas être activées (« Vous ne détenez pas cette permission. »), mais celles déjà portées par le rôle restent désactivables.
 - **Enregistrer** applique les changements (« Rôle enregistré. ») et ramène à la liste ; **Annuler** revient sans enregistrer.
 
 ## Questions fréquentes

@@ -19,7 +19,7 @@ sources:
   - src/components/ui/Labels.tsx
   - src/components/ui/Pagination.tsx
   - src/components/ui/TableFrame.tsx
-sourceHash: sha256:96d7c5f038b633753c2ca3cec7c1aaab06f817869bb65bc7293be5e588bdc7ca
+sourceHash: sha256:a54e32599d79301076bfbc88f3c2dddba3009b7c396bcb043bdbb8d28c850ff4
 updatedAt: 2026-11-13
 ---
 

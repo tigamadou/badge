@@ -7,11 +7,13 @@ import {
   effectiveSet,
   grantablePermissions,
   groupedPermissions,
+  permissionsBySpace,
   overridesToRows,
   readOrThrow,
   roleErrorMessage,
   setOverrideState,
   stateOf,
+  toggleOverride,
   togglePermission,
 } from "../logic";
 import { ActionError } from "@/lib/toast";
@@ -117,5 +119,37 @@ describe("defaultRoleId", () => {
     expect(defaultRoleId([role("a", "AGENT", true), role("o", "OWNER", false)], "OWNER")).toBe("a");
     expect(defaultRoleId([role("o", "OWNER", false)], "OWNER")).toBe("");
     expect(defaultRoleId([], "OWNER")).toBe("");
+  });
+});
+
+describe("permissionsBySpace", () => {
+  it("sépare les espaces dans l'ordre des niveaux, sans mélanger les portées d'un même domaine", () => {
+    const spaces = permissionsBySpace(["PLATFORM", "ORG", "EVENT"]);
+    expect(spaces.map((s) => s.scope)).toEqual(["PLATFORM", "ORG", "EVENT"]);
+    const keysOf = (i: number) => spaces[i].groups.flatMap((g) => g.permissions.map((d) => d.key));
+    expect(keysOf(0)).toContain("organizations.members.manage");
+    expect(keysOf(0)).not.toContain("org.members.manage");
+    expect(keysOf(1)).toContain("org.members.manage");
+    expect([...keysOf(0), ...keysOf(1), ...keysOf(2)].sort()).toEqual([...editablePermissions(["PLATFORM", "ORG", "EVENT"])].sort());
+  });
+
+  it("omet un espace sans permission éditable", () => {
+    expect(permissionsBySpace(["EVENT"]).map((s) => s.label)).toEqual(["Espace évènement"]);
+  });
+});
+
+describe("toggleOverride", () => {
+  const inherited = new Set<Permission>(["org.read"]);
+
+  it("désactiver une permission héritée pose un retrait ; la réactiver le supprime", () => {
+    const revoked = toggleOverride(inherited, new Map(), "org.read");
+    expect(revoked.get("org.read")).toBe("REVOKE");
+    expect(toggleOverride(inherited, revoked, "org.read").has("org.read")).toBe(false);
+  });
+
+  it("activer une permission non héritée pose un ajout ; la désactiver le supprime", () => {
+    const granted = toggleOverride(inherited, new Map(), "org.update");
+    expect(granted.get("org.update")).toBe("GRANT");
+    expect(toggleOverride(inherited, granted, "org.update").has("org.update")).toBe(false);
   });
 });
