@@ -35,6 +35,9 @@ updatedAt: 2026-11-20           # posé par l'outil
   cette permission. La clé appartient au catalogue et a **la portée de l'espace** : `/platform` (y compris
   `/platform/organizations/[orgId]/…`) → PLATFORM, `/org` → ORG, `/event` → EVENT, `/account` → PARTICIPANT.
   Pas de blocs imbriqués.
+  Conséquence : sur `/platform/organizations/[orgId]/…`, une section réservée à une permission d'organisation
+  (`org.*`) ne peut pas s'exprimer (`docs-check` refuse la clé ORG sur une page plateforme), car les gardes de
+  ces pages testent des clés PLATFORM. Ce choix, qui s'écarte du plan initial (portée ORG), est assumé.
 
 ### Correspondance route → fichier
 
@@ -102,7 +105,9 @@ Fait **côté serveur** (`src/lib/page-docs/`) : la cible de permissions est dé
 organisation, évènement dont l'organisation est lue en base, participant) ; un bloc dont l'utilisateur n'a pas
 la permission est retiré avant le rendu, il n'apparaît donc pas dans la réponse. Un bloc dont la clé n'a pas la
 portée évaluée est conservé avec la mention « Réservé aux utilisateurs disposant de la permission … ». Un bloc
-mal formé ne casse jamais le rendu (texte conservé, marqueurs retirés).
+mal formé échoue **fermé** : un bloc non fermé ou imbriqué masque tout le texte jusqu'à la fin, pour ne jamais
+révéler un contenu réservé (`docs-check` et `make test` refusent ces docs à la source) ; un marqueur isolé,
+inconnu ou sans clé est retiré seul. Le résumé de la liste Documentation est calculé sur le corps filtré.
 
 ## Consigne aux agents
 

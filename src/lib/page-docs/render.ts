@@ -2,8 +2,15 @@ import MarkdownIt from "markdown-it";
 
 const md = new MarkdownIt({ html: false, linkify: false, typographer: false });
 
-// Liens autorisés : http, https, mailto et liens relatifs (jamais javascript:, data:, etc.).
-md.validateLink = (url: string) => /^(https?:|mailto:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url.trim());
+// Liens autorisés : http, https, mailto et liens relatifs (jamais javascript:, data:, ni « //hôte »).
+md.validateLink = (url: string) => {
+  const trimmed = url.trim();
+  if (trimmed.startsWith("//")) return false;
+  return /^(https?:|mailto:)/i.test(trimmed) || !/^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+};
+
+// Pas d'images : aucune ressource distante n'est chargée par le panneau.
+md.disable("image");
 
 md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
   const href = String(tokens[idx].attrGet("href"));
