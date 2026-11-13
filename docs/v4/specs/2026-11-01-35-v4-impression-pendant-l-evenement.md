@@ -30,9 +30,11 @@ commandé.
 
 ## Décisions (validées par l'utilisateur le 2026-11-01)
 
+> **Amendement 2026-11-13** : la décision 3 est élargie par la spec 37 (décision 10) : le poste est tenu par un opérateur de la plateforme **ou par un AGENT de l'organisation**. Le droit n'est plus un rôle plateforme minimal mais la permission `print.onsite.operate`.
+
 1. Deux types d'impression : en amont et **pendant l'évènement**.
 2. L'impression pendant l'évènement **exige un template de badge adapté**.
-3. **C'est un opérateur de la plateforme qui imprime sur place** (2026-11-01).
+3. **C'est un opérateur de la plateforme ou un AGENT de l'organisation qui imprime sur place** (2026-11-01, amendé le 2026-11-13 : spec 37, décision 10).
 4. **Les badges non utilisés ne sont pas remboursés**, ils deviennent un **crédit** pour les
    prochaines demandes de l'organisation (2026-11-01).
 5. **Une imprimante sur place** (2026-11-01).
@@ -92,7 +94,7 @@ commandé.
   scanner existant (`QRScanner`, celui du contrôle d'accès) ; à défaut (téléphone déchargé,
   email perdu), il **recherche** par nom, email ou ID d'inscription. La fiche s'affiche :
   photo, nom, catégorie, aperçu du badge ; « Imprimer » ouvre le PDF du badge (comme
-  aujourd'hui) et marque le badge imprimé en un geste. Droit : staff `STAFF_SUPPORT` minimum.
+  aujourd'hui) et marque le badge imprimé en un geste. Droit : permission `print.onsite.operate` (amendement 2026-11-13 ; auparavant `STAFF_SUPPORT` minimum). L'AGENT d'organisation y accède par `/event/[eventId]/print/[requestId]/onsite`, sans voir ni prix ni lignes de devis.
 - **Contrôles** :
   - le QR ou la recherche doit désigner une inscription **de cet évènement** ; sinon refus
     (« ce QR ne correspond pas à cet évènement ») ;
