@@ -9,11 +9,13 @@ import { mergeRowsById } from "@/components/staff/print/sheets/merge-rows";
 // Réunit le formulaire et l'historique : une génération créée apparaît aussitôt en tête.
 export function GenerationsScreen({
   layouts,
+  canGenerate,
   initial,
   printRequest,
   pagination,
 }: {
   layouts: LayoutOption[];
+  canGenerate: boolean;
   initial: GenerationRow[];
   printRequest?: LinkedPrintRequest;
   // Pagination par l'URL, rendue par la page serveur.
@@ -37,7 +39,7 @@ export function GenerationsScreen({
 
   return (
     <div className="space-y-6">
-      <GenerationForm layouts={layouts} onCreated={reload} printRequest={printRequest} />
+      {canGenerate && <GenerationForm layouts={layouts} onCreated={reload} printRequest={printRequest} />}
       <GenerationList
         generations={rows}
         onChange={(fresh) => setPolled({ from: initial, rows: mergeRowsById(rows, fresh) })}

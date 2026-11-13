@@ -5,5 +5,5 @@ import { listOrdersWithSheet } from "@/lib/print-sheets/order-queue";
 // Commandes avec planche (sous-page « Générées »), rafraîchies toutes les 5 s pendant une génération.
 export const GET = withStaffAuth(
   async () => NextResponse.json({ orders: await listOrdersWithSheet() }),
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.sheets.read" },
 );

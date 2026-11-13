@@ -41,7 +41,7 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 | 5 | Paramètres, motifs de rejet, templates de badge | [x] | 2026-11-13 | |
 | 6 | Jobs e-mail, journal, upload, paiements | [x] | 2026-11-13 | |
 | 7 | Impression : commandes et poste sur place | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
-| 8 | Impression : catalogue, gabarits, planches (gardes) | [ ] | | |
+| 8 | Impression : catalogue, gabarits, planches (gardes) | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
 | 9 | `/api/files` par permission | [ ] | | |
 | 10 | Spec 38 : loader des planches en génération | [ ] | | |
 | 11 | e2e, doc, vérification | [ ] | | |

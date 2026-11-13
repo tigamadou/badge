@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { toLayoutSpec } from "@/lib/print-sheets/layout-input";
 import { pxToMm } from "@/lib/print-sheets/units";
 import { makeRequest } from "./helpers/print-requests";
+import { makeStaff } from "@/test/factories";
 
 const template = vi.hoisted(() => ({ pages: 2, w: "324px", h: "204px" }));
 vi.mock("@/lib/badge-templates/render-badge", () => ({
@@ -41,9 +42,7 @@ async function setup() {
   const event = await prisma.event.create({
     data: { orgId: org.id, title: "E", slug: uniq("e"), location: "L", date: new Date() },
   });
-  const user = await prisma.user.create({
-    data: { email: `${uniq("u")}@x`, password: "x", name: "U", isStaff: true, staffRole: "STAFF_SUPPORT" },
-  });
+  const user = await makeStaff("STAFF_PRINTER");
   const layout = await prisma.printSheetLayout.create({ data: layoutData(uniq("lay")) });
   const catA = await prisma.category.create({ data: { eventId: event.id, name: "A", color: "#000000", number: 2 } as never });
   const catB = await prisma.category.create({ data: { eventId: event.id, name: "B", color: "#000000", number: 10 } as never });

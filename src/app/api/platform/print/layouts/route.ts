@@ -12,7 +12,7 @@ export const GET = withStaffAuth(async (req) => {
     orderBy: { createdAt: "asc" },
   });
   return NextResponse.json({ layouts });
-});
+}, { permission: "print.layouts.read" });
 
 export const POST = withStaffAuth(
   async (req, { session }) => {
@@ -44,5 +44,5 @@ export const POST = withStaffAuth(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.layouts.manage" },
 );
