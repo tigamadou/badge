@@ -1,6 +1,6 @@
 import type { EventRole, OrgRole, StaffRole } from "@prisma/client";
 import { legacyKeyOf } from "@/lib/permissions/db";
-import type { SystemRoleKey } from "@/lib/permissions";
+import { SYSTEM_ROLES, isSystemRoleKey, type SystemRoleKey } from "@/lib/permissions";
 import type { RoleDTO } from "./roles";
 
 // @deprecated compat chantier roles-permissions (retiré à la fusion, plan 3) : double écriture de la colonne
@@ -28,3 +28,21 @@ export const staffRoleColumns = (role: RoleKeyRef | null): { platformRoleId: str
 
 /** Valeur d'un rôle dans les détails du journal : clé du rôle système (stable, comme l'ancien enum), sinon le nom. */
 export const roleLogKey = (role: { systemKey: string | null; name: string }): string => role.systemKey ?? role.name;
+
+export type RoleView = { id: string | null; name: string; systemKey: string | null };
+
+/**
+ * Rôle d'une appartenance tel que les API le renvoient : `roleRef` d'abord, sinon repli sur la colonne d'enum
+ * (lignes antérieures à la migration, `id` nul), sinon « Aucun rôle ».
+ */
+export function roleView(roleRef: RoleView | null, legacyKey: string | null): RoleView {
+  if (roleRef) return { id: roleRef.id, name: roleRef.name, systemKey: roleRef.systemKey };
+  if (legacyKey !== null && isSystemRoleKey(legacyKey)) {
+    return { id: null, name: SYSTEM_ROLES[legacyKey].name, systemKey: legacyKey };
+  }
+  return { id: null, name: "Aucun rôle", systemKey: null };
+}
+
+/** Titulaire du rôle système `key` (par `roleRef`, sinon par la colonne d'enum). */
+export const holdsSystemRole = (roleRef: { systemKey: string | null } | null, legacyKey: string | null, key: string): boolean =>
+  roleRef ? roleRef.systemKey === key : legacyKey === key;

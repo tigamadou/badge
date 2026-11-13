@@ -1,388 +1,254 @@
-import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
+import { makeCustomRole, makeEvent, makeEventMember, makeOrg, makeStaff, makeUser, seedFactories } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
-afterAll(async () => {
-  await prisma.activityLog.deleteMany();
-  await prisma.registration.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.eventMembership.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.organization.deleteMany();
-  await prisma.user.deleteMany();
-});
-
-vi.mock("@/lib/mail", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/mail")>("@/lib/mail");
-  return {
-    ...actual,
-    sendUserInvitation: vi.fn(async () => undefined),
-  };
+// SMTP réel (mailpit) : l'envoi d'invitation est simulé pour pouvoir provoquer un échec.
+vi.mock("@/lib/mail", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/mail")>();
+  return { ...actual, sendUserInvitation: vi.fn().mockResolvedValue(undefined) };
 });
 import { sendUserInvitation } from "@/lib/mail";
+import { GET, POST } from "@/app/api/org/[orgId]/events/[eventId]/members/route";
+import { DELETE, PATCH } from "@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route";
 
-async function withSession(user: { id: string; email: string; name: string; isStaff: boolean }) {
-  vi.mocked(getServerSession).mockResolvedValue({ user } as never);
-}
-
-async function seedAdmin() {
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const u = await prisma.user.create({ data: { email: `a-${stamp}@x.test`, password: "x", name: "A" } });
-  const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
-  const event = await prisma.event.create({
-    data: { orgId: org.id, title: "E", slug: `e-${stamp}`, location: "L", date: new Date() },
-  });
-  await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN" } });
-  return { u, org, event };
-}
-
-async function cleanup() {
-  await prisma.activityLog.deleteMany();
-  await prisma.registration.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.eventMembership.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.organization.deleteMany();
-  await prisma.user.deleteMany();
+beforeEach(() => {
+  seedFactories(71);
   vi.mocked(getServerSession).mockReset();
-  vi.mocked(sendUserInvitation).mockClear();
+  vi.mocked(sendUserInvitation).mockReset().mockResolvedValue(undefined);
+});
+
+function as(user: { id: string; email: string; name: string } | null, isStaff = false) {
+  vi.mocked(getServerSession).mockResolvedValue(user ? ({ user: { ...user, isStaff } } as never) : null);
+}
+const role = (key: Parameters<typeof systemRoleId>[1]) => systemRoleId(prisma, key);
+const base = (o: string, e: string) => `http://localhost/api/org/${o}/events/${e}/members`;
+const req = (method: string, url: string, body?: unknown) =>
+  new NextRequest(url, { method, body: body === undefined ? undefined : JSON.stringify(body), headers: { "content-type": "application/json" } });
+
+async function setup() {
+  const org = await makeOrg();
+  const event = await makeEvent(org.id);
+  const admin = await makeEventMember(event.id, "ADMIN");
+  const ctx = { params: Promise.resolve({ orgId: org.id, eventId: event.id }) };
+  const mctx = (membershipId: string) => ({ params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId } as never) });
+  const url = base(org.id, event.id);
+  const membershipOf = (userId: string) => prisma.eventMembership.findFirstOrThrow({ where: { userId, eventId: event.id }, include: { roleRef: true } });
+  return { org, event, admin, ctx, mctx, url, membershipOf };
 }
 
 describe("GET /api/org/[orgId]/events/[eventId]/members", () => {
-  beforeEach(cleanup);
-
-  it("lists event members (ADMIN)", async () => {
-    const { u, org, event } = await seedAdmin();
-    const other = await prisma.user.create({ data: { email: "listed@x.test", password: "x", name: "L" } });
-    await prisma.eventMembership.create({ data: { userId: other.id, eventId: event.id, role: "VIEWER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const res = await GET(
-      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, { method: "GET" }),
-      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
-    );
+  it("401 sans session ; 403 pour OPERATOR ; ADMIN liste avec le rôle", async () => {
+    const { event, admin, ctx, url } = await setup();
+    const viewer = await makeEventMember(event.id, "VIEWER");
+    as(null);
+    expect((await GET(req("GET", url), ctx)).status).toBe(401);
+    as(await makeEventMember(event.id, "OPERATOR"));
+    expect((await GET(req("GET", url), ctx)).status).toBe(403);
+    as(admin);
+    const res = await GET(req("GET", url), ctx);
     expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.members).toHaveLength(2);
-    expect(json.members.map((m: { user: { id: string } }) => m.user.id).sort()).toEqual(
-      [u.id, other.id].sort(),
-    );
+    const body = await res.json();
+    expect(body.members).toHaveLength(3);
+    const v = body.members.find((m: { user: { id: string } }) => m.user.id === viewer.id);
+    expect(v.role).toMatchObject({ systemKey: "VIEWER", name: "Lecteur" });
   });
 
-  it("returns 401 without session", async () => {
-    const { org, event } = await seedAdmin();
-    vi.mocked(getServerSession).mockResolvedValue(null as never);
-
-    const { GET } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const res = await GET(
-      new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, { method: "GET" }),
-      { params: Promise.resolve({ orgId: org.id, eventId: event.id }) },
-    );
-    expect(res.status).toBe(401);
+  it("un évènement archivé reste lisible ; une appartenance sans roleId est lue par son enum", async () => {
+    const { event, admin, ctx, url } = await setup();
+    const legacy = await makeUser();
+    await prisma.eventMembership.create({ data: { userId: legacy.id, eventId: event.id, role: "OPERATOR" } });
+    await prisma.event.update({ where: { id: event.id }, data: { archived: true, archivedAt: new Date() } });
+    as(admin);
+    const res = await GET(req("GET", url), ctx);
+    expect(res.status).toBe(200);
+    const m = (await res.json()).members.find((x: { user: { id: string } }) => x.user.id === legacy.id);
+    expect(m.role).toMatchObject({ systemKey: "OPERATOR" });
   });
 });
 
-describe("POST /api/org/[orgId]/events/[eventId]/members (invite)", () => {
-  beforeEach(cleanup);
-
-  it("returns 401 without session", async () => {
-    const { org, event } = await seedAdmin();
-    vi.mocked(getServerSession).mockResolvedValue(null as never);
-
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "z@x.test", role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
-    expect(res.status).toBe(401);
+describe("POST /api/org/[orgId]/events/[eventId]/members", () => {
+  it("401 ; 403 pour OPERATOR", async () => {
+    const { event, ctx, url } = await setup();
+    const body = { email: "z@test.fr", roleId: await role("VIEWER") };
+    as(null);
+    expect((await POST(req("POST", url, body), ctx)).status).toBe(401);
+    as(await makeEventMember(event.id, "OPERATOR"));
+    expect((await POST(req("POST", url, body), ctx)).status).toBe(403);
   });
 
-  it("still creates the membership when the invite email fails to send", async () => {
-    const { u, org, event } = await seedAdmin();
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    vi.mocked(sendUserInvitation).mockRejectedValueOnce(new Error("smtp down"));
+  it("400 sur corps invalide, ancien champ role, JSON illisible ; 404 rôle inconnu ou d'une autre organisation ; 400 rôle d'une autre portée", async () => {
+    const { admin, ctx, url } = await setup();
+    as(admin);
+    const post = (b: unknown) => POST(req("POST", url, b), ctx);
+    expect((await post({ email: "z@test.fr", role: "VIEWER" })).status).toBe(400);
+    expect((await post({ email: "pas-un-mail", roleId: "r" })).status).toBe(400);
+    expect((await POST(new NextRequest(url, { method: "POST", body: "{x", headers: { "content-type": "application/json" } }), ctx)).status).toBe(400);
+    const foreign = await makeCustomRole({ scope: "EVENT", orgId: (await makeOrg()).id, permissions: ["event.read"] });
+    expect((await post({ email: "z@test.fr", roleId: "inconnu" })).status).toBe(404);
+    expect((await post({ email: "z@test.fr", roleId: foreign.id })).status).toBe(404);
+    expect((await post({ email: "z@test.fr", roleId: await role("MANAGER") })).status).toBe(400);
+  });
 
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "mailfail@x.test", role: "VIEWER" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+  it("crée l'utilisateur et l'appartenance (roleId + enum), journalise et invite", async () => {
+    const { event, admin, ctx, url, membershipOf } = await setup();
+    as(admin);
+    const res = await POST(req("POST", url, { email: "Nouveau@Test.fr", name: "Nouveau", roleId: await role("OPERATOR") }), ctx);
     expect(res.status).toBe(201);
-    const created = await prisma.user.findUnique({ where: { email: "mailfail@x.test" } });
-    expect(created).not.toBeNull();
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: "nouveau@test.fr" } });
+    expect(user.inviteToken).toMatch(/^[0-9a-f]{64}$/);
+    const m = await membershipOf(user.id);
+    expect(m.roleRef?.systemKey).toBe("OPERATOR");
+    expect(m.role).toBe("OPERATOR");
+    expect(sendUserInvitation).toHaveBeenCalledWith(user.id, expect.objectContaining({ eventId: event.id, role: "OPERATOR" }));
+    const log = await prisma.activityLog.findFirstOrThrow({ where: { type: "MEMBERSHIP_ADDED", targetId: user.id } });
+    expect(log.details).toMatchObject({ role: "OPERATOR", scope: "event" });
   });
 
-  it("adds membership when user exists by email", async () => {
-    const { u, org, event } = await seedAdmin();
-    const existing = await prisma.user.create({ data: { email: "op@x.test", password: "x", name: "Op" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "op@x.test", role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
+  it("nom absent : dérivé de l'email ; l'appartenance est créée même si l'invitation échoue", async () => {
+    const { admin, ctx, url } = await setup();
+    as(admin);
+    vi.mocked(sendUserInvitation).mockRejectedValueOnce(new Error("smtp"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const res = await POST(req("POST", url, { email: "sans.nom@test.fr", roleId: await role("VIEWER") }), ctx);
+    spy.mockRestore();
     expect(res.status).toBe(201);
-
-    const m = await prisma.eventMembership.findFirst({ where: { eventId: event.id, userId: existing.id } });
-    expect(m?.role).toBe("OPERATOR");
-    expect(vi.mocked(sendUserInvitation)).not.toHaveBeenCalled();
+    expect((await prisma.user.findUniqueOrThrow({ where: { email: "sans.nom@test.fr" } })).name).toBe("sans.nom");
   });
 
-  it("creates user + invite when email is new", async () => {
-    const { u, org, event } = await seedAdmin();
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "newuser@x.test", name: "New User", role: "ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
-    expect(res.status).toBe(201);
-
-    const created = await prisma.user.findUnique({ where: { email: "newuser@x.test" } });
-    expect(created).not.toBeNull();
-    expect(created?.inviteToken).toMatch(/^[0-9a-f]{64}$/);
-    expect(vi.mocked(sendUserInvitation)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(sendUserInvitation).mock.calls[0][1]).toMatchObject({ eventId: event.id, role: "ADMIN" });
+  it("utilisateur existant : sans invitation ; déjà membre : 409 ALREADY_MEMBER", async () => {
+    const { admin, ctx, url } = await setup();
+    as(admin);
+    const existing = await makeUser();
+    const body = { email: existing.email, roleId: await role("VIEWER") };
+    expect((await POST(req("POST", url, body), ctx)).status).toBe(201);
+    expect(sendUserInvitation).not.toHaveBeenCalled();
+    const dup = await POST(req("POST", url, body), ctx);
+    expect(dup.status).toBe(409);
+    expect((await dup.json()).code).toBe("ALREADY_MEMBER");
   });
 
-  it("rejects duplicate membership (409)", async () => {
-    const { u, org, event } = await seedAdmin();
-    const x = await prisma.user.create({ data: { email: "dup@x.test", password: "x", name: "D" } });
-    await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "OPERATOR" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "dup@x.test", role: "ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
-    expect(res.status).toBe(409);
-  });
-
-  it("returns 400 VALIDATION on malformed JSON body", async () => {
-    const { u, org, event } = await seedAdmin();
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: "{not-json",
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.error).toBe("VALIDATION");
-  });
-
-  it("rethrows non-P2002 errors from membership creation", async () => {
-    const { u, org, event } = await seedAdmin();
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-    const spy = vi
-      .spyOn(prisma.eventMembership, "create")
-      .mockRejectedValueOnce(Object.assign(new Error("db-boom"), { code: "P2003" }));
-
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "rethrow@x.test", role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    await expect(POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) })).rejects.toThrow(
-      "db-boom",
-    );
+  it("relance les erreurs inattendues de la base", async () => {
+    const { admin, ctx, url } = await setup();
+    as(admin);
+    const spy = vi.spyOn(prisma.eventMembership, "create").mockRejectedValueOnce(Object.assign(new Error("db-boom"), { code: "P2003" }));
+    await expect(POST(req("POST", url, { email: "boom@test.fr", roleId: await role("VIEWER") }), ctx)).rejects.toThrow("db-boom");
     spy.mockRestore();
   });
 
-  it("OPERATOR cannot invite (403)", async () => {
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `op-${stamp}@x.test`, password: "x", name: "Op" } });
-    const org = await prisma.organization.create({ data: { name: "O", slug: `o-op-${stamp}` } });
-    const event = await prisma.event.create({
-      data: { orgId: org.id, title: "E", slug: `e-op-${stamp}`, location: "L", date: new Date() },
-    });
-    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+  it("anti-escalade : un rôle d'évènement personnalisé ne donne que ce qu'il détient ; un rôle personnalisé de l'organisation est attribuable", async () => {
+    const { org, event, ctx, url, membershipOf } = await setup();
+    const limited = await makeCustomRole({ scope: "EVENT", orgId: org.id, name: "Gère les membres", permissions: ["event.members.manage", "event.read"] });
+    const actor = await makeUser();
+    await prisma.eventMembership.create({ data: { userId: actor.id, eventId: event.id, roleId: limited.id } });
+    as(actor);
+    const denied = await POST(req("POST", url, { email: "a@test.fr", roleId: await role("ADMIN") }), ctx);
+    expect(denied.status).toBe(403);
+    expect((await denied.json()).error).toBe("PERMISSION_NOT_HELD");
+    const small = await makeCustomRole({ scope: "EVENT", orgId: org.id, name: "Petit", permissions: ["event.read"] });
+    expect((await POST(req("POST", url, { email: "b@test.fr", roleId: small.id }), ctx)).status).toBe(201);
+    const created = await prisma.user.findUniqueOrThrow({ where: { email: "b@test.fr" } });
+    const m = await membershipOf(created.id);
+    expect(m.roleId).toBe(small.id);
+    expect(m.role).toBeNull();
+  });
 
-    const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members`, {
-      method: "POST",
-      body: JSON.stringify({ email: "y@x.test", role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await POST(req, { params: Promise.resolve({ orgId: org.id, eventId: event.id }) });
-    expect(res.status).toBe(403);
+  it("le staff (STAFF_ADMIN) peut attribuer un rôle système sans appartenance", async () => {
+    const { ctx, url } = await setup();
+    as(await makeStaff("STAFF_ADMIN"), true);
+    expect((await POST(req("POST", url, { email: "s@test.fr", roleId: await role("ADMIN") }), ctx)).status).toBe(201);
   });
 });
 
 describe("PATCH /api/org/[orgId]/events/[eventId]/members/[membershipId]", () => {
-  beforeEach(cleanup);
-
-  it("updates the role and logs MEMBERSHIP_ROLE_CHANGED", async () => {
-    const { u, org, event } = await seedAdmin();
-    const x = await prisma.user.create({ data: { email: "role@x.test", password: "x", name: "R" } });
-    const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "VIEWER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
-    });
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.membership.role).toBe("OPERATOR");
-
-    const log = await prisma.activityLog.findFirst({ where: { type: "MEMBERSHIP_ROLE_CHANGED" } });
-    expect(log?.targetId).toBe(x.id);
-    expect((log?.details as { from?: string; to?: string } | null)?.from).toBe("VIEWER");
-    expect((log?.details as { from?: string; to?: string } | null)?.to).toBe("OPERATOR");
+  it("401 ; 403 pour OPERATOR ; 400 corps invalide ; 404 appartenance inconnue ou d'un autre évènement", async () => {
+    const { org, event, admin, mctx, membershipOf, url } = await setup();
+    const target = await makeEventMember(event.id, "VIEWER");
+    const m = await membershipOf(target.id);
+    const patch = (id: string, b: unknown) => PATCH(req("PATCH", `${url}/${id}`, b), mctx(id));
+    as(null);
+    expect((await patch(m.id, { roleId: await role("OPERATOR") })).status).toBe(401);
+    as(await makeEventMember(event.id, "OPERATOR"));
+    expect((await patch(m.id, { roleId: await role("OPERATOR") })).status).toBe(403);
+    as(admin);
+    expect((await patch(m.id, { role: "OPERATOR" })).status).toBe(400);
+    expect((await PATCH(new NextRequest(`${url}/${m.id}`, { method: "PATCH", body: "{x" }), mctx(m.id))).status).toBe(400);
+    expect((await patch("inconnu", { roleId: await role("OPERATOR") })).status).toBe(404);
+    const otherEvent = await makeEvent(org.id);
+    const stranger = await makeEventMember(otherEvent.id, "VIEWER");
+    const foreign = await prisma.eventMembership.findFirstOrThrow({ where: { userId: stranger.id } });
+    expect((await patch(foreign.id, { roleId: await role("OPERATOR") })).status).toBe(404);
   });
 
-  it("traite une appartenance sans rôle comme VIEWER dans la notification de changement", async () => {
-    const { u, org, event } = await seedAdmin();
-    const x = await prisma.user.create({ data: { email: "norole@x.test", password: "x", name: "N" } });
+  it("change le rôle : double écriture et journal ; un rôle d'une autre organisation est refusé (404)", async () => {
+    const { event, admin, mctx, membershipOf, url } = await setup();
+    const target = await makeEventMember(event.id, "VIEWER");
+    const m = await membershipOf(target.id);
+    as(admin);
+    const res = await PATCH(req("PATCH", `${url}/${m.id}`, { roleId: await role("OPERATOR") }), mctx(m.id));
+    expect(res.status).toBe(200);
+    expect((await res.json()).membership.role).toMatchObject({ systemKey: "OPERATOR" });
+    const after = await membershipOf(target.id);
+    expect(after.roleRef?.systemKey).toBe("OPERATOR");
+    expect(after.role).toBe("OPERATOR");
+    const log = await prisma.activityLog.findFirstOrThrow({ where: { type: "MEMBERSHIP_ROLE_CHANGED", targetId: target.id } });
+    expect(log.details).toMatchObject({ from: "VIEWER", to: "OPERATOR", scope: "event" });
+    const foreign = await makeCustomRole({ scope: "EVENT", orgId: (await makeOrg()).id, permissions: ["event.read"] });
+    expect((await PATCH(req("PATCH", `${url}/${m.id}`, { roleId: foreign.id }), mctx(m.id))).status).toBe(404);
+  });
+
+  it("une appartenance sans roleId (enum nul) passe à un rôle par roleId", async () => {
+    const { event, admin, mctx, url } = await setup();
+    const x = await makeUser();
     const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: null } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
-    });
+    as(admin);
+    const res = await PATCH(req("PATCH", `${url}/${m.id}`, { roleId: await role("OPERATOR") }), mctx(m.id));
     expect(res.status).toBe(200);
-    expect((await res.json()).membership.role).toBe("OPERATOR");
   });
 
-  it("returns 400 on malformed JSON body", async () => {
-    const { u, org, event } = await seedAdmin();
-    const x = await prisma.user.create({ data: { email: "malformed@x.test", password: "x", name: "R" } });
-    const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "VIEWER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, {
-      method: "PATCH",
-      body: "{not-json",
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 on invalid role", async () => {
-    const { u, org, event } = await seedAdmin();
-    const x = await prisma.user.create({ data: { email: "badrole@x.test", password: "x", name: "R" } });
-    const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "VIEWER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ role: "NOT_A_ROLE" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 404 when membership does not exist in this event", async () => {
-    const { u, org, event } = await seedAdmin();
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/does-not-exist`, {
-      method: "PATCH",
-      body: JSON.stringify({ role: "OPERATOR" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: "does-not-exist" } as never),
-    });
-    expect(res.status).toBe(404);
-  });
-
-  it("OPERATOR cannot PATCH a role (403)", async () => {
-    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const u = await prisma.user.create({ data: { email: `patchop-${stamp}@x.test`, password: "x", name: "Op" } });
-    const org = await prisma.organization.create({ data: { name: "O", slug: `o-patchop-${stamp}` } });
-    const event = await prisma.event.create({
-      data: { orgId: org.id, title: "E", slug: `e-patchop-${stamp}`, location: "L", date: new Date() },
-    });
-    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "OPERATOR" } });
-    const x = await prisma.user.create({ data: { email: `target-${stamp}@x.test`, password: "x", name: "T" } });
-    const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "VIEWER" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ role: "ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
-    });
+  it("refuse la modification de son propre rôle (SELF_MODIFICATION)", async () => {
+    const { admin, mctx, membershipOf, url } = await setup();
+    const own = await membershipOf(admin.id);
+    as(admin);
+    const res = await PATCH(req("PATCH", `${url}/${own.id}`, { roleId: await role("VIEWER") }), mctx(own.id));
     expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("SELF_MODIFICATION");
+  });
+
+  it("anti-escalade : refuse un rôle que l'acteur ne détient pas", async () => {
+    const { org, event, mctx, membershipOf, url } = await setup();
+    const limited = await makeCustomRole({ scope: "EVENT", orgId: org.id, permissions: ["event.members.manage", "event.read"] });
+    const actor = await makeUser();
+    await prisma.eventMembership.create({ data: { userId: actor.id, eventId: event.id, roleId: limited.id } });
+    const target = await makeEventMember(event.id, "VIEWER");
+    const m = await membershipOf(target.id);
+    as(actor);
+    const res = await PATCH(req("PATCH", `${url}/${m.id}`, { roleId: await role("ADMIN") }), mctx(m.id));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("PERMISSION_NOT_HELD");
   });
 });
 
 describe("DELETE /api/org/[orgId]/events/[eventId]/members/[membershipId]", () => {
-  beforeEach(cleanup);
-
-  it("removes membership and logs MEMBERSHIP_REMOVED", async () => {
-    const { u, org, event } = await seedAdmin();
-    const x = await prisma.user.create({ data: { email: "y@x.test", password: "x", name: "Y" } });
-    const m = await prisma.eventMembership.create({ data: { userId: x.id, eventId: event.id, role: "OPERATOR" } });
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/${m.id}`, { method: "DELETE" });
-    const res = await DELETE(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id } as never),
-    });
-    expect(res.status).toBe(204);
-    const log = await prisma.activityLog.findFirst({ where: { type: "MEMBERSHIP_REMOVED" } });
-    expect(log?.eventId).toBe(event.id);
-  });
-
-  it("returns 404 when membership does not exist in this event", async () => {
-    const { u, org, event } = await seedAdmin();
-    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { DELETE } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
-    const req = new NextRequest(`http://localhost/api/org/${org.id}/events/${event.id}/members/does-not-exist`, { method: "DELETE" });
-    const res = await DELETE(req, {
-      params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: "does-not-exist" } as never),
-    });
-    expect(res.status).toBe(404);
+  it("401 ; 403 pour OPERATOR ; 404 inconnue ; ADMIN retire (204) et journalise", async () => {
+    const { event, admin, mctx, membershipOf, url } = await setup();
+    const target = await makeEventMember(event.id, "OPERATOR");
+    const m = await membershipOf(target.id);
+    const del = (id: string) => DELETE(req("DELETE", `${url}/${id}`), mctx(id));
+    as(null);
+    expect((await del(m.id)).status).toBe(401);
+    as(await makeEventMember(event.id, "OPERATOR"));
+    expect((await del(m.id)).status).toBe(403);
+    as(admin);
+    expect((await del("inconnu")).status).toBe(404);
+    expect((await del(m.id)).status).toBe(204);
+    expect(await prisma.eventMembership.count({ where: { userId: target.id } })).toBe(0);
+    const log = await prisma.activityLog.findFirstOrThrow({ where: { type: "MEMBERSHIP_REMOVED", targetId: target.id } });
+    expect(log).toMatchObject({ eventId: event.id });
+    expect(log.details).toMatchObject({ role: "OPERATOR", scope: "event" });
   });
 });

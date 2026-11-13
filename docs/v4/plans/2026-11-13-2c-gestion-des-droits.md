@@ -24,7 +24,7 @@ les routes participant sur `requireParticipantPermission`.
 | 3 | API rôles d'organisation | [x] | 2026-11-13 | orgId du chemin impose ; assignable accepte eventId optionnel (cible evenement). |
 | 4 | API d'ajustements de permissions (plateforme et organisation) | [x] | 2026-11-13 | SELF/OWNER_PROTECTED/appartenance portes par applyOverrides ; GET org renvoie levels[1]. |
 | 5 | API utilisateurs et propriétaires plateforme par `roleId` | [x] | 2026-11-13 | owners POST: roleId optionnel (OWNER par defaut). Anciens tests api-staff-users-{post,detail} reecrits. withRoleErrors traduit aussi AuthError. notifications.ts (role-management) pour roles sans enum. Journal: from/to = cle systeme sinon nom. |
-| 6 | API membres d'organisation et d'évènement par `roleId` | [ ] | | |
+| 6 | API membres d'organisation et d'évènement par `roleId` | [x] | 2026-11-13 | GET/POST/PATCH/DELETE par permission (org.members.*, event.members.manage). OWNER_PROTECTED hors users.permissions.manage; SELF_MODIFICATION; LAST_OWNER. Tests org deplaces dans api-org-members.test.ts. |
 | 7 | Routes participant | [ ] | | |
 | 8 | Composants `src/components/permissions/**` | [ ] | | |
 | 9 | Pages `/platform/roles` et `/org/[orgId]/roles` | [ ] | | |

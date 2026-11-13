@@ -1,133 +1,119 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { systemRoleId } from "@/lib/permissions/db";
-import { requireOrgRole, assertNotLastOwner, AuthError } from "@/lib/auth-guards";
+import { hasPermission } from "@/lib/permissions";
+import { withOrgAuth } from "@/lib/with-org-auth";
+import { assertNotLastOwner } from "@/lib/auth-guards";
 import { logActivity } from "@/lib/activity-log";
-import { notifyMembershipRoleChanged } from "@/lib/notifications/triggers";
+import {
+  RoleError,
+  actorContext,
+  assertCanAssignRole,
+  holdsSystemRole,
+  notifyRoleChanged,
+  orgRoleColumns,
+  resolveAssignableRole,
+  roleLogKey,
+  roleView,
+  withRoleErrors,
+} from "@/lib/role-management";
+import type { UserContext } from "@/types/auth";
 
-type Params = { params: Promise<{ orgId: string; userId: string }> };
+const userIdOf = async (extra: unknown) => (await (extra as { params: Promise<{ userId: string }> }).params).userId;
 
-const patchSchema = z.object({ role: z.enum(["OWNER", "MANAGER", "AUDITOR"]) }).strict();
+const patchSchema = z.object({ roleId: z.string().min(1) }).strict();
 
-export async function PATCH(req: NextRequest, { params }: Params): Promise<Response> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const dto = (id: string, userId: string, orgId: string, role: { id: string; name: string; systemKey: string | null }) => ({
+  id,
+  userId,
+  orgId,
+  role: { id: role.id, name: role.name, systemKey: role.systemKey },
+});
 
-  const { orgId, userId } = await params;
-  try {
-    await requireOrgRole(session.user.id, orgId, "OWNER");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-    }
-    throw err;
+const MEMBERSHIP_INCLUDE = { roleRef: { select: { id: true, name: true, systemKey: true } } } as const;
+
+/** Modifier ou retirer un autre titulaire du rôle OWNER exige `users.permissions.manage` (staff SUPER_ADMIN). */
+function assertMayTouchOwner(actor: UserContext, targetIsOwner: boolean, targetUserId: string): void {
+  if (targetIsOwner && targetUserId !== actor.user.id && !hasPermission(actor, "users.permissions.manage", { kind: "platform" })) {
+    throw new RoleError("OWNER_PROTECTED");
   }
-
-  const json = await req.json().catch(() => null);
-  const parsed = patchSchema.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "VALIDATION", issues: parsed.error.issues },
-      { status: 400 },
-    );
-  }
-
-  const existing = await prisma.orgMembership.findUnique({
-    where: { userId_orgId: { userId, orgId } },
-  });
-  if (!existing) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-
-  const { role: nextRole } = parsed.data;
-  if (existing.role === nextRole) {
-    return NextResponse.json({ membership: existing });
-  }
-
-  // Garde-fou : si on retrograde un OWNER vers MANAGER/AUDITOR, il doit rester
-  // au moins un autre OWNER actif dans l'org.
-  if (existing.role === "OWNER" && nextRole !== "OWNER") {
-    try {
-      await assertNotLastOwner(orgId, userId);
-    } catch (err) {
-      if (err instanceof AuthError) {
-        return NextResponse.json(
-          { error: "Dernier OWNER : impossible de retrograder", code: err.code },
-          { status: err.httpStatus },
-        );
-      }
-      throw err;
-    }
-  }
-
-  const updated = await prisma.orgMembership.update({
-    where: { id: existing.id },
-    // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
-    data: { role: nextRole, roleId: await systemRoleId(prisma, nextRole) },
-  });
-
-  await logActivity({
-    type: "MEMBERSHIP_ROLE_CHANGED",
-    userId: session.user.id,
-    orgId,
-    targetId: userId,
-    details: { from: existing.role, to: nextRole, scope: "org" },
-    req,
-  });
-
-  await notifyMembershipRoleChanged({
-    userId,
-    orgId,
-    from: existing.role ?? "AUDITOR",
-    to: nextRole,
-    actorId: session.user.id,
-  });
-
-  return NextResponse.json({ membership: updated });
 }
 
-export async function DELETE(req: NextRequest, { params }: Params): Promise<Response> {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { orgId, userId } = await params;
-  try {
-    await requireOrgRole(session.user.id, orgId, "OWNER");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
+export const PATCH = withOrgAuth("org.members.manage", (req, { orgId, session }, extra) =>
+  withRoleErrors(async () => {
+    const userId = await userIdOf(extra);
+    const json = await req.json().catch(() => null);
+    const parsed = patchSchema.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
     }
-    throw err;
-  }
 
-  // ADR 2026-06-01 (v2-14 Task 2) : filtrer user.archived=false pour aligner sur
-  // assertNotLastOwner (sinon un OWNER archive serait compte et masquerait le
-  // garde-fou last-owner).
-  const ownerCount = await prisma.orgMembership.count({
-    where: { orgId, role: "OWNER", user: { archived: false } },
-  });
-  const target = await prisma.orgMembership.findUnique({
-    where: { userId_orgId: { userId, orgId } },
-  });
-  if (!target) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    const existing = await prisma.orgMembership.findUnique({
+      where: { userId_orgId: { userId, orgId } },
+      include: MEMBERSHIP_INCLUDE,
+    });
+    if (!existing) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-  if (target.role === "OWNER" && ownerCount <= 1) {
-    return NextResponse.json(
-      { error: "Last OWNER cannot be removed", code: "LAST_OWNER" },
-      { status: 409 },
-    );
-  }
+    // Personne ne modifie son propre rôle.
+    if (userId === session.user.id) throw new RoleError("SELF_MODIFICATION");
+    const actor = await actorContext(session.user.id);
+    const wasOwner = holdsSystemRole(existing.roleRef, existing.role, "OWNER");
+    assertMayTouchOwner(actor, wasOwner, userId);
 
-  await prisma.orgMembership.delete({ where: { id: target.id } });
-  await logActivity({
-    type: "MEMBERSHIP_REMOVED",
-    userId: session.user.id,
-    orgId,
-    targetId: userId,
-    details: { role: target.role },
-    req,
-  });
+    const next = await resolveAssignableRole(parsed.data.roleId, { scope: "ORG", orgId });
+    assertCanAssignRole(actor, next, { kind: "org", orgId });
+    const from = roleView(existing.roleRef, existing.role);
+    if (existing.roleId === next.id) return NextResponse.json({ membership: dto(existing.id, userId, orgId, next) });
 
-  return new NextResponse(null, { status: 204 });
-}
+    // Garde-fou : on ne rétrograde pas le dernier propriétaire actif.
+    if (wasOwner && next.systemKey !== "OWNER") await assertNotLastOwner(orgId, userId);
+
+    const updated = await prisma.orgMembership.update({
+      where: { id: existing.id },
+      // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+      data: orgRoleColumns(next),
+    });
+
+    await logActivity({
+      type: "MEMBERSHIP_ROLE_CHANGED",
+      userId: session.user.id,
+      orgId,
+      targetId: userId,
+      details: { from: roleLogKey(from), to: roleLogKey(next), fromRoleId: existing.roleId, toRoleId: next.id, scope: "org" },
+      req,
+    });
+
+    await notifyRoleChanged({ userId, orgId, from, to: next, actorId: session.user.id });
+
+    return NextResponse.json({ membership: dto(updated.id, userId, orgId, next) });
+  }),
+);
+
+export const DELETE = withOrgAuth("org.members.manage", (req, { orgId, session }, extra) =>
+  withRoleErrors(async () => {
+    const userId = await userIdOf(extra);
+    const target = await prisma.orgMembership.findUnique({
+      where: { userId_orgId: { userId, orgId } },
+      include: MEMBERSHIP_INCLUDE,
+    });
+    if (!target) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+
+    const isOwner = holdsSystemRole(target.roleRef, target.role, "OWNER");
+    const actor = await actorContext(session.user.id);
+    assertMayTouchOwner(actor, isOwner, userId);
+    // ADR 2026-06-01 (v2-14 Task 2) : le dernier propriétaire actif ne peut pas être retiré.
+    if (isOwner) await assertNotLastOwner(orgId, userId);
+
+    await prisma.orgMembership.delete({ where: { id: target.id } });
+    await logActivity({
+      type: "MEMBERSHIP_REMOVED",
+      userId: session.user.id,
+      orgId,
+      targetId: userId,
+      details: { role: roleLogKey(roleView(target.roleRef, target.role)), roleId: target.roleId },
+      req,
+    });
+
+    return new NextResponse(null, { status: 204 });
+  }),
+);

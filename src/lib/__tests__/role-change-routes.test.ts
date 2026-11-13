@@ -70,7 +70,7 @@ describe("changement de rôle sur des lignes migrées", () => {
     expect(hasPermission(await ctxOf(member.id), "org.events.create", orgTarget)).toBe(true);
 
     const { PATCH } = await import("@/app/api/org/[orgId]/members/[userId]/route");
-    const res = await PATCH(patch(`http://localhost/api/org/${org.id}/members/${member.id}`, { role: "AUDITOR" }), {
+    const res = await PATCH(patch(`http://localhost/api/org/${org.id}/members/${member.id}`, { roleId: await systemRoleId(prisma, "AUDITOR") }), {
       params: Promise.resolve({ orgId: org.id, userId: member.id }),
     });
     expect(res.status).toBe(200);
@@ -93,7 +93,7 @@ describe("changement de rôle sur des lignes migrées", () => {
 
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
     const res = await PATCH(
-      patch(`http://localhost/api/org/${org.id}/events/${event.id}/members/${membership.id}`, { role: "VIEWER" }),
+      patch(`http://localhost/api/org/${org.id}/events/${event.id}/members/${membership.id}`, { roleId: await systemRoleId(prisma, "VIEWER") }),
       { params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: membership.id } as never) },
     );
     expect(res.status).toBe(200);
