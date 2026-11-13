@@ -1,5 +1,5 @@
-import type { PrintRequestStatus, PrintRequestType, StaffRole } from "@prisma/client";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import type { PrintRequestStatus, PrintRequestType } from "@prisma/client";
+import type { Permission } from "@/lib/permissions";
 import { pxToMm } from "@/lib/print-sheets/units";
 
 // Fonctions pures de l'écran staff d'une commande d'impression (testées sans rendu).
@@ -13,15 +13,15 @@ export type StaffAction =
   | "MARK_READY"
   | "COMPLETE";
 
-// Rôle minimal par action, aligné sur les routes /api/platform/print/requests/**.
-const ACTION_ROLE: Record<StaffAction, StaffRole> = {
-  SEND_QUOTE: "STAFF_ADMIN",
-  REJECT: "STAFF_SUPPORT",
-  REOPEN: "STAFF_ADMIN",
-  MARK_PAID: "STAFF_ADMIN",
-  START_PRODUCTION: "STAFF_SUPPORT",
-  MARK_READY: "STAFF_SUPPORT",
-  COMPLETE: "STAFF_SUPPORT",
+// Permission requise par action, alignée sur les routes /api/platform/print/requests/**.
+const ACTION_PERMISSION: Record<StaffAction, Permission> = {
+  SEND_QUOTE: "print.requests.quote.send",
+  REJECT: "print.requests.reject",
+  REOPEN: "print.requests.reopen",
+  MARK_PAID: "print.requests.mark_paid",
+  START_PRODUCTION: "print.requests.advance",
+  MARK_READY: "print.requests.advance",
+  COMPLETE: "print.requests.advance",
 };
 
 const ACTIONS_BY_STATUS: Partial<Record<PrintRequestStatus, StaffAction[]>> = {
@@ -33,26 +33,35 @@ const ACTIONS_BY_STATUS: Partial<Record<PrintRequestStatus, StaffAction[]>> = {
   READY: ["COMPLETE"],
 };
 
-// Actions de statut proposées : celles de l'état courant que le rôle a le droit d'appeler.
-export function availableActions(status: PrintRequestStatus, role: StaffRole): StaffAction[] {
-  return (ACTIONS_BY_STATUS[status] ?? []).filter((a) => staffRoleAtLeast(role, ACTION_ROLE[a]));
+// Clore une commande sur place verse un crédit ou crée une facture : droit dédié, comme la route.
+function requiredPermission(action: StaffAction, type: PrintRequestType): Permission {
+  return action === "COMPLETE" && type === "ONSITE" ? "print.requests.onsite.complete" : ACTION_PERMISSION[action];
 }
 
-// Lignes éditables : STAFF_ADMIN, tant que la commande est envoyée ou en devis.
-export function canEditQuote(status: PrintRequestStatus, role: StaffRole): boolean {
-  return (status === "SUBMITTED" || status === "QUOTED") && staffRoleAtLeast(role, "STAFF_ADMIN");
+// Actions de statut proposées : celles de l'état courant que les permissions autorisent à appeler.
+export function availableActions(
+  status: PrintRequestStatus,
+  type: PrintRequestType,
+  permissions: ReadonlySet<Permission>,
+): StaffAction[] {
+  return (ACTIONS_BY_STATUS[status] ?? []).filter((a) => permissions.has(requiredPermission(a, type)));
 }
 
-// Lien « Générer les planches » : commande en amont payée (ruling C7 : PAID à READY), STAFF_SUPPORT.
+// Lignes éditables tant que la commande est envoyée ou en devis, avec `print.requests.quote.edit`.
+export function canEditQuote(status: PrintRequestStatus, permissions: ReadonlySet<Permission>): boolean {
+  return (status === "SUBMITTED" || status === "QUOTED") && permissions.has("print.requests.quote.edit");
+}
+
+// Lien « Générer les planches » : commande en amont payée (ruling C7 : PAID à READY), `print.sheets.generate`.
 export function canGenerateSheets(
   status: PrintRequestStatus,
   type: PrintRequestType,
-  role: StaffRole,
+  permissions: ReadonlySet<Permission>,
 ): boolean {
   return (
     type === "ADVANCE" &&
     (status === "PAID" || status === "IN_PRODUCTION" || status === "READY") &&
-    staffRoleAtLeast(role, "STAFF_SUPPORT")
+    permissions.has("print.sheets.generate")
   );
 }
 

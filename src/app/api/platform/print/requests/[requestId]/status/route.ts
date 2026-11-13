@@ -2,7 +2,7 @@ import { z } from "zod";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { notifyPrintRequestQuoted, notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import { hasPermission } from "@/lib/permissions";
 import { PrintRequestError } from "@/lib/print-requests/errors";
 import { advanceStatus } from "@/lib/print-requests/quote";
 import { loadUserContext } from "@/lib/user-context";
@@ -27,11 +27,13 @@ export const POST = withStaffAuth<{ requestId: string }>(
       const target = await loadStaffRequest(requestId);
       const { to } = await parseBody(req, bodySchema);
       const userId = session.user.id;
-      // Clore une commande sur place verse un crédit ou crée une facture : STAFF_ADMIN au moins.
-      // `withStaffAuth` garantit un compte staff : le contexte et son rôle existent.
+      // Clore une commande sur place verse un crédit ou crée une facture : droit dédié.
+      // `withStaffAuth` garantit un compte staff : le contexte existe.
       if (to === "COMPLETED" && target.type === "ONSITE") {
         const ctx = (await loadUserContext(userId))!;
-        if (!staffRoleAtLeast(ctx.staffRole!, "STAFF_ADMIN")) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
+        if (!hasPermission(ctx, "print.requests.onsite.complete", { kind: "platform" })) {
+          throw new PrintRequestError("STAFF_FORBIDDEN", 403);
+        }
       }
       const { previousStatus, closure, ...request } = await advanceStatus({ requestId, userId, to });
       await afterCommit("PRINT_REQUEST_STATUS_CHANGED log", () =>
@@ -81,5 +83,5 @@ export const POST = withStaffAuth<{ requestId: string }>(
       }
       return json({ request: requestDTO(request), closure });
     }),
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.requests.advance" },
 );

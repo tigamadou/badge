@@ -54,18 +54,18 @@ async function onsite(printed = 0, over: Parameters<typeof makeRequest>[1] = {})
 beforeEach(async () => {
   vi.mocked(getServerSession).mockReset();
   fx = await seedPrintFixture();
-  as(fx.staffSupport);
+  as(fx.staffPrinter);
 });
 
 const logs = (type: string) => prisma.activityLog.findMany({ where: { type: type as never } });
 
-describe("gardes de rôle", () => {
-  it("401 sans session, 403 non-staff et rôle inférieur", async () => {
+describe("gardes de permission", () => {
+  it("401 sans session, 403 non-staff, support et observateur ; l'imprimeur n'a pas la marge", async () => {
     const r = await onsite();
-    const runs: [string, "SUPPORT" | "ADMIN", () => Promise<{ status: number }>][] = [
-      ["lookup", "SUPPORT", () => call(lookupPOST, r.id, "lookup", "POST", { payload: fx.approved[0].id })],
-      ["search", "SUPPORT", () => call(searchGET, r.id, "search?q=Al", "GET")],
-      ["print", "SUPPORT", () => call(printPOST, r.id, "print", "POST", { registrationId: fx.approved[0].id })],
+    const runs: [string, "PRINTER" | "ADMIN", () => Promise<{ status: number }>][] = [
+      ["lookup", "PRINTER", () => call(lookupPOST, r.id, "lookup", "POST", { payload: fx.approved[0].id })],
+      ["search", "PRINTER", () => call(searchGET, r.id, "search?q=Al", "GET")],
+      ["print", "PRINTER", () => call(printPOST, r.id, "print", "POST", { registrationId: fx.approved[0].id })],
       ["margin", "ADMIN", () => call(marginPATCH, r.id, "margin", "PATCH", { marginPercent: 15, reason: "Motif" })],
     ];
     for (const [name, min, run] of runs) {
@@ -76,9 +76,22 @@ describe("gardes de rôle", () => {
       as(fx.staffObserver);
       expect((await run()).status, `${name} observateur`).toBe(403);
       as(fx.staffSupport);
-      const support = (await run()).status;
-      if (min === "ADMIN") expect(support, `${name} support`).toBe(403);
-      else expect(support, `${name} support`).not.toBe(403);
+      expect((await run()).status, `${name} support`).toBe(403);
+      as(fx.staffPrinter);
+      const printer = (await run()).status;
+      if (min === "ADMIN") expect(printer, `${name} imprimeur`).toBe(403);
+      else expect(printer, `${name} imprimeur`).not.toBe(403);
+      as(fx.staffAdmin);
+      expect((await run()).status, `${name} admin`).not.toBe(403);
+    }
+  });
+
+  it("commande inconnue : 404 pour les rôles autorisés", async () => {
+    for (const user of [fx.staffPrinter, fx.staffAdmin]) {
+      as(user);
+      expect((await call(lookupPOST, "inconnue", "lookup", "POST", { payload: "x" })).status).toBe(404);
+      expect((await call(searchGET, "inconnue", "search?q=Al", "GET")).status).toBe(404);
+      expect((await call(printPOST, "inconnue", "print", "POST", { registrationId: "x" })).status).toBe(404);
     }
   });
 });
@@ -128,7 +141,7 @@ describe("POST print", () => {
     expect(res.json.counter).toMatchObject({ printed: 1, cap: 220 });
     expect(res.json.pdfUrl).toBe(`/api/org/${fx.org.id}/events/${fx.event.id}/badges/${reg.id}`);
     const [log] = await logs("BADGE_PRINTED");
-    expect(log).toMatchObject({ targetId: reg.id, userId: fx.staffSupport.id });
+    expect(log).toMatchObject({ targetId: reg.id, userId: fx.staffPrinter.id });
     expect(log.details).toEqual({ printRequestId: r.id, onsite: true, reprint: false });
   });
 

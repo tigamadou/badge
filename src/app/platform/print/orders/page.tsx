@@ -1,6 +1,5 @@
 import type { Prisma, PrintRequestStatus } from "@prisma/client";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { prisma } from "@/lib/prisma";
 import { unreadByRequest } from "@/lib/print-requests/read-state";
 import { RequestList, type RequestFilters } from "@/components/staff/print/RequestList";
@@ -26,6 +25,7 @@ type Search = Partial<Record<"status" | "orgId" | "type" | "wantedFrom" | "wante
 const isDay = (v: string | undefined): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
 
 export default async function PrintRequestsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const { userId } = await requirePlatformPage("print.requests.read", "/platform/print/orders");
   const sp = await searchParams;
   const filters: RequestFilters = {
     status: (STATUSES as readonly string[]).includes(sp.status ?? "") ? sp.status! : "",
@@ -78,11 +78,7 @@ export default async function PrintRequestsPage({ searchParams }: { searchParams
   ]);
   const rows = result.rows;
 
-  // Le layout /platform garantit une session staff ; la garde sert le typage.
-  const session = await getServerSession(authOptions);
-  const unread = session?.user?.id
-    ? await unreadByRequest(session.user.id, "STAFF", rows.map((r) => r.id))
-    : {};
+  const unread = await unreadByRequest(userId, "STAFF", rows.map((r) => r.id));
 
   return (
     <div className="space-y-4">

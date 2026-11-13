@@ -67,7 +67,7 @@ async function seedRequest(
 }
 
 // Page Détail d'une commande d'impression (staff) — /platform/print/orders/[requestId]
-// Rôles : STAFF_ADMIN modifie le devis, l'envoie, rouvre et marque payée ; STAFF_SUPPORT refuse,
+// Rôles : STAFF_ADMIN modifie le devis, l'envoie, rouvre et marque payée ; STAFF_PRINTER refuse,
 // écrit et fait avancer la production ; STAFF_OBSERVER lit.
 test.describe("Platform — Détail d'une commande d'impression", () => {
   test.afterAll(async () => {
@@ -152,7 +152,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
   test("Une note interne est visible du staff seulement, un message simple l'est de l'organisateur", async ({ page, browser }) => {
     const { orgId, eventId, request } = await seedRequest("prd-note", "SUBMITTED");
     const organizer = await makeEventAdminUser({ scope: "prd-note-org", eventId, orgId });
-    const support = await createTestStaff({ scope: "prd-note", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prd-note", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 
@@ -181,7 +181,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
 
   test("Un message de l'organisateur apparaît par polling, sans doublon ni rechargement", async ({ page }) => {
     const { request, organizer } = await seedRequest("prd-poll", "SUBMITTED");
-    const support = await createTestStaff({ scope: "prd-poll", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prd-poll", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
     await expect(page.getByText("Aucun échange pour le moment.")).toBeVisible();
@@ -223,7 +223,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
 
   test("Le refus exige un motif : bouton désactivé tant qu'il est vide, puis refus transmis", async ({ page }) => {
     const { eventId, request } = await seedRequest("prd-reject", "SUBMITTED");
-    const support = await createTestStaff({ scope: "prd-reject", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prd-reject", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 
@@ -275,10 +275,22 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     await expectLastActivity({ type: "PRINT_REQUEST_MARKED_PAID", eventId, userId: admin.id, targetId: request.id });
   });
 
-  test("STAFF_SUPPORT ne voit ni l'éditeur de lignes ni « Marquer payée »", async ({ page }) => {
+  test("STAFF_OBSERVER lit la fiche et le fil, sans zone de saisie ni action", async ({ page }) => {
+    const submitted = await seedRequest("prd-obs", "SUBMITTED");
+    const observer = await createTestStaff({ scope: "prd-obs", role: "STAFF_OBSERVER" });
+    await loginAndEnter(page, observer, { kind: "platform" });
+
+    await openRequest(page, submitted.request);
+    await expect(page.getByLabel("Votre message")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Refuser", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Modifier le devis" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Envoyer le devis" })).toHaveCount(0);
+  });
+
+  test("STAFF_PRINTER ne voit ni l'éditeur de lignes ni « Marquer payée »", async ({ page }) => {
     const submitted = await seedRequest("prd-support-sub", "SUBMITTED");
     const accepted = await seedRequest("prd-support-acc", "ACCEPTED");
-    const support = await createTestStaff({ scope: "prd-support", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prd-support", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
 
     // Commande envoyée : devis en lecture seule, ni ajout de ligne ni envoi du devis.
@@ -303,7 +315,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
 
   test("« Générer les planches » ouvre la génération pré-remplie par la commande payée", async ({ page }) => {
     const { orgId, eventId, request } = await seedRequest("prd-sheets", "PAID", { registrations: 2 });
-    const support = await createTestStaff({ scope: "prd-sheets", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prd-sheets", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 
@@ -337,7 +349,7 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
       status: "APPROVED",
       settle: true,
     });
-    const support = await createTestStaff({ scope: "prd-payments", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prd-payments", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 

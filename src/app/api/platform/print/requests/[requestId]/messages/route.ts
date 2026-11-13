@@ -29,8 +29,7 @@ export const GET = withStaffAuth<Params>(async (req, { session }, { params }) =>
     const entries = await listThread(requestId, "STAFF", after ? { after } : {});
     await markRead(requestId, session.user.id, at);
     return json({ entries });
-  }),
-);
+  }), { permission: "print.requests.read" });
 
 export const POST = withStaffAuth<Params>(
   async (req, { session }, { params }) =>
@@ -50,5 +49,5 @@ export const POST = withStaffAuth<Params>(
       await notifyPrintRequestMessage(message.id, userId);
       return json({ entry: toEntryDTO(message, session.user.name ?? null, "STAFF") }, 201);
     }),
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.requests.messages.send" },
 );

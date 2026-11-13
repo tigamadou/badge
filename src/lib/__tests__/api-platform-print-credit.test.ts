@@ -45,11 +45,11 @@ beforeEach(async () => {
 });
 
 describe("POST /api/platform/print/requests/[requestId]/credit", () => {
-  it("401 sans session, 403 non-staff et STAFF_SUPPORT / STAFF_OBSERVER", async () => {
+  it("401 sans session, 403 non-staff, STAFF_SUPPORT, STAFF_PRINTER et STAFF_OBSERVER", async () => {
     const r = await requestOf();
     as(null);
     expect((await post(r.id, { amount: 1000 })).status).toBe(401);
-    for (const user of [fx.owner, fx.staffSupport, fx.staffObserver]) {
+    for (const user of [fx.owner, fx.staffSupport, fx.staffPrinter, fx.staffObserver]) {
       as(user);
       expect((await post(r.id, { amount: 1000 })).status).toBe(403);
     }

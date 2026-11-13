@@ -37,5 +37,5 @@ export const PATCH = withStaffAuth<{ requestId: string }>(
       }
       return json({ counter });
     }),
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.onsite.margin.update" },
 );
