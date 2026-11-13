@@ -65,8 +65,12 @@ export function eventNavFor(
   return entries;
 }
 
-/** Première entrée autorisée (hors entrées « au moins une permission »), ou null si aucune. */
+/**
+ * Première entrée autorisée (hors entrées « au moins une permission »). Une permission qu'aucune entrée
+ * ne couvre (rôle personnalisé) replie sur Notifications, toujours accessible ; null sans aucune permission.
+ */
 export function firstAllowedEventHref(eventId: string, permissions: ReadonlySet<Permission>): string | null {
   const first = EVENT_NAV.find((n) => n.anyOf.length > 0 && visible(n, permissions));
-  return first ? linkOf(eventId, first).href : null;
+  if (first) return linkOf(eventId, first).href;
+  return permissions.size > 0 ? `/event/${eventId}/notifications` : null;
 }

@@ -101,4 +101,11 @@ describe("eventNavFor", () => {
     expect(eventNavFor(event.id, perms)).toEqual([]);
     expect(firstAllowedEventHref(event.id, new Set())).toBeNull();
   });
+
+  it("permission hors menu (rôle personnalisé) : atterrit sur Notifications, jamais sur /select", () => {
+    const eventId = "evt-hors-menu";
+    for (const key of ["event.categories.manage", "registration.create", "event.update", "event.registration_toggle"] as const) {
+      expect(firstAllowedEventHref(eventId, new Set([key]))).toBe(`/event/${eventId}/notifications`);
+    }
+  });
 });
