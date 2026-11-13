@@ -89,7 +89,7 @@ supérieure est refusée (`400 ACCESSORY_QUANTITY_ABOVE_BADGES`, détails `{ pro
 une quantité sous le minimum du produit aussi (`BELOW_MIN_QUANTITY`) ; un accessoire dont le minimum
 dépasse le nombre de badges ne peut donc pas être choisi. Quand le lot change, `followBadgeCount`
 aligne les quantités des lignes produit (une quantité égale à l'ancien nombre suit le nouveau ; un
-accessoire dont la quantité dépasse le nouveau nombre y est ramené ; une quantité inférieure est
+accessoire ajouté par l'organisateur dont la quantité dépasse le nouveau nombre y est ramené (les lignes du staff ne bougent pas, et le minimum du produit n'est pas revérifié) ; une quantité inférieure est
 conservée) et écrit l'écart dans le fil. Une quantité **fixée** (à la main par le staff, ou par une répartition
 `QUANTITY_SPLIT`) ne bouge pas : elle est signalée comme « quantité fixée par l'équipe à vérifier ».
 Une ligne dont le prix ou la quantité a été modifiée par le staff est protégée

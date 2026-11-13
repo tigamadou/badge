@@ -102,6 +102,18 @@ describe("setOrganizerProducts — création", () => {
     expect(res.lines.map((l) => l.quantity)).toEqual([10, 10]);
   });
 
+  it("ligne fixée par le staff au-dessus du plafond, renvoyée à l'identique : acceptée ; quantité changée -> LINE_LOCKED_BY_STAFF", async () => {
+    const r = await requestWithBadges("SUBMITTED", 10);
+    await set(r.id, [badge(), lanyard()]);
+    await prisma.printQuoteLine.updateMany({
+      where: { requestId: r.id, label: "Cordon" },
+      data: { quantityOverridden: true, quantity: 12, lineTotal: 6000 },
+    });
+    const same = await set(r.id, [badge(), lanyard({ quantity: 12 })]);
+    expect(same.lines[1].quantity).toBe(12);
+    expect(await reject(set(r.id, [badge(), lanyard({ quantity: 9 })]))).toMatchObject({ code: "LINE_LOCKED_BY_STAFF" });
+  });
+
   it("accessoire au-dessus du nombre de badges -> ACCESSORY_QUANTITY_ABOVE_BADGES { productId, badgeCount }, rien d'écrit", async () => {
     const r = await requestWithBadges("DRAFT", 10);
     expect(await reject(set(r.id, [badge(), lanyard({ quantity: 11 })]))).toMatchObject({
@@ -726,6 +738,18 @@ describe("followBadgeCount — plafond des accessoires (spec 39)", () => {
     await set(lower.id, [badge(), lanyard({ quantity: 3 })]);
     await follow(lower.id, 10, 6);
     expect(await cordon(lower.id)).toMatchObject({ quantity: 3, lineTotal: 1500 });
+  });
+
+  it("ligne ajoutée par le staff, non fixée, au-dessus du nouveau nombre : intacte", async () => {
+    const r = await requestWithBadges("DRAFT", 10);
+    await prisma.printQuoteLine.create({
+      data: {
+        requestId: r.id, kind: "PRODUCT", productId: fx.lanyard.id, label: "Cordon staff",
+        quantity: 50, unitPrice: 10, lineTotal: 500, position: 5, addedBy: "STAFF",
+      },
+    });
+    await follow(r.id, 10, 6);
+    expect(await prisma.printQuoteLine.findFirstOrThrow({ where: { requestId: r.id, label: "Cordon staff" } })).toMatchObject({ quantity: 50, lineTotal: 500 });
   });
 
   it("ligne fixée par le staff : jamais ramenée, signalée dans lagging", async () => {
