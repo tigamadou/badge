@@ -21,7 +21,7 @@ les routes participant sur `requireParticipantPermission`.
 |---|---|---|---|---|
 | 1 | Service de gestion des rôles et de leurs ajustements (`_lib`) | [x] | 2026-11-13 | Service dans src/lib/role-management/ (amendement 1). Residuels N1 (commit 4539d54) et N2 faits. Ecarts : validateRolePermissions(actor, level, keys, {keep?}) sans param target (calcule du niveau) ; updateRole/archiveRole/restoreRole prennent un RoleOwner ; applyOverrides porte aussi SELF/OWNER_PROTECTED/appartenance. |
 | 2 | API rôles plateforme | [x] | 2026-11-13 | Ajouts au service : http.ts (schemas zod, parseBody), listAssignableRoles/missingPermission ; exception : un staff non membre attribue un role SYSTEME d'organisation (STAFF_ADMIN doit pouvoir donner OWNER). |
-| 3 | API rôles d'organisation | [ ] | | |
+| 3 | API rôles d'organisation | [x] | 2026-11-13 | orgId du chemin impose ; assignable accepte eventId optionnel (cible evenement). |
 | 4 | API d'ajustements de permissions (plateforme et organisation) | [ ] | | |
 | 5 | API utilisateurs et propriétaires plateforme par `roleId` | [ ] | | |
 | 6 | API membres d'organisation et d'évènement par `roleId` | [ ] | | |
