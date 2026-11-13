@@ -43,7 +43,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 2 | Catalogue des permissions et libellés | [x] | 2026-11-13 | 98 clés (56/18/20/4). Union `PermissionDomain` figée : access, roles, users, organizations, members, subscriptions, plans, payments, profiles, blocklist, settings, rejection_reasons, badge_templates, email_jobs, activity, print_requests, print_catalog, print_layouts, print_sheets, org, events, billing, scan, registrations, badges, print_event, account (`print.onsite.margin.update` et `print.quote.accept` dans `print_requests`; `org.events.*` dans `events`; `org.members.*` dans `members`). |
 | 3 | Rôles système (permissions en code) | [x] | 2026-11-13 | `system-roles.ts` : grants typés `Record<Permission, …>` (une permission sans attribution ne compile pas). `index.ts` ré-exporte catalog, system-roles, labels (resolve en Task 5). |
 | 4 | Contexte utilisateur enrichi et repli sur les enums | [x] | 2026-11-13 | Correctifs mécaniques : `auth-helpers.ts` (garde `m.role !== null`), `recipients.ts` (champs de compat du contexte, Task 11 refait), tests `auth-helpers`, `org-redirect`, `api-staff-users-post/detail` (formes de contexte / lignes mockées). `print-requests/service.ts` inchangé (typecheck vert). Appartenance sans `roleId` ni enum ignorée (fermé par défaut). |
-| 5 | Résolution des permissions effectives | [ ] | | |
+| 5 | Résolution des permissions effectives | [x] | 2026-11-13 | `resolve.ts` pur ; `eventTargetOf` accepte `{ id, orgId }` ou `{ eventId, orgId }`. Les règles « jamais le staff » sont laissées aux gardes. |
 | 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [ ] | | |
 | 7 | Wrappers de routes et garde participant | [ ] | | |
 | 8 | Rôles système en base, migration, `make migrate-roles` | [ ] | | |
@@ -492,7 +492,7 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Consumes : `UserContext`, `PermissionTarget`, `permissionScopeOf`.
 - Produces : `effectivePermissions`, `hasPermission`, `isStaffActor`, `eventTargetOf`, `PermissionTarget`.
 
-- [ ] **Step 1 : tests rouges** (un `it` par ligne) :
+- [x] **Step 1 : tests rouges** (un `it` par ligne) :
   - base = union plateforme + org + évènement, filtrée par le niveau de la cible (clé de mauvais niveau ignorée) ;
   - cible `event` : SUPER_ADMIN a `badge.print` ; STAFF_OBSERVER a `event.read.aggregated` mais pas `registration.delete` ;
   - cible `org` d'un membre `AGENT` : {`org.read`, `org.events.list`} ; sur une **autre** org : vide ;
@@ -506,13 +506,13 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
   - `hasPermission` = appartenance ; `isStaffActor` : staff sans membership → vrai ; staff membre de l'org → faux (target
     org et event) ; staff membre de l'évènement seul → faux pour la cible événement ; non staff → faux ; cibles
     `platform`/`participant` → faux ; `eventTargetOf({ id, orgId })` et `eventTargetOf({ eventId, orgId })`.
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : implémenter `resolve.ts`** selon l'ordre de la spec 37 (« Résolution des permissions
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : implémenter `resolve.ts`** selon l'ordre de la spec 37 (« Résolution des permissions
   effectives », points 1 à 5) ; scope d'une cible : platform→PLATFORM, org→ORG, event→EVENT, participant→PARTICIPANT ;
   ajustements applicables : `orgId` nul toujours, `orgId === target.orgId` pour org/event ; `REVOKE` appliqué après `GRANT`.
   Ajouter `export * from "./resolve"` à `index.ts`.
-- [ ] **Step 4 : lancer** → vert, 100 %.
-- [ ] **Step 5 : commit** : `feat(roles): resolution des permissions effectives`.
+- [x] **Step 4 : lancer** → vert, 100 %.
+- [x] **Step 5 : commit** : `feat(roles): resolution des permissions effectives`.
 
 ### Task 6: Gardes : `requirePermission`, compatibilité, derniers titulaires
 
