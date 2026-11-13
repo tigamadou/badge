@@ -75,7 +75,7 @@ test.describe("Event — Acces a l'espace", () => {
 
   // --- Shells par role ----------------------------------------------------
 
-  test("Chaque role obtient son shell dedie", async ({ page }) => {
+  test("Chaque role obtient le menu et l'atterrissage de ses permissions", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "evacc-shells" });
 
     const operator = await createTestEventMember({
@@ -86,7 +86,7 @@ test.describe("Event — Acces a l'espace", () => {
     });
     await loginAndEnter(page, operator, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByRole("heading", { name: /tableau de bord opérateur/i })).toBeVisible();
+    await expect(page.getByText(/mes scans/i)).toBeVisible();
 
     const printer = await createTestEventMember({
       scope: "evacc-shell-pr",
@@ -96,7 +96,8 @@ test.describe("Event — Acces a l'espace", () => {
     });
     await loginAndEnter(page, printer, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByText(/impression —/i)).toBeVisible();
+    // Aucune permission de tableau de bord : atterrissage sur la première entrée du menu.
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges$`));
 
     const viewer = await createTestEventMember({
       scope: "evacc-shell-vw",
@@ -106,7 +107,7 @@ test.describe("Event — Acces a l'espace", () => {
     });
     await loginAndEnter(page, viewer, { kind: "event", id: eventId });
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByText(/lecture —/i)).toBeVisible();
+    await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
   });
 
   // --- Evenement archive --------------------------------------------------

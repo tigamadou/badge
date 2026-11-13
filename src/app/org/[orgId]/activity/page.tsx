@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { prisma } from "@/lib/prisma";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { Tag } from "@/components/ui/Labels";
@@ -17,6 +18,7 @@ export default async function ActivityPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
+  await requireOrgPagePermission(orgId, "org.activity.read", `/org/${orgId}/activity`);
   const list = parseListPage(await searchParams);
   const result = await paginate(
     list,

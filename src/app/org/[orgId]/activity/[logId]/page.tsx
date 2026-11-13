@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { prisma } from "@/lib/prisma";
 import { JournalEntryDetail } from "@/components/activity/JournalEntryDetail";
 
@@ -10,6 +11,7 @@ export default async function OrgJournalDetailPage({
   params: Promise<{ orgId: string; logId: string }>;
 }) {
   const { orgId, logId } = await params;
+  await requireOrgPagePermission(orgId, "org.activity.read", `/org/${orgId}/activity/${logId}`);
 
   // Scoping : on ne montre que les entrees rattachees a cette organisation.
   const log = await prisma.activityLog.findFirst({

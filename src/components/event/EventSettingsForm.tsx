@@ -16,6 +16,7 @@ import {
 import type { ImageRequirement } from "@/lib/badge-templates/image-frames";
 import { toastApiError, toastSuccess } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import type { Permission } from "@/lib/permissions";
 import { linesToInstructions } from "@/lib/security-instructions";
 import { BadgeOptionsFields, type BadgeOption } from "@/components/event/BadgeOptionsFields";
 import { mergeTemplateOptions, normalizeEditedOptions, type OptionValue } from "@/lib/badge-templates/template-options";
@@ -207,13 +208,18 @@ export function EventSettingsForm({
   initial,
   imageRequirements,
   imageIssues,
+  permissions,
 }: {
   orgId: string;
   eventId: string;
   initial: Initial;
   imageRequirements: Partial<Record<ImageSlot, ImageRequirement>>;
   imageIssues: Partial<Record<ImageSlot, string>>;
+  // `event.settings.update` ouvre la page ; modifier l'évènement lui-même exige en plus `event.update`.
+  permissions: Permission[];
 }) {
+  const canUpdateEvent = permissions.includes("event.update");
+  const canToggleRegistration = permissions.includes("event.registration_toggle");
   const [title, setTitle] = useState(initial.event.title);
   const [location, setLocation] = useState(initial.event.location);
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
@@ -341,8 +347,8 @@ export function EventSettingsForm({
               setFieldErrors({});
               void saveEvent.run();
             }}
-            className="space-y-4"
           >
+            <fieldset disabled={!canUpdateEvent} className="m-0 min-w-0 space-y-4 border-0 p-0">
             <Input label="Titre" value={title} onChange={(e) => setTitle(e.target.value)} required />
             <Input label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -413,27 +419,38 @@ export function EventSettingsForm({
                 30 au plus, 500 caractères chacune.
               </p>
             </div>
-            <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
+            <fieldset disabled={!canToggleRegistration} className="m-0 min-w-0 border-0 p-0 disabled:opacity-60">
+              <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
+            </fieldset>
             <p className="text-xs text-slate-400">
               Slug : <code className="font-mono text-slate-600">{initial.event.slug}</code> (modifiable par le staff
               uniquement)
             </p>
-            <div className="flex justify-end">
-              <Button type="submit" loading={saveEvent.pending} disabled={imageBusy}>
-                Enregistrer
-              </Button>
-            </div>
+            {canUpdateEvent ? (
+              <div className="flex justify-end">
+                <Button type="submit" loading={saveEvent.pending} disabled={imageBusy}>
+                  Enregistrer
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                Vous pouvez consulter ces informations, pas les modifier.
+              </p>
+            )}
+            </fieldset>
           </form>
         </CardBody>
       </Card>
 
       {fieldErrors.templateOptions && <p className="text-sm text-rose-600">{fieldErrors.templateOptions}</p>}
-      <BadgeOptionsFields
-        options={initial.options}
-        values={optionValues}
-        onChange={(name, value) => setOptionValues((prev) => ({ ...prev, [name]: value }))}
-        onUpload={uploadOptionImage}
-      />
+      {canUpdateEvent && (
+        <BadgeOptionsFields
+          options={initial.options}
+          values={optionValues}
+          onChange={(name, value) => setOptionValues((prev) => ({ ...prev, [name]: value }))}
+          onUpload={uploadOptionImage}
+        />
+      )}
 
       <Card>
         <CardHead title="Contact (surcharges)" subtitle="Laisser vide pour hériter du niveau organisation." />

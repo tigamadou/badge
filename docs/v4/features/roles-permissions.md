@@ -248,7 +248,116 @@ OB = `STAFF_OBSERVER`.
 
 ## Organisation et évènement (lot 2b)
 
-À rédiger par le lot 2b.
+Les espaces `/org/[orgId]` et `/event/[eventId]` ne testent plus de rôle : chaque garde, chaque
+entrée de menu et chaque bouton lit une **permission** résolue par `effectivePermissions` (socle).
+Le serveur reste l'autorité : le menu et les boutons masquent seulement ce que la route refuserait.
+
+### Menus
+
+Une seule table par espace (`src/components/admin/org-nav.ts`, `src/components/event/event-nav.ts`) sert le menu et
+la page d'atterrissage. Un seul `EventShell` remplace les trois coques par rôle (opérateur, imprimeur,
+observateur) ; le bandeau de rôle a disparu.
+
+| Entrée de l'organisation | Permission (l'une d'elles) |
+|---|---|
+| Tableau de bord, Notifications, Documentation | `org.read` |
+| Événements | `org.events.list` |
+| Membres | `org.members.read` |
+| Rôles (`/org/[orgId]/roles`, lot 2c) | `org.roles.manage` |
+| Modèles catégories | `org.templates.read` |
+| Abonnement | `billing.subscription.read` |
+| Paiements | `billing.payments.read` |
+| Paramètres | `org.update` |
+| Journal | `org.activity.read` |
+
+| Entrée de l'évènement | Permission (l'une d'elles) |
+|---|---|
+| Tableau de bord | `event.read.aggregated`, `event.read.detailed`, `scan.check-in` |
+| Notifications, Documentation | toute permission sur l'évènement |
+| Vue d'ensemble | `event.read.aggregated`, **sans** `event.read.detailed` (sinon Inscriptions la remplace) |
+| Inscriptions, Catégories | `event.read.detailed` |
+| Badges | `badge.print` |
+| Impression | `print.request` (pastille des non-lus) |
+| Poste sur place | `print.onsite.operate` |
+| Scanner | `scan.check-in` |
+| Membres | `event.members.manage` |
+| Paramètres (groupe « Administration ») | `event.settings.update` |
+| Journal (groupe « Administration ») | `event.activity.read` ou `scan.history.read` |
+
+Résultat par rôle système : Propriétaire voit tout ; Gestionnaire ni Rôles ni Paramètres ; Auditeur la
+consultation (sans Abonnement ni Paiements) ; **Agent** : Tableau de bord, Notifications, Événements, Documentation.
+Dans un évènement, l'**Opérateur** a Inscriptions, Badges, Catégories, Scanner et Journal ; l'**Imprimeur** Notifications,
+Badges et Documentation (sans groupe « Administration ») ; l'**Observateur** Tableau de bord et Vue d'ensemble ; l'**Agent**
+Tableau de bord, Badges, Poste sur place, Scanner et Journal (ses scans).
+
+### Pages gardées
+
+Chaque page appelle `requireOrgPagePermission` / `requireEventPagePermission` (`_lib/page-access.ts`) en tête. Un refus
+renvoie vers `/org/[orgId]` ou `/event/[eventId]` (jamais vers la page d'atterrissage elle-même : pas de boucle) ;
+aucune permission du tout renvoie vers `/select`.
+
+| Page de l'évènement | Permission |
+|---|---|
+| `registrations`, `registrations/[regId]`, `categories` | `event.read.detailed` |
+| `blocked-emails`, `blocked-documents` | `registration.block` |
+| `registrations/new` | `registration.create` |
+| `registrations/overview` | `event.read.aggregated` |
+| `badges`, `badges/[badgeId]`, `badges/print` | `badge.print` |
+| `scan` | `scan.check-in` |
+| `settings`, `settings/badge` | `event.settings.update` |
+| `activity`, `activity/[logId]` | `event.activity.read` ou `scan.history.read` (sans la première : ses scans seulement) |
+| `print/onsite`, `print/[requestId]/onsite` | `print.onsite.operate` |
+| `notifications` | toute permission sur l'évènement |
+
+Côté organisation, `events`, `events/new`, `activity`, `settings`, `settings/badge`, `templates`, `payments`, `subscription`
+suivent les permissions des routes correspondantes (`org.events.list`, `org.events.create`, `org.activity.read`, `org.update`,
+`org.badge_settings.update`, `org.templates.read`, `billing.payments.read`, `billing.subscription.read`).
+
+### Page d'atterrissage
+
+`/event/[eventId]` affiche le tableau de bord à qui détient `event.read.aggregated`, `event.read.detailed` ou
+`scan.check-in` ; les autres sont envoyés sur la première entrée de leur menu (`firstAllowedEventHref`).
+Le contenu dépend des permissions : compteurs et scans avec `event.read.aggregated` ; « Dernières inscriptions », quota
+avec `event.read.detailed` ; bandeau d'images avec `event.settings.update` ; bloc « Mes scans » et bouton du scanner avec
+`scan.check-in` ; bloc « Poste sur place » pour qui n'a pas la lecture des chiffres. L'Opérateur, qui détient
+`event.read.detailed`, voit le tableau de bord complet.
+
+### Parcours de l'Agent
+
+Rôle d'organisation, valable sur **tous les évènements de l'organisation** : `org.read`, `org.events.list`, `scan.check-in`,
+`badge.print`, `print.onsite.operate`, `scan.history.read`. Il choisit un évènement, scanne les QR, imprime les badges et tient
+le poste d'impression sur place : liste `/event/[eventId]/print/onsite` puis poste `/event/[eventId]/print/[requestId]/onsite`.
+Il ne voit **ni prix, ni lignes de devis, ni inscriptions nominatives** : les routes du poste (`…/print-requests/[requestId]/onsite/*`)
+renvoient `404` pour toute commande qui n'est pas une impression sur place de cet évènement et de cette organisation.
+
+### Boutons masqués
+
+Les composants clients reçoivent `permissions: Permission[]` : « Exporter » (`registration.export`), « Inscription »
+(`registration.create`), Approuver / Rejeter (`registration.approve`), « Marquer imprimé » et « Voir le badge » (`badge.print`),
+modifier / supprimer / bloquer / ALL ACCESS (`registration.update`, `registration.delete`, `registration.block`, `registration.all_access`),
+gestion des catégories (`event.categories.manage`), enregistrement des informations de l'évènement (`event.update`, en plus de
+`event.settings.update` qui ouvre la page). « Accepter un devis » suit `print.quote.accept` (jamais pour le staff). La pièce d'identité
+d'une inscription suit la règle de `/api/files` selon la classe de la clé.
+
+### Union des rôles
+
+Les permissions d'un utilisateur sont l'**union** de son rôle d'organisation et de son rôle d'évènement, plus ses ajustements
+(socle, « Ordre de résolution »). Un Auditeur membre `PRINTER` d'un évènement voit donc les entrées de l'Observateur et de l'Imprimeur.
+
+### Règles métier restées en code
+
+La permission ne remplace pas les contrôles d'état : évènement archivé (écritures refusées sauf `allowArchived`), inscriptions
+fermées, garde d'abonnement des écritures d'un membre (`MANAGE_ONGOING_EVENTS`), plafond d'organisation, dernier propriétaire,
+statut de la commande d'impression. Les écritures faites par le staff plateforme sont journalisées avec `staffActor=true`.
+
+### Limites connues
+
+- Pas de permission de lecture de la page « Paramètres » de l'évènement : l'accès exige `event.settings.update` (la modification
+  des informations exige en plus `event.update`).
+- Le téléversement des images de l'évènement passe par `/api/org/[orgId]/upload` (`org.upload`) : un porteur de `event.update`
+  sans `org.upload` voit les champs mais l'envoi d'image est refusé par le serveur.
+- Un ajustement de permission posé au niveau d'un évènement n'entre pas dans le calcul de la page d'atterrissage ni de `/select`
+  (le contexte ne connaît pas l'organisation de l'évènement) ; les gardes de page et de route, elles, le prennent en compte.
 
 ## Gestion des droits (lot 2c)
 

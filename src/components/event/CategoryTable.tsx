@@ -12,6 +12,7 @@ import { CategoryReassignModal } from "./CategoryReassignModal";
 import { CategoryImportTemplatesModal } from "./CategoryImportTemplatesModal";
 import { TableFrame } from "@/components/ui/TableFrame";
 import { toastSuccess } from "@/lib/toast";
+import type { Permission } from "@/lib/permissions";
 
 type Cat = {
   id: string;
@@ -28,6 +29,7 @@ export function CategoryTable({
   eventId,
   rows: cats,
   allCategories,
+  permissions,
   footer,
 }: {
   orgId: string;
@@ -35,8 +37,11 @@ export function CategoryTable({
   rows: Cat[];
   // Toutes les categories de l'evenement (cibles de reaffectation), pas seulement la page affichee.
   allCategories: { id: string; name: string; number: number }[];
+  // Sans `event.categories.manage` la page est en lecture seule : le serveur refuserait chaque écriture.
+  permissions: Permission[];
   footer?: ReactNode;
 }) {
+  const canManage = permissions.includes("event.categories.manage");
   const router = useRouter();
   const [editing, setEditing] = useState<Cat | null>(null);
   const [adding, setAdding] = useState(false);
@@ -79,16 +84,18 @@ export function CategoryTable({
           <h1 className="text-xl font-semibold text-navy">Catégories</h1>
           <p className="mt-0.5 text-sm text-slate-400">Catégories de participation de l&apos;événement</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setImporting(true)}>
-            Importer un modèle
-          </Button>
-          <Button onClick={() => setAdding(true)}>
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="plus" size={16} /> Ajouter
-            </span>
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setImporting(true)}>
+              Importer un modèle
+            </Button>
+            <Button onClick={() => setAdding(true)}>
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="plus" size={16} /> Ajouter
+              </span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {importing && (
@@ -139,6 +146,7 @@ export function CategoryTable({
                 </td>
                 <td className="px-4 py-3 text-sm tabular-nums text-slate-600">{c._count.registrations}</td>
                 <td className="px-4 py-3 text-right">
+                  {canManage && (
                   <div className="inline-flex gap-1">
                     <button
                       onClick={() => setEditing(c)}
@@ -163,6 +171,7 @@ export function CategoryTable({
                       <Icon name="trash-2" size={15} />
                     </ActionButton>
                   </div>
+                  )}
                 </td>
               </tr>
             ))}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { prisma } from "@/lib/prisma";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
@@ -15,33 +16,37 @@ export default async function OrgDashboardPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  const { permissions } = await requireOrgPagePermission(orgId, "org.read", `/org/${orgId}`);
+  const canListEvents = permissions.has("org.events.list");
+  const canReadActivity = permissions.has("org.activity.read");
+  const canReadSubscription = permissions.has("billing.subscription.read");
 
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const [eventsActive, eventsArchived, registrationsThisMonth, latestEvents, recentActivity, limits] =
     await Promise.all([
-      prisma.event.count({ where: { orgId, archived: false } }),
-      prisma.event.count({ where: { orgId, archived: true } }),
-      prisma.registration.count({
-        where: {
-          event: { orgId },
-          createdAt: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
-        },
-      }),
+      canListEvents ? prisma.event.count({ where: { orgId, archived: false } }) : 0,
+      canListEvents ? prisma.event.count({ where: { orgId, archived: true } }) : 0,
+      canListEvents
+        ? prisma.registration.count({ where: { event: { orgId }, createdAt: { gte: monthStart } } })
+        : 0,
       prisma.event.findMany({
         where: { orgId, archived: false },
         orderBy: { createdAt: "desc" },
         take: 5,
         select: { id: true, title: true, slug: true, date: true, registrationOpen: true },
       }),
-      prisma.activityLog.findMany({
-        where: { orgId },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-        select: { id: true, type: true, createdAt: true, staffActor: true, details: true },
-      }),
-      resolveOrgLimits(orgId),
+      canReadActivity
+        ? prisma.activityLog.findMany({
+            where: { orgId },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+            select: { id: true, type: true, createdAt: true, staffActor: true, details: true },
+          })
+        : [],
+      canReadSubscription ? resolveOrgLimits(orgId) : null,
     ]);
 
-  const maxEvents = limits.maxEvents;
+  const maxEvents = limits?.maxEvents ?? null;
   const eventsPct = maxEvents != null ? Math.round((eventsActive / maxEvents) * 100) : null;
 
   const quotaWarning = eventsPct != null && eventsPct > 80;
@@ -53,25 +58,29 @@ export default async function OrgDashboardPage({
         <p className="mt-0.5 text-sm text-slate-400">Vue d&apos;ensemble de votre organisation</p>
       </div>
 
-      {quotaWarning && (
+      {canReadSubscription && quotaWarning && (
         <Alert tone="warn">
           <Icon name="alert-triangle" size={16} /> Un quota dépasse 80 %. Contactez le support si vous prévoyez
           d&apos;aller plus loin.
         </Alert>
       )}
 
-      <StatGrid cols={4}>
-        <StatCard label="Événements actifs" value={eventsActive} icon="calendar" />
-        <StatCard label="Événements archivés" value={eventsArchived} icon="archive" />
-        <StatCard label="Inscriptions ce mois" value={registrationsThisMonth.toLocaleString("fr-FR")} icon="user-check" />
-        <StatCard
-          label="Quota événements"
-          value={maxEvents != null ? `${eventsActive} / ${maxEvents}` : "—"}
-          icon="hard-drive"
-        />
-      </StatGrid>
+      {canListEvents && (
+        <StatGrid cols={canReadSubscription ? 4 : 3}>
+          <StatCard label="Événements actifs" value={eventsActive} icon="calendar" />
+          <StatCard label="Événements archivés" value={eventsArchived} icon="archive" />
+          <StatCard label="Inscriptions ce mois" value={registrationsThisMonth.toLocaleString("fr-FR")} icon="user-check" />
+          {canReadSubscription && (
+            <StatCard
+              label="Quota événements"
+              value={maxEvents != null ? `${eventsActive} / ${maxEvents}` : "—"}
+              icon="hard-drive"
+            />
+          )}
+        </StatGrid>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-6 ${canReadActivity ? "lg:grid-cols-2" : ""}`}>
         <Card>
           <CardHead
             title="Derniers événements"
@@ -104,6 +113,7 @@ export default async function OrgDashboardPage({
           </CardBody>
         </Card>
 
+        {canReadActivity && (
         <Card>
           <CardHead title="Activité récente" />
           <CardBody>
@@ -123,6 +133,7 @@ export default async function OrgDashboardPage({
             )}
           </CardBody>
         </Card>
+        )}
       </div>
     </div>
   );

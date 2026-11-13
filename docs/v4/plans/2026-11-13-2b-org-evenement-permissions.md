@@ -33,17 +33,17 @@ contrôle) · [35 — impression pendant l'évènement](../specs/2026-11-01-35-v
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Modèles de menu et gardes de page (org, évènement) | [ ] | | |
-| 2 | Routes API `org/[orgId]/**` hors évènement | [ ] | | |
-| 3 | Routes API d'évènement | [ ] | | |
-| 4 | Routes AGENT du poste sur place | [ ] | | |
-| 5 | Espace organisation : layout, `/select`, redirection, `OrgShell`, pages | [ ] | | |
-| 6 | `EventShell` unique, layout et atterrissage | [ ] | | |
-| 7 | Pages d'évènement gardées, boutons par permission, tableau de bord | [ ] | | |
-| 8 | Pages AGENT du poste sur place | [ ] | | |
-| 9 | Quantité automatique des accessoires (spec 39) | [ ] | | |
-| 10 | Documentation (spec 35, impression sur place, rôles et permissions) | [ ] | | |
-| 11 | e2e, doc, vérification | [ ] | | |
+| 1 | Modèles de menu et gardes de page (org, évènement) | [x] | 2026-11-13 | Entree Documentation du socle conservee (avant le groupe Administration); SidebarNav n'active que l'entree la plus specifique. |
+| 2 | Routes API `org/[orgId]/**` hors évènement | [x] | 2026-11-13 | archive/restore: org.events.archive. STAFF_SUPPORT perd archive/restore et PATCH org (spec). |
+| 3 | Routes API d'évènement | [x] | 2026-11-13 | Garde 'une parmi' du socle (pas de helper local). STAFF_SUPPORT/Observateur: droits du catalogue. Matrice de tests derivee du catalogue des roles systeme. |
+| 4 | Routes AGENT du poste sur place | [x] | 2026-11-13 | Controle d'appartenance dans onsite/_scope.ts (404 hors evenement/organisation/ADVANCE/brouillon). Les POST passent par le garde d'abonnement de withEventAuth (lookup inclus). |
+| 5 | Espace organisation : layout, `/select`, redirection, `OrgShell`, pages | [x] | 2026-11-13 | Menu Documentation conserve (org.read). src/components/layout/__tests__/space-shells.test.tsx adapte (teste OrgShell/EventShell). accessibleOrgIds/accessibleEventIds exportes de org-redirect (utilises par /select); l'orgId d'un evenement est inconnu du contexte: ajustements d'organisation ignores pour l'atterrissage. |
+| 6 | `EventShell` unique, layout et atterrissage | [x] | 2026-11-13 | EventShell unique, layout, atterrissage |
+| 7 | Pages d'évènement gardées, boutons par permission, tableau de bord | [x] | 2026-11-13 | pages evenement gardees |
+| 8 | Pages AGENT du poste sur place | [x] | 2026-11-13 | pages poste sur place agent, canAccept par permission |
+| 9 | Quantité automatique des accessoires (spec 39) | [x] | 2026-11-13 | quantite accessoires auto |
+| 10 | Documentation (spec 35, impression sur place, rôles et permissions) | [x] | 2026-11-13 | docs |
+| 11 | e2e, doc, vérification | [x] | 2026-11-13 | specs e2e + gates lint, tsc, couverture 100 % ; navigateur 3 largeurs non fait |
 
 ## Fichiers du lot (exclusifs)
 

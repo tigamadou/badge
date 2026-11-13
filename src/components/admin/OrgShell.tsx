@@ -1,7 +1,7 @@
-import type { OrgRole } from "@prisma/client";
 import { OrgSelector } from "./OrgSelector";
-import { SidebarNav, type NavEntry, type NavLink } from "./SidebarNav";
-import { orgRoleAtLeast } from "@/lib/auth-helpers";
+import { SidebarNav } from "./SidebarNav";
+import { orgNavFor } from "./org-nav";
+import type { Permission } from "@/lib/permissions";
 import { AppShell } from "@/components/layout/AppShell";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { UserAvatar } from "@/components/layout/UserAvatar";
@@ -20,35 +20,19 @@ export function OrgShell({
   org,
   user,
   orgs,
-  orgRole,
+  permissions,
   photoUrl,
   children,
 }: {
   org: Org;
   user: { name: string; email: string; isStaff: boolean };
   orgs: Org[];
-  orgRole: OrgRole;
+  permissions: Permission[];
   photoUrl?: string | null;
   children: React.ReactNode;
 }) {
-  // v4 Bloc C : nav filtree par role effectif. AUDITOR (lecture seule) ne voit pas les
-  // entrees d'ecriture ; MANAGER gere events/modeles/membres mais pas les parametres org ;
-  // OWNER voit tout. L'enforcement reel reste route par route.
-  const navByRole: Array<NavLink & { minRole: OrgRole }> = [
-    { href: `/org/${org.id}`, label: "Tableau de bord", icon: "layout-dashboard", exact: true, minRole: "AUDITOR" },
-    { href: `/org/${org.id}/notifications`, label: "Notifications", icon: "bell", minRole: "AUDITOR" },
-    { href: `/org/${org.id}/events`, label: "Événements", icon: "calendar", minRole: "AUDITOR" },
-    { href: `/org/${org.id}/members`, label: "Membres", icon: "users", minRole: "MANAGER" },
-    { href: `/org/${org.id}/templates`, label: "Modèles catégories", icon: "tags", minRole: "MANAGER" },
-    { href: `/org/${org.id}/subscription`, label: "Abonnement", icon: "credit-card", minRole: "MANAGER" },
-    { href: `/org/${org.id}/payments`, label: "Paiements", icon: "file", minRole: "MANAGER" },
-    { href: `/org/${org.id}/settings`, label: "Paramètres", icon: "settings", minRole: "OWNER" },
-    { href: `/org/${org.id}/activity`, label: "Journal", icon: "scroll-text", minRole: "AUDITOR" },
-    { href: `/org/${org.id}/docs`, label: "Documentation", icon: "file", minRole: "AUDITOR" },
-  ];
-  const nav: NavEntry[] = navByRole
-    .filter((n) => orgRoleAtLeast(orgRole, n.minRole))
-    .map(({ minRole: _minRole, ...link }) => link);
+  // Menu filtre par permission (modele `org-nav.ts`) ; l'application reelle des droits reste route par route.
+  const nav = orgNavFor(org.id, new Set(permissions));
 
   return (
     <AppShell

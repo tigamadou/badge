@@ -39,8 +39,8 @@ const ALLOWED_TYPES: ReadonlySet<ActivityType> = new Set<ActivityType>([
 ]);
 
 export const GET = withEventAuth(
-  { minRole: "OPERATOR", allowArchived: true },
-  async (req, { eventId, session, effectiveRole }) => {
+  { permission: ["event.activity.read", "scan.history.read"], allowArchived: true },
+  async (req, { eventId, session, permissions }) => {
     const url = new URL(req.url);
     const typeParam = url.searchParams.get("type");
     const { page, pageSize, skip, take } = parseListPage(url.searchParams);
@@ -49,7 +49,8 @@ export const GET = withEventAuth(
     if (typeParam && ALLOWED_TYPES.has(typeParam as ActivityType)) {
       where.type = typeParam as ActivityType;
     }
-    if (effectiveRole === "OPERATOR") {
+    // Sans `event.activity.read` : uniquement ses propres scans.
+    if (!permissions.has("event.activity.read")) {
       where.userId = session.user.id;
       where.type = "BADGE_SCANNED";
     }

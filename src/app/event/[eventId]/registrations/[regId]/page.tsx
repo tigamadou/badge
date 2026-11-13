@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { loadUserContext } from "@/lib/user-context";
 import { RegistrationDetailPanel } from "@/components/event/RegistrationDetailPanel";
 import { Icon } from "@/components/ui/Icon";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../../_lib/page-access";
 
 export default async function RegistrationDetailPage({
   params,
@@ -14,7 +11,11 @@ export default async function RegistrationDetailPage({
   params: Promise<{ eventId: string; regId: string }>;
 }) {
   const { eventId, regId } = await params;
-  const orgId = await getEventOrgId(eventId);
+  const { ctx, orgId, permissions } = await requireEventPagePermission(
+    eventId,
+    "event.read.detailed",
+    `/event/${eventId}/registrations/${regId}`,
+  );
   const registration = await prisma.registration.findUnique({
     where: { id: regId },
     include: {
@@ -24,11 +25,14 @@ export default async function RegistrationDetailPage({
   });
   if (!registration || registration.eventId !== eventId) notFound();
 
-  // Meme regle que /api/files : un document de profil n'est lisible que par le staff
-  // plateforme. Un membre d'organisation voit un etat, pas le fichier.
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const idDocumentReadable = Boolean(ctx?.isStaff);
+  // Meme regle que /api/files, selon la classe de la cle : le staff lit tout, un document
+  // d'evenement exige `event.read.detailed`, un document de profil n'est lisible que par son titulaire.
+  const key = registration.snapshotIdDocument;
+  const idDocumentReadable =
+    ctx.isStaff ||
+    (key.startsWith(`events/${eventId}/idDocuments/`)
+      ? permissions.has("event.read.detailed")
+      : key.startsWith(`profile/${ctx.user.id}/documents/`));
 
   // v4 (plan 08) : date de validation plateforme (derniere soumission approuvee).
   const approvedSubmission = await prisma.profileSubmission.findFirst({
@@ -82,6 +86,7 @@ export default async function RegistrationDetailPage({
         eventId={eventId}
         registration={r}
         rejectionReasons={rejectionReasons}
+        permissions={[...permissions]}
       />
     </div>
   );

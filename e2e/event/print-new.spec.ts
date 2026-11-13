@@ -99,10 +99,20 @@ test.describe("Event — Nouvelle commande d'impression", () => {
 
     // Étape « Accessoires » : un cordon.
     await page.getByRole("button", { name: new RegExp(lanyardName) }).click();
+    // Spec 39 (révisée) : quantité préremplie au nombre de badges, plafonnée, modifiable.
+    const qty = page.getByLabel(/^Quantité/);
+    await expect(qty).toHaveValue("3");
+    await qty.fill("9");
+    await expect(qty).toHaveValue("3");
+    await qty.fill("2");
+    await expect(page.getByText("Quantité inférieure au nombre de badges de la commande (3).")).toBeVisible();
     await page.getByRole("button", { name: "Suivant" }).click();
     await expect
       .poll(() => getDb().printQuoteLine.count({ where: { requestId, label: lanyardName, removedAt: null } }))
       .toBe(1);
+    // La quantité saisie (inférieure au plafond) est enregistrée.
+    const lanyardLine = await getDb().printQuoteLine.findFirstOrThrow({ where: { requestId, label: lanyardName, removedAt: null } });
+    expect(lanyardLine.quantity).toBe(2);
 
     // Étape « Remise » : retrait.
     await page.getByRole("radio", { name: /^Retrait/ }).click();

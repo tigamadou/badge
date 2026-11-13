@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -114,9 +115,7 @@ describe("PATCH /api/org/[orgId] (Task 4 — name + slug)", () => {
   });
 
   it("staff can update slug", async () => {
-    const s = await prisma.user.create({
-      data: { email: "s@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_SUPPORT" },
-    });
+    const s = await makeStaff("STAFF_ADMIN");
     const org = await prisma.organization.create({ data: { name: "Old", slug: "old" } });
     await withSession({ id: s.id, email: s.email, name: s.name, isStaff: true });
 

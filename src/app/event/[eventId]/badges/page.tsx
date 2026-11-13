@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { BadgeListTable } from "@/components/event/BadgeListTable";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../_lib/page-access";
 
 export default async function BadgesPage({
   params,
@@ -8,7 +8,7 @@ export default async function BadgesPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const orgId = await getEventOrgId(eventId);
+  const { orgId } = await requireEventPagePermission(eventId, "badge.print", `/event/${eventId}/badges`);
   return (
     <div className="space-y-4">
       <div>

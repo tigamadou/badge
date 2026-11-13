@@ -23,9 +23,6 @@ const FILES = [
   "src/components/admin/SidebarNav.tsx",
   "src/components/admin/OrgShell.tsx",
   "src/components/event/EventShell.tsx",
-  "src/components/event/EventViewerShell.tsx",
-  "src/components/event/EventOperatorShell.tsx",
-  "src/components/event/EventPrinterShell.tsx",
   "src/components/public/AccountNav.tsx",
   "src/app/styleguide/page.tsx",
 ];

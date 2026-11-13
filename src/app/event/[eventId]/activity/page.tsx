@@ -1,20 +1,15 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { redirect, notFound } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { loadUserContext } from "@/lib/user-context";
-import { effectiveEventRole } from "@/lib/auth-helpers";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { logKind } from "@/lib/activity-labels";
-import { getEventOrgId } from "@/lib/event-org";
 import { TableFrame } from "@/components/ui/TableFrame";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { UrlPagination } from "@/components/ui/Pagination";
+import { requireEventPagePermission } from "../_lib/page-access";
 
 export default async function ActivityPage({
   params,
@@ -25,26 +20,15 @@ export default async function ActivityPage({
 }) {
   const { eventId } = await params;
   const list = parseListPage(await searchParams);
-  const orgId = await getEventOrgId(eventId);
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/login");
-
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    select: { orgId: true },
-  });
-  if (!event || event.orgId !== orgId) notFound();
-
-  const role = effectiveEventRole(ctx, eventId, orgId);
-  if (role !== "STAFF" && role !== "ADMIN" && role !== "OPERATOR") {
-    notFound();
-  }
+  const { ctx, permissions } = await requireEventPagePermission(
+    eventId,
+    ["event.activity.read", "scan.history.read"],
+    `/event/${eventId}/activity`,
+  );
 
   const where: Prisma.ActivityLogWhereInput = { eventId };
-  if (role === "OPERATOR") {
+  // Sans le journal complet, seulement ses propres scans (même règle que la route).
+  if (!permissions.has("event.activity.read")) {
     where.userId = ctx.user.id;
     where.type = "BADGE_SCANNED";
   }

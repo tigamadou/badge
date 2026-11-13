@@ -5,7 +5,7 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { resolvePublicSettings } from "@/lib/settings";
 
-export const GET = withEventAuth({ minRole: "ADMIN", allowArchived: true }, async (_req, { eventId }) => {
+export const GET = withEventAuth({ permission: "event.settings.update", allowArchived: true }, async (_req, { eventId }) => {
   const settings = await prisma.eventSettings.findUnique({ where: { eventId } });
   const resolved = await resolvePublicSettings(eventId);
   return NextResponse.json({
@@ -23,7 +23,7 @@ const patchSchema = z
   })
   .strict();
 
-export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }) => {
+export const PATCH = withEventAuth({ permission: "event.settings.update" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {

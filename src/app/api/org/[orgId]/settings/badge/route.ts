@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireOrgRole, AuthError } from "@/lib/auth-guards";
+import { requirePermission, AuthError } from "@/lib/auth-guards";
 import { prisma } from "@/lib/prisma";
 import { templateExists } from "@/lib/badge-templates/resolve";
 import { logActivity } from "@/lib/activity-log";
@@ -26,8 +26,7 @@ export async function PATCH(
     return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
   }
   try {
-    // OWNER ou MANAGER (hierarchie : MANAGER satisfait via requireOrgRole MANAGER).
-    await requireOrgRole(session.user.id, orgId, "MANAGER");
+    await requirePermission(session.user.id, "org.badge_settings.update", { kind: "org", orgId });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.httpStatus });

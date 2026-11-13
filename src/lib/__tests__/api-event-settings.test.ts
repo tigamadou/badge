@@ -151,9 +151,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
 
   it("staff can update slug", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const s = await prisma.user.create({
-      data: { email: `s-${stamp}@x.test`, password: "x", name: "S", isStaff: true, staffRole: "STAFF_SUPPORT" },
-    });
+    const s = await makeStaff("STAFF_ADMIN");
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-staff-${stamp}` } });
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "T", slug: `old-slug-${stamp}`, location: "L", date: new Date() },
@@ -288,9 +286,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId]", () => {
 
   it("returns 409 SLUG_TAKEN when staff reuses another event's slug", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const staff = await prisma.user.create({
-      data: { email: `st-${stamp}@x.test`, password: "x", name: "St", isStaff: true, staffRole: "STAFF_SUPPORT" },
-    });
+    const staff = await makeStaff("STAFF_ADMIN");
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-${stamp}` } });
     const taken = await prisma.event.create({
       data: { orgId: org.id, title: "E1", slug: `taken-${stamp}`, location: "L", date: new Date() },

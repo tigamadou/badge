@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { requireOrgRole, AuthError } from "@/lib/auth-guards";
+import { requirePermission, AuthError } from "@/lib/auth-guards";
 import { logActivity } from "@/lib/activity-log";
 
 type Params = { params: Promise<{ orgId: string; id: string }> };
@@ -23,8 +23,7 @@ async function authorize(orgId: string): Promise<{ userId: string } | Response> 
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
-    // ADR 2026-06-01 (v2-14 Task 2) : MANAGER autorise sur CategoryTemplate CRUD.
-    await requireOrgRole(session.user.id, orgId, "MANAGER");
+    await requirePermission(session.user.id, "org.templates.manage", { kind: "org", orgId });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.httpStatus });

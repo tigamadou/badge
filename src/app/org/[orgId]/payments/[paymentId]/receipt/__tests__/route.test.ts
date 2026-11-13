@@ -4,13 +4,12 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 import { GET } from "../route";
 import { prisma } from "@/lib/prisma";
-import { makeOrg, makeUser } from "@/test/factories";
+import { makeOrg, makeOrgMember, makeStaff } from "@/test/factories";
 import { makeBillingPayment, makeBillingPlan } from "@/test/factories-billing";
 
-async function setup(role: "OWNER" | "MANAGER" | "AUDITOR" = "MANAGER") {
-  const user = await makeUser();
+async function setup(role: "OWNER" | "MANAGER" | "AUDITOR" | "AGENT" = "MANAGER") {
   const org = await makeOrg({ name: "<b>Org</b>" });
-  await prisma.orgMembership.create({ data: { userId: user.id, orgId: org.id, role } });
+  const user = await makeOrgMember(org.id, role);
   const plan = await makeBillingPlan();
   vi.mocked(getServerSession).mockResolvedValue({ user: { id: user.id } } as never);
   return { user, org, plan };
@@ -27,9 +26,12 @@ describe("GET /org/[orgId]/payments/[paymentId]/receipt", () => {
     expect((await call("o", "p")).status).toBe(401);
   });
 
-  it("AUDITOR et utilisateur inconnu → 403", async () => {
+  it("AUDITOR, AGENT et utilisateur inconnu → 403", async () => {
     const { org, plan } = await setup("AUDITOR");
     const p = await makeBillingPayment({ orgId: org.id, planId: plan.id, amount: 1000 });
+    expect((await call(org.id, p.id)).status).toBe(403);
+    const agent = await makeOrgMember(org.id, "AGENT");
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: agent.id } } as never);
     expect((await call(org.id, p.id)).status).toBe(403);
     vi.mocked(getServerSession).mockResolvedValue({ user: { id: "fantome" } } as never);
     expect((await call(org.id, p.id)).status).toBe(403);
@@ -46,6 +48,14 @@ describe("GET /org/[orgId]/payments/[paymentId]/receipt", () => {
     expect(html).toContain("Reçu de paiement");
     expect(html).toContain("&lt;b&gt;Org&lt;/b&gt;");
     expect(html).not.toContain("<b>Org</b>");
+  });
+
+  it("Observateur plateforme (billing.payments.read) → 200", async () => {
+    const { org, plan } = await setup("OWNER");
+    const p = await makeBillingPayment({ orgId: org.id, planId: plan.id, amount: 1000 });
+    const staff = await makeStaff("STAFF_OBSERVER");
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: staff.id } } as never);
+    expect((await call(org.id, p.id)).status).toBe(200);
   });
 
   it("paiement non approuvé, inconnu ou d'une autre organisation → 404", async () => {

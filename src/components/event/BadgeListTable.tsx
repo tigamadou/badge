@@ -77,7 +77,7 @@ export function BadgeListTable({ orgId, eventId }: { orgId: string; eventId: str
     setBusy(true);
     try {
       // Endpoint badges dedie : garde par la permission badge.print (accessible au
-      // PRINTER, contrairement a /registrations garde par minRole OPERATOR) et DTO
+      // PRINTER, contrairement a /registrations, qui exige event.read.detailed) et DTO
       // minimal (pas d'email ni de structure). Filtres et pagination cote serveur.
       const p = filterQuery();
       p.set("page", String(page));

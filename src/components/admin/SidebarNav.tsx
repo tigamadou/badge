@@ -30,6 +30,11 @@ function isActive(pathname: string, link: NavLink): boolean {
 
 export function SidebarNav({ items }: { items: NavEntry[] }) {
   const pathname = usePathname();
+  // Une seule entrée active : la plus spécifique (ex. « Poste sur place » sous « Impression »).
+  const links = items.filter((i): i is NavLink => !("group" in i));
+  const activeHref = links
+    .filter((l) => isActive(pathname, l))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <nav className="flex flex-1 flex-col gap-1">
       {items.map((item, i) => {
@@ -40,7 +45,7 @@ export function SidebarNav({ items }: { items: NavEntry[] }) {
             </div>
           );
         }
-        const active = isActive(pathname, item);
+        const active = item.href === activeHref;
         return (
           <Link
             key={item.href}

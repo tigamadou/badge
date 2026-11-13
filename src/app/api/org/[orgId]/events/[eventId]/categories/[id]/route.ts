@@ -13,7 +13,7 @@ const patchSchema = z.object({
   reassignToCategoryId: z.string().optional(),
 });
 
-export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+export const PATCH = withEventAuth({ permission: "event.categories.manage" }, async (req, { orgId, eventId, session }, extra) => {
   const { id } = (await extra.params) as { orgId: string; eventId: string; id: string };
   const json = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
@@ -70,7 +70,7 @@ export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, ev
   }
 });
 
-export const DELETE = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, eventId, session }, extra) => {
+export const DELETE = withEventAuth({ permission: "event.categories.manage" }, async (req, { orgId, eventId, session }, extra) => {
   const { id } = (await extra.params) as { orgId: string; eventId: string; id: string };
   const existing = await prisma.category.findUnique({
     where: { id },

@@ -23,8 +23,10 @@ reste celle du navigateur (PDF du badge ouvert dans un onglet).
 | `/platform/settings?tab=onsite-print` (« Impression sur place ») | Templates adaptés, note de l'imprimante, marge par défaut | `STAFF_ADMIN` (onglet masqué sinon) |
 | `/event/[eventId]/print/new` | Option « Pendant l'évènement », désactivée si le template n'est pas adapté | Permission `print.request` |
 | `/account/registrations/[id]` | Carte « QR d'accueil » d'une inscription approuvée | Le participant |
-| `/platform/print/orders/[requestId]` | Bloc compteur, accès au poste, marge, crédit | Lecture : tout le staff ; poste : `STAFF_SUPPORT` ; marge et crédit : `STAFF_ADMIN` |
-| `/platform/print/orders/[requestId]/onsite` | Poste d'impression | `STAFF_SUPPORT` minimum |
+| `/platform/print/orders/[requestId]` | Bloc compteur, accès au poste, marge, crédit | Lecture : tout le staff ; poste : `print.onsite.operate` ; marge : `print.onsite.margin.update` ; crédit : `STAFF_ADMIN` |
+| `/platform/print/orders/[requestId]/onsite` | Poste d'impression (plateforme) | `print.onsite.operate` |
+| `/event/[eventId]/print/onsite` | Liste des commandes ouvertes au poste, sans prix | `print.onsite.operate` |
+| `/event/[eventId]/print/[requestId]/onsite` | Poste d'impression (organisation) | `print.onsite.operate` |
 
 ## Réglages
 
@@ -83,8 +85,18 @@ qu'une commande sur place existe ou non.
 
 Depuis le détail d'une commande `PAID`, `IN_PRODUCTION` ou `READY`, le bouton « Ouvrir le poste
 d'impression » mène à `/platform/print/orders/[requestId]/onsite` (retour à la commande pour les
-autres statuts ou un rôle inférieur à `STAFF_SUPPORT`). Le poste affiche la note de l'imprimante, le
+autres statuts ou sans la permission `print.onsite.operate`). Le poste affiche la note de l'imprimante, le
 compteur, la caméra (désactivable) et un champ « Nom, email, ID ou contenu du QR ».
+
+**Deux accès, un même composant** (`OnsiteStation`). Côté plateforme : `/platform/print/orders/[requestId]/onsite`.
+Côté organisation, pour l'AGENT (et tout porteur de `print.onsite.operate`) : la liste `/event/[eventId]/print/onsite`
+(commandes sur place `PAID`, `IN_PRODUCTION` ou `READY` de l'évènement, sans prix ni ligne de devis) puis le poste
+`/event/[eventId]/print/[requestId]/onsite`, qui appelle les routes de l'évènement
+`GET …/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/onsite` et
+`POST …/onsite/{lookup,search,print}`. Ces routes exigent `print.onsite.operate` et contrôlent que la commande est
+une impression sur place (hors brouillon, sans commande parente) **de cet évènement et de cette organisation** :
+tout écart répond `404`, avant la lecture de toute inscription. Les routes d'écriture passent par la garde d'abonnement
+des routes d'évènement. Un évènement archivé n'ouvre pas le poste.
 
 **Identifier le participant.**
 
@@ -215,8 +227,9 @@ mouvements) s'affiche côté organisation et côté staff.
 | Action | Rôle minimal |
 |---|---|
 | Réglages de l'onglet « Impression sur place » | `STAFF_ADMIN` |
-| Poste : recherche, lecture du QR, impression, réimpression | `STAFF_SUPPORT` |
-| Relever ou baisser la marge, appliquer le crédit | `STAFF_ADMIN` |
+| Poste : recherche, lecture du QR, impression, réimpression | Permission `print.onsite.operate` (`STAFF_ADMIN` et `STAFF_PRINTER` côté plateforme ; `AGENT`, `MANAGER`, `OWNER` d'organisation ; `ADMIN` d'évènement) |
+| Relever ou baisser la marge | Permission `print.onsite.margin.update` (`STAFF_ADMIN`) |
+| Appliquer le crédit | `STAFF_ADMIN` |
 | Lire la commande, le compteur et le crédit | Tout le staff ; côté organisateur, `print.request` |
 | Envoyer une commande sur place | `print.request` (template adapté requis) |
 
@@ -231,7 +244,9 @@ mouvements) s'affiche côté organisation et côté staff.
 | `src/lib/print-requests/org-credit.ts`, `credit-view.ts` | Crédit : solde, application, dépense ; libellés |
 | `src/lib/registration-qr.ts`, `src/app/api/public/qr/[registrationId]/route.ts` | QR d'accueil |
 | `src/components/staff/OnsitePrintSettingsForm.tsx` | Onglet des réglages |
-| `src/components/staff/print/Onsite*.tsx`, `RequestCreditPanel.tsx`, `ApplyCreditDialog.tsx` | Poste, bloc de la commande, marge, crédit (staff) |
+| `src/components/staff/print/Onsite*.tsx`, `RequestCreditPanel.tsx`, `ApplyCreditDialog.tsx` | Poste, bloc de la commande, marge, crédit (staff) ; le poste sert aussi l'organisation |
+| `src/app/event/[eventId]/print/onsite/page.tsx`, `print/[requestId]/onsite/page.tsx`, `src/components/event/print/OnsiteOrderList.tsx` | Liste sans prix et poste de l'agent |
+| `src/app/api/org/[orgId]/events/[eventId]/print-requests/[requestId]/onsite/` | Routes du poste côté organisation (`_scope.ts` : contrôle d'appartenance) |
 | `src/components/print/Onsite*.tsx`, `OrgPrintCreditCard.tsx`, `RelatedRequestLinks.tsx` | Compteur, alerte, crédit, liens (communs) |
 | `e2e/platform/print-request-onsite.spec.ts` | Poste, refus, plafond, marge |
 | `e2e/platform/settings.spec.ts`, `e2e/event/print-new.spec.ts` | Réglages, assistant |
