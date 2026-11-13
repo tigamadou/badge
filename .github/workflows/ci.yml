@@ -114,7 +114,8 @@ jobs:
       - run: yarn vitest run --coverage
 
   e2e:
-    runs-on: ubuntu-latest
+    # Epingle : ubuntu-latest pointe sur 26.04, que Playwright 1.60 ne sait pas equiper (chromium).
+    runs-on: ubuntu-24.04
     services:
       mysql:
         image: mysql:8
