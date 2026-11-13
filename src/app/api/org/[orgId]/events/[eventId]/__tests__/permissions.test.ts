@@ -47,7 +47,7 @@ const ROWS: Row[] = [
   { name: "GET settings", handler: settingsRoute.GET, method: "GET", path: "/settings", permissions: ["event.settings.update"] },
   { name: "PATCH settings", handler: settingsRoute.PATCH, method: "PATCH", path: "/settings", permissions: ["event.settings.update"] },
   { name: "PATCH settings/badge", handler: settingsBadgeRoute.PATCH, method: "PATCH", path: "/settings/badge", permissions: ["event.settings.update"] },
-  { name: "POST upload", handler: uploadRoute.POST, method: "POST", path: "/upload", permissions: ["event.update"] },
+  { name: "POST upload", handler: uploadRoute.POST, method: "POST", path: "/upload", permissions: ["registration.create"] },
   { name: "GET activity", handler: activityRoute.GET, method: "GET", path: "/activity", permissions: ["event.activity.read", "scan.history.read"] },
   { name: "GET blocked-emails", handler: blockedEmailsRoute.GET, method: "GET", path: "/blocked-emails", permissions: ["registration.block"] },
   { name: "POST blocked-emails", handler: blockedEmailsRoute.POST, method: "POST", path: "/blocked-emails", permissions: ["registration.block"] },
@@ -242,6 +242,23 @@ describe("GET activity : filtrage selon la permission", () => {
     const other = await makeUser();
     await seedLogs(org.id, event.id, op.id, other.id);
     expect((await (await call(row, org.id, event.id, op)).json()).total).toBe(1);
+  });
+});
+
+describe("POST upload : registration.create sans event.update", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("un rôle personnalisé registration.create passe la garde ; event.update seul est refusé", async () => {
+    const { org, event } = await scene();
+    const row = ROWS.find((x) => x.name === "POST upload")!;
+    const as = async (permissions: Permission[]) => {
+      const role = await makeCustomRole({ scope: "EVENT", permissions });
+      const user = await makeUser();
+      await prisma.eventMembership.create({ data: { userId: user.id, eventId: event.id, roleId: role.id } });
+      return call(row, org.id, event.id, { ...user, isStaff: false });
+    };
+    expect(await denied(await as(["registration.create"]))).toBe(false);
+    expect(await denied(await as(["event.update"]))).toBe(true);
   });
 });
 
