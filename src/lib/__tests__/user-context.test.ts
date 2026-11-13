@@ -4,7 +4,7 @@ import { getUserContext, loadUserContext } from "@/lib/user-context";
 import { systemRolePermissions } from "@/lib/permissions";
 import { systemRoleId } from "@/lib/permissions/db";
 import type { Permission } from "@/lib/permissions";
-import { makeCustomRole, makeEvent, makeOrg, makeUser, seedFactories } from "@/test/factories";
+import { makeCustomRole, makeEvent, makeOrg, makeOverride, makeUser, seedFactories } from "@/test/factories";
 
 describe("loadUserContext", () => {
   beforeEach(async () => {
@@ -145,13 +145,9 @@ describe("loadUserContext", () => {
   it("charge les ajustements et ignore les clés inconnues", async () => {
     const org = await makeOrg();
     const u = await makeUser();
-    await prisma.userPermissionOverride.createMany({
-      data: [
-        { userId: u.id, orgId: null, permission: "platform.access", effect: "GRANT" },
-        { userId: u.id, orgId: org.id, permission: "org.read", effect: "REVOKE" },
-        { userId: u.id, orgId: org.id, permission: "cle.inconnue", effect: "GRANT" },
-      ],
-    });
+    await makeOverride({ userId: u.id, orgId: null, permission: "platform.access", effect: "GRANT" });
+    await makeOverride({ userId: u.id, orgId: org.id, permission: "org.read", effect: "REVOKE" });
+    await makeOverride({ userId: u.id, orgId: org.id, permission: "cle.inconnue" as Permission, effect: "GRANT" });
     const ctx = await loadUserContext(u.id);
     expect(ctx!.overrides).toHaveLength(2);
     expect(ctx!.overrides).toEqual(
@@ -171,5 +167,39 @@ describe("loadUserContext", () => {
   it("getUserContext renvoie la même valeur que loadUserContext", async () => {
     const u = await makeUser({ isStaff: true, staffRole: "STAFF_SUPPORT" });
     expect(await getUserContext(u.id)).toEqual(await loadUserContext(u.id));
+  });
+
+  it("ignore les clés réservées d'un rôle personnalisé et d'un ajustement", async () => {
+    const org = await makeOrg();
+    const role = await makeCustomRole({
+      scope: "ORG",
+      orgId: org.id,
+      permissions: ["org.read", "org.roles.manage", "org.members.permissions.manage"],
+    });
+    const u = await makeUser();
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: role.id } });
+    await makeOverride({ userId: u.id, orgId: org.id, permission: "org.roles.manage", effect: "GRANT" });
+    await makeOverride({ userId: u.id, orgId: org.id, permission: "org.update", effect: "GRANT" });
+    const ctx = await loadUserContext(u.id);
+    expect([...ctx!.orgMemberships[0].roleRef!.permissions]).toEqual(["org.read"]);
+    expect(ctx!.overrides).toEqual([{ orgId: org.id, permission: "org.update", effect: "GRANT" }]);
+  });
+
+  it("ignore un rôle dont le niveau ne correspond pas à la place", async () => {
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const platformRole = await makeCustomRole({ scope: "PLATFORM", permissions: ["platform.access"] });
+    const eventRole = await makeCustomRole({ scope: "EVENT", orgId: org.id, permissions: ["scan.check-in"] });
+    const orgRole = await makeCustomRole({ scope: "ORG", orgId: org.id, permissions: ["org.read"] });
+    const u = await makeUser({ isStaff: true, platformRoleId: orgRole.id });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: platformRole.id } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, roleId: orgRole.id } });
+    const ctx = await loadUserContext(u.id);
+    expect(ctx!.platformRole).toBeNull();
+    expect(ctx!.orgMemberships[0].roleRef).toBeNull();
+    expect(ctx!.eventMemberships[0].roleRef).toBeNull();
+    // Un rôle du bon niveau reste résolu.
+    await prisma.eventMembership.update({ where: { userId_eventId: { userId: u.id, eventId: event.id } }, data: { roleId: eventRole.id } });
+    expect((await loadUserContext(u.id))!.eventMemberships[0].roleRef?.id).toBe(eventRole.id);
   });
 });

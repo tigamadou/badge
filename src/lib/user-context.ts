@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { EventRole, OrgRole, Prisma, StaffRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isPermission, type Permission } from "@/lib/permissions/catalog";
+import { isPermission, permissionDef, type Permission } from "@/lib/permissions/catalog";
 import {
   SYSTEM_ROLES,
   isSystemRoleKey,
@@ -42,6 +42,7 @@ type RoleRow = {
   permissions: { permission: string }[];
 };
 
+/** @deprecated compat chantier roles-permissions (retiré à la fusion) : clés d'enum héritées. */
 const STAFF_KEYS: ReadonlySet<string> = new Set<StaffRole>(["SUPER_ADMIN", "STAFF_ADMIN", "STAFF_SUPPORT", "STAFF_OBSERVER"]);
 const ORG_KEYS: ReadonlySet<string> = new Set<OrgRole>(["OWNER", "MANAGER", "AUDITOR"]);
 const EVENT_KEYS: ReadonlySet<string> = new Set<EventRole>(["ADMIN", "OPERATOR", "PRINTER", "VIEWER"]);
@@ -51,39 +52,54 @@ function systemRole(key: SystemRoleKey, id: string | null): ResolvedRole {
   return { id, systemKey: key, scope: def.scope, name: def.name, permissions: systemRolePermissions(key) };
 }
 
-/** `roleRef` non archivé d'abord ; sinon repli sur la colonne d'enum ; sinon aucun rôle (fermé par défaut). */
-function resolveRole(ref: RoleRow | null, legacyKey: string | null): ResolvedRole | null {
+type RolePlace = "PLATFORM" | "ORG" | "EVENT";
+
+/** Permission interdite à un rôle personnalisé et à un ajustement (clé `reserved`). */
+function isReserved(permission: Permission): boolean {
+  return permissionDef(permission).reserved === true;
+}
+
+/**
+ * `roleRef` non archivé d'abord ; sinon repli sur la colonne d'enum ; sinon aucun rôle (fermé par défaut).
+ * Un rôle dont le niveau ne correspond pas à la place (membership d'organisation, d'évènement, plateforme) est ignoré,
+ * ainsi que les clés `reserved` d'un rôle personnalisé.
+ * Le repli sur la colonne d'enum (roleId nul) est conservé après la fusion (plan 3) : lignes créées avant la migration.
+ */
+function resolveRole(ref: RoleRow | null, legacyKey: string | null, place: RolePlace): ResolvedRole | null {
   if (ref) {
-    if (ref.archived) return null;
+    if (ref.archived || ref.scope !== place) return null;
     if (ref.systemKey !== null && isSystemRoleKey(ref.systemKey)) return systemRole(ref.systemKey, ref.id);
     const permissions = new Set<Permission>();
-    for (const { permission } of ref.permissions) if (isPermission(permission)) permissions.add(permission);
+    for (const { permission } of ref.permissions) {
+      if (isPermission(permission) && !isReserved(permission)) permissions.add(permission);
+    }
     return { id: ref.id, systemKey: null, scope: ref.scope, name: ref.name, permissions };
   }
   if (legacyKey !== null && isSystemRoleKey(legacyKey)) return systemRole(legacyKey, null);
   return null;
 }
 
+/** @deprecated compat chantier roles-permissions (retiré à la fusion) */
 function legacy<T extends string>(role: ResolvedRole | null, keys: ReadonlySet<string>): T | null {
   return role?.systemKey && keys.has(role.systemKey) ? (role.systemKey as T) : null;
 }
 
 export function buildUserContext(row: Prisma.UserGetPayload<{ select: typeof USER_CONTEXT_SELECT }>): UserContext {
-  const platformRole = resolveRole(row.platformRole, row.staffRole);
+  const platformRole = resolveRole(row.platformRole, row.staffRole, "PLATFORM");
 
   const orgMemberships = row.orgMemberships.flatMap((m) => {
-    const roleRef = resolveRole(m.roleRef, m.roleId === null ? m.role : null);
+    const roleRef = resolveRole(m.roleRef, m.roleId === null ? m.role : null, "ORG");
     if (!roleRef && m.roleId === null && m.role === null) return [];
     return [{ orgId: m.orgId, roleId: m.roleId, roleRef, role: legacy<OrgRole>(roleRef, ORG_KEYS) }];
   });
   const eventMemberships = row.eventMemberships.flatMap((m) => {
-    const roleRef = resolveRole(m.roleRef, m.roleId === null ? m.role : null);
+    const roleRef = resolveRole(m.roleRef, m.roleId === null ? m.role : null, "EVENT");
     if (!roleRef && m.roleId === null && m.role === null) return [];
     return [{ eventId: m.eventId, roleId: m.roleId, roleRef, role: legacy<EventRole>(roleRef, EVENT_KEYS) }];
   });
 
   const overrides = row.permissionOverrides.flatMap((o) =>
-    isPermission(o.permission) ? [{ orgId: o.orgId, permission: o.permission, effect: o.effect }] : [],
+    isPermission(o.permission) && !isReserved(o.permission) ? [{ orgId: o.orgId, permission: o.permission, effect: o.effect }] : [],
   );
 
   return {
