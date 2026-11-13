@@ -114,6 +114,11 @@ export const PATCH = withStaffAuth<{ userId: string }>(
       if (!target) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
       const oldKey = systemKeyOf(target);
 
+      // Archiver ou restaurer un compte de rôle supérieur exige aussi `users.staff.assign_top_role`.
+      if (data.archived !== undefined && isTopPlatformRole(oldKey) && !hasPermission(actor, "users.staff.assign_top_role", platform)) {
+        return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
+      }
+
       let newRole: RoleDTO | null | undefined;
       if (data.platformRoleId !== undefined) {
         newRole = data.platformRoleId === null ? null : await resolveAssignableRole(data.platformRoleId, { scope: "PLATFORM" });
@@ -194,7 +199,13 @@ export const DELETE = withStaffAuth<{ userId: string }>(
       });
       if (!target) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-      if (systemKeyOf(target) === "SUPER_ADMIN") await assertNotLastSuperAdmin(userId);
+      const targetKey = systemKeyOf(target);
+      const actor = await actorContext(session.user.id);
+      if (isTopPlatformRole(targetKey) && !hasPermission(actor, "users.staff.assign_top_role", platform)) {
+        return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
+      }
+
+      if (targetKey === "SUPER_ADMIN") await assertNotLastSuperAdmin(userId);
 
       await prisma.user.update({
         where: { id: userId },

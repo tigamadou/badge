@@ -164,6 +164,19 @@ describe("PATCH /api/platform/users/[userId]", () => {
     expect((await patch(target.id, { platformRoleId: null })).status).toBe(200);
   });
 
+  it("archiver ou restaurer un compte de rôle supérieur exige assign_top_role (STAFF_ADMIN 403, SUPER_ADMIN OK)", async () => {
+    await makeStaff("SUPER_ADMIN");
+    const [sa, ad] = [await makeStaff("SUPER_ADMIN"), await makeStaff("STAFF_ADMIN")];
+    await actAs("STAFF_ADMIN");
+    expect(await err(patch(sa.id, { archived: true }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(patch(ad.id, { archived: true }))).toEqual([403, "PERMISSION_DENIED"]);
+    await prisma.user.update({ where: { id: sa.id }, data: { archived: true, archivedAt: new Date() } });
+    expect(await err(patch(sa.id, { archived: false }))).toEqual([403, "PERMISSION_DENIED"]);
+    await actAs("SUPER_ADMIN");
+    expect((await patch(ad.id, { archived: true })).status).toBe(200);
+    expect((await patch(sa.id, { archived: false })).status).toBe(200);
+  });
+
   it("archive et désarchive : archivedAt posé puis effacé", async () => {
     await actAs("STAFF_ADMIN");
     const target = await makeUser();
@@ -223,6 +236,17 @@ describe("DELETE /api/platform/users/[userId]", () => {
     expect(await prisma.activityLog.count({ where: { type: "USER_DELETED", targetId: target.id } })).toBe(1);
     expect(await err(DELETE(req("DELETE"), ctx(admin.id)))).toEqual([403, "SELF_MODIFICATION"]);
     expect((await DELETE(req("DELETE"), ctx("inconnu"))).status).toBe(404);
+  });
+
+  it("supprimer un compte de rôle supérieur exige assign_top_role (STAFF_ADMIN 403, aucun effet)", async () => {
+    const [sa, ad] = [await makeStaff("SUPER_ADMIN"), await makeStaff("STAFF_ADMIN")];
+    await makeStaff("SUPER_ADMIN");
+    await actAs("STAFF_ADMIN");
+    expect(await err(DELETE(req("DELETE"), ctx(sa.id)))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(DELETE(req("DELETE"), ctx(ad.id)))).toEqual([403, "PERMISSION_DENIED"]);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: sa.id } })).archived).toBe(false);
+    await actAs("SUPER_ADMIN");
+    expect((await DELETE(req("DELETE"), ctx(ad.id))).status).toBe(204);
   });
 
   it("un SUPER_ADMIN avec un autre actif est archivé (204)", async () => {
