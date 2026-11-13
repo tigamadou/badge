@@ -39,7 +39,7 @@ contrôle) · [35 — impression pendant l'évènement](../specs/2026-11-01-35-v
 | 4 | Routes AGENT du poste sur place | [x] | 2026-11-13 | Controle d'appartenance dans onsite/_scope.ts (404 hors evenement/organisation/ADVANCE/brouillon). Les POST passent par le garde d'abonnement de withEventAuth (lookup inclus). |
 | 5 | Espace organisation : layout, `/select`, redirection, `OrgShell`, pages | [x] | 2026-11-13 | Menu Documentation conserve (org.read). src/components/layout/__tests__/space-shells.test.tsx adapte (teste OrgShell/EventShell). accessibleOrgIds/accessibleEventIds exportes de org-redirect (utilises par /select); l'orgId d'un evenement est inconnu du contexte: ajustements d'organisation ignores pour l'atterrissage. |
 | 6 | `EventShell` unique, layout et atterrissage | [x] | 2026-11-13 | EventShell unique, layout, atterrissage |
-| 7 | Pages d'évènement gardées, boutons par permission, tableau de bord | [ ] | | |
+| 7 | Pages d'évènement gardées, boutons par permission, tableau de bord | [x] | 2026-11-13 | pages evenement gardees |
 | 8 | Pages AGENT du poste sur place | [ ] | | |
 | 9 | Quantité automatique des accessoires (spec 39) | [ ] | | |
 | 10 | Documentation (spec 35, impression sur place, rôles et permissions) | [ ] | | |

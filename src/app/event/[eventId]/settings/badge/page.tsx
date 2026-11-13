@@ -1,16 +1,12 @@
-import { notFound, redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { hasEventPermission } from "@/lib/auth-helpers";
-import { loadUserContext } from "@/lib/user-context";
 import { listAvailableTemplates } from "@/lib/badge-templates/resolve";
 import { resolveBadgeTemplateId } from "@/lib/settings";
 import BadgeTemplatePicker, {
   type EffectiveLevel,
   type TemplateSummary,
 } from "@/components/admin/BadgeTemplatePicker";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../../_lib/page-access";
 import { findTemplateLock } from "@/lib/print-requests/template-lock-core";
 import { EVENT_IMAGE_SELECT, evaluateEventImages } from "@/lib/event-image-compliance";
 import { EventImageAlert } from "@/components/event/EventImageAlert";
@@ -23,22 +19,17 @@ export default async function EventBadgeSettingsPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const orgId = await getEventOrgId(eventId);
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    redirect(`/login?callbackUrl=/event/${eventId}/settings/badge`);
-  }
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
+  const { orgId } = await requireEventPagePermission(
+    eventId,
+    "event.settings.update",
+    `/event/${eventId}/settings/badge`,
+  );
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: { title: true, ...EVENT_IMAGE_SELECT },
   });
   if (!event || event.orgId !== orgId) notFound();
-  if (!hasEventPermission(ctx, eventId, orgId, "event.settings.update")) {
-    redirect(`/event/${eventId}`);
-  }
 
   const [organization, platform] = await Promise.all([
     prisma.organization.findUnique({

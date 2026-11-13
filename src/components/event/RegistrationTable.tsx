@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useTransition } from "react";
 import Link from "next/link";
+import type { Permission } from "@/lib/permissions";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CatPill, Tag } from "@/components/ui/Labels";
@@ -16,7 +17,15 @@ import { DEFAULT_PAGE_SIZE, parseListPage } from "@/lib/list-query";
 // difference explicite au lieu de la laisser implicite.
 type Row = Omit<RegistrationListDTO, "createdAt"> & { createdAt: string };
 
-export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: string }) {
+export function RegistrationTable({
+  orgId,
+  eventId,
+  permissions,
+}: {
+  orgId: string;
+  eventId: string;
+  permissions: Permission[];
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -115,15 +124,19 @@ export function RegistrationTable({ orgId, eventId }: { orgId: string; eventId: 
           Rafraîchir
         </Button>
         <div className="ml-auto flex gap-2">
-          <Button variant="secondary" onClick={exportCsv} className="flex items-center gap-1.5">
-            <Icon name="download" size={16} /> Exporter
-          </Button>
-          <Link
-            href={`/event/${eventId}/registrations/new`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
-          >
-            <Icon name="plus" size={16} /> Inscription
-          </Link>
+          {permissions.includes("registration.export") && (
+            <Button variant="secondary" onClick={exportCsv} className="flex items-center gap-1.5">
+              <Icon name="download" size={16} /> Exporter
+            </Button>
+          )}
+          {permissions.includes("registration.create") && (
+            <Link
+              href={`/event/${eventId}/registrations/new`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
+            >
+              <Icon name="plus" size={16} /> Inscription
+            </Link>
+          )}
         </div>
       </div>
 

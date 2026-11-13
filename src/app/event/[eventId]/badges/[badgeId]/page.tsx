@@ -1,16 +1,12 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { hasEventPermission } from "@/lib/auth-helpers";
-import { loadUserContext } from "@/lib/user-context";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BadgePrintActions } from "@/components/badge/BadgePrintActions";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { KeyValue } from "@/components/ui/JournalBlocks";
 import { CatPill } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../../_lib/page-access";
 
 export default async function BadgeDetailPage({
   params,
@@ -18,17 +14,8 @@ export default async function BadgeDetailPage({
   params: Promise<{ eventId: string; badgeId: string }>;
 }) {
   const { eventId, badgeId } = await params;
-  const orgId = await getEventOrgId(eventId);
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    redirect(`/login?callbackUrl=/event/${eventId}/badges/${badgeId}`);
-  }
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-  // Garde avant toute lecture d'inscription : le layout de l'evenement laisse passer tout role.
-  if (!hasEventPermission(ctx, eventId, orgId, "badge.print")) {
-    redirect(`/event/${eventId}`);
-  }
+  // Garde avant toute lecture d'inscription.
+  const { orgId } = await requireEventPagePermission(eventId, "badge.print", `/event/${eventId}/badges/${badgeId}`);
   const registration = await prisma.registration.findUnique({
     where: { id: badgeId },
     include: {

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { RegistrationForm } from "@/components/event/RegistrationForm";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../../_lib/page-access";
 
 export default async function NewRegistrationPage({
   params,
@@ -8,7 +8,11 @@ export default async function NewRegistrationPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const orgId = await getEventOrgId(eventId);
+  const { orgId } = await requireEventPagePermission(
+    eventId,
+    "registration.create",
+    `/event/${eventId}/registrations/new`,
+  );
   const categories = await prisma.category.findMany({
     where: { eventId },
     orderBy: { number: "asc" },

@@ -1,5 +1,5 @@
 import { QRScanner } from "@/components/event/QRScanner";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../_lib/page-access";
 
 export default async function ScanPage({
   params,
@@ -7,7 +7,7 @@ export default async function ScanPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const orgId = await getEventOrgId(eventId);
+  const { orgId } = await requireEventPagePermission(eventId, "scan.check-in", `/event/${eventId}/scan`);
   return (
     <div className="space-y-4">
       <div>

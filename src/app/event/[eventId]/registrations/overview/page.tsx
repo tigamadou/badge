@@ -1,13 +1,9 @@
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { loadUserContext } from "@/lib/user-context";
-import { effectiveEventRole } from "@/lib/auth-helpers";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { CatPill } from "@/components/ui/Labels";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../../_lib/page-access";
 
 type Props = {
   params: Promise<{ eventId: string }>;
@@ -17,21 +13,17 @@ type Props = {
 // Aucune donnee nominative -- juste des comptes par statut et par categorie.
 export default async function RegistrationsOverviewPage({ params }: Props) {
   const { eventId } = await params;
-  const orgId = await getEventOrgId(eventId);
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) notFound();
-
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) notFound();
+  const { orgId } = await requireEventPagePermission(
+    eventId,
+    "event.read.aggregated",
+    `/event/${eventId}/registrations/overview`,
+  );
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: { id: true, title: true, orgId: true },
   });
   if (!event || event.orgId !== orgId) notFound();
-
-  const role = effectiveEventRole(ctx, event.id, event.orgId);
-  if (!role) notFound();
 
   const [pending, approved, rejected, categories] = await Promise.all([
     prisma.registration.count({ where: { eventId, status: "PENDING" } }),
