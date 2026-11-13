@@ -186,6 +186,26 @@ describe("setOrganizerProducts — refus", () => {
     });
   });
 
+  it("accessoire dont minQuantity dépasse le nombre de badges, quantité envoyée ignorée : BELOW_MIN_QUANTITY (comportement actuel, à arbitrer (spec 39))", async () => {
+    const r = await requestWithBadges("DRAFT", 3);
+    await prisma.printProduct.update({ where: { id: fx.lanyard.id }, data: { minQuantity: 5 } });
+    expect(await reject(set(r.id, [badge(), lanyard({ quantity: 50 })]))).toMatchObject({
+      code: "BELOW_MIN_QUANTITY", status: 400, details: { productId: fx.lanyard.id, minQuantity: 5 },
+    });
+    expect(await lines(r.id)).toHaveLength(0);
+  });
+
+  it("commande existante : badges retirés sous le minQuantity de l'accessoire puis réenregistrement -> BELOW_MIN_QUANTITY (comportement actuel, à arbitrer (spec 39))", async () => {
+    const r = await requestWithBadges("DRAFT", 5);
+    await prisma.printProduct.update({ where: { id: fx.lanyard.id }, data: { minQuantity: 5 } });
+    await set(r.id, [badge(), lanyard()]);
+    await prisma.printRequestItem.deleteMany({ where: { requestId: r.id, position: { gte: 3 } } });
+    expect(await reject(set(r.id, [badge(), lanyard()]))).toMatchObject({
+      code: "BELOW_MIN_QUANTITY", status: 400, details: { productId: fx.lanyard.id, minQuantity: 5 },
+    });
+    expect((await lines(r.id)).find((l) => l.label === "Cordon")?.quantity).toBe(5);
+  });
+
   it("choiceFailureToError : les trois familles de codes", () => {
     const product = { id: "p", minQuantity: 4 };
     expect(choiceFailureToError(product, { ok: false, code: "PRODUCT_UNAVAILABLE" }).code).toBe("PRODUCT_UNAVAILABLE");
