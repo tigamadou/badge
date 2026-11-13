@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { makePng, putTestImage } from "@/test/factories-2a";
+import { makeUser } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -288,7 +289,7 @@ describe("PUT /api/account/profile", () => {
     expect(json.code).toBe("DOCUMENT_BLOCKED");
   });
 
-  it("returns 404 when the session user no longer exists in DB", async () => {
+  it("returns 401 when the session user no longer exists in DB", async () => {
     await withSession({
       id: "ghost-user-id-put",
       email: "ghost-put@v2-11-profile.test",
@@ -298,9 +299,24 @@ describe("PUT /api/account/profile", () => {
 
     const { PUT } = await import("@/app/api/account/profile/route");
     const res = await PUT(makeReq({ firstName: "X" }, "PUT"));
+    expect(res.status).toBe(401);
+    expect((await res.json()).code).toBe("NOT_AUTHENTICATED");
+  });
+
+  it("returns 404 when the profile row disappears after the permission check", async () => {
+    const u = await makeUser();
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    // L'utilisateur de session existe pour le garde ; seule la relecture du profil le perd.
+    const realFindUnique = prisma.user.findUnique.bind(prisma.user);
+    vi.spyOn(prisma.user, "findUnique").mockImplementation(((args: { select?: Record<string, unknown> }) =>
+      args?.select && !("id" in args.select) && "firstName" in args.select
+        ? Promise.resolve(null)
+        : realFindUnique(args as never)) as never);
+    const { PUT } = await import("@/app/api/account/profile/route");
+    const res = await PUT(makeReq({ firstName: "X" }, "PUT"));
+    vi.restoreAllMocks();
     expect(res.status).toBe(404);
-    const json = await res.json();
-    expect(json.code).toBe("NOT_FOUND");
+    expect((await res.json()).code).toBe("NOT_FOUND");
   });
 
   it("cree une soumission de profil quand les pieces deviennent completes", async () => {

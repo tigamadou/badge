@@ -88,7 +88,7 @@ describe("POST /api/org/[orgId]/events/[eventId]/members", () => {
     expect((await post({ email: "z@test.fr", role: "VIEWER" })).status).toBe(400);
     expect((await post({ email: "pas-un-mail", roleId: "r" })).status).toBe(400);
     expect((await POST(new NextRequest(url, { method: "POST", body: "{x", headers: { "content-type": "application/json" } }), ctx)).status).toBe(400);
-    const foreign = await makeCustomRole({ scope: "EVENT", orgId: (await makeOrg()).id, permissions: ["event.read"] });
+    const foreign = await makeCustomRole({ scope: "EVENT", orgId: (await makeOrg()).id, permissions: ["event.read.aggregated"] });
     expect((await post({ email: "z@test.fr", roleId: "inconnu" })).status).toBe(404);
     expect((await post({ email: "z@test.fr", roleId: foreign.id })).status).toBe(404);
     expect((await post({ email: "z@test.fr", roleId: await role("MANAGER") })).status).toBe(400);
@@ -142,14 +142,14 @@ describe("POST /api/org/[orgId]/events/[eventId]/members", () => {
 
   it("anti-escalade : un rôle d'évènement personnalisé ne donne que ce qu'il détient ; un rôle personnalisé de l'organisation est attribuable", async () => {
     const { org, event, ctx, url, membershipOf } = await setup();
-    const limited = await makeCustomRole({ scope: "EVENT", orgId: org.id, name: "Gère les membres", permissions: ["event.members.manage", "event.read"] });
+    const limited = await makeCustomRole({ scope: "EVENT", orgId: org.id, name: "Gère les membres", permissions: ["event.members.manage", "event.read.aggregated"] });
     const actor = await makeUser();
     await prisma.eventMembership.create({ data: { userId: actor.id, eventId: event.id, roleId: limited.id } });
     as(actor);
     const denied = await POST(req("POST", url, { email: "a@test.fr", roleId: await role("ADMIN") }), ctx);
     expect(denied.status).toBe(403);
     expect((await denied.json()).error).toBe("PERMISSION_NOT_HELD");
-    const small = await makeCustomRole({ scope: "EVENT", orgId: org.id, name: "Petit", permissions: ["event.read"] });
+    const small = await makeCustomRole({ scope: "EVENT", orgId: org.id, name: "Petit", permissions: ["event.read.aggregated"] });
     expect((await POST(req("POST", url, { email: "b@test.fr", roleId: small.id }), ctx)).status).toBe(201);
     const created = await prisma.user.findUniqueOrThrow({ where: { email: "b@test.fr" } });
     const m = await membershipOf(created.id);
@@ -197,7 +197,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/members/[membershipId]", () =>
     expect(after.role).toBe("OPERATOR");
     const log = await prisma.activityLog.findFirstOrThrow({ where: { type: "MEMBERSHIP_ROLE_CHANGED", targetId: target.id } });
     expect(log.details).toMatchObject({ from: "VIEWER", to: "OPERATOR", scope: "event" });
-    const foreign = await makeCustomRole({ scope: "EVENT", orgId: (await makeOrg()).id, permissions: ["event.read"] });
+    const foreign = await makeCustomRole({ scope: "EVENT", orgId: (await makeOrg()).id, permissions: ["event.read.aggregated"] });
     expect((await PATCH(req("PATCH", `${url}/${m.id}`, { roleId: foreign.id }), mctx(m.id))).status).toBe(404);
   });
 
@@ -221,7 +221,7 @@ describe("PATCH /api/org/[orgId]/events/[eventId]/members/[membershipId]", () =>
 
   it("anti-escalade : refuse un rôle que l'acteur ne détient pas", async () => {
     const { org, event, mctx, membershipOf, url } = await setup();
-    const limited = await makeCustomRole({ scope: "EVENT", orgId: org.id, permissions: ["event.members.manage", "event.read"] });
+    const limited = await makeCustomRole({ scope: "EVENT", orgId: org.id, permissions: ["event.members.manage", "event.read.aggregated"] });
     const actor = await makeUser();
     await prisma.eventMembership.create({ data: { userId: actor.id, eventId: event.id, roleId: limited.id } });
     const target = await makeEventMember(event.id, "VIEWER");
