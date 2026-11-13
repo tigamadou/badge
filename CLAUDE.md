@@ -83,6 +83,46 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
 ---
 
+## Documentation des pages
+
+Chaque page des espaces connectés (`/platform`, `/org/[orgId]`, `/event/[eventId]`, `/account`)
+a une doc dans `src/content/page-docs/<espace>/<chemin>.md`, affichée par le bouton « ? » et
+dans la section Documentation de l'espace. **Tu la tiens à jour dans le même changement que le
+code.**
+
+**Quand**
+- Tu modifies une page, ou un composant qu'elle utilise (`src/app/**`, `src/components/**`) :
+  mets sa doc à jour (option ajoutée, retirée ou modifiée, comportement changé).
+- Nouvelle page → nouvelle doc. Page supprimée → doc supprimée.
+- Refactor sans effet visible : ne change pas le texte, re-tamponne seulement.
+
+**Comment**
+1. Lis la page et ses composants (`make docs-check` liste les docs manquantes, obsolètes et
+   orphelines, avec le chemin attendu du fichier et les sources).
+2. Rédige ou corrige le corps du fichier ; ne touche jamais à la main `sources`, `sourceHash`,
+   `updatedAt` ni aux fichiers `*.generated.ts`.
+3. `make docs-stamp PAGES="<id> …"` (id de doc, route, espace ou `all`).
+4. `make docs-check` doit être vert avant tout commit.
+
+**Format** : frontmatter `route`, `title`, `audience` (`organisateur` | `staff` |
+`participant`), `access` (clé de permission exigée par la garde de la page, si elle en a une),
+puis le corps :
+- « À quoi sert cet écran » ;
+- une section par bloc de l'écran, avec chaque option expliquée (effet, valeur par défaut,
+  contraintes, conséquences) ;
+- « Questions fréquentes » seulement si utile.
+- Une section qui n'a de sens qu'avec une permission se place entre `:::permission <clé>` et
+  `:::` (clé du catalogue `src/lib/permissions/catalog.ts`, de la **portée de l'espace** :
+  `/platform` (y compris `/platform/organizations/[orgId]/…`) → clés PLATFORM ; `/org` → ORG ;
+  `/event` → EVENT ; `/account` → PARTICIPANT ; pas de blocs imbriqués).
+
+**Rédaction** : français avec accents, vouvoiement, ton du guide utilisateur ; public =
+organisateurs et staff ; n'explique que ce que l'écran montre, avec les libellés exacts de
+l'interface ; ne rien inventer ; jamais de secret, de jeton, ni de donnée personnelle réelle
+(exemples fictifs seulement).
+
+---
+
 ## Conventions de langue
 
 | Type de contenu | Langue | Accents |
@@ -142,7 +182,7 @@ environnement d'agent (`scripts/agent-stack.sh`), en respectant les règles de t
 ## Workflow Git — valeurs projet
 
 - **Branche principale** : `development`
-- **Avant tout commit** : `make lint && make typecheck && make test`
+- **Avant tout commit** : `make lint && make typecheck && make test` ; `make docs-check` (inclus dans `make lint`) pour les docs des pages
 - Messages de commit en **français ASCII**, style conventional commits.
 
 Le reste des règles git (pas d'initiative de commit, pas de co-auteur IA, interdits) vit dans `CLAUDE.template.md`.
