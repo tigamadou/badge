@@ -11,10 +11,13 @@ import type { RoleRow } from "./types";
 type Props = {
   roles: RoleRow[];
   apiBase: string;
-  editHref: (id: string) => string;
-  duplicateHref?: (id: string) => string;
+  /** Modèles d'URL contenant `:id` (une fonction ne peut pas passer d'un Server Component à ce composant client). */
+  editHref: string;
+  duplicateHref?: string;
   canManage: boolean;
 };
+
+const hrefOf = (pattern: string, id: string) => pattern.replace(":id", id);
 
 function RoleActions({ role, apiBase, editHref, duplicateHref, canManage }: Props & { role: RoleRow }) {
   const router = useRouter();
@@ -33,14 +36,14 @@ function RoleActions({ role, apiBase, editHref, duplicateHref, canManage }: Prop
   return (
     <div className="flex flex-wrap items-center gap-3">
       {duplicateHref ? (
-        <Link href={duplicateHref(role.id)} className="text-[13px] font-medium text-navy hover:underline">
+        <Link href={hrefOf(duplicateHref, role.id)} className="text-[13px] font-medium text-navy hover:underline">
           Dupliquer
         </Link>
       ) : null}
       {canManage && role.systemKey === null ? (
         <>
           {!role.archived ? (
-            <Link href={editHref(role.id)} className="text-[13px] font-medium text-navy hover:underline">
+            <Link href={hrefOf(editHref, role.id)} className="text-[13px] font-medium text-navy hover:underline">
               Modifier
             </Link>
           ) : null}
@@ -70,7 +73,7 @@ export function RoleTable(props: Props) {
               {role.archived ? (
                 <span className="break-words text-sm font-semibold text-navy">{role.name}</span>
               ) : (
-                <Link href={editHref(role.id)} className="break-words text-sm font-semibold text-navy hover:underline">
+                <Link href={hrefOf(editHref, role.id)} className="break-words text-sm font-semibold text-navy hover:underline">
                   {role.name}
                 </Link>
               )}

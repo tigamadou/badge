@@ -77,7 +77,7 @@ describe("RoleTable", () => {
 
   it("pastille Système, compteurs, liens et actions", () => {
     const html = renderToStaticMarkup(
-      <RoleTable roles={[base, sys, archived]} apiBase="/api/org/o/roles" editHref={(id) => `/e/${id}`} duplicateHref={(id) => `/d/${id}`} canManage />,
+      <RoleTable roles={[base, sys, archived]} apiBase="/api/org/o/roles" editHref="/e/:id" duplicateHref="/d/:id" canManage />,
     );
     expect(html).toContain("Système");
     expect(html).toContain("2 membres");
@@ -95,7 +95,7 @@ describe("RoleTable", () => {
 
   it("sans droit de gestion ni duplication : aucune action", () => {
     const html = renderToStaticMarkup(
-      <RoleTable roles={[base]} apiBase="/x" editHref={(id) => `/e/${id}`} canManage={false} />,
+      <RoleTable roles={[base]} apiBase="/x" editHref="/e/:id" canManage={false} />,
     );
     expect(html).not.toContain("Archiver");
     expect(html).not.toContain("Dupliquer");
