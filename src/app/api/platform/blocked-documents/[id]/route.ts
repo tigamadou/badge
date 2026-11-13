@@ -22,5 +22,5 @@ export const DELETE = withStaffAuth(
     });
     return new NextResponse(null, { status: 204 });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "blocklist.manage" },
 );

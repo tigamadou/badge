@@ -4,22 +4,14 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff } from "@/test/factories";
 
 function stamp() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 async function seedSuperAdmin() {
-  const u = await prisma.user.create({
-    data: {
-      email: `sa-orgdel-${stamp()}@x.test`,
-      password: "x",
-      name: "SA",
-      emailVerifiedAt: new Date(),
-      isStaff: true,
-      staffRole: "SUPER_ADMIN",
-    },
-  });
+  const u = await makeStaff("SUPER_ADMIN", { emailVerifiedAt: new Date() });
   vi.mocked(getServerSession).mockResolvedValue({
     user: { id: u.id, email: u.email, name: u.name, isStaff: true },
   } as never);

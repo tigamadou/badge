@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
 
 import { prisma } from "@/lib/prisma";
 import { resolveOrgLimits } from "@/lib/subscription";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { StatCard, StatGrid } from "@/components/ui/StatCard";
 import { QuotaBar } from "@/components/ui/QuotaBar";
@@ -20,9 +18,10 @@ export default async function OrgDetailPage({
 }) {
   const { orgId } = await params;
 
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const canDelete = ctx?.staffRole === "SUPER_ADMIN";
+  const { permissions } = await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}`);
+  const canArchive = permissions.has("organizations.archive");
+  const canDelete = permissions.has("organizations.delete");
+  const canManageSubscription = permissions.has("subscriptions.update");
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
@@ -47,7 +46,7 @@ export default async function OrgDetailPage({
         select: { status: true, endDate: true, plan: { select: { name: true, period: true } } },
       },
       memberships: {
-        where: { role: "OWNER" },
+        where: { OR: [{ roleRef: { systemKey: "OWNER" } }, { roleId: null, role: "OWNER" }] },
         select: {
           user: { select: { id: true, name: true, email: true } },
         },
@@ -102,7 +101,7 @@ export default async function OrgDetailPage({
               href={`/platform/organizations/${org.id}/subscription`}
               className="text-[13px] font-medium text-navy hover:underline"
             >
-              Gérer
+              {canManageSubscription ? "Gérer" : "Voir"}
             </Link>
           }
         />
@@ -187,7 +186,11 @@ export default async function OrgDetailPage({
         </CardBody>
       </Card>
 
-      <OrgDetailActions org={{ id: org.id, slug: org.slug, archived: org.archived }} canDelete={canDelete} />
+      <OrgDetailActions
+        org={{ id: org.id, slug: org.slug, archived: org.archived }}
+        canArchive={canArchive}
+        canDelete={canDelete}
+      />
     </div>
   );
 }

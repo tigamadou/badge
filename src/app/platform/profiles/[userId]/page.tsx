@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
 import { ProfileReviewPanel } from "@/components/staff/ProfileReviewPanel";
@@ -12,6 +11,7 @@ export default async function PlatformProfileDetailPage({
   params: Promise<{ userId: string }>;
 }) {
   const { userId } = await params;
+  const { permissions } = await requirePlatformPage("profiles.read", `/platform/profiles/${userId}`);
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -30,13 +30,8 @@ export default async function PlatformProfileDetailPage({
   });
   if (!user || user.isStaff) notFound();
 
-  // v4 (plan 08) : la decision est reservee STAFF_SUPPORT et au-dessus.
-  const session = await getServerSession(authOptions);
-  const me = session?.user?.id
-    ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { staffRole: true } })
-    : null;
-  const canDecide =
-    me?.staffRole === "SUPER_ADMIN" || me?.staffRole === "STAFF_ADMIN" || me?.staffRole === "STAFF_SUPPORT";
+  // La décision relève de `profiles.review` (clé de la route approve/reject).
+  const canDecide = permissions.has("profiles.review");
 
   const submissions = await prisma.profileSubmission.findMany({
     where: { userId },

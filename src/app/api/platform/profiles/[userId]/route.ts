@@ -44,4 +44,4 @@ export const GET = withStaffAuth<Params>(async (_req, _ctx, extra) => {
   });
 
   return NextResponse.json({ user, submissions });
-});
+}, { permission: "profiles.read" });

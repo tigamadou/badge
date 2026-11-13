@@ -26,5 +26,5 @@ export const POST = withStaffAuth<{ orgId: string }>(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "organizations.archive" },
 );

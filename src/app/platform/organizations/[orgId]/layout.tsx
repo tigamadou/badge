@@ -1,9 +1,6 @@
-import { notFound, redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth-guards";
-import { AuthError } from "@/lib/auth-guards";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { PlatformOrgShell } from "@/components/platform/PlatformOrgShell";
 
 export default async function PlatformOrgLayout({
@@ -14,16 +11,7 @@ export default async function PlatformOrgLayout({
   children: React.ReactNode;
 }) {
   const { orgId } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/platform/organizations/${orgId}`);
-
-  // Defensif : le parent /platform impose deja le staff, mais on garantit le niveau ici.
-  try {
-    await requireStaff(session.user.id, "STAFF_OBSERVER");
-  } catch (e) {
-    if (e instanceof AuthError) redirect("/");
-    throw e;
-  }
+  await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}`);
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },

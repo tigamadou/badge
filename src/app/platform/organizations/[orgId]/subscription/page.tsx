@@ -5,6 +5,7 @@ import { SubscriptionForm } from "@/components/staff/SubscriptionForm";
 import { Icon } from "@/components/ui/Icon";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { PaymentHistory } from "@/components/admin/PaymentHistory";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-history";
 
 export default async function OrgSubscriptionPage({
@@ -13,6 +14,7 @@ export default async function OrgSubscriptionPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  const { permissions } = await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}/subscription`);
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: { id: true, name: true, subscription: true },
@@ -63,12 +65,15 @@ export default async function OrgSubscriptionPage({
       </Link>
       <div>
         <h1 className="text-xl font-semibold text-navy">Abonnement — {org.name}</h1>
-        <p className="mt-0.5 text-sm text-slate-400">Assigner un plan et gérer le statut de l&apos;abonnement</p>
+        <p className="mt-0.5 text-sm text-slate-400">{permissions.has("subscriptions.update")
+            ? "Assigner un plan et gérer le statut de l'abonnement"
+            : "Abonnement de l'organisation (lecture seule)"}</p>
       </div>
       <SubscriptionForm
         orgId={org.id}
         plans={plans}
         current={current}
+        canEdit={permissions.has("subscriptions.update")}
         scheduledPlanName={sub?.scheduledPlanId ? (scheduledPlan?.name ?? "—") : null}
       />
       <Card>

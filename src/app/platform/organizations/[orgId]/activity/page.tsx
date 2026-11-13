@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { prisma } from "@/lib/prisma";
 import { LogType } from "@/components/ui/JournalBlocks";
 import { logKind } from "@/app/platform/activity/page";
@@ -15,6 +16,7 @@ export default async function OrgActivitySupervisionPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
+  await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}/activity`);
   const list = parseListPage(await searchParams);
   const result = await paginate(
     list,

@@ -31,5 +31,5 @@ export const POST = withStaffAuth<Params>(
       throw err;
     }
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "profiles.review" },
 );
