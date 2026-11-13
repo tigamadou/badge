@@ -72,7 +72,7 @@ test.describe("Org — Acces a l'espace", () => {
 
   });
 
-  test("La nav est filtree par role (AUDITOR ne voit ni Membres ni Parametres)", async ({
+  test("La nav est filtree par role (AUDITOR voit Membres en lecture mais pas Parametres)", async ({
     page,
   }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "acc-nav" });
@@ -86,7 +86,7 @@ test.describe("Org — Acces a l'espace", () => {
     await page.goto(`/org/${orgId}`);
     const nav = page.getByRole("navigation").first();
     await expect(nav.getByRole("link", { name: /tableau de bord/i })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^membres$/i })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: /^membres$/i })).toBeVisible();
     await expect(nav.getByRole("link", { name: /^paramètres$/i })).toHaveCount(0);
   });
 

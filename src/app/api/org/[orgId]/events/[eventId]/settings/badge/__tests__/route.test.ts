@@ -21,9 +21,8 @@ vi.mock("@/lib/subscription-access", async () => {
 });
 import { getServerSession } from "next-auth";
 
-// Tests Plan v2-12 : PATCH event.badgeTemplateId. Permission event.settings.update
-// (ADMIN event uniquement). Route geree par withEventAuth + check explicite via
-// hasEventPermission.
+// Tests Plan v2-12 : PATCH event.badgeTemplateId. Permission event.settings.update,
+// portee par withEventAuth.
 
 type OrgRoleStr = "OWNER" | "MANAGER" | "AUDITOR";
 type EventRoleStr = "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER";
