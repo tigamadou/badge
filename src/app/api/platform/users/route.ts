@@ -147,6 +147,10 @@ export const POST = withStaffAuth(
           requested.push({ orgId, roleId: orgRoleId ?? (await systemRoleId(prisma, "OWNER")) });
         }
       }
+      // Rattacher un compte à une organisation (OWNER par défaut) relève de la gestion des membres d'organisation.
+      if (requested.length > 0 && !hasPermission(actor, "organizations.members.manage", platform)) {
+        return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
+      }
       const memberships: { orgId: string; role: RoleDTO }[] = [];
       for (const m of requested) {
         const org = await prisma.organization.findUnique({ where: { id: m.orgId }, select: { id: true } });

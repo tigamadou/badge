@@ -123,6 +123,19 @@ describe("POST /api/platform/users", () => {
     expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).inviteToken).toBeTruthy();
   });
 
+  it("STAFF_SUPPORT ne rattache pas un client à une organisation (403, rien créé) ; STAFF_ADMIN oui", async () => {
+    await actAs("STAFF_SUPPORT");
+    const org = await makeOrg();
+    const before = await prisma.user.count();
+    for (const body of [clientBody({ orgId: org.id }), clientBody({ orgMemberships: [{ orgId: org.id, roleId: await roleId("AGENT") }] })]) {
+      const res = await post(body);
+      expect([res.status, (await res.json()).error]).toEqual([403, "PERMISSION_DENIED"]);
+    }
+    expect(await prisma.user.count()).toBe(before);
+    await actAs("STAFF_ADMIN");
+    expect((await post(clientBody({ orgId: org.id }))).status).toBe(201);
+  });
+
   it("orgId sans orgRoleId : propriétaire par défaut ; plusieurs orgMemberships dont un rôle sans enum", async () => {
     await actAs("STAFF_ADMIN");
     const [a, b] = [await makeOrg(), await makeOrg()];
