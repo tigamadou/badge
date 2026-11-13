@@ -475,3 +475,21 @@ Boutons (le serveur exige la même permission) : `RegistrationTable` — « Expo
 2. **`effectivePermissions`** n'applique le rôle plateforme que si `ctx.isStaff` (invariant `isStaff = platformRoleId != null`). Le résolveur ignore les clés `reserved` d'un rôle non système ou d'un ajustement, et un `roleRef` de niveau incompatible avec la place de la membership.
 3. Les quatre routes de changement de rôle (`platform/users/[userId]`, `org/[orgId]/members/[userId]`, `org/[orgId]/events/[eventId]/members/[membershipId]`, `platform/organizations/[orgId]/owners`) écrivent désormais `roleId` / `platformRoleId` en plus de la colonne d'enum (marqueur `@deprecated compat`). Le lot qui les reprend conserve cette double écriture jusqu'au plan 3.
 4. `migrate-roles` ne migre que les comptes `isStaff = true`, n'écrit jamais `isStaff` et signale les lignes incohérentes (`isStaff = 0 AND staffRole IS NOT NULL`).
+5. **Spec 39 révisée (décision de l'utilisateur, 2026-11-13)** : la quantité d'un accessoire n'est
+   plus imposée mais **plafonnée** au nombre de badges. La Task 9 et le Step 5 de la Task 11
+   suivent la spec 39 révisée, qui prime sur leur texte :
+   - champ de quantité **modifiable** (plus de `quantityLocked` pour les accessoires), prérempli
+     au nombre de badges, `max` = nombre de badges, saisie supérieure ramenée au plafond, « Suivant »
+     bloqué tant qu'une quantité dépasse ;
+   - alerte « Quantité inférieure au nombre de badges de la commande (N). » sous l'accessoire quand
+     la quantité est inférieure (enregistrement possible) ;
+   - accessoire dont `minQuantity` dépasse le nombre de badges : case désactivée, mention
+     « Minimum de M, supérieur au nombre de badges (N) » ;
+   - retour à « Badges » / « Quantité » : la quantité égale à l'ancien nombre suit le nouveau, une
+     quantité supérieure au nouveau est ramenée, une quantité inférieure est conservée ;
+   - brouillon rouvert : `line.quantity` reprise, ramenée au plafond ;
+   - `productsPayload` envoie la quantité saisie ; le serveur (socle, déjà fait) refuse
+     `ACCESSORY_QUANTITY_ABOVE_BADGES` : afficher ce code comme une erreur de saisie.
+   - e2e : saisie supérieure ramenée au plafond, alerte visible pour une quantité inférieure,
+     quantité enregistrée en base, retrait d'un badge qui ramène une quantité au nouveau plafond.
+
