@@ -85,7 +85,7 @@ describe("cadre du seed de demo", () => {
       expect(() => ctx.storage.key("a\\b")).toThrow();
       await expect(ctx.storage.put("autre/x", Buffer.from("x"), "text/plain")).rejects.toThrow();
       expect(Object.keys(ctx.registry.staff).sort()).toEqual(
-        ["STAFF_ADMIN", "STAFF_OBSERVER", "STAFF_SUPPORT", "SUPER_ADMIN"],
+        ["STAFF_ADMIN", "STAFF_OBSERVER", "STAFF_PRINTER", "STAFF_SUPPORT", "SUPER_ADMIN"],
       );
       expect(ctx.registry.registrations.size).toBe(0);
       expect(ctx.passwordHash).toMatch(/^\$2[aby]\$12\$/);

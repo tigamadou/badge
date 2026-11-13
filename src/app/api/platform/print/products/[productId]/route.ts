@@ -34,7 +34,7 @@ export const PATCH = withStaffAuth<{ productId: string }>(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.catalog.manage" },
 );
 
 // Archivage logique : les commandes d'impression referencent les produits.
@@ -56,5 +56,5 @@ export const DELETE = withStaffAuth<{ productId: string }>(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.catalog.manage" },
 );

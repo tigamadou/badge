@@ -28,7 +28,7 @@ const IMAGE_COLUMNS = {
 } as const;
 const IMAGE_SLOTS: ImageSlot[] = ["logo", "banner"];
 
-export const GET = withEventAuth({ minRole: "OPERATOR", allowArchived: true }, async (_req, { eventId }) => {
+export const GET = withEventAuth({ permission: "event.read.detailed", allowArchived: true }, async (_req, { eventId }) => {
   // withEventAuth a deja garanti l'existence de l'event -> findUniqueOrThrow.
   const event = await prisma.event.findUniqueOrThrow({
     where: { id: eventId },
@@ -85,11 +85,16 @@ const patchSchema = z.object({
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
 });
 
-export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, async (req, { orgId, eventId, session }) => {
+export const PATCH = withEventAuth({ permission: ["event.update", "event.registration_toggle"], allowArchived: false }, async (req, { orgId, eventId, session, permissions }) => {
   const json = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "VALIDATION", issues: parsed.error.issues }, { status: 400 });
+  }
+  // La garde accepte l'une ou l'autre permission : chaque champ exige la sienne.
+  const otherFields = Object.keys(parsed.data).filter((k) => k !== "registrationOpen");
+  if (otherFields.length > 0 && !permissions.has("event.update")) {
+    return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
   }
 
   const before = await prisma.event.findUniqueOrThrow({
@@ -175,7 +180,13 @@ export const PATCH = withEventAuth({ minRole: "ADMIN", allowArchived: false }, a
       data.templateOptions = cleanedOptions;
     }
   }
-  if (parsed.data.registrationOpen !== undefined) data.registrationOpen = parsed.data.registrationOpen;
+  // Le formulaire renvoie toute la fiche : seul un changement réel exige event.registration_toggle.
+  if (parsed.data.registrationOpen !== undefined) {
+    if (parsed.data.registrationOpen !== before.registrationOpen && !permissions.has("event.registration_toggle")) {
+      return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
+    }
+    data.registrationOpen = parsed.data.registrationOpen;
+  }
   if (parsed.data.securityInstructions !== undefined) {
     const cleaned = cleanSecurityInstructions(parsed.data.securityInstructions);
     // Ecrit uniquement si la liste nettoyee differe de celle stockee.

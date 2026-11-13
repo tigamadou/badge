@@ -62,7 +62,7 @@ export const PATCH = withStaffAuth<{ layoutId: string }>(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.layouts.manage" },
 );
 
 // Archivage logique : jamais de suppression physique (les generations y font reference).
@@ -88,5 +88,5 @@ export const DELETE = withStaffAuth<{ layoutId: string }>(
     });
     return NextResponse.json({ layout });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.layouts.manage" },
 );

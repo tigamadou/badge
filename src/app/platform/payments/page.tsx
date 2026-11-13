@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "../page-guard";
 import { parseListPage } from "@/lib/list-query";
 import { listPayments, parsePaymentFilters } from "@/lib/payments-query";
 import { UrlPagination } from "@/components/ui/Pagination";
@@ -8,8 +9,9 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
-// Lecture seule pour tout rôle staff : le layout /platform impose déjà isStaff.
+// Lecture seule : `payments.read`.
 export default async function PlatformPaymentsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  await requirePlatformPage("payments.read", "/platform/payments");
   const sp = await searchParams;
   const filters = parsePaymentFilters(sp, { allowOrg: true });
   const { page, pageSize, skip, take } = parseListPage(sp);

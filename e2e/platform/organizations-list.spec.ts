@@ -18,7 +18,7 @@ test.describe("Platform — Organisations (liste)", () => {
 
   // --- Acces & rendu ------------------------------------------------------
 
-  test("STAFF_OBSERVER voit la liste et le lien de creation", async ({ page }) => {
+  test("STAFF_OBSERVER voit la liste sans lien de creation", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "porg-render" });
     const org = await getDb().organization.findUnique({ where: { id: orgId } });
     await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "porg-render-staff" });
@@ -26,6 +26,17 @@ test.describe("Platform — Organisations (liste)", () => {
     await page.goto("/platform/organizations");
     await expect(page.getByRole("heading", { name: /organisations/i }).first()).toBeVisible();
     await expect(page.getByText(org!.name)).toBeVisible();
+    await expect(page.getByRole("link", { name: /créer une organisation/i })).toHaveCount(0);
+  });
+
+  test("STAFF_SUPPORT ne voit pas le lien de creation, STAFF_ADMIN le voit", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "porg-create-support" });
+    await page.goto("/platform/organizations");
+    await expect(page.getByRole("heading", { name: /organisations/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /créer une organisation/i })).toHaveCount(0);
+
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "porg-create-admin" });
+    await page.goto("/platform/organizations");
     await expect(page.getByRole("link", { name: /créer une organisation/i })).toBeVisible();
   });
 

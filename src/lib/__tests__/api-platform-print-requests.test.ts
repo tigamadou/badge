@@ -97,25 +97,26 @@ async function withLine(status: "SUBMITTED" | "QUOTED" = "SUBMITTED") {
 }
 const lineBody = { kind: "SERVICE", label: "Livraison", quantity: 1, unitPrice: 500 };
 
-// Une entrée par frontière de route : (nom, appel, rôle minimal).
-type Route = { name: string; min: "ADMIN" | "SUPPORT" | "OBSERVER"; run: () => Promise<{ status: number; json: unknown }> };
+// Une entrée par frontière de route : (nom, appel, rôles autorisés d'après la spec 37).
+type StaffKey = "ADMIN" | "SUPPORT" | "PRINTER" | "OBSERVER";
+type Route = { name: string; allowed: StaffKey[]; run: () => Promise<{ status: number; json: unknown }> };
 async function routes(): Promise<Route[]> {
   const { r, line } = await withLine();
   const id = r.id;
   const u = `${BASE}/${id}`;
   return [
-    { name: "list", min: "OBSERVER", run: () => call(listGET, BASE, "GET", {}) },
-    { name: "detail", min: "OBSERVER", run: () => call(detailGET, u, "GET", { requestId: id }) },
-    { name: "messages GET", min: "OBSERVER", run: () => call(messagesGET, `${u}/messages`, "GET", { requestId: id }) },
-    { name: "messages POST", min: "SUPPORT", run: () => call(messagesPOST, `${u}/messages`, "POST", { requestId: id }, { body: "x" }) },
-    { name: "status", min: "SUPPORT", run: () => call(statusPOST, `${u}/status`, "POST", { requestId: id }, { to: "READY" }) },
-    { name: "reject", min: "SUPPORT", run: () => call(rejectPOST, `${u}/reject`, "POST", { requestId: id }, { reason: "Motif" }) },
-    { name: "reopen", min: "ADMIN", run: () => call(reopenPOST, `${u}/reopen`, "POST", { requestId: id }) },
-    { name: "lines POST", min: "ADMIN", run: () => call(linesPOST, `${u}/lines`, "POST", { requestId: id }, lineBody) },
-    { name: "line PATCH", min: "ADMIN", run: () => call(linePATCH, `${u}/lines/${line.id}`, "PATCH", { requestId: id, lineId: line.id }, { unitPrice: 5 }) },
-    { name: "line DELETE", min: "ADMIN", run: () => call(lineDELETE, `${u}/lines/${line.id}`, "DELETE", { requestId: id, lineId: line.id }) },
-    { name: "send-quote", min: "ADMIN", run: () => call(sendQuotePOST, `${u}/send-quote`, "POST", { requestId: id }) },
-    { name: "mark-paid", min: "ADMIN", run: () => call(markPaidPOST, `${u}/mark-paid`, "POST", { requestId: id }, { reason: "Virement" }) },
+    { name: "list", allowed: ["ADMIN", "PRINTER", "OBSERVER"], run: () => call(listGET, BASE, "GET", {}) },
+    { name: "detail", allowed: ["ADMIN", "PRINTER", "OBSERVER"], run: () => call(detailGET, u, "GET", { requestId: id }) },
+    { name: "messages GET", allowed: ["ADMIN", "PRINTER", "OBSERVER"], run: () => call(messagesGET, `${u}/messages`, "GET", { requestId: id }) },
+    { name: "messages POST", allowed: ["ADMIN", "PRINTER"], run: () => call(messagesPOST, `${u}/messages`, "POST", { requestId: id }, { body: "x" }) },
+    { name: "status", allowed: ["ADMIN", "PRINTER"], run: () => call(statusPOST, `${u}/status`, "POST", { requestId: id }, { to: "READY" }) },
+    { name: "reject", allowed: ["ADMIN", "PRINTER"], run: () => call(rejectPOST, `${u}/reject`, "POST", { requestId: id }, { reason: "Motif" }) },
+    { name: "reopen", allowed: ["ADMIN"], run: () => call(reopenPOST, `${u}/reopen`, "POST", { requestId: id }) },
+    { name: "lines POST", allowed: ["ADMIN"], run: () => call(linesPOST, `${u}/lines`, "POST", { requestId: id }, lineBody) },
+    { name: "line PATCH", allowed: ["ADMIN"], run: () => call(linePATCH, `${u}/lines/${line.id}`, "PATCH", { requestId: id, lineId: line.id }, { unitPrice: 5 }) },
+    { name: "line DELETE", allowed: ["ADMIN"], run: () => call(lineDELETE, `${u}/lines/${line.id}`, "DELETE", { requestId: id, lineId: line.id }) },
+    { name: "send-quote", allowed: ["ADMIN"], run: () => call(sendQuotePOST, `${u}/send-quote`, "POST", { requestId: id }) },
+    { name: "mark-paid", allowed: ["ADMIN"], run: () => call(markPaidPOST, `${u}/mark-paid`, "POST", { requestId: id }, { reason: "Virement" }) },
   ];
 }
 
@@ -129,14 +130,18 @@ describe("gardes de rôle, une par frontière de route", () => {
     }
   });
 
-  it("403 sous le rôle minimal, jamais 403 au rôle minimal", async () => {
-    const order = ["OBSERVER", "SUPPORT", "ADMIN"] as const;
-    const staff = { OBSERVER: fx.staffObserver, SUPPORT: fx.staffSupport, ADMIN: fx.staffAdmin };
+  it("403 hors des rôles autorisés, jamais 403 pour un rôle autorisé", async () => {
+    const staff = {
+      ADMIN: fx.staffAdmin,
+      SUPPORT: fx.staffSupport,
+      PRINTER: fx.staffPrinter,
+      OBSERVER: fx.staffObserver,
+    };
     for (const route of await routes()) {
-      for (const role of order) {
+      for (const role of Object.keys(staff) as StaffKey[]) {
         as(staff[role]);
         const { status } = await route.run();
-        const allowed = order.indexOf(role) >= order.indexOf(route.min);
+        const allowed = route.allowed.includes(role);
         if (allowed) expect(status, `${route.name} ${role}`).not.toBe(403);
         else expect(status, `${route.name} ${role}`).toBe(403);
       }
@@ -394,8 +399,8 @@ describe("envoi, réouverture, refus, statut", () => {
     expect(res).toMatchObject({ status: 409, json: { error: "PAYMENT_IN_PROGRESS" } });
   });
 
-  it("reject (STAFF_SUPPORT) : motif obligatoire, journal avec motif, notification", async () => {
-    as(fx.staffSupport);
+  it("reject (STAFF_PRINTER) : motif obligatoire, journal avec motif, notification", async () => {
+    as(fx.staffPrinter);
     const r = await makeRequest(fx);
     const bad = await call(rejectPOST, `${BASE}/${r.id}/reject`, "POST", { requestId: r.id }, {});
     expect(bad.status).toBe(400);
@@ -412,8 +417,8 @@ describe("envoi, réouverture, refus, statut", () => {
     expect(await prisma.notification.count({ where: { userId: fx.owner.id, type: "PRINT_REQUEST_STATUS_CHANGED" } })).toBe(1);
   });
 
-  it("status (STAFF_SUPPORT) : avance PAID -> IN_PRODUCTION, refuse une valeur ou transition invalide", async () => {
-    as(fx.staffSupport);
+  it("status (STAFF_PRINTER) : avance PAID -> IN_PRODUCTION, refuse une valeur ou transition invalide", async () => {
+    as(fx.staffPrinter);
     const r = await makeRequest(fx, { status: "PAID" });
     const res = await call(statusPOST, `${BASE}/${r.id}/status`, "POST", { requestId: r.id }, { to: "IN_PRODUCTION" });
     expect(res.json.request.status).toBe("IN_PRODUCTION");
@@ -497,7 +502,7 @@ describe("clôture d'une commande sur place (READY -> COMPLETED)", () => {
   });
 });
 
-describe("clôture sur place : STAFF_ADMIN et suites d'après commit", () => {
+describe("clôture sur place : droit onsite.complete et suites d'après commit", () => {
   const onsiteReady = async (printed: number) => {
     const r = await makeRequest(fx, { type: "ONSITE", status: "READY", estimatedQuantity: 200, marginPercent: 10 });
     await prisma.printQuoteLine.create({
@@ -513,9 +518,9 @@ describe("clôture sur place : STAFF_ADMIN et suites d'après commit", () => {
   };
   const complete = (id: string) => call(statusPOST, `${BASE}/${id}/status`, "POST", { requestId: id }, { to: "COMPLETED" });
 
-  it("COMPLETED sur une commande sur place : 403 STAFF_FORBIDDEN pour STAFF_SUPPORT, rien n'est écrit ; 200 pour STAFF_ADMIN", async () => {
+  it("COMPLETED sur une commande sur place : 403 STAFF_FORBIDDEN pour STAFF_PRINTER, rien n'est écrit ; 200 pour STAFF_ADMIN", async () => {
     const r = await onsiteReady(170);
-    as(fx.staffSupport);
+    as(fx.staffPrinter);
     expect(await complete(r.id)).toMatchObject({ status: 403, json: { error: "STAFF_FORBIDDEN" } });
     expect((await reload(r.id)).status).toBe("READY");
     expect(await prisma.orgPrintCredit.count({ where: { orgId: fx.org.id } })).toBe(0);
@@ -525,8 +530,8 @@ describe("clôture sur place : STAFF_ADMIN et suites d'après commit", () => {
     expect(done.json.request.status).toBe("COMPLETED");
   });
 
-  it("STAFF_SUPPORT garde les autres passages : IN_PRODUCTION sur place, COMPLETED en amont", async () => {
-    as(fx.staffSupport);
+  it("STAFF_PRINTER garde les autres passages : IN_PRODUCTION sur place, COMPLETED en amont", async () => {
+    as(fx.staffPrinter);
     const paid = await makeRequest(fx, { type: "ONSITE", status: "PAID" });
     expect((await call(statusPOST, `${BASE}/${paid.id}/status`, "POST", { requestId: paid.id }, { to: "IN_PRODUCTION" })).status).toBe(200);
     const advance = await makeRequest(fx, { type: "ADVANCE", status: "READY" });
@@ -715,12 +720,12 @@ describe("mark-paid", () => {
 
 describe("messages", () => {
   it("POST staff : 201, entrée du fil, notification aux admins de l'évènement et pas au staff", async () => {
-    as(fx.staffSupport);
+    as(fx.staffPrinter);
     const r = await makeRequest(fx);
     const res = await call(messagesPOST, `${BASE}/${r.id}/messages`, "POST", { requestId: r.id }, { body: "Bonjour" });
     expect(res.status).toBe(201);
     expect(res.json.entry).toMatchObject({
-      side: "STAFF", kind: "MESSAGE", body: "Bonjour", attachmentKey: null, authorName: "staffSupport",
+      side: "STAFF", kind: "MESSAGE", body: "Bonjour", attachmentKey: null, authorName: "staffPrinter",
     });
     expect(Date.parse(res.json.entry.createdAt)).not.toBeNaN();
     const notified = await prisma.notification.findMany({ where: { type: "PRINT_REQUEST_MESSAGE" } });
@@ -728,7 +733,7 @@ describe("messages", () => {
     expect(recipients).toContain(fx.owner.id);
     expect(recipients).toContain(fx.eventAdmin.id);
     expect(recipients).not.toContain(fx.staffAdmin.id);
-    expect(recipients).not.toContain(fx.staffSupport.id);
+    expect(recipients).not.toContain(fx.staffPrinter.id);
   });
 
   it("POST avec pièce jointe valide, clé invalide -> 400, corps absent -> 400", async () => {
@@ -766,7 +771,7 @@ describe("messages : polling, notes internes, lecture", () => {
     prisma.printRequestRead.findUnique({ where: { requestId_userId: { requestId, userId } } });
 
   it("GET ?after= : seulement les entrées strictement postérieures ; la lecture est enregistrée", async () => {
-    as(fx.staffSupport);
+    as(fx.staffPrinter);
     const r = await makeRequest(fx);
     const old = await prisma.printRequestMessage.create({
       data: { requestId: r.id, side: "ORGANIZER", kind: "MESSAGE", body: "Ancien", authorId: fx.owner.id, createdAt: new Date(Date.now() - 60_000) },
@@ -778,21 +783,21 @@ describe("messages : polling, notes internes, lecture", () => {
     const res = await call(messagesGET, `${messagesUrl(r.id)}?after=${old.createdAt.toISOString()}`, "GET", { requestId: r.id });
     expect(res.status).toBe(200);
     expect(res.json.entries.map((e: { body: string }) => e.body)).toEqual(["Récent"]);
-    const read = await readAt(r.id, fx.staffSupport.id);
+    const read = await readAt(r.id, fx.staffPrinter.id);
     expect(read!.lastReadAt.getTime()).toBeGreaterThanOrEqual(before - 1000);
   });
 
   it("GET : un message arrivé après l'instant de lecture reste non lu ; ses propres messages ne comptent pas", async () => {
-    as(fx.staffSupport);
+    as(fx.staffPrinter);
     const r = await makeRequest(fx);
     await call(messagesGET, messagesUrl(r.id), "GET", { requestId: r.id });
     await prisma.printRequestMessage.create({
       data: { requestId: r.id, side: "ORGANIZER", kind: "MESSAGE", body: "Après", authorId: fx.owner.id, createdAt: new Date(Date.now() + 5000) },
     });
     const { unreadByRequest } = await import("@/lib/print-requests/read-state");
-    expect((await unreadByRequest(fx.staffSupport.id, "STAFF", [r.id]))[r.id]).toBe(1);
+    expect((await unreadByRequest(fx.staffPrinter.id, "STAFF", [r.id]))[r.id]).toBe(1);
     await call(messagesPOST, messagesUrl(r.id), "POST", { requestId: r.id }, { body: "Moi" });
-    expect((await unreadByRequest(fx.staffSupport.id, "STAFF", [r.id]))[r.id]).toBe(1);
+    expect((await unreadByRequest(fx.staffPrinter.id, "STAFF", [r.id]))[r.id]).toBe(1);
   });
 
   it("GET : ?after= invalide -> 400 VALIDATION", async () => {
@@ -802,11 +807,11 @@ describe("messages : polling, notes internes, lecture", () => {
   });
 
   it("POST internal : entrée marquée interne, invisible côté organisateur, sans notification", async () => {
-    as(fx.staffSupport);
+    as(fx.staffPrinter);
     const r = await makeRequest(fx);
     const res = await call(messagesPOST, messagesUrl(r.id), "POST", { requestId: r.id }, { body: "Note", internal: true });
     expect(res.status).toBe(201);
-    expect(res.json.entry).toMatchObject({ body: "Note", internal: true, authorName: "staffSupport" });
+    expect(res.json.entry).toMatchObject({ body: "Note", internal: true, authorName: "staffPrinter" });
     const { listThread } = await import("@/lib/print-requests/thread");
     expect((await listThread(r.id, "ORGANIZER")).map((e) => e.body)).not.toContain("Note");
     expect((await listThread(r.id, "STAFF")).map((e) => e.body)).toContain("Note");
@@ -836,7 +841,7 @@ describe("erreurs inattendues et session sans nom", () => {
   it("message : auteur sans nom dans la session -> authorName null", async () => {
     const r = await makeRequest(fx);
     vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: fx.staffSupport.id, email: "s@x.test", isStaff: true },
+      user: { id: fx.staffPrinter.id, email: "s@x.test", isStaff: true },
     } as never);
     const res = await call(messagesPOST, `${BASE}/${r.id}/messages`, "POST", { requestId: r.id }, { body: "Salut" });
     expect(res.json.entry.authorName).toBeNull();

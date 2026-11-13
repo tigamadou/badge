@@ -1,37 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
-import type { EventRole } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { AuthError } from "@/lib/auth-guards";
+import { loadUserContext } from "@/lib/user-context";
 import {
-  AuthError,
-  requireEventRole,
-  requireEventPermission,
-  getEffectiveEventRole,
-} from "@/lib/auth-guards";
+  effectivePermissions,
+  eventTargetOf,
+  hasPermission,
+  isStaffActor,
+  permissionScopeOf,
+  type Permission,
+} from "@/lib/permissions";
 import { loadOrgAccess } from "@/lib/subscription-access";
 import { can } from "@/lib/subscription-rights";
-import type { EventPermission } from "@/lib/auth-helpers";
-import type { EffectiveEventRole } from "@/types/auth";
+import type { UserContext } from "@/types/auth";
 
 export type EventAuthCtx = {
+  session: Session;
   orgId: string;
   eventId: string;
-  effectiveRole: EffectiveEventRole;
-  session: Session;
+  event: {
+    id: string;
+    orgId: string;
+    archived: boolean;
+    registrationOpen: boolean;
+    date: Date;
+    endDate: Date | null;
+  };
+  /** Permissions effectives de l'utilisateur sur l'évènement. */
+  permissions: Set<Permission>;
+  /** Staff agissant sans appartenance à l'organisation ni à l'évènement. */
+  isStaffActor: boolean;
 };
 
 type RouteParams = { params: Promise<{ orgId: string; eventId: string }> };
 
-// Deux modes d'autorisation, exclusifs :
-//  - minRole    : hierarchie de roles (ADMIN > OPERATOR > PRINTER/VIEWER).
-//  - permission : permission atomique (EVENT_PERMISSION_ROLES). A privilegier
-//    quand un role "lateral" doit passer (ex. PRINTER sur badge.print, que la
-//    hierarchie minRole ne satisfait jamais).
+// `permission` : permission de niveau EVENT (ou liste, "au moins une"), resolue
+// sur les permissions effectives (role d'org + role d'evenement + ajustements).
 export type WithEventAuthOptions = {
-  minRole?: EventRole;
-  permission?: EventPermission;
+  permission: Permission | readonly Permission[];
   allowArchived?: boolean;
   requireRegistrationOpen?: boolean;
 };
@@ -42,6 +51,11 @@ export function withEventAuth(
   options: WithEventAuthOptions,
   handler: (req: NextRequest, ctx: EventAuthCtx, extra: RouteParams) => Promise<Response>,
 ) {
+  const required: readonly Permission[] =
+    typeof options.permission === "string" ? [options.permission] : options.permission;
+  if (required.some((p) => permissionScopeOf(p) !== "EVENT")) {
+    throw new Error("withEventAuth: la permission doit être de niveau EVENT");
+  }
   return async (req: NextRequest, params: RouteParams): Promise<Response> => {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -84,13 +98,17 @@ export function withEventAuth(
       );
     }
 
+    const target = eventTargetOf(event);
+    const loadCtx = async () => {
+      const loaded = await loadUserContext(session.user.id);
+      if (!loaded) throw new AuthError("NOT_AUTHENTICATED", 401);
+      return loaded;
+    };
+    let userCtx: UserContext;
     try {
-      if (options.permission) {
-        await requireEventPermission(session.user.id, eventId, options.permission);
-      } else if (options.minRole) {
-        await requireEventRole(session.user.id, eventId, options.minRole);
-      } else {
-        throw new Error("withEventAuth: minRole ou permission requis");
+      userCtx = await loadCtx();
+      if (!required.some((p) => hasPermission(userCtx, p, target))) {
+        throw new AuthError("PERMISSION_DENIED", 403);
       }
     } catch (err) {
       if (err instanceof AuthError) {
@@ -111,8 +129,17 @@ export function withEventAuth(
       }
     }
 
-    const effectiveRole = await getEffectiveEventRole(session.user.id, eventId);
-
-    return handler(req, { orgId, eventId, effectiveRole, session }, params);
+    return handler(
+      req,
+      {
+        session,
+        orgId,
+        eventId,
+        event,
+        permissions: effectivePermissions(userCtx, target),
+        isStaffActor: isStaffActor(userCtx, target),
+      },
+      params,
+    );
   };
 }

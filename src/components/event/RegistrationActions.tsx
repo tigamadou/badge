@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { ActionError } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import type { Permission } from "@/lib/permissions";
 
 type Reason = { id: string; label: string };
 
@@ -16,6 +17,7 @@ export function RegistrationActions({
   badgePrinted,
   profileApproved,
   reasons,
+  permissions,
   onChanged,
 }: {
   orgId: string;
@@ -25,8 +27,11 @@ export function RegistrationActions({
   badgePrinted: boolean;
   profileApproved: boolean;
   reasons: Reason[];
+  permissions: Permission[];
   onChanged: () => void;
 }) {
+  const canApprove = permissions.includes("registration.approve");
+  const canPrint = permissions.includes("badge.print");
   const [showReject, setShowReject] = useState(false);
   const [reasonId, setReasonId] = useState("");
   const [details, setDetails] = useState("");
@@ -82,7 +87,7 @@ export function RegistrationActions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {status === "PENDING" && (
+      {status === "PENDING" && canApprove && (
         <>
           <Button onClick={approve.run} loading={approve.pending} disabled={busy || !profileApproved} className="flex items-center gap-1.5">
             <Icon name="check" size={16} /> Approuver
@@ -98,7 +103,7 @@ export function RegistrationActions({
       {status === "APPROVED" && badgePrinted && (
         <span className="text-xs text-slate-500">Badge imprimé : cette inscription ne peut plus être rejetée.</span>
       )}
-      {status === "APPROVED" && (
+      {status === "APPROVED" && canPrint && (
         <Button onClick={print.run} loading={print.pending} disabled={busy} className="flex items-center gap-1.5">
           <Icon name="printer" size={16} /> Marquer imprimé
         </Button>

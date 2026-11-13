@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { getOrgAccess } from "@/lib/org-access";
 import { can } from "@/lib/subscription-rights";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,7 @@ export default async function NewEventPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  await requireOrgPagePermission(orgId, "org.events.create", `/org/${orgId}/events/new`);
   // Sans le droit de création, retour à la liste avant tout chargement.
   if (!can(await getOrgAccess(orgId), "CREATE_EVENT")) redirect(`/org/${orgId}/events`);
   const [templates, badgeTemplates, organization, platform] = await Promise.all([

@@ -24,31 +24,31 @@ function selectByLabel(page: Page, label: string) {
 
 // « Planches » ouvre la file « À traiter » ; la génération libre est son troisième onglet.
 async function openFreeGeneration(page: Page) {
-  await page.getByRole("link", { name: "Planches" }).click();
+  await page.getByRole("link", { name: "Planches", exact: true }).click();
   await expect(page).toHaveURL(/\/platform\/print\/sheets\/pending$/);
   await page.getByRole("link", { name: "Génération libre" }).click();
   await expect(page).toHaveURL(/\/platform\/print\/sheets\/free$/);
 }
 
 // Page Planches d'impression — /platform/print/sheets (sous-pages À traiter, Générées, Génération libre)
-// Rôle : STAFF_SUPPORT minimum (STAFF_OBSERVER redirigé). La génération est traitée par
-// le worker de dev avec le vrai moteur de rendu ; le fichier est servi par /api/files,
-// réservé au staff STAFF_SUPPORT+.
+// Rôles : STAFF_PRINTER et STAFF_ADMIN (`print.sheets.read`) ; STAFF_OBSERVER et STAFF_SUPPORT n'ont ni
+// l'entrée de menu ni l'accès direct. La génération est traitée par le worker de dev avec le vrai
+// moteur de rendu ; le fichier est servi par /api/files avec la même permission.
 test.describe("Platform — Planches d'impression", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
   });
 
-  test("STAFF_OBSERVER est redirigé vers le tableau de bord", async ({ page }) => {
+  test("L'observateur n'a pas l'entrée Planches et est redirigé en URL directe", async ({ page }) => {
     const observer = await createTestStaff({ scope: "sheets-observer", role: "STAFF_OBSERVER" });
     await loginAndEnter(page, observer, { kind: "platform" });
-    // L'entrée de nav est visible de tous les staffs : l'observateur est refusé à l'arrivée.
-    await page.getByRole("link", { name: "Planches" }).click();
+    await expect(page.getByRole("link", { name: "Planches", exact: true })).toHaveCount(0);
+    await page.goto("/platform/print/sheets/pending");
     await expect(page).toHaveURL(/\/platform$/);
   });
 
-  test("STAFF_SUPPORT génère les planches d'un évènement et télécharge le PDF", async ({ page }) => {
+  test("STAFF_PRINTER génère les planches d'un évènement et télécharge le PDF", async ({ page }) => {
     test.setTimeout(180_000);
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "sheets-gen" });
     const layout = await createTestPrintLayout({ scope: "sheets-gen" });
@@ -57,7 +57,7 @@ test.describe("Platform — Planches d'impression", () => {
       const u = await createTestUser({ scope: `sheets-gen-${i}`, verified: true, profile: true });
       await createTestRegistration({ eventId, userId: u.id, categoryId, status: "APPROVED" });
     }
-    const support = await createTestStaff({ scope: "sheets-support", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "sheets-support", role: "STAFF_PRINTER" });
 
     await loginAndEnter(page, support, { kind: "platform" });
     await openFreeGeneration(page);
@@ -121,10 +121,10 @@ test.describe("Platform — Planches d'impression", () => {
     });
     // Une commande sur place payée n'apparaît jamais dans les sous-pages.
     const onsite = await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "PAID", type: "ONSITE" });
-    const support = await createTestStaff({ scope: "sheets-order-support", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "sheets-order-support", role: "STAFF_PRINTER" });
 
     await loginAndEnter(page, support, { kind: "platform" });
-    await page.getByRole("link", { name: "Planches" }).click();
+    await page.getByRole("link", { name: "Planches", exact: true }).click();
     await expect(page).toHaveURL(/\/platform\/print\/sheets\/pending$/);
     const pendingRow = page.locator("tr", { hasText: request.reference });
     await expect(pendingRow).toContainText("Salon E2E");
@@ -137,6 +137,10 @@ test.describe("Platform — Planches d'impression", () => {
     await selectByLabel(page, "Gabarit").selectOption(layoutA.id);
     await dialog.getByRole("button", { name: "Générer" }).click();
     await expect(toast(page, "Génération lancée.")).toBeVisible();
+    // La commande reste dans « À traiter » avec l'état de sa génération, jusqu'à ce que la planche soit prête.
+    await expect(pendingRow).toContainText(/En attente…|Génération en cours…/);
+    await expect(pendingRow.getByRole("button", { name: "Regénérer" })).toBeDisabled();
+    await expect(toast(page, `Planche de ${request.reference} prête`)).toBeVisible({ timeout: 150_000 });
     await expect(pendingRow).toHaveCount(0);
 
     // Générées : la planche se termine, le PDF est téléchargeable.
@@ -165,8 +169,55 @@ test.describe("Platform — Planches d'impression", () => {
     expect(rows[0]).toMatchObject({ id: first.id, status: "DONE", layoutId: layoutB.id, fileKey: key });
   });
 
+  test("Une génération en cours reste dans « À traiter », prête puis passe dans « Générées »", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "sheets-live" });
+    const organizer = await createTestUser({ scope: "sheets-live-org", verified: true });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "PAID" });
+    const layout = await createTestPrintLayout({ scope: "sheets-live" });
+    // Le worker ne prend que les générations PENDING : une génération RUNNING posée en base reste en cours.
+    const generation = await getDb().printSheetGeneration.create({
+      data: { eventId, printRequestId: request.id, layoutId: layout.id, status: "RUNNING", registrationIds: [] },
+    });
+    const staff = await createTestStaff({ scope: "sheets-live-staff", role: "STAFF_PRINTER" });
+    await loginAndEnter(page, staff, { kind: "platform" });
+    await page.getByRole("link", { name: "Planches", exact: true }).click();
+
+    const row = page.locator("tr", { hasText: request.reference });
+    await expect(row).toContainText("Génération en cours…");
+    await expect(row.getByRole("button", { name: "Regénérer" })).toBeDisabled();
+
+    await getDb().printSheetGeneration.update({
+      where: { id: generation.id },
+      data: { status: "DONE", fileKey: `print-sheets/orders/${request.id}.pdf`, sheetCount: 1, completedAt: new Date() },
+    });
+    await expect(toast(page, `Planche de ${request.reference} prête`)).toBeVisible({ timeout: 15_000 });
+    await expect(row).toHaveCount(0);
+    await page.getByRole("link", { name: "Générées" }).click();
+    await expect(page.locator("tr", { hasText: request.reference })).toContainText("Prête");
+  });
+
+  test("Une génération en échec reste dans « À traiter » avec son message et un bouton Regénérer actif", async ({ page }) => {
+    const { orgId, eventId } = await createTestEvent({ scope: "sheets-failed" });
+    const organizer = await createTestUser({ scope: "sheets-failed-org", verified: true });
+    const request = await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "PAID" });
+    const layout = await createTestPrintLayout({ scope: "sheets-failed" });
+    await getDb().printSheetGeneration.create({
+      data: {
+        eventId, printRequestId: request.id, layoutId: layout.id, status: "FAILED", error: "Rendu impossible", registrationIds: [],
+      },
+    });
+    const staff = await createTestStaff({ scope: "sheets-failed-staff", role: "STAFF_PRINTER" });
+    await loginAndEnter(page, staff, { kind: "platform" });
+    await page.getByRole("link", { name: "Planches", exact: true }).click();
+
+    const row = page.locator("tr", { hasText: request.reference });
+    await expect(row).toContainText("Échec");
+    await expect(row).toContainText("Rendu impossible");
+    await expect(row.getByRole("button", { name: "Regénérer" })).toBeEnabled();
+  });
+
   test("Sans gabarit sélectionné ni badge, « Générer » reste désactivé", async ({ page }) => {
-    const support = await createTestStaff({ scope: "sheets-disabled", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "sheets-disabled", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openFreeGeneration(page);
     await expect(page.getByRole("button", { name: "Générer" })).toBeDisabled();

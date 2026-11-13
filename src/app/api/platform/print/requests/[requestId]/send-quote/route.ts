@@ -23,5 +23,5 @@ export const POST = withStaffAuth<{ requestId: string }>(
       await notifyPrintRequestQuoted(requestId, userId);
       return json({ request: requestDTO(request) });
     }),
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.requests.quote.send" },
 );

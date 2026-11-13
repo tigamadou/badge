@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { GET } from "@/app/api/files/[...path]/route";
 import { uploadFile, accountProfileKey } from "@/lib/storage";
+import { makeEventMember, makeStaff } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 
@@ -68,9 +69,7 @@ describe("GET /api/files — controle d'acces aux documents", () => {
 
   it("autorise le staff (200) a lire un document prive appartenant a un autre user", async () => {
     const owner = await prisma.user.create({ data: { email: "own2@x", password: "x", name: "Own2" } });
-    const staff = await prisma.user.create({
-      data: { email: "staff@x", password: "x", name: "Staff", isStaff: true, staffRole: "STAFF_ADMIN" },
-    });
+    const staff = await makeStaff("STAFF_ADMIN");
     const key = accountProfileKey(owner.id, "document", "d2.pdf");
     await uploadFile(key, Buffer.from("pdf"), "application/pdf");
 
@@ -90,8 +89,7 @@ describe("GET /api/files — controle d'acces aux documents", () => {
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: "ev-files-admin", location: "L", date: new Date() },
     });
-    const admin = await prisma.user.create({ data: { email: "admin@x", password: "x", name: "Admin" } });
-    await prisma.eventMembership.create({ data: { userId: admin.id, eventId: event.id, role: "ADMIN" } });
+    const admin = await makeEventMember(event.id, "ADMIN");
 
     const key = `events/${event.id}/idDocuments/d.pdf`;
     await uploadFile(key, Buffer.from("pdf"), "application/pdf");
@@ -105,8 +103,7 @@ describe("GET /api/files — controle d'acces aux documents", () => {
     const event = await prisma.event.create({
       data: { orgId: org.id, title: "E", slug: "ev-files-viewer", location: "L", date: new Date() },
     });
-    const viewer = await prisma.user.create({ data: { email: "viewer@x", password: "x", name: "Viewer" } });
-    await prisma.eventMembership.create({ data: { userId: viewer.id, eventId: event.id, role: "VIEWER" } });
+    const viewer = await makeEventMember(event.id, "VIEWER");
 
     const key = `events/${event.id}/idDocuments/d.pdf`;
     await uploadFile(key, Buffer.from("pdf"), "application/pdf");
@@ -139,20 +136,19 @@ describe("GET /api/files — controle d'acces aux documents", () => {
     vi.mocked(getServerSession).mockResolvedValue({ user: { id: plain.id } } as never);
     expect((await GET(req(), ctx(key))).status).toBe(403);
 
-    const observer = await prisma.user.create({
-      data: { email: "ps-obs@x", password: "x", name: "O", isStaff: true, staffRole: "STAFF_OBSERVER" },
-    });
+    const observer = await makeStaff("STAFF_OBSERVER");
     vi.mocked(getServerSession).mockResolvedValue({ user: { id: observer.id } } as never);
     expect((await GET(req(), ctx(key))).status).toBe(403);
   });
 
-  it("print-sheets/ : 200 private no-store pour STAFF_SUPPORT", async () => {
+  it("print-sheets/ : 200 private no-store pour STAFF_PRINTER, 403 pour STAFF_SUPPORT", async () => {
     const key = "print-sheets/gen-2.pdf";
     await uploadFile(key, Buffer.from("pdf"), "application/pdf");
-    const support = await prisma.user.create({
-      data: { email: "ps-sup@x", password: "x", name: "S", isStaff: true, staffRole: "STAFF_SUPPORT" },
-    });
+    const support = await makeStaff("STAFF_SUPPORT");
     vi.mocked(getServerSession).mockResolvedValue({ user: { id: support.id } } as never);
+    expect((await GET(req(), ctx(key))).status).toBe(403);
+    const printer = await makeStaff("STAFF_PRINTER");
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: printer.id } } as never);
     const res = await GET(req(), ctx(key));
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");

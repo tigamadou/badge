@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/Feedback";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { RegistrationActions } from "./RegistrationActions";
+import type { Permission } from "@/lib/permissions";
 
 type Reg = {
   id: string;
@@ -42,12 +43,15 @@ export function RegistrationDetailPanel({
   eventId,
   registration,
   rejectionReasons,
+  permissions,
 }: {
   orgId: string;
   eventId: string;
   registration: Reg;
   rejectionReasons: { id: string; label: string }[];
+  permissions: Permission[];
 }) {
+  const can = (p: Permission) => permissions.includes(p);
   const router = useRouter();
   const [navigating, setNavigating] = useState(false);
   const r = registration;
@@ -132,6 +136,7 @@ export function RegistrationDetailPanel({
             badgePrinted={r.badgePrinted}
             profileApproved={r.profileStatus === "APPROVED"}
             reasons={rejectionReasons}
+            permissions={permissions}
             onChanged={() => router.refresh()}
           />
         </CardBody>
@@ -156,6 +161,7 @@ export function RegistrationDetailPanel({
         <CardHead title="Actions avancées" />
         <CardBody>
           <div className="flex flex-wrap gap-2">
+{can("registration.all_access") && (
             <ActionButton
               variant="secondary"
               disabled={navigating}
@@ -166,9 +172,13 @@ export function RegistrationDetailPanel({
             >
               {r.allAccessGranted ? "Retirer ALL ACCESS" : "Activer ALL ACCESS"}
             </ActionButton>
+)}
+{can("badge.print") && (
             <Link href={`/event/${eventId}/badges/${r.id}`}>
               <Button variant="secondary">Voir le badge</Button>
             </Link>
+)}
+{can("registration.block") && (
             <ActionButton
               variant="secondary"
               disabled={navigating}
@@ -179,6 +189,8 @@ export function RegistrationDetailPanel({
             >
               Bloquer cet e-mail
             </ActionButton>
+)}
+{can("registration.block") && (
             <ActionButton
               variant="secondary"
               disabled={navigating}
@@ -189,6 +201,8 @@ export function RegistrationDetailPanel({
             >
               Bloquer ce document
             </ActionButton>
+)}
+{can("registration.delete") && (
             <Button
               variant="danger"
               loading={remove.pending || navigating}
@@ -199,6 +213,7 @@ export function RegistrationDetailPanel({
             >
               Supprimer
             </Button>
+)}
           </div>
         </CardBody>
       </Card>

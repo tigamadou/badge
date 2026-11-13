@@ -1,9 +1,6 @@
-import { notFound, redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { hasOrgRole } from "@/lib/auth-helpers";
-import { loadUserContext } from "@/lib/user-context";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { listAvailableTemplates } from "@/lib/badge-templates/resolve";
 import { resolveBadgeTemplateId } from "@/lib/settings";
 import BadgeTemplatePicker, {
@@ -19,15 +16,7 @@ export default async function OrgBadgeSettingsPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    redirect(`/login?callbackUrl=/org/${orgId}/settings/badge`);
-  }
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-  if (!hasOrgRole(ctx, orgId, "MANAGER")) {
-    redirect(`/org/${orgId}`);
-  }
+  await requireOrgPagePermission(orgId, "org.badge_settings.update", `/org/${orgId}/settings/badge`);
 
   const organization = await prisma.organization.findUnique({
     where: { id: orgId },

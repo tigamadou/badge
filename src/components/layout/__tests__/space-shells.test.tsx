@@ -11,12 +11,14 @@ vi.mock("@/components/notifications/NotificationBell", () => ({
   ),
 }));
 
+vi.mock("@/components/page-docs/PageDocButton", () => ({
+  PageDocButton: () => <i data-testid="doc-button" />,
+}));
+
 import { StaffShell } from "@/components/staff/StaffShell";
+import { systemRolePermissions } from "@/lib/permissions";
 import { OrgShell } from "@/components/admin/OrgShell";
 import { EventShell } from "@/components/event/EventShell";
-import { EventOperatorShell } from "@/components/event/EventOperatorShell";
-import { EventPrinterShell } from "@/components/event/EventPrinterShell";
-import { EventViewerShell } from "@/components/event/EventViewerShell";
 
 function noDarkClasses(html: string) {
   for (const banned of ["text-white", "text-slate-300", "text-slate-400", "hover:bg-white/10"]) {
@@ -42,7 +44,7 @@ const event = {
 
 describe("StaffShell", () => {
   const html = renderToStaticMarkup(
-    <StaffShell user={{ ...user, staffRole: "STAFF_OBSERVER" }} pendingPrintRequests={2}>
+    <StaffShell user={{ ...user, roleName: "Administrateur" }} permissions={systemRolePermissions("STAFF_ADMIN")} pendingPrintRequests={2}>
       <p>x</p>
     </StaffShell>,
   );
@@ -83,7 +85,7 @@ describe("StaffShell", () => {
 
 describe("OrgShell", () => {
   const html = renderToStaticMarkup(
-    <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} orgRole="AUDITOR">
+    <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} permissions={[...systemRolePermissions("AUDITOR")]}>
       <p>x</p>
     </OrgShell>,
   );
@@ -100,7 +102,7 @@ describe("OrgShell", () => {
 
 describe("EventShell", () => {
   const html = renderToStaticMarkup(
-    <EventShell org={org} event={event} effectiveRole="ADMIN" isStaffMode={false} user={user}>
+    <EventShell org={org} event={event} permissions={[...systemRolePermissions("ADMIN")]} isStaffMode={false} user={user}>
       <p>x</p>
     </EventShell>,
   );
@@ -115,63 +117,59 @@ describe("EventShell", () => {
   });
 });
 
-describe.each([
-  ["EventOperatorShell", EventOperatorShell],
-  ["EventPrinterShell", EventPrinterShell],
-  ["EventViewerShell", EventViewerShell],
-])("%s", (_name, Shell) => {
-  const html = renderToStaticMarkup(
-    <Shell org={org} event={event} user={user}>
-      <p>x</p>
-    </Shell>,
-  );
-
-  it("place la cloche en portée event", () => {
-    expect(bellScope(html)).toEqual({ kind: "event", eventId: "e1" });
-  });
-
-  it("ajoute l'entrée Notifications avant Profil", () => {
-    const notif = html.indexOf('href="/event/e1/notifications"');
-    expect(notif).toBeGreaterThanOrEqual(0);
-    expect(notif).toBeLessThan(html.indexOf('href="/profile"'));
-  });
-
-  it("affiche désormais un avatar", () => {
-    expect(html).toContain(">AD</span>");
-  });
-});
-
 describe("menu clair des shells d'évènement", () => {
   const sidebarHtml = (node: React.ReactElement) => renderToStaticMarkup(node);
 
   it("EventShell : titre marine, organisation grise, bandeau staff marine", () => {
     const html = sidebarHtml(
-      <EventShell org={org} event={event} effectiveRole="ADMIN" isStaffMode={true} user={user}>
+      <EventShell org={org} event={event} permissions={[...systemRolePermissions("ADMIN")]} isStaffMode={true} user={user}>
         <p>x</p>
       </EventShell>,
     );
     expect(html).toMatch(/<div class="[^"]*text-navy[^"]*">Salon<\/div>/);
     expect(html).toContain("text-nav-muted");
-    expect(html).toContain("bg-navy/10");
     // Bandeau staff : bande marine, texte blanc (seul usage de text-white).
     expect(html).toMatch(/class="bg-navy[^"]*text-white[^"]*"[^>]*>\s*<strong/);
     expect(html).not.toContain("bg-amber-50");
     expect(html).not.toContain("text-slate-300 hover:bg-white/10");
   });
+});
 
-  it.each([
-    ["EventOperatorShell", EventOperatorShell],
-    ["EventPrinterShell", EventPrinterShell],
-    ["EventViewerShell", EventViewerShell],
-  ])("%s : titre marine, liens SIDEBAR_LINK, aucune classe sombre", (_n, Shell) => {
-    const html = sidebarHtml(
-      <Shell org={org} event={event} user={user}>
+describe("ancrage de la documentation", () => {
+  it("StaffShell : lien Documentation vers /platform/docs, bouton avant la cloche", () => {
+    const html = renderToStaticMarkup(
+      <StaffShell user={{ ...user, roleName: "Observateur" }} permissions={systemRolePermissions("STAFF_OBSERVER")} pendingPrintRequests={0}>
         <p>x</p>
-      </Shell>,
+      </StaffShell>,
     );
-    expect(html).toMatch(/<div class="[^"]*text-navy[^"]*">Salon<\/div>/);
-    expect(html).toContain("px-2 text-xs text-nav-muted\">Acme");
-    expect(html).toContain("hover:bg-mist hover:text-navy");
-    noDarkClasses(html);
+    expect(html).toContain('href="/platform/docs"');
+    expect(html).toContain("Documentation");
+    // Visible de tout porteur de platform.access : hors du groupe Plateforme, juste après Notifications.
+    expect(html.indexOf("/platform/docs")).toBeGreaterThan(html.indexOf("/platform/notifications"));
+    expect(html.indexOf("/platform/docs")).toBeLessThan(html.indexOf(">Impression<"));
+    expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
+  });
+
+  it.each(["OWNER", "MANAGER", "AUDITOR"] as const)("OrgShell %s : lien Documentation", (role) => {
+    const html = renderToStaticMarkup(
+      <OrgShell org={org} user={{ ...user, isStaff: false }} orgs={[org]} permissions={[...systemRolePermissions(role)]}>
+        <p>x</p>
+      </OrgShell>,
+    );
+    expect(html).toContain('href="/org/o1/docs"');
+    expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
+  });
+
+  it("EventShell : lien Documentation, bouton avant la cloche", () => {
+    const html = renderToStaticMarkup(
+      <EventShell org={org} event={event} permissions={[...systemRolePermissions("VIEWER")]} isStaffMode={false} user={user}>
+        <p>x</p>
+      </EventShell>,
+    );
+    expect(html).toContain('href="/event/e1/docs"');
+    expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
   });
 });

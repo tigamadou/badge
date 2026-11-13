@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withOrgAuth } from "@/lib/with-org-auth";
 import { logActivity } from "@/lib/activity-log";
 
-export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
+export const GET = withOrgAuth("org.read", async (_req, { orgId }) => {
   // ADR 2026-06-01 (v2-14 Task 10) : select enrichi avec champs administratifs
   // (legalName, adresse, taxId, website, logo, contacts). Auparavant tronque
   // aux compteurs/quotas -- la page settings org n'affichait pas ces infos.
@@ -85,7 +85,7 @@ const OWNER_FIELDS = [
 
 const STAFF_FIELDS = ["slug"] as const;
 
-export const PATCH = withOrgAuth("OWNER", async (req, { orgId, session }) => {
+export const PATCH = withOrgAuth("org.update", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) {

@@ -16,9 +16,9 @@ espace de routes, sans reutiliser les vues du niveau inferieur.
 
 | Espace | Prefixe pages | Prefixe API | Acces |
 |---|---|---|---|
-| Staff applicatif | `/platform/**` | `/api/platform/**` | `isStaff` (StaffRole) |
-| Organisation | `/org/[orgId]/**` | `/api/org/[orgId]/**` | membres org (OWNER/MANAGER/AUDITOR) |
-| Evenement | `/org/[orgId]/events/[eventId]/**` | `/api/org/[orgId]/events/[eventId]/**` | roles event + heritage org |
+| Staff applicatif | `/platform/**` | `/api/platform/**` | permission `platform.access` (role plateforme) |
+| Organisation | `/org/[orgId]/**` | `/api/org/[orgId]/**` | permission `org.read` (membres de l'organisation) |
+| Evenement | `/event/[eventId]/**` | `/api/org/[orgId]/events/[eventId]/**` | permissions de niveau evenement (role d'organisation + role d'evenement + ajustements) |
 
 Renommage v4 : ancien `/staff` -> `/platform`, ancien `/admin` -> `/org`.
 
@@ -34,27 +34,47 @@ Renommage v4 : ancien `/staff` -> `/platform`, ancien `/admin` -> `/org`.
   membres, abonnement, journal) — shell `PlatformOrgShell` (sous-nav dans le
   StaffShell). Le layout `/org/[orgId]` redirige tout staff non-membre vers
   `/platform/organizations/[orgId]`.
-- La nav de l'espace org (`OrgShell`) est **filtree par role effectif** :
-  AUDITOR (tableau de bord, evenements, journal), MANAGER (+ membres, modeles),
-  OWNER (+ parametres).
+- La nav de chaque espace (`StaffShell`, `OrgShell`, `EventShell`) est **filtree par
+  permission** : chaque entree porte la meme permission que la page cible et ses routes de
+  lecture. Le menu suit le serveur, jamais l'inverse ; chaque page et chaque route
+  reverifie sa permission cote serveur.
 
-## RBAC
+## RBAC : roles et permissions
 
-`src/lib/auth-helpers.ts` (fonctions pures) + `src/lib/auth-guards.ts` (guards
-async pour les routes API). Hierarchies :
+Le modele (spec 37, [feature](features/roles-permissions.md)) remplace les trois enums
+hierarchiques (`StaffRole`, `OrgRole`, `EventRole`) par des **permissions atomiques** :
 
-- **StaffRole** : `SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`.
-- **OrgRole** : `OWNER > MANAGER > AUDITOR`.
-- **EventRole** : partielle `ADMIN > OPERATOR > { PRINTER, VIEWER }`.
+- **Catalogue dans le code** (`src/lib/permissions/catalog.ts`) : cle, niveau
+  (PLATFORM, ORG, EVENT, PARTICIPANT), domaine, libelle. Le type `Permission` en derive.
+- **Roles en base** (`Role`, `RolePermission`) : `User.platformRoleId`, `OrgMembership.roleId`,
+  `EventMembership.roleId`. Les **roles systeme** sont figes (permissions dans
+  `system-roles.ts`, dont `AGENT` et `STAFF_PRINTER` / Imprimeur) ; les roles personnalises
+  sont crees par la plateforme (portee plateforme) ou par une organisation (portee org/event).
+- **Ajustements par utilisateur** (`UserPermissionOverride`, GRANT ou REVOKE) ; les cles
+  `reserved` (gestion des droits) ne se cochent ni en role personnalise ni en ajustement.
+- **Resolution par cible** (`src/lib/permissions/resolve.ts`) : quatre niveaux de cible
+  (`platform`, `org`, `event`, participant). Un role de niveau superieur porte les permissions
+  des niveaux inferieurs ; l'union role d'organisation + role d'evenement s'applique sur un
+  evenement. `memberPermissions` donne les droits « cote organisateur » (sans le role plateforme
+  d'un staff) et `isStaffActor` marque l'action d'un staff sans appartenance.
+- **Gardes par permission** (`src/lib/auth-guards.ts`) : `requirePermission`,
+  `requireParticipantPermission`, `loadPermissions`, `loadMemberPermissions` ; wrappers de
+  routes `withStaffAuth`, `withOrgAuth`, `withEventAuth` (option `permission`, une cle ou une
+  liste « au moins une »). Garde-fous metier conserves : `assertNotLastOwner`,
+  `assertNotLastSuperAdmin`. Plus aucun helper par niveau hierarchique (`minRole`,
+  `requireOrgRole`, ...).
+- **Repli sur l'enum** : tant que `roleId` est nul (lignes anterieures a la migration
+  `make migrate-roles`), `src/lib/user-context.ts` retombe sur la colonne d'enum ; les routes
+  de changement de role ecrivent `roleId` ET la colonne d'enum. Les colonnes d'enum sont
+  conservees, inutilisees par les gardes, jusqu'a un changement ulterieur.
 
-### Pouvoir staff explicite (v4)
+### Pouvoir staff explicite
 
-`hasOrgRole(ctx, orgId, role, { allowStaff })` : le staff n'obtient le role org
-**que** si `allowStaff: true` est demande explicitement. Les routes API
-(`requireOrgRole`) passent `allowStaff: true` (pouvoir d'action staff conserve,
-audit `staffActor`). Les **layouts de pages** appellent sans `allowStaff`, ce qui
-sort le staff de l'espace org vers sa supervision. Fin de l'ancien bypass
-implicite `if (ctx.isStaff) return true`.
+Le staff n'obtient aucun droit « organisateur » implicite : ses permissions viennent de son
+role plateforme. Les actions organisateur (ecriture d'une commande d'impression, acceptation de
+devis, paiement d'abonnement) exigent `memberPermissions` en plus du refus de `isStaffActor`.
+Le layout `/org/[orgId]` redirige un staff non membre vers sa supervision
+(`/platform/organizations/[orgId]`).
 
 ## Deconnexion
 
@@ -64,8 +84,7 @@ implicite `if (ctx.isStaff) return true`.
 
 ## Roles a la creation
 
-Choix du role expose partout : invitation membre org (`OrgMemberForm`, OWNER/
-MANAGER/AUDITOR), invitation membre event, creation staff/user, et endpoint staff
+Choix du role expose partout : invitation membre org (`OrgMemberForm`, selecteur de role par `roleId`), invitation membre event, creation staff/user, et endpoint staff
 `/api/platform/organizations/[orgId]/owners` (generalise a tous les roles org avec
 form dans la supervision). Le code mort v1 `UserForm` est supprime.
 
@@ -79,8 +98,8 @@ Variables `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY` / `S3_SECRET_KEY` /
 `S3_BUCKET`. Voir la [spec S3](specs/2026-05-31-v4-stockage-s3-et-backups.md).
 
 Les documents de profil (`profile/{userId}/documents/...`) sont **sensibles** :
-`/api/files` ne les sert qu'a leur proprietaire et au staff plateforme
-(`ctx.isStaff`). Les photos (`profile/{userId}/photos/...`) restent publiques
+`/api/files` ne les sert qu'a leur proprietaire et aux detenteurs de la permission
+`profiles.read`. Les photos (`profile/{userId}/photos/...`) restent publiques
 (elles figurent sur les badges). Le composant `DocumentPreview`
 (`src/components/ui/`) rend un apercu cliquable et affiche un etat
 « non consultable ici » quand le visiteur n'a pas le droit de lire le fichier.

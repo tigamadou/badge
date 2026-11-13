@@ -157,12 +157,12 @@ test.describe("Org — Modeles de categories", () => {
 
   // --- Gardes exprimees en etat UI ---------------------------------------
 
-  test("AUDITOR ne voit pas l'entree Modeles dans la nav", async ({ page }) => {
+  test("AUDITOR voit l'entree Modeles (org.templates.read), en lecture seule", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "tpl-aud" });
     const auditor = await createTestOrgMember({ scope: "tpl-aud-user", orgId, role: "AUDITOR" });
     await loginAndEnter(page, auditor, { kind: "org", id: orgId });
 
-    // Les modeles sont reserves a MANAGER+ : l'entree de nav est absente.
-    await expect(page.getByRole("link", { name: /modèles/i })).toHaveCount(0);
+    // La lecture des modeles est ouverte a l'Auditeur (org.templates.read) ; l'ecriture reste a MANAGER+.
+    await expect(page.getByRole("link", { name: /modèles/i }).first()).toBeVisible();
   });
 });

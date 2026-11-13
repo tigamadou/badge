@@ -9,6 +9,7 @@ import { AccountNav } from "@/components/public/AccountNav";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageDocButton } from "@/components/page-docs/PageDocButton";
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -30,14 +31,15 @@ export default async function AccountLayout({ children }: { children: React.Reac
     <div className="min-h-screen bg-mist">
       <header className="border-b-2 border-gold bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-6">
             <Link href="/account" className="flex-none">
-              <Image src="/logo.png" alt="Badge" width={100} height={26} className="h-[26px] w-auto flex-none object-contain" />
+              <Image src="/logo.png" alt="Badge" width={100} height={26} className="h-[22px] w-auto flex-none object-contain sm:h-[26px]" />
             </Link>
             <AccountNav />
           </div>
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex flex-none items-center gap-2 text-sm sm:gap-3">
             <span className="hidden text-slate-600 sm:inline">{user.name}</span>
+            <PageDocButton />
             <NotificationBell scope={{ kind: "participant" }} />
             <UserAvatar name={user.name} photoUrl={photoUrl} />
             <LogoutButton

@@ -92,5 +92,4 @@ export const GET = withStaffAuth<Params>(async (_req, _ctx, { params }) =>
       lines: lines.map(lineDTO),
       generations,
     });
-  }),
-);
+  }), { permission: "print.requests.read" });

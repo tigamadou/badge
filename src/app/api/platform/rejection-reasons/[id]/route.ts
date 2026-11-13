@@ -33,7 +33,7 @@ export const PATCH = withStaffAuth<Params>(
     });
     return NextResponse.json({ reason });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "rejection_reasons.manage" },
 );
 
 export const DELETE = withStaffAuth<Params>(
@@ -57,5 +57,5 @@ export const DELETE = withStaffAuth<Params>(
     });
     return NextResponse.json({ ok: true });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "rejection_reasons.manage" },
 );

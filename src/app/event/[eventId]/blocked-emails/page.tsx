@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { BlocklistTabs } from "@/components/event/BlocklistTabs";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../_lib/page-access";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { UrlPagination } from "@/components/ui/Pagination";
@@ -17,7 +17,7 @@ export default async function BlocklistPage({
   const query = await searchParams;
   const tab = query.tab === "documents" ? "documents" : "emails";
   const list = parseListPage(query);
-  const orgId = await getEventOrgId(eventId);
+  const { orgId } = await requireEventPagePermission(eventId, "registration.block", `/event/${eventId}/blocked-emails`);
   // Seule la liste de l'onglet actif est lue et paginee ; l'autre n'est que comptee (pastille).
   const [emailTotal, documentTotal] = await Promise.all([
     prisma.blockedEmail.count({ where: { eventId } }),

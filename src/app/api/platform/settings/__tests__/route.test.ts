@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +6,7 @@ import { DEFAULT_RIGHTS } from "@/lib/subscription-rights";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff as createStaff } from "@/test/factories";
 
 // Tests Plan v2-14 Task 1 : PATCH /api/platform/settings -- garde SUPER_ADMIN sur
 // smtpPassword et recaptchaSecretKey (ADR 2026-06-01 operator-approve-permissions
@@ -60,16 +61,7 @@ async function setupPlatform(
 
 async function makeStaff(staffRole: StaffRoleStr) {
   const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  const user = await prisma.user.create({
-    data: {
-      email: `staff-${suffix}@v2-14.test`,
-      password: "x",
-      name: "Staff User",
-      isStaff: true,
-      staffRole,
-      emailVerifiedAt: new Date(),
-    },
-  });
+  const user = await createStaff(staffRole, { emailVerifiedAt: new Date() });
   withSession({ id: user.id, email: user.email, name: user.name, isStaff: true });
   return user;
 }
@@ -81,6 +73,11 @@ function makeReq(body: unknown): NextRequest {
     headers: { "content-type": "application/json" },
   });
 }
+
+// Les droits d'abonnement écrits par ces tests ne doivent pas survivre au fichier (les gardes d'écriture des autres fichiers les lisent).
+afterAll(async () => {
+  await prisma.platformSettings.updateMany({ data: { subscriptionRights: Prisma.DbNull } });
+});
 
 describe("PATCH /api/platform/settings", () => {
   beforeEach(async () => {
@@ -96,7 +93,7 @@ describe("PATCH /api/platform/settings", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 403 for STAFF_OBSERVER (below STAFF_ADMIN)", async () => {
+  it("returns 403 for STAFF_OBSERVER (no settings update permission)", async () => {
     await makeStaff("STAFF_OBSERVER");
     const { PATCH } = await import("../route");
     const req = makeReq({ smtpHost: "smtp.example.com" });

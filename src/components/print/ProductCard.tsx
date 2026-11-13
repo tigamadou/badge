@@ -7,10 +7,13 @@ export function ProductCard({
   product,
   selected,
   onSelect,
+  disabledReason,
 }: {
   product: CatalogProduct;
   selected?: boolean;
   onSelect?: () => void;
+  /** Carte non sélectionnable, avec la raison affichée. */
+  disabledReason?: string | null;
 }) {
   const image = product.images[0];
   const content = (
@@ -30,6 +33,7 @@ export function ProductCard({
         {product.leadTimeDays ? (
           <div className="mt-0.5 text-xs text-slate-400">{`Fabrication : ${product.leadTimeDays} jour${product.leadTimeDays > 1 ? "s" : ""}`}</div>
         ) : null}
+        {disabledReason ? <div className="mt-1 text-xs text-warn">{disabledReason}</div> : null}
       </div>
     </>
   );
@@ -39,10 +43,11 @@ export function ProductCard({
     <button
       type="button"
       aria-pressed={!!selected}
+      disabled={!!disabledReason}
       onClick={onSelect}
       className={`${base} transition-colors focus:outline-none focus:ring-2 focus:ring-navy ${
         selected ? "border-navy ring-2 ring-navy" : "border-slate-200 hover:border-navy"
-      }`}
+      } ${disabledReason ? "cursor-not-allowed opacity-60" : ""}`}
     >
       {content}
     </button>

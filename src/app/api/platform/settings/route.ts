@@ -5,6 +5,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
+import { loadUserContext } from "@/lib/user-context";
+import { hasPermission, type Permission } from "@/lib/permissions";
 import {
   SUBSCRIPTION_RIGHTS,
   parseRights,
@@ -59,7 +61,7 @@ function publicView(s: SettingsRecord) {
 export const GET = withStaffAuth(async () => {
   const s = await ensureSingleton();
   return NextResponse.json({ settings: publicView(s) });
-});
+}, { permission: "settings.read" });
 
 // Schema strict : refuser tout champ inconnu (id, createdAt, etc.) pour eviter
 // qu'un client legacy n'ecrive une cle non prevue.
@@ -103,22 +105,31 @@ export const PATCH = withStaffAuth(
       return NextResponse.json({ error: "NOTHING_TO_UPDATE" }, { status: 400 });
     }
 
-    // ADR 2026-06-01 : seul SUPER_ADMIN peut ecrire smtpPassword / recaptchaSecretKey.
-    // Une chaine vide est ignoree (preserve la valeur existante) -- pas de restriction.
+    // Contrôle par champ avant toute écriture (aucune écriture partielle) :
+    // - secrets (smtpPassword, recaptchaSecretKey non vides, ADR 2026-06-01) : `settings.secrets.update` ;
+    // - droits d'abonnement : `settings.subscription_rights.update` ;
+    // - tout autre champ : `settings.update`. Une chaîne vide pour un secret est ignorée (valeur conservée).
     const writesSecret =
       (data.smtpPassword !== undefined && data.smtpPassword !== "") ||
       (data.recaptchaSecretKey !== undefined && data.recaptchaSecretKey !== "");
-    if (writesSecret) {
-      const me = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { staffRole: true },
-      });
-      if (me?.staffRole !== "SUPER_ADMIN") {
-        return NextResponse.json(
-          { error: "FORBIDDEN_SECRET_CHANGE" },
-          { status: 403 },
-        );
-      }
+    const writesRights = data.subscriptionRights !== undefined;
+    const writesOther =
+      Object.keys(data).some(
+        (k) => k !== "smtpPassword" && k !== "recaptchaSecretKey" && k !== "subscriptionRights",
+      ) ||
+      (!writesSecret && !writesRights);
+
+    // Le contexte existe : withStaffAuth vient de le charger pour la permission de base.
+    const ctx = (await loadUserContext(session.user.id))!;
+    const can = (permission: Permission) => hasPermission(ctx, permission, { kind: "platform" });
+    if (writesSecret && !can("settings.secrets.update")) {
+      return NextResponse.json({ error: "FORBIDDEN_SECRET_CHANGE" }, { status: 403 });
+    }
+    if (
+      (writesRights && !can("settings.subscription_rights.update")) ||
+      (writesOther && !can("settings.update"))
+    ) {
+      return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
     }
 
     await ensureSingleton();
@@ -176,5 +187,5 @@ export const PATCH = withStaffAuth(
 
     return NextResponse.json({ settings: publicView(updated) });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "settings.read" },
 );

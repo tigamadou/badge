@@ -2,12 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { PlanManager, type PlanRow } from "@/components/staff/PlanManager";
+import { requirePlatformPage } from "../page-guard";
 
 export default async function PlatformPlansPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { permissions } = await requirePlatformPage("plans.read", "/platform/plans");
   const list = parseListPage(await searchParams);
   const result = await paginate(
     list,
@@ -47,6 +49,7 @@ export default async function PlatformPlansPage({
       </div>
       <PlanManager
         plans={rows}
+        canManage={permissions.has("plans.manage")}
         pagination={{ page: result.page, totalPages: result.totalPages, total: result.total, pageSize: result.pageSize }}
       />
     </div>

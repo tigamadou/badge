@@ -32,6 +32,22 @@ async function record(
   }
 }
 
+/** Controles de la base commune a tous les environnements : staff seede et roles systeme (14 lignes). */
+export async function platformChecks(prisma: PrismaClient): Promise<CheckResult[]> {
+  const results: CheckResult[] = [];
+  await record(results, "Au moins un staff seede", async () => {
+    const staff = await prisma.user.findFirst({
+      where: { OR: [{ platformRoleId: { not: null } }, { isStaff: true }] },
+    });
+    assert(staff !== null, "Aucun utilisateur staff seede");
+  });
+  await record(results, "Rôles système présents", async () => {
+    const count = await prisma.role.count({ where: { systemKey: { not: null } } });
+    assert(count === 14, `Attendu 14 rôles système, trouvé ${count}`);
+  });
+  return results;
+}
+
 /** Controles de donnees dependants de l'environnement (prod : base vide ; dev/preprod : demo chargee). */
 export async function dataChecks(prisma: PrismaClient, env: BadgeEnv): Promise<CheckResult[]> {
   const results: CheckResult[] = [];
@@ -87,10 +103,7 @@ export async function runChecks(
       assert(ps !== null, "PlatformSettings manquant");
     });
 
-    await rec("Au moins un staff seede", async () => {
-      const staff = await prisma.user.findFirst({ where: { isStaff: true } });
-      assert(staff !== null, "Aucun utilisateur staff seede");
-    });
+    results.push(...(await platformChecks(prisma)));
 
     results.push(...(await dataChecks(prisma, badgeEnv)));
 

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { prisma } from "@/lib/prisma";
 import { SettingsClient } from "./SettingsClient";
 
@@ -8,6 +9,7 @@ export default async function SettingsPage({
   params: Promise<{ orgId: string }>;
 }) {
   const { orgId } = await params;
+  await requireOrgPagePermission(orgId, "org.update", `/org/${orgId}/settings`);
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: {

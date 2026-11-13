@@ -1,17 +1,12 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
 
 const uniq = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-async function user(name: string, staffRole?: "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER") {
-  return prisma.user.create({
-    data: {
-      email: `${uniq(name)}@x.test`,
-      password: "x",
-      name,
-      ...(staffRole ? { isStaff: true, staffRole } : {}),
-    },
-  });
+async function user(name: string, staffRole?: "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_PRINTER" | "STAFF_OBSERVER") {
+  const data = { email: `${uniq(name)}@x.test`, password: "x", name };
+  return staffRole ? makeStaff(staffRole, data) : prisma.user.create({ data });
 }
 
 let regCounter = 0;
@@ -64,10 +59,11 @@ export async function seedPrintFixture() {
   const [owner, manager, eventAdmin, operator] = await Promise.all([
     user("owner"), user("manager"), user("eventAdmin"), user("operator"),
   ]);
-  const [staffAdmin, staffSupport, staffObserver] = await Promise.all([
-    user("staffAdmin", "STAFF_ADMIN"), user("staffSupport", "STAFF_SUPPORT"),
-    user("staffObserver", "STAFF_OBSERVER"),
-  ]);
+  // Séquentiel : chaque makeStaff résout (upsert) l'id du rôle système.
+  const staffAdmin = await user("staffAdmin", "STAFF_ADMIN");
+  const staffSupport = await user("staffSupport", "STAFF_SUPPORT");
+  const staffPrinter = await user("staffPrinter", "STAFF_PRINTER");
+  const staffObserver = await user("staffObserver", "STAFF_OBSERVER");
   await prisma.orgMembership.createMany({
     data: [
       { userId: owner.id, orgId: org.id, role: "OWNER" },
@@ -105,7 +101,7 @@ export async function seedPrintFixture() {
     },
   });
   return {
-    owner, manager, eventAdmin, operator, staffAdmin, staffSupport, staffObserver,
+    owner, manager, eventAdmin, operator, staffAdmin, staffSupport, staffPrinter, staffObserver,
     org, event, template, categories: [c1, c2] as const, approved, pending, badgeProduct, lanyard,
   };
 }

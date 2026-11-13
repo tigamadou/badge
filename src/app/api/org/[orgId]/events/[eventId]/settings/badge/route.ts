@@ -9,24 +9,15 @@ import { lockEventRow } from "@/lib/print-requests/content";
 import { assertTemplateChangeAllowed, syncRequestTemplates } from "@/lib/print-requests/template-lock";
 import { notifyPrintRequestStatusChanged } from "@/lib/notifications/triggers";
 
-// v2-12 : PATCH event.badgeTemplateId. requireEventPermission event.settings.update
-// (helper geree par withEventAuth + check explicite via hasEventPermission).
+// v2-12 : PATCH event.badgeTemplateId, permission `event.settings.update`.
 const bodySchema = z.object({
   // null pour heriter de l'Organization/PlatformSettings ; string sinon.
   badgeTemplateId: z.string().min(1).nullable(),
 });
 
 export const PATCH = withEventAuth(
-  { minRole: "VIEWER" },
+  { permission: "event.settings.update" },
   async (req, { orgId, eventId, session }) => {
-    const { hasEventPermission } = await import("@/lib/auth-helpers");
-    const { loadUserContext } = await import("@/lib/user-context");
-    // withEventAuth garantit deja session valide + user existant.
-    const ctx = (await loadUserContext(session.user.id))!;
-    if (!hasEventPermission(ctx, eventId, orgId, "event.settings.update")) {
-      return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
-    }
-
     const raw = await req.json().catch(() => null);
     const parsed = bodySchema.safeParse(raw);
     if (!parsed.success) {

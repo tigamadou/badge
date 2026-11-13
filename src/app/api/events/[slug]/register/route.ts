@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { loadPublicEventBySlug, PublicEventError } from "@/lib/public-event";
 import { logActivity } from "@/lib/activity-log";
 import { assertCanRegister, SubscriptionError } from "@/lib/subscription";
-import { requireAuth, AuthError } from "@/lib/auth-participant";
+import { requireParticipantPermission, AuthError } from "@/lib/auth-participant";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
 import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationConfirmation } from "@/lib/mail";
@@ -27,7 +27,7 @@ export async function POST(
   ctx: { params: Promise<{ slug: string }> },
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireParticipantPermission("registration.self.create");
     const { slug } = await ctx.params;
     const ip = extractClientIp(req.headers);
     const rl = checkRateLimit(ip, `event-register:${slug}`, { windowMs: 60_000, max: 10 });

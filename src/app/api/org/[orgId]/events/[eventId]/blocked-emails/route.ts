@@ -6,7 +6,7 @@ import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 
 export const GET = withEventAuth(
-  { minRole: "ADMIN", allowArchived: true },
+  { permission: "registration.block", allowArchived: true },
   async (_req, { eventId }) => {
     const blocked = await prisma.blockedEmail.findMany({
       where: { eventId } satisfies Prisma.BlockedEmailWhereInput,
@@ -22,7 +22,7 @@ const schema = z.object({
 });
 
 export const POST = withEventAuth(
-  { minRole: "ADMIN" },
+  { permission: "registration.block" },
   async (req, { orgId, eventId, session }) => {
     const json = await req.json().catch(() => null);
     const parsed = schema.safeParse(json);

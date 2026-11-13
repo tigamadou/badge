@@ -238,7 +238,7 @@ function PublicSheetPanel({ plan, onClose }: { plan: PlanRow; onClose: () => voi
   );
 }
 
-function PlanRowView({ plan }: { plan: PlanRow }) {
+function PlanRowView({ plan, canManage }: { plan: PlanRow; canManage: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
 
@@ -265,26 +265,30 @@ function PlanRowView({ plan }: { plan: PlanRow }) {
               {plan.publicVisible ? "Visible" : "Masqué"} · position {plan.position}
               {plan.highlighted ? " · mis en avant" : ""}
             </span>
-            <Button type="button" variant="link" className="text-slate-700" onClick={() => setEditing((v) => !v)}>
-              Fiche publique
-            </Button>
+            {canManage && (
+              <Button type="button" variant="link" className="text-slate-700" onClick={() => setEditing((v) => !v)}>
+                Fiche publique
+              </Button>
+            )}
           </div>
         </td>
         <td className="py-2">{plan.subscriptionsCount}</td>
         <td className="py-2 text-right">
-          <ActionButton
-            variant="link"
-            className="text-slate-700"
-            action={toggleArchive}
-            success={plan.archived ? "Plan restauré." : "Plan archivé."}
-            error={plan.archived ? "Échec de la restauration." : "Échec de l'archivage."}
-            onSuccess={() => router.refresh()}
-          >
-            {plan.archived ? "Restaurer" : "Archiver"}
-          </ActionButton>
+          {canManage && (
+            <ActionButton
+              variant="link"
+              className="text-slate-700"
+              action={toggleArchive}
+              success={plan.archived ? "Plan restauré." : "Plan archivé."}
+              error={plan.archived ? "Échec de la restauration." : "Échec de l'archivage."}
+              onSuccess={() => router.refresh()}
+            >
+              {plan.archived ? "Restaurer" : "Archiver"}
+            </ActionButton>
+          )}
         </td>
       </tr>
-      {editing && (
+      {canManage && editing && (
         <tr className="border-b border-slate-100">
           <td colSpan={8} className="py-3">
             <PublicSheetPanel plan={plan} onClose={() => setEditing(false)} />
@@ -297,7 +301,16 @@ function PlanRowView({ plan }: { plan: PlanRow }) {
 
 export type PlanPagination = { page: number; totalPages: number; total: number; pageSize: number };
 
-export function PlanManager({ plans, pagination }: { plans: PlanRow[]; pagination?: PlanPagination }) {
+export function PlanManager({
+  plans,
+  pagination,
+  canManage,
+}: {
+  plans: PlanRow[];
+  pagination?: PlanPagination;
+  // Clé `plans.manage` : sans elle, ni création, ni fiche publique, ni archivage.
+  canManage: boolean;
+}) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -364,12 +377,15 @@ export function PlanManager({ plans, pagination }: { plans: PlanRow[]; paginatio
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button type="button" onClick={() => setCreating(true)}>
-          Nouveau plan
-        </Button>
-      </div>
+      {canManage && (
+        <div className="flex justify-end">
+          <Button type="button" onClick={() => setCreating(true)}>
+            Nouveau plan
+          </Button>
+        </div>
+      )}
 
+      {canManage && (
       <Dialog
         open={creating}
         title="Nouveau plan"
@@ -452,6 +468,7 @@ export function PlanManager({ plans, pagination }: { plans: PlanRow[]; paginatio
       </form>
 
       </Dialog>
+      )}
 
       <TableFrame>
       <table className="w-full text-sm">
@@ -469,7 +486,7 @@ export function PlanManager({ plans, pagination }: { plans: PlanRow[]; paginatio
         </thead>
         <tbody>
           {plans.map((p) => (
-            <PlanRowView key={p.id} plan={p} />
+            <PlanRowView key={p.id} plan={p} canManage={canManage} />
           ))}
           {plans.length === 0 && (
             <tr>

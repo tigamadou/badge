@@ -24,11 +24,14 @@ export function SubscriptionForm({
   plans,
   current,
   scheduledPlanName = null,
+  canEdit = false,
 }: {
   orgId: string;
   plans: PlanOption[];
   current: SubscriptionState;
   scheduledPlanName?: string | null;
+  // Clé `subscriptions.update` : sans elle, lecture seule (aucun champ, aucun bouton).
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [planId, setPlanId] = useState(current?.planId ?? plans[0]?.id ?? "");
@@ -38,7 +41,7 @@ export function SubscriptionForm({
     current?.overrideMaxParticipantsPerEvent ?? "",
   );
   // Un abonnement existant s'affiche en resume ; le formulaire n'apparait que sur demande.
-  const [editing, setEditing] = useState(current == null);
+  const [editing, setEditing] = useState(current == null && canEdit);
 
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
 
@@ -81,7 +84,11 @@ export function SubscriptionForm({
     setEditing(false);
   }
 
-  if (!editing && current) {
+  if (!canEdit && !current) {
+    return <p className="text-sm text-slate-500">Aucun abonnement.</p>;
+  }
+
+  if ((!editing || !canEdit) && current) {
     const plan = plans.find((p) => p.id === current.planId) ?? null;
     const rows: [string, string][] = [
       ["Plan", plan?.name ?? "—"],
@@ -109,15 +116,17 @@ export function SubscriptionForm({
             </div>
           ))}
         </dl>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-mist"
-          >
-            Modifier
-          </button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-mist"
+            >
+              Modifier
+            </button>
+          </div>
+        )}
       </div>
     );
   }

@@ -104,9 +104,9 @@ test.describe("Event — Inscriptions (liste)", () => {
     await expect(page.locator("tbody tr")).toHaveCount(1);
   });
 
-  test("Pagination : 20 par page, la page 2 affiche la suite", async ({ page }) => {
+  test("Pagination : 10 par page, les pages suivantes affichent la suite", async ({ page }) => {
     const { orgId, eventId, categoryId } = await createTestEvent({ scope: "reg-pagin" });
-    // 26 inscriptions => 2 pages (20 + 6).
+    // 26 inscriptions => 3 pages (10 + 10 + 6).
     for (let i = 0; i < 26; i++) {
       await addReg(eventId, categoryId, "PENDING", `reg-pagin-${i}`);
     }
@@ -114,15 +114,19 @@ test.describe("Event — Inscriptions (liste)", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/registrations`);
-    // 20 lignes de donnees sur la premiere page.
-    await expect(page.locator("tbody tr")).toHaveCount(20);
+    // 10 lignes de donnees sur la premiere page.
+    await expect(page.locator("tbody tr")).toHaveCount(10);
 
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator("tbody tr")).toHaveCount(6);
 
     await page.getByRole("button", { name: "Page précédente" }).click();
-    await expect(page.locator("tbody tr")).toHaveCount(20);
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
   });
 
   test("Le clic sur une ligne ouvre le detail", async ({ page }) => {

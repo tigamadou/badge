@@ -1,5 +1,5 @@
-import type { OrgPrintCreditKind, PrintRequestStatus, StaffRole } from "@prisma/client";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import type { OrgPrintCreditKind, PrintRequestStatus } from "@prisma/client";
+import type { Permission } from "@/lib/permissions/catalog";
 import { formatFcfa } from "@/lib/print-catalog/pricing-core";
 
 // Logique pure des écrans du crédit d'impression (libellés, visibilité, montants).
@@ -37,15 +37,15 @@ const OPEN: PrintRequestStatus[] = ["SUBMITTED", "QUOTED"];
 export const showsCreditOffer = (status: PrintRequestStatus, available: number): boolean =>
   OPEN.includes(status) && available > 0;
 
-// Bouton « Appliquer le crédit » : STAFF_ADMIN, commande ouverte, et quelque chose à appliquer
-// (crédit libre et lignes à couvrir).
+// Bouton « Appliquer le crédit » : permission `print.requests.credit.apply`, commande ouverte, et
+// quelque chose à appliquer (crédit libre et lignes à couvrir).
 export function canApplyCredit(
   status: PrintRequestStatus,
-  role: StaffRole,
+  access: ReadonlySet<Permission>,
   available: number,
   grossTotal: number,
 ): boolean {
-  return OPEN.includes(status) && staffRoleAtLeast(role, "STAFF_ADMIN") && available > 0 && grossTotal > 0;
+  return OPEN.includes(status) && access.has("print.requests.credit.apply") && available > 0 && grossTotal > 0;
 }
 
 // Montant pré-rempli : le plus grand crédit applicable à la commande.

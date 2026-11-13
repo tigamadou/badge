@@ -123,6 +123,39 @@ test.describe("Platform — Parametres", () => {
     await expect(page.getByLabel("Utilisateur SMTP")).toBeVisible();
   });
 
+  test("STAFF_OBSERVER lit E-mails, Securite, Abonnements et Motifs en lecture seule", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pset-readonly" });
+
+    await page.goto("/platform/settings");
+    const tabs = page.getByRole("navigation", { name: "Sections des paramètres" });
+    for (const name of ["E-mails", "Sécurité", "Abonnements", "Motifs de rejet"]) {
+      await expect(tabs.getByRole("link", { name })).toBeVisible();
+    }
+    await expect(tabs.getByRole("link", { name: "Badge", exact: true })).toHaveCount(0);
+    await expect(tabs.getByRole("link", { name: "Impression sur place" })).toHaveCount(0);
+
+    // E-mails : champs désactivés, ni enregistrement ni test SMTP.
+    await expect(page.getByLabel("Utilisateur SMTP")).toBeDisabled();
+    await expect(page.getByRole("button", { name: /enregistrer les paramètres/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /envoyer/i })).toHaveCount(0);
+
+    await page.goto("/platform/settings?tab=security");
+    await expect(page.getByRole("button", { name: /enregistrer les paramètres/i })).toHaveCount(0);
+
+    await page.goto("/platform/settings?tab=subscriptions");
+    await expect(page.getByRole("button", { name: /^enregistrer$/i })).toHaveCount(0);
+
+    await page.goto("/platform/settings?tab=reasons");
+    await expect(page.getByRole("button", { name: /^ajouter$/i })).toHaveCount(0);
+  });
+
+  test("Un Imprimeur en URL directe sur /settings est renvoye au tableau de bord", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_PRINTER", scope: "pset-printer" });
+
+    await page.goto("/platform/settings");
+    await expect(page).toHaveURL(/\/platform$/);
+  });
+
   test("Les onglets changent de section et l'URL suit", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "pset-tabs" });
 

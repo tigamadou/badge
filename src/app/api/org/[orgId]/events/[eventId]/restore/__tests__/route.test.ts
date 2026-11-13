@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -14,7 +15,7 @@ function noSession() {
 
 const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-// ADR 2026-06-01 (v2-14 Task 2) : la route exige requireOrgRole(..., "MANAGER").
+// La route exige la permission `org.events.archive`.
 async function seedArchivedEvent(orgRole: "OWNER" | "MANAGER" | "AUDITOR") {
   const s = stamp();
   const user = await prisma.user.create({
@@ -45,8 +46,8 @@ describe("POST /api/org/[orgId]/events/[eventId]/restore", () => {
     vi.restoreAllMocks();
   });
 
-  it("rethrows a non-AuthError raised inside requireOrgRole (rethrow branch)", async () => {
-    // requireOrgRole() delegue a loadUserContext() -> prisma.user.findUnique(). En faisant
+  it("rethrows a non-AuthError raised inside the permission guard (rethrow branch)", async () => {
+    // requirePermission() delegue a loadUserContext() -> prisma.user.findUnique(). En faisant
     // echouer cet appel avec une erreur ordinaire (pas une AuthError), on force le `throw err`
     // de la l.22 (branche non couverte : err instanceof AuthError est false).
     const { user, org, event } = await seedArchivedEvent("MANAGER");
@@ -89,8 +90,8 @@ describe("POST /api/org/[orgId]/events/[eventId]/restore", () => {
 
   it("returns 404 when the event does not belong to the org in the URL", async () => {
     // Le user doit avoir le role MANAGER sur `otherOrg` (l'orgId de l'URL) pour que
-    // requireOrgRole passe et que le test exerce bien la verification interne de la
-    // route (event.orgId !== orgId), et non le 403 de requireOrgRole.
+    // la garde par permission passe et que le test exerce bien la verification interne de la
+    // route (event.orgId !== orgId), et non le 403 de la garde.
     const { user, event } = await seedArchivedEvent("MANAGER");
     const otherOrg = await prisma.organization.create({
       data: { name: "Other", slug: `other-${stamp()}` },
@@ -163,15 +164,7 @@ describe("POST /api/org/[orgId]/events/[eventId]/restore", () => {
 
   it("platform staff bypasses org membership and logs staffActor=true", async () => {
     const s = stamp();
-    const staff = await prisma.user.create({
-      data: {
-        email: `staff-${s}@x.test`,
-        password: "x",
-        name: "Staff",
-        isStaff: true,
-        staffRole: "STAFF_SUPPORT",
-      },
-    });
+    const staff = await makeStaff("STAFF_ADMIN");
     const org = await prisma.organization.create({ data: { name: "O", slug: `o-staff-${s}` } });
     const event = await prisma.event.create({
       data: {

@@ -25,5 +25,5 @@ export const POST = withStaffAuth<{ requestId: string }>(
       if (revised) await notifyPrintRequestStatusChanged(requestId, userId, { organizer: true, staff: false });
       return json({ line: lineDTO(line), available: await getAvailableOrgPrintCredit(request.orgId, requestId) }, 201);
     }),
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.requests.credit.apply" },
 );

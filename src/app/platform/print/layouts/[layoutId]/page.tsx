@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { prisma } from "@/lib/prisma";
 import { LayoutEditor } from "@/components/staff/print/LayoutEditor";
 import {
@@ -12,6 +13,7 @@ export default async function EditPrintLayoutPage({
 }: {
   params: Promise<{ layoutId: string }>;
 }) {
+  await requirePlatformPage("print.layouts.read", "/platform/print/layouts");
   const { layoutId } = await params;
   const [layout, canWrite, templates] = await Promise.all([
     prisma.printSheetLayout.findUnique({ where: { id: layoutId } }),

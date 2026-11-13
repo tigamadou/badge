@@ -23,21 +23,21 @@ test.describe("Event — Pagination des listes", () => {
     await createManyTestRegistrations({ scope: "pg-evt", eventId, categoryId, count: 45 });
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
-    // Inscriptions : defaut 20 lignes.
+    // Inscriptions : defaut 10 lignes.
     await page.getByRole("link", { name: /inscriptions/i }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/registrations`));
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 45, pageSize: 20 });
-
-    await selectPageSize(page, 10);
     await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 45, pageSize: 10 });
+
+    await selectPageSize(page, 20);
+    await expect(page.locator("tbody tr")).toHaveCount(20);
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
-    await expectPagination(page, { total: 45, pageSize: 10, page: 2 });
+    await expectPagination(page, { total: 45, pageSize: 20, page: 2 });
 
     // L'etat persiste au rechargement.
     await page.reload();
-    await expectPagination(page, { total: 45, pageSize: 10, page: 2 });
+    await expectPagination(page, { total: 45, pageSize: 20, page: 2 });
 
     // Page hors bornes : bornee a la derniere page (45 / 10 => 5).
     await page.goto(`/event/${eventId}/registrations?pageSize=10&page=99`);
@@ -45,19 +45,19 @@ test.describe("Event — Pagination des listes", () => {
     await expect(page.locator("tbody tr")).toHaveCount(5);
     // Taille invalide : retombe sur le defaut.
     await page.goto(`/event/${eventId}/registrations?pageSize=7`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
 
-    // Badges : defaut 100, donc les 45 sur une page ; filtre « Imprimés » remet la page a 1.
+    // Badges : defaut 10 ; filtre « Imprimés » remet la page a 1.
     await page.goto(`/event/${eventId}/badges?filter=all`);
-    await expect(page.getByRole("checkbox")).toHaveCount(45);
-    await selectPageSize(page, 10);
     await expect(page.getByRole("checkbox")).toHaveCount(10);
+    await selectPageSize(page, 20);
+    await expect(page.getByRole("checkbox")).toHaveCount(20);
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
     await page.getByLabel("Filtrer les badges").selectOption("printed");
     await expect(page).toHaveURL(/filter=printed/);
     await expect(page).not.toHaveURL(/page=/);
-    await expect(page).toHaveURL(/pageSize=10/);
+    await expect(page).toHaveURL(/pageSize=20/);
     await expect(page.getByText(/aucun badge/i)).toBeVisible();
 
     await page.goto(`/event/${eventId}/badges?filter=all&pageSize=10&page=99`);
@@ -67,7 +67,7 @@ test.describe("Event — Pagination des listes", () => {
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 800 });
       await page.goto(`/event/${eventId}/registrations`);
-      await expect(page.locator("tbody tr")).toHaveCount(20);
+      await expect(page.locator("tbody tr")).toHaveCount(10);
       await expectNoHorizontalOverflow(page);
     }
   });
@@ -89,19 +89,19 @@ test.describe("Event — Pagination des listes", () => {
     page.on("dialog", (d) => d.accept());
 
     await page.goto(`/event/${eventId}/categories`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await page.getByRole("button", { name: "3", exact: true }).click();
-    await expect(page).toHaveURL(/page=3/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "5", exact: true }).click();
+    await expect(page).toHaveURL(/page=5/);
     await expect(page.locator("tbody tr")).toHaveCount(1);
 
     await page.locator("tbody tr").first().getByLabel("Supprimer").click();
-    // Après router.refresh(), la page 3 n'existe plus : retour sur la page 2 (20 lignes), jamais un tableau vide.
+    // Après router.refresh(), la page 3 n'existe plus : retour sur la page 4 (10 lignes), jamais un tableau vide.
     await expect(page.getByText("40 résultats", { exact: true })).toBeVisible();
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expect(page.locator("button[aria-current=\"page\"]")).toHaveText("2");
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expect(page.locator("button[aria-current=\"page\"]")).toHaveText("4");
   });
 
-  test("Membres : 25 membres paginés par défaut à 20", async ({ page }) => {
+  test("Membres : 25 membres paginés par défaut à 10", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "pg-mem" });
     const admin = await makeEventAdminUser({ scope: "pg-mem", eventId, orgId });
     const db = getDb();
@@ -115,9 +115,13 @@ test.describe("Event — Pagination des listes", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/members`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 25, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 25, pageSize: 10 });
     await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator("tbody tr")).toHaveCount(5);
     await expectNoHorizontalOverflow(page);
   });
@@ -135,15 +139,19 @@ test.describe("Event — Pagination des listes", () => {
     await loginAndEnter(page, admin, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}/blocked-emails`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
     await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator("tbody tr")).toHaveCount(3);
 
     // Changer d'onglet retire `page` et affiche la liste des documents (12 lignes).
     await page.getByRole("tab", { name: /documents/i }).click();
     await expect(page).toHaveURL(/tab=documents/);
     await expect(page).not.toHaveURL(/page=/);
-    await expect(page.locator("tbody tr")).toHaveCount(12);
-    await expectPagination(page, { total: 12, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 12, pageSize: 10 });
   });
 });

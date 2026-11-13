@@ -13,7 +13,7 @@ export default async function FreeSheetsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireSheetsStaff();
+  const { canGenerate } = await requireSheetsStaff();
   const list = parseListPage(await searchParams);
   // Historique de la génération libre : les planches de commande ont leur sous-page.
   const where = { output: "SHEETS", printRequestId: null } as const;
@@ -47,6 +47,7 @@ export default async function FreeSheetsPage({
   return (
     <GenerationsScreen
       layouts={layouts}
+      canGenerate={canGenerate}
       initial={initial}
       pagination={<UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />}
     />

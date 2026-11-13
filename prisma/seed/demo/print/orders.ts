@@ -1,5 +1,6 @@
 import type { PrintProduct } from "@prisma/client";
 import { prisma } from "../../../../src/lib/prisma";
+import { systemRoleId } from "../../../../src/lib/permissions/db";
 import { createDraft } from "../../../../src/lib/print-requests/service";
 import {
   acceptQuote, cancelRequest, submitRequest,
@@ -57,9 +58,9 @@ export async function ownerFor(ctx: DemoContext, state: PrintState, org: DemoOrg
     const created = await prisma.user.create({
       data: { email, password: ctx.passwordHash, name: `${firstName} ${lastName}`, firstName, lastName, emailVerifiedAt: ctx.dates.now },
     });
-    await prisma.orgMembership.create({ data: { userId: created.id, orgId: org.id, role: "OWNER" } });
+    await prisma.orgMembership.create({ data: { userId: created.id, orgId: org.id, role: "OWNER", roleId: await systemRoleId(prisma, "OWNER") } });
     owner = { id: created.id, email: created.email, name: created.name };
-    const bucket = ctx.registry.orgMembers.get(org.id) ?? { OWNER: [], MANAGER: [], AUDITOR: [] };
+    const bucket = ctx.registry.orgMembers.get(org.id) ?? { OWNER: [], MANAGER: [], AUDITOR: [], AGENT: [] };
     bucket.OWNER.push(owner);
     ctx.registry.orgMembers.set(org.id, bucket);
     ctx.recordAccount(email, "OWNER", `Propriétaire de ${org.name} (commandes d'impression)`);
@@ -116,9 +117,9 @@ async function organizerProducts(state: PrintState, index: number, badges: numbe
   ];
   if (withAccessory !== null) {
     const accessory = pick(state.products.accessories, withAccessory);
-    const quantity = Math.max(accessory.minQuantity, badges);
-    const accChoices = await productConfig(accessory, quantity);
-    if (accChoices) products.push({ productId: accessory.id, quantity, choices: accChoices });
+    // Quantité d'accessoire plafonnée au nombre de badges (spec 39) : on prend ce nombre, sans accessoire sous son minimum.
+    const accChoices = badges >= accessory.minQuantity ? await productConfig(accessory, badges) : null;
+    if (accChoices) products.push({ productId: accessory.id, quantity: badges, choices: accChoices });
   }
   return products;
 }

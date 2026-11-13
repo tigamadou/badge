@@ -26,7 +26,7 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   { icon: "check-circle", title: "Modération & approbation", desc: "Validez ou rejetez les demandes en masse, avec motifs de rejet, détection de doublons et listes de blocage." },
   { icon: "id-card", title: "Badges PDF + QR", desc: "Modèles réutilisables aux couleurs de vos catégories, génération individuelle ou par lot, prêts à imprimer." },
   { icon: "scan-line", title: "Contrôle d'accès par scan", desc: "Application de scan sur mobile, résultat instantané valide / non valide, historique des passages par session." },
-  { icon: "users", title: "Rôles & permissions", desc: "Gérez équipes staff, organisations et événements avec des rôles fins : admin, opérateur, imprimeur, lecteur." },
+  { icon: "users", title: "Rôles & permissions", desc: "Gérez équipes staff, organisations et événements avec des rôles fins : admin, opérateur, imprimeur, lecteur… et rôles personnalisés selon votre organisation." },
   { icon: "scroll-text", title: "Journal d'activité", desc: "Traçabilité complète de chaque action, avec avant/après et métadonnées, pour l'audit et la conformité." },
 ];
 

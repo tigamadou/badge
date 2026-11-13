@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui/Icon";
 import { resolvePublicSettings } from "@/lib/settings";
 import { EventSettingsForm } from "@/components/event/EventSettingsForm";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../_lib/page-access";
 import { readSecurityInstructions } from "@/lib/security-instructions";
 import { resolveEventTemplateVariables } from "@/lib/badge-templates/event-template-variables";
 import { optionVariables, readTemplateOptions, effectiveOption } from "@/lib/badge-templates/template-options";
@@ -15,7 +15,11 @@ export default async function EventSettingsPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const orgId = await getEventOrgId(eventId);
+  const { orgId, permissions } = await requireEventPagePermission(
+    eventId,
+    "event.settings.update",
+    `/event/${eventId}/settings`,
+  );
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
@@ -69,6 +73,7 @@ export default async function EventSettingsPage({
       <EventSettingsForm
         orgId={orgId}
         eventId={eventId}
+        permissions={[...permissions]}
         imageRequirements={imageRequirements}
         imageIssues={imageIssues}
         initial={{

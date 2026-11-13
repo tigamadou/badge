@@ -11,7 +11,7 @@ export default async function PrintSheetsPage({
   const { printRequestId } = await searchParams;
   // Sans commande ciblée : la file « À traiter » est l'écran d'accueil.
   if (!printRequestId) redirect("/platform/print/sheets/pending");
-  await requireSheetsStaff();
+  const { canGenerate } = await requireSheetsStaff();
 
   // Lien « Générer les planches » d'une commande : formulaire prérempli avec ses badges.
   const linked = await prisma.printRequest.findFirst({
@@ -44,7 +44,12 @@ export default async function PrintSheetsPage({
           Les planches ne peuvent être générées que pour une commande payée, en production ou prête.
         </p>
       )}
-      {printRequest && <LinkedOrderSheet layouts={await loadLayoutOptions()} printRequest={printRequest} />}
+      {printRequest && !canGenerate && (
+        <p role="alert" className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
+          Vous n&apos;avez pas le droit de générer des planches.
+        </p>
+      )}
+      {printRequest && canGenerate && <LinkedOrderSheet layouts={await loadLayoutOptions()} printRequest={printRequest} />}
     </>
   );
 }

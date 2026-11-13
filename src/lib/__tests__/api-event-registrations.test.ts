@@ -1178,7 +1178,7 @@ describe("GET /registrations/[regId]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("VIEWER cannot read the detail (403, minRole=OPERATOR)", async () => {
+  it("VIEWER cannot read the detail (403, permission event.read.detailed)", async () => {
     const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const u = await prisma.user.create({
       data: { email: `vw-${stamp}@x.test`, password: "x", name: "Vw", emailVerifiedAt: new Date() },

@@ -18,6 +18,7 @@ import { markRead } from "@/lib/print-requests/read-state";
 import { OrganizerConversation } from "@/components/event/print/order/OrganizerConversation";
 import { OrganizerOrderSummary } from "@/components/event/print/order/OrganizerOrderSummary";
 import { OrganizerQuoteColumn } from "@/components/event/print/order/OrganizerQuoteColumn";
+import { loadMemberPermissions } from "@/lib/auth-guards";
 import { requirePrintAccess } from "@/components/event/print/guard";
 import { requestBadgeCount } from "@/lib/print-requests/service";
 import { hasPendingPayment } from "@/components/event/print/pay-button";
@@ -47,16 +48,13 @@ export default async function PrintRequestDetailPage({
   // Crédit encore libre pour cette commande (hors sa propre réservation) : proposé tant qu'elle est ouverte.
   const availableCredit = await getAvailableOrgPrintCredit(orgId, requestId);
 
-  const [lines, badgeCount, owner, paymentRows] = await Promise.all([
+  const [lines, badgeCount, memberPermissions, paymentRows] = await Promise.all([
     prisma.printQuoteLine.findMany({
       where: { requestId, removedAt: null },
       orderBy: [{ position: "asc" }, { id: "asc" }],
     }),
     requestBadgeCount(prisma, request),
-    prisma.orgMembership.findFirst({
-      where: { userId: ctx.user.id, orgId, role: "OWNER" },
-      select: { userId: true },
-    }),
+    loadMemberPermissions(ctx.user.id, { kind: "org", orgId }),
     prisma.payment.findMany({
       where: { printRequestId: requestId },
       orderBy: { createdAt: "desc" },
@@ -70,7 +68,8 @@ export default async function PrintRequestDetailPage({
     request.type === "ONSITE" && request.parentRequestId === null && showsOnsiteCounter(request.status)
       ? (await loadOnsiteOverview(requestId)).counter
       : null;
-  const isOwner = !ctx.isStaff && owner !== null;
+  // Même règle que `assertOwner` : la permission d'accepter un devis, jamais pour le staff en consultation.
+  const isOwner = !ctx.isStaff && memberPermissions.has("print.quote.accept");
   const canAccept = isOwner && request.status === "QUOTED";
   const base = `/api/org/${orgId}/events/${eventId}/print-requests`;
   // Capturé avant la lecture : un message arrivé pendant le rendu restera non lu.

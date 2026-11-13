@@ -1,18 +1,20 @@
-import type { EventRole, OrgRole, StaffRole } from "@prisma/client";
 import { prisma } from "../../../src/lib/prisma";
+import { ensureSystemRoles, legacyKeyOf } from "../../../src/lib/permissions/db";
 import { DEMO_DOMAIN, DEV_SUPER_ADMIN_EMAIL } from "../constants";
-import type { DemoContext, DemoSpecialCase, DemoUser, EventPhase } from "./context";
+import type {
+  DemoContext, DemoSpecialCase, DemoUser, EventPhase, EventRoleKey, OrgRoleKey, PlatformRoleKey,
+} from "./context";
 
 type Seed = {
   email: string;
   role: string;
   scenario: string;
-  staffRole?: StaffRole;
+  staffRole?: PlatformRoleKey;
   data?: Record<string, unknown>;
   /** Clé du registre `special` ou rattachements à matérialiser plus tard. */
   special?: DemoSpecialCase;
-  orgs?: Array<{ slug: string; role: OrgRole }>;
-  events?: Array<{ slug: string; role: EventRole; phase: EventPhase | "any" }>;
+  orgs?: Array<{ slug: string; role: OrgRoleKey }>;
+  events?: Array<{ slug: string; role: EventRoleKey; phase: EventPhase | "any" }>;
   participant?: boolean;
 };
 
@@ -28,13 +30,13 @@ function buildSeeds(ctx: DemoContext): Seed[] {
   const token = () => faker.string.hexadecimal({ length: 64, casing: "lower", prefix: "" });
   const verified = { emailVerifiedAt: dates.now };
 
-  const staff = (local: string, staffRole: StaffRole, scenario: string, full = email(local)): Seed => ({
+  const staff = (local: string, staffRole: PlatformRoleKey, scenario: string, full = email(local)): Seed => ({
     email: full, role: staffRole, scenario, staffRole, data: { isStaff: true, ...verified },
   });
-  const orgMember = (local: string, role: OrgRole, scenario: string, orgs: Seed["orgs"], extra: Partial<Seed> = {}): Seed => ({
+  const orgMember = (local: string, role: OrgRoleKey, scenario: string, orgs: Seed["orgs"], extra: Partial<Seed> = {}): Seed => ({
     email: email(local), role, scenario, orgs, data: { ...verified }, ...extra,
   });
-  const eventMember = (local: string, role: EventRole, scenario: string, events: Seed["events"]): Seed => ({
+  const eventMember = (local: string, role: EventRoleKey, scenario: string, events: Seed["events"]): Seed => ({
     email: email(local), role, scenario, events, data: { ...verified },
   });
 
@@ -46,10 +48,12 @@ function buildSeeds(ctx: DemoContext): Seed[] {
     staff("support.2", "STAFF_SUPPORT", "Support plateforme (second compte)"),
     staff("observer", "STAFF_OBSERVER", "Observateur plateforme en lecture seule", "observer@badge.local"),
     staff("observer", "STAFF_OBSERVER", "Observateur plateforme (compte de démo)"),
+    staff("printer", "STAFF_PRINTER", "Imprimeur plateforme (menu Impression)"),
 
     orgMember("owner.grosse-org", "OWNER", "Propriétaire de la grosse organisation", [{ slug: GROSSE, role: "OWNER" }]),
     orgMember("owner.2.grosse-org", "OWNER", "Second propriétaire de la grosse organisation", [{ slug: GROSSE, role: "OWNER" }]),
     orgMember("manager.grosse-org", "MANAGER", "Gestionnaire de la grosse organisation", [{ slug: GROSSE, role: "MANAGER" }]),
+    orgMember("agent.grosse-org", "AGENT", "Agent de la grosse organisation (poste sur place)", [{ slug: GROSSE, role: "AGENT" }]),
     orgMember("auditor.grosse-org", "AUDITOR", "Auditeur de la grosse organisation", [{ slug: GROSSE, role: "AUDITOR" }]),
     orgMember("owner.moyenne-1", "OWNER", "Propriétaire d'une organisation moyenne", [{ slug: MOYENNE, role: "OWNER" }]),
     orgMember("manager.moyenne-1", "MANAGER", "Gestionnaire d'une organisation moyenne", [{ slug: MOYENNE, role: "MANAGER" }]),
@@ -106,6 +110,7 @@ function buildSeeds(ctx: DemoContext): Seed[] {
 export async function seedAccounts(ctx: DemoContext): Promise<void> {
   const { registry, faker } = ctx;
   const seeds = buildSeeds(ctx);
+  const roleIds = await ensureSystemRoles(prisma);
 
   // Les emails doivent rester uniques : le seed en dur ci-dessus ne doit jamais se recouper.
   const emails = seeds.map((s) => s.email);
@@ -120,7 +125,9 @@ export async function seedAccounts(ctx: DemoContext): Promise<void> {
       name: `${firstName} ${lastName}`,
       firstName,
       lastName,
-      ...(s.staffRole ? { staffRole: s.staffRole } : {}),
+      ...(s.staffRole
+        ? { staffRole: legacyKeyOf<"StaffRole">(s.staffRole), platformRoleId: roleIds[s.staffRole] }
+        : {}),
       ...s.data,
     };
   });

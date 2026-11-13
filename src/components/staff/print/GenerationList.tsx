@@ -5,6 +5,7 @@ import { Card, CardBody, CardHead } from "@/components/ui/Card";
 import { DocumentPreview } from "@/components/ui/DocumentPreview";
 import { Button } from "@/components/ui/Button";
 import { Table } from "@/components/ui/Table";
+import { GenerationStatePill } from "@/components/staff/print/sheets/GenerationStatePill";
 
 export type GenerationStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
 
@@ -23,13 +24,6 @@ export type GenerationRow = {
 };
 
 export const REFRESH_INTERVAL_MS = 5000;
-
-const STATUS: Record<GenerationStatus, { label: string; className: string }> = {
-  PENDING: { label: "En attente", className: "bg-gold-soft text-gold-strong" },
-  RUNNING: { label: "En cours", className: "bg-mist text-navy" },
-  DONE: { label: "Terminée", className: "bg-turquoise-soft text-turquoise-strong" },
-  FAILED: { label: "Échec", className: "bg-rose-50 text-rose-700" },
-};
 
 const dateFmt = new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" });
 
@@ -125,12 +119,7 @@ export function GenerationList({
                 header: "Statut",
                 render: (g) => (
                   <div className="space-y-1">
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS[g.status].className}`}>
-                      {STATUS[g.status].label}
-                    </span>
-                    {g.status === "FAILED" && (
-                      <p className="text-xs text-rose-600">{g.error ?? "Erreur inconnue."}</p>
-                    )}
+                    <GenerationStatePill status={g.status} doneLabel="Terminée" error={g.error} />
                     {skippedOf(g).length > 0 && (
                       <details className="text-xs text-warn">
                         <summary className="cursor-pointer">

@@ -9,6 +9,7 @@ import {
   notifyPrintRequestStatusChanged,
   notifyPrintRequestSubmitted,
 } from "../triggers";
+import { makeStaff } from "@/test/factories";
 import { addOrgMember, makeUser, seedTeam } from "./helpers";
 
 vi.mock("@/lib/jobs/enqueue-email", async (importOriginal) => ({
@@ -30,6 +31,7 @@ async function setup(over: { type?: "ADVANCE" | "ONSITE"; estimatedQuantity?: nu
   const superAdmin = await makeUser({ staffRole: "SUPER_ADMIN" });
   const support = await makeUser({ staffRole: "STAFF_SUPPORT" });
   const observer = await makeUser({ staffRole: "STAFF_OBSERVER" });
+  const staffPrinter = await makeStaff("STAFF_PRINTER");
   refCounter += 1;
   const request = await prisma.printRequest.create({
     data: {
@@ -43,7 +45,7 @@ async function setup(over: { type?: "ADVANCE" | "ONSITE"; estimatedQuantity?: nu
       estimatedQuantity: over.estimatedQuantity ?? null,
     },
   });
-  return { ...team, manager, staffAdmin, superAdmin, support, observer, request };
+  return { ...team, manager, staffAdmin, superAdmin, support, observer, staffPrinter, request };
 }
 
 const sorted = (...ids: string[]) => [...ids].sort();
@@ -94,14 +96,14 @@ describe("notifyPrintRequestMessage", () => {
     });
   }
 
-  it("message organisateur : staff STAFF_SUPPORT+, auteur exclu", async () => {
+  it("message organisateur : SUPER_ADMIN, STAFF_ADMIN et Imprimeur (print.requests.messages.send), pas le Support, auteur exclu", async () => {
     const t = await setup();
     const m = await message(t.request.id, "ORGANIZER", t.owner.id);
     await notifyPrintRequestMessage(m.id, t.owner.id);
     const rows = await prisma.notification.findMany({ where: { type: "PRINT_REQUEST_MESSAGE" } });
     const ids = rows.map((r) => r.userId);
-    for (const id of [t.staffAdmin.id, t.superAdmin.id, t.support.id]) expect(ids).toContain(id);
-    for (const id of [t.observer.id, t.owner.id, t.admin.id]) expect(ids).not.toContain(id);
+    for (const id of [t.staffAdmin.id, t.superAdmin.id, t.staffPrinter.id]) expect(ids).toContain(id);
+    for (const id of [t.support.id, t.observer.id, t.owner.id, t.admin.id]) expect(ids).not.toContain(id);
     expect(rows[0]).toMatchObject({ scope: "PLATFORM", href: `/platform/print/orders/${t.request.id}` });
     expect(rows[0].body).toBe("Owner : Bonjour");
     expect(vi.mocked(enqueueEmail)).toHaveBeenCalledTimes(rows.length);
@@ -111,7 +113,7 @@ describe("notifyPrintRequestMessage", () => {
     const t = await setup();
     const m = await message(t.request.id, "ORGANIZER", null);
     await notifyPrintRequestMessage(m.id, t.owner.id);
-    const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.support.id } });
+    const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.staffAdmin.id } });
     expect(row.body).toBe("L'organisateur : Bonjour");
   });
 
@@ -168,6 +170,7 @@ describe("notifyPrintRequestStatusChanged", () => {
     const ids = await idsOf("PRINT_REQUEST_STATUS_CHANGED");
     expect(ids).toEqual(expect.arrayContaining([t.staffAdmin.id, t.superAdmin.id]));
     expect(ids).not.toContain(t.support.id);
+    expect(ids).not.toContain(t.staffPrinter.id);
     expect(ids).not.toContain(t.owner.id);
     const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.staffAdmin.id } });
     expect(row).toMatchObject({ scope: "PLATFORM", href: `/platform/print/orders/${t.request.id}` });
@@ -208,6 +211,7 @@ describe("notifyPrintRequestPaid / notifyPrintPaymentUnmatched", () => {
       where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.staffAdmin.id },
     });
     expect(staff.some((r) => r.body.includes("80"))).toBe(true);
+    expect(await prisma.notification.count({ where: { userId: t.staffPrinter.id } })).toBe(0);
     const manager = await prisma.notification.findMany({
       where: { type: "PRINT_REQUEST_STATUS_CHANGED", userId: t.manager.id },
     });
@@ -234,7 +238,7 @@ describe("notifyPrintRequestPaid / notifyPrintPaymentUnmatched", () => {
     });
     await notifyPrintPaymentUnmatched(t.request.id, payment.id);
     const rows = await prisma.notification.findMany({ where: { type: "PRINT_REQUEST_STATUS_CHANGED" } });
-    const mine = rows.filter((r) => [t.staffAdmin.id, t.manager.id, t.owner.id].includes(r.userId));
+    const mine = rows.filter((r) => [t.staffAdmin.id, t.staffPrinter.id, t.manager.id, t.owner.id].includes(r.userId));
     expect(mine.map((r) => r.userId)).toEqual([t.staffAdmin.id]);
     expect(mine[0].body).toContain("42");
     const before = await prisma.notification.count();

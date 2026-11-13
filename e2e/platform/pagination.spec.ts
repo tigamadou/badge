@@ -42,11 +42,11 @@ test.describe("Platform — Pagination des listes", () => {
     await page.getByPlaceholder(/rechercher une organisation/i).fill(stamp);
     await page.getByRole("button", { name: "Filtrer" }).click();
     await expect(page).toHaveURL(new RegExp(`q=${stamp}`));
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 45, pageSize: 20 });
-
-    await selectPageSize(page, 10);
     await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 45, pageSize: 10 });
+
+    await selectPageSize(page, 20);
+    await expect(page.locator("tbody tr")).toHaveCount(20);
     await expect(page).toHaveURL(new RegExp(`q=${stamp}`));
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
@@ -54,8 +54,8 @@ test.describe("Platform — Pagination des listes", () => {
     // Soumettre le filtre depuis la page 2 : retour page 1, taille conservée.
     await page.getByRole("button", { name: "Filtrer" }).click();
     await expect(page).not.toHaveURL(/page=/);
-    await expect(page).toHaveURL(/pageSize=10/);
-    await expectPagination(page, { total: 45, pageSize: 10 });
+    await expect(page).toHaveURL(/pageSize=20/);
+    await expectPagination(page, { total: 45, pageSize: 20 });
 
     await page.goto(`/platform/organizations?q=${stamp}&pageSize=10&page=99`);
     await expectPagination(page, { total: 45, pageSize: 10, page: 5 });
@@ -68,8 +68,12 @@ test.describe("Platform — Pagination des listes", () => {
     const users = await db.user.findMany({ where: { email: { in: emails } }, select: { id: true } });
     await db.orgMembership.createMany({ data: users.map((u) => ({ userId: u.id, orgId: org.id, role: "AUDITOR" as const })) });
     await page.goto(`/platform/organizations/${org.id}/members`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
     await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator("tbody tr")).toHaveCount(5);
     await expectNoHorizontalOverflow(page);
   });
@@ -93,25 +97,25 @@ test.describe("Platform — Pagination des listes", () => {
     await loginAndEnter(page, staff, { kind: "platform" });
 
     await page.goto(`/platform/users?q=${stamp}`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 45, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 45, pageSize: 10 });
     await selectPageSize(page, 50);
     await expect(page.locator("tbody tr")).toHaveCount(45);
 
     await page.goto(`/platform/profiles?status=PENDING&q=${stamp}`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 45, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 45, pageSize: 10 });
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
     await page.goto(`/platform/profiles?status=PENDING&q=${stamp}&page=99`);
-    await expectPagination(page, { total: 45, pageSize: 20, page: 3 });
+    await expectPagination(page, { total: 45, pageSize: 10, page: 5 });
     await expect(page.locator("tbody tr")).toHaveCount(5);
 
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 800 });
       await page.goto(`/platform/users?q=${stamp}`);
-      await expect(page.locator("tbody tr")).toHaveCount(20);
+      await expect(page.locator("tbody tr")).toHaveCount(10);
       await expectNoHorizontalOverflow(page);
     }
   });
@@ -135,19 +139,23 @@ test.describe("Platform — Pagination des listes", () => {
     await loginAndEnter(page, staff, { kind: "platform" });
 
     await page.goto(`/platform/jobs?q=${jobRecipients}`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 23, pageSize: 20 });
-    await selectPageSize(page, 10);
-    await expect(page).toHaveURL(new RegExp(`q=${jobRecipients}`));
     await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 23, pageSize: 10 });
+    await selectPageSize(page, 20);
+    await expect(page).toHaveURL(new RegExp(`q=${jobRecipients}`));
+    await expect(page.locator("tbody tr")).toHaveCount(20);
     await page.goto(`/platform/jobs?q=${jobRecipients}&pageSize=10&page=99`);
     await expectPagination(page, { total: 23, pageSize: 10, page: 3 });
     await expect(page.locator("tbody tr")).toHaveCount(3);
 
     await page.goto(`/platform/activity?orgId=${orgId}`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 23, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 23, pageSize: 10 });
     await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator("tbody tr")).toHaveCount(3);
   });
 
@@ -167,9 +175,9 @@ test.describe("Platform — Pagination des listes", () => {
     await loginAndEnter(page, staff, { kind: "platform" });
 
     await page.goto(`/platform/print/orders?orgId=${orgId}`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 23, pageSize: 20 });
-    await selectPageSize(page, 10);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 23, pageSize: 10 });
+    await selectPageSize(page, 20);
     await expect(page).toHaveURL(new RegExp(`orgId=${orgId}`));
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
@@ -178,13 +186,13 @@ test.describe("Platform — Pagination des listes", () => {
     await page.getByLabel("Statut").selectOption("QUOTED");
     await page.getByRole("button", { name: "Filtrer" }).click();
     await expect(page).not.toHaveURL(/page=/);
-    await expect(page).toHaveURL(/pageSize=10/);
+    await expect(page).toHaveURL(/pageSize=20/);
     await expect(page.locator("tbody tr")).toHaveCount(3);
 
     await page.goto(`/platform/print/orders?orgId=${orgId}&page=99`);
-    await expectPagination(page, { total: 23, pageSize: 20, page: 2 });
+    await expectPagination(page, { total: 23, pageSize: 10, page: 3 });
     await expect(page.locator("tbody tr")).toHaveCount(3);
     await page.goto("/platform/print/orders?pageSize=abc");
-    await expect(page.getByLabel("Nombre de résultats par page")).toHaveValue("20");
+    await expect(page.getByLabel("Nombre de résultats par page")).toHaveValue("10");
   });
 });

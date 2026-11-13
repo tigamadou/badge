@@ -7,7 +7,7 @@ import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
 
-// Tests Plan v2-12 : PATCH organization.badgeTemplateId. requireOrgRole MANAGER
+// Tests Plan v2-12 : PATCH organization.badgeTemplateId. permission `org.badge_settings.update`
 // (OWNER satisfait via hierarchie). Log via ORG_UPDATED.
 
 type OrgRoleStr = "OWNER" | "MANAGER" | "AUDITOR";
@@ -181,7 +181,7 @@ describe("PATCH /api/org/[orgId]/settings/badge", () => {
     expect(reloaded?.badgeTemplateId).toBeNull();
   });
 
-  it("rethrows a non-AuthError from requireOrgRole", async () => {
+  it("rethrows a non-AuthError from requirePermission", async () => {
     const { org } = await makeOrgWithMember("MANAGER");
     const spy = vi.spyOn(prisma.user, "findUnique").mockRejectedValueOnce(new Error("db boom"));
 

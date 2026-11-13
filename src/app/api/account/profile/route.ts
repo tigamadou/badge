@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { requireAuth, AuthError } from "@/lib/auth-participant";
+import { requireAuth, requireParticipantPermission, AuthError } from "@/lib/auth-participant";
 import { computeParticipantProfileCompletedAt } from "@/lib/participant-profile";
 import { submitProfile, getCurrentSubmission } from "@/lib/profile-review";
 import { refreshPendingRegistrationSnapshots } from "@/lib/registration-snapshot-sync";
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireParticipantPermission("account.profile.update");
 
     const raw = await req.json().catch(() => null);
     const parsed = profileUpdateSchema.safeParse(raw);

@@ -9,7 +9,7 @@ test.describe("Compte participant — pagination des inscriptions", () => {
     await disconnectDb();
   });
 
-  test("25 inscriptions : 20 cartes, puis 5 sur la page 2, sans débordement à 375 px", async ({ page }) => {
+  test("25 inscriptions : 10 cartes, puis 10 et 5 sur les pages 2 et 3, sans débordement à 375 px", async ({ page }) => {
     const db = getDb();
     const stamp = Date.now();
     const { orgId } = await createTestOrgWithOwner({ scope: "pg-acc" });
@@ -48,10 +48,13 @@ test.describe("Compte participant — pagination des inscriptions", () => {
 
     await loginAs(page, user);
     await page.goto("/account");
-    await expect(page.locator('a[href^="/account/registrations/"]')).toHaveCount(20);
-    await expectPagination(page, { total: 25, pageSize: 20 });
+    await expect(page.locator('a[href^="/account/registrations/"]')).toHaveCount(10);
+    await expectPagination(page, { total: 25, pageSize: 10 });
     await page.getByRole("button", { name: "Page suivante" }).click();
     await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator('a[href^="/account/registrations/"]')).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator('a[href^="/account/registrations/"]')).toHaveCount(5);
 
     await page.setViewportSize({ width: 375, height: 800 });

@@ -44,9 +44,10 @@ export async function cleanupActivity(opts: { keepBilling?: boolean } = {}): Pro
 
 /**
  * Types non seedés, volontairement : suppressions définitives (action staff explicite, jamais
- * jouée dans le monde de démo, où toute ligne seedée existe encore).
+ * jouée dans le monde de démo, où toute ligne seedée existe encore) ; types de rôles et permissions
+ * (le monde de démo ne crée pas de rôle personnalisé).
  */
-export const ACTIVITY_NOT_SEEDED: ActivityType[] = ["USER_DELETED", "ORG_DELETED", "REGISTRATION_DELETED", "EVENT_IMAGE_UPDATED", "PAYMENT_PRORATA_MISMATCH"];
+export const ACTIVITY_NOT_SEEDED: ActivityType[] = ["USER_DELETED", "ORG_DELETED", "REGISTRATION_DELETED", "EVENT_IMAGE_UPDATED", "PAYMENT_PRORATA_MISMATCH", "ROLE_CREATED", "ROLE_UPDATED", "ROLE_ARCHIVED", "ROLE_RESTORED", "USER_PERMISSIONS_CHANGED"];
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;

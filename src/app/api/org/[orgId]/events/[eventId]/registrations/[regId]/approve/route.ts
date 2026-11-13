@@ -7,9 +7,7 @@ import { notifyRegistrationDecision } from "@/lib/notifications/triggers";
 
 type Params = { orgId: string; eventId: string; regId: string };
 
-// ADR 2026-06-01 (v2-14 Task 3) : OPERATOR autorise sur `registration.approve` par la matrice.
-// Auparavant `minRole: "ADMIN"` -- divergent de la spec espace-evenement (critere #2).
-export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, eventId, session }, extra) => {
+export const POST = withEventAuth({ permission: "registration.approve" }, async (req, { orgId, eventId, session }, extra) => {
   const { regId } = (await extra.params) as Params;
   const existing = await prisma.registration.findUnique({ where: { id: regId } });
   if (!existing || existing.eventId !== eventId) {

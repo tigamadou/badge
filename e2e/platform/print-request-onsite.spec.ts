@@ -77,22 +77,22 @@ const counter = (page: Page) => page.getByTestId("onsite-counter");
 // Page Poste d'impression sur place — /platform/print/orders/[requestId]/onsite, ouvert depuis le bloc
 // « impression sur place » de la commande. La caméra n'est pas automatisable : le contenu du QR d'accueil
 // est saisi dans le champ de recherche (toute saisie qui contient /verify/ est lue comme un QR).
-// Rôles : STAFF_SUPPORT imprime ; STAFF_ADMIN règle en plus la marge (motif obligatoire).
+// Rôles : STAFF_PRINTER imprime ; STAFF_ADMIN règle en plus la marge (motif obligatoire).
 test.describe("Platform — Poste d'impression sur place", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
     await disconnectDb();
   });
 
-  test("STAFF_SUPPORT ouvre le poste, saisit un QR d'accueil et imprime : compteur 1 / 10 et journal", async ({ page }) => {
+  test("STAFF_PRINTER ouvre le poste, saisit un QR d'accueil et imprime : compteur 1 / 10 et journal", async ({ page }) => {
     const { eventId, categoryId, request } = await seedOnsiteRequest("onsite-print");
     const participant = await createTestUser({ scope: "onsite-print-part", verified: true, profile: true });
     const reg = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "APPROVED" });
-    const support = await createTestStaff({ scope: "onsite-print", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-print", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 
-    // Bloc de la commande : compteur à zéro, plafond 11, pas de réglage de marge pour STAFF_SUPPORT.
+    // Bloc de la commande : compteur à zéro, plafond 11, pas de réglage de marge pour STAFF_PRINTER.
     await expect(counter(page)).toContainText("0 / 10 badges imprimés");
     await expect(counter(page)).toContainText("Plafond 11 · marge 10 %");
     await expect(page.getByLabel("Marge (%)")).toHaveCount(0);
@@ -127,7 +127,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
 
   test("Réimprimer un badge déjà imprimé est proposé, journalisé et n'est pas compté", async ({ page }) => {
     const { request, printedIds } = await seedOnsiteRequest("onsite-reprint", { printed: 1 });
-    const support = await createTestStaff({ scope: "onsite-reprint", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-reprint", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
     await openStation(page, request);
@@ -159,7 +159,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
       categoryId: other.categoryId,
       status: "APPROVED",
     });
-    const support = await createTestStaff({ scope: "onsite-foreign", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-foreign", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
     await openStation(page, request);
@@ -175,7 +175,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
     const { eventId, categoryId, request } = await seedOnsiteRequest("onsite-pending");
     const participant = await createTestUser({ scope: "onsite-pending-part", verified: true, profile: true });
     const pending = await createTestRegistration({ eventId, userId: participant.id, categoryId, status: "PENDING" });
-    const support = await createTestStaff({ scope: "onsite-pending", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-pending", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
     await openStation(page, request);
@@ -189,7 +189,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
 
   test("La recherche par nom propose les participants de l'évènement", async ({ page }) => {
     const { request } = await seedOnsiteRequest("onsite-search");
-    const support = await createTestStaff({ scope: "onsite-search", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-search", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
     await openStation(page, request);
@@ -205,7 +205,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
 
   test("Plafond atteint (11) : « Imprimer » est désactivé, la réimpression reste possible", async ({ page }) => {
     const { request, printedIds, nextId } = await seedOnsiteRequest("onsite-cap", { printed: 11 });
-    const support = await createTestStaff({ scope: "onsite-cap", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-cap", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
     await openStation(page, request);
@@ -279,7 +279,7 @@ test.describe("Platform — Poste d'impression sur place", () => {
       status: "QUOTED",
       lines: [{ label: "Support badge PVC", quantity: 10, unitPrice: 1500, kind: "PRODUCT" }],
     });
-    const support = await createTestStaff({ scope: "onsite-unpaid", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "onsite-unpaid", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
     await openRequest(page, request);
 

@@ -68,6 +68,14 @@ describe("notify", () => {
     ]);
   });
 
+  it("n'écrit pas d'ancre sur le lien principal quand le contenu n'en porte pas", async () => {
+    const { org, event, a } = await seed();
+    const base = input({ recipients: { users: [a.id] }, orgId: org.id, eventId: event.id });
+    await notify({ ...base, content: { ...base.content, anchor: undefined, links: [] } });
+    const row = await prisma.notification.findFirstOrThrow({ where: { userId: a.id } });
+    expect(row.links).toEqual([{ label: base.content.primaryLabel, href: base.content.href }]);
+  });
+
   it("déduit orgId de l'évènement quand il manque", async () => {
     const { org, event, a } = await seed();
     await notify(input({ recipients: { users: [a.id] }, eventId: event.id }));
@@ -167,8 +175,8 @@ describe("notify", () => {
     const staff = await makeUser({ staffRole: "STAFF_ADMIN" });
     await addOrgMember(staff.id, org.id, "OWNER");
     await notifyAll([
-      input({ type: "SUBSCRIPTION_CHANGED", scope: "ORG", recipients: { orgRoles: { orgId: org.id, roles: ["OWNER"] } }, orgId: org.id }),
-      input({ type: "SUBSCRIPTION_CHANGED", scope: "PLATFORM", recipients: { staffMinRole: "STAFF_ADMIN" } }),
+      input({ type: "SUBSCRIPTION_CHANGED", scope: "ORG", recipients: { permission: "billing.subscription.pay", target: { kind: "org", orgId: org.id } }, orgId: org.id }),
+      input({ type: "SUBSCRIPTION_CHANGED", scope: "PLATFORM", recipients: { permission: "subscriptions.update", target: { kind: "platform" } } }),
     ]);
     void a;
     const rows = await prisma.notification.findMany({ where: { userId: staff.id } });

@@ -7,7 +7,7 @@ import { parseRegistrationQr } from "@/lib/registration-qr";
 
 const schema = z.object({ payload: z.string().min(1).max(2000) });
 
-export const POST = withEventAuth({ minRole: "OPERATOR" }, async (req, { orgId, eventId, session }) => {
+export const POST = withEventAuth({ permission: "scan.check-in" }, async (req, { orgId, eventId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = schema.safeParse(json);
   if (!parsed.success) {

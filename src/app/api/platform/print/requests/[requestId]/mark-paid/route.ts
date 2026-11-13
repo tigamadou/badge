@@ -32,5 +32,5 @@ export const POST = withStaffAuth<{ requestId: string }>(
       await notifyPrintRequestPaid(requestId, userId, { manual: true });
       return json({ request: requestDTO(request) });
     }),
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.requests.mark_paid" },
 );

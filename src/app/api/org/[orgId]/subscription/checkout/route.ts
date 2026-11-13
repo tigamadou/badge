@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { withOrgAuth } from "@/lib/with-org-auth";
+import { loadMemberPermissions } from "@/lib/auth-guards";
 import { PaymentError, startCheckout } from "@/lib/payments";
 
 const schema = z.object({ planId: z.string().min(1) });
 
-export const POST = withOrgAuth("OWNER", async (req, { orgId, session }) => {
+export const POST = withOrgAuth("billing.subscription.pay", async (req, { orgId, session }) => {
+  // Côté organisateur uniquement : le rôle plateforme d'un staff ne paie pas l'abonnement.
+  const memberPermissions = await loadMemberPermissions(session.user.id, { kind: "org", orgId });
+  if (!memberPermissions.has("billing.subscription.pay")) {
+    return NextResponse.json({ error: "PERMISSION_DENIED" }, { status: 403 });
+  }
+
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "INVALID_BODY" }, { status: 400 });

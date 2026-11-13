@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { RoleBadge, Tag } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
@@ -23,6 +24,7 @@ export default async function StaffUsersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePlatformPage("users.read", "/platform/users");
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : undefined;
   const type = typeof sp.type === "string" ? sp.type : "all";
@@ -51,6 +53,7 @@ export default async function StaffUsersPage({
           name: true,
           isStaff: true,
           staffRole: true,
+          platformRole: { select: { name: true } },
           archived: true,
           _count: { select: { orgMemberships: true } },
         },
@@ -150,7 +153,7 @@ export default async function StaffUsersPage({
                 <td className="px-4 py-3 text-[13px] text-slate-500 hidden md:table-cell">{u.email}</td>
                 <td className="px-4 py-3">
                   {u.isStaff ? (
-                    <RoleBadge tone="navy">{u.staffRole}</RoleBadge>
+                    <RoleBadge tone="navy">{u.platformRole?.name ?? u.staffRole}</RoleBadge>
                   ) : (
                     <RoleBadge tone="slate">Client</RoleBadge>
                   )}

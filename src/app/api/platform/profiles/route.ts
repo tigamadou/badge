@@ -42,4 +42,4 @@ export const GET = withStaffAuth(async (req) => {
     },
   });
   return NextResponse.json({ users });
-});
+}, { permission: "profiles.read" });

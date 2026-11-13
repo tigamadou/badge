@@ -108,4 +108,13 @@ test.describe("Platform — Emails (queue)", () => {
     await expect(page.getByRole("button", { name: "Relancer" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Annuler l'envoi" })).toHaveCount(0);
   });
+
+  test("un Imprimeur n'a pas Emails dans le menu et est renvoye en URL directe", async ({ page }) => {
+    const staff = await createTestStaff({ role: "STAFF_PRINTER", scope: "jobs-printer" });
+    await loginAndEnter(page, staff, { kind: "platform" });
+
+    await expect(page.locator("#app-shell-nav").getByRole("link", { name: "Emails" })).toHaveCount(0);
+    await page.goto("/platform/jobs");
+    await expect(page).toHaveURL(/\/platform$/);
+  });
 });

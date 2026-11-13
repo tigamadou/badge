@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { resolveOrgLimits } from "@/lib/subscription";
 
-// ADR 2026-06-01 (v2-14 Task 4) : vue agregee pour role VIEWER (et au-dessus).
+// Vue agregee (`event.read.aggregated`).
 // Retourne UNIQUEMENT des chiffres -- aucune coordonnee nominative (email, nom,
 // piece d'identite). Suffit a la consultation passive sans exposer de PII.
-export const GET = withEventAuth({ minRole: "VIEWER" }, async (_req, { eventId }) => {
+export const GET = withEventAuth({ permission: "event.read.aggregated" }, async (_req, { eventId }) => {
   const [totals, byCategory, quota] = await Promise.all([
     prisma.registration.groupBy({
       by: ["status"],

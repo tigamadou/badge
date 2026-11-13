@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CategoryTable } from "@/components/event/CategoryTable";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../_lib/page-access";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { UrlPagination } from "@/components/ui/Pagination";
@@ -14,7 +14,7 @@ export default async function CategoriesPage({
 }) {
   const { eventId } = await params;
   const list = parseListPage(await searchParams);
-  const orgId = await getEventOrgId(eventId);
+  const { orgId, permissions } = await requireEventPagePermission(eventId, "event.read.detailed", `/event/${eventId}/categories`);
   const [result, allCategories] = await Promise.all([
     paginate(
       list,
@@ -45,6 +45,7 @@ export default async function CategoriesPage({
   return (
     <CategoryTable
       orgId={orgId}
+      permissions={[...permissions]}
       eventId={eventId}
       rows={result.rows}
       allCategories={allCategories}

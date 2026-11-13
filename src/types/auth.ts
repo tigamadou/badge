@@ -1,4 +1,5 @@
-import type { StaffRole, OrgRole, EventRole } from "@prisma/client";
+import type { Permission } from "@/lib/permissions/catalog";
+import type { RoleScope, SystemRoleKey } from "@/lib/permissions/system-roles";
 
 export type SessionUser = {
   id: string;
@@ -7,15 +8,39 @@ export type SessionUser = {
   isStaff: boolean;
 };
 
-export type OrgMembershipLite = { orgId: string; role: OrgRole };
-export type EventMembershipLite = { eventId: string; role: EventRole };
+export type ResolvedRole = {
+  /** null : rôle système résolu par repli sur l'enum */
+  id: string | null;
+  /** null : rôle personnalisé */
+  systemKey: SystemRoleKey | null;
+  scope: RoleScope;
+  name: string;
+  permissions: ReadonlySet<Permission>;
+};
+
+export type PermissionOverrideLite = {
+  orgId: string | null;
+  permission: Permission;
+  effect: "GRANT" | "REVOKE";
+};
+
+export type OrgMembershipLite = {
+  orgId: string;
+  roleId: string | null;
+  roleRef: ResolvedRole | null;
+};
+
+export type EventMembershipLite = {
+  eventId: string;
+  roleId: string | null;
+  roleRef: ResolvedRole | null;
+};
 
 export type UserContext = {
   user: { id: string; email: string; name: string };
   isStaff: boolean;
-  staffRole: StaffRole | null;
+  platformRole: ResolvedRole | null;
   orgMemberships: OrgMembershipLite[];
   eventMemberships: EventMembershipLite[];
+  overrides: PermissionOverrideLite[];
 };
-
-export type EffectiveEventRole = EventRole | "STAFF" | null;

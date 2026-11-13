@@ -96,6 +96,19 @@ describe("GET /api/platform/users", () => {
     expect(JSON.stringify(json)).not.toContain("SECRET");
   });
 
+  it("renvoie le rôle plateforme (id, nom, clé) des comptes staff, sans enum", async () => {
+    await makeStaff("STAFF_OBSERVER");
+    const { systemRoleId } = await import("@/lib/permissions/db");
+    const support = await prisma.user.create({
+      data: { email: "sup@x", password: "x", name: "Sup", isStaff: true, platformRoleId: await systemRoleId(prisma, "STAFF_SUPPORT") },
+    });
+    const { GET } = await import("@/app/api/platform/users/route");
+    const json = await (await GET(new NextRequest("http://localhost/api/platform/users"), { params: Promise.resolve({}) })).json();
+    const entry = json.users.find((u: { id: string }) => u.id === support.id);
+    expect(entry.platformRole).toMatchObject({ systemKey: "STAFF_SUPPORT", name: "Support" });
+    expect(entry.staffRole).toBeUndefined();
+  });
+
   it("filters type=staff", async () => {
     await makeStaff("STAFF_OBSERVER");
     await prisma.user.create({

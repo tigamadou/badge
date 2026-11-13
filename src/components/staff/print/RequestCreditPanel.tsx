@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { PrintRequestStatus, StaffRole } from "@prisma/client";
+import type { PrintRequestStatus } from "@prisma/client";
+import type { Permission } from "@/lib/permissions";
 import { OrgPrintCreditCard } from "@/components/print/OrgPrintCreditCard";
 import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
@@ -30,13 +31,13 @@ export type StaffCreditData = {
 export function RequestCreditPanel({
   requestId,
   status,
-  role,
+  permissions,
   credit,
   onChanged,
 }: {
   requestId: string;
   status: PrintRequestStatus;
-  role: StaffRole;
+  permissions: Permission[];
   credit: StaffCreditData;
   onChanged: () => void;
 }) {
@@ -54,7 +55,7 @@ export function RequestCreditPanel({
                 <p className="text-slate-500">{`Crédit appliqué à cette commande : ${formatFcfa(credit.applied)}`}</p>
               ) : null}
             </div>
-            {canApplyCredit(status, role, credit.available, credit.grossTotal) ? (
+            {canApplyCredit(status, new Set(permissions), credit.available, credit.grossTotal) ? (
               <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
                 {credit.applied > 0 ? "Modifier le crédit" : "Appliquer le crédit"}
               </Button>

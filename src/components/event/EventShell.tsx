@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { EffectiveEventRole } from "@/types/auth";
+import type { Permission } from "@/lib/permissions";
 import { AppShell } from "@/components/layout/AppShell";
-import { SidebarNav, type NavEntry } from "@/components/admin/SidebarNav";
+import { SidebarNav } from "@/components/admin/SidebarNav";
+import { eventNavFor } from "./event-nav";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import {
   SHELL_BANNER,
@@ -11,6 +12,7 @@ import {
   SIDEBAR_FOOTER_TEXT,
 } from "@/components/layout/sidebar-classes";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageDocButton } from "@/components/page-docs/PageDocButton";
 
 type Event = { id: string; title: string; slug: string; date: Date; archived: boolean; registrationOpen: boolean };
 type Org = { id: string; name: string };
@@ -18,40 +20,28 @@ type Org = { id: string; name: string };
 export function EventShell({
   org,
   event,
-  effectiveRole,
+  permissions,
   isStaffMode,
   printUnread = 0,
+  orgLinkEnabled = true,
   user,
   photoUrl,
   children,
 }: {
   org: Org;
   event: Event;
-  effectiveRole: Exclude<EffectiveEventRole, null>;
+  permissions: Permission[];
   isStaffMode: boolean;
   // Commandes d'impression de l'évènement avec des messages non lus (0 : pastille masquée).
   printUnread?: number;
+  // Faux quand l'utilisateur n'a pas d'espace d'organisation (membre d'évènement seul) : le lien devient un simple libellé.
+  orgLinkEnabled?: boolean;
   user: { name: string; email: string };
   photoUrl?: string | null;
   children: React.ReactNode;
 }) {
-  const base = `/event/${event.id}`;
-  const nav: NavEntry[] = [
-    { href: base, label: "Tableau de bord", icon: "layout-dashboard", exact: true },
-    { href: `${base}/notifications`, label: "Notifications", icon: "bell" },
-    { href: `${base}/registrations`, label: "Inscriptions", icon: "user-check" },
-    { href: `${base}/badges`, label: "Badges", icon: "id-card" },
-    // Commandes d'impression : réservées à ceux qui détiennent la permission `print.request`.
-    ...(effectiveRole === "ADMIN" || effectiveRole === "STAFF"
-      ? [{ href: `${base}/print`, label: "Impression", icon: "printer", count: printUnread } as const]
-      : []),
-    { href: `${base}/categories`, label: "Catégories", icon: "tags" },
-    { href: `${base}/scan`, label: "Scanner", icon: "scan-line" },
-    { href: `${base}/members`, label: "Membres", icon: "users" },
-    { group: "Administration" },
-    { href: `${base}/settings`, label: "Paramètres", icon: "settings" },
-    { href: `${base}/activity`, label: "Journal", icon: "scroll-text" },
-  ];
+  // Menu filtre par permission (modele `event-nav.ts`), commun a tous les roles.
+  const nav = eventNavFor(event.id, new Set(permissions), { printUnread });
 
   return (
     <AppShell
@@ -59,12 +49,16 @@ export function EventShell({
         <>
           <div className={SIDEBAR_BRAND}>Badge</div>
           <div className="mb-3 px-2">
-            <Link
-              href={`/org/${org.id}/events`}
-              className="mb-1.5 inline-flex items-center gap-1 text-xs text-nav-muted transition-colors hover:text-navy"
-            >
-              <ArrowLeft size={13} strokeWidth={1.5} /> {org.name}
-            </Link>
+            {orgLinkEnabled ? (
+              <Link
+                href={`/org/${org.id}/events`}
+                className="mb-1.5 inline-flex items-center gap-1 text-xs text-nav-muted transition-colors hover:text-navy"
+              >
+                <ArrowLeft size={13} strokeWidth={1.5} /> {org.name}
+              </Link>
+            ) : (
+              <div className="mb-1.5 text-xs text-nav-muted">{org.name}</div>
+            )}
             <div className={SIDEBAR_CONTEXT_TITLE}>{event.title}</div>
           </div>
         </>
@@ -87,9 +81,7 @@ export function EventShell({
             <span className="hidden text-slate-300 sm:inline">/</span>
             <span className="truncate font-medium text-slate-700">{event.title}</span>
           </nav>
-          <span className="hidden items-center gap-1.5 rounded-full bg-navy/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-navy sm:inline-flex">
-            {effectiveRole}
-          </span>
+          <PageDocButton />
           <NotificationBell scope={{ kind: "event", eventId: event.id }} />
           <UserAvatar name={user.name} photoUrl={photoUrl ?? null} size={30} />
         </>

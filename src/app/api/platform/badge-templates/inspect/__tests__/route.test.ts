@@ -81,7 +81,7 @@ function formWith(archive: Buffer): FormData {
 
 async function inspect(body: FormData | string, headers?: Record<string, string>) {
   const { POST } = await import("../route");
-  return POST(inspectRequest(body, headers));
+  return POST(inspectRequest(body, headers), { params: Promise.resolve({}) });
 }
 
 async function asAdmin() {

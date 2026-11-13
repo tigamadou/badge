@@ -12,7 +12,7 @@ const templateSchema = z.object({
   anonymous: z.boolean().optional(),
 });
 
-export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
+export const GET = withOrgAuth("org.templates.read", async (_req, { orgId }) => {
   const templates = await prisma.categoryTemplate.findMany({
     where: { orgId },
     orderBy: [{ number: "asc" }, { name: "asc" }],
@@ -20,8 +20,7 @@ export const GET = withOrgAuth("AUDITOR", async (_req, { orgId }) => {
   return NextResponse.json({ templates });
 });
 
-// ADR 2026-06-01 (v2-14 Task 2) : MANAGER autorise sur CategoryTemplate CRUD (spec).
-export const POST = withOrgAuth("MANAGER", async (req, { orgId, session }) => {
+export const POST = withOrgAuth("org.templates.manage", async (req, { orgId, session }) => {
   const json = await req.json().catch(() => null);
   const parsed = templateSchema.safeParse(json);
   if (!parsed.success) {

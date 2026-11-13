@@ -29,6 +29,15 @@ test.describe("Platform — Membres d'une organisation", () => {
     await expect(page.getByRole("heading", { name: /inviter un membre/i })).toBeVisible();
   });
 
+  test("STAFF_OBSERVER voit la table sans formulaire d'invitation", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "pmem-readonly" });
+    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pmem-readonly-staff" });
+
+    await page.goto(`/platform/organizations/${orgId}/members`);
+    await expect(page.getByText(owner.email)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /inviter un membre/i })).toHaveCount(0);
+  });
+
   // --- Actions UI ---------------------------------------------------------
 
   test("STAFF_ADMIN invite un membre MANAGER via le formulaire", async ({ page }) => {
@@ -39,7 +48,7 @@ test.describe("Platform — Membres d'une organisation", () => {
     const email = `pmem-invitee-${Date.now()}@v2-11-e2e.test`;
     await page.getByPlaceholder("Nom complet").fill("Invite Plateforme");
     await page.getByPlaceholder("email@exemple.fr").fill(email);
-    await page.locator("form select").selectOption("MANAGER");
+    await page.locator("form select").selectOption({ label: "Gestionnaire" });
     await page.getByRole("button", { name: /^inviter$/i }).click();
 
     await expect(page.getByText(email)).toBeVisible();
@@ -62,7 +71,7 @@ test.describe("Platform — Membres d'une organisation", () => {
     const email = `pmem-aud-${Date.now()}@v2-11-e2e.test`;
     await page.getByPlaceholder("Nom complet").fill("Auditeur Plateforme");
     await page.getByPlaceholder("email@exemple.fr").fill(email);
-    await page.locator("form select").selectOption("AUDITOR");
+    await page.locator("form select").selectOption({ label: "Auditeur" });
     await page.getByRole("button", { name: /^inviter$/i }).click();
 
     await expect(page.getByText(email)).toBeVisible();

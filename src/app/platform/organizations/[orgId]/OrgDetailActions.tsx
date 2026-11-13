@@ -11,9 +11,12 @@ import { Icon } from "@/components/ui/Icon";
 
 export function OrgDetailActions({
   org,
+  canArchive,
   canDelete,
 }: {
   org: { id: string; slug: string; archived: boolean };
+  // Clé `organizations.archive` (archiver, restaurer) et `organizations.delete` (suppression définitive).
+  canArchive: boolean;
   canDelete: boolean;
 }) {
   const router = useRouter();
@@ -73,20 +76,23 @@ export function OrgDetailActions({
     void destroy.run();
   }
 
+  if (!canArchive && !canDelete) return null;
+
   return (
     <Card className="border-rose-200">
       <CardHead title="Zone de danger" />
       <CardBody className="space-y-4">
         <div className="flex flex-wrap gap-3">
-          {!org.archived ? (
-            <Button variant="secondary" onClick={archive.run} loading={archive.pending} disabled={restore.pending}>
-              Archiver
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={restore.run} loading={restore.pending} disabled={archive.pending}>
-              Restaurer
-            </Button>
-          )}
+          {canArchive &&
+            (!org.archived ? (
+              <Button variant="secondary" onClick={archive.run} loading={archive.pending} disabled={restore.pending}>
+                Archiver
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={restore.run} loading={restore.pending} disabled={archive.pending}>
+                Restaurer
+              </Button>
+            ))}
           {canDelete && (
             <Button variant="danger" onClick={() => setConfirmOpen(true)} disabled={archive.pending || restore.pending}>
               <span className="inline-flex items-center gap-1.5">
@@ -96,7 +102,7 @@ export function OrgDetailActions({
           )}
         </div>
         {!canDelete && (
-          <p className="text-xs text-slate-400">La suppression définitive est réservée aux SUPER_ADMIN.</p>
+          <p className="text-xs text-slate-400">La suppression définitive est réservée aux super administrateurs.</p>
         )}
       </CardBody>
 

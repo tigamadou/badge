@@ -18,6 +18,8 @@ model User {
   name              String
   isStaff           Boolean    @default(false)
   staffRole         StaffRole?
+  platformRoleId    String?
+  platformRole      Role?      @relation("PlatformRole", fields: [platformRoleId], references: [id], onDelete: SetNull)
   inviteToken       String?    @unique
   inviteTokenExpiry DateTime?
   archived          Boolean    @default(false)
@@ -71,6 +73,9 @@ model User {
   printRequestReads     PrintRequestRead[]
   printRequestPrints    PrintRequestPrint[]   @relation("PrintRequestPrintPrintedBy")
   orgPrintCredits       OrgPrintCredit[]      @relation("OrgPrintCreditCreatedBy")
+  permissionOverrides   UserPermissionOverride[]
+
+  @@index([platformRoleId])
 }
 
 enum StaffRole {
@@ -126,19 +131,24 @@ model Organization {
   payments          Payment[]
   printRequests     PrintRequest[]
   printCredits      OrgPrintCredit[]
+  roles             Role[]
+  permissionOverrides UserPermissionOverride[]
 }
 
 model OrgMembership {
   id           String       @id @default(cuid())
   userId       String
   orgId        String
-  role         OrgRole
+  role         OrgRole?
+  roleId       String?
+  roleRef      Role?        @relation("OrgMembershipRole", fields: [roleId], references: [id], onDelete: SetNull)
   createdAt    DateTime     @default(now())
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([userId, orgId])
   @@index([orgId])
+  @@index([roleId])
 }
 
 enum OrgRole {
@@ -211,13 +221,16 @@ model EventMembership {
   id        String    @id @default(cuid())
   userId    String
   eventId   String
-  role      EventRole
+  role      EventRole?
+  roleId    String?
+  roleRef   Role?     @relation("EventMembershipRole", fields: [roleId], references: [id], onDelete: SetNull)
   createdAt DateTime  @default(now())
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId])
   @@index([eventId])
+  @@index([roleId])
 }
 
 enum EventRole {
@@ -534,6 +547,12 @@ model ActivityLog {
 }
 
 enum ActivityType {
+  // Rôles et permissions
+  ROLE_CREATED
+  ROLE_UPDATED
+  ROLE_ARCHIVED
+  ROLE_RESTORED
+  USER_PERMISSIONS_CHANGED
   // Retours client
   EVENT_IMAGE_UPDATED
   PAYMENT_PRORATA_MISMATCH
@@ -1287,4 +1306,64 @@ model PrintRequestMessage {
 
   @@index([requestId, createdAt])
   @@index([attachmentKey])
+}
+
+// =====================================================
+//  Rôles et permissions
+// =====================================================
+enum RoleScope {
+  PLATFORM
+  ORG
+  EVENT
+  PARTICIPANT
+}
+
+enum PermissionEffect {
+  GRANT
+  REVOKE
+}
+
+model Role {
+  id          String    @id @default(cuid())
+  scope       RoleScope
+  systemKey   String?   @unique // "SUPER_ADMIN", "OWNER", "AGENT"... ; null = personnalisé
+  name        String // libellé affiché (FR)
+  description String?   @db.Text
+  orgId       String? // rôle personnalisé ORG ou EVENT d'une organisation ; null sinon
+  archived    Boolean   @default(false)
+  archivedAt  DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  organization     Organization?     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  permissions      RolePermission[]
+  users            User[]            @relation("PlatformRole")
+  orgMemberships   OrgMembership[]   @relation("OrgMembershipRole")
+  eventMemberships EventMembership[] @relation("EventMembershipRole")
+
+  @@index([orgId, scope])
+}
+
+model RolePermission {
+  roleId     String
+  permission String // clé du catalogue, validée par le code
+  role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permission])
+}
+
+model UserPermissionOverride {
+  id           String           @id @default(cuid())
+  userId       String
+  orgId        String? // null = niveau plateforme (super admin) ; sinon organisation
+  permission   String
+  effect       PermissionEffect
+  createdById  String?
+  createdAt    DateTime         @default(now())
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization?    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId, permission])
+  @@index([orgId])
 }

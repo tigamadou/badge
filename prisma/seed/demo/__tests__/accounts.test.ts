@@ -31,7 +31,7 @@ describe("seedAccounts", () => {
 
   it("couvre les 4 roles staff, au moins 2 comptes sauf SUPER_ADMIN, tous verifies", async () => {
     const { staff } = ctx.registry;
-    expect(Object.keys(staff).sort()).toEqual(["STAFF_ADMIN", "STAFF_OBSERVER", "STAFF_SUPPORT", "SUPER_ADMIN"]);
+    expect(Object.keys(staff).sort()).toEqual(["STAFF_ADMIN", "STAFF_OBSERVER", "STAFF_PRINTER", "STAFF_SUPPORT", "SUPER_ADMIN"]);
     for (const role of ["STAFF_ADMIN", "STAFF_SUPPORT", "STAFF_OBSERVER"] as const) {
       expect(staff[role].length).toBeGreaterThanOrEqual(2);
     }
@@ -43,12 +43,29 @@ describe("seedAccounts", () => {
 
     for (const [role, users] of Object.entries(staff)) {
       for (const u of users) {
-        const row = await prisma.user.findUniqueOrThrow({ where: { id: u.id } });
-        expect(row.staffRole).toBe(role);
+        const row = await prisma.user.findUniqueOrThrow({ where: { id: u.id }, include: { platformRole: true } });
+        if (role === "STAFF_PRINTER") expect(row.staffRole).toBeNull();
+        else expect(row.staffRole).toBe(role);
+        if (u.email !== DEV_SUPER_ADMIN_EMAIL) expect(row.platformRole?.systemKey).toBe(role);
         expect(row.isStaff).toBe(true);
         expect(row.emailVerifiedAt).not.toBeNull();
       }
     }
+  });
+
+  it("cree un compte Imprimeur plateforme et un compte Agent d'organisation", async () => {
+    const printer = await prisma.user.findUniqueOrThrow({
+      where: { email: "printer@demo.local" },
+      include: { platformRole: true },
+    });
+    expect(printer.isStaff).toBe(true);
+    expect(printer.staffRole).toBeNull();
+    expect(printer.platformRole?.systemKey).toBe("STAFF_PRINTER");
+    expect(ctx.registry.staff.STAFF_PRINTER.map((u) => u.email)).toEqual(["printer@demo.local"]);
+
+    const agent = ctx.registry.pendingOrgMembers.find((m) => m.role === "AGENT");
+    expect(agent?.user.email).toBe("agent.grosse-org@demo.local");
+    expect(agent?.orgSlug).toBe("demo-grosse-org");
   });
 
   it("cree les cas particuliers de compte", async () => {
@@ -88,7 +105,7 @@ describe("seedAccounts", () => {
 
   it("prepare les rattachements d'organisation et d'evenement", () => {
     const { pendingOrgMembers: orgs, pendingEventMembers: events, special } = ctx.registry;
-    expect(new Set(orgs.map((m) => m.role))).toEqual(new Set(["OWNER", "MANAGER", "AUDITOR"]));
+    expect(new Set(orgs.map((m) => m.role))).toEqual(new Set(["OWNER", "MANAGER", "AUDITOR", "AGENT"]));
     const grosseOwners = orgs.filter((m) => m.orgSlug === "demo-grosse-org" && m.role === "OWNER");
     expect(new Set(grosseOwners.map((m) => m.user.id)).size).toBe(2);
     expect(orgs.filter((m) => m.user.id === special.multiOrg!.id).map((m) => m.orgSlug)).toHaveLength(2);

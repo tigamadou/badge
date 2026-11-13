@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { getProductDetail } from "@/lib/print-catalog/catalog";
 import { ProductEditor } from "@/components/staff/print/ProductEditor";
 
@@ -12,14 +9,11 @@ export default async function PrintCatalogProductPage({
 }: {
   params: Promise<{ productId: string }>;
 }) {
+  const { permissions } = await requirePlatformPage("print.catalog.read", "/platform/print/catalog");
   const { productId } = await params;
   const product = await getProductDetail(productId);
   if (!product) notFound();
-
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const canWrite =
-    !!ctx && ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_ADMIN");
+  const canWrite = permissions.has("print.catalog.manage");
 
   return (
     <div>

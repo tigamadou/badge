@@ -2,6 +2,8 @@ import { z } from "zod";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { loadOnsiteRequest, recordOnsitePrint } from "@/lib/print-requests/onsite-station";
+import { permissionDenied } from "@/app/api/platform/permission-response";
+import { eventTargetOf } from "@/lib/permissions";
 import { guarded, json, parseBody } from "@/lib/print-requests/staff-api";
 import { EventImagesNoncompliantError, eventImagesErrorResponse } from "@/lib/event-image-compliance";
 
@@ -11,9 +13,12 @@ export const POST = withStaffAuth<{ requestId: string }>(
   async (req, { session }, { params }) =>
     guarded(async () => {
       const { requestId } = await params;
-      const { registrationId, confirmReprint } = await parseBody(req, bodySchema);
       const userId = session.user.id;
-      const { orgId, eventId } = await loadOnsiteRequest(requestId);
+      const request = await loadOnsiteRequest(requestId);
+      const denied = await permissionDenied(userId, "print.onsite.operate", eventTargetOf(request));
+      if (denied) return denied;
+      const { registrationId, confirmReprint } = await parseBody(req, bodySchema);
+      const { orgId, eventId } = request;
       let recorded;
       try {
         recorded = await recordOnsitePrint({
@@ -44,5 +49,5 @@ export const POST = withStaffAuth<{ requestId: string }>(
       }
       return json({ print, counter, pdfUrl: `/api/org/${orgId}/events/${eventId}/badges/${registrationId}` }, 201);
     }),
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "platform.access" },
 );

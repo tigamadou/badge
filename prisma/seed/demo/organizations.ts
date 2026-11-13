@@ -1,7 +1,8 @@
 import type { EventRole, OrgRole, Prisma } from "@prisma/client";
 import { prisma } from "../../../src/lib/prisma";
+import { ensureSystemRoles, legacyKeyOf } from "../../../src/lib/permissions/db";
 import type {
-  DemoCategory, DemoContext, DemoEvent, DemoOrg, DemoUser, EventPhase, OrgSize,
+  DemoCategory, DemoContext, DemoEvent, DemoOrg, DemoUser, EventPhase, EventRoleKey, OrgRoleKey, OrgSize,
 } from "./context";
 import { installDemoTemplate } from "./templates";
 
@@ -43,8 +44,8 @@ const SECURITY_INSTRUCTIONS = [
   "Les sacs peuvent être inspectés à l'entrée.",
 ];
 
-const orgRoles = (): Record<OrgRole, DemoUser[]> => ({ OWNER: [], MANAGER: [], AUDITOR: [] });
-const eventRoles = (): Record<EventRole, DemoUser[]> => ({ ADMIN: [], OPERATOR: [], PRINTER: [], VIEWER: [] });
+const orgRoles = (): Record<OrgRoleKey, DemoUser[]> => ({ OWNER: [], MANAGER: [], AUDITOR: [], AGENT: [] });
+const eventRoles = (): Record<EventRoleKey, DemoUser[]> => ({ ADMIN: [], OPERATOR: [], PRINTER: [], VIEWER: [] });
 
 export async function seedOrganizationsAndEvents(ctx: DemoContext): Promise<void> {
   const { faker, registry, dates, images } = ctx;
@@ -167,22 +168,23 @@ export async function seedOrganizationsAndEvents(ctx: DemoContext): Promise<void
     }
   }
 
-  // Rattachements issus de la Task 5.
+  // Rattachements issus de la Task 5 : colonne d'enum heritee ET role systeme (roleId).
+  const roleIds = await ensureSystemRoles(prisma);
   const orgBySlug = new Map(registry.orgs.map((o) => [o.slug, o]));
-  const orgPairs = new Map<string, { userId: string; orgId: string; role: OrgRole }>();
+  const orgPairs = new Map<string, { userId: string; orgId: string; role: OrgRole | null; roleId: string }>();
   for (const m of registry.pendingOrgMembers) {
     const org = orgBySlug.get(m.orgSlug);
     if (!org) throw new Error(`Organisation de demo inconnue : ${m.orgSlug}`);
     const key = `${m.user.id}|${org.id}`;
     if (orgPairs.has(key)) continue;
-    orgPairs.set(key, { userId: m.user.id, orgId: org.id, role: m.role });
+    orgPairs.set(key, { userId: m.user.id, orgId: org.id, role: legacyKeyOf<"OrgRole">(m.role), roleId: roleIds[m.role] });
     const bucket = registry.orgMembers.get(org.id) ?? orgRoles();
     bucket[m.role].push(m.user);
     registry.orgMembers.set(org.id, bucket);
   }
   await prisma.orgMembership.createMany({ data: [...orgPairs.values()] });
 
-  const eventPairs = new Map<string, { userId: string; eventId: string; role: EventRole }>();
+  const eventPairs = new Map<string, { userId: string; eventId: string; role: EventRole | null; roleId: string }>();
   for (const m of registry.pendingEventMembers) {
     const org = orgBySlug.get(m.orgSlug);
     if (!org) throw new Error(`Organisation de demo inconnue : ${m.orgSlug}`);
@@ -192,7 +194,7 @@ export async function seedOrganizationsAndEvents(ctx: DemoContext): Promise<void
     if (!event) throw new Error(`Aucun evenement ${m.phase} pour ${m.orgSlug}`);
     const key = `${m.user.id}|${event.id}`;
     if (eventPairs.has(key)) continue;
-    eventPairs.set(key, { userId: m.user.id, eventId: event.id, role: m.role });
+    eventPairs.set(key, { userId: m.user.id, eventId: event.id, role: legacyKeyOf<"EventRole">(m.role), roleId: roleIds[m.role] });
     const bucket = registry.eventMembers.get(event.id) ?? eventRoles();
     bucket[m.role].push(m.user);
     registry.eventMembers.set(event.id, bucket);

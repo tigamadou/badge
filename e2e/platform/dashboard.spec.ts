@@ -8,8 +8,8 @@ import {
 import { loginAsStaff } from "../helpers/auth";
 
 // Page Tableau de bord plateforme — /platform
-// Rôle mini : STAFF_OBSERVER (layout). Page 100% lecture seule : KPI globaux,
-// top organisations du mois, activite recente.
+// Acces : `platform.access` (layout). Page 100% lecture seule : KPI globaux, top organisations du mois
+// et activite recente selon les droits ; l'imprimeur voit le bloc Impression a la place.
 test.describe("Platform — Tableau de bord", () => {
   test.afterAll(async () => {
     await cleanupE2ETestData();
@@ -28,6 +28,17 @@ test.describe("Platform — Tableau de bord", () => {
     await expect(page.getByText("Organisations archivées")).toBeVisible();
     await expect(page.getByText("Événements actifs")).toBeVisible();
     await expect(page.getByText("Inscriptions cumulées")).toBeVisible();
+  });
+
+  test("STAFF_PRINTER voit le bloc Impression et aucun KPI global", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_PRINTER", scope: "pdash-printer" });
+
+    await page.goto("/platform");
+    await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
+    await expect(page.getByText("Commandes à traiter")).toBeVisible();
+    await expect(page.getByText("Planches à générer")).toBeVisible();
+    await expect(page.getByText("Organisations actives")).toHaveCount(0);
+    await expect(page.getByText("Inscriptions cumulées")).toHaveCount(0);
   });
 
   test("SUPER_ADMIN voit aussi le tableau de bord", async ({ page }) => {

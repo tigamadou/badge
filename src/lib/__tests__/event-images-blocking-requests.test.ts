@@ -153,7 +153,7 @@ describe("recordOnsitePrint sur un évènement non conforme", () => {
     const r = await onsiteInProduction();
     await breakEventLogo(fx.event.id, fx.staffAdmin.id);
     vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: fx.staffSupport.id, email: fx.staffSupport.email, name: fx.staffSupport.name, isStaff: true },
+      user: { id: fx.staffPrinter.id, email: fx.staffPrinter.email, name: fx.staffPrinter.name, isStaff: true },
     } as never);
     const { POST } = await import("@/app/api/platform/print/requests/[requestId]/onsite/print/route");
     const res = await POST(

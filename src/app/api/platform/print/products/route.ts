@@ -28,5 +28,5 @@ export const POST = withStaffAuth(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.catalog.manage" },
 );

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hasEventPermission } from "@/lib/auth-helpers";
+import { hasPermission, eventTargetOf } from "@/lib/permissions";
 import { loadUserContext } from "@/lib/user-context";
 
 // Garde commune des pages « Impression » : session, évènement, permission `print.request`.
@@ -17,6 +17,6 @@ export async function requirePrintAccess(eventId: string, path: string) {
     select: { id: true, orgId: true, archived: true },
   });
   if (!event) notFound();
-  if (!hasEventPermission(ctx, eventId, event.orgId, "print.request")) redirect(`/event/${eventId}`);
+  if (!hasPermission(ctx, "print.request", eventTargetOf({ eventId, orgId: event.orgId }))) redirect(`/event/${eventId}`);
   return { ctx, event, orgId: event.orgId };
 }

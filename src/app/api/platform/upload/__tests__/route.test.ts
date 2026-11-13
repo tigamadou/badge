@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeStaff, makeUser } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/storage", async (orig) => ({
@@ -11,15 +12,8 @@ import { getServerSession } from "next-auth";
 
 const uniq = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-async function login(role?: "STAFF_OBSERVER" | "STAFF_SUPPORT" | "STAFF_ADMIN") {
-  const u = await prisma.user.create({
-    data: {
-      email: `${uniq("u")}@x`,
-      password: "x",
-      name: "U",
-      ...(role ? { isStaff: true, staffRole: role } : {}),
-    },
-  });
+async function login(role?: "STAFF_OBSERVER" | "STAFF_SUPPORT" | "STAFF_PRINTER" | "STAFF_ADMIN") {
+  const u = role ? await makeStaff(role) : await makeUser();
   vi.mocked(getServerSession).mockResolvedValue({
     user: { id: u.id, email: u.email, name: u.name, isStaff: !!role },
   } as never);
@@ -61,6 +55,16 @@ describe("POST /api/platform/upload", () => {
   it("403 STAFF_SUPPORT avec print-product", async () => {
     await login("STAFF_SUPPORT");
     expect((await post(makeReq("print-product", jpg))).status).toBe(403);
+  });
+
+  it("403 STAFF_PRINTER avec print-product (print.catalog.manage)", async () => {
+    await login("STAFF_PRINTER");
+    expect((await post(makeReq("print-product", jpg))).status).toBe(403);
+  });
+
+  it("403 STAFF_SUPPORT avec print-request (print.requests.messages.send)", async () => {
+    await login("STAFF_SUPPORT");
+    expect((await post(makeReq("print-request", pdf, "x"))).status).toBe(403);
   });
 
   it("403 STAFF_OBSERVER avec print-request", async () => {
@@ -130,8 +134,8 @@ describe("POST /api/platform/upload", () => {
     });
   }
 
-  it("print-request : PDF accepte par STAFF_SUPPORT, cle rangee sous la commande", async () => {
-    await login("STAFF_SUPPORT");
+  it("print-request : PDF accepte par STAFF_PRINTER, cle rangee sous la commande", async () => {
+    await login("STAFF_PRINTER");
     const r = await aRequest();
     const res = await post(makeReq("print-request", pdf, r.id));
     expect(res.status).toBe(200);
@@ -141,7 +145,7 @@ describe("POST /api/platform/upload", () => {
   });
 
   it("print-request : commande absente ou inconnue -> 400 BAD_REQUEST_ID", async () => {
-    await login("STAFF_SUPPORT");
+    await login("STAFF_PRINTER");
     for (const id of [undefined, "ghost"]) {
       const res = await post(makeReq("print-request", pdf, id));
       expect(res.status).toBe(400);
@@ -150,7 +154,7 @@ describe("POST /api/platform/upload", () => {
   });
 
   it("print-request : text/plain -> 415", async () => {
-    await login("STAFF_SUPPORT");
+    await login("STAFF_PRINTER");
     const r = await aRequest();
     const res = await post(makeReq("print-request", { name: "a.txt", type: "text/plain", bytes: Buffer.from("x") }, r.id));
     expect(res.status).toBe(415);
@@ -162,8 +166,8 @@ describe("POST /api/platform/upload : erreur inattendue", () => {
     vi.resetModules();
     vi.doMock("@/lib/auth-guards", async (orig) => ({
       ...(await orig<typeof import("@/lib/auth-guards")>()),
-      // 1er appel : garde du wrapper (passe) ; 2e appel : STAFF_ADMIN dans la route (echoue).
-      requireStaff: vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("boom")),
+      // Le wrapper évalue platform.access sur le contexte ; le contrôle du contexte passe par requirePermission.
+      requirePermission: vi.fn().mockRejectedValueOnce(new Error("boom")),
     }));
     try {
       await login("STAFF_ADMIN");

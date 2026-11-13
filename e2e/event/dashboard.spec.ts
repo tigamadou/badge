@@ -63,7 +63,8 @@ test.describe("Event — Tableau de bord", () => {
     await loginAndEnter(page, operator, { kind: "event", id: eventId });
 
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByRole("heading", { name: /tableau de bord opérateur/i })).toBeVisible();
+    // L'Opérateur détient event.read.detailed : tableau de bord complet, avec « Mes scans ».
+    await expect(page.getByText(/dernières inscriptions/i)).toBeVisible();
     await expect(page.getByText(/mes scans/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /ouvrir le scanner/i })).toBeVisible();
   });
@@ -80,11 +81,10 @@ test.describe("Event — Tableau de bord", () => {
     });
     await loginAndEnter(page, printer, { kind: "event", id: eventId });
 
-    // v4 Bloc D : le membre PRINTER (event-only, sans role org) atteint bien son
-    // evenement (plus de redirect cascade). Il obtient le shell dedie PRINTER,
-    // reconnaissable a l'en-tete "Impression — <titre>". La nav /badges est accessible.
+    // Le membre PRINTER n'a aucune permission de tableau de bord : atterrissage sur sa première
+    // entrée de menu (Badges).
     await page.goto(`/event/${eventId}`);
-    await expect(page.getByText(/impression —/i)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges$`));
 
     // Le lien "Badges" est present dans la sidebar.
     const badgesLink = page.getByRole("link", { name: /^badges$/i });
@@ -109,9 +109,8 @@ test.describe("Event — Tableau de bord", () => {
     await expect(page.getByText(/tableau de bord de l'événement/i).first()).toBeVisible();
     await expect(page.getByText(/en attente/i).first()).toBeVisible();
     await expect(page.getByText(/approuvées/i).first()).toBeVisible();
-    // v4 Bloc D : le membre VIEWER (event-only) atteint son evenement et obtient le
-    // shell dedie VIEWER, reconnaissable a l'en-tete "Lecture — <titre>".
-    await expect(page.getByText(/lecture —/i)).toBeVisible();
+    // Aucune donnée nominative pour le VIEWER.
+    await expect(page.getByText(/dernières inscriptions/i)).toHaveCount(0);
   });
 
   // --- Lien d'inscription public -------------------------------------------
@@ -149,7 +148,7 @@ test.describe("Event — Tableau de bord", () => {
     await page.goto(`/event/${eventId}`);
     const [publicPage] = await Promise.all([
       page.waitForEvent("popup"),
-      page.getByRole("link", { name: /ouvrir/i }).click(),
+      page.getByRole("link", { name: "Ouvrir", exact: true }).click(),
     ]);
     await expect(publicPage).toHaveURL(new RegExp(`/e/${slug}$`));
   });

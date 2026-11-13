@@ -27,7 +27,7 @@ export const PATCH = withStaffAuth<Params>(
       if (revised) await notifyPrintRequestStatusChanged(requestId, userId, { organizer: true, staff: false });
       return json({ line: lineDTO(line) });
     }),
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.requests.quote.edit" },
 );
 
 export const DELETE = withStaffAuth<Params>(
@@ -49,5 +49,5 @@ export const DELETE = withStaffAuth<Params>(
       if (revised) await notifyPrintRequestStatusChanged(requestId, userId, { organizer: true, staff: false });
       return json({ ok: true });
     }),
-  { minRole: "STAFF_ADMIN" },
+  { permission: "print.requests.quote.edit" },
 );

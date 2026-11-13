@@ -63,9 +63,8 @@ Versions actuelles :
 
 Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
-- **`auth.ts`** — helpers d'autorisation :
-  - v2 : `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`, `getEffectiveEventRoles`, `loadUserContext`, `assertNotLastOwner`, `assertNotLastSuperAdmin`
-  - v1 : `checkRole(userRole, requiredRole)`
+- **`auth-guards.ts`** / **`auth-participant.ts`** — autorisation par **permission** : `requirePermission`, `requireParticipantPermission` (participant), `loadPermissions`, `loadMemberPermissions` (et `hasPermission`, `effectivePermissions` de `permissions/`) ; wrappers de routes `withStaffAuth` / `withOrgAuth` / `withEventAuth` (option `permission` : une clé ou une liste « au moins une ») ; `loadUserContext` ; garde-fous `assertNotLastOwner`, `assertNotLastSuperAdmin`. Plus de helper par niveau hiérarchique (`minRole`, `requireOrgRole`…).
+- **`permissions/**`** — catalogue des permissions, rôles système, résolution par cible (`resolve.ts`), libellés ; `src/lib/role-management/**` — rôles personnalisés et ajustements.
 - **`activity-log.ts`** — audit via `logActivity({ type, userId?, targetId?, orgId?, eventId?, details?, req? })`. Tout nouveau type d'action → ajouter un `ActivityType` au schéma Prisma.
 - **`mail.ts`** — envoi d'emails. v2 : `resolveTransporter(ctx)` utilise un SMTP **plateforme uniquement** (`getPlatformSmtp()`, pas de cascade — décision 2026-05-31, voir `docs/v2/features/notifications-email.md`). Le **branding** reste contextuel : `fromLabel`, `logoUrl`, `contactEmail`/`contactPhone` sont résolus en cascade `Event → Org`. v1 mono-event.
 - **`settings.ts`** (v2) — `resolveSettings(eventId?, orgId?)` cascade `Event → Org` pour `contactEmail` / `contactPhone` uniquement (premier non-null gagne, pas de fallback Platform). Le SMTP et le reCAPTCHA ne sont **pas** cascadés : lecture directe via `getPlatformSmtp()` / `getPlatformRecaptcha()` (avec secret) / `getPlatformPublicRecaptcha()` (sans secret, pour les Server Components publics). `resolveBadgeTemplateId(event, organization, platformSettings)` cascade `Event → Org → Platform` pour le template de badge.
@@ -79,8 +78,50 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
 - **Server Components par défaut** ; ajouter `"use client"` uniquement quand l'interactivité l'exige.
 - **Toute action sensible doit logger** via `logActivity()` (`src/lib/activity-log.ts`).
-- **Toute route API doit vérifier le rôle/permission** via les helpers de `src/lib/auth.ts` avant l'action.
+- **Toute route API doit vérifier la permission** via les wrappers et gardes de `src/lib/auth-guards.ts` avant l'action.
 - **Ne jamais exposer dans une réponse API** : hash bcrypt, `smtpPassword`, `recaptchaSecretKey`, tokens d'invitation ou d'édition non hashés.
+
+---
+
+## Documentation des pages
+
+Chaque page des espaces connectés (`/platform`, `/org/[orgId]`, `/event/[eventId]`, `/account`)
+a une doc dans `src/content/page-docs/<espace>/<chemin>.md`, affichée par le bouton « ? » et
+dans la section Documentation de l'espace. **Tu la tiens à jour dans le même changement que le
+code.**
+
+**Quand**
+- Tu modifies une page, ou un composant qu'elle utilise (`src/app/**`, `src/components/**`) :
+  mets sa doc à jour (option ajoutée, retirée ou modifiée, comportement changé).
+- Nouvelle page → nouvelle doc. Page supprimée → doc supprimée.
+- Refactor sans effet visible : ne change pas le texte, re-tamponne seulement.
+
+**Comment**
+1. Lis la page et ses composants (`make docs-check` liste les docs manquantes, obsolètes et
+   orphelines, avec le chemin attendu du fichier et les sources).
+2. Rédige ou corrige le corps du fichier ; ne touche jamais à la main `sources`, `sourceHash`,
+   `updatedAt` ni aux fichiers `*.generated.ts`.
+3. `make docs-stamp PAGES="<id> …"` (id de doc, route, espace ou `all`).
+4. `make docs-check` doit être vert avant tout commit.
+
+**Format** : frontmatter `route`, `title`, `audience` (`organisateur` | `staff` |
+`participant`), `access` (clé de permission exigée par la garde de la page, si elle en a une),
+puis le corps :
+- « À quoi sert cet écran » ;
+- une section par bloc de l'écran, avec chaque option expliquée (effet, valeur par défaut,
+  contraintes, conséquences) ;
+- « Questions fréquentes » seulement si utile.
+- Une section qui n'a de sens qu'avec une permission se place entre `:::permission <clé>` et
+  `:::` (clé du catalogue `src/lib/permissions/catalog.ts`, de la **portée de l'espace** :
+  `/platform` (y compris `/platform/organizations/[orgId]/…`) → clés PLATFORM ; `/org` → ORG ;
+  `/event` → EVENT ; `/account` → PARTICIPANT ; pas de blocs imbriqués). Un bloc n'est justifié que si
+  l'écran masque réellement la section sans la permission (vérifie la condition d'affichage dans le
+  code) ; sinon décris le droit en texte. Une page sans garde de permission n'a pas de `access`.
+
+**Rédaction** : français avec accents, vouvoiement, ton du guide utilisateur ; public =
+organisateurs et staff ; n'explique que ce que l'écran montre, avec les libellés exacts de
+l'interface ; ne rien inventer ; jamais de secret, de jeton, ni de donnée personnelle réelle
+(exemples fictifs seulement).
 
 ---
 
@@ -101,7 +142,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 - **Mot de passe** : bcryptjs avec **12 rounds**, longueur minimale **6 caractères**.
 - **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
 - **Soft delete partout** (`archived: bool` + `archivedAt: DateTime?`). Hard delete = action staff explicite.
-- **RBAC — séparation des rôles (v1 uniquement)** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **En v2**, cette restriction n'existe plus : `SUPER_ADMIN` est au sommet de `StaffRole` (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`) avec tous les droits sans restriction, y compris les actions métier (avec audit `staffActor=true`). Voir `docs/v2/features/multi-tenancy-rbac.md`.
+- **RBAC** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **À partir de la v2 (v4 : modèle rôles + permissions, spec 37)**, tout passe par des permissions du catalogue ; `SUPER_ADMIN` détient toutes les permissions plateforme, organisation et évènement (audit `staffActor=true` pour les actions métier). Voir `docs/v4/features/roles-permissions.md`.
 - **Rendu des badges** : le moteur `@tigamadou/pdf-engine` rend un badge en HTML ; le PDF, le document figé de l'aperçu et l'épreuve `proof.png` sont produits par le **service de rendu** (`renderer`, jamais exposé, réseau interne sans accès sortant), dont le tag d'image est égal à la version exacte du moteur. Montserrat est embarquée dans le moteur : plus d'accès sortant à Google Fonts requis. Un paquet de template peut embarquer ses propres polices (TTF/OTF), enregistrées sous une famille préfixée par template. Les images d'un paquet sont limitées à **JPEG et PNG** : le moteur ne lit pas le WebP, pourtant accepté ailleurs pour les uploads. Un document de badge de plus de 20 Mo est refusé avant l'appel. Voir `docs/v4/features/templates-badges.md` et `DEPLOYMENT.md`.
 
 ---
@@ -143,7 +184,7 @@ environnement d'agent (`scripts/agent-stack.sh`), en respectant les règles de t
 ## Workflow Git — valeurs projet
 
 - **Branche principale** : `development`
-- **Avant tout commit** : `make lint && make typecheck && make test`
+- **Avant tout commit** : `make lint && make typecheck && make test` ; `make docs-check` (inclus dans `make lint`) pour les docs des pages
 - Messages de commit en **français ASCII**, style conventional commits.
 
 Le reste des règles git (pas d'initiative de commit, pas de co-auteur IA, interdits) vit dans `CLAUDE.template.md`.

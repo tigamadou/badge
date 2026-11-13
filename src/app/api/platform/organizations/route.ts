@@ -52,7 +52,7 @@ export const GET = withStaffAuth(async (req) => {
   ]);
 
   return NextResponse.json({ organizations, total, page, pageSize });
-});
+}, { permission: "organizations.read" });
 
 // =====================================================
 //  POST /api/platform/organizations - creation organisation + OWNER initial
@@ -252,5 +252,5 @@ export const POST = withStaffAuth(
       { status: 201 },
     );
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "organizations.create" },
 );

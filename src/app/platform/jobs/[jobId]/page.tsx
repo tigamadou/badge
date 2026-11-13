@@ -1,9 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { getJobDetail } from "@/lib/jobs/admin";
 import { Card, CardBody, CardHead } from "@/components/ui/Card";
 import { Alert } from "@/components/ui/Feedback";
@@ -20,13 +17,11 @@ export default async function PlatformJobDetailPage({
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
+  const { permissions } = await requirePlatformPage("email_jobs.read", `/platform/jobs/${jobId}`);
   const job = await getJobDetail(jobId);
   if (!job) notFound();
 
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const canAdmin =
-    !!ctx && ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_ADMIN");
+  const canAdmin = permissions.has("email_jobs.manage");
 
   return (
     <div className="flex flex-col gap-4">

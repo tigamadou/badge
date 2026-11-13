@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
 import { getApprovedPhotoUrl } from "@/lib/approved-photo";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { effectivePermissions, hasPermission } from "@/lib/permissions";
 import { getOrgAccess } from "@/lib/org-access";
 import { can } from "@/lib/subscription-rights";
 import { OrgShell } from "@/components/admin/OrgShell";
@@ -31,9 +31,10 @@ export default async function OrgLayout({
   if (!org) notFound();
 
   // v4 Bloc B : fin des vues imbriquees. Le staff ne "descend" plus dans l'espace org ;
-  // il supervise via /platform/organizations/[orgId]. Seuls les membres org (OWNER/MANAGER/
-  // AUDITOR) accedent a /org ; la matrice de permissions est appliquee route par route.
-  const isMember = hasOrgRole(ctx, orgId, "AUDITOR"); // sans allowStaff
+  // il supervise via /platform/organizations/[orgId]. Seuls les membres de l'organisation
+  // qui detiennent `org.read` accedent a /org ; chaque page et chaque route verifie sa permission.
+  const target = { kind: "org", orgId } as const;
+  const isMember = ctx.orgMemberships.some((m) => m.orgId === orgId) && hasPermission(ctx, "org.read", target);
   if (!isMember) {
     if (ctx.isStaff) redirect(`/platform/organizations/${orgId}`);
     redirect("/select");
@@ -41,21 +42,16 @@ export default async function OrgLayout({
 
   const photoUrl = await getApprovedPhotoUrl(ctx.user.id);
 
+  const readableOrgIds = ctx.orgMemberships
+    .filter((m) => hasPermission(ctx, "org.read", { kind: "org", orgId: m.orgId }))
+    .map((m) => m.orgId);
   const orgs = await prisma.organization.findMany({
-    where: ctx.isStaff
-      ? {}
-      : {
-          memberships: {
-            some: { userId: ctx.user.id, role: { in: ["OWNER", "MANAGER", "AUDITOR"] } },
-          },
-        },
+    where: ctx.isStaff ? {} : { id: { in: readableOrgIds } },
     select: { id: true, name: true, slug: true },
     orderBy: { name: "asc" },
   });
 
-  // v4 Bloc C : role effectif du membre pour filtrer la nav. Seuls des membres
-  // atteignent ce point (staff redirige plus haut), donc la membership existe.
-  const orgRole = ctx.orgMemberships.find((m) => m.orgId === orgId)?.role ?? "AUDITOR";
+  const permissions = [...effectivePermissions(ctx, target)];
 
   // Selon les droits de l'abonnement (réglage plateforme), l'espace peut être remplacé
   // par un écran bloquant. Ce layout n'est pas re-rendu lors d'une navigation douce :
@@ -69,7 +65,7 @@ export default async function OrgLayout({
       org={org}
       user={{ name: ctx.user.name, email: ctx.user.email, isStaff: ctx.isStaff }}
       orgs={orgs}
-      orgRole={orgRole}
+      permissions={permissions}
       photoUrl={photoUrl}
     >
       <OrgAccessGate orgId={orgId} canAccessOrgSpace={canAccessOrgSpace}>

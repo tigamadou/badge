@@ -98,4 +98,13 @@ test.describe("Platform — Paiements", () => {
       expect(m.doc).toBeLessThanOrEqual(m.inner);
     });
   }
+
+  test("un Imprimeur n'a pas Paiements dans le menu et est renvoye en URL directe", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_PRINTER", scope: "ppay-printer" });
+
+    await page.goto("/platform");
+    await expect(page.locator("#app-shell-nav").getByRole("link", { name: "Paiements" })).toHaveCount(0);
+    await page.goto("/platform/payments");
+    await expect(page).toHaveURL(/\/platform$/);
+  });
 });

@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { JournalEntryDetail } from "@/components/activity/JournalEntryDetail";
@@ -6,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StaffJournalDetailPage({ params }: { params: Promise<{ logId: string }> }) {
   const { logId } = await params;
+  await requirePlatformPage("activity.read", `/platform/activity/${logId}`);
 
   const log = await prisma.activityLog.findUnique({
     where: { id: logId },
@@ -20,7 +22,7 @@ export default async function StaffJournalDetailPage({ params }: { params: Promi
       orgId: true,
       eventId: true,
       targetId: true,
-      user: { select: { id: true, name: true, email: true, staffRole: true } },
+      user: { select: { id: true, name: true, email: true, platformRole: { select: { name: true } } } },
     },
   });
   if (!log) notFound();

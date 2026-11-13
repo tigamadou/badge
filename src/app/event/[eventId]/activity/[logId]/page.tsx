@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { JournalEntryDetail } from "@/components/activity/JournalEntryDetail";
-import { getEventOrgId } from "@/lib/event-org";
+import { requireEventPagePermission } from "../../_lib/page-access";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +11,19 @@ export default async function EventJournalDetailPage({
   params: Promise<{ eventId: string; logId: string }>;
 }) {
   const { eventId, logId } = await params;
-  const orgId = await getEventOrgId(eventId);
+  const { ctx, orgId, permissions } = await requireEventPagePermission(
+    eventId,
+    ["event.activity.read", "scan.history.read"],
+    `/event/${eventId}/activity/${logId}`,
+  );
 
-  // Scoping : on ne montre que les entrees rattachees a cet evenement.
+  // Scoping : on ne montre que les entrees rattachees a cet evenement ; sans journal complet, les siennes seulement.
   const log = await prisma.activityLog.findFirst({
-    where: { id: logId, eventId },
+    where: {
+      id: logId,
+      eventId,
+      ...(permissions.has("event.activity.read") ? {} : { userId: ctx.user.id, type: "BADGE_SCANNED" as const }),
+    },
     select: {
       id: true,
       type: true,

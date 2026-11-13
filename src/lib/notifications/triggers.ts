@@ -53,7 +53,7 @@ export async function notifyRegistrationCreated(registrationId: string, actorId:
       {
         type: "REGISTRATION_CREATED",
         scope: "EVENT",
-        recipients: { eventRoles: { eventId: r.event.id, roles: ["ADMIN", "OPERATOR"] } },
+        recipients: { permission: "registration.approve", target: { kind: "event", eventId: r.event.id, orgId: r.event.orgId } },
         actorId,
         orgId: r.event.orgId,
         eventId: r.event.id,
@@ -81,7 +81,7 @@ export async function notifyRegistrationResubmitted(
       {
         type: "REGISTRATION_RESUBMITTED",
         scope: "EVENT",
-        recipients: { eventRoles: { eventId: r.event.id, roles: ["ADMIN", "OPERATOR"] } },
+        recipients: { permission: "registration.approve", target: { kind: "event", eventId: r.event.id, orgId: r.event.orgId } },
         actorId,
         orgId: r.event.orgId,
         eventId: r.event.id,
@@ -155,7 +155,7 @@ export async function notifyProfileSubmitted(userId: string): Promise<void> {
       {
         type: "PROFILE_SUBMITTED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_SUPPORT" },
+        recipients: { permission: "profiles.review", target: { kind: "platform" } },
         actorId: user.id,
         content: profileSubmittedMessage({ userId: user.id, userName: user.name }),
       },
@@ -297,7 +297,7 @@ export async function notifyEventRegistrationToggled(
       {
         type: open ? "EVENT_REGISTRATION_OPENED" : "EVENT_REGISTRATION_CLOSED",
         scope: "EVENT",
-        recipients: { eventRoles: { eventId, roles: ["ADMIN", "OPERATOR", "PRINTER", "VIEWER"] } },
+        recipients: { permission: "event.read.aggregated", target: { kind: "event", eventId: eventId, orgId: event.orgId } },
         actorId,
         orgId: event.orgId,
         eventId,
@@ -320,7 +320,7 @@ export async function notifyOrgCreated(orgId: string, actorId: string): Promise<
       {
         type: "ORG_CREATED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "organizations.create", target: { kind: "platform" } },
         actorId,
         content: orgCreatedMessage({ orgId, orgName: org.name }),
       },
@@ -347,7 +347,7 @@ export async function notifySubscriptionChanged(orgId: string, actorId: string |
       {
         type: "SUBSCRIPTION_CHANGED",
         scope: "ORG",
-        recipients: { orgRoles: { orgId, roles: ["OWNER"] } },
+        recipients: { permission: "billing.subscription.pay", target: { kind: "org", orgId } },
         actorId,
         orgId,
         content: subscriptionChangedMessage({ ...args, audience: "org" }),
@@ -355,7 +355,7 @@ export async function notifySubscriptionChanged(orgId: string, actorId: string |
       {
         type: "SUBSCRIPTION_CHANGED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "subscriptions.update", target: { kind: "platform" } },
         actorId,
         content: subscriptionChangedMessage({ ...args, audience: "platform" }),
       },
@@ -374,7 +374,7 @@ export async function notifySubscriptionExpiring(orgId: string, daysBefore: numb
       {
         type: "SUBSCRIPTION_EXPIRING",
         scope: "ORG",
-        recipients: { orgRoles: { orgId, roles: ["OWNER"] } },
+        recipients: { permission: "billing.subscription.pay", target: { kind: "org", orgId } },
         actorId: null,
         orgId,
         content: subscriptionExpiringMessage({
@@ -401,7 +401,7 @@ export async function notifyQuotaExceeded(orgId: string, eventId: string, actorI
       {
         type: "QUOTA_EXCEEDED",
         scope: "ORG",
-        recipients: { orgRoles: { orgId, roles: ["OWNER"] } },
+        recipients: { permission: "billing.subscription.pay", target: { kind: "org", orgId } },
         actorId,
         orgId,
         content: quotaExceededMessage({ ...args, audience: "org" }),
@@ -409,7 +409,7 @@ export async function notifyQuotaExceeded(orgId: string, eventId: string, actorI
       {
         type: "QUOTA_EXCEEDED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "subscriptions.update", target: { kind: "platform" } },
         actorId,
         content: quotaExceededMessage({ ...args, audience: "platform" }),
       },
@@ -429,7 +429,7 @@ export async function notifyEmailFailed(job: {
       {
         type: "EMAIL_FAILED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "email_jobs.manage", target: { kind: "platform" } },
         actorId: null,
         email: false,
         content: emailFailedMessage({
@@ -469,7 +469,7 @@ export async function notifyPrintRequestSubmitted(requestId: string, actorId: st
       {
         type: "PRINT_REQUEST_SUBMITTED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "print.requests.quote.send", target: { kind: "platform" } },
         actorId,
         orgId: r.orgId,
         eventId: r.eventId,
@@ -496,7 +496,7 @@ export async function notifyPrintRequestQuoted(requestId: string, actorId: strin
       {
         type: "PRINT_REQUEST_QUOTED",
         scope: "EVENT",
-        recipients: { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        recipients: { permission: "print.request", target: { kind: "event", eventId: r.eventId, orgId: r.orgId } },
         actorId,
         orgId: r.orgId,
         eventId: r.eventId,
@@ -534,8 +534,8 @@ export async function notifyPrintRequestMessage(messageId: string, actorId: stri
         type: "PRINT_REQUEST_MESSAGE",
         scope: toStaff ? "PLATFORM" : "EVENT",
         recipients: toStaff
-          ? { staffMinRole: "STAFF_SUPPORT" }
-          : { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+          ? { permission: "print.requests.messages.send", target: { kind: "platform" } }
+          : { permission: "print.request", target: { kind: "event", eventId: r.eventId, orgId: r.orgId } },
         actorId,
         orgId: r.orgId,
         eventId: r.eventId,
@@ -573,7 +573,7 @@ export async function notifyPrintRequestStatusChanged(
       inputs.push({
         ...base,
         scope: "EVENT",
-        recipients: { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        recipients: { permission: "print.request", target: { kind: "event", eventId: r.eventId, orgId: r.orgId } },
         content: printRequestStatusChangedMessage({ ...args, toStaff: false }),
       });
     }
@@ -581,7 +581,7 @@ export async function notifyPrintRequestStatusChanged(
       inputs.push({
         ...base,
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "print.requests.quote.send", target: { kind: "platform" } },
         content: printRequestStatusChangedMessage({ ...args, toStaff: true }),
       });
     }
@@ -612,13 +612,13 @@ export async function notifyPrintRequestPaid(
       {
         ...base,
         scope: "EVENT",
-        recipients: { eventRoles: { eventId: r.eventId, roles: ["ADMIN"] } },
+        recipients: { permission: "print.request", target: { kind: "event", eventId: r.eventId, orgId: r.orgId } },
         content: printRequestPaidMessage({ ...args, audience: "event" }),
       },
       {
         ...base,
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "print.requests.mark_paid", target: { kind: "platform" } },
         content: printRequestPaidMessage({ ...args, audience: "platform" }),
       },
     ]);
@@ -637,7 +637,7 @@ export async function notifyPrintPaymentUnmatched(requestId: string, paymentId: 
       {
         type: "PRINT_REQUEST_STATUS_CHANGED",
         scope: "PLATFORM",
-        recipients: { staffMinRole: "STAFF_ADMIN" },
+        recipients: { permission: "print.requests.mark_paid", target: { kind: "platform" } },
         actorId: null,
         orgId: r.orgId,
         eventId: r.eventId,

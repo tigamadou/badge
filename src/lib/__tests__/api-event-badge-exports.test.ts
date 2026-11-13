@@ -53,7 +53,7 @@ describe("POST /api/org/[orgId]/events/[eventId]/badges/exports", () => {
     const a = await addRegistration();
     const res = await post(org.id, event.id, { ids: [a.id] });
     expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe("EVENT_FORBIDDEN");
+    expect((await res.json()).error).toBe("PERMISSION_DENIED");
   });
 
   it("201 pour un PRINTER pur ; ordre conserve, doublons retires, journal BADGE_BATCH_EXPORTED", async () => {

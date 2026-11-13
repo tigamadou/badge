@@ -6,9 +6,13 @@ import { OrgMemberForm } from "@/components/admin/OrgMemberForm";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ActionError } from "@/lib/toast";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import Link from "next/link";
 import { RoleBadge } from "@/components/ui/Labels";
 import { Icon } from "@/components/ui/Icon";
 import { TableFrame } from "@/components/ui/TableFrame";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { readOrThrow } from "@/components/permissions/logic";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -24,11 +28,15 @@ type Member = {
   email: string;
   name: string;
   archived: boolean;
-  role: string;
+  role: { id: string; name: string; systemKey: string | null };
+  // Rôle non modifiable par l'acteur (soi-même, autre propriétaire).
+  roleLocked: boolean;
+  // Retrait permis à l'acteur (droit de gestion, et pas un autre propriétaire).
+  removable: boolean;
   invitedAt: string;
+  // Lien vers l'ajustement des permissions ; absent si l'acteur n'y a pas droit pour ce membre.
+  permissionsHref?: string | null;
 };
-
-const ORG_ROLES = ["OWNER", "MANAGER", "AUDITOR"] as const;
 
 export function MembersClient({
   orgId,
@@ -36,14 +44,17 @@ export function MembersClient({
   ownerCount,
   footer,
   canManageRoles = false,
+  roles,
 }: {
   orgId: string;
   rows: Member[];
   // Nombre d'OWNER de toute l'organisation (la liste est paginee : on ne peut pas le deduire des lignes).
   ownerCount: number;
   footer?: ReactNode;
-  // Seul un OWNER peut changer les roles : sinon le role reste en lecture seule.
+  // `org.members.manage` : inviter, changer les rôles et retirer ; sinon la liste reste en lecture seule.
   canManageRoles?: boolean;
+  // Rôles attribuables par l'acteur (précalculés par la page).
+  roles: AssignableRoleRow[];
 }) {
   const router = useRouter();
 
@@ -56,17 +67,16 @@ export function MembersClient({
   async function removeMember(userId: string) {
     const res = await fetch(`/api/org/${orgId}/members/${userId}`, { method: "DELETE" });
     if (res.status === 409) throw new ActionError("Impossible : c'est le dernier OWNER.");
-    if (!res.ok) throw res;
+    await readOrThrow(res);
   }
 
-  async function changeRole(userId: string, role: string) {
+  async function changeRole(userId: string, roleId: string) {
     const res = await fetch(`/api/org/${orgId}/members/${userId}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ roleId }),
     });
-    if (res.status === 409) throw new ActionError("Impossible : c'est le dernier OWNER.");
-    if (!res.ok) throw res;
+    await readOrThrow(res);
   }
 
   return (
@@ -76,8 +86,8 @@ export function MembersClient({
         <p className="mt-0.5 text-sm text-slate-400">Les membres de votre organisation et leurs rôles</p>
       </div>
 
-      {/* Inviter est OWNER-only : on masque le formulaire pour les autres roles. */}
-      {canManageRoles && <OrgMemberForm orgId={orgId} onAdded={refresh} />}
+      {/* Inviter exige `org.members.manage` : formulaire masqué sinon. */}
+      {canManageRoles && <OrgMemberForm orgId={orgId} onAdded={refresh} roles={roles} />}
 
       <TableFrame>
         <table className="w-full text-sm">
@@ -94,8 +104,9 @@ export function MembersClient({
               <MemberRow
                 key={m.userId}
                 member={m}
-                isLastOwner={m.role === "OWNER" && ownerCount === 1}
+                isLastOwner={m.role.systemKey === "OWNER" && ownerCount === 1}
                 canManageRoles={canManageRoles}
+                roles={roles}
                 changeRole={changeRole}
                 removeMember={removeMember}
                 refresh={refresh}
@@ -113,6 +124,7 @@ function MemberRow({
   member: m,
   isLastOwner,
   canManageRoles,
+  roles,
   changeRole,
   removeMember,
   refresh,
@@ -120,7 +132,8 @@ function MemberRow({
   member: Member;
   isLastOwner: boolean;
   canManageRoles: boolean;
-  changeRole: (userId: string, role: string) => Promise<void>;
+  roles: AssignableRoleRow[];
+  changeRole: (userId: string, roleId: string) => Promise<void>;
   removeMember: (userId: string) => Promise<void>;
   refresh: () => Promise<void>;
 }) {
@@ -151,29 +164,30 @@ function MemberRow({
         </div>
       </td>
       <td className="px-4 py-3">
-        {canManageRoles ? (
-          <select
-            aria-label={`Rôle de ${m.email}`}
-            value={m.role}
+        {canManageRoles && !m.roleLocked ? (
+          <RoleSelect
+            compact
+            name={`role-${m.userId}`}
+            label={`Rôle de ${m.email}`}
+            roles={roles.some((r) => r.id === m.role.id) ? roles : [{ ...m.role, scope: "ORG", description: null, assignable: false }, ...roles]}
+            value={m.role.id}
             disabled={role.pending}
-            onChange={(e) => role.run(e.target.value)}
-            className="rounded-lg border border-slate-300 px-2 py-1 text-sm disabled:opacity-50"
-          >
-            {ORG_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => role.run(value)}
+          />
         ) : (
-          <RoleBadge tone={m.role === "OWNER" ? "green" : "slate"}>{m.role}</RoleBadge>
+          <RoleBadge tone={m.role.systemKey === "OWNER" ? "green" : "slate"}>{m.role.name}</RoleBadge>
         )}
       </td>
       <td className="px-4 py-3 text-sm tabular-nums text-slate-500">
         {new Date(m.invitedAt).toLocaleDateString("fr-FR")}
       </td>
-      <td className="px-4 py-3 text-right">
-        {isLastOwner ? (
+      <td className="space-x-3 whitespace-nowrap px-4 py-3 text-right">
+        {m.permissionsHref ? (
+          <Link href={m.permissionsHref} className="text-[13px] font-medium text-navy hover:underline">
+            Permissions
+          </Link>
+        ) : null}
+        {!m.removable ? null : isLastOwner ? (
           <span className="inline-flex items-center gap-1 text-xs text-slate-400">
             <Icon name="lock" size={12} /> Dernier OWNER
           </span>

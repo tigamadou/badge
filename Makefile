@@ -6,8 +6,8 @@
         preprod preprod-down preprod-build preprod-logs preprod-db-push \
         preprod-db-reset preprod-reload-demo \
         backup-prod rollback-prod migrate-uploads-clear smoke-tests smoke-tests-preprod \
-        test test-db test-unit test-coverage test-all ci test-e2e test-e2e-ui lint typecheck build logs \
-        db-push db-seed db-studio db-generate db-reset \
+        test test-db test-unit test-coverage test-all ci test-e2e test-e2e-ui lint docs-check docs-stamp typecheck build logs \
+        db-push db-seed db-studio db-generate db-reset migrate-roles \
         validate-badge-templates migrate-badge-template-refs migrate-installed-templates migrate-installed-templates-preprod migrate-installed-templates-prod \
         validate-badge-templates-preprod validate-badge-templates-prod \
         verify-engine verify-engine-preprod verify-engine-prod export-engine-corpus export-engine-corpus-prod \
@@ -519,6 +519,16 @@ migrate-badge-template-refs:
 
 lint:
 	$(DEV_COMPOSE) exec app yarn lint
+	@$(MAKE) --no-print-directory docs-check
+
+# Docs des pages (spec 40) : verification hors ligne (obsoletes, manquantes, orphelines, format)
+# et tampon apres mise a jour du texte (PAGES = identifiants, routes, espaces ou all).
+docs-check:
+	$(DEV_COMPOSE) exec app yarn --silent tsx scripts/page-docs/cli.ts check
+
+docs-stamp:
+	@test -n "$(PAGES)" || { echo "Usage : make docs-stamp PAGES=\"org/events/new platform\" (identifiants, routes, espaces ou all)"; exit 1; }
+	$(DEV_COMPOSE) exec app yarn --silent tsx scripts/page-docs/cli.ts stamp $(PAGES)
 
 typecheck:
 	$(DEV_COMPOSE) exec app yarn tsc --noEmit
@@ -542,6 +552,11 @@ db-push:
 	@# Le worker a son propre node_modules, donc son propre client Prisma.
 	@$(DEV_COMPOSE) restart worker >/dev/null 2>&1 || true
 	@./node_modules/.bin/prisma generate >/dev/null 2>&1 && echo "Client Prisma regenere aussi sur l'hote (types IDE)." || true
+
+# Renseigne roleId depuis les colonnes d'enum (staff, membres d'org et d'evenement).
+# Idempotent ; ARGS=--dry-run pour previsualiser. Dev uniquement dans ce chantier.
+migrate-roles:
+	$(DEV_COMPOSE) exec app yarn tsx scripts/migrate-roles.ts $(ARGS)
 
 # Seed minimal : plans, motifs, templates de badge, gabarits et catalogue d'impression,
 # plus admin@badge.local (dev uniquement, mot de passe 123456).

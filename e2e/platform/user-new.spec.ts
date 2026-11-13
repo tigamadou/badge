@@ -31,13 +31,13 @@ test.describe("Platform — Nouvel utilisateur", () => {
 
   // --- Actions UI ---------------------------------------------------------
 
-  test("STAFF_SUPPORT cree un client rattache a une org (AUDITOR)", async ({ page }) => {
+  test("STAFF_ADMIN cree un client rattache a une org (AUDITOR) — organizations.members.manage", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "unew-client" });
     const org = await getDb().organization.findUnique({
       where: { id: orgId },
       select: { name: true },
     });
-    await loginAsStaff(page, { role: "STAFF_SUPPORT", scope: "unew-client-actor" });
+    await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "unew-client-actor" });
     await mailpit.clear();
 
     const email = `e2e-unew-client-${Date.now()}@v2-11-e2e.test`;
@@ -49,7 +49,7 @@ test.describe("Platform — Nouvel utilisateur", () => {
     await page.getByRole("combobox", { name: /organisation/i }).selectOption({ label: org!.name });
     await page
       .getByRole("combobox", { name: /rôle dans l.organisation/i })
-      .selectOption("AUDITOR");
+      .selectOption({ label: "Auditeur" });
     await page.getByRole("button", { name: /créer et inviter/i }).click();
 
     await page.waitForURL(/\/platform\/users\/(?!new)[a-z0-9]+/i, { timeout: 10_000 });
@@ -82,7 +82,7 @@ test.describe("Platform — Nouvel utilisateur", () => {
     await page.getByRole("radio", { name: /staff applicatif/i }).click();
     // Le <label> englobe le <select> : son texte inclut les options, donc getByLabel
     // ne matche pas. La section "Rôle staff" n'expose qu'un seul select.
-    await page.locator("select").selectOption("STAFF_SUPPORT");
+    await page.locator("select").selectOption({ label: "Support" });
     await page.getByRole("button", { name: /créer et inviter/i }).click();
 
     await page.waitForURL(/\/platform\/users\/(?!new)[a-z0-9]+/i, { timeout: 10_000 });

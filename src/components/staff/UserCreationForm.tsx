@@ -8,10 +8,11 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { FormSection } from "@/components/ui/FormControls";
 import { RadioCards } from "@/components/ui/RadioCards";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { defaultRoleId } from "@/components/permissions/logic";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
 type OrgLite = { id: string; name: string };
-
-type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
 
 const SELECT_CLASS =
   "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-navy";
@@ -19,21 +20,46 @@ const SELECT_CLASS =
 export function UserCreationForm({
   orgs,
   canCreateStaff,
-  canCreateTopStaff,
+  canCreateClient,
+  platformRoles,
+  orgRoles,
 }: {
   orgs: OrgLite[];
   canCreateStaff: boolean;
-  canCreateTopStaff: boolean;
+  canCreateClient: boolean;
+  // Rôles plateforme attribuables par l'acteur (précalculés par la page).
+  platformRoles: AssignableRoleRow[];
+  // Rôles d'organisation système attribuables ; ceux d'une organisation précise sont relus à son choix.
+  orgRoles: AssignableRoleRow[];
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
     email: "",
     name: "",
-    type: "client" as "client" | "staff",
-    staffRole: "STAFF_OBSERVER" as StaffRoleStr,
+    type: (canCreateClient ? "client" : "staff") as "client" | "staff",
+    platformRoleId: defaultRoleId(platformRoles, "STAFF_OBSERVER"),
     orgId: "",
-    orgRole: "OWNER" as "OWNER" | "MANAGER" | "AUDITOR",
+    orgRoleId: defaultRoleId(orgRoles, "OWNER"),
   });
+  // Rôles de l'organisation choisie (système + personnalisés), relus à chaque changement d'organisation.
+  const [orgChoices, setOrgChoices] = useState<AssignableRoleRow[]>(orgRoles);
+  const [rolesLoading, setRolesLoading] = useState(false);
+
+  async function pickOrg(orgId: string) {
+    setForm((f) => ({ ...f, orgId }));
+    if (!orgId) return;
+    setRolesLoading(true);
+    try {
+      const res = await fetch(`/api/platform/roles/assignable?scope=ORG&orgId=${encodeURIComponent(orgId)}`);
+      if (res.ok) {
+        const roles = ((await res.json()) as { roles: AssignableRoleRow[] }).roles;
+        setOrgChoices(roles);
+        setForm((f) => (roles.some((r) => r.id === f.orgRoleId && r.assignable) ? f : { ...f, orgRoleId: defaultRoleId(roles, "OWNER") }));
+      }
+    } finally {
+      setRolesLoading(false);
+    }
+  }
   const [emailError, setEmailError] = useState<string | null>(null);
   const [navigating, setNavigating] = useState(false);
 
@@ -44,10 +70,10 @@ export function UserCreationForm({
         name: form.name.trim(),
         type: form.type,
       };
-      if (form.type === "staff") payload.staffRole = form.staffRole;
+      if (form.type === "staff") payload.platformRoleId = form.platformRoleId;
       if (form.type === "client" && form.orgId) {
         payload.orgId = form.orgId;
-        payload.orgRole = form.orgRole;
+        payload.orgRoleId = form.orgRoleId;
       }
 
       const res = await fetch("/api/platform/users", {
@@ -75,7 +101,9 @@ export function UserCreationForm({
   const busy = create.pending || navigating;
 
   const typeOptions = [
-    { value: "client", title: "Client", description: "Rattaché à une organisation.", color: "#16B8A6" },
+    ...(canCreateClient
+      ? [{ value: "client", title: "Client", description: "Rattaché à une organisation.", color: "#16B8A6" }]
+      : []),
     ...(canCreateStaff
       ? [{ value: "staff", title: "Staff applicatif", description: "Administration de la plateforme.", color: "#081558" }]
       : []),
@@ -122,19 +150,12 @@ export function UserCreationForm({
 
           {form.type === "staff" && canCreateStaff && (
             <FormSection title="Rôle staff">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Rôle</span>
-                <select
-                  value={form.staffRole}
-                  onChange={(e) => setForm((f) => ({ ...f, staffRole: e.target.value as StaffRoleStr }))}
-                  className={SELECT_CLASS}
-                >
-                  <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
-                  <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>
-                  {canCreateTopStaff && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
-                  {canCreateTopStaff && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
-                </select>
-              </label>
+              <RoleSelect
+                name="platformRoleId"
+                roles={platformRoles}
+                value={form.platformRoleId}
+                onChange={(v) => setForm((f) => ({ ...f, platformRoleId: v }))}
+              />
             </FormSection>
           )}
 
@@ -145,7 +166,7 @@ export function UserCreationForm({
                   <span className="mb-1 block text-sm font-medium text-slate-700">Organisation</span>
                   <select
                     value={form.orgId}
-                    onChange={(e) => setForm((f) => ({ ...f, orgId: e.target.value }))}
+                    onChange={(e) => void pickOrg(e.target.value)}
                     className={SELECT_CLASS}
                   >
                     <option value="">Aucune</option>
@@ -157,18 +178,14 @@ export function UserCreationForm({
                   </select>
                 </label>
                 {form.orgId && (
-                  <label className="block">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Rôle dans l&apos;organisation</span>
-                    <select
-                      value={form.orgRole}
-                      onChange={(e) => setForm((f) => ({ ...f, orgRole: e.target.value as typeof form.orgRole }))}
-                      className={SELECT_CLASS}
-                    >
-                      <option value="OWNER">OWNER</option>
-                      <option value="MANAGER">MANAGER</option>
-                      <option value="AUDITOR">AUDITOR</option>
-                    </select>
-                  </label>
+                  <RoleSelect
+                    name="orgRoleId"
+                    label="Rôle dans l'organisation"
+                    roles={orgChoices}
+                    value={form.orgRoleId}
+                    disabled={rolesLoading}
+                    onChange={(v) => setForm((f) => ({ ...f, orgRoleId: v }))}
+                  />
                 )}
               </div>
             </FormSection>
@@ -183,7 +200,7 @@ export function UserCreationForm({
         <Button type="button" variant="secondary" onClick={() => router.push("/platform/users")}>
           Annuler
         </Button>
-        <Button type="submit" loading={busy} disabled={!form.email.trim() || !form.name.trim()}>
+        <Button type="submit" loading={busy} disabled={!form.email.trim() || !form.name.trim() || (form.type === "staff" && !form.platformRoleId)}>
           Créer et inviter
         </Button>
       </div>

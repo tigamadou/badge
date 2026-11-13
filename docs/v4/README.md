@@ -32,6 +32,8 @@ et retires du depot une fois implementes.
 
 - [Spec 30 — Plan gratuit d'un mois et droits selon l'abonnement](specs/2026-11-01-30-v4-abonnement-essai-droits.md) · [Plan](plans/2026-11-01-abonnement-essai-droits.md) · [Feature](features/abonnements.md) — `free` = essai de 30 jours sans repli, echeance → `EXPIRED`, droits reglables dans `/platform/settings` (creation d'evenement, inscriptions, gestion des evenements en cours, espace org). Sur la branche `feat/paiement-fedapay`, avant sa fusion. En attente de relecture.
 
+- [Spec 37 — Rôles et permissions](specs/2026-11-13-37-v4-roles-et-permissions.md) · [Plan socle](plans/2026-11-13-1-socle-roles-docs.md) · [Feature](features/roles-permissions.md) — catalogue de permissions, rôles système et personnalisés, ajustements par utilisateur. Chantier en cours (socle).
+
 ### Chantiers livres
 
 Les plans correspondants ont ete **supprimes du depot** apres implementation (demande du
@@ -63,6 +65,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 - [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox, paiement des devis d'impression (`purpose`, un seul paiement en cours, paiement hors contexte, marquage manuel, URL de retour).
 - [Abonnements](features/abonnements.md) — plans, prix, essai free de 30 jours, echeance (`EXPIRED`), droits selon l'abonnement, rappels.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
+- [Documentation des pages](features/documentation-pages.md) — bouton « ? », section Documentation, outil `make docs-check` / `make docs-stamp`, consigne aux agents.
 - [Lot notifications — socle commun](features/lot-notifications-socle.md) — contrats C1 a C4 (`enqueueEmail`, `NotificationBell`, `UserAvatar`, toasts) tels que livres.
 - [Notifications internes et email](features/notifications.md) — cloche, panneau, pages par espace, matrice des evenements, destinataires, API, retention.
 - [Loader et toast sur les actions](features/feedback-actions.md) — primitives, `apiErrorMessage`, motifs A a G, regles d'usage, helpers e2e.

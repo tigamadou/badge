@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { hasOrgRole } from "@/lib/auth-helpers";
+import { notFound } from "next/navigation";
+import { requireOrgPagePermission } from "@/app/org/[orgId]/_lib/page-access";
 import { loadPayment } from "@/lib/payments-query";
 import { Icon } from "@/components/ui/Icon";
 import { PaymentDetailView } from "@/components/payments/PaymentDetailView";
@@ -14,11 +11,7 @@ export default async function OrgPaymentPage({
   params: Promise<{ orgId: string; paymentId: string }>;
 }) {
   const { orgId, paymentId } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect(`/login?callbackUrl=/org/${orgId}/payments/${paymentId}`);
-  const ctx = await loadUserContext(session.user.id);
-  if (!ctx) redirect("/login");
-  if (!hasOrgRole(ctx, orgId, "MANAGER")) redirect(`/org/${orgId}`);
+  await requireOrgPagePermission(orgId, "billing.payments.read", `/org/${orgId}/payments/${paymentId}`);
 
   // Scope d'organisation : le paiement d'une autre organisation donne 404, comme un id inconnu.
   const payment = await loadPayment(paymentId, { orgId });

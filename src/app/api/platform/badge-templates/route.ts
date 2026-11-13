@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { requireStaff, AuthError } from "@/lib/auth-guards";
+import { withStaffAuth } from "@/lib/with-staff-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { MAX_ARCHIVE_BYTES, readTemplatePackage } from "@tigamadou/pdf-engine/package";
@@ -15,20 +13,8 @@ function badRequest(errors: string[]) {
   return NextResponse.json({ error: "INVALID_PACKAGE", errors }, { status: 400 });
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
-  }
-  try {
-    await requireStaff(session.user.id, "STAFF_ADMIN");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-    }
-    throw err;
-  }
-
+export const POST = withStaffAuth(
+  async (req: NextRequest, { session }) => {
   const form = await req.formData().catch(() => null);
   const file = form?.get("archive");
   if (!(file instanceof File)) {
@@ -79,22 +65,12 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(created, { status: 201 });
-}
+},
+  { permission: "badge_templates.manage" },
+);
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "NOT_AUTHENTICATED" }, { status: 401 });
-  }
-  try {
-    await requireStaff(session.user.id, "STAFF_OBSERVER");
-  } catch (err) {
-    if (err instanceof AuthError) {
-      return NextResponse.json({ error: err.code }, { status: err.httpStatus });
-    }
-    throw err;
-  }
-
+export const GET = withStaffAuth(
+  async () => {
   const templates = await prisma.installedBadgeTemplate.findMany({
     orderBy: [{ family: "asc" }, { version: "desc" }],
     select: {
@@ -110,4 +86,6 @@ export async function GET() {
     },
   });
   return NextResponse.json({ templates });
-}
+},
+  { permission: "badge_templates.read" },
+);

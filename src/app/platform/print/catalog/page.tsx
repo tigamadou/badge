@@ -1,7 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { listProducts } from "@/lib/print-catalog/products";
 import { CatalogList } from "@/components/staff/print/CatalogList";
 import { parseListPage } from "@/lib/list-query";
@@ -14,10 +11,8 @@ export default async function PrintCatalogPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  const canWrite =
-    !!ctx && ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_ADMIN");
+  const { permissions } = await requirePlatformPage("print.catalog.read", "/platform/print/catalog");
+  const canWrite = permissions.has("print.catalog.manage");
 
   const kind = sp.kind === "BADGE" || sp.kind === "ACCESSORY" ? sp.kind : null;
   const archived = sp.archived === "true";

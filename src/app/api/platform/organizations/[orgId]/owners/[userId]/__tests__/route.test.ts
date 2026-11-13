@@ -240,3 +240,28 @@ describe("DELETE /api/platform/organizations/[orgId]/owners/[userId]", () => {
     expect(log?.staffActor).toBe(true);
   });
 });
+
+describe("DELETE owners : lignes migrées (roleId)", () => {
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  it("retire un propriétaire porteur du rôle OWNER par roleId, refuse un membre porteur d'un autre rôle", async () => {
+    const { systemRoleId } = await import("@/lib/permissions/db");
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    const mk = async (email: string, key: "OWNER" | "MANAGER") => {
+      const u = await prisma.user.create({ data: { email, password: "x", name: email } });
+      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: await systemRoleId(prisma, key) } });
+      return u;
+    };
+    const o1 = await mk("o1@x.com", "OWNER");
+    await mk("o2@x.com", "OWNER");
+    const mgr = await mk("m@x.com", "MANAGER");
+    const { DELETE } = await import("@/app/api/platform/organizations/[orgId]/owners/[userId]/route");
+    const call = (userId: string) =>
+      DELETE(new NextRequest("http://localhost/x", { method: "DELETE" }), { params: Promise.resolve({ orgId: org.id, userId }) });
+    expect((await call(mgr.id)).status).toBe(409);
+    expect((await call(o1.id)).status).toBe(204);
+  });
+});

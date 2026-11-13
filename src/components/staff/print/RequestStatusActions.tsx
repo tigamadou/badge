@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { PrintRequestStatus, PrintRequestType, StaffRole } from "@prisma/client";
+import type { PrintRequestStatus, PrintRequestType } from "@prisma/client";
+import type { Permission } from "@/lib/permissions";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { toastError, toastSuccess } from "@/lib/toast";
@@ -35,21 +36,22 @@ export function RequestStatusActions({
   eventId,
   orgId,
   items,
-  role,
+  permissions,
   onChanged,
 }: {
   request: { id: string; status: PrintRequestStatus; type: PrintRequestType };
   eventId: string;
   orgId: string;
   items: { registrationId: string; badgePrinted: boolean }[];
-  role: StaffRole;
+  permissions: Permission[];
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState<StaffAction | null>(null);
   const [dialog, setDialog] = useState<"REJECT" | "MARK_PAID" | "COMPLETE" | null>(null);
   const [reason, setReason] = useState("");
-  const actions = availableActions(request.status, role);
-  const showSheets = canGenerateSheets(request.status, request.type, role);
+  const permissionSet = new Set(permissions);
+  const actions = availableActions(request.status, request.type, permissionSet);
+  const showSheets = canGenerateSheets(request.status, request.type, permissionSet);
   const toPrint = request.type === "ADVANCE" ? unprintedIds(items) : [];
 
   function close() {

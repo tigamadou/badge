@@ -8,7 +8,7 @@ import { checkIdPhotoKey } from "@/lib/event-image-compliance";
 type Params = { orgId: string; eventId: string; regId: string };
 
 export const GET = withEventAuth(
-  { minRole: "OPERATOR", allowArchived: true },
+  { permission: "event.read.detailed", allowArchived: true },
   async (_req, { eventId }, extra) => {
     const { regId } = (await extra.params) as Params;
     const registration = await prisma.registration.findUnique({
@@ -39,7 +39,7 @@ const patchSchema = z.object({
 });
 
 export const PATCH = withEventAuth(
-  { minRole: "ADMIN" },
+  { permission: "registration.update" },
   async (req, { orgId, eventId, session }, extra) => {
     const { regId } = (await extra.params) as Params;
     const json = await req.json().catch(() => null);
@@ -85,7 +85,7 @@ export const PATCH = withEventAuth(
 );
 
 export const DELETE = withEventAuth(
-  { minRole: "ADMIN" },
+  { permission: "registration.delete" },
   async (req, { orgId, eventId, session }, extra) => {
     const { regId } = (await extra.params) as Params;
     const existing = await prisma.registration.findUnique({ where: { id: regId } });

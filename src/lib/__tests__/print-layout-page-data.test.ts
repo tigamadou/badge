@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { prisma } from "@/lib/prisma";
+import { makeStaff, makeUser } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -52,6 +53,20 @@ describe("canWriteLayouts", () => {
     await staff("STAFF_OBSERVER");
     expect(await canWriteLayouts()).toBe(false);
     await staff(null);
+    expect(await canWriteLayouts()).toBe(false);
+  });
+});
+
+describe("canWriteLayouts par rôle système", () => {
+  it("SA et AD vrai ; SU, PR, OB et non staff faux", async () => {
+    const expected = { SUPER_ADMIN: true, STAFF_ADMIN: true, STAFF_SUPPORT: false, STAFF_PRINTER: false, STAFF_OBSERVER: false } as const;
+    for (const [role, ok] of Object.entries(expected)) {
+      const user = await makeStaff(role as keyof typeof expected);
+      vi.mocked(getServerSession).mockResolvedValue({ user: { id: user.id } } as never);
+      expect(await canWriteLayouts(), role).toBe(ok);
+    }
+    const plain = await makeUser();
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: plain.id } } as never);
     expect(await canWriteLayouts()).toBe(false);
   });
 });

@@ -45,6 +45,8 @@ export type OnsiteStationProps = {
   location: string | null;
   printerNote: string | null;
   initialCounter: OnsiteCounter;
+  apiBase?: string;
+  backHref?: string;
 };
 
 // Le contenu d'un QR d'accueil contient l'URL de vérification ; une saisie qui la contient est lue comme un QR.
@@ -53,7 +55,8 @@ const looksLikeQr = (text: string) => text.includes("/verify/");
 // Poste d'impression sur place : le staff identifie un participant déjà approuvé et imprime
 // son badge. Le poste n'inscrit et n'approuve personne.
 export function OnsiteStation(props: OnsiteStationProps) {
-  const { requestId, reference, orgId, eventId, eventTitle, location, printerNote } = props;
+  const { requestId, reference, orgId, eventId, eventTitle, location, printerNote, apiBase } = props;
+  const backHref = props.backHref ?? `/platform/print/orders/${requestId}`;
   const [counter, setCounter] = useState(props.initialCounter);
   const [card, setCard] = useState<StationCard | null>(null);
   const [refusal, setRefusal] = useState<OnsiteRefusal | null>(null);
@@ -63,7 +66,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const { run: lookup, pending: looking } = useAsyncAction(async (payload: string) => {
-    const res = await fetch(requestUrl(requestId, "/onsite/lookup"), {
+    const res = await fetch(requestUrl(requestId, "/onsite/lookup", apiBase), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ payload: payload.trim().slice(0, 200) }),
@@ -81,7 +84,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
   }, { error: "Recherche impossible. Réessayez." });
 
   const { run: search, pending: searching } = useAsyncAction(async (q: string) => {
-    const res = await fetch(`${requestUrl(requestId, "/onsite/search")}?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`${requestUrl(requestId, "/onsite/search", apiBase)}?q=${encodeURIComponent(q)}`);
     if (!res.ok) throw res;
     setResults(((await res.json()) as { registrations: StationCard[] }).registrations);
   }, { error: "Recherche impossible. Réessayez." });
@@ -89,7 +92,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
   const { run: print, pending: printing } = useAsyncAction(
     async (registrationId: string, confirmReprint: boolean, tab: Window | null) => {
       try {
-        const res = await fetch(requestUrl(requestId, "/onsite/print"), {
+        const res = await fetch(requestUrl(requestId, "/onsite/print", apiBase), {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ registrationId, confirmReprint }),
@@ -147,7 +150,7 @@ export function OnsiteStation(props: OnsiteStationProps) {
     <div className="space-y-4">
       <div>
         <Link
-          href={`/platform/print/orders/${requestId}`}
+          href={backHref}
           className="text-[13px] text-slate-500 hover:text-slate-800"
         >
           ← Commande {reference}

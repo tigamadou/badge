@@ -65,7 +65,7 @@ test.describe("Platform — Fiche utilisateur", () => {
     await loginAsStaff(page, { role: "SUPER_ADMIN", scope: "udet-role-staff" });
 
     await page.goto(`/platform/users/${cible.id}`);
-    await page.locator("select").selectOption("STAFF_ADMIN");
+    await page.locator("select").selectOption({ label: "Administrateur" });
     await page.getByRole("button", { name: /changer le rôle/i }).click();
 
     await expect(async () => {
