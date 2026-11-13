@@ -41,7 +41,7 @@ contrôle) · [35 — impression pendant l'évènement](../specs/2026-11-01-35-v
 | 6 | `EventShell` unique, layout et atterrissage | [x] | 2026-11-13 | EventShell unique, layout, atterrissage |
 | 7 | Pages d'évènement gardées, boutons par permission, tableau de bord | [x] | 2026-11-13 | pages evenement gardees |
 | 8 | Pages AGENT du poste sur place | [x] | 2026-11-13 | pages poste sur place agent, canAccept par permission |
-| 9 | Quantité automatique des accessoires (spec 39) | [ ] | | |
+| 9 | Quantité automatique des accessoires (spec 39) | [x] | 2026-11-13 | quantite accessoires auto |
 | 10 | Documentation (spec 35, impression sur place, rôles et permissions) | [ ] | | |
 | 11 | e2e, doc, vérification | [ ] | | |
 

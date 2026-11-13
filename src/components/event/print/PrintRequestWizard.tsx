@@ -9,6 +9,7 @@ import { RadioCards } from "@/components/ui/RadioCards";
 import { Stepper } from "@/components/ui/Stepper";
 import { ProductCard } from "@/components/print/ProductCard";
 import { ProductConfigurator, type ProductConfiguration } from "@/components/print/ProductConfigurator";
+import { withBadgeQuantity } from "./accessory-quantity";
 import { QuoteLinesTable, type QuoteLineView } from "@/components/print/QuoteLinesTable";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { ActionError, toastSuccess } from "@/lib/toast";
@@ -177,8 +178,9 @@ export function PrintRequestWizard({
             missing.push(line.label);
             continue;
           }
+          // La quantité d'un accessoire suit le nombre de badges (spec 39), pas la ligne enregistrée.
           nextConfigs[product.id] = {
-            quantity: line.quantity,
+            quantity: product.kind === "BADGE" ? line.quantity : data.badgeCount,
             choices: pruneChoices(product, (line.choices ?? []) as OptionChoice[]),
           };
           if (product.kind === "BADGE") badge = product.id;
@@ -245,11 +247,10 @@ export function PrintRequestWizard({
     if (!badge) throw new ActionError("Choisissez un support de badge.");
     const entries = [badge, ...accessoryIds.map((id) => productById.get(id)).filter((p): p is CatalogProduct => !!p)];
     return entries.map((product) => {
-      const cfg = configOf(product);
-      const qty = product.kind === "BADGE" ? badgeCount : cfg.quantity;
-      const check = validateChoices(product, cfg.choices, qty);
+      const cfg = withBadgeQuantity(configOf(product), badgeCount);
+      const check = validateChoices(product, cfg.choices, cfg.quantity);
       if (!check.ok) throw new ActionError(`${product.name} : ${choiceErrorMessage(check.code)}`);
-      return { productId: product.id, quantity: product.kind === "BADGE" ? null : qty, choices: cfg.choices };
+      return { productId: product.id, quantity: product.kind === "BADGE" ? null : cfg.quantity, choices: cfg.choices };
     });
   }
 
@@ -425,10 +426,12 @@ export function PrintRequestWizard({
               <div key={id} className="rounded-xl border border-slate-200 bg-white p-4">
                 <ProductConfigurator
                   product={product}
-                  value={configOf(product)}
-                  onChange={(v) => setConfig(id, v)}
+                  value={withBadgeQuantity(configOf(product), badgeCount)}
+                  onChange={(v) => setConfig(id, { quantity: badgeCount, choices: v.choices })}
                   uploadFile={uploadFile}
+                  quantityLocked
                 />
+                <p className="mt-2 text-xs text-slate-500">Calculée sur le nombre de badges ({badgeCount}).</p>
               </div>
             );
           })}
