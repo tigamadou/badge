@@ -22,7 +22,7 @@ const ITEMS: Item[] = [
 export function AccountNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 text-sm">
+    <nav className="flex min-w-0 gap-0.5 overflow-x-auto text-xs sm:gap-1 sm:text-sm">
       {ITEMS.map((it) => {
         const active = it.exact ? pathname === it.href : pathname.startsWith(it.href);
         return (
@@ -30,7 +30,7 @@ export function AccountNav() {
             key={it.href}
             href={it.href}
             aria-current={active ? "page" : undefined}
-            className={`${it.hideBelowSm ? "hidden sm:inline-flex " : ""}whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-colors ${
+            className={`${it.hideBelowSm ? "hidden sm:inline-flex " : ""}whitespace-nowrap rounded-lg px-1.5 py-1.5 font-medium sm:px-3 transition-colors ${
               active ? "bg-mist text-navy" : "text-slate-600 hover:text-navy"
             }`}
           >
