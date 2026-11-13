@@ -8,6 +8,7 @@ import {
   notifyMembershipRoleChanged,
   notifyOrgMembershipAdded,
 } from "../triggers";
+import { systemRoleId } from "@/lib/permissions/db";
 import { addEventMember, addOrgMember, makeEvent, makeOrg, makeUser, sessionOf } from "./helpers";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
@@ -47,6 +48,8 @@ function json(body: unknown, method = "POST") {
   });
 }
 
+const rid = (key: Parameters<typeof systemRoleId>[1]) => systemRoleId(prisma, key);
+
 const emailKinds = () => vi.mocked(enqueueEmail).mock.calls.map((c) => c[0].kind);
 
 async function seedOrgOwner() {
@@ -62,7 +65,7 @@ describe("déclencheurs membres et rôles", () => {
     const target = await makeUser();
     login({ ...owner, isStaff: false });
     const { POST } = await import("@/app/api/org/[orgId]/members/route");
-    const res = await POST(json({ email: target.email, name: "X", role: "MANAGER" }), {
+    const res = await POST(json({ email: target.email, name: "X", roleId: await rid("MANAGER") }), {
       params: Promise.resolve({ orgId: org.id }),
     });
     expect(res.status).toBe(201);
@@ -76,7 +79,7 @@ describe("déclencheurs membres et rôles", () => {
     const { org, owner } = await seedOrgOwner();
     login({ ...owner, isStaff: false });
     const { POST } = await import("@/app/api/org/[orgId]/members/route");
-    const res = await POST(json({ email: "nouveau@x.test", name: "Nouveau", role: "AUDITOR" }), {
+    const res = await POST(json({ email: "nouveau@x.test", name: "Nouveau", roleId: await rid("AUDITOR") }), {
       params: Promise.resolve({ orgId: org.id }),
     });
     expect(res.status).toBe(201);
@@ -92,7 +95,7 @@ describe("déclencheurs membres et rôles", () => {
     const target = await makeUser();
     login({ ...owner, isStaff: false });
     const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const res = await POST(json({ email: target.email, role: "OPERATOR" }), {
+    const res = await POST(json({ email: target.email, roleId: await rid("OPERATOR") }), {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
     expect(res.status).toBe(201);
@@ -108,7 +111,7 @@ describe("déclencheurs membres et rôles", () => {
     const event = await makeEvent(org.id);
     login({ ...owner, isStaff: false });
     const { POST } = await import("@/app/api/org/[orgId]/events/[eventId]/members/route");
-    const res = await POST(json({ email: "evt-new@x.test", role: "VIEWER" }), {
+    const res = await POST(json({ email: "evt-new@x.test", roleId: await rid("VIEWER") }), {
       params: Promise.resolve({ orgId: org.id, eventId: event.id }),
     });
     expect(res.status).toBe(201);
@@ -148,7 +151,7 @@ describe("déclencheurs membres et rôles", () => {
     const res = await POST(
       json({
         email: "client@x.test", name: "Client", type: "client",
-        orgMemberships: [{ orgId: o1.id, role: "OWNER" }, { orgId: o2.id, role: "AUDITOR" }],
+        orgMemberships: [{ orgId: o1.id, roleId: await rid("OWNER") }, { orgId: o2.id, roleId: await rid("AUDITOR") }],
       }),
       { params: Promise.resolve({}) },
     );
@@ -165,7 +168,7 @@ describe("déclencheurs membres et rôles", () => {
     await addOrgMember(target.id, org.id, "AUDITOR");
     login({ ...owner, isStaff: false });
     const { PATCH } = await import("@/app/api/org/[orgId]/members/[userId]/route");
-    const res = await PATCH(json({ role: "MANAGER" }, "PATCH"), {
+    const res = await PATCH(json({ roleId: await rid("MANAGER") }, "PATCH"), {
       params: Promise.resolve({ orgId: org.id, userId: target.id }),
     });
     expect(res.status).toBe(200);
@@ -184,9 +187,9 @@ describe("déclencheurs membres et rôles", () => {
     login({ ...owner, isStaff: false });
     const { PATCH } = await import("@/app/api/org/[orgId]/events/[eventId]/members/[membershipId]/route");
     const ctx = { params: Promise.resolve({ orgId: org.id, eventId: event.id, membershipId: m.id }) };
-    expect((await PATCH(json({ role: "VIEWER" }, "PATCH"), ctx)).status).toBe(200);
+    expect((await PATCH(json({ roleId: await rid("VIEWER") }, "PATCH"), ctx)).status).toBe(200);
     expect(await prisma.notification.count()).toBe(0);
-    expect((await PATCH(json({ role: "OPERATOR" }, "PATCH"), ctx)).status).toBe(200);
+    expect((await PATCH(json({ roleId: await rid("OPERATOR") }, "PATCH"), ctx)).status).toBe(200);
     const row = await prisma.notification.findFirstOrThrow({ where: { userId: target.id } });
     expect(row).toMatchObject({ type: "MEMBERSHIP_ROLE_CHANGED", scope: "EVENT", eventId: event.id, orgId: org.id });
   });
@@ -198,7 +201,7 @@ describe("déclencheurs membres et rôles", () => {
     await addOrgMember(target.id, org.id, "AUDITOR");
     login({ ...staff, isStaff: true });
     const { POST } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
-    const res = await POST(json({ email: target.email, name: "T", role: "OWNER" }), {
+    const res = await POST(json({ email: target.email, name: "T", roleId: await rid("OWNER") }), {
       params: Promise.resolve({ orgId: org.id }),
     });
     expect(res.status).toBe(200);
@@ -213,10 +216,10 @@ describe("déclencheurs membres et rôles", () => {
     login({ ...staff, isStaff: true });
     const { POST } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
     const ctx = { params: Promise.resolve({ orgId: org.id }) };
-    expect((await POST(json({ email: existing.email, name: "E", role: "MANAGER" }), ctx)).status).toBe(201);
+    expect((await POST(json({ email: existing.email, name: "E", roleId: await rid("MANAGER") }), ctx)).status).toBe(201);
     expect(emailKinds()).toEqual(["notification.org_membership_added"]);
     vi.mocked(enqueueEmail).mockClear();
-    expect((await POST(json({ email: "brand-new@x.test", name: "N", role: "OWNER" }), ctx)).status).toBe(201);
+    expect((await POST(json({ email: "brand-new@x.test", name: "N", roleId: await rid("OWNER") }), ctx)).status).toBe(201);
     expect(enqueueEmail).not.toHaveBeenCalled();
     expect(await prisma.notification.count({ where: { type: "ORG_MEMBERSHIP_ADDED" } })).toBe(2);
   });
@@ -226,7 +229,7 @@ describe("déclencheurs membres et rôles", () => {
     const { org } = await seedOrgOwner();
     login({ ...staff, isStaff: true });
     const { POST } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
-    const res = await POST(json({ email: staff.email, name: "S", role: "OWNER" }), {
+    const res = await POST(json({ email: staff.email, name: "S", roleId: await rid("OWNER") }), {
       params: Promise.resolve({ orgId: org.id }),
     });
     expect(res.status).toBe(201);

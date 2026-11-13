@@ -490,7 +490,12 @@ describe("POST /api/account/registrations/[id]/resubmit", () => {
         email: me.email,
       });
       await withSession({ id: me.id, email: me.email, name: me.name, isStaff: false });
-      vi.spyOn(prisma.user, "findUnique").mockResolvedValueOnce(null);
+      // L'utilisateur de session existe pour le garde ; seule la relecture du profil le perd.
+      const realFindUnique = prisma.user.findUnique.bind(prisma.user);
+      vi.spyOn(prisma.user, "findUnique").mockImplementation(((args: { select?: Record<string, unknown> }) =>
+        args?.select && !("id" in args.select) && "firstName" in args.select
+          ? Promise.resolve(null)
+          : realFindUnique(args as never)) as never);
 
       const { POST } = await import(
         "@/app/api/account/registrations/[id]/resubmit/route"

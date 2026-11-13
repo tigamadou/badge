@@ -404,7 +404,7 @@ describe("POST /api/events/[slug]/register", () => {
     expect(json.code).toBe("INVALID_BODY");
   });
 
-  it("returns 404 when the session references a user missing from the database", async () => {
+  it("returns 401 when the session references a user missing from the database", async () => {
     const { event, category } = await seedEvent("re-ghostuser");
     await withSession({ id: "ghost-user-id", email: "ghost@x.test", name: "Ghost", isStaff: false });
 
@@ -412,9 +412,27 @@ describe("POST /api/events/[slug]/register", () => {
     const res = await POST(makeReq(event.slug, { categoryId: category.id }), {
       params: Promise.resolve({ slug: event.slug }),
     });
+    expect(res.status).toBe(401);
+    expect((await res.json()).code).toBe("NOT_AUTHENTICATED");
+  });
+
+  it("returns 404 when the profile row disappears after the permission check", async () => {
+    const { event, category } = await seedEvent("re-ghostprofile");
+    const u = await createCompleteUser("ghost-profile@v2-11-evtreg.test");
+    await withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
+    // L'utilisateur de session existe pour le garde ; seule la relecture du profil le perd.
+    const realFindUnique = prisma.user.findUnique.bind(prisma.user);
+    vi.spyOn(prisma.user, "findUnique").mockImplementation(((args: { select?: Record<string, unknown> }) =>
+      args?.select && !("id" in args.select) && "firstName" in args.select
+        ? Promise.resolve(null)
+        : realFindUnique(args as never)) as never);
+    const { POST } = await import("@/app/api/events/[slug]/register/route");
+    const res = await POST(makeReq(event.slug, { categoryId: category.id }), {
+      params: Promise.resolve({ slug: event.slug }),
+    });
+    vi.restoreAllMocks();
     expect(res.status).toBe(404);
-    const json = await res.json();
-    expect(json.code).toBe("NOT_FOUND");
+    expect((await res.json()).code).toBe("NOT_FOUND");
   });
 
   it("returns 409 EMAIL_BLOCKED when the participant's email is blocked", async () => {

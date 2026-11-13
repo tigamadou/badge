@@ -6,20 +6,23 @@ import { Input } from "@/components/ui/Input";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { defaultRoleId, readOrThrow } from "@/components/permissions/logic";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
-export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () => void }) {
+export function OrgMemberForm({ orgId, onAdded, roles }: { orgId: string; onAdded: () => void; roles: AssignableRoleRow[] }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"OWNER" | "MANAGER" | "AUDITOR">("MANAGER");
+  const [roleId, setRoleId] = useState(() => defaultRoleId(roles, "MANAGER"));
 
   const invite = useAsyncAction(
     async () => {
       const res = await fetch(`/api/org/${orgId}/members`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, name, role }),
+        body: JSON.stringify({ email, name, roleId }),
       });
-      if (!res.ok) throw res;
+      await readOrThrow(res);
     },
     {
       success: "Invitation envoyée.",
@@ -27,7 +30,7 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
       onSuccess: () => {
         setEmail("");
         setName("");
-        setRole("MANAGER");
+        setRoleId(defaultRoleId(roles, "MANAGER"));
         onAdded();
       },
     },
@@ -43,7 +46,8 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
             void invite.run();
           }}
           className="space-y-4"
-        >          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input placeholder="Nom complet" value={name} onChange={(e) => setName(e.target.value)} required />
             <Input
               type="email"
@@ -53,19 +57,8 @@ export function OrgMemberForm({ orgId, onAdded }: { orgId: string; onAdded: () =
               required
             />
           </div>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-700">Rôle</span>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as "OWNER" | "MANAGER" | "AUDITOR")}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy"
-            >
-              <option value="OWNER">Propriétaire (OWNER) — pleins pouvoirs sur l&apos;organisation</option>
-              <option value="MANAGER">Gestionnaire (MANAGER) — gère les événements</option>
-              <option value="AUDITOR">Auditeur (AUDITOR) — lecture seule</option>
-            </select>
-          </label>
-          <Button type="submit" loading={invite.pending}>
+          <RoleSelect name="roleId" roles={roles} value={roleId} onChange={setRoleId} />
+          <Button type="submit" loading={invite.pending} disabled={!roleId}>
             <span className="inline-flex items-center gap-2">
               <Icon name="send" size={16} /> Inviter
             </span>

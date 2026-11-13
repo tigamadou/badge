@@ -48,7 +48,7 @@ test.describe("Platform — Membres d'une organisation", () => {
     const email = `pmem-invitee-${Date.now()}@v2-11-e2e.test`;
     await page.getByPlaceholder("Nom complet").fill("Invite Plateforme");
     await page.getByPlaceholder("email@exemple.fr").fill(email);
-    await page.locator("form select").selectOption("MANAGER");
+    await page.locator("form select").selectOption({ label: "Gestionnaire" });
     await page.getByRole("button", { name: /^inviter$/i }).click();
 
     await expect(page.getByText(email)).toBeVisible();
@@ -71,7 +71,7 @@ test.describe("Platform — Membres d'une organisation", () => {
     const email = `pmem-aud-${Date.now()}@v2-11-e2e.test`;
     await page.getByPlaceholder("Nom complet").fill("Auditeur Plateforme");
     await page.getByPlaceholder("email@exemple.fr").fill(email);
-    await page.locator("form select").selectOption("AUDITOR");
+    await page.locator("form select").selectOption({ label: "Auditeur" });
     await page.getByRole("button", { name: /^inviter$/i }).click();
 
     await expect(page.getByText(email)).toBeVisible();

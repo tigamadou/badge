@@ -38,15 +38,18 @@ function compute(ctx: UserContext, target: PermissionTarget, withStaffRights: bo
   if (target.kind === "participant") add(systemRolePermissions("PARTICIPANT"));
 
   const orgId = target.kind === "org" || target.kind === "event" ? target.orgId : null;
-  // Pour les droits « côté organisateur » d'un staff, les ajustements plateforme sont écartés.
-  const levels = withStaffRights || !ctx.isStaff ? [null, orgId] : orgId === null ? [] : [orgId];
+  // Droits « côté organisateur » d'un staff : ses GRANT plateforme sont écartés, ses REVOKE plateforme restent appliqués.
+  const memberSideOfStaff = !withStaffRights && ctx.isStaff;
+  const levels = [null, orgId];
   const applicable = ctx.overrides.filter(
     (o) => permissionScopeOf(o.permission) === scope && (o.orgId === null || o.orgId === orgId),
   );
   // Plateforme avant organisation ; REVOKE appliqué après GRANT à chaque niveau.
   for (const level of levels) {
     const rows = applicable.filter((o) => o.orgId === level);
-    for (const o of rows) if (o.effect === "GRANT") result.add(o.permission);
+    if (!(memberSideOfStaff && level === null)) {
+      for (const o of rows) if (o.effect === "GRANT") result.add(o.permission);
+    }
     for (const o of rows) if (o.effect === "REVOKE") result.delete(o.permission);
   }
   return result;

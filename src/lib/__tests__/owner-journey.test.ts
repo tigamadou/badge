@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { systemRoleId } from "@/lib/permissions/db";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
@@ -66,7 +67,7 @@ describe("OWNER journey (smoke)", () => {
     const r2 = await inviteOwner(
       new NextRequest(`http://localhost/api/org/${org.id}/members`, {
         method: "POST",
-        body: JSON.stringify({ email: "bob@acme.test", name: "Bob" }),
+        body: JSON.stringify({ email: "bob@acme.test", name: "Bob", roleId: await systemRoleId(prisma, "OWNER") }),
         headers: { "content-type": "application/json" },
       }),
       { params: Promise.resolve({ orgId: org.id }) },

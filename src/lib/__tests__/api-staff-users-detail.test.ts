@@ -1,832 +1,264 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
+import { loadUserContext } from "@/lib/user-context";
+import { hasPermission } from "@/lib/permissions";
+import { makeCustomRole, makeEvent, makeEventMember, makeOrg, makeOrgMember, makeStaff, makeUser, seedFactories } from "@/test/factories";
+import type { PlatformSystemKey } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { DELETE, GET, PATCH } from "@/app/api/platform/users/[userId]/route";
+import { POST as RESET } from "@/app/api/platform/users/[userId]/reset-password/route";
 
-type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
+beforeEach(() => {
+  seedFactories(62);
+  vi.mocked(getServerSession).mockReset();
+});
 
-function withSession(user: {
-  id: string;
-  email: string;
-  name: string;
-  isStaff: boolean;
-}) {
-  vi.mocked(getServerSession).mockResolvedValue({ user } as never);
+function as(user: { id: string; email: string; name: string } | null) {
+  vi.mocked(getServerSession).mockResolvedValue(user ? ({ user } as never) : null);
 }
-
-async function makeStaff(staffRole: StaffRoleStr = "STAFF_ADMIN") {
-  const u = await prisma.user.create({
-    data: {
-      email: `s-${Date.now()}-${Math.random()}@x`,
-      password: "x",
-      name: "Staff",
-      isStaff: true,
-      staffRole,
-    },
+async function actAs(role: PlatformSystemKey) {
+  const user = await makeStaff(role);
+  as(user);
+  return user;
+}
+const ctx = (userId: string) => ({ params: Promise.resolve({ userId }) });
+const req = (method: string, body?: unknown) =>
+  new NextRequest("http://localhost/api/platform/users/x", {
+    method,
+    ...(body === undefined ? {} : { body: typeof body === "string" ? body : JSON.stringify(body), headers: { "content-type": "application/json" } }),
   });
-  withSession({ id: u.id, email: u.email, name: u.name, isStaff: true });
-  return u;
-}
-
-async function cleanDb() {
-  await prisma.activityLog.deleteMany();
-  await prisma.eventMembership.deleteMany();
-  await prisma.orgMembership.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.organization.deleteMany();
-  await prisma.user.deleteMany();
-}
-
-// ===========================================================
-// GET /api/platform/users/[userId]
-// ===========================================================
+const patch = (userId: string, body: unknown) => PATCH(req("PATCH", body), ctx(userId));
+const roleId = (key: Parameters<typeof systemRoleId>[1]) => systemRoleId(prisma, key);
+const err = async (r: Promise<Response>) => { const res = await r; return [res.status, (await res.json()).error]; };
 
 describe("GET /api/platform/users/[userId]", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    vi.mocked(getServerSession).mockReset();
+  it("401 sans session, 403 pour un non-staff, 404 pour un compte inconnu", async () => {
+    as(null);
+    expect((await GET(req("GET"), ctx("x"))).status).toBe(401);
+    as(await makeUser());
+    expect((await GET(req("GET"), ctx("x"))).status).toBe(403);
+    await actAs("STAFF_OBSERVER");
+    expect((await GET(req("GET"), ctx("inconnu"))).status).toBe(404);
   });
 
-  it("returns 401 without session", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { GET } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`);
-    const res = await GET(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 403 for non-staff", async () => {
-    const u = await prisma.user.create({
-      data: { email: "u@x", password: "x", name: "U" },
-    });
-    withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const { GET } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${u.id}`);
-    const res = await GET(req, { params: Promise.resolve({ userId: u.id }) });
-    expect(res.status).toBe(403);
-  });
-
-  it("returns user details without password (STAFF_OBSERVER allowed)", async () => {
-    await makeStaff("STAFF_OBSERVER");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "SECRET", name: "T" },
-    });
-
-    const { GET } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`);
-    const res = await GET(req, { params: Promise.resolve({ userId: t.id }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.user.password).toBeUndefined();
-    expect(JSON.stringify(json)).not.toContain("SECRET");
-  });
-
-  it("returns 404 for unknown user", async () => {
-    await makeStaff();
-
-    const { GET } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest("http://localhost/api/platform/users/unknown");
-    const res = await GET(req, { params: Promise.resolve({ userId: "unknown" }) });
-    expect(res.status).toBe(404);
+  it("STAFF_OBSERVER lit la fiche : rôles de plateforme, d'organisation et d'évènement, sans mot de passe", async () => {
+    await actAs("STAFF_OBSERVER");
+    const org = await makeOrg();
+    const event = await makeEvent(org.id);
+    const target = await makeStaff("STAFF_SUPPORT");
+    await prisma.orgMembership.create({ data: { userId: target.id, orgId: org.id, roleId: await roleId("AGENT") } });
+    await prisma.eventMembership.create({ data: { userId: target.id, eventId: event.id, roleId: await roleId("VIEWER") } });
+    const { user } = await (await GET(req("GET"), ctx(target.id))).json();
+    expect(user.password).toBeUndefined();
+    expect(user.platformRole).toMatchObject({ systemKey: "STAFF_SUPPORT", name: "Support" });
+    expect(user.orgMemberships[0].roleRef).toMatchObject({ systemKey: "AGENT" });
+    expect(user.eventMemberships[0].roleRef).toMatchObject({ systemKey: "VIEWER" });
   });
 });
-
-// ===========================================================
-// PATCH /api/platform/users/[userId]
-// ===========================================================
 
 describe("PATCH /api/platform/users/[userId]", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    vi.mocked(getServerSession).mockReset();
+  it("401 sans session ; 403 pour un participant et pour STAFF_OBSERVER (plus de users.update)", async () => {
+    const target = await makeUser();
+    as(null);
+    expect((await patch(target.id, { name: "N" })).status).toBe(401);
+    as(await makeUser());
+    expect((await patch(target.id, { name: "N" })).status).toBe(403);
+    await actAs("STAFF_OBSERVER");
+    expect((await patch(target.id, { name: "N" })).status).toBe(403);
   });
 
-  it("returns 401 without session", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: "Y" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(401);
+  it("STAFF_SUPPORT ne modifie plus rien (403) ; STAFF_ADMIN renomme", async () => {
+    await actAs("STAFF_SUPPORT");
+    const target = await makeUser();
+    expect(await err(patch(target.id, { name: "Nouveau nom" }))).toEqual([403, "PERMISSION_DENIED"]);
+    await actAs("STAFF_ADMIN");
+    expect((await patch(target.id, { name: "Nouveau nom" })).status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: target.id } })).name).toBe("Nouveau nom");
   });
 
-  it("STAFF_OBSERVER can patch name (200)", async () => {
-    await makeStaff("STAFF_OBSERVER");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "Old" },
-    });
+  it("chaque champ exige sa permission : rôle seul (assign_role) ne permet ni renommer ni archiver", async () => {
+    const roleOnly = await makeCustomRole({ scope: "PLATFORM", permissions: ["platform.access", "users.staff.assign_role"] });
+    as(await makeUser({ isStaff: true, platformRoleId: roleOnly.id }));
+    const target = await makeUser();
+    expect(await err(patch(target.id, { name: "N" }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(patch(target.id, { archived: true }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect((await patch(target.id, { platformRoleId: null })).status).toBe(200);
+  });
 
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: "New" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
+  it("STAFF_ADMIN : change le rôle d'un staff vers Imprimeur, journalise, double écriture ; pas son propre rôle", async () => {
+    const admin = await actAs("STAFF_ADMIN");
+    const target = await makeStaff("STAFF_OBSERVER");
+    const res = await patch(target.id, { platformRoleId: await roleId("STAFF_PRINTER") });
     expect(res.status).toBe(200);
+    expect((await res.json()).user.platformRole).toMatchObject({ systemKey: "STAFF_PRINTER" });
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+    expect(row).toMatchObject({ isStaff: true, staffRole: null });
+    expect(await prisma.activityLog.count({ where: { type: "USER_UPDATED", targetId: target.id, userId: admin.id } })).toBe(1);
+    expect(await err(patch(admin.id, { platformRoleId: await roleId("STAFF_SUPPORT") }))).toEqual([403, "SELF_MODIFICATION"]);
+    expect(await err(patch(admin.id, { archived: true }))).toEqual([403, "SELF_MODIFICATION"]);
+    expect((await patch(admin.id, { name: "Moi" })).status).toBe(200);
   });
 
-  it("STAFF_SUPPORT cannot change staffRole (403)", async () => {
-    await makeStaff("STAFF_SUPPORT");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "STAFF_OBSERVER",
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_SUPPORT" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(403);
+  it("promotion vers STAFF_ADMIN / SUPER_ADMIN et rétrogradation d'un STAFF_ADMIN exigent assign_top_role", async () => {
+    await actAs("STAFF_ADMIN");
+    const support = await makeStaff("STAFF_SUPPORT");
+    const other = await makeStaff("STAFF_ADMIN");
+    expect(await err(patch(support.id, { platformRoleId: await roleId("STAFF_ADMIN") }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(patch(support.id, { platformRoleId: await roleId("SUPER_ADMIN") }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(patch(other.id, { platformRoleId: await roleId("STAFF_SUPPORT") }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(patch(other.id, { platformRoleId: null }))).toEqual([403, "PERMISSION_DENIED"]);
+    await actAs("SUPER_ADMIN");
+    expect((await patch(support.id, { platformRoleId: await roleId("STAFF_ADMIN") })).status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: support.id } })).staffRole).toBe("STAFF_ADMIN");
   });
 
-  it("STAFF_ADMIN cannot change own staffRole (403)", async () => {
-    const self = await prisma.user.create({
-      data: {
-        email: "self@x",
-        password: "x",
-        name: "Self",
-        isStaff: true,
-        staffRole: "STAFF_ADMIN",
-      },
-    });
-    withSession({ id: self.id, email: self.email, name: self.name, isStaff: true });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${self.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_OBSERVER" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: self.id }) });
-    expect(res.status).toBe(403);
+  it("rôle plateforme personnalisé : anti-escalade ; rôle d'organisation 400 ; archivé ou inconnu 404", async () => {
+    const org = await makeOrg();
+    const custom = await makeCustomRole({ scope: "PLATFORM", permissions: ["settings.secrets.update"] });
+    const orgRole = await makeCustomRole({ scope: "ORG", orgId: org.id, permissions: [] });
+    const archived = await makeCustomRole({ scope: "PLATFORM", permissions: [] });
+    await prisma.role.update({ where: { id: archived.id }, data: { archived: true } });
+    const target = await makeStaff("STAFF_OBSERVER");
+    await actAs("STAFF_ADMIN");
+    expect(await err(patch(target.id, { platformRoleId: custom.id }))).toEqual([403, "PERMISSION_NOT_HELD"]);
+    await actAs("SUPER_ADMIN");
+    expect((await patch(target.id, { platformRoleId: custom.id })).status).toBe(200);
+    expect(await err(patch(target.id, { platformRoleId: orgRole.id }))).toEqual([400, "INVALID_ROLE"]);
+    expect(await err(patch(target.id, { platformRoleId: archived.id }))).toEqual([404, "NOT_FOUND"]);
+    expect(await err(patch(target.id, { platformRoleId: "inconnu" }))).toEqual([404, "NOT_FOUND"]);
   });
 
-  it("STAFF_ADMIN can change another staff's role to STAFF_SUPPORT + logs USER_UPDATED", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "STAFF_OBSERVER",
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_SUPPORT" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(200);
-
-    const updated = await prisma.user.findUnique({ where: { id: t.id } });
-    expect(updated?.staffRole).toBe("STAFF_SUPPORT");
-
-    const log = await prisma.activityLog.findFirst({ where: { type: "USER_UPDATED" } });
-    expect(log).not.toBeNull();
+  it("retirer le rôle repasse isStaff à false et le contexte perd ses droits plateforme", async () => {
+    await actAs("SUPER_ADMIN");
+    const target = await makeStaff("STAFF_OBSERVER");
+    expect(hasPermission((await loadUserContext(target.id))!, "users.read", { kind: "platform" })).toBe(true);
+    expect((await patch(target.id, { platformRoleId: null })).status).toBe(200);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
+    expect(row).toMatchObject({ isStaff: false, platformRoleId: null, staffRole: null });
+    expect(hasPermission((await loadUserContext(target.id))!, "users.read", { kind: "platform" })).toBe(false);
   });
 
-  it("STAFF_ADMIN cannot promote to STAFF_ADMIN (403, SUPER_ADMIN only)", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "STAFF_SUPPORT",
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(403);
+  it("promouvoir un compte client en staff", async () => {
+    await actAs("SUPER_ADMIN");
+    const target = await makeUser();
+    expect((await patch(target.id, { platformRoleId: await roleId("STAFF_SUPPORT") })).status).toBe(200);
+    expect(await prisma.user.findUniqueOrThrow({ where: { id: target.id } })).toMatchObject({ isStaff: true, staffRole: "STAFF_SUPPORT" });
   });
 
-  it("STAFF_ADMIN cannot promote to SUPER_ADMIN (403)", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "STAFF_SUPPORT",
-      },
+  it("dernier SUPER_ADMIN : ni retiré ni archivé (409) ; avec un autre SUPER_ADMIN actif c'est permis", async () => {
+    // acteur non SUPER_ADMIN mais porteur des permissions de gestion des rôles supérieurs
+    const gate = await makeCustomRole({
+      scope: "PLATFORM",
+      permissions: ["platform.access", "users.staff.assign_role", "users.staff.assign_top_role", "users.archive"],
     });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "SUPER_ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(403);
-  });
-
-  it("STAFF_ADMIN cannot demote an existing STAFF_ADMIN (403)", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "STAFF_ADMIN",
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_SUPPORT" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(403);
-  });
-
-  it("SUPER_ADMIN can promote another to STAFF_ADMIN (200)", async () => {
+    as(await makeUser({ isStaff: true, platformRoleId: gate.id }));
+    const target = await makeStaff("SUPER_ADMIN");
+    expect(await err(patch(target.id, { platformRoleId: null }))).toEqual([409, "LAST_SUPER_ADMIN"]);
+    expect(await err(patch(target.id, { archived: true }))).toEqual([409, "LAST_SUPER_ADMIN"]);
+    expect(await err(DELETE(req("DELETE"), ctx(target.id)))).toEqual([409, "LAST_SUPER_ADMIN"]);
     await makeStaff("SUPER_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "STAFF_SUPPORT",
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(200);
-
-    const updated = await prisma.user.findUnique({ where: { id: t.id } });
-    expect(updated?.staffRole).toBe("STAFF_ADMIN");
+    expect((await patch(target.id, { platformRoleId: null })).status).toBe(200);
   });
 
-  it("archiving the last SUPER_ADMIN returns 409 (LAST_SUPER_ADMIN)", async () => {
-    // Actor STAFF_ADMIN peut patcher archived. La cible est l'unique SUPER_ADMIN
-    // actif -> assertNotLastSuperAdmin doit jeter LAST_SUPER_ADMIN (409).
-    await makeStaff("STAFF_ADMIN");
-
-    const target = await prisma.user.create({
-      data: {
-        email: "lonely-sa@x",
-        password: "x",
-        name: "Lonely SA",
-        isStaff: true,
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${target.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ archived: true }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: target.id }) });
-    expect(res.status).toBe(409);
-  });
-
-  it("returns 404 for unknown user on PATCH", async () => {
-    await makeStaff("STAFF_ADMIN");
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest("http://localhost/api/platform/users/unknown", {
-      method: "PATCH",
-      body: JSON.stringify({ name: "Y" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: "unknown" }) });
-    expect(res.status).toBe(404);
-  });
-
-  it("returns 403 NOT_STAFF when the handler's own loadUserContext lookup finds a non-staff user", async () => {
-    // Meme technique que pour POST /platform/users : withStaffAuth valide deja
-    // isStaff/staffRole via un premier appel prisma.user.findUnique (mocke ici en
-    // staff), le second appel (dans le handler PATCH) retombe sur l'implementation
-    // reelle et retrouve l'utilisateur non-staff effectivement seede en base.
-    const u = await prisma.user.create({
-      data: { email: `notstaff-${Date.now()}@x`, password: "x", name: "NotStaff" },
-    });
-    withSession({ id: u.id, email: u.email, name: u.name, isStaff: false });
-
-    const spy = vi.spyOn(prisma.user, "findUnique").mockResolvedValueOnce({
-      id: u.id,
-      email: u.email,
-      name: u.name,
-      isStaff: true,
-      staffRole: "STAFF_ADMIN",
-      archived: false,
-      platformRole: null,
-      orgMemberships: [],
-      eventMemberships: [],
-      permissionOverrides: [],
-    } as never);
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${u.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: "New" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: u.id }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(403);
-    expect(json.error).toBe("NOT_STAFF");
-    spy.mockRestore();
-  });
-
-  it("returns 400 on malformed JSON body", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: "{not-json",
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 NOTHING_TO_UPDATE for an empty body", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({}),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(400);
-    expect(json.error).toBe("NOTHING_TO_UPDATE");
-  });
-
-  it("sets archivedAt when archiving a non-SUPER_ADMIN target (200)", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ archived: true }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(200);
-
-    const updated = await prisma.user.findUnique({ where: { id: t.id } });
-    expect(updated?.archived).toBe(true);
-    expect(updated?.archivedAt).not.toBeNull();
-  });
-
-  it("clears archivedAt when unarchiving a target (200)", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        archived: true,
-        archivedAt: new Date(),
-      },
-    });
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ archived: false }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(200);
-
-    const updated = await prisma.user.findUnique({ where: { id: t.id } });
-    expect(updated?.archived).toBe(false);
-    expect(updated?.archivedAt).toBeNull();
-  });
-
-  it("returns 409 LAST_SUPER_ADMIN when demoting the sole SUPER_ADMIN's staffRole (forced via spy)", async () => {
-    // Le flux naturel ne peut pas atteindre cette branche : seul un SUPER_ADMIN peut
-    // demoter un SUPER_ADMIN (garde involvesTopRoles), et cet acteur compte alors
-    // lui-meme comme SUPER_ADMIN restant dans assertNotLastSuperAdmin. On force donc
-    // artificiellement prisma.user.count (utilise par assertNotLastSuperAdmin) a
-    // renvoyer 0 pour simuler "plus aucun autre SUPER_ADMIN actif".
+  it("archiver ou restaurer un compte de rôle supérieur exige assign_top_role (STAFF_ADMIN 403, SUPER_ADMIN OK)", async () => {
     await makeStaff("SUPER_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-
-    const spy = vi.spyOn(prisma.user, "count").mockResolvedValueOnce(0);
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(409);
-    expect(json.error).toBe("LAST_SUPER_ADMIN");
-    spy.mockRestore();
+    const [sa, ad] = [await makeStaff("SUPER_ADMIN"), await makeStaff("STAFF_ADMIN")];
+    await actAs("STAFF_ADMIN");
+    expect(await err(patch(sa.id, { archived: true }))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(patch(ad.id, { archived: true }))).toEqual([403, "PERMISSION_DENIED"]);
+    await prisma.user.update({ where: { id: sa.id }, data: { archived: true, archivedAt: new Date() } });
+    expect(await err(patch(sa.id, { archived: false }))).toEqual([403, "PERMISSION_DENIED"]);
+    await actAs("SUPER_ADMIN");
+    expect((await patch(ad.id, { archived: true })).status).toBe(200);
+    expect((await patch(sa.id, { archived: false })).status).toBe(200);
   });
 
-  it("rethrows a non-AuthError raised by assertNotLastSuperAdmin during staffRole demotion", async () => {
-    await makeStaff("SUPER_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-
-    const spy = vi.spyOn(prisma.user, "count").mockRejectedValueOnce(new Error("boom"));
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ staffRole: "STAFF_ADMIN" }),
-      headers: { "content-type": "application/json" },
-    });
-    await expect(
-      PATCH(req, { params: Promise.resolve({ userId: t.id }) }),
-    ).rejects.toThrow("boom");
-    spy.mockRestore();
+  it("archive et désarchive : archivedAt posé puis effacé", async () => {
+    await actAs("STAFF_ADMIN");
+    const target = await makeUser();
+    const archived = await patch(target.id, { archived: true });
+    expect((await archived.json()).user.archivedAt).not.toBeNull();
+    const restored = await patch(target.id, { archived: false });
+    expect((await restored.json()).user.archivedAt).toBeNull();
   });
 
-  it("rethrows a non-AuthError raised by assertNotLastSuperAdmin during archive", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: {
-        email: "t@x",
-        password: "x",
-        name: "T",
-        isStaff: true,
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-
-    const spy = vi.spyOn(prisma.user, "count").mockRejectedValueOnce(new Error("boom"));
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ archived: true }),
-      headers: { "content-type": "application/json" },
-    });
-    await expect(
-      PATCH(req, { params: Promise.resolve({ userId: t.id }) }),
-    ).rejects.toThrow("boom");
-    spy.mockRestore();
-  });
-
-  it("rethrows prisma.user.update errors whose code is not P2025 (else branch of if(code===P2025))", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const spy = vi
-      .spyOn(prisma.user, "update")
-      .mockRejectedValueOnce(Object.assign(new Error("fk violation"), { code: "P2003" }));
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: "New" }),
-      headers: { "content-type": "application/json" },
-    });
-    await expect(
-      PATCH(req, { params: Promise.resolve({ userId: t.id }) }),
-    ).rejects.toThrow("fk violation");
-    spy.mockRestore();
-  });
-
-  it("returns 404 (P2025) when the target is deleted concurrently before update", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const spy = vi
-      .spyOn(prisma.user, "update")
-      .mockRejectedValueOnce(Object.assign(new Error("gone"), { code: "P2025" }));
-
-    const { PATCH } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ name: "New" }),
-      headers: { "content-type": "application/json" },
-    });
-    const res = await PATCH(req, { params: Promise.resolve({ userId: t.id }) });
-    const json = await res.json();
-
-    expect(res.status).toBe(404);
-    expect(json.error).toBe("NOT_FOUND");
-    spy.mockRestore();
+  it("400 : JSON malformé, corps vide, champ inconnu (dont l'ancien staffRole) ; 404 : compte inconnu", async () => {
+    await actAs("SUPER_ADMIN");
+    const target = await makeUser();
+    expect((await PATCH(req("PATCH", "{pas du json"), ctx(target.id))).status).toBe(400);
+    expect(await err(patch(target.id, {}))).toEqual([400, "NOTHING_TO_UPDATE"]);
+    expect((await patch(target.id, { staffRole: "STAFF_ADMIN" })).status).toBe(400);
+    expect((await patch("inconnu", { name: "N" })).status).toBe(404);
   });
 });
-
-// ===========================================================
-// POST /api/platform/users/[userId]/reset-password
-// ===========================================================
 
 describe("POST /api/platform/users/[userId]/reset-password", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    vi.mocked(getServerSession).mockReset();
+  it("401 sans session ; 403 pour STAFF_OBSERVER et STAFF_PRINTER", async () => {
+    const target = await makeUser();
+    as(null);
+    expect((await RESET(req("POST"), ctx(target.id))).status).toBe(401);
+    for (const role of ["STAFF_OBSERVER", "STAFF_PRINTER"] as const) {
+      await actAs(role);
+      expect((await RESET(req("POST"), ctx(target.id))).status).toBe(403);
+    }
   });
 
-  it("returns 401 without session", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
-    const req = new NextRequest(
-      `http://localhost/api/platform/users/${t.id}/reset-password`,
-      { method: "POST" },
-    );
-    const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(401);
-  });
-
-  it("STAFF_OBSERVER cannot reset password (403)", async () => {
-    await makeStaff("STAFF_OBSERVER");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
-    const req = new NextRequest(
-      `http://localhost/api/platform/users/${t.id}/reset-password`,
-      { method: "POST" },
-    );
-    const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(403);
-  });
-
-  it("STAFF_SUPPORT can reset password : token regenerated + log USER_PASSWORD_SET", async () => {
-    await makeStaff("STAFF_SUPPORT");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "old", name: "T" },
-    });
-
-    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
-    const req = new NextRequest(
-      `http://localhost/api/platform/users/${t.id}/reset-password`,
-      { method: "POST" },
-    );
-    const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(200);
-
-    const after = await prisma.user.findUnique({
-      where: { id: t.id },
-      select: { inviteToken: true, inviteTokenExpiry: true },
-    });
-    expect(after?.inviteToken).toBeTruthy();
-    expect(after?.inviteToken?.length).toBeGreaterThan(20);
-    expect(after?.inviteTokenExpiry).not.toBeNull();
-
-    const log = await prisma.activityLog.findFirst({
-      where: { type: "USER_PASSWORD_SET", targetId: t.id },
-    });
-    expect(log).not.toBeNull();
-  });
-
-  it("returns 404 for unknown user on reset-password", async () => {
-    await makeStaff("STAFF_SUPPORT");
-
-    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
-    const req = new NextRequest(
-      "http://localhost/api/platform/users/unknown/reset-password",
-      { method: "POST" },
-    );
-    const res = await POST(req, { params: Promise.resolve({ userId: "unknown" }) });
-    expect(res.status).toBe(404);
-  });
-
-  it("returns 400 when user is archived", async () => {
-    await makeStaff("STAFF_SUPPORT");
-    const t = await prisma.user.create({
-      data: {
-        email: "z@x",
-        password: "x",
-        name: "Z",
-        archived: true,
-        archivedAt: new Date(),
-      },
-    });
-
-    const { POST } = await import("@/app/api/platform/users/[userId]/reset-password/route");
-    const req = new NextRequest(
-      `http://localhost/api/platform/users/${t.id}/reset-password`,
-      { method: "POST" },
-    );
-    const res = await POST(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(400);
+  it("STAFF_SUPPORT régénère le jeton et journalise ; 404 inconnu ; 400 archivé", async () => {
+    const actor = await actAs("STAFF_SUPPORT");
+    const target = await makeUser();
+    expect((await RESET(req("POST"), ctx(target.id))).status).toBe(200);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: target.id } })).inviteToken).toBeTruthy();
+    expect(await prisma.activityLog.count({ where: { type: "USER_PASSWORD_SET", targetId: target.id, userId: actor.id } })).toBe(1);
+    expect((await RESET(req("POST"), ctx("inconnu"))).status).toBe(404);
+    const archived = await makeUser({ archived: true });
+    expect((await RESET(req("POST"), ctx(archived.id))).status).toBe(400);
   });
 });
 
-// ===========================================================
-// DELETE /api/platform/users/[userId] (soft-delete)
-// ===========================================================
-
 describe("DELETE /api/platform/users/[userId]", () => {
-  beforeEach(async () => {
-    await cleanDb();
-    vi.mocked(getServerSession).mockReset();
+  it("401 sans session ; 403 pour STAFF_SUPPORT", async () => {
+    const target = await makeUser();
+    as(null);
+    expect((await DELETE(req("DELETE"), ctx(target.id))).status).toBe(401);
+    await actAs("STAFF_SUPPORT");
+    expect((await DELETE(req("DELETE"), ctx(target.id))).status).toBe(403);
   });
 
-  it("returns 401 without session", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(null);
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "DELETE",
-    });
-    const res = await DELETE(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(401);
+  it("STAFF_ADMIN archive (204) et journalise ; pas soi-même ; 404 inconnu", async () => {
+    const admin = await actAs("STAFF_ADMIN");
+    const target = await makeOrgMember((await makeOrg()).id, "MANAGER");
+    expect((await DELETE(req("DELETE"), ctx(target.id))).status).toBe(204);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: target.id } })).archived).toBe(true);
+    expect(await prisma.activityLog.count({ where: { type: "USER_DELETED", targetId: target.id } })).toBe(1);
+    expect(await err(DELETE(req("DELETE"), ctx(admin.id)))).toEqual([403, "SELF_MODIFICATION"]);
+    expect((await DELETE(req("DELETE"), ctx("inconnu"))).status).toBe(404);
   });
 
-  it("STAFF_SUPPORT cannot soft-delete (403)", async () => {
-    await makeStaff("STAFF_SUPPORT");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "DELETE",
-    });
-    const res = await DELETE(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(403);
+  it("supprimer un compte de rôle supérieur exige assign_top_role (STAFF_ADMIN 403, aucun effet)", async () => {
+    const [sa, ad] = [await makeStaff("SUPER_ADMIN"), await makeStaff("STAFF_ADMIN")];
+    await makeStaff("SUPER_ADMIN");
+    await actAs("STAFF_ADMIN");
+    expect(await err(DELETE(req("DELETE"), ctx(sa.id)))).toEqual([403, "PERMISSION_DENIED"]);
+    expect(await err(DELETE(req("DELETE"), ctx(ad.id)))).toEqual([403, "PERMISSION_DENIED"]);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: sa.id } })).archived).toBe(false);
+    await actAs("SUPER_ADMIN");
+    expect((await DELETE(req("DELETE"), ctx(ad.id))).status).toBe(204);
   });
 
-  it("STAFF_ADMIN can soft-delete : archived=true + log USER_DELETED (204)", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const t = await prisma.user.create({
-      data: { email: "t@x", password: "x", name: "T" },
-    });
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${t.id}`, {
-      method: "DELETE",
-    });
-    const res = await DELETE(req, { params: Promise.resolve({ userId: t.id }) });
-    expect(res.status).toBe(204);
-
-    const after = await prisma.user.findUnique({ where: { id: t.id } });
-    expect(after?.archived).toBe(true);
-    expect(after?.archivedAt).not.toBeNull();
-
-    const log = await prisma.activityLog.findFirst({
-      where: { type: "USER_DELETED", targetId: t.id },
-    });
-    expect(log).not.toBeNull();
+  it("un SUPER_ADMIN avec un autre actif est archivé (204)", async () => {
+    await actAs("SUPER_ADMIN");
+    const target = await makeStaff("SUPER_ADMIN");
+    expect((await DELETE(req("DELETE"), ctx(target.id))).status).toBe(204);
   });
 
-  it("cannot soft-delete self (403)", async () => {
-    const self = await prisma.user.create({
-      data: {
-        email: "self@x",
-        password: "x",
-        name: "Self",
-        isStaff: true,
-        staffRole: "STAFF_ADMIN",
-      },
-    });
-    withSession({ id: self.id, email: self.email, name: self.name, isStaff: true });
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${self.id}`, {
-      method: "DELETE",
-    });
-    const res = await DELETE(req, { params: Promise.resolve({ userId: self.id }) });
-    expect(res.status).toBe(403);
-  });
-
-  it("returns 409 when soft-deleting the last SUPER_ADMIN", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const sa = await prisma.user.create({
-      data: {
-        email: "lone-sa@x",
-        password: "x",
-        name: "Lone SA",
-        isStaff: true,
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${sa.id}`, {
-      method: "DELETE",
-    });
-    const res = await DELETE(req, { params: Promise.resolve({ userId: sa.id }) });
-    expect(res.status).toBe(409);
-  });
-
-  it("returns 404 for unknown user on DELETE", async () => {
-    await makeStaff("STAFF_ADMIN");
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest("http://localhost/api/platform/users/unknown", {
-      method: "DELETE",
-    });
-    const res = await DELETE(req, { params: Promise.resolve({ userId: "unknown" }) });
-    expect(res.status).toBe(404);
-  });
-
-  it("rethrows a non-AuthError raised by assertNotLastSuperAdmin on DELETE", async () => {
-    await makeStaff("STAFF_ADMIN");
-    const sa = await prisma.user.create({
-      data: {
-        email: "sa@x",
-        password: "x",
-        name: "SA",
-        isStaff: true,
-        staffRole: "SUPER_ADMIN",
-      },
-    });
-
-    const spy = vi.spyOn(prisma.user, "count").mockRejectedValueOnce(new Error("boom"));
-
-    const { DELETE } = await import("@/app/api/platform/users/[userId]/route");
-    const req = new NextRequest(`http://localhost/api/platform/users/${sa.id}`, {
-      method: "DELETE",
-    });
-    await expect(
-      DELETE(req, { params: Promise.resolve({ userId: sa.id }) }),
-    ).rejects.toThrow("boom");
-    spy.mockRestore();
+  it("un membre d'évènement est archivé comme un autre compte", async () => {
+    await actAs("STAFF_ADMIN");
+    const event = await makeEvent((await makeOrg()).id);
+    const member = await makeEventMember(event.id, "VIEWER");
+    expect((await DELETE(req("DELETE"), ctx(member.id))).status).toBe(204);
   });
 });

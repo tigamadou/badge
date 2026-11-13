@@ -16,10 +16,13 @@ vi.mock("@/lib/storage", async (importOriginal) => {
 });
 import { uploadFile } from "@/lib/storage";
 import { makePng } from "@/test/factories-2a";
+import { makeUser } from "@/test/factories";
 
 const PHOTO = makePng(420, 540);
 
-function withSession(user: { id: string; email: string; name: string; isStaff: boolean }) {
+// La route relit le compte en base (requireParticipantPermission) : l'utilisateur de session existe.
+async function withSession(user: { id: string; email: string; name: string; isStaff: boolean }) {
+  await makeUser({ id: user.id, email: user.email, name: user.name });
   vi.mocked(getServerSession).mockResolvedValue({ user } as never);
 }
 function noSession() {
@@ -66,7 +69,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 400 BAD_KIND when kind is missing", async () => {
-    withSession({ id: "u-1", email: "u1@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-1", email: "u1@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(makeReq(null));
     expect(res.status).toBe(400);
@@ -75,7 +78,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 400 BAD_KIND when kind is invalid", async () => {
-    withSession({ id: "u-2", email: "u2@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-2", email: "u2@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(makeReq("something-else"));
     expect(res.status).toBe(400);
@@ -84,7 +87,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 400 NO_FILE when the file is missing", async () => {
-    withSession({ id: "u-3", email: "u3@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-3", email: "u3@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(makeReq("photo"));
     expect(res.status).toBe(400);
@@ -93,7 +96,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 415 BAD_TYPE for a disallowed mime", async () => {
-    withSession({ id: "u-4", email: "u4@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-4", email: "u4@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
       makeReq("photo", { name: "p.txt", type: "text/plain", bytes: Buffer.from("x") }),
@@ -104,7 +107,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 415 BAD_TYPE when the mime is missing (falls back to octet-stream)", async () => {
-    withSession({ id: "u-5", email: "u5@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-5", email: "u5@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     // Un Blob cree via `new Blob(...)` sans `type`, une fois serialise/reparse par le
     // FormData multipart, se voit toujours attribuer un Content-Type concret par undici
@@ -131,7 +134,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 413 TOO_LARGE for files over 5 Mo", async () => {
-    withSession({ id: "u-6", email: "u6@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-6", email: "u6@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const big = Buffer.alloc(5 * 1024 * 1024 + 1);
     const res = await POST(
@@ -143,7 +146,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("accepts a valid JPEG for kind=photo and returns a profile storage key", async () => {
-    withSession({ id: "u-7", email: "u7@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-7", email: "u7@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
       makeReq("photo", { name: "p.png", type: "image/png", bytes: PHOTO }),
@@ -157,7 +160,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("accepts a valid PDF for kind=document and returns a profile storage key", async () => {
-    withSession({ id: "u-8", email: "u8@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-8", email: "u8@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
       makeReq("document", { name: "d.pdf", type: "application/pdf", bytes: Buffer.from("%PDF") }),
@@ -169,7 +172,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("rejects a PDF when kind=photo", async () => {
-    withSession({ id: "u-9", email: "u9@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-9", email: "u9@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
       makeReq("photo", { name: "d.pdf", type: "application/pdf", bytes: Buffer.from("%PDF") }),
@@ -178,7 +181,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("infers the extension from the mime (.pdf) when the uploaded part has no dot in its name", async () => {
-    withSession({ id: "u-10", email: "u10@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-10", email: "u10@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     // Un Blob ajoute sans 3e argument `filename` est normalise par le FormData en File
     // nomme "blob" (WHATWG spec + verifie empiriquement avec NextRequest.formData()) :
@@ -195,7 +198,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("infers the extension as .bin (mime fallback) when the uploaded part has no dot in its name and is not a PDF", async () => {
-    withSession({ id: "u-12", email: "u12@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-12", email: "u12@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     const res = await POST(
       makeReq("photo", { type: "image/png", bytes: PHOTO }),
@@ -206,7 +209,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("rethrows a non-AuthError raised by the storage layer", async () => {
-    withSession({ id: "u-13", email: "u13@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-13", email: "u13@v4-account-upload.test", name: "U", isStaff: false });
     vi.mocked(uploadFile).mockRejectedValueOnce(new Error("boom-upload"));
     const { POST } = await import("@/app/api/account/upload/route");
     await expect(
@@ -215,7 +218,7 @@ describe("POST /api/account/upload", () => {
   });
 
   it("returns 429 RATE_LIMITED after 20 requests within the window", async () => {
-    withSession({ id: "u-11", email: "u11@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-11", email: "u11@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     let lastRes;
     for (let i = 0; i < 21; i++) {
@@ -230,7 +233,7 @@ describe("POST /api/account/upload", () => {
   });
 
   async function sender(kind: "photo" | "document") {
-    withSession({ id: "u-2a", email: "u2a@v4-account-upload.test", name: "U", isStaff: false });
+    await withSession({ id: "u-2a", email: "u2a@v4-account-upload.test", name: "U", isStaff: false });
     const { POST } = await import("@/app/api/account/upload/route");
     return (file: { name: string; type: string; bytes: Buffer }) => POST(makeReq(kind, file));
   }

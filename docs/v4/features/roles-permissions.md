@@ -361,7 +361,53 @@ statut de la commande d'impression. Les écritures faites par le staff plateform
 
 ## Gestion des droits (lot 2c)
 
-À rédiger par le lot 2c.
+Le lot 2c ajoute l'écriture : créer des rôles, attribuer un rôle par `roleId`, ajuster les permissions d'un compte, et protéger les routes participant. Le service est dans `src/lib/role-management/` ; les écrans partagés dans `src/components/permissions/`.
+
+### Modèle
+
+- **Rôles système** : figés par le code (voir « Rôles système figés »). Jamais modifiables ni archivables (`SYSTEM_ROLE`, 409) ; on les **duplique** pour partir d'un rôle personnalisé.
+- **Rôles personnalisés** : une ligne `Role` et ses `RolePermission`. Un rôle plateforme n'a pas d'organisation ; un rôle d'organisation ou d'évènement appartient à une organisation (`orgId`). Nom unique par `(orgId, scope)` parmi les rôles non archivés (`ROLE_NAME_TAKEN`). Archivage logique (`archived`) ; un rôle attribué à au moins un compte n'est pas archivable (`ROLE_IN_USE`).
+- **Ajustements** : `UserPermissionOverride`, par compte et par niveau (`orgId` nul = plateforme, sinon l'organisation). Trois états par permission : hérité (aucune ligne), ajouté (`GRANT`), retiré (`REVOKE`) ; un retrait l'emporte sur un ajout. L'écriture remplace l'ensemble des ajustements d'un niveau.
+- **Compatibilité** : tant que le plan 3 n'a pas retiré les colonnes d'enum, chaque changement de rôle écrit `roleId` **et** la colonne d'enum correspondante (marqueur `@deprecated compat`).
+
+### Qui peut quoi
+
+| Action | Permission requise | Où |
+|---|---|---|
+| Gérer les rôles plateforme | `platform.roles.manage` (SUPER_ADMIN) | `/platform/roles` |
+| Gérer les rôles d'une organisation | `org.roles.manage` (OWNER) | `/org/[orgId]/roles` |
+| Ajuster les permissions d'un compte | `users.permissions.manage` (SUPER_ADMIN) | `/platform/users/[userId]/permissions` |
+| Ajuster celles d'un membre d'organisation | `org.members.permissions.manage` (OWNER) | `/org/[orgId]/members/[userId]/permissions` |
+| Inviter, changer le rôle, retirer un membre d'organisation | `org.members.manage` | `/org/[orgId]/members` |
+| Idem pour un membre d'évènement | `event.members.manage` | `/event/[eventId]/members` |
+| Créer un compte client / staff | `users.create` / `users.staff.create` | `/platform/users/new` |
+| Changer le rôle plateforme d'un compte | `users.staff.assign_role` (et `users.staff.assign_top_role` pour un rôle supérieur) | fiche utilisateur |
+| Gérer les propriétaires d'une organisation | `organizations.members.manage` | `/platform/organizations/[orgId]/members` |
+
+Les sélecteurs de rôle (`RoleSelect`) listent les rôles système et personnalisés applicables ; ceux que l'acteur ne peut pas attribuer sont grisés avec la raison.
+
+### Garde-fous et codes d'erreur
+
+- **Anti-escalade** : on ne coche, n'ajoute ni n'attribue jamais une permission qu'on ne détient pas sur la cible (`PERMISSION_NOT_HELD`, 403). Exception : un staff sans appartenance peut attribuer un rôle **système** d'organisation ou d'évènement (son contenu est fixé par le code) ; les droits du niveau participant s'ajoutent sans être détenus.
+- **Permissions `reserved`** : refusées dans les rôles personnalisés et les ajustements (`RESERVED_PERMISSION`, 403), absentes des éditeurs. Une clé inconnue ou d'un niveau non portable par le rôle : `INVALID_PERMISSION` (400) ; un rôle de portée inadaptée : `INVALID_ROLE` (400).
+- **Pas d'auto-modification** : ni son propre rôle ni ses propres ajustements (`SELF_MODIFICATION`, 403).
+- **Propriétaires** : un OWNER ne modifie ni ne retire un autre OWNER, sauf détenteur de `users.permissions.manage` (`OWNER_PROTECTED`, 403). Le dernier OWNER d'une organisation (`LAST_OWNER`) et le dernier SUPER_ADMIN effectif (`isStaff = true`) restent protégés (409).
+- **IDOR** : `orgId` toujours pris dans le chemin ; un `roleId` d'une autre organisation, un `userId` non membre, un `membershipId` d'un autre évènement répondent 404 (`NOT_FOUND`).
+- Toute écriture est journalisée : `ROLE_CREATED`, `ROLE_UPDATED`, `ROLE_ARCHIVED`, `ROLE_RESTORED`, `USER_PERMISSIONS_CHANGED` (avant / après dans `details`), `MEMBERSHIP_ROLE_CHANGED` (clé système, sinon nom du rôle).
+- Le staff membre d'une organisation n'agit pas côté organisateur avec ses droits plateforme : les REVOKE plateforme du compte s'appliquent à son côté « membre », ses GRANT plateforme non.
+
+### Pages et routes
+
+- Pages : `/platform/roles` (onglets Plateforme, Organisation, Évènement ; seuls les rôles plateforme sont éditables), `/platform/roles/new?from=<roleId>`, `/platform/roles/[roleId]` ; `/org/[orgId]/roles?tab=org|event`, `/org/[orgId]/roles/new`, `/org/[orgId]/roles/[roleId]` ; pages d'ajustement plateforme et organisation. Accès sans le droit : redirection (`/platform`, `/org/[orgId]`, fiche ou liste de membres).
+- API : `/api/platform/roles` (liste, création), `/api/platform/roles/[roleId]` (lecture, modification, `DELETE` = archivage), `.../restore`, `/api/platform/roles/assignable?scope=PLATFORM|ORG&orgId=` ; mêmes routes sous `/api/org/[orgId]/roles` ; `/api/platform/users/[userId]/permissions` et `/api/org/[orgId]/members/[userId]/permissions` (`GET` niveaux, `PUT` remplacement). Les routes de membres et d'utilisateurs reçoivent `roleId` / `platformRoleId` (plus de champ d'enum).
+
+### Routes participant
+
+`PUT /api/account/profile` (`account.profile.update`), `POST /api/account/upload` (`account.profile.upload`), `POST /api/account/registrations/[id]/resubmit` (`registration.self.resubmit`, la propriété de l'inscription reste vérifiée) et `POST /api/events/[slug]/register` (`registration.self.create`) passent par `requireParticipantPermission`. Un compte inexistant ou archivé avec session ouverte répond 401, un compte bloqué 403 `ACCOUNT_BLOCKED`, une permission retirée par ajustement 403. Les lectures (profil, inscriptions, notifications) restent permises à tout compte valide.
+
+### Tests
+
+Tests d'intégration sur la base `_test` (`src/lib/role-management/__tests__`, tests colocalisés des routes, `src/lib/__tests__/api-org-members.test.ts`, `api-event-members.test.ts`, `src/app/api/account/__tests__/participant-guard.test.ts`) ; composants purs dans `src/components/permissions/__tests__` ; e2e `e2e/platform/roles.spec.ts`, `e2e/org/roles.spec.ts`, `e2e/platform/user-permissions.spec.ts`, `e2e/org/member-permissions.spec.ts`, `e2e/public/account-permissions.spec.ts`.
 
 ---
 

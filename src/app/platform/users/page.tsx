@@ -51,6 +51,7 @@ export default async function StaffUsersPage({
           name: true,
           isStaff: true,
           staffRole: true,
+          platformRole: { select: { name: true } },
           archived: true,
           _count: { select: { orgMemberships: true } },
         },
@@ -150,7 +151,7 @@ export default async function StaffUsersPage({
                 <td className="px-4 py-3 text-[13px] text-slate-500 hidden md:table-cell">{u.email}</td>
                 <td className="px-4 py-3">
                   {u.isStaff ? (
-                    <RoleBadge tone="navy">{u.staffRole}</RoleBadge>
+                    <RoleBadge tone="navy">{u.platformRole?.name ?? u.staffRole}</RoleBadge>
                   ) : (
                     <RoleBadge tone="slate">Client</RoleBadge>
                   )}

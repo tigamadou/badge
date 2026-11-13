@@ -19,18 +19,18 @@ les routes participant sur `requireParticipantPermission`.
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Service de gestion des rôles et de leurs ajustements (`_lib`) | [ ] | | |
-| 2 | API rôles plateforme | [ ] | | |
-| 3 | API rôles d'organisation | [ ] | | |
-| 4 | API d'ajustements de permissions (plateforme et organisation) | [ ] | | |
-| 5 | API utilisateurs et propriétaires plateforme par `roleId` | [ ] | | |
-| 6 | API membres d'organisation et d'évènement par `roleId` | [ ] | | |
-| 7 | Routes participant | [ ] | | |
-| 8 | Composants `src/components/permissions/**` | [ ] | | |
-| 9 | Pages `/platform/roles` et `/org/[orgId]/roles` | [ ] | | |
-| 10 | Pages d'ajustement et liens d'entrée | [ ] | | |
-| 11 | Formulaires et pages de membres / utilisateurs | [ ] | | |
-| 12 | e2e, doc, vérification | [ ] | | |
+| 1 | Service de gestion des rôles et de leurs ajustements (`_lib`) | [x] | 2026-11-13 | Service dans src/lib/role-management/ (amendement 1). Residuels N1 (commit 4539d54) et N2 faits. Ecarts : validateRolePermissions(actor, level, keys, {keep?}) sans param target (calcule du niveau) ; updateRole/archiveRole/restoreRole prennent un RoleOwner ; applyOverrides porte aussi SELF/OWNER_PROTECTED/appartenance. |
+| 2 | API rôles plateforme | [x] | 2026-11-13 | Ajouts au service : http.ts (schemas zod, parseBody), listAssignableRoles/missingPermission ; exception : un staff non membre attribue un role SYSTEME d'organisation (STAFF_ADMIN doit pouvoir donner OWNER). |
+| 3 | API rôles d'organisation | [x] | 2026-11-13 | orgId du chemin impose ; assignable accepte eventId optionnel (cible evenement). |
+| 4 | API d'ajustements de permissions (plateforme et organisation) | [x] | 2026-11-13 | SELF/OWNER_PROTECTED/appartenance portes par applyOverrides ; GET org renvoie levels[1]. |
+| 5 | API utilisateurs et propriétaires plateforme par `roleId` | [x] | 2026-11-13 | owners POST: roleId optionnel (OWNER par defaut). Anciens tests api-staff-users-{post,detail} reecrits. withRoleErrors traduit aussi AuthError. notifications.ts (role-management) pour roles sans enum. Journal: from/to = cle systeme sinon nom. |
+| 6 | API membres d'organisation et d'évènement par `roleId` | [x] | 2026-11-13 | GET/POST/PATCH/DELETE par permission (org.members.*, event.members.manage). OWNER_PROTECTED hors users.permissions.manage; SELF_MODIFICATION; LAST_OWNER. Tests org deplaces dans api-org-members.test.ts. |
+| 7 | Routes participant | [x] | 2026-11-13 | PUT profil, upload, resubmit, register via requireParticipantPermission. Compte inexistant/archive: 401; bloque: 403 ACCOUNT_BLOCKED. Tests 404 fantome devenus 401 + spy cible pour la branche defensive. Nouveau participant-guard.test.ts. |
+| 8 | Composants `src/components/permissions/**` | [x] | 2026-11-13 | Logique pure dans logic.ts (testee sans DOM: renderToStaticMarkup + fonctions). UserPermissionsEditor prend `levels` en prop plutot qu'un orgId (+ heldPermissions, scopes, sendOrgId). Erreurs d'API mappees en francais (readOrThrow). |
+| 9 | Pages `/platform/roles` et `/org/[orgId]/roles` | [x] | 2026-11-13 | Pages serveur; RoleTable recoit des modeles d'URL `:id` (fonctions non serialisables vers un composant client). Gardes: redirection /platform ou /org/[orgId]. Verifie navigateur: creation d'un role plateforme. Controle responsive regroupe en Task 12. |
+| 10 | Pages d'ajustement et liens d'entrée | [x] | 2026-11-13 | Pages d'ajustement (plateforme: un editeur par niveau; org). Fiche utilisateur: lien Permissions, role par platformRole.name, actions par permissions (users.staff.assign_role/archive/password.reset). MembersClient/OrgMemberForm (RoleSelect compact) embarques ici car deja relies aux pages. |
+| 11 | Formulaires et pages de membres / utilisateurs | [x] | 2026-11-13 | Formulaires par roleId. PlatformOrgMemberInviteForm garde la prop `{orgId}` (page 2a inchangee) et relit les roles par l'API assignable; UserCreationForm relit les roles de l'organisation choisie. MemberTable: lecture seule sans event.members.manage. |
+| 12 | e2e, doc, vérification | [x] | 2026-11-13 | e2e du lot et adaptes verts (apres replay); doc « Gestion des droits (lot 2c) »; tests triggers-memberships et owner-journey passes a roleId; controle navigateur 375/1024/1280 OK. Gate couverture: 100 % sauf src/lib/print-sheets/generations.ts l.186 (hors lot). |
 
 ## Fichiers du lot (exclusifs)
 

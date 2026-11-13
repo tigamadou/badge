@@ -9,6 +9,10 @@ import { Icon } from "@/components/ui/Icon";
 import { MemberInviteForm } from "./MemberInviteForm";
 import { TableFrame } from "@/components/ui/TableFrame";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { readOrThrow } from "@/components/permissions/logic";
+import { RoleBadge } from "@/components/ui/Labels";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
 function initials(name: string | null): string {
   return (name || "?")
@@ -19,11 +23,9 @@ function initials(name: string | null): string {
     .toUpperCase();
 }
 
-type MemberRole = "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER";
-
 type Member = {
   id: string;
-  role: "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER";
+  role: { id: string; name: string; systemKey: string | null };
   createdAt: string;
   user: { id: string; email: string; name: string; isStaff: boolean };
 };
@@ -33,11 +35,17 @@ export function MemberTable({
   eventId,
   rows: members,
   footer,
+  roles,
+  canManage,
 }: {
   orgId: string;
   eventId: string;
   rows: Member[];
   footer?: ReactNode;
+  // Rôles d'évènement attribuables par l'acteur (précalculés par la page).
+  roles: AssignableRoleRow[];
+  // `event.members.manage` : sans lui, les rôles restent en lecture seule.
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [inviting, setInviting] = useState(false);
@@ -47,18 +55,18 @@ export function MemberTable({
     setInviting(false);
   }
 
-  async function setRole(m: Member, role: MemberRole) {
+  async function setRole(m: Member, roleId: string) {
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ roleId }),
     });
-    if (!res.ok) throw res;
+    await readOrThrow(res);
   }
 
   async function remove(m: Member) {
     const res = await fetch(`/api/org/${orgId}/events/${eventId}/members/${m.id}`, { method: "DELETE" });
-    if (!res.ok) throw res;
+    await readOrThrow(res);
   }
 
   return (
@@ -68,11 +76,13 @@ export function MemberTable({
           <h1 className="text-xl font-semibold text-navy">Membres</h1>
           <p className="mt-0.5 text-sm text-slate-400">L&apos;équipe de l&apos;événement et ses rôles</p>
         </div>
-        <Button onClick={() => setInviting(true)}>
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="plus" size={16} /> Inviter
-          </span>
-        </Button>
+        {canManage ? (
+          <Button onClick={() => setInviting(true)}>
+            <span className="inline-flex items-center gap-1.5">
+              <Icon name="plus" size={16} /> Inviter
+            </span>
+          </Button>
+        ) : null}
       </div>
 
       <TableFrame>
@@ -94,7 +104,7 @@ export function MemberTable({
               </tr>
             )}
             {members.map((m) => (
-              <MemberRow key={m.id} member={m} setRole={setRole} remove={remove} refresh={refresh} />
+              <MemberRow key={m.id} member={m} roles={roles} canManage={canManage} setRole={setRole} remove={remove} refresh={refresh} />
             ))}
           </tbody>
         </table>
@@ -108,7 +118,7 @@ export function MemberTable({
               <h3 className="text-base font-semibold text-navy">Inviter un membre</h3>
             </div>
             <div className="px-6 py-5">
-              <MemberInviteForm orgId={orgId} eventId={eventId} onDone={refresh} onCancel={() => setInviting(false)} />
+              <MemberInviteForm orgId={orgId} eventId={eventId} roles={roles} onDone={refresh} onCancel={() => setInviting(false)} />
             </div>
           </div>
         </div>
@@ -119,18 +129,22 @@ export function MemberTable({
 
 function MemberRow({
   member: m,
+  roles,
+  canManage,
   setRole,
   remove,
   refresh,
 }: {
   member: Member;
-  setRole: (m: Member, role: MemberRole) => Promise<void>;
+  roles: AssignableRoleRow[];
+  canManage: boolean;
+  setRole: (m: Member, roleId: string) => Promise<void>;
   remove: (m: Member) => Promise<void>;
   refresh: () => Promise<void>;
 }) {
   // La liste est rechargée aussi en cas d'échec : le select retrouve la valeur serveur.
   const role = useAsyncAction(
-    async (value: MemberRole) => {
+    async (value: string) => {
       try {
         await setRole(m, value);
       } catch (err) {
@@ -155,22 +169,25 @@ function MemberRow({
         </div>
       </td>
       <td className="px-4 py-3">
-        <select
-          value={m.role}
-          disabled={role.pending}
-          onChange={(e) => role.run(e.target.value as MemberRole)}
-          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-[13px] font-medium text-slate-700 disabled:opacity-50"
-        >
-          <option value="ADMIN">Administrateur</option>
-          <option value="OPERATOR">Opérateur</option>
-          <option value="PRINTER">Imprimeur</option>
-          <option value="VIEWER">Observateur</option>
-        </select>
+        {canManage ? (
+          <RoleSelect
+            compact
+            name={`role-${m.id}`}
+            label={`Rôle de ${m.user.email}`}
+            roles={roles.some((r) => r.id === m.role.id) ? roles : [{ ...m.role, scope: "EVENT", description: null, assignable: false }, ...roles]}
+            value={m.role.id}
+            disabled={role.pending}
+            onChange={(value) => role.run(value)}
+          />
+        ) : (
+          <RoleBadge tone="slate">{m.role.name}</RoleBadge>
+        )}
       </td>
       <td className="px-4 py-3 text-xs tabular-nums text-slate-400">
         {new Date(m.createdAt).toLocaleDateString("fr-FR")}
       </td>
       <td className="px-4 py-3 text-right">
+        {canManage ? (
         <ActionButton
           variant="link"
           confirm={`Retirer ${m.user.email} ?`}
@@ -183,6 +200,7 @@ function MemberRow({
         >
           <Icon name="trash-2" size={15} />
         </ActionButton>
+        ) : null}
       </td>
     </tr>
   );

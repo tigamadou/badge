@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
-import { requireAuth, AuthError } from "@/lib/auth-participant";
+import { requireParticipantPermission, AuthError } from "@/lib/auth-participant";
 import { buildRegistrationSnapshot } from "@/lib/participant-profile";
 import { canRegisterToEvent } from "@/lib/profile-review";
 import { sendRegistrationResubmitted } from "@/lib/mail";
@@ -21,7 +21,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await requireAuth();
+    const session = await requireParticipantPermission("registration.self.resubmit");
     const { id } = await params;
 
     // Corps optionnel : vide ou absent = comportement historique (meme categorie).

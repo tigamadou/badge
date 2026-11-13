@@ -5,38 +5,33 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHead, CardBody } from "@/components/ui/Card";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
-
-type StaffRoleStr = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
+import { RoleSelect } from "@/components/permissions/RoleSelect";
+import { readOrThrow } from "@/components/permissions/logic";
+import type { AssignableRoleRow } from "@/components/permissions/types";
 
 type Props = {
   user: {
     id: string;
     isStaff: boolean;
-    staffRole: StaffRoleStr | null;
+    platformRoleId: string | null;
     archived: boolean;
   };
-  canAdmin: boolean;
-  canEditTopRoles: boolean;
+  // Rôles plateforme attribuables par l'acteur (précalculés par la page).
+  platformRoles: AssignableRoleRow[];
+  canAssignRole: boolean;
+  canArchive: boolean;
   canResetPassword: boolean;
   isSelf: boolean;
 };
 
-export function UserDetailActions({
-  user,
-  canAdmin,
-  canEditTopRoles,
-  canResetPassword,
-  isSelf,
-}: Props) {
+export function UserDetailActions({ user, platformRoles, canAssignRole, canArchive, canResetPassword, isSelf }: Props) {
   const router = useRouter();
-  const [staffRole, setStaffRole] = useState<StaffRoleStr>(
-    user.staffRole ?? "STAFF_OBSERVER",
-  );
+  const [platformRoleId, setPlatformRoleId] = useState(user.platformRoleId ?? "");
 
   const resetPwd = useAsyncAction(
     async () => {
       const res = await fetch(`/api/platform/users/${user.id}/reset-password`, { method: "POST" });
-      if (!res.ok) throw res;
+      await readOrThrow(res);
     },
     { success: "Lien d'invitation régénéré.", error: "Échec de la réinitialisation." },
   );
@@ -46,9 +41,9 @@ export function UserDetailActions({
       const res = await fetch(`/api/platform/users/${user.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ staffRole }),
+        body: JSON.stringify({ platformRoleId }),
       });
-      if (!res.ok) throw res;
+      await readOrThrow(res);
     },
     { success: "Rôle mis à jour.", error: "Échec du changement de rôle.", onSuccess: () => router.refresh() },
   );
@@ -56,7 +51,7 @@ export function UserDetailActions({
   const archive = useAsyncAction(
     async () => {
       const res = await fetch(`/api/platform/users/${user.id}`, { method: "DELETE" });
-      if (!res.ok) throw res;
+      await readOrThrow(res);
     },
     { success: "Utilisateur archivé.", error: "Échec de l'archivage.", onSuccess: () => router.refresh() },
   );
@@ -72,25 +67,30 @@ export function UserDetailActions({
           </Button>
         )}
 
-        {canAdmin && user.isStaff && !isSelf && (
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={staffRole}
-              onChange={(e) => setStaffRole(e.target.value as StaffRoleStr)}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-navy"
+        {canAssignRole && user.isStaff && !isSelf && (
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[14rem] flex-1">
+              <RoleSelect
+                name="platformRoleId"
+                label="Rôle plateforme"
+                roles={platformRoles}
+                value={platformRoleId}
+                onChange={setPlatformRoleId}
+                disabled={busy}
+              />
+            </div>
+            <Button
+              className="mb-4"
+              onClick={changeRole.run}
+              loading={changeRole.pending}
+              disabled={busy || platformRoleId === "" || platformRoleId === user.platformRoleId}
             >
-              <option value="STAFF_OBSERVER">STAFF_OBSERVER</option>
-              <option value="STAFF_SUPPORT">STAFF_SUPPORT</option>
-              {canEditTopRoles && <option value="STAFF_ADMIN">STAFF_ADMIN</option>}
-              {canEditTopRoles && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
-            </select>
-            <Button onClick={changeRole.run} loading={changeRole.pending} disabled={busy}>
               Changer le rôle
             </Button>
           </div>
         )}
 
-        {canAdmin && !user.archived && !isSelf && (
+        {canArchive && !user.archived && !isSelf && (
           <Button variant="danger" onClick={archive.run} loading={archive.pending} disabled={busy}>
             Archiver l&apos;utilisateur
           </Button>

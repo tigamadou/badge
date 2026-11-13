@@ -219,6 +219,17 @@ describe("invariant isStaff et memberPermissions", () => {
     expect(memberPermissions(c, { kind: "platform" }).size).toBe(0);
   });
 
+  it("memberPermissions d'un staff membre applique ses REVOKE plateforme mais pas ses GRANT plateforme", () => {
+    const c = ctx({
+      isStaff: true,
+      staffRole: "SUPER_ADMIN",
+      orgs: [{ orgId: ORG, role: "OWNER" }],
+      overrides: [{ orgId: null, permission: "print.quote.accept", effect: "REVOKE" }],
+    });
+    expect(memberPermissions(c, org).has("print.quote.accept")).toBe(false);
+    expect(memberPermissions(c, org).has("org.read")).toBe(true);
+  });
+
   it("memberPermissions égale effectivePermissions pour un non-staff", () => {
     const c = ctx({
       orgs: [{ orgId: ORG, role: "MANAGER" }],

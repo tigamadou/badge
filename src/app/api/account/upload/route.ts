@@ -9,7 +9,7 @@ import {
   MAX_UPLOAD_BYTES,
   type UploadKind,
 } from "@/lib/storage";
-import { requireAuth, AuthError } from "@/lib/auth-participant";
+import { requireParticipantPermission, AuthError } from "@/lib/auth-participant";
 import { checkIdPhotoBuffer } from "@/lib/event-image-compliance";
 import { checkRateLimit, extractClientIp } from "@/lib/rate-limit";
 
@@ -26,7 +26,7 @@ function extOf(name: string, fallback: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requireAuth();
+    const session = await requireParticipantPermission("account.profile.upload");
     const ip = extractClientIp(req.headers);
     const rl = checkRateLimit(ip, "account-upload", { windowMs: 60_000, max: 20 });
     if (!rl.ok) {
