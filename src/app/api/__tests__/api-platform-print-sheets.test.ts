@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/badge-templates/render-badge", () => ({
@@ -12,10 +13,8 @@ import { getServerSession } from "next-auth";
 
 const uniq = (p: string) => `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-async function asStaff(role: "STAFF_SUPPORT" | "STAFF_OBSERVER" = "STAFF_SUPPORT") {
-  const u = await prisma.user.create({
-    data: { email: `${uniq(role)}@x`, password: "x", name: "S", isStaff: true, staffRole: role },
-  });
+async function asStaff(role: "STAFF_PRINTER" | "STAFF_SUPPORT" | "STAFF_OBSERVER" = "STAFF_PRINTER") {
+  const u = await makeStaff(role);
   vi.mocked(getServerSession).mockResolvedValue({
     user: { id: u.id, email: u.email, name: u.name, isStaff: true },
   } as never);
@@ -227,7 +226,7 @@ describe("POST /api/platform/print/sheets", () => {
 describe("GET /api/platform/print/sheets", () => {
   beforeEach(() => vi.mocked(getServerSession).mockReset());
 
-  it("401 without session, 403 for STAFF_OBSERVER (SUPPORT minimum)", async () => {
+  it("401 without session, 403 for STAFF_OBSERVER (PRINTER minimum)", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null as never);
     const { GET } = await import("@/app/api/platform/print/sheets/route");
     expect((await GET(req("/api/platform/print/sheets", "GET"), noParams)).status).toBe(401);

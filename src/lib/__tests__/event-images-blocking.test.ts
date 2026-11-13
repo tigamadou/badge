@@ -108,7 +108,7 @@ describe("planches et exports", () => {
 
   async function printSetup() {
     const fx = await seedPrintFixture();
-    const staff = await makeStaff("STAFF_SUPPORT");
+    const staff = await makeStaff("STAFF_PRINTER");
     const layout = await makePrintLayout();
     await breakEventLogo(fx.event.id, staff.id);
     return { ...fx, staff, layout };
