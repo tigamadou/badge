@@ -23,7 +23,7 @@ les routes participant sur `requireParticipantPermission`.
 | 2 | API rôles plateforme | [x] | 2026-11-13 | Ajouts au service : http.ts (schemas zod, parseBody), listAssignableRoles/missingPermission ; exception : un staff non membre attribue un role SYSTEME d'organisation (STAFF_ADMIN doit pouvoir donner OWNER). |
 | 3 | API rôles d'organisation | [x] | 2026-11-13 | orgId du chemin impose ; assignable accepte eventId optionnel (cible evenement). |
 | 4 | API d'ajustements de permissions (plateforme et organisation) | [x] | 2026-11-13 | SELF/OWNER_PROTECTED/appartenance portes par applyOverrides ; GET org renvoie levels[1]. |
-| 5 | API utilisateurs et propriétaires plateforme par `roleId` | [ ] | | |
+| 5 | API utilisateurs et propriétaires plateforme par `roleId` | [x] | 2026-11-13 | owners POST: roleId optionnel (OWNER par defaut). Anciens tests api-staff-users-{post,detail} reecrits. withRoleErrors traduit aussi AuthError. notifications.ts (role-management) pour roles sans enum. Journal: from/to = cle systeme sinon nom. |
 | 6 | API membres d'organisation et d'évènement par `roleId` | [ ] | | |
 | 7 | Routes participant | [ ] | | |
 | 8 | Composants `src/components/permissions/**` | [ ] | | |

@@ -30,5 +30,5 @@ export const POST = withStaffAuth<{ userId: string }>(
 
     return NextResponse.json({ ok: true });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "users.password.reset" },
 );

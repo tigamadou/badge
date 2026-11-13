@@ -19,6 +19,9 @@ import type { UserContext } from "@/types/auth";
 import { RoleError } from "./errors";
 import { heldOn } from "./held";
 
+/** Rôles plateforme « supérieurs » : les attribuer ou les retirer exige `users.staff.assign_top_role`. */
+export const isTopPlatformRole = (systemKey: string | null): boolean => systemKey === "SUPER_ADMIN" || systemKey === "STAFF_ADMIN";
+
 /** Niveau auquel un rôle personnalisé est créé : plateforme, ou organisation / évènement d'une organisation. */
 export type RoleLevel = { scope: "PLATFORM" } | { scope: "ORG" | "EVENT"; orgId: string };
 

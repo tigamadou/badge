@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
 import { loadUserContext } from "@/lib/user-context";
 import { effectiveEventRole, hasOrgRole, staffRoleAtLeast } from "@/lib/auth-helpers";
 import { eventTargetOf, hasPermission } from "@/lib/permissions";
@@ -44,14 +45,14 @@ describe("changement de rôle sur des lignes migrées", () => {
     const url = `http://localhost/api/platform/users/${target.id}`;
     const params = { params: Promise.resolve({ userId: target.id }) };
 
-    expect((await PATCH(patch(url, { staffRole: "STAFF_OBSERVER" }), params)).status).toBe(200);
+    expect((await PATCH(patch(url, { platformRoleId: await systemRoleId(prisma, "STAFF_OBSERVER") }), params)).status).toBe(200);
     let ctx = await ctxOf(target.id);
     expect(ctx.platformRole?.systemKey).toBe("STAFF_OBSERVER");
     expect(ctx.staffRole).toBe("STAFF_OBSERVER");
     expect(staffRoleAtLeast(ctx.staffRole!, "STAFF_ADMIN")).toBe(false);
     expect(hasPermission(ctx, "users.update", { kind: "platform" })).toBe(false);
 
-    expect((await PATCH(patch(url, { staffRole: null }), params)).status).toBe(200);
+    expect((await PATCH(patch(url, { platformRoleId: null }), params)).status).toBe(200);
     ctx = await ctxOf(target.id);
     const row = await prisma.user.findUniqueOrThrow({ where: { id: target.id } });
     expect(row.platformRoleId).toBeNull();
@@ -114,7 +115,7 @@ describe("changement de rôle sur des lignes migrées", () => {
     const res = await POST(
       new NextRequest(`http://localhost/api/platform/organizations/${org.id}/owners`, {
         method: "POST",
-        body: JSON.stringify({ email: member.email, name: member.name, role: "OWNER" }),
+        body: JSON.stringify({ email: member.email, name: member.name, roleId: await systemRoleId(prisma, "OWNER") }),
         headers: { "content-type": "application/json" },
       }),
       { params: Promise.resolve({ orgId: org.id }) },

@@ -12,9 +12,12 @@ export const DELETE = withStaffAuth(
     const { orgId, userId } = await params;
     const target = await prisma.orgMembership.findUnique({
       where: { userId_orgId: { userId, orgId } },
+      include: { roleRef: { select: { systemKey: true } } },
     });
     if (!target) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-    if (target.role !== "OWNER") {
+    // Propriétaire = titulaire du rôle système OWNER (repli sur l'enum tant que roleId est nul).
+    const isOwner = target.roleRef ? target.roleRef.systemKey === "OWNER" : target.role === "OWNER";
+    if (!isOwner) {
       return NextResponse.json(
         { error: "NOT_OWNER", message: "Cet utilisateur n'est pas OWNER." },
         { status: 409 },
@@ -45,5 +48,5 @@ export const DELETE = withStaffAuth(
 
     return new NextResponse(null, { status: 204 });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "organizations.members.manage" },
 );

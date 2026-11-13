@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
@@ -312,7 +313,7 @@ describe("POST /api/platform/organizations/[orgId]/owners", () => {
       `http://localhost/api/platform/organizations/${org.id}/owners`,
       {
         method: "POST",
-        body: JSON.stringify({ email: "newmgr@x.com", name: "New Manager", role: "MANAGER" }),
+        body: JSON.stringify({ email: "newmgr@x.com", name: "New Manager", roleId: await systemRoleId(prisma, "MANAGER") }),
         headers: { "content-type": "application/json" },
       },
     );
@@ -343,7 +344,7 @@ describe("POST /api/platform/organizations/[orgId]/owners", () => {
       `http://localhost/api/platform/organizations/${org.id}/owners`,
       {
         method: "POST",
-        body: JSON.stringify({ email: "already@x.com", name: "Already", role: "OWNER" }),
+        body: JSON.stringify({ email: "already@x.com", name: "Already", roleId: await systemRoleId(prisma, "OWNER") }),
         headers: { "content-type": "application/json" },
       },
     );
@@ -373,7 +374,7 @@ describe("POST /api/platform/organizations/[orgId]/owners", () => {
     const { POST } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
     const req = new NextRequest(`http://localhost/api/platform/organizations/${org.id}/owners`, {
       method: "POST",
-      body: JSON.stringify({ email: "norole@x.com", name: "NoRole", role: "OWNER" }),
+      body: JSON.stringify({ email: "norole@x.com", name: "NoRole", roleId: await systemRoleId(prisma, "OWNER") }),
       headers: { "content-type": "application/json" },
     });
     const res = await POST(req, { params: Promise.resolve({ orgId: org.id }) });
@@ -398,7 +399,7 @@ describe("POST /api/platform/organizations/[orgId]/owners", () => {
       `http://localhost/api/platform/organizations/${org.id}/owners`,
       {
         method: "POST",
-        body: JSON.stringify({ email: "upgrade@x.com", name: "Upgrade", role: "OWNER" }),
+        body: JSON.stringify({ email: "upgrade@x.com", name: "Upgrade", roleId: await systemRoleId(prisma, "OWNER") }),
         headers: { "content-type": "application/json" },
       },
     );
@@ -484,5 +485,102 @@ describe("POST /api/platform/organizations/[orgId]/owners", () => {
 
     const user = await prisma.user.findUnique({ where: { email: "mailfail@x.com" } });
     expect(user).not.toBeNull();
+  });
+});
+
+describe("POST /api/platform/organizations/[orgId]/owners : rôles par roleId", () => {
+  const call = async (orgId: string, body: unknown) => {
+    const { POST } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
+    return POST(
+      new NextRequest(`http://localhost/api/platform/organizations/${orgId}/owners`, {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { "content-type": "application/json" },
+      }),
+      { params: Promise.resolve({ orgId }) },
+    );
+  };
+
+  beforeEach(() => {
+    vi.mocked(getServerSession).mockReset();
+  });
+
+  it("sans roleId : propriétaire ; avec un rôle personnalisé de l'organisation : accepté, sans enum", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    expect((await call(org.id, { email: "a@x.com", name: "A" })).status).toBe(201);
+    const a = await prisma.user.findUniqueOrThrow({ where: { email: "a@x.com" } });
+    expect(await prisma.orgMembership.findFirstOrThrow({ where: { userId: a.id }, include: { roleRef: true } })).toMatchObject({
+      role: "OWNER",
+      roleRef: { systemKey: "OWNER" },
+    });
+    const custom = await prisma.role.create({ data: { scope: "ORG", orgId: org.id, name: "Comptable" } });
+    expect((await call(org.id, { email: "b@x.com", name: "B", roleId: custom.id })).status).toBe(201);
+    const b = await prisma.user.findUniqueOrThrow({ where: { email: "b@x.com" } });
+    expect(await prisma.orgMembership.findFirstOrThrow({ where: { userId: b.id } })).toMatchObject({ roleId: custom.id, role: null });
+    const list = await (async () => {
+      const { GET } = await import("@/app/api/platform/organizations/[orgId]/owners/route");
+      return (
+        await GET(new NextRequest("http://localhost/x"), { params: Promise.resolve({ orgId: org.id }) })
+      ).json();
+    })();
+    expect(list.owners).toHaveLength(1);
+    expect(list.owners[0].role).toMatchObject({ systemKey: "OWNER" });
+  });
+
+  it("rôle d'une autre organisation : 404 ; rôle plateforme : 400 ; membre inchangé", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    const other = await prisma.organization.create({ data: { name: "Y", slug: uniqueSlug() } });
+    const foreign = await prisma.role.create({ data: { scope: "ORG", orgId: other.id, name: "Étranger" } });
+    const platform = await prisma.role.create({ data: { scope: "PLATFORM", name: "Plateforme perso" } });
+    expect((await call(org.id, { email: "c@x.com", name: "C", roleId: foreign.id })).status).toBe(404);
+    expect((await call(org.id, { email: "c@x.com", name: "C", roleId: platform.id })).status).toBe(400);
+    expect(await prisma.user.count({ where: { email: "c@x.com" } })).toBe(0);
+  });
+
+  it("anti-escalade : rôle personnalisé non détenu refusé au STAFF_ADMIN ; le SUPER_ADMIN l'attribue", async () => {
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    const payer = await prisma.role.create({
+      data: { scope: "ORG", orgId: org.id, name: "Payeur", permissions: { create: [{ permission: "billing.subscription.pay" }] } },
+    });
+    await makeStaff("STAFF_ADMIN");
+    const refused = await call(org.id, { email: "d@x.com", name: "D", roleId: payer.id });
+    expect([refused.status, (await refused.json()).error]).toEqual([403, "PERMISSION_NOT_HELD"]);
+    await makeStaff("SUPER_ADMIN");
+    expect((await call(org.id, { email: "d@x.com", name: "D", roleId: payer.id })).status).toBe(201);
+  });
+
+  it("rétrograder le dernier propriétaire : 409 LAST_OWNER ; avec un second propriétaire : autorisé", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    const owner = await prisma.user.create({ data: { email: "o@x.com", password: "x", name: "O" } });
+    await prisma.orgMembership.create({ data: { userId: owner.id, orgId: org.id, role: "OWNER", roleId: await systemRoleId(prisma, "OWNER") } });
+    const manager = await systemRoleId(prisma, "MANAGER");
+    const refused = await call(org.id, { email: "o@x.com", name: "O", roleId: manager });
+    expect([refused.status, (await refused.json()).error]).toEqual([409, "LAST_OWNER"]);
+    const second = await prisma.user.create({ data: { email: "o2@x.com", password: "x", name: "O2" } });
+    await prisma.orgMembership.create({ data: { userId: second.id, orgId: org.id, role: "OWNER", roleId: await systemRoleId(prisma, "OWNER") } });
+    expect((await call(org.id, { email: "o@x.com", name: "O", roleId: manager })).status).toBe(200);
+  });
+
+  it("le staff ne change pas son propre rôle d'organisation (403)", async () => {
+    const staff = await prisma.user.update({ where: { id: (await makeStaff("STAFF_ADMIN")).id }, data: { email: "self-staff@x.com" } });
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    await prisma.orgMembership.create({ data: { userId: staff.id, orgId: org.id, role: "AUDITOR", roleId: await systemRoleId(prisma, "AUDITOR") } });
+    const res = await call(org.id, { email: staff.email, name: "S", roleId: await systemRoleId(prisma, "OWNER") });
+    expect([res.status, (await res.json()).error]).toEqual([403, "SELF_MODIFICATION"]);
+  });
+
+  it("un staff peut s'ajouter lui-même comme nouveau membre", async () => {
+    const staff = await prisma.user.update({ where: { id: (await makeStaff("STAFF_ADMIN")).id }, data: { email: "ajout-staff@x.com" } });
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    expect((await call(org.id, { email: staff.email, name: "S", roleId: await systemRoleId(prisma, "AUDITOR") })).status).toBe(201);
+  });
+
+  it("corps invalide (champ inconnu `role`) : 400", async () => {
+    await makeStaff("STAFF_ADMIN");
+    const org = await prisma.organization.create({ data: { name: "X", slug: uniqueSlug() } });
+    expect((await call(org.id, { email: "e@x.com", name: "E", role: "MANAGER" })).status).toBe(400);
   });
 });

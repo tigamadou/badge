@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { AuthError } from "@/lib/auth-guards";
 import { loadUserContext } from "@/lib/user-context";
 import type { UserContext } from "@/types/auth";
 import { roleErrorResponse } from "./errors";
@@ -32,11 +33,12 @@ export async function actorContext(userId: string): Promise<UserContext> {
   return (await loadUserContext(userId))!;
 }
 
-/** Exécute `fn` et traduit les `RoleError` en réponse HTTP ; toute autre erreur est relancée. */
+/** Exécute `fn` et traduit les `RoleError` et les `AuthError` (dernier OWNER, dernier SUPER_ADMIN…) en réponse HTTP ; toute autre erreur est relancée. */
 export async function withRoleErrors(fn: () => Promise<Response>): Promise<Response> {
   try {
     return await fn();
   } catch (err) {
+    if (err instanceof AuthError) return NextResponse.json({ error: err.code }, { status: err.httpStatus });
     const res = roleErrorResponse(err);
     if (res) return res;
     throw err;
