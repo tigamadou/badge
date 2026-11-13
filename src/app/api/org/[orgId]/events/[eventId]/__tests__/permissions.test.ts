@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import {
-  makeEvent, makeEventMember, makeOrg, makeOrgMember, makeStaff, makeUser, seedFactories,
+  makeCustomRole, makeEvent, makeEventMember, makeOrg, makeOrgMember, makeStaff, makeUser, seedFactories,
 } from "@/test/factories";
 import { prisma } from "@/lib/prisma";
 import { SYSTEM_ROLES, type Permission, type SystemRoleKey } from "@/lib/permissions";
@@ -43,7 +43,7 @@ type Row = { name: string; handler: Handler; method: string; path: string; permi
 const reg = "/registrations/inconnu";
 const ROWS: Row[] = [
   { name: "GET event", handler: eventRoute.GET, method: "GET", path: "", permissions: ["event.read.detailed"] },
-  { name: "PATCH event", handler: eventRoute.PATCH, method: "PATCH", path: "", permissions: ["event.update"] },
+  { name: "PATCH event", handler: eventRoute.PATCH, method: "PATCH", path: "", permissions: ["event.update", "event.registration_toggle"] },
   { name: "GET settings", handler: settingsRoute.GET, method: "GET", path: "/settings", permissions: ["event.settings.update"] },
   { name: "PATCH settings", handler: settingsRoute.PATCH, method: "PATCH", path: "/settings", permissions: ["event.settings.update"] },
   { name: "PATCH settings/badge", handler: settingsBadgeRoute.PATCH, method: "PATCH", path: "/settings/badge", permissions: ["event.settings.update"] },
@@ -242,5 +242,52 @@ describe("GET activity : filtrage selon la permission", () => {
     const other = await makeUser();
     await seedLogs(org.id, event.id, op.id, other.id);
     expect((await (await call(row, org.id, event.id, op)).json()).total).toBe(1);
+  });
+});
+
+describe("PATCH event : event.registration_toggle", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  async function memberWith(eventId: string, permissions: Permission[]): Promise<Actor> {
+    const role = await makeCustomRole({ scope: "EVENT", permissions });
+    const user = await makeUser();
+    await prisma.eventMembership.create({ data: { userId: user.id, eventId, roleId: role.id } });
+    return { ...user, isStaff: false };
+  }
+
+  async function patch(orgId: string, eventId: string, actor: Actor, body: unknown) {
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: actor.id, email: actor.email, name: actor.name, isStaff: false } } as never);
+    const req = new NextRequest(`http://localhost/api/org/${orgId}/events/${eventId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+      headers: { "content-type": "application/json" },
+    });
+    return eventRoute.PATCH(req, { params: Promise.resolve({ orgId, eventId }) } as never);
+  }
+
+  const openOf = async (eventId: string) => (await prisma.event.findUniqueOrThrow({ where: { id: eventId } })).registrationOpen;
+
+  it("event.update sans event.registration_toggle : ne ferme pas les inscriptions (403), mais modifie le titre", async () => {
+    const { org, event } = await scene();
+    await prisma.event.update({ where: { id: event.id }, data: { registrationOpen: true } });
+    const a = await memberWith(event.id, ["event.update"]);
+    const res = await patch(org.id, event.id, a, { registrationOpen: false });
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("PERMISSION_DENIED");
+    expect(await openOf(event.id)).toBe(true);
+    // valeur inchangée renvoyée par le formulaire : acceptée
+    expect((await patch(org.id, event.id, a, { title: "Nouveau", registrationOpen: true })).status).toBe(200);
+  });
+
+  it("event.registration_toggle seule : ferme les inscriptions, mais ne modifie pas le titre", async () => {
+    const { org, event } = await scene();
+    await prisma.event.update({ where: { id: event.id }, data: { registrationOpen: true } });
+    const a = await memberWith(event.id, ["event.registration_toggle"]);
+    const res = await patch(org.id, event.id, a, { registrationOpen: false });
+    expect(res.status).toBe(200);
+    expect(await openOf(event.id)).toBe(false);
+    const other = await patch(org.id, event.id, a, { title: "Autre" });
+    expect(other.status).toBe(403);
+    expect((await other.json()).error).toBe("PERMISSION_DENIED");
   });
 });

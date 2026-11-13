@@ -148,8 +148,13 @@ describe("EventSettingsForm", () => {
   });
 
   it("avec event.update : champs modifiables et Enregistrer", () => {
-    const html = render(["event.settings.update", "event.update"]);
+    const html = render(["event.settings.update", "event.update", "event.registration_toggle"]);
     expect(html).not.toContain("<fieldset disabled");
     expect(html.match(/>Enregistrer</g)).toHaveLength(2);
+  });
+
+  it("sans event.registration_toggle : l'interrupteur des inscriptions est désactivé", () => {
+    const html = render(["event.settings.update", "event.update"]);
+    expect(html).toMatch(/<fieldset disabled[^>]*><button[^>]*role="switch"/);
   });
 });

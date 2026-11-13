@@ -219,6 +219,7 @@ export function EventSettingsForm({
   permissions: Permission[];
 }) {
   const canUpdateEvent = permissions.includes("event.update");
+  const canToggleRegistration = permissions.includes("event.registration_toggle");
   const [title, setTitle] = useState(initial.event.title);
   const [location, setLocation] = useState(initial.event.location);
   const [date, setDate] = useState(initial.event.date.slice(0, 10));
@@ -418,7 +419,9 @@ export function EventSettingsForm({
                 30 au plus, 500 caractères chacune.
               </p>
             </div>
-            <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
+            <fieldset disabled={!canToggleRegistration} className="m-0 min-w-0 border-0 p-0 disabled:opacity-60">
+              <Switch checked={registrationOpen} onChange={setRegistrationOpen} label="Inscriptions ouvertes" />
+            </fieldset>
             <p className="text-xs text-slate-400">
               Slug : <code className="font-mono text-slate-600">{initial.event.slug}</code> (modifiable par le staff
               uniquement)
