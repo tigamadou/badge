@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff } from "@/test/factories";
 import { makeBillingPayment, makeSubscription } from "@/test/factories-billing";
 import { POST } from "@/app/api/org/[orgId]/subscription/checkout/route";
 
@@ -49,6 +50,18 @@ describe("POST /api/org/[orgId]/subscription/checkout", () => {
   it("MANAGER → 403", async () => {
     const { org, plan } = await seed("MANAGER");
     expect((await call(org.id, { planId: plan.id })).status).toBe(403);
+  });
+
+  it("SUPER_ADMIN non membre → 403 (le paiement reste côté organisateur)", async () => {
+    const { org, plan } = await seed("OWNER");
+    const staff = await makeStaff("SUPER_ADMIN");
+    vi.mocked(getServerSession).mockResolvedValue({ user: { id: staff.id, email: staff.email, name: "S", isStaff: true } } as never);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await call(org.id, { planId: plan.id });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("OWNER → 200 { url }", async () => {
@@ -112,12 +125,10 @@ describe("POST /api/org/[orgId]/subscription/checkout", () => {
     expect(await res.json()).toEqual({ error: "NOTHING_TO_PAY" });
   });
 
-  it("erreur inattendue (org inexistante, accès staff) → propagée", async () => {
-    const staff = await prisma.user.create({
-      data: { email: `st-${Date.now()}@x.test`, password: "x", name: "S", isStaff: true, staffRole: "SUPER_ADMIN" },
-    });
-    withSession(staff);
-    const plan = await prisma.plan.create({ data: { name: "pro", price: 15000 } });
-    await expect(call("org-fantome", { planId: plan.id })).rejects.toThrow();
+  it("erreur inattendue (prisma indisponible) → propagée", async () => {
+    const { org, plan } = await seed("OWNER");
+    const spy = vi.spyOn(prisma.plan, "findUnique").mockRejectedValueOnce(new Error("boom"));
+    await expect(call(org.id, { planId: plan.id })).rejects.toThrow("boom");
+    spy.mockRestore();
   });
 });
