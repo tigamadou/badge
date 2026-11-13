@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { sendUserInvitation } from "@/lib/mail";
@@ -117,7 +118,8 @@ export const POST = withStaffAuth(
       // Ajuste le role du membership existant au role choisi par le staff.
       await prisma.orgMembership.update({
         where: { id: existing.id },
-        data: { role },
+        // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+        data: { role, roleId: await systemRoleId(prisma, role) },
       });
       await logActivity({
         type: "MEMBERSHIP_ROLE_CHANGED",

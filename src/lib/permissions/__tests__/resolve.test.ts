@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildUserContext } from "@/lib/user-context";
 import type { UserContext } from "@/types/auth";
 import type { Permission } from "../catalog";
-import { effectivePermissions, eventTargetOf, hasPermission, isStaffActor, type PermissionTarget } from "../resolve";
+import { effectivePermissions, eventTargetOf, hasPermission, isStaffActor, memberPermissions, type PermissionTarget } from "../resolve";
 
 type Row = Parameters<typeof buildUserContext>[0];
 type Opts = {
@@ -187,5 +187,46 @@ describe("hasPermission, isStaffActor, eventTargetOf", () => {
   it("eventTargetOf accepte { id, orgId } et { eventId, orgId }", () => {
     expect(eventTargetOf({ id: "e", orgId: "o" })).toEqual({ kind: "event", eventId: "e", orgId: "o" });
     expect(eventTargetOf({ eventId: "e", orgId: "o" })).toEqual({ kind: "event", eventId: "e", orgId: "o" });
+  });
+});
+
+describe("invariant isStaff et memberPermissions", () => {
+  it("le rôle plateforme est ignoré quand isStaff est faux (repli staffRole d'une ligne incohérente)", () => {
+    const c = ctx({ isStaff: false, staffRole: "SUPER_ADMIN" });
+    expect(c.platformRole).not.toBeNull();
+    expect(effectivePermissions(c, org).size).toBe(0);
+    expect(effectivePermissions(c, ev).size).toBe(0);
+    expect(hasPermission(c, "users.update", { kind: "platform" })).toBe(false);
+  });
+
+  it("memberPermissions d'un staff membre écarte le rôle plateforme et ses ajustements", () => {
+    const c = ctx({
+      isStaff: true,
+      staffRole: "SUPER_ADMIN",
+      orgs: [{ orgId: ORG, role: "AGENT" }],
+      overrides: [
+        { orgId: null, permission: "org.update", effect: "GRANT" },
+        { orgId: ORG, permission: "org.events.create", effect: "GRANT" },
+      ],
+    });
+    expect(hasPermission(c, "print.quote.accept", org)).toBe(true);
+    const member = memberPermissions(c, org);
+    expect(member.has("print.quote.accept")).toBe(false);
+    expect(member.has("org.update")).toBe(false);
+    expect(member.has("org.read")).toBe(true);
+    expect(member.has("org.events.create")).toBe(true);
+    expect(memberPermissions(c, ev).has("print.request")).toBe(false);
+    expect(memberPermissions(c, { kind: "platform" }).size).toBe(0);
+  });
+
+  it("memberPermissions égale effectivePermissions pour un non-staff", () => {
+    const c = ctx({
+      orgs: [{ orgId: ORG, role: "MANAGER" }],
+      events: [{ eventId: EV, role: "VIEWER" }],
+      overrides: [{ orgId: null, permission: "org.update", effect: "GRANT" }],
+    });
+    for (const t of [org, ev, { kind: "platform" } as PermissionTarget, { kind: "participant" } as PermissionTarget]) {
+      expect(sorted(new Set(memberPermissions(c, t)))).toEqual(sorted(effectivePermissions(c, t)));
+    }
   });
 });

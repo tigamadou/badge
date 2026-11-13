@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
 import { withEventAuth } from "@/lib/with-event-auth";
 import { logActivity } from "@/lib/activity-log";
 import { notifyMembershipRoleChanged } from "@/lib/notifications/triggers";
@@ -22,7 +23,8 @@ export const PATCH = withEventAuth({ minRole: "ADMIN" }, async (req, { orgId, ev
 
   const updated = await prisma.eventMembership.update({
     where: { id: membershipId },
-    data: { role: parsed.data.role },
+    // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+    data: { role: parsed.data.role, roleId: await systemRoleId(prisma, parsed.data.role) },
   });
   await logActivity({
     type: "MEMBERSHIP_ROLE_CHANGED",

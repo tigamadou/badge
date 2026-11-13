@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
 import { withStaffAuth } from "@/lib/with-staff-auth";
 import { logActivity } from "@/lib/activity-log";
 import { loadUserContext } from "@/lib/user-context";
@@ -144,6 +145,7 @@ export const PATCH = withStaffAuth<{ userId: string }>(async (req, { session }, 
     archivedAt?: Date | null;
     staffRole?: (typeof STAFF_ROLES)[number] | null;
     isStaff?: boolean;
+    platformRoleId?: string | null;
   } = {};
   if (data.name !== undefined) updateData.name = data.name;
   if (data.archived !== undefined) {
@@ -153,6 +155,9 @@ export const PATCH = withStaffAuth<{ userId: string }>(async (req, { session }, 
   if (data.staffRole !== undefined) {
     updateData.staffRole = data.staffRole;
     updateData.isStaff = data.staffRole !== null;
+    // Double écriture : le contexte lit platformRoleId en priorité sur la colonne d'enum.
+    // @deprecated compat chantier roles-permissions (retiré à la fusion)
+    updateData.platformRoleId = data.staffRole === null ? null : await systemRoleId(prisma, data.staffRole);
   }
 
   try {

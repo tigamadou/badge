@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { systemRoleId } from "@/lib/permissions/db";
 import { requireOrgRole, assertNotLastOwner, AuthError } from "@/lib/auth-guards";
 import { logActivity } from "@/lib/activity-log";
 import { notifyMembershipRoleChanged } from "@/lib/notifications/triggers";
@@ -62,7 +63,8 @@ export async function PATCH(req: NextRequest, { params }: Params): Promise<Respo
 
   const updated = await prisma.orgMembership.update({
     where: { id: existing.id },
-    data: { role: nextRole },
+    // @deprecated compat chantier roles-permissions (retiré à la fusion) : roleId double l'enum.
+    data: { role: nextRole, roleId: await systemRoleId(prisma, nextRole) },
   });
 
   await logActivity({
