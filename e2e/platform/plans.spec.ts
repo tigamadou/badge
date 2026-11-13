@@ -9,6 +9,9 @@ import { cleanupBillingPlans, createTestPlan } from "../helpers/billing";
 // ligne). Garde-fou : 409 NAME_TAKEN sur un nom deja utilise.
 // Note : l'etat vide du catalogue n'est pas testable — la page liste TOUS les
 // plans sans filtre et la base dev en contient toujours (seed + autres specs).
+// La liste est paginee (10 par defaut) : les specs ouvrent la taille maximale pour
+// retrouver les plans qu'elles viennent de creer, classes en fin de liste. La creation
+// se fait dans une modale ouverte par « Nouveau plan ».
 test.describe("Platform — Plans", () => {
   const createdPlanIds: string[] = [];
 
@@ -30,8 +33,9 @@ test.describe("Platform — Plans", () => {
   test("STAFF_ADMIN voit le catalogue et le formulaire", async ({ page }) => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "plans-render" });
 
-    await page.goto("/platform/plans");
-    await expect(page.getByLabel("Nom")).toBeVisible();
+    await page.goto("/platform/plans?pageSize=500");
+    await page.getByRole("button", { name: "Nouveau plan" }).click();
+    await expect(page.getByLabel("Nom", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /créer le plan/i })).toBeVisible();
   });
 
@@ -41,8 +45,9 @@ test.describe("Platform — Plans", () => {
     const staff = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "plans-create" });
     const planName = `E2E Plan ${Date.now()}`;
 
-    await page.goto("/platform/plans");
-    await page.getByLabel("Nom").fill(planName);
+    await page.goto("/platform/plans?pageSize=500");
+    await page.getByRole("button", { name: "Nouveau plan" }).click();
+    await page.getByLabel("Nom", { exact: true }).fill(planName);
     await page.getByLabel(/Max events/i).fill("5");
     await page.getByLabel(/Max participants\/event/i).fill("100");
     await page.getByRole("button", { name: /créer le plan/i }).click();
@@ -80,8 +85,9 @@ test.describe("Platform — Plans", () => {
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "plans-unlimited" });
     const planName = `E2E Plan Illimite ${Date.now()}`;
 
-    await page.goto("/platform/plans");
-    await page.getByLabel("Nom").fill(planName);
+    await page.goto("/platform/plans?pageSize=500");
+    await page.getByRole("button", { name: "Nouveau plan" }).click();
+    await page.getByLabel("Nom", { exact: true }).fill(planName);
     await page.getByRole("button", { name: /créer le plan/i }).click();
 
     await expect(page.locator("tr", { hasText: planName })).toBeVisible();
@@ -95,7 +101,7 @@ test.describe("Platform — Plans", () => {
     const staff = await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "plans-public" });
     const plan = await createTestPlan({ scope: "plans-public", price: 20000 });
 
-    await page.goto("/platform/plans");
+    await page.goto("/platform/plans?pageSize=500");
     const row = page.locator("tr", { hasText: plan.name }).first();
     await expect(row).toContainText("Masqué");
     await row.getByRole("button", { name: "Fiche publique" }).click();
@@ -127,8 +133,9 @@ test.describe("Platform — Plans", () => {
     const existing = await getDb().plan.create({ data: { name: planName, period: "MONTHLY" } });
     createdPlanIds.push(existing.id);
 
-    await page.goto("/platform/plans");
-    await page.getByLabel("Nom").fill(planName);
+    await page.goto("/platform/plans?pageSize=500");
+    await page.getByRole("button", { name: "Nouveau plan" }).click();
+    await page.getByLabel("Nom", { exact: true }).fill(planName);
     await page.getByRole("button", { name: /créer le plan/i }).click();
 
     // Reponse attendue — ECHEC : message d'erreur UI, aucun 2e plan cree.

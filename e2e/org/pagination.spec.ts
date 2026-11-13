@@ -10,7 +10,7 @@ test.describe("Org — Pagination des listes", () => {
     await disconnectDb();
   });
 
-  test("Événements : 20 par défaut, taille 50, page hors bornes, pas de débordement", async ({ page }) => {
+  test("Événements : 10 par défaut, taille 50, page hors bornes, pas de débordement", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "pg-org-ev" });
     const stamp = Date.now();
     await getDb().event.createMany({
@@ -26,27 +26,27 @@ test.describe("Org — Pagination des listes", () => {
     await page.getByRole("link", { name: /événements/i }).first().click();
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/events`));
 
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 45, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 45, pageSize: 10 });
 
     await selectPageSize(page, 50);
     await expect(page.locator("tbody tr")).toHaveCount(45);
 
     await page.goto(`/org/${orgId}/events?page=99`);
     await expect(page.locator("tbody tr")).toHaveCount(5);
-    await expectPagination(page, { total: 45, pageSize: 20, page: 3 });
+    await expectPagination(page, { total: 45, pageSize: 10, page: 5 });
 
     // Archiver depuis la liste : la tranche est relue, la ligne reste (archivée) et la page tient.
     page.on("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Archiver" }).first().click();
     await expect(page.getByText("Archivé").first()).toBeVisible();
     await expect(page.locator("tbody tr")).toHaveCount(5);
-    await expectPagination(page, { total: 45, pageSize: 20, page: 3 });
+    await expectPagination(page, { total: 45, pageSize: 10, page: 5 });
 
     for (const width of [375, 1024, 1280]) {
       await page.setViewportSize({ width, height: 800 });
       await page.goto(`/org/${orgId}/events`);
-      await expect(page.locator("tbody tr")).toHaveCount(20);
+      await expect(page.locator("tbody tr")).toHaveCount(10);
       await expectNoHorizontalOverflow(page);
     }
   });
@@ -68,19 +68,23 @@ test.describe("Org — Pagination des listes", () => {
     await loginAndEnter(page, owner, { kind: "org", id: orgId });
 
     await page.goto(`/org/${orgId}/members`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 25, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 25, pageSize: 10 });
     await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await page.getByRole("button", { name: "Page suivante" }).click();
+    await expect(page).toHaveURL(/page=3/);
     await expect(page.locator("tbody tr")).toHaveCount(5);
 
     await page.goto(`/org/${orgId}/templates`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await expectPagination(page, { total: 22, pageSize: 20 });
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expectPagination(page, { total: 22, pageSize: 10 });
 
     await page.goto(`/org/${orgId}/activity`);
-    await expect(page.locator("tbody tr")).toHaveCount(20);
-    await selectPageSize(page, 10);
     await expect(page.locator("tbody tr")).toHaveCount(10);
+    await selectPageSize(page, 20);
+    await expect(page.locator("tbody tr")).toHaveCount(20);
     await page.goto(`/org/${orgId}/activity?pageSize=10&page=99`);
     await expectPagination(page, { total: 23, pageSize: 10, page: 3 });
     await expect(page.locator("tbody tr")).toHaveCount(3);

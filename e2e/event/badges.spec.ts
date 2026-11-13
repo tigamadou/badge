@@ -10,6 +10,7 @@ import {
   getDb,
   makeEventAdminUser,
 } from "../helpers/db";
+import { selectPageSize } from "../helpers/pagination";
 import { loginAndEnter } from "../helpers/nav";
 import { expectLastActivity } from "../helpers/audit";
 import { toast } from "../helpers/feedback";
@@ -319,7 +320,8 @@ test.describe("Event — Badges", () => {
     await page.getByRole("link", { name: /badges/i }).first().click();
     await expect(page).toHaveURL(new RegExp(`/event/${eventId}/badges`));
 
-    // La liste est paginee : 100 lignes affichees sur 130.
+    // La liste est paginee (10 par defaut) : on passe a 100 lignes affichees sur 130.
+    await selectPageSize(page, 100);
     await expect(page.getByText("130 résultats")).toBeVisible();
     await expect(page.getByRole("checkbox")).toHaveCount(100);
 

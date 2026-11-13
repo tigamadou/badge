@@ -427,6 +427,9 @@ export async function cleanupE2ETestData(): Promise<void> {
   if (orgIds.length > 0) {
     await prisma.organization.deleteMany({ where: { id: { in: orgIds } } });
   }
+  // Plans crees avec les organisations e2e (leurs abonnements sont partis avec l'organisation) :
+  // sans ce nettoyage, ils s'accumulent dans le catalogue et la liste paginee des plans les noie.
+  await prisma.plan.deleteMany({ where: { name: { startsWith: "e2e-plan-" } } });
 }
 
 // Cree un user e2e. Si `verified` = true, emailVerifiedAt pose pour permettre

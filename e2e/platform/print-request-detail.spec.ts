@@ -419,10 +419,10 @@ test.describe("Platform — Détail d'une commande d'impression", () => {
     await page.getByRole("button", { name: "Voir les badges (45)" }).click();
     const dialog = page.getByRole("dialog", { name: "Badges de la commande" });
     await expect(dialog.getByText("45 résultats", { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("row")).toHaveCount(21);
-
-    await dialog.getByLabel("Nombre de résultats par page").selectOption("10");
     await expect(dialog.getByRole("row")).toHaveCount(11);
+
+    await dialog.getByLabel("Nombre de résultats par page").selectOption("20");
+    await expect(dialog.getByRole("row")).toHaveCount(21);
     await dialog.getByRole("button", { name: "Page suivante" }).click();
     await expect(dialog.locator('button[aria-current="page"]')).toHaveText("2");
 
