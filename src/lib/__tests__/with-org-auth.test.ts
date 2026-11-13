@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeOrgMember } from "@/test/factories";
 import { withOrgAuth } from "@/lib/with-org-auth";
 
 vi.mock("next-auth", () => ({
@@ -110,10 +111,8 @@ describe("withOrgAuth", () => {
     });
 
     it("AGENT : 403 PERMISSION_DENIED", async () => {
-      const agent = await prisma.role.create({ data: { scope: "ORG", systemKey: "AGENT", name: "Agent" } });
-      const u = await prisma.user.create({ data: { email: "ag@x", password: "x", name: "Ag" } });
       const org = await prisma.organization.create({ data: { name: "O", slug: "pm2" } });
-      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: agent.id } });
+      const u = await makeOrgMember(org.id, "AGENT");
       const res = await call("org.members.read", u, org.id);
       expect(res.status).toBe(403);
       expect(await res.json()).toEqual({ error: "PERMISSION_DENIED" });

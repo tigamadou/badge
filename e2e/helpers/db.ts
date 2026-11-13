@@ -35,10 +35,12 @@ export type TestEventRole = EventSystemKey;
 
 // Rôles système permanents (jamais supprimés par cleanupE2ETestData) ; la colonne d'enum
 // n'est posée que pour les rôles hérités (double écriture de compatibilité).
+// @deprecated compat chantier roles-permissions (retiré à la fusion) : double écriture de la colonne d'enum.
 const LEGACY_ENUM_KEYS: ReadonlySet<string> = new Set([
   "SUPER_ADMIN", "STAFF_ADMIN", "STAFF_SUPPORT", "STAFF_OBSERVER",
   "OWNER", "MANAGER", "AUDITOR", "ADMIN", "OPERATOR", "PRINTER", "VIEWER",
 ]);
+// @deprecated compat chantier roles-permissions (retiré à la fusion)
 async function roleColumns<E>(key: PlatformSystemKey | OrgSystemKey | EventSystemKey): Promise<{ roleId: string; legacy: E | null }> {
   const ids = await ensureSystemRoles(db());
   return { roleId: ids[key], legacy: LEGACY_ENUM_KEYS.has(key) ? (key as unknown as E) : null };

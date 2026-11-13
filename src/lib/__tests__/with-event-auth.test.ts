@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeOrgMember } from "@/test/factories";
 import { withEventAuth, type EventAuthCtx } from "@/lib/with-event-auth";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
@@ -352,9 +353,7 @@ describe("withEventAuth", () => {
 
     it("AGENT de l'org : 200 sur scan.check-in", async () => {
       const { org, event } = await setup();
-      const agent = await prisma.role.create({ data: { scope: "ORG", systemKey: "AGENT", name: "Agent" } });
-      const u = await prisma.user.create({ data: { email: "ag@x", password: "x", name: "Ag" } });
-      await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: agent.id } });
+      const u = await makeOrgMember(org.id, "AGENT");
       expect((await run({ permission: "scan.check-in" }, u, false, { orgId: org.id, eventId: event.id })).status).toBe(200);
     });
 

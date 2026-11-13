@@ -79,6 +79,7 @@ export function hasOrgRole(
   role: OrgRole,
   opts: { allowStaff?: boolean } = {},
 ): boolean {
+  // @deprecated compat chantier roles-permissions (retiré à la fusion) : `staffRole` est la clé héritée.
   if (opts.allowStaff && ctx.isStaff && ctx.staffRole !== null) return true;
   return ctx.orgMemberships.some(
     (m) => m.orgId === orgId && m.role !== null && orgRoleAtLeast(m.role, role),
@@ -96,6 +97,7 @@ export function effectiveEventRole(
   eventId: string,
   orgId: string,
 ): EffectiveEventRole {
+  // @deprecated compat chantier roles-permissions (retiré à la fusion) : `staffRole` est la clé héritée.
   if (ctx.isStaff && ctx.staffRole !== null) return "STAFF";
 
   const orgMembership = ctx.orgMemberships.find((m) => m.orgId === orgId);
