@@ -60,8 +60,12 @@ export function docIdForRoute(route: string): string {
   return [space, ...named].join("/");
 }
 
+export function docFileForId(id: string): string {
+  return `${DOCS_DIR}/${id}.md`;
+}
+
 export function docFileForRoute(route: string): string {
-  return `${DOCS_DIR}/${docIdForRoute(route)}.md`;
+  return docFileForId(docIdForRoute(route));
 }
 
 /** Identifiant développé : les segments dynamiques intermédiaires gardent leur nom (`[requestId]` -> `requestId`). */
