@@ -105,7 +105,9 @@ function hasQuantitySplit(choices: Prisma.JsonValue | null): boolean {
 // Aligne les quantités des lignes produit sur le nouveau nombre de badges. Le prix unitaire reste
 // figé (aucun recalcul de palier ni de minQuantity : le staff fixe le prix). Les lignes dont la
 // quantité est fixée (à la main ou par répartition) ne bougent pas ; celles qui diffèrent du
-// nouveau nombre sont signalées dans `lagging`.
+// nouveau nombre sont signalées dans `lagging`. Une ligne non fixée dont la quantité égale l'ancien
+// nombre suit le nouveau ; un accessoire de l'organisateur dont la quantité dépasse le nouveau nombre y est ramené
+// (spec 39 ; les lignes du staff gardent leur quantité) ; une quantité inférieure est conservée.
 export async function followBadgeCount(
   tx: Prisma.TransactionClient,
   requestId: string,
@@ -121,7 +123,7 @@ export async function followBadgeCount(
     const fixed = line.quantityOverridden || hasQuantitySplit(line.choices);
     if (fixed) {
       if (line.quantity !== next) lagging.push(line.label);
-    } else if (line.quantity === previous) {
+    } else if (line.quantity === previous || (line.quantity > next && line.addedBy === "ORGANIZER")) {
       await tx.printQuoteLine.update({
         where: { id: line.id },
         data: { quantity: next, lineTotal: next * line.unitPrice },
@@ -479,10 +481,21 @@ export async function setOrganizerProducts(input: {
     const moves: { id: string; position: number }[] = [];
 
     for (const [position, { product, entry }] of ordered.entries()) {
-      // La quantité d'un accessoire est toujours le nombre de badges (spec 39) : `entry.quantity`
-      // reste accepté pour la rétrocompatibilité des clients mais est ignoré.
+      // Spec 39 : le support vaut toujours le nombre de badges ; un accessoire vaut la quantité
+      // saisie (1 au moins, validée par le schéma), plafonnée au nombre de badges, ou ce nombre par défaut.
+      const accessory = product.kind !== "BADGE";
+      const derivedQuantity = !accessory || entry.quantity === null || entry.quantity === undefined;
+      const quantity = derivedQuantity ? badgeCount : entry.quantity!;
       const line = byProduct.get(product.id);
-      const quantity = badgeCount;
+      const locked = line ? line.priceOverridden || line.quantityOverridden : false;
+      // Une ligne fixée par le staff renvoyée à l'identique n'est pas contestée, même au-dessus du plafond.
+      const unchangedLocked = locked && line!.quantity === quantity;
+      if (accessory && quantity > badgeCount && !unchangedLocked) {
+        throw new PrintRequestError("ACCESSORY_QUANTITY_ABOVE_BADGES", 400, {
+          productId: product.id,
+          badgeCount,
+        });
+      }
       let choices = normalizeChoices(product, entry.choices);
 
       if (!line) {
@@ -492,10 +505,9 @@ export async function setOrganizerProducts(input: {
       keptIds.add(line.id);
       const storedChoices = normalizeChoices(product, (line.choices ?? []) as unknown as OptionChoice[]);
       const sameChoices = canonical(storedChoices) === canonical(choices);
-      const locked = line.priceOverridden || line.quantityOverridden;
-      // Quantité toujours dérivée sur une ligne fixée par le staff : l'organisateur ne la conteste pas
+      // Quantité non saisie sur une ligne fixée par le staff : l'organisateur ne la conteste pas
       // (le suivi du nombre de badges appartient à followBadgeCount).
-      const effectiveQuantity = locked ? line.quantity : quantity;
+      const effectiveQuantity = derivedQuantity && locked ? line.quantity : quantity;
       if (sameChoices && effectiveQuantity === line.quantity) {
         if (line.position !== position) moves.push({ id: line.id, position });
         continue;

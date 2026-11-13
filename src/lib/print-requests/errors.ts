@@ -16,6 +16,7 @@ export type PrintRequestErrorCode =
   | "PRODUCT_UNAVAILABLE"
   | "INVALID_CHOICES"
   | "BELOW_MIN_QUANTITY"
+  | "ACCESSORY_QUANTITY_ABOVE_BADGES"
   | "LINE_LOCKED_BY_STAFF"
   | "DELIVERY_INCOMPLETE"
   | "ONSITE_INCOMPLETE"
@@ -57,6 +58,8 @@ export const PRINT_REQUEST_ERROR_MESSAGES: Record<PrintRequestErrorCode, string>
   PRODUCT_UNAVAILABLE: "Ce produit n'est plus disponible.",
   INVALID_CHOICES: "Les options choisies pour ce produit sont invalides.",
   BELOW_MIN_QUANTITY: "La quantité est inférieure au minimum de commande du produit.",
+  ACCESSORY_QUANTITY_ABOVE_BADGES:
+    "La quantité d'un accessoire ne peut pas dépasser le nombre de badges de la commande.",
   LINE_LOCKED_BY_STAFF: "Cette ligne a été fixée par l'équipe et ne peut pas être modifiée.",
   DELIVERY_INCOMPLETE: "Complétez les informations de livraison.",
   ONSITE_INCOMPLETE: "Complétez les informations d'impression sur place.",

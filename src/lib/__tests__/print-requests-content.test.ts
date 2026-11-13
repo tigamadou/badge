@@ -177,7 +177,7 @@ describe("setBadges", () => {
     expect(await items(r.id)).toHaveLength(0);
   });
 
-  it("suivi des quantités : 3 -> 2 badges, ligne fixée et cordon fixé conservés", async () => {
+  it("suivi des quantités : 3 -> 2 badges, ligne fixée conservée, quantité supérieure ramenée, inférieure conservée", async () => {
     const r = await makeRequest(fx, { status: "SUBMITTED" });
     for (const a of fx.approved) await reserve(r.id, a.id, fx.approved.indexOf(a));
     await line(r.id, { label: "Badge PVC", quantity: 3, unitPrice: 1500, position: 0 });
@@ -186,14 +186,15 @@ describe("setBadges", () => {
     await line(r.id, { label: "Autre", quantity: 5, unitPrice: 10, position: 3 });
     await line(r.id, { label: "Remise", kind: "DISCOUNT", quantity: 1, unitPrice: -100, position: 4 });
     await line(r.id, { label: "Retiré", quantity: 3, unitPrice: 7, position: 5, removedAt: new Date() });
+    await line(r.id, { label: "Inférieure", quantity: 1, unitPrice: 10, position: 6 });
     const res = await setBadges(base({ requestId: r.id, selection: { mode: "CATEGORIES", categoryIds: [fx.categories[0].id] } }));
     expect(res.count).toBe(2);
     const lines = await prisma.printQuoteLine.findMany({ where: { requestId: r.id }, orderBy: { position: "asc" } });
     expect(lines.map((l) => [l.label, l.quantity, l.lineTotal])).toEqual([
-      ["Badge PVC", 2, 3000], ["Cordon", 2, 1000], ["Pochette", 10, 1000], ["Autre", 5, 50],
-      ["Remise", 1, -100], ["Retiré", 3, 21],
+      ["Badge PVC", 2, 3000], ["Cordon", 2, 1000], ["Pochette", 10, 1000], ["Autre", 2, 20],
+      ["Remise", 1, -100], ["Retiré", 3, 21], ["Inférieure", 1, 10],
     ]);
-    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).total).toBe(3000 + 1000 + 1000 + 50 - 100);
+    expect((await prisma.printRequest.findUniqueOrThrow({ where: { id: r.id } })).total).toBe(3000 + 1000 + 1000 + 20 - 100 + 10);
     const [entry] = await thread(r.id);
     expect(entry.eventType).toBe("BADGES_CHANGED");
     expect(entry.details).toMatchObject({ added: 0, removed: 1, count: 2, lagging: ["Pochette"] });
