@@ -9,8 +9,8 @@ import { PrintRequestError } from "./errors";
 import { onsiteOrPrintErrorResponse } from "./onsite";
 
 // Le staff supervise depuis /platform : il lit les commandes mais n'agit jamais côté organisateur.
-export function assertNotStaff(session: EventAuthCtx["session"]): void {
-  if (session.user.isStaff) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
+export function assertNotStaff(ctx: Pick<EventAuthCtx, "isStaffActor">): void {
+  if (ctx.isStaffActor) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
 }
 
 // Corps JSON validé par un schéma zod ; tout écart donne 400 VALIDATION.
@@ -33,7 +33,7 @@ export function organizerRoute(
     { permission: "print.request", allowArchived: options.allowArchived },
     async (req, ctx, extra) => {
       try {
-        if (req.method.toUpperCase() !== "GET") assertNotStaff(ctx.session);
+        if (req.method.toUpperCase() !== "GET") assertNotStaff(ctx);
         const params = (await extra.params) as { requestId?: string };
         return await handler(req, { ...ctx, requestId: params.requestId ?? "" });
       } catch (err) {

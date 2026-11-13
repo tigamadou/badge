@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import type { PrintQuoteLine, PrintRequest, PrintRequestStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
+import { hasPermission } from "@/lib/permissions";
 import {
   loadProductForPricing,
   snapshotChoices,
@@ -422,15 +423,14 @@ export async function advanceStatus(input: {
   );
 }
 
-// Seul passage manuel en PAID du chantier : STAFF_ADMIN (ou SUPER_ADMIN) avec un motif.
+// Seul passage manuel en PAID du chantier : permission `print.requests.mark_paid` avec un motif.
 export async function markPaidManually(input: {
   requestId: string;
   userId: string;
   reason: string;
 }): Promise<PrintRequest> {
   const ctx = await loadUserContext(input.userId);
-  const allowed = ctx?.isStaff && (ctx.staffRole === "STAFF_ADMIN" || ctx.staffRole === "SUPER_ADMIN");
-  if (!allowed) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
+  if (!ctx || !hasPermission(ctx, "print.requests.mark_paid", { kind: "platform" })) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
   const reason = cleanReason(input.reason, 3, 500);
   const request = await loadRequest(input.requestId);
 

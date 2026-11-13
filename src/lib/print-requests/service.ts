@@ -6,6 +6,7 @@ import type {
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
+import { hasPermission, isStaffActor } from "@/lib/permissions";
 import {
   findEffectiveTemplateRow,
   resolveEventTemplateId,
@@ -49,9 +50,9 @@ export async function lockRequestWithEvent(
 // Seul un propriétaire de l'organisation peut accepter un devis (le staff n'agit jamais côté organisateur).
 export async function assertOwner(userId: string, orgId: string): Promise<void> {
   const ctx = await loadUserContext(userId);
-  if (ctx?.isStaff) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
-  const isOwner = ctx?.orgMemberships.some((m) => m.orgId === orgId && m.role === "OWNER") ?? false;
-  if (!isOwner) throw new PrintRequestError("OWNER_REQUIRED", 403);
+  const target = { kind: "org", orgId } as const;
+  if (ctx && isStaffActor(ctx, target)) throw new PrintRequestError("STAFF_FORBIDDEN", 403);
+  if (!ctx || !hasPermission(ctx, "print.quote.accept", target)) throw new PrintRequestError("OWNER_REQUIRED", 403);
 }
 
 const REFERENCE_ATTEMPTS = 3;

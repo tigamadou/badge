@@ -1,9 +1,9 @@
 import type { PrintSheetLayout } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
+import { hasPermission } from "@/lib/permissions";
 import { pxToMm } from "@/lib/print-sheets/units";
 import type { LayoutRow, TemplateOption } from "@/components/staff/print/layout-form";
 
@@ -11,7 +11,7 @@ import type { LayoutRow, TemplateOption } from "@/components/staff/print/layout-
 export async function canWriteLayouts(): Promise<boolean> {
   const session = await getServerSession(authOptions);
   const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  return !!ctx && ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_ADMIN");
+  return !!ctx && hasPermission(ctx, "print.layouts.manage", { kind: "platform" });
 }
 
 export async function loadTemplateOptions(): Promise<TemplateOption[]> {

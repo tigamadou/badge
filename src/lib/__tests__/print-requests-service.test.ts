@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
+import { systemRoleId } from "@/lib/permissions/db";
 import { formatFcfa } from "@/lib/print-requests/labels";
 import { PrintRequestError } from "@/lib/print-requests/errors";
 import * as templateVars from "@/lib/badge-templates/event-template-variables";
@@ -162,6 +164,15 @@ describe("assertOwner", () => {
     expect((await reject(assertOwner(fx.manager.id, fx.org.id)))?.code).toBe("OWNER_REQUIRED");
     const staff = await reject(assertOwner(fx.staffAdmin.id, fx.org.id));
     expect([staff?.code, staff?.status]).toEqual(["STAFF_FORBIDDEN", 403]);
+  });
+  it("staff non membre (SA) -> STAFF_FORBIDDEN ; staff membre OWNER de l'organisation -> accepté", async () => {
+    const sa = await makeStaff("SUPER_ADMIN");
+    const refused = await reject(assertOwner(sa.id, fx.org.id));
+    expect([refused?.code, refused?.status]).toEqual(["STAFF_FORBIDDEN", 403]);
+    const staffOwner = await makeStaff("STAFF_ADMIN");
+    const roleId = await systemRoleId(prisma, "OWNER");
+    await prisma.orgMembership.create({ data: { userId: staffOwner.id, orgId: fx.org.id, role: "OWNER", roleId } });
+    await expect(assertOwner(staffOwner.id, fx.org.id)).resolves.toBeUndefined();
   });
   it("OWNER d'une autre organisation, ou utilisateur inconnu -> OWNER_REQUIRED", async () => {
     const other = await seedPrintFixture();

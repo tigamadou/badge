@@ -1,3 +1,4 @@
+import type { Permission } from "@/lib/permissions/catalog";
 import { describe, it, expect } from "vitest";
 import { computeOnsiteCounter } from "@/lib/print-requests/onsite-counter";
 import {
@@ -102,5 +103,11 @@ describe("statuts", () => {
     expect(canSetOnsiteMargin("READY", "SUPER_ADMIN")).toBe(true);
     expect(canSetOnsiteMargin("READY", "STAFF_SUPPORT")).toBe(false);
     expect(canSetOnsiteMargin("COMPLETED", "STAFF_ADMIN")).toBe(false);
+  });
+  it("marge avec un ensemble de permissions : vrai ssi `print.onsite.margin.update`", () => {
+    const granted = new Set<Permission>(["print.onsite.margin.update"]);
+    expect(canSetOnsiteMargin("READY", granted)).toBe(true);
+    expect(canSetOnsiteMargin("READY", new Set<Permission>(["print.request"]))).toBe(false);
+    expect(canSetOnsiteMargin("COMPLETED", granted)).toBe(false);
   });
 });

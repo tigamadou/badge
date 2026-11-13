@@ -1,5 +1,6 @@
 import type { StaffRole } from "@prisma/client";
 import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import type { Permission } from "@/lib/permissions/catalog";
 import type { OnsiteCounter } from "./onsite-counter";
 
 // Logique pure du poste d'impression sur place (libellés du compteur, traduction des refus).
@@ -73,5 +74,7 @@ const STATION_STATUSES = ["PAID", "IN_PRODUCTION", "READY"];
 /** Le compteur n'a de sens qu'à partir du paiement. */
 export const showsOnsiteCounter = (status: string) => COUNTER_STATUSES.includes(status);
 export const canOpenOnsiteStation = (status: string) => STATION_STATUSES.includes(status);
-export const canSetOnsiteMargin = (status: string, role: StaffRole) =>
-  STATION_STATUSES.includes(status) && staffRoleAtLeast(role, "STAFF_ADMIN");
+// `access` : ensemble de permissions ; la branche `StaffRole` est @deprecated compat chantier roles-permissions (retiré à la fusion).
+export const canSetOnsiteMargin = (status: string, access: StaffRole | ReadonlySet<Permission>) =>
+  STATION_STATUSES.includes(status) &&
+  (typeof access === "string" ? staffRoleAtLeast(access, "STAFF_ADMIN") : access.has("print.onsite.margin.update"));

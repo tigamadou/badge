@@ -50,7 +50,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 9 | Fabriques, reset global et helpers e2e | [x] | 2026-11-13 | Reset global (`src/test-setup.ts`) supprimait déjà rôles et ajustements. `createTestStaff`/`OrgMember`/`OrgWithOwner`/`EventMember` écrivent `roleId` (rôles système permanents via `ensureSystemRoles`) + enum hérité ; cleanup supprime ajustements et rôles personnalisés des orgs e2e. `user-context.test.ts` : rôles provisoires remplacés. Fabriques écrites avant le test (RED non rejoué). |
 | 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [x] | 2026-11-13 | `ensureSystemRoles` au début du seed minimal ; SUPER_ADMIN (dev et `seedSuperAdmin`) avec `platformRoleId` + enum, détection `exists` par rôle ou enum. Démo : `staff-printer` (`printer@demo.local`), `agent.grosse-org`; registre `PlatformRoleKey`/`OrgRoleKey`/`EventRoleKey` (+ `STAFF_PRINTER`, `AGENT`). `roleId` + enum hérité (null pour AGENT) pour les membres. Tests écrits après le code (RED non rejoué). `make db-seed` dev : 14 rôles, admin@badge.local avec `platformRoleId`. |
 | 11 | Notifications ciblées par permission | [x] | 2026-11-13 | `RecipientSpec` = `users` ou `permission`+`target`(+`includeStaff`) ; résolution par `USER_CONTEXT_SELECT`/`buildUserContext`/`hasPermission` (repli enum conservé, memberships à rôle nul écartées par `buildUserContext`). Arbitrages voulus : le PRINTER d'évènement n'est plus notifié sur `notifyEventRegistrationToggled` ; le SUPPORT ne reçoit plus les messages d'impression (Admin et Imprimeur oui). `billing.subscription.pay` : SUPER_ADMIN non membre non notifié (testé). `seed/demo/organizations.ts` inchangé (variables locales homonymes). |
-| 12 | Logique d'impression partagée | [ ] | | |
+| 12 | Logique d'impression partagée | [x] | 2026-11-13 | `assertOwner` : staff acteur seulement refusé (staff membre OWNER accepté, changement assumé). `canApplyCredit`/`canSetOnsiteMargin` : branche `StaffRole` @deprecated compat. `lifecycle.ts` inchangé (n'appelle qu'`assertOwner`). Seul appelant hors `route.ts` de `assertNotStaff` : aucun. Tests : `print-requests-route`, `guard` ajoutés. |
 | 13 | Découplage de `OnsiteStation` | [ ] | | |
 | 14 | Consommateurs transverses | [ ] | | |
 | 15 | Spec 39 : quantité des accessoires côté serveur | [ ] | | |
@@ -749,7 +749,7 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
 - Consumes : `hasPermission`, `isStaffActor`, `eventTargetOf`, `getUserContext`.
 - Produces : `assertOwner`, `assertNotStaff(ctx)`, `canApplyCredit`/`canSetOnsiteMargin` (paramètre union), `canWriteLayouts`.
 
-- [ ] **Step 1 : tests rouges** (ajouter ou adapter) :
+- [x] **Step 1 : tests rouges** (ajouter ou adapter) :
   - `assertOwner` : membre d'org `OWNER` accepté ; `MANAGER` → `OWNER_REQUIRED` 403 ; staff **non membre** (SA) →
     `STAFF_FORBIDDEN` 403 ; staff **membre OWNER** de l'org → accepté (changement assumé : staff acteur seulement) ;
     contexte inconnu → `OWNER_REQUIRED` ;
@@ -760,8 +760,8 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
   - `markPaidManually` : SA et AD autorisés (`print.requests.mark_paid`), SU/PR/OB → `STAFF_FORBIDDEN` ; non staff idem ;
   - `canWriteLayouts` : SA/AD vrai (`print.layouts.manage`), SU/PR/OB faux, non connecté faux ;
   - `requirePrintAccess` : membre ADMIN d'évènement passe ; OPERATOR redirigé vers `/event/{id}` ; AGENT redirigé.
-- [ ] **Step 2 : lancer** les fichiers localisés → échec sur les nouveaux cas.
-- [ ] **Step 3 : implémenter** — `service.ts#assertOwner` : contexte ; `isStaffActor(ctx, orgTarget)` → `STAFF_FORBIDDEN` ;
+- [x] **Step 2 : lancer** les fichiers localisés → échec sur les nouveaux cas.
+- [x] **Step 3 : implémenter** — `service.ts#assertOwner` : contexte ; `isStaffActor(ctx, orgTarget)` → `STAFF_FORBIDDEN` ;
   `hasPermission(ctx, "print.quote.accept", orgTarget)` sinon `OWNER_REQUIRED` ; `route.ts#assertNotStaff(ctx: Pick<EventAuthCtx,
   "isStaffActor">)` et l'appel dans `organizerRoute` passe `ctx` ; `quote.ts#markPaidManually` :
   `hasPermission(ctx, "print.requests.mark_paid", { kind: "platform" })` ; `credit-view.ts`/`onsite-station-view.ts` :
@@ -770,9 +770,9 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
   `guard.ts` : `hasPermission(ctx, "print.request", eventTargetOf(event))`. `lifecycle.ts` n'appelle qu'`assertOwner`
   (aucune modification de signature ; vérifier). Marquer la branche `StaffRole` des deux fonctions de vue
   `@deprecated compat`.
-- [ ] **Step 4 : lancer** les fichiers localisés + `make test FILE=src/app/api/org` sous-dossiers `print-requests` → vert ;
+- [x] **Step 4 : lancer** les fichiers localisés + `make test FILE=src/app/api/org` sous-dossiers `print-requests` → vert ;
   `make typecheck` : les appelants de `assertNotStaff` hors `route.ts` (rechercher) sont mis à jour mécaniquement.
-- [ ] **Step 5 : commit** : `feat(roles): controles de role de la logique d'impression par permission`.
+- [x] **Step 5 : commit** : `feat(roles): controles de role de la logique d'impression par permission`.
 
 ### Task 13: Découplage de `OnsiteStation`
 

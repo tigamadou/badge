@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { PrintRequestStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { makeStaff } from "@/test/factories";
 import { formatFcfa } from "@/lib/print-catalog/pricing";
 import { PrintRequestError, PRINT_REQUEST_ERROR_MESSAGES } from "@/lib/print-requests/errors";
 import { staffLineSchema, staffLinePatchSchema } from "@/lib/print-requests/inputs";
@@ -554,7 +555,8 @@ describe("markPaidManually", () => {
     const a = await accepted();
     expect((await markPaidManually({ requestId: a.r.id, userId: superAdmin.id, reason: "Espèces" })).status).toBe("PAID");
     const b = await accepted();
-    for (const userId of [fx.staffSupport.id, fx.staffObserver.id, fx.owner.id, "inconnu"]) {
+    const printer = await makeStaff("STAFF_PRINTER");
+    for (const userId of [fx.staffSupport.id, fx.staffObserver.id, printer.id, fx.owner.id, "inconnu"]) {
       expect(await reject(markPaidManually({ requestId: b.r.id, userId, reason: "Espèces" })), userId).toMatchObject({ code: "STAFF_FORBIDDEN", status: 403 });
     }
     expect((await reload(b.r.id)).status).toBe("ACCEPTED");
