@@ -183,3 +183,35 @@ test-coverage`, e2e), PR vers `development`.
   rôle plateforme appliqué seulement si `isStaff` ; double écriture `roleId` / `platformRoleId`
   dans les 4 routes de changement de rôle (reprises par 2a et 2c) ; `migrate-roles` ne promeut
   plus de compte en staff. Amendements reportés en fin des plans 2a, 2b, 2c et 3.
+- 2026-11-13 — Vague 3 (fusion) : fusions `--no-ff` des lots 2a (`fc73b38b`), 2b (`d93f9e47`) et 2c
+  (`c2832b1b`), **sans rebase préalable** (choix de l'orchestrateur : les branches de lot contiennent
+  des merges), sans conflit ; un import en double corrigé après fusion (`65a3edea`). Le lot 2c a
+  modifié `resolve.ts` et `auth-guards.ts` (autorisé par les amendements N1/N2).
+- 2026-11-13 — Arbitrage : le lot 2b a modifié `src/components/print/ProductCard.tsx` et
+  `ProductConfigurator.tsx`, déclarés en lecture seule. Écart accepté par l'orchestrateur : il est
+  nécessaire à la spec 39 révisée (quantité plafonnée, modifiable, alerte) et sans conflit avec les
+  autres lots. La spec 39 révisée est intégrée dans 2a, 2b et 2c.
+- 2026-11-13 — Retrait de la compatibilité (tâche 5) : `src/lib/auth-helpers.ts` supprimé ;
+  `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`,
+  `getEffectiveEventRole`, options `minRole` / `role` et `effectiveRole`, champs de contexte
+  `staffRole` / `role` retirés ; `withStaffAuth` exige désormais une `permission`. **Conservés**
+  (amendements) : repli sur l'enum quand `roleId` est nul et double écriture `roleId` + enum dans
+  les quatre routes de changement de rôle. Les occurrences restantes de `StaffRole` / `OrgRole` /
+  `EventRole` sont des types Prisma de ces colonnes conservées (migration, seed, fabriques, double
+  écriture, notifications) ; `"STAFF"` restant = côté `STAFF` d'un message d'impression, pas un rôle.
+- 2026-11-13 — Cohérence et défauts jumeaux (tâches 6 et 7) : test `catalog-usage` (aucune clé
+  orpheline, aucune clé non réservée jamais vérifiée) ; trois pages de liste de membres sans garde
+  de page (`/platform/users`, `/org/[orgId]/members`, `/event/[eventId]/members`) désormais gardées par
+  `users.read`, `org.members.read`, `event.members.manage` ; boucle `/platform` → `/` → `/platform`
+  pour un compte staff dont le rôle n'a pas `platform.access` supprimée (`resolveHomeRedirect` et
+  `/select`). Jumeaux déjà corrigés par les lots et vérifiés : paiement d'abonnement et commandes
+  d'impression côté organisateur (`memberPermissions`), pages de supervision (journal, paiements),
+  fiche de commande (paiements et crédit selon la permission), atterrissage d'évènement (repli
+  Notifications), garde « dernier OWNER / SUPER_ADMIN » et protection des rôles supérieurs.
+  Fuites d'état de test corrigées (droits d'abonnement laissés par les tests de paramètres,
+  `fakeExporter` partagé) : tests uniquement.
+- 2026-11-13 — Limite connue non corrigée (hors défaut de fusion) : `lib/org-redirect.ts` ignore
+  les ajustements propres à une organisation pour un membre d'évènement (`orgId: ""`), d'où une
+  boucle possible `/select` ↔ `/event/E` si un ajustement `REVOKE` d'organisation retire toutes ses
+  permissions d'évènement.
+

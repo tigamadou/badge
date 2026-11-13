@@ -4,8 +4,9 @@
 > **Spec** : [37 — rôles et permissions](../specs/2026-11-13-37-v4-roles-et-permissions.md) (coordination : spec 36)
 > **Plan du socle** : [2026-11-13-1-socle-roles-docs](../plans/2026-11-13-1-socle-roles-docs.md)
 
-Cette page est remplie par lot : chaque lot rédige sa section. Le socle est décrit ci-dessous ;
-les autres sections sont à rédiger par leur lot.
+Cette page décrit le modèle (socle) puis les trois lots : plateforme (2a), organisation et
+évènement (2b), gestion des droits (2c). La fusion (vague 3) a retiré les gardes et options par
+niveau hiérarchique ; le code fait foi.
 
 ---
 
@@ -72,9 +73,8 @@ pour une cible `platform | org | event | participant` :
 
 Changement visible : le rôle d'organisation et le rôle d'évènement s'**additionnent** (un
 `AUDITOR` d'organisation membre `PRINTER` d'un évènement est `VIEWER` et `PRINTER`) ; l'ancien
-comportement faisait remplacer l'un par l'autre. Cette union ne vaut que pour les nouvelles
-API (`permission`, `requirePermission`, `hasPermission`) ; `minRole` / `role` / `effectiveRole`
-gardent leur sémantique.
+comportement faisait remplacer l'un par l'autre. Cette union vaut pour toutes les gardes (`permission`, `requirePermission`, `hasPermission`) :
+les anciennes options `minRole` / `role` / `effectiveRole` n'existent plus.
 
 ### Règle de cible
 
@@ -91,32 +91,32 @@ archivé) d'abord ; à défaut, la colonne d'enum héritée (`staffRole`, `OrgMe
 `EventMembership.role`) ; à défaut, aucun rôle (fermé par défaut). Un rôle archivé ne donne
 aucune permission. Fabriques, seed et helpers e2e écrivent donc **les deux** (`roleId` et enum)
 pour les rôles hérités. Les rôles sans enum (`STAFF_PRINTER`, `AGENT`, rôles personnalisés)
-n'ont pas de clé héritée : les champs de compatibilité du contexte (`staffRole`,
-`role`) valent `null` et **ils ne satisfont aucun contrôle hérité** (`minRole`, `role`).
-Le code de compatibilité est marqué `@deprecated compat chantier roles-permissions` et
-disparaît à la fusion.
+n'ont pas de clé héritée : écrits sans colonne d'enum, ils se résolvent par `roleId` seul. Le repli
+sur l'enum (`roleId` nul) et la double écriture `roleId` + enum dans les routes de changement de
+rôle sont **conservés** jusqu'au changement ultérieur qui supprimera les colonnes d'enum ; les
+champs de contexte `staffRole` et `role`, eux, ont été retirés (plus aucun contrôle hérité).
 
 ### Contexte et gardes
 
 - **`UserContext`** (`src/types/auth.ts`, construit par `src/lib/user-context.ts`) :
   identité, `isStaff`, `platformRole`, `orgMemberships`, `eventMemberships` (avec `roleRef`
-  résolu), `overrides`, plus `staffRole` hérité. `loadUserContext(userId)` n'est pas mémoïsé
+  résolu) et `overrides`. `loadUserContext(userId)` n'est pas mémoïsé
   (null si absent ou archivé) ; `getUserContext` l'est par requête (`cache()` de React) pour
   les pages. Aucune permission dans le JWT : un changement s'applique à la requête suivante.
 - **`src/lib/auth-guards.ts`** : `requirePermission(userId, permission | liste, target)`
   (401 `NOT_AUTHENTICATED` si contexte nul, 403 `PERMISSION_DENIED` sinon ; une liste signifie
   « au moins une »), `loadPermissions(userId, target)` pour les Server Components (ensemble vide
   si contexte nul), `loadEventTarget(eventId)` (404 `EVENT_NOT_FOUND`) ; côté pages,
-  `getEventTarget(eventId)` (`src/lib/event-org.ts`). Les gardes héritées (`requireStaff`,
-  `requireOrgRole`, `requireEventRole`) restent, réimplémentées sur les rôles système.
-- **Wrappers de routes** : `withStaffAuth(handler, { permission })` (cible plateforme,
-  `permission` et `minRole` exclusifs), `withOrgAuth(permission | rôle, handler)` (cible
-  organisation), `withEventAuth({ permission, allowArchived?, requireRegistrationOpen? }, handler)`
+  `getEventTarget(eventId)` (`src/lib/event-org.ts`), `loadMemberPermissions` (droits sans le rôle
+  plateforme). Les gardes héritées (`requireStaff`, `requireOrgRole`, `requireEventRole`,
+  `requireEventPermission`) et `src/lib/auth-helpers.ts` ont été supprimés.
+- **Wrappers de routes** : `withStaffAuth(handler, { permission })` (cible plateforme),
+  `withOrgAuth(permission, handler)` (cible organisation), `withEventAuth({ permission, allowArchived?, requireRegistrationOpen? }, handler)`
   (cible évènement). Chaque `permission` accepte une liste (« au moins une ») et doit être du
   bon niveau (erreur à la déclaration sinon).
 - **`EventAuthCtx`** : `session`, `orgId`, `eventId`, `event` (`id`, `orgId`, `archived`,
   `registrationOpen`, `date`, `endDate`), `permissions` (ensemble effectif), `isStaffActor`
-  (staff sans appartenance à l'organisation ni à l'évènement) et `effectiveRole` (déprécié).
+  (staff sans appartenance à l'organisation ni à l'évènement).
 - **Participant** : `requireParticipantPermission(permission)` (`src/lib/auth-participant.ts`)
   relit le compte : absent ou archivé → 401 `NOT_AUTHENTICATED` ; bloqué → 403
   `ACCOUNT_BLOCKED` ; permission absente → 403 `FORBIDDEN`.
@@ -368,7 +368,7 @@ Le lot 2c ajoute l'écriture : créer des rôles, attribuer un rôle par `roleId
 - **Rôles système** : figés par le code (voir « Rôles système figés »). Jamais modifiables ni archivables (`SYSTEM_ROLE`, 409) ; on les **duplique** pour partir d'un rôle personnalisé.
 - **Rôles personnalisés** : une ligne `Role` et ses `RolePermission`. Un rôle plateforme n'a pas d'organisation ; un rôle d'organisation ou d'évènement appartient à une organisation (`orgId`). Nom unique par `(orgId, scope)` parmi les rôles non archivés (`ROLE_NAME_TAKEN`). Archivage logique (`archived`) ; un rôle attribué à au moins un compte n'est pas archivable (`ROLE_IN_USE`).
 - **Ajustements** : `UserPermissionOverride`, par compte et par niveau (`orgId` nul = plateforme, sinon l'organisation). Trois états par permission : hérité (aucune ligne), ajouté (`GRANT`), retiré (`REVOKE`) ; un retrait l'emporte sur un ajout. L'écriture remplace l'ensemble des ajustements d'un niveau.
-- **Compatibilité** : tant que le plan 3 n'a pas retiré les colonnes d'enum, chaque changement de rôle écrit `roleId` **et** la colonne d'enum correspondante (marqueur `@deprecated compat`).
+- **Compatibilité** : tant que les colonnes d'enum ne sont pas supprimées (changement ultérieur), chaque changement de rôle écrit `roleId` **et** la colonne d'enum correspondante (marqueur `@deprecated compat`).
 
 ### Qui peut quoi
 

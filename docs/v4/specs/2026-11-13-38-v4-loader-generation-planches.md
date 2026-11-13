@@ -1,6 +1,6 @@
 # Spec v4 — Loader sur la planche en cours de génération (spec 38)
 
-> **Statut** : validée — 2026-11-13
+> **Statut** : implémentée — 2026-11-13 (branche `feat/roles-imprimeur-support`), validée — 2026-11-13
 > **Type** : amélioration UI
 > **Périmètre** : v4 — `/platform/print/sheets` (onglets « À traiter », « Générées », « Libre »)
 > **Source** : `Todo.md` du 2026-11-12 (item 3)

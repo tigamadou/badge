@@ -1,6 +1,6 @@
 # Spec v4 — Rôles et permissions configurables (spec 37)
 
-> **Statut** : validée — 2026-11-13
+> **Statut** : implémentée — 2026-11-13 (branche `feat/roles-imprimeur-support`), validée — 2026-11-13
 > **Type** : refonte transverse (autorisation) + nouvelles fonctionnalités
 > **Périmètre** : v4 — tous les espaces (plateforme, organisation, évènement, participant)
 > **Source** : `Todo.md` du 2026-11-12 (items 1 et 2) + échanges avec l'utilisateur des 2026-11-12/13
@@ -542,6 +542,16 @@ Voir la spec de coordination du chantier :
 - La table trigger → permission des notifications (règle : équivalence avec l'actuel, plus
   les deux ajustements ci-dessus).
 - Le libellé et la description française de chaque permission.
+
+## Points à relire (non tranchés)
+
+- **Ajustement GRANT plateforme sur un compte non staff.** `effectivePermissions` n'applique le
+  rôle plateforme que si `isStaff` (invariant `isStaff = platformRoleId != null`), mais un
+  ajustement de portée plateforme (`orgId = null`, GRANT) s'applique aussi à un compte non staff :
+  seul le rôle plateforme est conditionné à `isStaff`. Seul un détenteur de
+  `users.permissions.manage` qui détient lui-même la permission peut créer un tel ajustement
+  (anti-escalade). Le code n'a pas été modifié ; à trancher : refuser l'ajustement plateforme
+  sur un compte non staff, ou l'assumer.
 
 ## Journal
 

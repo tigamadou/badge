@@ -63,9 +63,8 @@ Versions actuelles :
 
 Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
-- **`auth.ts`** — helpers d'autorisation :
-  - v2 : `requireStaff`, `requireOrgRole`, `requireEventRole`, `requireEventPermission`, `getEffectiveEventRoles`, `loadUserContext`, `assertNotLastOwner`, `assertNotLastSuperAdmin`
-  - v1 : `checkRole(userRole, requiredRole)`
+- **`auth-guards.ts`** / **`auth-participant.ts`** — autorisation par **permission** : `requirePermission`, `requireParticipantPermission` (participant), `loadPermissions`, `loadMemberPermissions` (et `hasPermission`, `effectivePermissions` de `permissions/`) ; wrappers de routes `withStaffAuth` / `withOrgAuth` / `withEventAuth` (option `permission` : une clé ou une liste « au moins une ») ; `loadUserContext` ; garde-fous `assertNotLastOwner`, `assertNotLastSuperAdmin`. Plus de helper par niveau hiérarchique (`minRole`, `requireOrgRole`…).
+- **`permissions/**`** — catalogue des permissions, rôles système, résolution par cible (`resolve.ts`), libellés ; `src/lib/role-management/**` — rôles personnalisés et ajustements.
 - **`activity-log.ts`** — audit via `logActivity({ type, userId?, targetId?, orgId?, eventId?, details?, req? })`. Tout nouveau type d'action → ajouter un `ActivityType` au schéma Prisma.
 - **`mail.ts`** — envoi d'emails. v2 : `resolveTransporter(ctx)` utilise un SMTP **plateforme uniquement** (`getPlatformSmtp()`, pas de cascade — décision 2026-05-31, voir `docs/v2/features/notifications-email.md`). Le **branding** reste contextuel : `fromLabel`, `logoUrl`, `contactEmail`/`contactPhone` sont résolus en cascade `Event → Org`. v1 mono-event.
 - **`settings.ts`** (v2) — `resolveSettings(eventId?, orgId?)` cascade `Event → Org` pour `contactEmail` / `contactPhone` uniquement (premier non-null gagne, pas de fallback Platform). Le SMTP et le reCAPTCHA ne sont **pas** cascadés : lecture directe via `getPlatformSmtp()` / `getPlatformRecaptcha()` (avec secret) / `getPlatformPublicRecaptcha()` (sans secret, pour les Server Components publics). `resolveBadgeTemplateId(event, organization, platformSettings)` cascade `Event → Org → Platform` pour le template de badge.
@@ -79,7 +78,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 
 - **Server Components par défaut** ; ajouter `"use client"` uniquement quand l'interactivité l'exige.
 - **Toute action sensible doit logger** via `logActivity()` (`src/lib/activity-log.ts`).
-- **Toute route API doit vérifier le rôle/permission** via les helpers de `src/lib/auth.ts` avant l'action.
+- **Toute route API doit vérifier la permission** via les wrappers et gardes de `src/lib/auth-guards.ts` avant l'action.
 - **Ne jamais exposer dans une réponse API** : hash bcrypt, `smtpPassword`, `recaptchaSecretKey`, tokens d'invitation ou d'édition non hashés.
 
 ---
@@ -101,7 +100,7 @@ Avant d'introduire un nouveau helper, chercher dans `src/lib/` :
 - **Mot de passe** : bcryptjs avec **12 rounds**, longueur minimale **6 caractères**.
 - **Uploads** : taille max **5 Mo**, types **JPEG / PNG / WebP / PDF** uniquement.
 - **Soft delete partout** (`archived: bool` + `archivedAt: DateTime?`). Hard delete = action staff explicite.
-- **RBAC — séparation des rôles (v1 uniquement)** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **En v2**, cette restriction n'existe plus : `SUPER_ADMIN` est au sommet de `StaffRole` (`SUPER_ADMIN > STAFF_ADMIN > STAFF_SUPPORT > STAFF_OBSERVER`) avec tous les droits sans restriction, y compris les actions métier (avec audit `staffActor=true`). Voir `docs/v2/features/multi-tenancy-rbac.md`.
+- **RBAC** : en **v1**, `SUPER_ADMIN` n'a **pas** le droit d'approuver, rejeter, supprimer une inscription ni d'imprimer un badge. **À partir de la v2 (v4 : modèle rôles + permissions, spec 37)**, tout passe par des permissions du catalogue ; `SUPER_ADMIN` détient toutes les permissions plateforme, organisation et évènement (audit `staffActor=true` pour les actions métier). Voir `docs/v4/features/roles-permissions.md`.
 - **Rendu des badges** : le moteur `@tigamadou/pdf-engine` rend un badge en HTML ; le PDF, le document figé de l'aperçu et l'épreuve `proof.png` sont produits par le **service de rendu** (`renderer`, jamais exposé, réseau interne sans accès sortant), dont le tag d'image est égal à la version exacte du moteur. Montserrat est embarquée dans le moteur : plus d'accès sortant à Google Fonts requis. Un paquet de template peut embarquer ses propres polices (TTF/OTF), enregistrées sous une famille préfixée par template. Les images d'un paquet sont limitées à **JPEG et PNG** : le moteur ne lit pas le WebP, pourtant accepté ailleurs pour les uploads. Un document de badge de plus de 20 Mo est refusé avant l'appel. Voir `docs/v4/features/templates-badges.md` et `DEPLOYMENT.md`.
 
 ---
