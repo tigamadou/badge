@@ -34,7 +34,7 @@ coordination : [`spec 36`](../specs/2026-11-13-36-v4-chantier-roles-docs-coordin
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
 | 1 | Pré-contrôles et inventaire des pages | [x] | 2026-11-13 | pages hors docs : plateforme 41, organisation 18, évènement 25, compte 5 (89) |
-| 2 | Outil : découverte, chemins de doc, sources, empreinte | [ ] | | |
+| 2 | Outil : découverte, chemins de doc, sources, empreinte | [x] | 2026-11-13 | `index` réservé à la racine d'un espace ; `assignDocIds` désambiguïse les collisions réelles (`event/print/requestId/onsite`) |
 | 3 | Outil : format (frontmatter, blocs), vérification, manifestes | [ ] | | |
 | 4 | Cibles `docs-check` / `docs-stamp` et intégration à `lint` | [ ] | | |
 | 5 | Logique serveur : appariement, cibles, blocs, rendu | [ ] | | |
