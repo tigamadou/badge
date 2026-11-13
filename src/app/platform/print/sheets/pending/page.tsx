@@ -12,13 +12,13 @@ export default async function PendingSheetsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireSheetsStaff();
+  const { canGenerate } = await requireSheetsStaff();
   const [orders, layouts] = await Promise.all([listOrdersToGenerate(), loadLayoutOptions()]);
   // La file est calculee en entier par la lib : la tranche est prise ici.
   const result = paginateArray(orders, parseListPage(await searchParams));
   return (
     <div className="space-y-4">
-      <OrderQueueTable mode="pending" initial={result.rows} layouts={layouts} />
+      <OrderQueueTable mode="pending" initial={result.rows} layouts={layouts} canGenerate={canGenerate} />
       <UrlPagination page={result.page} totalPages={result.totalPages} total={result.total} pageSize={result.pageSize} />
     </div>
   );

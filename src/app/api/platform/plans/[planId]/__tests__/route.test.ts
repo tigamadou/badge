@@ -4,21 +4,14 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff } from "@/test/factories";
 
 function noSession() {
   vi.mocked(getServerSession).mockResolvedValue(null as never);
 }
 
 async function asStaff(role: "STAFF_ADMIN" | "STAFF_OBSERVER" = "STAFF_ADMIN") {
-  const u = await prisma.user.create({
-    data: {
-      email: `staff-planid-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@x`,
-      password: "x",
-      name: "S",
-      isStaff: true,
-      staffRole: role,
-    },
-  });
+  const u = await makeStaff(role);
   vi.mocked(getServerSession).mockResolvedValue({
     user: { id: u.id, email: u.email, name: u.name, isStaff: true },
   } as never);

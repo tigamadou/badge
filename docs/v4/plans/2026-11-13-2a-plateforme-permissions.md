@@ -34,17 +34,17 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Prérequis : contrats du socle, helpers de lot, matrice de refus | [ ] | | |
-| 2 | Shell, layout et tableau de bord filtrés (STAFF_PRINTER) | [ ] | | |
-| 3 | Organisations, abonnements, plans | [ ] | | |
-| 4 | Profils et listes de blocage | [ ] | | |
-| 5 | Paramètres, motifs de rejet, templates de badge | [ ] | | |
-| 6 | Jobs e-mail, journal, upload, paiements | [ ] | | |
-| 7 | Impression : commandes et poste sur place | [ ] | | |
-| 8 | Impression : catalogue, gabarits, planches (gardes) | [ ] | | |
-| 9 | `/api/files` par permission | [ ] | | |
-| 10 | Spec 38 : loader des planches en génération | [ ] | | |
-| 11 | e2e, doc, vérification | [ ] | | |
+| 1 | Prérequis : contrats du socle, helpers de lot, matrice de refus | [x] | 2026-11-13 | contrats du socle conformes ; ligne de sonde dans la matrice |
+| 2 | Shell, layout et tableau de bord filtrés (STAFF_PRINTER) | [x] | 2026-11-13 | tabs de paramètres et page paramètres (garde) faits ici ; entrée Documentation hors groupe |
+| 3 | Organisations, abonnements, plans | [x] | 2026-11-13 | e2e verts (1 flaky sous charge, repasse) |
+| 4 | Profils et listes de blocage | [x] | 2026-11-13 | |
+| 5 | Paramètres, motifs de rejet, templates de badge | [x] | 2026-11-13 | |
+| 6 | Jobs e-mail, journal, upload, paiements | [x] | 2026-11-13 | |
+| 7 | Impression : commandes et poste sur place | [x] | 2026-11-13 | e2e verts |
+| 8 | Impression : catalogue, gabarits, planches (gardes) | [x] | 2026-11-13 | e2e verts |
+| 9 | `/api/files` par permission | [x] | 2026-11-13 |  |
+| 10 | Spec 38 : loader des planches en génération | [x] | 2026-11-13 | e2e verts |
+| 11 | e2e, doc, vérification | [x] | 2026-11-13 | e2e du lot verts (workers=1) ; gates en fin de lot |
 
 ## Fichiers du lot (exclusifs)
 

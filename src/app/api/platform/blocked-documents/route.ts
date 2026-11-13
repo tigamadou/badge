@@ -20,7 +20,7 @@ export const GET = withStaffAuth(
     });
     return NextResponse.json({ items: rows });
   },
-  { minRole: "STAFF_OBSERVER" },
+  { permission: "blocklist.read" },
 );
 
 const addSchema = z
@@ -61,5 +61,5 @@ export const POST = withStaffAuth(
     });
     return NextResponse.json({ item: row }, { status: 201 });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "blocklist.manage" },
 );

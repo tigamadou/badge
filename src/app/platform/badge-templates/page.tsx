@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requirePlatformPage } from "../page-guard";
 import { prisma } from "@/lib/prisma";
 import { getOnsitePrintSettings } from "@/lib/settings";
 import { templateImageUrl } from "@/lib/badge-templates/resolve";
@@ -23,17 +22,10 @@ export default async function PlatformBadgeTemplatesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { permissions } = await requirePlatformPage("badge_templates.read", "/platform/badge-templates");
   const list = parseListPage(await searchParams);
-  const session = await getServerSession(authOptions);
-  const me = session?.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: session.user.id as string },
-        select: { staffRole: true },
-      })
-    : null;
-  // L'installation modifie le catalogue : reservee a STAFF_ADMIN et au-dessus,
-  // comme les autres reglages plateforme. Les autres roles consultent.
-  const canInstall = me?.staffRole === "STAFF_ADMIN" || me?.staffRole === "SUPER_ADMIN";
+  // L'installation modifie le catalogue : `badge_templates.manage`. Les autres consultent.
+  const canInstall = permissions.has("badge_templates.manage");
 
   const result = await paginate(
     list,

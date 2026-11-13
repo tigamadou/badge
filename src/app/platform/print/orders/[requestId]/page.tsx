@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
+import { requirePlatformPage } from "@/app/platform/page-guard";
+import { loadPermissions } from "@/lib/auth-guards";
+import { eventTargetOf } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { RequestDetail } from "@/components/staff/print/RequestDetail";
 import { OnsiteError } from "@/lib/print-requests/onsite";
@@ -16,35 +16,35 @@ import { PAYMENT_HISTORY_SELECT, toPaymentHistoryItem } from "@/lib/payment-hist
 
 export default async function PrintRequestDetailPage({ params }: { params: Promise<{ requestId: string }> }) {
   const { requestId } = await params;
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  // Le layout /platform garantit déjà un membre du staff ; cette garde sert le typage.
-  if (!ctx || !ctx.isStaff || !ctx.staffRole) notFound();
+  const { userId, permissions } = await requirePlatformPage("print.requests.read", `/platform/print/orders/${requestId}`);
 
-  // Produits proposés à l'ajout d'une ligne produit (STAFF_ADMIN seulement).
-  const products =
-    ctx.staffRole === "STAFF_ADMIN" || ctx.staffRole === "SUPER_ADMIN"
-      ? await prisma.printProduct.findMany({
+  // Produits proposés à l'ajout d'une ligne produit (avec `print.requests.quote.edit` seulement).
+  const products = permissions.has("print.requests.quote.edit")
+    ? await prisma.printProduct.findMany({
           where: { archived: false },
           orderBy: [{ position: "asc" }, { name: "asc" }],
           select: { id: true, name: true, basePrice: true },
         })
-      : [];
+    : [];
 
   // Paiements de cette commande (FedaPay), du plus récent au plus ancien.
-  const payments = (
-    await prisma.payment.findMany({
-      where: { printRequestId: requestId },
-      orderBy: { createdAt: "desc" },
-      select: PAYMENT_HISTORY_SELECT,
-    })
-  ).map(toPaymentHistoryItem);
+  // Réservés à `payments.read` : une commande lisible ne donne pas accès aux paiements.
+  const payments = permissions.has("payments.read")
+    ? (
+        await prisma.payment.findMany({
+          where: { printRequestId: requestId },
+          orderBy: { createdAt: "desc" },
+          select: PAYMENT_HISTORY_SELECT,
+        })
+      ).map(toPaymentHistoryItem)
+    : [];
 
   // Commande, crédit de l'organisation et liens vers la commande principale / les compléments.
   const request = await prisma.printRequest.findUnique({
     where: { id: requestId },
     select: {
       orgId: true,
+      eventId: true,
       status: true,
       parentRequestId: true,
       parentRequest: { select: { id: true, reference: true } },
@@ -52,14 +52,17 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
     },
   });
   if (!request) notFound();
+  const canOperateOnsite = (await loadPermissions(userId, eventTargetOf(request))).has("print.onsite.operate");
+  // Le crédit de l'organisation n'est chargé que pour qui peut l'appliquer.
+  const canSeeCredit = permissions.has("print.requests.credit.apply");
   const [lines, balance, available, movements, sheet] = await Promise.all([
     prisma.printQuoteLine.findMany({
       where: { requestId, removedAt: null },
       select: { lineTotal: true, usesOrgCredit: true },
     }),
-    getOrgPrintCreditBalance(request.orgId),
-    getAvailableOrgPrintCredit(request.orgId, requestId),
-    listOrgPrintCreditMovements(request.orgId),
+    canSeeCredit ? getOrgPrintCreditBalance(request.orgId) : 0,
+    canSeeCredit ? getAvailableOrgPrintCredit(request.orgId, requestId) : 0,
+    canSeeCredit ? listOrgPrintCreditMovements(request.orgId) : [],
     getOrderSheet(requestId),
   ]);
   const applied = -lines.filter((l) => l.usesOrgCredit).reduce((sum, l) => sum + l.lineTotal, 0);
@@ -80,12 +83,13 @@ export default async function PrintRequestDetailPage({ params }: { params: Promi
   return (
     <RequestDetail
       requestId={requestId}
-      role={ctx.staffRole}
+      permissions={[...permissions]}
+      canOperateOnsite={canOperateOnsite}
       products={products}
       payments={payments}
       onsiteCounter={onsiteCounter}
       sheet={sheet}
-      credit={{ balance, available, applied, grossTotal, movements }}
+      credit={canSeeCredit ? { balance, available, applied, grossTotal, movements } : null}
       parentRequest={request.parentRequest}
       supplements={request.childRequests}
     />

@@ -69,5 +69,5 @@ export const PATCH = withStaffAuth<{ planId: string }>(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "plans.manage" },
 );

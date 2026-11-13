@@ -9,5 +9,4 @@ export const GET = withStaffAuth<Params>(async (req, _ctx, { params }) =>
     const { requestId } = await params;
     await loadStaffRequest(requestId);
     return json(await listPrintItemsPage(requestId, req.nextUrl.searchParams));
-  }),
-);
+  }), { permission: "print.requests.read" });

@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { prisma } from "@/lib/prisma";
 import { PlatformOrgMemberInviteForm } from "@/components/platform/PlatformOrgMemberInviteForm";
 import { TableFrame } from "@/components/ui/TableFrame";
@@ -20,6 +21,7 @@ export default async function OrgMembersSupervisionPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgId } = await params;
+  const { permissions } = await requirePlatformPage("organizations.read", `/platform/organizations/${orgId}/members`);
   const list = parseListPage(await searchParams);
   const result = await paginate(
     list,
@@ -32,6 +34,7 @@ export default async function OrgMembersSupervisionPage({
         select: {
           id: true,
           role: true,
+          roleRef: { select: { name: true } },
           createdAt: true,
           user: { select: { name: true, email: true } },
         },
@@ -41,7 +44,7 @@ export default async function OrgMembersSupervisionPage({
 
   return (
     <div className="space-y-4">
-      <PlatformOrgMemberInviteForm orgId={orgId} />
+      {permissions.has("organizations.members.manage") && <PlatformOrgMemberInviteForm orgId={orgId} />}
       <h2 className="text-base font-semibold text-slate-800">Membres ({result.total})</h2>
       <TableFrame>
         <table className="w-full text-sm">
@@ -65,7 +68,7 @@ export default async function OrgMembersSupervisionPage({
               <tr key={m.id} className="border-t border-slate-100">
                 <td className="px-4 py-3 text-slate-900">{m.user.name}</td>
                 <td className="px-4 py-3 text-slate-500">{m.user.email}</td>
-                <td className="px-4 py-3 text-slate-500">{(m.role ? ROLE_LABEL[m.role] : null) ?? m.role ?? "—"}</td>
+                <td className="px-4 py-3 text-slate-500">{m.roleRef?.name ?? (m.role ? ROLE_LABEL[m.role] : null) ?? "—"}</td>
                 <td className="px-4 py-3 tabular-nums text-slate-400">
                   {new Date(m.createdAt).toLocaleDateString("fr-FR")}
                 </td>

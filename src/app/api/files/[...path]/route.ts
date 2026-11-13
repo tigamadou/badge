@@ -3,53 +3,56 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loadUserContext } from "@/lib/user-context";
-import { hasEventPermission, staffRoleAtLeast } from "@/lib/auth-helpers";
+import { eventTargetOf, hasPermission, type Permission } from "@/lib/permissions";
 import { getFile } from "@/lib/storage";
 
 // v4 Task 5.3 : les documents d'identite ne doivent JAMAIS etre servis publiquement.
 // Cles sensibles : `profile/{userId}/documents/...` (compte participant) et
 // `events/{eventId}/idDocuments/...` (piece jointe a une inscription). Les photos et
 // logos restent publics (ils apparaissent sur les badges / pages publiques).
-// Les planches d'impression (`print-sheets/...`) contiennent des donnees de
-// participants : lisibles par le staff STAFF_SUPPORT minimum uniquement.
-// Les pieces jointes de commandes d'impression (`print-requests/...`) sont lisibles par tout le
-// staff, STAFF_OBSERVER compris. Les detenteurs de `print.request` lisent les fichiers de leur
-// evenement : `print-requests/{eventId}/...` directement, `print-requests/staff/{requestId}/...` via
-// l'evenement de la commande nommee par la cle (le message qui la porte est verifie a l'ecriture :
-// il ne peut citer que le prefixe de sa propre commande). Autre forme de cle staff : staff seulement.
-// Les archives ZIP d'export (`badge-exports/{eventId}/...`) contiennent des badges nominatifs :
-// lisibles par le staff et par les titulaires de `badge.print` sur l'evenement.
-// Union discriminee : un fichier sensible est TOUJOURS soit un document de profil
-// (profileUserId), soit un document d'evenement (eventId). Le type garantit qu'un
-// des deux est present quand sensitive vaut true.
+// Chaque classe de cle exige une permission du catalogue (spec 37, « Fichiers sensibles »), sans
+// passe-droit `isStaff` :
+// - `print-sheets/...` : `print.sheets.read` (plateforme) ;
+// - `print-requests/{eventId}/...` et `print-requests/staff/{requestId}/...` : `print.requests.read`
+//   (plateforme) ou `print.request` sur l'evenement de la cle, ou de la commande nommee par la cle
+//   (le message qui la porte est verifie a l'ecriture : il ne peut citer que le prefixe de sa propre
+//   commande) ; autre forme `print-requests/...` : `print.requests.read` seulement ;
+// - `badge-exports/{eventId}/...` : `badge.print` sur l'evenement ;
+// - `events/{eventId}/idDocuments/...` : `event.read.detailed` sur l'evenement ;
+// - `profile/{userId}/documents/...` : le proprietaire, ou `profiles.read` (plateforme).
 type SensitiveFile =
-  | { sensitive: true; profileUserId: string; eventId?: undefined }
-  | { sensitive: true; eventId: string; profileUserId?: undefined }
-  | { sensitive: true; staffOnly: true; eventId?: undefined; profileUserId?: undefined }
-  | { sensitive: true; printRequestScope: string; eventId?: undefined; profileUserId?: undefined }
-  | { sensitive: true; staffAny: true; eventId?: undefined; profileUserId?: undefined }
-  | { sensitive: true; printEventId: string; eventId?: undefined; profileUserId?: undefined };
-type FileClass = { sensitive: false } | SensitiveFile;
+  | { kind: "profile"; userId: string }
+  | { kind: "idDocument"; eventId: string }
+  | { kind: "sheets" }
+  | { kind: "printRequest"; scope: string }
+  | { kind: "printRequestOther" }
+  | { kind: "export"; eventId: string };
+type FileClass = { sensitive: false } | ({ sensitive: true } & SensitiveFile);
 
 function classify(key: string): FileClass {
-  if (key.startsWith("print-sheets/")) return { sensitive: true, staffOnly: true };
+  if (key.startsWith("print-sheets/")) return { sensitive: true, kind: "sheets" };
   const printRequest = key.match(/^print-requests\/([^/]+)\//);
-  if (printRequest) return { sensitive: true, printRequestScope: printRequest[1] };
-  if (key.startsWith("print-requests/")) return { sensitive: true, staffAny: true };
+  if (printRequest) return { sensitive: true, kind: "printRequest", scope: printRequest[1] };
+  if (key.startsWith("print-requests/")) return { sensitive: true, kind: "printRequestOther" };
   const exportFile = key.match(/^badge-exports\/([^/]+)\//);
-  if (exportFile) return { sensitive: true, printEventId: exportFile[1] };
+  if (exportFile) return { sensitive: true, kind: "export", eventId: exportFile[1] };
   const profileDoc = key.match(/^profile\/([^/]+)\/documents\//);
-  if (profileDoc) return { sensitive: true, profileUserId: profileDoc[1] };
+  if (profileDoc) return { sensitive: true, kind: "profile", userId: profileDoc[1] };
   const eventDoc = key.match(/^events\/([^/]+)\/idDocuments\//);
-  if (eventDoc) return { sensitive: true, eventId: eventDoc[1] };
+  if (eventDoc) return { sensitive: true, kind: "idDocument", eventId: eventDoc[1] };
   return { sensitive: false };
 }
 
-async function canReadPrintRequestFile(
-  ctx: NonNullable<Awaited<ReturnType<typeof loadUserContext>>>,
-  scope: string,
-  key: string,
-): Promise<boolean> {
+const PLATFORM = { kind: "platform" } as const;
+type Ctx = NonNullable<Awaited<ReturnType<typeof loadUserContext>>>;
+
+async function hasEventFilePermission(ctx: Ctx, eventId: string, permission: Permission): Promise<boolean> {
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
+  return !!event && hasPermission(ctx, permission, eventTargetOf({ eventId, orgId: event.orgId }));
+}
+
+async function canReadPrintRequestFile(ctx: Ctx, scope: string, key: string): Promise<boolean> {
+  if (hasPermission(ctx, "print.requests.read", PLATFORM)) return true;
   let eventId = scope;
   if (scope === "staff") {
     // Cle staff `print-requests/staff/{requestId}/{fichier}` : l'evenement est celui de la commande.
@@ -59,35 +62,26 @@ async function canReadPrintRequestFile(
     if (!request) return false;
     eventId = request.eventId;
   }
-  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
-  return !!event && hasEventPermission(ctx, eventId, event.orgId, "print.request");
+  return hasEventFilePermission(ctx, eventId, "print.request");
 }
 
 async function canRead(userId: string, c: SensitiveFile, key: string): Promise<boolean> {
   const ctx = await loadUserContext(userId);
   if (!ctx) return false;
-  if ("staffOnly" in c) {
-    return ctx.isStaff && !!ctx.staffRole && staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT");
+  switch (c.kind) {
+    case "sheets":
+      return hasPermission(ctx, "print.sheets.read", PLATFORM);
+    case "printRequestOther":
+      return hasPermission(ctx, "print.requests.read", PLATFORM);
+    case "printRequest":
+      return canReadPrintRequestFile(ctx, c.scope, key);
+    case "export":
+      return hasEventFilePermission(ctx, c.eventId, "badge.print");
+    case "idDocument":
+      return hasEventFilePermission(ctx, c.eventId, "event.read.detailed");
+    case "profile":
+      return c.userId === userId || hasPermission(ctx, "profiles.read", PLATFORM);
   }
-  if ("staffAny" in c) return ctx.isStaff && !!ctx.staffRole;
-  if ("printRequestScope" in c) {
-    // Tout le staff lit ; sinon il faut `print.request` sur l'evenement de la cle.
-    if (ctx.isStaff && !!ctx.staffRole) return true;
-    return canReadPrintRequestFile(ctx, c.printRequestScope, key);
-  }
-  if (ctx.isStaff) return true;
-  if ("printEventId" in c) {
-    const event = await prisma.event.findUnique({ where: { id: c.printEventId }, select: { orgId: true } });
-    return !!event && hasEventPermission(ctx, c.printEventId, event.orgId, "badge.print");
-  }
-  if (c.eventId === undefined) return c.profileUserId === userId;
-  // Sinon c'est un document d'evenement : eventId est garanti par le type.
-  const event = await prisma.event.findUnique({
-    where: { id: c.eventId },
-    select: { orgId: true },
-  });
-  if (!event) return false;
-  return hasEventPermission(ctx, c.eventId, event.orgId, "event.read.detailed");
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

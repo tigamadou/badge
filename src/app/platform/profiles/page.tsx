@@ -8,6 +8,7 @@ import { TableFrame } from "@/components/ui/TableFrame";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { UrlPagination } from "@/components/ui/Pagination";
+import { requirePlatformPage } from "../page-guard";
 
 const TABS: Array<{ value: ProfileStatus; label: string }> = [
   { value: "PENDING", label: "En attente" },
@@ -20,6 +21,7 @@ export default async function PlatformProfilesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePlatformPage("profiles.read", "/platform/profiles");
   const sp = await searchParams;
   const status = typeof sp.status === "string" ? sp.status : "PENDING";
   const q = typeof sp.q === "string" ? sp.q : undefined;

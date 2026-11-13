@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { Icon } from "@/components/ui/Icon";
 import { prisma } from "@/lib/prisma";
 import { LayoutList } from "@/components/staff/print/LayoutList";
@@ -15,6 +16,7 @@ export default async function PrintLayoutsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requirePlatformPage("print.layouts.read", "/platform/print/layouts");
   const list = parseListPage(await searchParams);
   const [canWrite, result] = await Promise.all([
     canWriteLayouts(),

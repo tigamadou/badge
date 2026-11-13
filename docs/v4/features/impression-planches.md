@@ -13,9 +13,9 @@ rastérisation, et **jamais mis à l'échelle** (100 %).
 
 | Écran | Rôle | Droits |
 |---|---|---|
-| `/platform/print/layouts` (« Gabarits ») | Liste des gabarits en cartes (miniature de la zone utile sans emplacements, format, marges et espacements), archivage | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
-| `/platform/print/layouts/new`, `/platform/print/layouts/[layoutId]` | Éditeur d'un gabarit avec aperçu en direct ; lecture seule sous `STAFF_ADMIN`, `/new` redirige vers la liste | Lecture `STAFF_OBSERVER`, écriture `STAFF_ADMIN` |
-| `/platform/print/sheets` (« Planches ») | Lancer une génération, historique, aperçu et téléchargement | `STAFF_SUPPORT` minimum (`STAFF_OBSERVER` est redirigé vers `/platform`) |
+| `/platform/print/layouts` (« Gabarits ») | Liste des gabarits en cartes (miniature de la zone utile sans emplacements, format, marges et espacements), archivage | Lecture `print.layouts.read`, écriture `print.layouts.manage` |
+| `/platform/print/layouts/new`, `/platform/print/layouts/[layoutId]` | Éditeur d'un gabarit avec aperçu en direct ; lecture seule sans `print.layouts.manage`, `/new` redirige vers la liste | Lecture `print.layouts.read`, écriture `print.layouts.manage` |
+| `/platform/print/sheets` (« Planches ») | Lancer une génération, historique, aperçu et téléchargement | `print.sheets.read` (génération : `print.sheets.generate`) ; sans elle, redirection vers `/platform` |
 
 Les deux entrées sont dans le groupe « Impression » de la navigation staff (`StaffShell`).
 Les organisateurs n'ont accès ni aux gabarits ni aux planches.
@@ -110,8 +110,8 @@ Un évènement peut compter des milliers de badges : le rendu prend plusieurs mi
   un **battement de cœur** après chaque badge rendu. Une génération `RUNNING` sans battement
   depuis **3 minutes** (`PRINT_SHEETS_STALE_MS`) est reprise ; au plus **3 tentatives**
   (`PRINT_SHEETS_MAX_ATTEMPTS`), puis `FAILED`.
-- Le PDF est stocké en `print-sheets/{id}.pdf`, servi par `/api/files` aux seuls
-  `STAFF_SUPPORT`+ (réponse `403` sinon, `Cache-Control: private, no-store`).
+- Le PDF est stocké en `print-sheets/{id}.pdf`, servi par `/api/files` aux seuls titulaires de
+  `print.sheets.read` (réponse `403` sinon, `Cache-Control: private, no-store`).
 - L'historique (50 dernières générations) se rafraîchit toutes les **5 s** tant qu'une ligne
   est en attente ou en cours et que l'onglet est visible. « Aperçu » ouvre le PDF dans la page ;
   « Télécharger » le récupère.
@@ -125,12 +125,23 @@ Un évènement peut compter des milliers de badges : le rendu prend plusieurs mi
 `/platform/print/sheets` est un groupe de sous-pages (onglets) :
 
 - **À traiter** (`/pending`, avec compteur) : commandes `ADVANCE` en `PAID` ou `IN_PRODUCTION`
-  sans planche. « Générer » ouvre une modale de choix du gabarit (aperçu de la disposition) ;
-  le recto-verso est imposé par le template.
+  **sans planche, ou dont la génération n'est pas `DONE`** (`PENDING`, `RUNNING`, `FAILED`) : une
+  commande ne quitte la file qu'à `DONE`. « Générer » ouvre une modale de choix du gabarit
+  (aperçu de la disposition) ; le recto-verso est imposé par le template.
 - **Générées** (`/generated`) : commandes de la file avec une planche, quel que soit son état
   (`PENDING`, `RUNNING`, `DONE`, `FAILED`), la plus récente d'abord. « Télécharger », « Voir »
-  (PDF en modale) et « Regénérer ». Rafraîchie toutes les 5 s (`GET /api/platform/print/sheets/orders`)
-  tant qu'une planche est en attente ou en cours.
+  (PDF en modale) et « Regénérer ».
+- **Indicateur de génération** (spec 38) : la colonne « État » des deux onglets affiche
+  `GenerationStatePill` : spinner et « En attente… » (`PENDING`) ou « Génération en cours… »
+  (`RUNNING`), « Prête » (`DONE`), « Échec » avec le message (`FAILED`). Le bouton de la ligne est
+  « Générer » sans planche, sinon « Regénérer » ; il est désactivé tant que la planche est en
+  attente ou en cours. Le polling (`GET /api/platform/print/sheets/orders`, toutes les 5 s, onglet
+  visible) tourne **dans les deux onglets** tant qu'une ligne est active, puis s'arrête. Une planche
+  qui passe à `DONE` déclenche le toast « Planche de {référence} prête » (et, dans « À traiter »,
+  la relecture de la liste : la ligne en sort) ; un passage à `FAILED` déclenche un toast d'erreur
+  et réactive « Regénérer ». L'historique de la génération libre utilise la même pastille
+  (« Terminée »). Vocabulaire du code conservé : `DONE` (et non `COMPLETED`), onglet « À traiter »
+  (et non « À générer »).
 - **Génération libre** (`/free`) : le formulaire historique ; son historique exclut les planches
   de commande.
 - `?printRequestId=` (lien « Générer les planches » de la page d'une commande) garde le
@@ -193,18 +204,24 @@ laisser une à moitié faite.
 
 ## Droits
 
-| Action | Rôle minimum |
-|---|---|
-| Voir les gabarits | `STAFF_OBSERVER` |
-| Créer, modifier, archiver un gabarit | `STAFF_ADMIN` |
-| Lancer ou regénérer une génération (libre ou par commande), voir les sous-pages, aperçu, téléchargement | `STAFF_SUPPORT` |
-| Télécharger un ZIP d'export | staff, ou `badge.print` sur l'évènement |
+| Action | Permission | Rôles système |
+|---|---|---|
+| Voir les gabarits | `print.layouts.read` | `SUPER_ADMIN`, `STAFF_ADMIN`, `STAFF_PRINTER`, `STAFF_OBSERVER` |
+| Créer, modifier, archiver un gabarit | `print.layouts.manage` | `SUPER_ADMIN`, `STAFF_ADMIN` |
+| Voir les sous-pages Planches, aperçu, téléchargement (`/api/files/print-sheets/…`) | `print.sheets.read` | `SUPER_ADMIN`, `STAFF_ADMIN`, `STAFF_PRINTER` |
+| Lancer ou regénérer une génération (libre ou par commande) | `print.sheets.generate` | `SUPER_ADMIN`, `STAFF_ADMIN`, `STAFF_PRINTER` |
+| Télécharger un ZIP d'export | `badge.print` sur l'évènement | `SUPER_ADMIN`, `STAFF_ADMIN`, `STAFF_PRINTER`, rôles d'évènement porteurs |
+
+`STAFF_SUPPORT` et `STAFF_OBSERVER` n'ont pas l'entrée de menu « Planches » ni l'accès direct
+(redirection vers `/platform`) ; les boutons de génération sont absents sans `print.sheets.generate`.
+Voir `roles-permissions.md` (section Plateforme).
 
 ## Tests
 
 - Unitaires et intégration : `src/lib/print-sheets/`, routes `src/app/api/platform/print/`.
 - E2E : `e2e/platform/print-layouts.spec.ts`, `e2e/platform/print-sheets.spec.ts` (génération
-  réelle par le worker de dev, PDF téléchargé et pages comptées, `403` hors staff) ;
+  réelle par le worker de dev, PDF téléchargé et pages comptées, `403` hors staff, indicateur de
+  génération en cours, prête et en échec posés via la base) ;
   `e2e/event/badges.spec.ts` pour le ZIP.
 
 ## Limites connues

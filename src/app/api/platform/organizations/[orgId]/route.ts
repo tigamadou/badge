@@ -62,7 +62,7 @@ export const GET = withStaffAuth<{ orgId: string }>(async (_req, _ctx, extra) =>
   });
   if (!org) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   return NextResponse.json({ org });
-});
+}, { permission: "organizations.read" });
 
 export const PATCH = withStaffAuth<{ orgId: string }>(
   async (req, { session }, extra) => {
@@ -107,7 +107,7 @@ export const PATCH = withStaffAuth<{ orgId: string }>(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "organizations.update" },
 );
 
 export const DELETE = withStaffAuth<{ orgId: string }>(
@@ -161,5 +161,5 @@ export const DELETE = withStaffAuth<{ orgId: string }>(
 
     return new NextResponse(null, { status: 204 });
   },
-  { minRole: "SUPER_ADMIN" },
+  { permission: "organizations.delete" },
 );

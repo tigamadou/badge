@@ -55,5 +55,5 @@ export const PATCH = withStaffAuth(
 
     return NextResponse.json({ settings: await getOnsitePrintSettings() });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "settings.onsite_print.update" },
 );

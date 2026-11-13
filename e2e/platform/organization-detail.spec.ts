@@ -30,6 +30,10 @@ test.describe("Platform — Fiche organisation", () => {
     await expect(page.getByText(org!.name).first()).toBeVisible();
     await expect(page.getByText(/abonnement/i).first()).toBeVisible();
     await expect(page.getByText(/organisation introuvable/i)).toHaveCount(0);
+    // L'Observateur supervise : ni archivage, ni suppression, abonnement en consultation.
+    await expect(page.getByRole("button", { name: /^archiver$/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /supprimer définitivement/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^voir$/i })).toBeVisible();
   });
 
   test("Organisation introuvable -> 404", async ({ page }) => {

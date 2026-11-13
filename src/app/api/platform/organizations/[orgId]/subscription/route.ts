@@ -73,5 +73,5 @@ export const PUT = withStaffAuth<{ orgId: string }>(
 
     return NextResponse.json({ subscription });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "subscriptions.update" },
 );

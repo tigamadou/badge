@@ -7,12 +7,14 @@ import { Icon } from "@/components/ui/Icon";
 import { parseListPage } from "@/lib/list-query";
 import { paginate } from "@/lib/paginate";
 import { UrlPagination } from "@/components/ui/Pagination";
+import { requirePlatformPage } from "../page-guard";
 
 export default async function StaffOrganizationsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const { permissions } = await requirePlatformPage("organizations.read", "/platform/organizations");
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : undefined;
   const archived = typeof sp.archived === "string" ? sp.archived : undefined;
@@ -51,12 +53,14 @@ export default async function StaffOrganizationsPage({
           <h1 className="text-xl font-semibold text-navy">Organisations</h1>
           <p className="mt-0.5 text-sm text-slate-400">Gérer les organisations de la plateforme</p>
         </div>
+        {permissions.has("organizations.create") && (
         <Link
           href="/platform/organizations/new"
           className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3.5 py-2 text-sm font-medium text-white hover:bg-navy-hover"
         >
           <Icon name="plus" size={16} /> Créer une organisation
         </Link>
+        )}
       </div>
 
       <form method="get" className="flex flex-wrap items-center gap-2.5">

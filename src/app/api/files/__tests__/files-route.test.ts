@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { makeEventMember, makeStaff, makeUser, type PlatformSystemKey } from "@/test/factories";
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/storage", () => ({
@@ -20,22 +21,26 @@ async function setup() {
   return { org, event };
 }
 
-async function login(opts: { eventId?: string; role?: "ADMIN" | "PRINTER" | "VIEWER"; staff?: boolean }) {
-  const u = await prisma.user.create({
-    data: {
-      email: `${uniq("u")}@x`,
-      password: "x",
-      name: "U",
-      ...(opts.staff ? { isStaff: true, staffRole: "STAFF_SUPPORT" as const } : {}),
-    },
-  });
-  if (opts.eventId && opts.role) {
-    await prisma.eventMembership.create({ data: { userId: u.id, eventId: opts.eventId, role: opts.role } });
-  }
+type EventRole = "ADMIN" | "PRINTER" | "VIEWER";
+
+function session(u: { id: string; email: string; name: string | null }, isStaff: boolean) {
   vi.mocked(getServerSession).mockResolvedValue({
-    user: { id: u.id, email: u.email, name: u.name, isStaff: !!opts.staff },
+    user: { id: u.id, email: u.email, name: u.name, isStaff },
   } as never);
 }
+
+async function login(opts: { eventId?: string; role?: EventRole; staff?: PlatformSystemKey | true }) {
+  const staffRole = opts.staff === true ? "STAFF_SUPPORT" : opts.staff;
+  const u =
+    opts.eventId && opts.role
+      ? await makeEventMember(opts.eventId, opts.role, staffRole ? { isStaff: true } : {})
+      : staffRole
+        ? await makeStaff(staffRole)
+        : await makeUser();
+  session(u, !!staffRole);
+}
+
+const loginStaff = (role: PlatformSystemKey) => login({ staff: role });
 
 const read = (key: string) =>
   GET(new NextRequest(`http://localhost/api/files/${key}`), { params: Promise.resolve({ path: key.split("/") }) });
@@ -64,25 +69,24 @@ describe("GET /api/files/badge-exports/{eventId}/...", () => {
     expect((await read(`badge-exports/${event.id}/abc.zip`)).status).toBe(403);
     vi.mocked(getServerSession).mockResolvedValue(null as never);
     expect((await read(`badge-exports/${event.id}/abc.zip`)).status).toBe(403);
-    await login({ staff: false });
+    await login({});
     expect((await read(`badge-exports/inconnu/abc.zip`)).status).toBe(403);
   });
 
-  it("le staff lit n'importe quelle archive", async () => {
+  it("STAFF_ADMIN et STAFF_PRINTER lisent n'importe quelle archive ; STAFF_OBSERVER et STAFF_SUPPORT non", async () => {
     const { event } = await setup();
-    await login({ staff: true });
-    expect((await read(`badge-exports/${event.id}/abc.zip`)).status).toBe(200);
+    const key = `badge-exports/${event.id}/abc.zip`;
+    for (const [role, status] of [
+      ["STAFF_ADMIN", 200],
+      ["STAFF_PRINTER", 200],
+      ["STAFF_OBSERVER", 403],
+      ["STAFF_SUPPORT", 403],
+    ] as const) {
+      await login({ staff: role });
+      expect((await read(key)).status, role).toBe(status);
+    }
   });
 });
-
-async function loginStaff(role: "STAFF_OBSERVER" | "STAFF_SUPPORT") {
-  const u = await prisma.user.create({
-    data: { email: `${uniq("st")}@x`, password: "x", name: "S", isStaff: true, staffRole: role },
-  });
-  vi.mocked(getServerSession).mockResolvedValue({
-    user: { id: u.id, email: u.email, name: u.name, isStaff: true },
-  } as never);
-}
 
 describe("GET /api/files/print-requests/... et platform/print-products/...", () => {
   beforeEach(() => vi.mocked(getServerSession).mockReset());
@@ -90,15 +94,19 @@ describe("GET /api/files/print-requests/... et platform/print-products/...", () 
   it("print-requests/ : 403 sans session et pour un non-staff", async () => {
     vi.mocked(getServerSession).mockResolvedValue(null as never);
     expect((await read("print-requests/staff/x.pdf")).status).toBe(403);
-    await login({ staff: false });
+    await login({});
     expect((await read("print-requests/staff/x.pdf")).status).toBe(403);
   });
 
-  it("print-requests/ : 200 private no-store pour tout staff, STAFF_OBSERVER compris", async () => {
+  it("print-requests/ : 200 private no-store avec print.requests.read, STAFF_OBSERVER compris ; 403 pour STAFF_SUPPORT", async () => {
     await loginStaff("STAFF_OBSERVER");
     const res = await read("print-requests/staff/x.pdf");
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    await loginStaff("STAFF_PRINTER");
+    expect((await read("print-requests/staff/x.pdf")).status).toBe(200);
+    await loginStaff("STAFF_SUPPORT");
+    expect((await read("print-requests/staff/x.pdf")).status).toBe(403);
   });
 
   it("platform/print-products/ reste public", async () => {
@@ -141,17 +149,26 @@ describe("GET /api/files/print-requests/{eventId}/... (organisateur)", () => {
     expect((await read(`print-requests/inconnu/x.pdf`)).status).toBe(403);
   });
 
-  it("une clé sans sous-dossier reste réservée au staff", async () => {
-    await login({ staff: false });
+  it("une clé sans sous-dossier exige print.requests.read", async () => {
+    await login({});
+    expect((await read("print-requests/x.pdf")).status).toBe(403);
+    await loginStaff("STAFF_SUPPORT");
     expect((await read("print-requests/x.pdf")).status).toBe(403);
     await loginStaff("STAFF_OBSERVER");
     expect((await read("print-requests/x.pdf")).status).toBe(200);
   });
 
-  it("le staff lit une clé d'évènement", async () => {
+  it("le staff avec print.requests.read lit une clé d'évènement", async () => {
     const { event } = await setup();
     await loginStaff("STAFF_OBSERVER");
     expect((await read(`print-requests/${event.id}/x.pdf`)).status).toBe(200);
+  });
+
+  it("STAFF_SUPPORT lit une clé d'évènement par print.request, pas sur un évènement inconnu", async () => {
+    const { event } = await setup();
+    await loginStaff("STAFF_SUPPORT");
+    expect((await read(`print-requests/${event.id}/x.pdf`)).status).toBe(200);
+    expect((await read("print-requests/inconnu/x.pdf")).status).toBe(403);
   });
 });
 
@@ -196,5 +213,78 @@ describe("GET /api/files/print-requests/staff/{requestId}/... (pièce jointe sta
     expect((await read(`print-requests/staff/${uniq("orph")}.pdf`)).status).toBe(403);
     await loginStaff("STAFF_OBSERVER");
     expect((await read(`print-requests/staff/ghost/${uniq("orph")}.pdf`)).status).toBe(200);
+    await loginStaff("STAFF_SUPPORT");
+    expect((await read(`print-requests/staff/ghost/${uniq("orph")}.pdf`)).status).toBe(403);
+  });
+});
+
+describe("GET /api/files/print-sheets/...", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("print.sheets.read : STAFF_ADMIN et STAFF_PRINTER lisent, les autres rôles et les anonymes non", async () => {
+    const key = "print-sheets/gen-1.pdf";
+    vi.mocked(getServerSession).mockResolvedValue(null as never);
+    expect((await read(key)).status).toBe(403);
+    await login({});
+    expect((await read(key)).status).toBe(403);
+    for (const [role, status] of [
+      ["STAFF_ADMIN", 200],
+      ["STAFF_PRINTER", 200],
+      ["STAFF_SUPPORT", 403],
+      ["STAFF_OBSERVER", 403],
+    ] as const) {
+      await loginStaff(role);
+      expect((await read(key)).status, role).toBe(status);
+    }
+  });
+});
+
+describe("GET /api/files/events/{eventId}/idDocuments/...", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("event.read.detailed : STAFF_OBSERVER, STAFF_SUPPORT et STAFF_ADMIN lisent, STAFF_PRINTER non", async () => {
+    const { event } = await setup();
+    const key = `events/${event.id}/idDocuments/d.pdf`;
+    for (const [role, status] of [
+      ["STAFF_ADMIN", 200],
+      ["STAFF_SUPPORT", 200],
+      ["STAFF_OBSERVER", 200],
+      ["STAFF_PRINTER", 403],
+    ] as const) {
+      await loginStaff(role);
+      expect((await read(key)).status, role).toBe(status);
+    }
+  });
+
+  it("le propriétaire de l'organisation lit les pièces de ses évènements, pas celles d'une autre organisation", async () => {
+    const { makeOrgMember } = await import("@/test/factories");
+    const mine = await setup();
+    const other = await setup();
+    const owner = await makeOrgMember(mine.org.id, "OWNER");
+    session(owner, false);
+    expect((await read(`events/${mine.event.id}/idDocuments/d.pdf`)).status).toBe(200);
+    expect((await read(`events/${other.event.id}/idDocuments/d.pdf`)).status).toBe(403);
+  });
+});
+
+describe("GET /api/files/profile/{userId}/documents/...", () => {
+  beforeEach(() => vi.mocked(getServerSession).mockReset());
+
+  it("le propriétaire lit son document ; profiles.read ouvre celui des autres (pas à STAFF_PRINTER)", async () => {
+    const owner = await makeUser();
+    const key = `profile/${owner.id}/documents/d.pdf`;
+    session(owner, false);
+    expect((await read(key)).status).toBe(200);
+    await login({});
+    expect((await read(key)).status).toBe(403);
+    for (const [role, status] of [
+      ["STAFF_ADMIN", 200],
+      ["STAFF_SUPPORT", 200],
+      ["STAFF_OBSERVER", 200],
+      ["STAFF_PRINTER", 403],
+    ] as const) {
+      await loginStaff(role);
+      expect((await read(key)).status, role).toBe(status);
+    }
   });
 });

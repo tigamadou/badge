@@ -19,7 +19,7 @@ export const GET = withStaffAuth(async (req) => {
     orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
   });
   return NextResponse.json({ reasons });
-});
+}, { permission: "rejection_reasons.read" });
 
 const createSchema = z.object({
   label: z.string().trim().min(1).max(200),
@@ -49,5 +49,5 @@ export const POST = withStaffAuth(
     });
     return NextResponse.json({ reason }, { status: 201 });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "rejection_reasons.manage" },
 );

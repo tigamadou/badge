@@ -43,7 +43,8 @@ describe("publicSheetPayload", () => {
 });
 
 describe("PlanManager", () => {
-  const html = renderToStaticMarkup(<PlanManager plans={[plan, { ...plan, id: "p2", name: "Libre", publicVisible: false, highlighted: false }]} />);
+  const rows = [plan, { ...plan, id: "p2", name: "Libre", publicVisible: false, highlighted: false }];
+  const html = renderToStaticMarkup(<PlanManager plans={rows} canManage />);
 
   it("création : bouton Nouveau plan, formulaire dans une modale fermée par défaut", () => {
     expect(html).toContain("Nouveau plan");
@@ -60,6 +61,16 @@ describe("PlanManager", () => {
   });
 
   it("aucun plan", () => {
-    expect(renderToStaticMarkup(<PlanManager plans={[]} />)).toContain("Aucun plan.");
+    expect(renderToStaticMarkup(<PlanManager plans={[]} canManage />)).toContain("Aucun plan.");
+  });
+
+  it("sans plans.manage : aucun bouton d'écriture, la liste reste lisible", () => {
+    const readOnly = renderToStaticMarkup(<PlanManager plans={rows} canManage={false} />);
+    expect(readOnly).not.toContain("Nouveau plan");
+    expect(readOnly).not.toContain("Fiche publique");
+    expect(readOnly).not.toContain("Archiver");
+    expect(readOnly).not.toContain("Restaurer");
+    expect(readOnly).toContain("Pro");
+    expect(readOnly).toContain("Visible · position 20 · mis en avant");
   });
 });

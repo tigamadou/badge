@@ -67,4 +67,4 @@ export const GET = withStaffAuth(async (req) => {
     badgeCount: r.type === "ADVANCE" ? _count.items : (r.estimatedQuantity ?? 0),
   }));
   return NextResponse.json({ requests, total, page, pageSize });
-});
+}, { permission: "print.requests.read" });

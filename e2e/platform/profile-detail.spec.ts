@@ -68,4 +68,13 @@ test.describe("Platform — Profil (detail)", () => {
     await expect(page.getByRole("button", { name: /^approuver$/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^rejeter$/i })).toHaveCount(0);
   });
+
+  test("un Imprimeur en URL directe sur un profil est renvoye au tableau de bord", async ({ page }) => {
+    const participant = await createTestUser({ scope: "prof-printer-detail", verified: true, profile: true, profileStatus: "PENDING" });
+    await createTestProfileSubmission({ userId: participant.id, status: "PENDING" });
+    await loginAsStaff(page, { role: "STAFF_PRINTER", scope: "prof-printer-detail" });
+
+    await page.goto(`/platform/profiles/${participant.id}`);
+    await expect(page).toHaveURL(/\/platform$/);
+  });
 });

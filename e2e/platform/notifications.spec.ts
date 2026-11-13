@@ -18,4 +18,13 @@ test.describe("Platform — Notifications", () => {
     await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
     await expect(page.getByText("Aucune notification", { exact: true })).toBeVisible();
   });
+
+  test("un Imprimeur ouvre Notifications depuis le menu", async ({ page }) => {
+    const staff = await createTestStaff({ role: "STAFF_PRINTER", scope: "notif-printer" });
+    await loginAndEnter(page, staff, { kind: "platform" });
+
+    await page.locator("#app-shell-nav").getByRole("link", { name: "Notifications" }).click();
+    await expect(page).toHaveURL(/\/platform\/notifications$/);
+    await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
+  });
 });

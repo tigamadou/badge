@@ -25,6 +25,16 @@ describe("PlatformOrgShell", () => {
     expect(html).toContain("text-slate-500 hover:text-slate-700");
   });
 
+  it("l'onglet Journal n'apparaît qu'avec activity.read", () => {
+    expect(html).not.toContain(">Journal<");
+    const withActivity = renderToStaticMarkup(
+      <PlatformOrgShell org={{ id: "o1", name: "Acme" }} canReadActivity>
+        <p>x</p>
+      </PlatformOrgShell>,
+    );
+    expect(withActivity).toContain(">Journal<");
+  });
+
   it("lien retour lisible", () => {
     expect(html).toContain("text-slate-500 hover:text-navy");
   });

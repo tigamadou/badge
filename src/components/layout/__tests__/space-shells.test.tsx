@@ -16,6 +16,7 @@ vi.mock("@/components/page-docs/PageDocButton", () => ({
 }));
 
 import { StaffShell } from "@/components/staff/StaffShell";
+import { systemRolePermissions } from "@/lib/permissions";
 import { OrgShell } from "@/components/admin/OrgShell";
 import { EventShell } from "@/components/event/EventShell";
 import { EventOperatorShell } from "@/components/event/EventOperatorShell";
@@ -46,7 +47,7 @@ const event = {
 
 describe("StaffShell", () => {
   const html = renderToStaticMarkup(
-    <StaffShell user={{ ...user, staffRole: "STAFF_OBSERVER" }} pendingPrintRequests={2}>
+    <StaffShell user={{ ...user, roleName: "Administrateur" }} permissions={systemRolePermissions("STAFF_ADMIN")} pendingPrintRequests={2}>
       <p>x</p>
     </StaffShell>,
   );
@@ -183,13 +184,15 @@ describe("menu clair des shells d'évènement", () => {
 describe("ancrage de la documentation", () => {
   it("StaffShell : lien Documentation vers /platform/docs, bouton avant la cloche", () => {
     const html = renderToStaticMarkup(
-      <StaffShell user={{ ...user, staffRole: "STAFF_OBSERVER" }} pendingPrintRequests={0}>
+      <StaffShell user={{ ...user, roleName: "Observateur" }} permissions={systemRolePermissions("STAFF_OBSERVER")} pendingPrintRequests={0}>
         <p>x</p>
       </StaffShell>,
     );
     expect(html).toContain('href="/platform/docs"');
     expect(html).toContain("Documentation");
-    expect(html.indexOf("/platform/docs")).toBeGreaterThan(html.indexOf(">Plateforme<"));
+    // Visible de tout porteur de platform.access : hors du groupe Plateforme, juste après Notifications.
+    expect(html.indexOf("/platform/docs")).toBeGreaterThan(html.indexOf("/platform/notifications"));
+    expect(html.indexOf("/platform/docs")).toBeLessThan(html.indexOf(">Impression<"));
     expect(html.indexOf('data-testid="doc-button"')).toBeGreaterThan(-1);
     expect(html.indexOf('data-testid="doc-button"')).toBeLessThan(html.indexOf('data-testid="bell"'));
   });

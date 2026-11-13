@@ -32,5 +32,5 @@ export const GET = withStaffAuth<{ generationId: string }>(
     if (!generation) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
     return NextResponse.json({ generation });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.sheets.read" },
 );

@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "../page-guard";
 import Link from "next/link";
 import type { ActivityType, Prisma } from "@prisma/client";
 
@@ -91,6 +92,7 @@ export default async function StaffActivityPage({
     pageSize?: string;
   }>;
 }) {
+  await requirePlatformPage("activity.read", "/platform/activity");
   const sp = await searchParams;
   const list = parseListPage(sp);
 

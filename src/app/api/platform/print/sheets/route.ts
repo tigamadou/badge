@@ -54,7 +54,7 @@ export const GET = withStaffAuth(
     });
     return NextResponse.json({ generations });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.sheets.read" },
 );
 
 export const POST = withStaffAuth(
@@ -78,5 +78,5 @@ export const POST = withStaffAuth(
       throw err;
     }
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.sheets.generate" },
 );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { StaffRole } from "@prisma/client";
+import type { Permission } from "@/lib/permissions";
 import { PrintRequestStatusBadge } from "@/components/print/PrintRequestStatusBadge";
 import { Alert } from "@/components/ui/Feedback";
 import { Button } from "@/components/ui/Button";
@@ -14,7 +14,6 @@ import { OrderTabs } from "@/components/print/OrderTabs";
 import { useIsWide } from "@/components/print/useIsWide";
 import type { PaymentHistoryItem } from "@/components/admin/PaymentHistory";
 import { toastApiError } from "@/lib/toast";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
 import type { OnsiteCounter } from "@/lib/print-requests/onsite-counter";
 import type { OrderSheetView } from "@/lib/print-sheets/order-sheet";
 import type { StaffCreditData } from "./RequestCreditPanel";
@@ -36,7 +35,8 @@ type OrderDetailData = RequestDetailData & {
 // Page d'une commande côté staff : conversation à trois colonnes (résumé, fil, devis et actions).
 export function RequestDetail({
   requestId,
-  role,
+  permissions,
+  canOperateOnsite = false,
   products,
   payments = [],
   onsiteCounter = null,
@@ -46,7 +46,8 @@ export function RequestDetail({
   supplements = [],
 }: {
   requestId: string;
-  role: StaffRole;
+  permissions: Permission[];
+  canOperateOnsite?: boolean;
   products: ProductOption[];
   payments?: PaymentHistoryItem[];
   onsiteCounter?: OnsiteCounter | null;
@@ -104,8 +105,9 @@ export function RequestDetail({
   }
 
   const { request, items } = data;
-  const canPost = staffRoleAtLeast(role, "STAFF_SUPPORT");
-  const editable = canEditQuote(request.status, role);
+  const permissionSet = new Set(permissions);
+  const canPost = permissionSet.has("print.requests.messages.send");
+  const editable = canEditQuote(request.status, permissionSet);
   const currentQuote = request.quoteVersion > 0 ? { version: request.quoteVersion, lines: data.lines } : undefined;
 
   const summary = (
@@ -124,7 +126,8 @@ export function RequestDetail({
   const quote = (
     <OrderQuoteColumn
       requestId={requestId}
-      role={role}
+      permissions={permissions}
+      canOperateOnsite={canOperateOnsite}
       data={data}
       payments={payments}
       onsiteCounter={onsiteCounter}
@@ -157,7 +160,7 @@ export function RequestDetail({
               eventId={data.event.id}
               orgId={data.event.org.id}
               items={items}
-              role={role}
+              permissions={permissions}
               onChanged={onChanged}
             />
           </div>

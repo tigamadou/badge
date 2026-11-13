@@ -14,7 +14,7 @@ export const GET = withStaffAuth(async (req) => {
     include: { _count: { select: { subscriptions: true } } },
   });
   return NextResponse.json({ plans });
-});
+}, { permission: "plans.read" });
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
@@ -71,5 +71,5 @@ export const POST = withStaffAuth(
       throw err;
     }
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "plans.manage" },
 );

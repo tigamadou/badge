@@ -46,6 +46,16 @@ test.describe("Platform — Abonnement d'une organisation", () => {
     await expect(page.getByLabel("Statut")).toBeVisible();
   });
 
+  test("STAFF_OBSERVER voit le resume sans bouton Modifier", async ({ page }) => {
+    const { orgId } = await createTestOrgWithOwner({ scope: "psub-readonly" });
+    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "psub-readonly-staff" });
+
+    await page.goto(`/platform/organizations/${orgId}/subscription`);
+    await expect(page.getByRole("heading", { name: /abonnement/i }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /^modifier$/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /enregistrer l'abonnement/i })).toHaveCount(0);
+  });
+
   test("Organisation sans abonnement : le formulaire est affiche d'emblee", async ({ page }) => {
     const { orgId } = await createTestOrgWithOwner({ scope: "psub-empty", activeSubscription: false });
     await loginAsStaff(page, { role: "STAFF_ADMIN", scope: "psub-empty-staff" });

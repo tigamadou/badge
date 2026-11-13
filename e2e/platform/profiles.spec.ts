@@ -35,4 +35,12 @@ test.describe("Platform — Profils (file d'attente)", () => {
     await expect(page).toHaveURL(/status=REJECTED/);
     await expect(page.getByText(pending.email)).toHaveCount(0);
   });
+
+  test("un Imprimeur en URL directe est renvoye au tableau de bord", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_PRINTER", scope: "prof-printer" });
+
+    await page.goto("/platform/profiles");
+    await expect(page).toHaveURL(/\/platform$/);
+    await expect(page.getByRole("heading", { name: /tableau de bord/i })).toBeVisible();
+  });
 });

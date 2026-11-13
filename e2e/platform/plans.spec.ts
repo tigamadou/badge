@@ -39,6 +39,16 @@ test.describe("Platform — Plans", () => {
     await expect(page.getByRole("button", { name: /créer le plan/i })).toBeVisible();
   });
 
+  test("STAFF_OBSERVER consulte le catalogue sans bouton d'ecriture", async ({ page }) => {
+    await getDb().plan.create({ data: { name: `e2e-plan-readonly-${Date.now()}` } });
+    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "plans-readonly" });
+
+    await page.goto("/platform/plans?pageSize=500");
+    await expect(page.getByRole("heading", { name: "Plans" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Nouveau plan" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /archiver/i })).toHaveCount(0);
+  });
+
   // --- Actions UI ---------------------------------------------------------
 
   test("STAFF_ADMIN cree un plan puis l'archive et le restaure", async ({ page }) => {

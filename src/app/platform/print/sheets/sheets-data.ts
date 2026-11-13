@@ -1,17 +1,10 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { loadUserContext } from "@/lib/user-context";
-import { staffRoleAtLeast } from "@/lib/auth-helpers";
+import { requirePlatformPage } from "@/app/platform/page-guard";
 import { prisma } from "@/lib/prisma";
 
-// L'observateur n'a pas accès à la génération (STAFF_SUPPORT minimum).
-export async function requireSheetsStaff(): Promise<void> {
-  const session = await getServerSession(authOptions);
-  const ctx = session?.user?.id ? await loadUserContext(session.user.id) : null;
-  if (!ctx || !ctx.isStaff || !ctx.staffRole || !staffRoleAtLeast(ctx.staffRole, "STAFF_SUPPORT")) {
-    redirect("/platform");
-  }
+// Accès aux planches : `print.sheets.read`. `canGenerate` (`print.sheets.generate`) commande les boutons de génération.
+export async function requireSheetsStaff(): Promise<{ canGenerate: boolean }> {
+  const { permissions } = await requirePlatformPage("print.sheets.read", "/platform/print/sheets");
+  return { canGenerate: permissions.has("print.sheets.generate") };
 }
 
 // Gabarits proposables (non archivés).

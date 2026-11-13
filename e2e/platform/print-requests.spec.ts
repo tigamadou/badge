@@ -13,7 +13,7 @@ import { loginAndEnter } from "../helpers/nav";
 const LINES = [{ label: "Support badge PVC", quantity: 10, unitPrice: 1500, kind: "PRODUCT" as const }];
 
 // Page Commandes d'impression — /platform/print/orders
-// Rôle : tout le staff y accède, STAFF_OBSERVER compris (lecture seule). Le menu « Commandes »
+// Rôles : STAFF_ADMIN, STAFF_PRINTER et STAFF_OBSERVER (lecture seule) y accèdent ; STAFF_SUPPORT est renvoyé au tableau de bord. Le menu « Commandes »
 // porte une pastille : le nombre de commandes envoyées (SUBMITTED) en attente de traitement.
 // Les brouillons ne sont jamais visibles du staff.
 test.describe("Platform — Commandes d'impression", () => {
@@ -46,6 +46,15 @@ test.describe("Platform — Commandes d'impression", () => {
     await expect(page).toHaveURL(new RegExp(`/platform/print/orders/${sent.id}$`));
   });
 
+  test("STAFF_SUPPORT est renvoyé au tableau de bord et n'a pas d'entrée « Commandes »", async ({ page }) => {
+    const support = await createTestStaff({ scope: "prq-support", role: "STAFF_SUPPORT" });
+    await loginAndEnter(page, support, { kind: "platform" });
+
+    await expect(page.getByRole("link", { name: /^Commandes/ })).toHaveCount(0);
+    await page.goto("/platform/print/orders");
+    await expect(page).toHaveURL(/\/platform$/);
+  });
+
   test("La pastille « Commandes » compte les commandes à traiter et celles avec des non-lus", async ({ page }) => {
     const { orgId, eventId } = await createTestEvent({ scope: "prq-counter" });
     const organizer = await createTestUser({ scope: "prq-counter-org", verified: true });
@@ -54,7 +63,7 @@ test.describe("Platform — Commandes d'impression", () => {
     }
     // Les commandes déjà devisées ne comptent pas.
     await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "QUOTED", lines: LINES });
-    const support = await createTestStaff({ scope: "prq-counter", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prq-counter", role: "STAFF_PRINTER" });
     // À traiter (envoyées) + commandes ayant des échanges non lus de la part de quelqu'un d'autre,
     // sans double compte.
     const expected = await getDb().printRequest.count({
@@ -79,7 +88,7 @@ test.describe("Platform — Commandes d'impression", () => {
     const organizer = await createTestUser({ scope: "prq-filter-org", verified: true });
     const sent = await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "SUBMITTED", lines: LINES });
     const quoted = await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "QUOTED", lines: LINES });
-    const support = await createTestStaff({ scope: "prq-filter", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prq-filter", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
 
     await page.getByRole("link", { name: /^Commandes/ }).click();
@@ -98,7 +107,7 @@ test.describe("Platform — Commandes d'impression", () => {
     const { orgId, eventId } = await createTestEvent({ scope: "prq-empty" });
     const organizer = await createTestUser({ scope: "prq-empty-org", verified: true });
     await createTestPrintRequest({ eventId, orgId, createdById: organizer.id, status: "SUBMITTED", lines: LINES });
-    const support = await createTestStaff({ scope: "prq-empty", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prq-empty", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
 
     await page.getByRole("link", { name: /^Commandes/ }).click();
@@ -130,7 +139,7 @@ test.describe("Platform — Non-lus dans la liste des commandes", () => {
         { requestId: request.id, side: "ORGANIZER", kind: "MESSAGE", body: "Second message", authorId: organizer.id },
       ],
     });
-    const support = await createTestStaff({ scope: "prq-unread", role: "STAFF_SUPPORT" });
+    const support = await createTestStaff({ scope: "prq-unread", role: "STAFF_PRINTER" });
     await loginAndEnter(page, support, { kind: "platform" });
 
     await page.getByRole("link", { name: /^Commandes/ }).click();

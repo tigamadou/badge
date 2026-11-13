@@ -64,13 +64,15 @@ describe("listOrdersToGenerate", () => {
     expect(rows[0].paidAt).toBeNull();
   });
 
-  it("exclut les commandes avec une planche (DONE ou FAILED)", async () => {
-    const done = await makePrintOrder({ eventId, orgId, status: "PAID" });
-    const failed = await makePrintOrder({ eventId, orgId, status: "PAID" });
-    const open = await makePrintOrder({ eventId, orgId, status: "PAID" });
+  it("exclut les commandes dont la planche est terminée (DONE) et garde les échecs", async () => {
+    const done = await makePrintOrder({ eventId, orgId, status: "PAID", data: { paidAt: new Date("2026-11-01T10:00:00Z") } });
+    const failed = await makePrintOrder({ eventId, orgId, status: "PAID", data: { paidAt: new Date("2026-11-01T11:00:00Z") } });
+    const open = await makePrintOrder({ eventId, orgId, status: "PAID", data: { paidAt: new Date("2026-11-01T12:00:00Z") } });
     await makePrintGeneration({ eventId, printRequestId: done.id, data: { status: "DONE" } });
     await makePrintGeneration({ eventId, printRequestId: failed.id, data: { status: "FAILED" } });
-    expect((await listOrdersToGenerate()).map((r) => r.requestId)).toEqual([open.id]);
+    const rows = await listOrdersToGenerate();
+    expect(rows.map((r) => r.requestId)).toEqual([failed.id, open.id]);
+    expect(rows[0].sheet?.status).toBe("FAILED");
   });
 
   it("prend les pages du template de l'évènement quand la commande n'en fige pas", async () => {
@@ -119,12 +121,14 @@ describe("listOrdersWithSheet", () => {
 });
 
 describe("countOrdersToGenerate", () => {
-  it("compte les commandes à traiter, comme la liste", async () => {
+  it("compte les commandes à traiter, génération en cours comprise, comme la liste", async () => {
     await makePrintOrder({ eventId, orgId, status: "PAID" });
     await makePrintOrder({ eventId, orgId, status: "IN_PRODUCTION" });
     await makePrintOrder({ eventId, orgId, status: "PAID", type: "ONSITE" });
     const done = await makePrintOrder({ eventId, orgId, status: "PAID" });
     await makePrintGeneration({ eventId, printRequestId: done.id, data: { status: "DONE" } });
-    expect(await countOrdersToGenerate()).toBe(2);
+    const running = await makePrintOrder({ eventId, orgId, status: "PAID" });
+    await makePrintGeneration({ eventId, printRequestId: running.id, data: { status: "RUNNING" } });
+    expect(await countOrdersToGenerate()).toBe(3);
   });
 });

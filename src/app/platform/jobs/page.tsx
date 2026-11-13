@@ -1,3 +1,4 @@
+import { requirePlatformPage } from "../page-guard";
 import Link from "next/link";
 import { Alert, EmptyState } from "@/components/ui/Feedback";
 import { Icon } from "@/components/ui/Icon";
@@ -25,6 +26,7 @@ export default async function PlatformJobsPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requirePlatformPage("email_jobs.read", "/platform/jobs");
   const sp = await searchParams;
   const params = new URLSearchParams(
     Object.entries(sp).flatMap(([k, v]) => (v ? [[k, v] as [string, string]] : [])),

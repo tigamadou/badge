@@ -155,7 +155,96 @@ ne reçoit plus les messages d'impression.
 
 ## Plateforme (lot 2a)
 
-À rédiger par le lot 2a.
+Toute l'API `/api/platform/**` (hors `users/**`, `owners/**` et `roles/**`, lot 2c) et les pages
+`/platform/**` sont gardées par une **clé du catalogue**, plus par un rôle minimal : une garde =
+une clé, et le bouton d'un écran vient de la **même** clé que la route qu'il appelle.
+
+### Mécanique
+
+- **Routes** : `withStaffAuth(handler, { permission })` (cible plateforme, un compte non staff est
+  refusé en `403 NOT_STAFF`, un droit manquant en `403 PERMISSION_DENIED`). Un second contrôle
+  dans le handler passe par `permissionDenied(userId, clé, cible)`
+  (`src/app/api/platform/permission-response.ts`) ; le contrôle d'un champ ou d'une variante
+  utilise `hasPermission(ctx, clé, cible)` sur le contexte déjà chargé.
+- **Pages** : `requirePlatformPage(clé)` (`src/app/platform/page-guard.ts`) : sans session,
+  redirection vers `/login?callbackUrl=…` ; sans la clé, redirection vers `/platform`. Elle renvoie
+  les permissions effectives, dont la page tire ses `canX` (props booléennes des composants).
+- **Layout et menu** : `/platform` exige `platform.access` (sinon `/`). `StaffShell` construit son
+  menu à partir des permissions (`buildStaffNav`) ; un groupe sans entrée disparaît (l'Imprimeur n'a
+  pas le groupe « Plateforme », l'entrée « Rôles » est réservée à `platform.roles.manage`).
+- **Onglets des paramètres** : `visibleSettingsTabs(permissions)` ; chaque onglet porte sa clé,
+  l'URL d'un onglet masqué retombe sur le premier visible, aucun onglet visible renvoie à
+  `/platform`.
+- **Tests** : une matrice de refus (`src/app/api/platform/__tests__/permission-matrix.test.ts`)
+  vérifie pour chaque route : 401 sans session, 403 pour un non-staff et pour chaque rôle hors de la
+  liste autorisée, ni 401 ni 403 pour les rôles autorisés ; les variantes et les contrôles par champ
+  ont des tests dédiés.
+
+### Clés, routes, écrans et rôles
+
+SA = `SUPER_ADMIN`, AD = `STAFF_ADMIN`, SU = `STAFF_SUPPORT`, PR = `STAFF_PRINTER`,
+OB = `STAFF_OBSERVER`.
+
+| Clé | Routes et écrans | Rôles |
+|---|---|---|
+| `platform.access` | layout `/platform`, tableau de bord, notifications, documentation | SA AD SU PR OB |
+| `organizations.read` | liste, fiche, onglets et membres (lecture) d'une organisation, KPI du tableau de bord | SA AD SU OB |
+| `organizations.create` / `update` / `archive` | création, édition, archivage et restauration (`OrgDetailActions` : `canArchive`) | SA AD |
+| `organizations.delete` | suppression définitive (`OrgDetailActions` : `canDelete`) | SA |
+| `organizations.members.manage` | formulaire d'invitation de la page Membres | SA AD |
+| `subscriptions.update` | `PUT …/subscription` ; `SubscriptionForm` (`canEdit`, « Aucun abonnement. » sinon) | SA AD |
+| `plans.read` / `plans.manage` | `/platform/plans` ; `PlanManager` (`canManage`) | lecture : SA AD SU OB ; gestion : SA AD |
+| `profiles.read` / `profiles.review` | `/platform/profiles` ; approuver ou rejeter (`canDecide`) | lecture : SA AD SU OB ; décision : SA AD SU |
+| `blocklist.read` / `blocklist.manage` | `blocked-emails`, `blocked-documents` | lecture : SA AD SU OB ; gestion : SA AD SU |
+| `settings.read` | `GET/PATCH settings`, onglets E-mails, Sécurité, Abonnements | SA AD SU OB |
+| `settings.update`, `settings.secrets.update`, `settings.subscription_rights.update` | contrôle **par champ** du `PATCH settings` (ci-dessous) ; `PlatformSettingsForm` (`canEdit`, secrets) | SA AD ; secrets : SA |
+| `settings.smtp.test` | `POST settings/test-smtp`, `TestSmtpForm` | SA AD |
+| `settings.badge_template.update`, `settings.onsite_print.update` | `PATCH settings/badge`, `PATCH settings/onsite-print` et leurs onglets | SA AD |
+| `rejection_reasons.read` / `manage` | onglet Motifs et routes `rejection-reasons` | lecture : SA AD SU OB ; gestion : SA AD |
+| `badge_templates.read` / `manage` | `/platform/badge-templates` (installation : `canInstall`), routes `badge-templates` | lecture : SA AD SU OB ; gestion : SA AD |
+| `email_jobs.read` / `manage` | `/platform/jobs` ; relancer et annuler (`canAdmin`) | lecture : SA AD SU OB ; gestion : SA AD |
+| `activity.read` | `/platform/activity`, détail, `GET activity` | SA AD SU OB |
+| `payments.read` | `/platform/payments`, détail, reçu | SA AD SU OB |
+| `print.requests.read` | commandes (liste, fiche, `items`, **`GET messages`**), pièces de commande de `/api/files` | SA AD PR OB (pas SU) |
+| `print.requests.messages.send` / `reject` | `POST messages`, `reject` | SA AD PR |
+| `print.requests.advance` | `POST status` (`START_PRODUCTION`, `MARK_READY`, `COMPLETE` en amont) | SA AD PR |
+| `print.requests.onsite.complete` | `POST status` avec `to = COMPLETED` sur une commande sur place (`403 STAFF_FORBIDDEN` sinon) ; bouton « Terminer » | SA AD |
+| `print.requests.reopen` / `quote.send` / `quote.edit` / `mark_paid` / `credit.apply` | rouvrir, envoyer le devis, éditer les lignes, marquer payée, appliquer le crédit | SA AD |
+| `print.onsite.operate` | `onsite/lookup`, `search`, `print` et page du poste, **sur l'évènement de la commande** | SA AD PR |
+| `print.onsite.margin.update` | `PATCH onsite/margin`, `OnsiteMarginForm` | SA AD |
+| `print.catalog.read` / `manage` | `/platform/print/catalog*` ; produits, images, options, paliers | lecture : SA AD PR OB ; gestion : SA AD |
+| `print.layouts.read` / `manage` | `/platform/print/layouts*`, routes `layouts` | lecture : SA AD PR OB ; gestion : SA AD |
+| `print.sheets.read` / `generate` | `/platform/print/sheets/**`, routes `sheets*`, fichiers `print-sheets/` ; boutons « Générer » et « Regénérer » | SA AD PR |
+
+### Arbitrages
+
+- **`GET messages`** est gardé par `print.requests.read` (seul l'envoi l'est par
+  `print.requests.messages.send`) pour ne pas retirer à l'Observateur la lecture du fil qu'il avait.
+- **`PATCH settings` par champ** : un secret non vide exige `settings.secrets.update` (`403
+  FORBIDDEN_SECRET_CHANGE`), `subscriptionRights` exige `settings.subscription_rights.update`, tout
+  autre champ (ou un corps vide) exige `settings.update` (`403 PERMISSION_DENIED`) ; tout est vérifié
+  avant la moindre écriture. La route elle-même exige `settings.read`.
+- **L'Imprimeur** (`STAFF_PRINTER`) entre dans `/platform` sans groupe « Plateforme » : tableau de
+  bord avec le seul bloc Impression, puis Commandes, Planches, Gabarits, Catalogue ; les espaces
+  d'administration le renvoient à `/platform`. Il avance la production d'une commande en amont mais
+  ne clôt pas une commande sur place et n'envoie ni devis ni paiement.
+- **Pertes de droits assumées** : le Support n'a plus ni les commandes d'impression en lecture, ni
+  les planches, ni les exports, ni la production ; l'Observateur n'a plus « Planches » ni les exports.
+- **`/api/files`** : plus aucun passe-droit `isStaff`. `print-sheets/*` exige `print.sheets.read` ;
+  `print-requests/{eventId}/…` et `print-requests/staff/{requestId}/…` exigent `print.requests.read`
+  **ou** `print.request` sur l'évènement de la clé (ou de la commande nommée par la clé) ; toute
+  autre forme `print-requests/…` exige `print.requests.read` ; `badge-exports/{eventId}/…` exige
+  `badge.print` sur l'évènement ; `events/{id}/idDocuments/…` exige `event.read.detailed` sur
+  l'évènement ; `profile/{uid}/documents/…` est lisible par son propriétaire ou par `profiles.read`.
+- **Poste sur place** : la permission `print.onsite.operate` est évaluée sur l'évènement de la
+  commande, après `loadOnsiteRequest` : une commande inexistante répond `404` aux rôles qui ont
+  `platform.access`, et la page du poste redirige vers la fiche sans la permission.
+- **Spec 38 (planches)** : vocabulaire du code conservé : `DONE` (et non `COMPLETED`), onglet « À
+  traiter » ; la file garde les commandes dont la génération est `PENDING`, `RUNNING` ou `FAILED`
+  (voir `impression-planches.md`).
+- **Organisation** : le rôle d'un membre d'organisation se lit sur `roleRef` (page Membres, requête
+  du propriétaire). `PlatformOrgShell` n'est pas filtré : tous ses onglets relèvent de
+  `organizations.read`.
 
 ## Organisation et évènement (lot 2b)
 

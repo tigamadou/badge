@@ -100,4 +100,13 @@ test.describe("Platform — Journal global", () => {
     const res = await page.goto("/platform/activity/log-inexistant-e2e");
     expect(res?.status()).toBe(404);
   });
+
+  test("un Imprimeur n'a pas Journal dans le menu et est renvoye en URL directe", async ({ page }) => {
+    await loginAsStaff(page, { role: "STAFF_PRINTER", scope: "activity-printer" });
+
+    await page.goto("/platform");
+    await expect(page.locator("#app-shell-nav").getByRole("link", { name: "Journal" })).toHaveCount(0);
+    await page.goto("/platform/activity");
+    await expect(page).toHaveURL(/\/platform$/);
+  });
 });

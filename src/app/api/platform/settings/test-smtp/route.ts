@@ -58,5 +58,5 @@ export const POST = withStaffAuth(
     });
     return NextResponse.json({ ok: true, to });
   },
-  { minRole: "STAFF_ADMIN" },
+  { permission: "settings.smtp.test" },
 );

@@ -93,5 +93,5 @@ export const GET = withStaffAuth(
       })),
     });
   },
-  { minRole: "STAFF_SUPPORT" },
+  { permission: "print.sheets.generate" },
 );

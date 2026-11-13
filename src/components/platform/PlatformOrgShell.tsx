@@ -9,9 +9,11 @@ import { usePathname } from "next/navigation";
 // plus dans les vues des membres.
 export function PlatformOrgShell({
   org,
+  canReadActivity = false,
   children,
 }: {
   org: { id: string; name: string };
+  canReadActivity?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -21,7 +23,7 @@ export function PlatformOrgShell({
     { href: `${base}/events`, label: "Événements" },
     { href: `${base}/members`, label: "Membres" },
     { href: `${base}/subscription`, label: "Abonnement" },
-    { href: `${base}/activity`, label: "Journal" },
+    ...(canReadActivity ? [{ href: `${base}/activity`, label: "Journal" }] : []),
   ];
 
   const isActive = (t: { href: string; exact?: boolean }) =>

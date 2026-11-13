@@ -7,6 +7,7 @@ import { ensureReferenceTemplates, defaultTemplateId, familyTemplateId } from "@
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 import { getServerSession } from "next-auth";
+import { makeStaff as createStaff } from "@/test/factories";
 
 // Tests Plan v2-12 : PATCH platformSettings.badgeTemplateId. requireStaff STAFF_ADMIN.
 // Racine de la cascade -- NOT NULL en BDD ; null refuse par Zod.
@@ -44,16 +45,7 @@ async function setupPlatform() {
 
 async function makeStaff(staffRole: StaffRoleStr) {
   const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  const user = await prisma.user.create({
-    data: {
-      email: `staff-${suffix}@v2-12.test`,
-      password: "x",
-      name: "Staff User",
-      isStaff: true,
-      staffRole,
-      emailVerifiedAt: new Date(),
-    },
-  });
+  const user = await createStaff(staffRole, { emailVerifiedAt: new Date() });
   withSession({ id: user.id, email: user.email, name: user.name, isStaff: true });
   return user;
 }
@@ -88,7 +80,7 @@ describe("PATCH /api/platform/settings/badge", () => {
     vi.mocked(getServerSession).mockResolvedValue(null);
     const { PATCH } = await import("../route");
     const req = makeReq({ badgeTemplateId: await installedDefaultId() });
-    const res = await PATCH(req);
+    const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(401);
   });
 
@@ -96,7 +88,7 @@ describe("PATCH /api/platform/settings/badge", () => {
     await makeStaff("STAFF_OBSERVER");
     const { PATCH } = await import("../route");
     const req = makeReq({ badgeTemplateId: await installedDefaultId() });
-    const res = await PATCH(req);
+    const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(403);
   });
 
@@ -104,7 +96,7 @@ describe("PATCH /api/platform/settings/badge", () => {
     const admin = await makeStaff("STAFF_ADMIN");
     const { PATCH } = await import("../route");
     const req = makeReq({ badgeTemplateId: await installedRectoVersoId() });
-    const res = await PATCH(req);
+    const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.ok).toBe(true);
@@ -128,7 +120,7 @@ describe("PATCH /api/platform/settings/badge", () => {
     await makeStaff("STAFF_ADMIN");
     const { PATCH } = await import("../route");
     const req = makeReq({ badgeTemplateId: null });
-    const res = await PATCH(req);
+    const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe("INVALID_BODY");
@@ -144,7 +136,7 @@ describe("PATCH /api/platform/settings/badge", () => {
     await makeStaff("STAFF_ADMIN");
     const { PATCH } = await import("../route");
     const req = makeReq({ badgeTemplateId: "ghost-xyz" });
-    const res = await PATCH(req);
+    const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe("UNKNOWN_TEMPLATE");
@@ -163,7 +155,7 @@ describe("PATCH /api/platform/settings/badge", () => {
       headers: { "content-type": "application/json" },
       body: "{not-json",
     });
-    const res = await PATCH(req);
+    const res = await PATCH(req, { params: Promise.resolve({}) });
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe("INVALID_BODY");
@@ -176,7 +168,7 @@ describe("PATCH /api/platform/settings/badge", () => {
       .mockRejectedValueOnce(new Error("boom-badge-role"));
     const { PATCH } = await import("../route");
     const req = makeReq({ badgeTemplateId: await installedDefaultId() });
-    await expect(PATCH(req)).rejects.toThrow("boom-badge-role");
+    await expect(PATCH(req, { params: Promise.resolve({}) })).rejects.toThrow("boom-badge-role");
     spy.mockRestore();
   });
 });
@@ -202,7 +194,7 @@ describe("PATCH platform badge template : évènements verrouillés", () => {
     const freeReq = await makeRequest({ org, event: free, owner: staff }, { status: "SUBMITTED", badgeTemplateId: defId });
 
     const { PATCH } = await import("../route");
-    expect((await PATCH(makeReq({ badgeTemplateId: rvId }))).status).toBe(200);
+    expect((await PATCH(makeReq({ badgeTemplateId: rvId }), { params: Promise.resolve({}) })).status).toBe(200);
 
     const ev = (id: string) => prisma.event.findUniqueOrThrow({ where: { id } });
     const rq = (id: string) => prisma.printRequest.findUniqueOrThrow({ where: { id } });
@@ -224,7 +216,7 @@ describe("PATCH platform badge template : évènements verrouillés", () => {
     const req = await makeRequest({ org, event, owner: staff }, { status: "ACCEPTED", badgeTemplateId: defId });
     vi.spyOn(paymentProbe, "isPaymentInProgress").mockImplementation(async (id) => id === req.id);
     const { PATCH } = await import("../route");
-    expect((await PATCH(makeReq({ badgeTemplateId: await installedRectoVersoId() }))).status).toBe(200);
+    expect((await PATCH(makeReq({ badgeTemplateId: await installedRectoVersoId() }), { params: Promise.resolve({}) })).status).toBe(200);
     vi.restoreAllMocks();
     expect(await prisma.printRequest.findUniqueOrThrow({ where: { id: req.id } })).toMatchObject({
       status: "ACCEPTED", badgeTemplateId: defId, templatePinned: true,

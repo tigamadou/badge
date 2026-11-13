@@ -29,6 +29,15 @@ test.describe("Platform — Membres d'une organisation", () => {
     await expect(page.getByRole("heading", { name: /inviter un membre/i })).toBeVisible();
   });
 
+  test("STAFF_OBSERVER voit la table sans formulaire d'invitation", async ({ page }) => {
+    const { orgId, owner } = await createTestOrgWithOwner({ scope: "pmem-readonly" });
+    await loginAsStaff(page, { role: "STAFF_OBSERVER", scope: "pmem-readonly-staff" });
+
+    await page.goto(`/platform/organizations/${orgId}/members`);
+    await expect(page.getByText(owner.email)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /inviter un membre/i })).toHaveCount(0);
+  });
+
   // --- Actions UI ---------------------------------------------------------
 
   test("STAFF_ADMIN invite un membre MANAGER via le formulaire", async ({ page }) => {

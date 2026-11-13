@@ -1,6 +1,6 @@
 "use client";
 
-import type { StaffRole } from "@prisma/client";
+import type { Permission } from "@/lib/permissions";
 import { Card, CardBody, CardHead } from "@/components/ui/Card";
 import { PaymentHistory, type PaymentHistoryItem } from "@/components/admin/PaymentHistory";
 import { OnsiteTemplateAlert } from "@/components/print/OnsiteTemplateAlert";
@@ -15,7 +15,8 @@ import type { RequestDetailData } from "../request-types";
 // Colonne droite : organisation, devis (lecture ; l'édition passe par la modale de l'en-tête), crédit, impression sur place, planche, paiements.
 export function OrderQuoteColumn({
   requestId,
-  role,
+  permissions,
+  canOperateOnsite,
   data,
   payments,
   onsiteCounter,
@@ -24,7 +25,8 @@ export function OrderQuoteColumn({
   onChanged,
 }: {
   requestId: string;
-  role: StaffRole;
+  permissions: Permission[];
+  canOperateOnsite: boolean;
   data: RequestDetailData;
   payments: PaymentHistoryItem[];
   onsiteCounter: OnsiteCounter | null;
@@ -33,8 +35,8 @@ export function OrderQuoteColumn({
   onChanged: () => void;
 }) {
   const { request, event, items, lines, onsiteTemplate } = data;
-  // /api/files refuse les planches (print-sheets/) à STAFF_OBSERVER : pas de lien mort pour lui.
-  const visibleSheet = sheet && role === "STAFF_OBSERVER" ? { ...sheet, downloadUrl: null } : sheet;
+  // /api/files refuse les planches (print-sheets/) sans `print.sheets.read` : pas de lien mort.
+  const visibleSheet = sheet && !permissions.includes("print.sheets.read") ? { ...sheet, downloadUrl: null } : sheet;
   return (
     <div className="min-w-0 space-y-4">
       {onsiteTemplate === "UNSUITABLE" && <OnsiteTemplateAlert side="STAFF" eventId={event.id} />}
@@ -69,11 +71,15 @@ export function OrderQuoteColumn({
       </Card>
 
       {credit && (
-        <RequestCreditPanel requestId={requestId} status={request.status} role={role} credit={credit} onChanged={onChanged} />
+        <RequestCreditPanel requestId={requestId} status={request.status} permissions={permissions} credit={credit} onChanged={onChanged} />
       )}
 
       {onsiteCounter && (
-        <OnsiteRequestPanel requestId={requestId} status={request.status} role={role} initialCounter={onsiteCounter} />
+        <OnsiteRequestPanel requestId={requestId} status={request.status}
+          permissions={permissions}
+          canOperateOnsite={canOperateOnsite}
+          initialCounter={onsiteCounter}
+        />
       )}
 
       <OrderSheetPanel sheet={visibleSheet} sheetsHref={`/platform/print/sheets?printRequestId=${requestId}`} />
