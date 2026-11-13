@@ -11,7 +11,6 @@ import { loginAs } from "../helpers/auth";
 import { loginAndEnter } from "../helpers/nav";
 import { mailpit } from "../helpers/mailpit";
 import { expectLastActivity, expectNoActivity } from "../helpers/audit";
-import { toast } from "../helpers/feedback";
 
 // Page Membres — /org/[orgId]/members
 // Nav : MANAGER+. Mutations (POST/PATCH/DELETE members) : OWNER-only.
@@ -46,13 +45,13 @@ test.describe("Org — Membres", () => {
     const inviteeEmail = `e2e-invitee-${Date.now()}@v2-11-e2e.test`;
     await page.getByPlaceholder("Nom complet").fill("UI Invitee");
     await page.getByPlaceholder("email@exemple.fr").fill(inviteeEmail);
-    await page.locator("form").getByLabel("Rôle").selectOption("MANAGER");
+    await page.locator("form").getByLabel("Rôle").selectOption({ label: "Gestionnaire" });
     await page.getByRole("button", { name: /^inviter$/i }).click();
 
     // Effet UI : la ligne apparait apres le refresh du formulaire.
     await expect(page.getByText("UI Invitee")).toBeVisible();
     const row = page.locator("tr", { hasText: inviteeEmail });
-    await expect(row.getByRole("combobox")).toHaveValue("MANAGER");
+    await expect(row.getByRole("combobox").locator("option:checked")).toHaveText("Gestionnaire");
 
     const created = await getDb().user.findUnique({
       where: { email: inviteeEmail },
@@ -81,11 +80,11 @@ test.describe("Org — Membres", () => {
     await page.goto(`/org/${orgId}/members`);
     await page.getByPlaceholder("Nom complet").fill(existing.name);
     await page.getByPlaceholder("email@exemple.fr").fill(existing.email);
-    await page.locator("form").getByLabel("Rôle").selectOption("AUDITOR");
+    await page.locator("form").getByLabel("Rôle").selectOption({ label: "Auditeur" });
     await page.getByRole("button", { name: /^inviter$/i }).click();
 
     const row = page.locator("tr", { hasText: existing.email });
-    await expect(row.getByRole("combobox")).toHaveValue("AUDITOR");
+    await expect(row.getByRole("combobox").locator("option:checked")).toHaveText("Auditeur");
 
     // Aucun compte cree : l'utilisateur existait deja.
     await expectNoActivity({ type: "USER_CREATED", targetId: existing.id });
@@ -138,7 +137,7 @@ test.describe("Org — Membres", () => {
   // --- Gardes & API (inatteignable par l'UI) ------------------------------
 
   
-  test("Retrograder le dernier OWNER affiche une erreur (echec UI)", async ({ page }) => {
+  test("Un OWNER ne modifie pas son propre role : badge sans select, et le dernier OWNER n'est pas retirable", async ({ page }) => {
     const { orgId, owner } = await createTestOrgWithOwner({ scope: "mem-last-demote" });
     await loginAndEnter(page, owner, { kind: "org", id: orgId });
 
@@ -146,15 +145,15 @@ test.describe("Org — Membres", () => {
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/members`));
 
     const row = page.locator("tr").filter({ hasText: owner.email });
-    await row.getByRole("combobox").selectOption("MANAGER");
-
-    // Reponse attendue — ECHEC : message d'erreur affiche et role inchange.
-    await expect(toast(page, /dernier OWNER/i)).toBeVisible();
+    // Regle SELF_MODIFICATION : pas de select sur sa propre ligne ; le dernier OWNER n'a pas de bouton Retirer.
+    await expect(row.getByRole("combobox")).toHaveCount(0);
+    await expect(row.getByText("Propriétaire")).toBeVisible();
+    await expect(row.getByText(/dernier OWNER/i)).toBeVisible();
+    await expect(row.getByRole("button", { name: /^retirer$/i })).toHaveCount(0);
     const still = await getDb().orgMembership.findUnique({
       where: { userId_orgId: { userId: owner.id, orgId } },
     });
     expect(still?.role).toBe("OWNER");
-    await expect(row.getByRole("combobox")).toHaveValue("OWNER");
   });
 
   test("OWNER change le role d'un membre via le select inline", async ({ page }) => {
@@ -170,10 +169,10 @@ test.describe("Org — Membres", () => {
     await expect(page).toHaveURL(new RegExp(`/org/${orgId}/members`));
 
     const row = page.locator("tr").filter({ hasText: manager.email });
-    await row.getByRole("combobox").selectOption("AUDITOR");
+    await row.getByRole("combobox").selectOption({ label: "Auditeur" });
 
     // Reponse attendue — SUCCES : le select reflete le nouveau role, persiste en base.
-    await expect(row.getByRole("combobox")).toHaveValue("AUDITOR");
+    await expect(row.getByRole("combobox").locator("option:checked")).toHaveText("Auditeur");
     const membership = await getDb().orgMembership.findUnique({
       where: { userId_orgId: { userId: manager.id, orgId } },
     });

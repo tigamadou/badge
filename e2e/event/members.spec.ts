@@ -34,7 +34,7 @@ test.describe("Event — Membres", () => {
     await page.getByRole("button", { name: /^inviter$/i }).click();
     await page.getByPlaceholder("Email").fill(inviteEmail);
     await page.getByPlaceholder(/Nom/).fill("Mariam Kone");
-    await page.locator("form").locator("select").selectOption("OPERATOR");
+    await page.locator("form").locator("select").selectOption({ label: "Opérateur" });
     await page.getByRole("button", { name: /^inviter$/i }).last().click();
 
     // Reponse attendue — SUCCES : la ligne apparait, user + membership crees, mail envoye.
@@ -118,7 +118,7 @@ test.describe("Event — Membres", () => {
 
     await page.goto(`/event/${eventId}/members`);
     const row = page.locator("tr", { hasText: member.email });
-    await row.locator("select").selectOption("PRINTER");
+    await row.locator("select").selectOption({ label: "Imprimeur d'évènement" });
 
     await expect(async () => {
       const membership = await getDb().eventMembership.findFirst({
