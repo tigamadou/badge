@@ -47,7 +47,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 6 | Gardes : `requirePermission`, compatibilité, derniers titulaires | [x] | 2026-11-13 | `requirePermission` accepte une liste ; `hasOrgRole`/`effectiveEventRole` : un staff sans rôle hérité (STAFF_PRINTER, personnalisé) n'obtient plus le contournement staff ; `getEventTarget` testé dans `event-org-target.test.ts` (base réelle, `event-org.test.ts` mocke Prisma) |
 | 7 | Wrappers de routes et garde participant | [x] | 2026-11-13 | Code écrit avant les tests (RED prouvé ensuite par stash des sources). Assertions EVENT_FORBIDDEN -> PERMISSION_DENIED mises à jour dans api-event-badge-exports.test.ts et badges/[badgeId]/__tests__/route.test.ts (tests seulement). assertNotStaff hors tâche. |
 | 8 | Rôles système en base, migration, `make migrate-roles` | [x] | 2026-11-13 | `make migrate-roles ARGS=--dry-run` sur la base de dev : 0 staff, 0 membre d'org, 0 membre d'évènement, 0 déjà migré (dev vide d'enums à migrer). `dryRun` n'écrit rien, pas même les rôles système. |
-| 9 | Fabriques, reset global et helpers e2e | [ ] | | |
+| 9 | Fabriques, reset global et helpers e2e | [x] | 2026-11-13 | Reset global (`src/test-setup.ts`) supprimait déjà rôles et ajustements. `createTestStaff`/`OrgMember`/`OrgWithOwner`/`EventMember` écrivent `roleId` (rôles système permanents via `ensureSystemRoles`) + enum hérité ; cleanup supprime ajustements et rôles personnalisés des orgs e2e. `user-context.test.ts` : rôles provisoires remplacés. Fabriques écrites avant le test (RED non rejoué). |
 | 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [ ] | | |
 | 11 | Notifications ciblées par permission | [ ] | | |
 | 12 | Logique d'impression partagée | [ ] | | |
@@ -626,26 +626,26 @@ les rôles hérités (double écriture de compatibilité, retirée à la fusion)
 - Consumes : `systemRoleId`, `legacyKeyOf`, `ensureSystemRoles`.
 - Produces : fabriques et helpers e2e du bloc « Contrats ».
 
-- [ ] **Step 1 : tests rouges** (`factories.test.ts`) : `makeStaff("STAFF_PRINTER")` → utilisateur `isStaff`, `platformRoleId` du
+- [x] **Step 1 : tests rouges** (`factories.test.ts`) : `makeStaff("STAFF_PRINTER")` → utilisateur `isStaff`, `platformRoleId` du
   rôle système `STAFF_PRINTER`, `staffRole` nul ; `makeStaff("STAFF_ADMIN")` → `platformRoleId` **et** `staffRole: "STAFF_ADMIN"`
   (double écriture de compatibilité) ; `makeOrgMember(org.id, "AGENT")` → `roleId` AGENT, `role` nul ; `makeOrgMember(…, "OWNER")`
   → `roleId` + `role` ; `makeEventMember` idem ; `makeCustomRole({ scope:"ORG", orgId, permissions:["org.read"] })` crée le rôle
   et ses `RolePermission` ; `makeOverride` ; le reset de `beforeEach` supprime rôles et ajustements (deux tests successifs
   sans collision sur `systemKey`).
-- [ ] **Step 2 : lancer** → échec.
-- [ ] **Step 3 : `factories.ts`** — `makeStaff(role: PlatformSystemKey, data)` (signature élargie, rétrocompatible avec les
+- [x] **Step 2 : lancer** → échec.
+- [x] **Step 3 : `factories.ts`** — `makeStaff(role: PlatformSystemKey, data)` (signature élargie, rétrocompatible avec les
   appels `makeStaff("STAFF_ADMIN")` existants), `makeOrgMember`, `makeEventMember`, `makeCustomRole`, `makeOverride` ;
   `systemRoleId(prisma, key)` à chaque appel (le reset supprime les rôles). Exporter `PlatformSystemKey`, `OrgSystemKey`,
   `EventSystemKey`.
-- [ ] **Step 4 : `e2e/helpers/db.ts`** — élargir `TestStaffRole`/`TestOrgRole`/`TestEventRole` ; `createTestStaff`,
+- [x] **Step 4 : `e2e/helpers/db.ts`** — élargir `TestStaffRole`/`TestOrgRole`/`TestEventRole` ; `createTestStaff`,
   `createTestOrgMember`, `createTestOrgWithOwner` (OWNER), `createTestEventMember` (y compris `attachOrgAuditor`) écrivent
   `roleId` via `ensureSystemRoles(db())` (rôles **permanents**, jamais supprimés par `cleanupE2ETestData`) et la colonne
   d'enum pour les rôles hérités. `cleanupE2ETestData` supprime en plus les `UserPermissionOverride` des utilisateurs e2e et les
   rôles personnalisés des organisations e2e (déjà emportés par la cascade d'organisation : vérifier). `e2e/helpers/auth.ts` :
   types seulement.
-- [ ] **Step 5 : lancer** `make test FILE=src/test` puis `make test FILE=src/lib/__tests__/user-context.test.ts` (remplacer
+- [x] **Step 5 : lancer** `make test FILE=src/test` puis `make test FILE=src/lib/__tests__/user-context.test.ts` (remplacer
   les `prisma.role.create` provisoires de la Task 4 par `makeCustomRole`/`makeStaff`) → vert.
-- [ ] **Step 6 : commit** : `test(roles): fabriques et helpers e2e par cle de role systeme`.
+- [x] **Step 6 : commit** : `test(roles): fabriques et helpers e2e par cle de role systeme`.
 
 ### Task 10: Seed : rôles système, SUPER_ADMIN, comptes démo
 

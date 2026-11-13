@@ -10,9 +10,19 @@ import type {
   PrintThreadSide,
   Prisma,
   RegistrationStatus,
-  StaffRole,
+  RoleScope,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import type { Permission } from "@/lib/permissions";
+import { legacyKeyOf, systemRoleId } from "@/lib/permissions/db";
+import type { SystemRoleKey } from "@/lib/permissions/system-roles";
+
+export type PlatformSystemKey = Extract<
+  SystemRoleKey,
+  "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_PRINTER" | "STAFF_OBSERVER"
+>;
+export type OrgSystemKey = Extract<SystemRoleKey, "OWNER" | "MANAGER" | "AUDITOR" | "AGENT">;
+export type EventSystemKey = Extract<SystemRoleKey, "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER">;
 
 let counter = 0;
 const uid = () => `${Date.now().toString(36)}${(counter++).toString(36)}${faker.string.alphanumeric(4).toLowerCase()}`;
@@ -36,8 +46,65 @@ export function makeUser(data: Partial<Prisma.UserUncheckedCreateInput> = {}) {
   });
 }
 
-export function makeStaff(role: StaffRole, data: Partial<Prisma.UserUncheckedCreateInput> = {}) {
-  return makeUser({ isStaff: true, staffRole: role, ...data });
+// Le reset global supprime les rôles : l'id système est résolu (upsert) à chaque appel.
+// Double écriture de compatibilité : la colonne d'enum est posée pour les rôles hérités.
+export async function makeStaff(role: PlatformSystemKey, data: Partial<Prisma.UserUncheckedCreateInput> = {}) {
+  const platformRoleId = await systemRoleId(prisma, role);
+  const staffRole = legacyKeyOf<"StaffRole">(role) ?? undefined;
+  return makeUser({ isStaff: true, platformRoleId, staffRole, ...data });
+}
+
+export async function makeOrgMember(
+  orgId: string,
+  role: OrgSystemKey,
+  data: Partial<Prisma.UserUncheckedCreateInput> = {},
+) {
+  const user = await makeUser(data);
+  const roleId = await systemRoleId(prisma, role);
+  await prisma.orgMembership.create({
+    data: { userId: user.id, orgId, roleId, role: legacyKeyOf<"OrgRole">(role) },
+  });
+  return user;
+}
+
+export async function makeEventMember(
+  eventId: string,
+  role: EventSystemKey,
+  data: Partial<Prisma.UserUncheckedCreateInput> = {},
+) {
+  const user = await makeUser(data);
+  const roleId = await systemRoleId(prisma, role);
+  await prisma.eventMembership.create({
+    data: { userId: user.id, eventId, roleId, role: legacyKeyOf<"EventRole">(role) },
+  });
+  return user;
+}
+
+export function makeCustomRole(input: {
+  scope: RoleScope;
+  orgId?: string | null;
+  name?: string;
+  permissions: Permission[];
+}) {
+  return prisma.role.create({
+    data: {
+      scope: input.scope,
+      orgId: input.orgId ?? null,
+      name: input.name ?? `Rôle ${uid()}`,
+      permissions: { create: input.permissions.map((permission) => ({ permission })) },
+    },
+  });
+}
+
+export function makeOverride(input: {
+  userId: string;
+  orgId?: string | null;
+  permission: Permission;
+  effect: "GRANT" | "REVOKE";
+}) {
+  return prisma.userPermissionOverride.create({
+    data: { userId: input.userId, orgId: input.orgId ?? null, permission: input.permission, effect: input.effect },
+  });
 }
 
 export function makeOrg(data: Partial<Prisma.OrganizationUncheckedCreateInput> = {}) {

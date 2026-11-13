@@ -2,29 +2,9 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { getUserContext, loadUserContext } from "@/lib/user-context";
 import { systemRolePermissions } from "@/lib/permissions";
-import type { RoleScope } from "@prisma/client";
-import { makeEvent, makeOrg, makeUser, seedFactories } from "@/test/factories";
-
-// Rôles écrits à la main tant que makeCustomRole n'existe pas (Task 9).
-function makeRole(input: {
-  scope: RoleScope;
-  systemKey?: string | null;
-  name?: string;
-  permissions?: string[];
-  archived?: boolean;
-  orgId?: string | null;
-}) {
-  return prisma.role.create({
-    data: {
-      scope: input.scope,
-      systemKey: input.systemKey ?? null,
-      name: input.name ?? "Rôle",
-      archived: input.archived ?? false,
-      orgId: input.orgId ?? null,
-      permissions: { create: (input.permissions ?? []).map((permission) => ({ permission })) },
-    },
-  });
-}
+import { systemRoleId } from "@/lib/permissions/db";
+import type { Permission } from "@/lib/permissions";
+import { makeCustomRole, makeEvent, makeOrg, makeUser, seedFactories } from "@/test/factories";
 
 describe("loadUserContext", () => {
   beforeEach(async () => {
@@ -39,10 +19,10 @@ describe("loadUserContext", () => {
   });
 
   it("résout un rôle plateforme système via roleId", async () => {
-    const role = await makeRole({ scope: "PLATFORM", systemKey: "SUPER_ADMIN", name: "Super admin" });
-    const u = await makeUser({ isStaff: true, platformRoleId: role.id });
+    const roleId = await systemRoleId(prisma, "SUPER_ADMIN");
+    const u = await makeUser({ isStaff: true, platformRoleId: roleId });
     const ctx = await loadUserContext(u.id);
-    expect(ctx?.platformRole?.id).toBe(role.id);
+    expect(ctx?.platformRole?.id).toBe(roleId);
     expect(ctx?.platformRole?.systemKey).toBe("SUPER_ADMIN");
     expect(ctx?.platformRole?.permissions).toEqual(systemRolePermissions("SUPER_ADMIN"));
     expect(ctx?.staffRole).toBe("SUPER_ADMIN");
@@ -61,8 +41,8 @@ describe("loadUserContext", () => {
   });
 
   it("roleId l'emporte sur la colonne staffRole", async () => {
-    const role = await makeRole({ scope: "PLATFORM", systemKey: "STAFF_PRINTER" });
-    const u = await makeUser({ isStaff: true, staffRole: "STAFF_ADMIN", platformRoleId: role.id });
+    const roleId = await systemRoleId(prisma, "STAFF_PRINTER");
+    const u = await makeUser({ isStaff: true, staffRole: "STAFF_ADMIN", platformRoleId: roleId });
     const ctx = await loadUserContext(u.id);
     expect(ctx?.platformRole?.systemKey).toBe("STAFF_PRINTER");
     expect(ctx?.platformRole?.permissions).toEqual(systemRolePermissions("STAFF_PRINTER"));
@@ -98,11 +78,11 @@ describe("loadUserContext", () => {
   it("roleId d'appartenance l'emporte sur la colonne ; AGENT n'a pas de role hérité", async () => {
     const org = await makeOrg();
     const event = await makeEvent(org.id);
-    const agent = await makeRole({ scope: "ORG", systemKey: "AGENT" });
-    const printer = await makeRole({ scope: "EVENT", systemKey: "PRINTER" });
+    const agentId = await systemRoleId(prisma, "AGENT");
+    const printerId = await systemRoleId(prisma, "PRINTER");
     const u = await makeUser();
-    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER", roleId: agent.id } });
-    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN", roleId: printer.id } });
+    await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER", roleId: agentId } });
+    await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, role: "ADMIN", roleId: printerId } });
     const ctx = await loadUserContext(u.id);
     expect(ctx!.orgMemberships[0].roleRef?.systemKey).toBe("AGENT");
     expect(ctx!.orgMemberships[0].role).toBeNull();
@@ -113,14 +93,14 @@ describe("loadUserContext", () => {
   it("rôle personnalisé : permissions filtrées, rôles hérités nuls", async () => {
     const org = await makeOrg();
     const event = await makeEvent(org.id);
-    const custom = await makeRole({
+    const custom = await makeCustomRole({
       scope: "ORG",
       orgId: org.id,
       name: "Comptable",
-      permissions: ["org.read", "inconnue.cle"],
+      permissions: ["org.read", "inconnue.cle"] as Permission[],
     });
-    const customEvent = await makeRole({ scope: "EVENT", orgId: org.id, permissions: ["event.read.aggregated"] });
-    const customPlatform = await makeRole({ scope: "PLATFORM", permissions: ["platform.access", "zzz"] });
+    const customEvent = await makeCustomRole({ scope: "EVENT", orgId: org.id, permissions: ["event.read.aggregated"] });
+    const customPlatform = await makeCustomRole({ scope: "PLATFORM", permissions: ["platform.access", "zzz"] as Permission[] });
     const u = await makeUser({ isStaff: true, platformRoleId: customPlatform.id });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, roleId: custom.id } });
     await prisma.eventMembership.create({ data: { userId: u.id, eventId: event.id, roleId: customEvent.id } });
@@ -137,9 +117,11 @@ describe("loadUserContext", () => {
 
   it("rôle archivé : traité comme aucun rôle", async () => {
     const org = await makeOrg();
-    const archived = await makeRole({ scope: "ORG", orgId: org.id, permissions: ["org.read"], archived: true });
-    const archivedPlatform = await makeRole({ scope: "PLATFORM", systemKey: "STAFF_ADMIN", archived: true });
-    const u = await makeUser({ isStaff: true, staffRole: "STAFF_ADMIN", platformRoleId: archivedPlatform.id });
+    const archived = await makeCustomRole({ scope: "ORG", orgId: org.id, permissions: ["org.read"] });
+    await prisma.role.update({ where: { id: archived.id }, data: { archived: true } });
+    const archivedPlatformId = await systemRoleId(prisma, "STAFF_ADMIN");
+    await prisma.role.update({ where: { id: archivedPlatformId }, data: { archived: true } });
+    const u = await makeUser({ isStaff: true, staffRole: "STAFF_ADMIN", platformRoleId: archivedPlatformId });
     await prisma.orgMembership.create({ data: { userId: u.id, orgId: org.id, role: "OWNER", roleId: archived.id } });
     const ctx = await loadUserContext(u.id);
     expect(ctx?.platformRole).toBeNull();

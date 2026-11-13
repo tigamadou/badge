@@ -1,6 +1,9 @@
 import { Prisma, PrismaClient, RegistrationStatus } from "@prisma/client";
 import { hashSync } from "bcryptjs";
 import { hashToken } from "@/lib/auth-tokens";
+import { ensureSystemRoles } from "@/lib/permissions/db";
+import type { EventSystemKey, OrgSystemKey, PlatformSystemKey } from "@/test/factories";
+import type { EventRole, OrgRole, StaffRole } from "@prisma/client";
 
 // Convention v2-11 : tous les emails de test E2E suivent ce pattern pour
 // permettre le cleanup massif sans toucher aux comptes seedes "permanents".
@@ -26,9 +29,20 @@ export type TestUser = {
   name: string;
 };
 
-export type TestStaffRole = "SUPER_ADMIN" | "STAFF_ADMIN" | "STAFF_SUPPORT" | "STAFF_OBSERVER";
-export type TestOrgRole = "OWNER" | "MANAGER" | "AUDITOR";
-export type TestEventRole = "ADMIN" | "OPERATOR" | "PRINTER" | "VIEWER";
+export type TestStaffRole = PlatformSystemKey;
+export type TestOrgRole = OrgSystemKey;
+export type TestEventRole = EventSystemKey;
+
+// Rôles système permanents (jamais supprimés par cleanupE2ETestData) ; la colonne d'enum
+// n'est posée que pour les rôles hérités (double écriture de compatibilité).
+const LEGACY_ENUM_KEYS: ReadonlySet<string> = new Set([
+  "SUPER_ADMIN", "STAFF_ADMIN", "STAFF_SUPPORT", "STAFF_OBSERVER",
+  "OWNER", "MANAGER", "AUDITOR", "ADMIN", "OPERATOR", "PRINTER", "VIEWER",
+]);
+async function roleColumns<E>(key: PlatformSystemKey | OrgSystemKey | EventSystemKey): Promise<{ roleId: string; legacy: E | null }> {
+  const ids = await ensureSystemRoles(db());
+  return { roleId: ids[key], legacy: LEGACY_ENUM_KEYS.has(key) ? (key as unknown as E) : null };
+}
 
 const FULL_PROFILE = {
   firstName: "Awa",
@@ -392,6 +406,16 @@ export async function cleanupE2ETestData(): Promise<void> {
     });
   }
 
+  // Ajustements des utilisateurs e2e et rôles personnalisés des organisations e2e
+  // (les rôles système restent : permanents).
+  if (userIds.length > 0) {
+    await prisma.userPermissionOverride.deleteMany({ where: { userId: { in: userIds } } });
+  }
+  if (orgIds.length > 0) {
+    await prisma.userPermissionOverride.deleteMany({ where: { orgId: { in: orgIds } } });
+    await prisma.role.deleteMany({ where: { orgId: { in: orgIds }, systemKey: null } });
+  }
+
   if (userIds.length > 0) {
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   }
@@ -493,9 +517,10 @@ export async function createTestStaff(opts: {
 }): Promise<TestUser> {
   const prisma = db();
   const base = await createTestUser({ scope: `staff-${opts.scope}`, verified: true });
+  const { roleId, legacy } = await roleColumns<StaffRole>(opts.role);
   await prisma.user.update({
     where: { id: base.id },
-    data: { isStaff: true, staffRole: opts.role },
+    data: { isStaff: true, platformRoleId: roleId, staffRole: legacy },
   });
   return base;
 }
@@ -535,8 +560,9 @@ export async function createTestOrgWithOwner(opts: {
     });
   }
   const owner = await createTestUser({ scope: `org-owner-${opts.scope}`, verified: true });
+  const ownerRole = await roleColumns<OrgRole>("OWNER");
   await prisma.orgMembership.create({
-    data: { userId: owner.id, orgId: org.id, role: "OWNER" },
+    data: { userId: owner.id, orgId: org.id, roleId: ownerRole.roleId, role: ownerRole.legacy },
   });
   return { orgId: org.id, owner };
 }
@@ -549,8 +575,9 @@ export async function createTestOrgMember(opts: {
 }): Promise<TestUser> {
   const prisma = db();
   const user = await createTestUser({ scope: `orgm-${opts.scope}`, verified: true });
+  const { roleId, legacy } = await roleColumns<OrgRole>(opts.role);
   await prisma.orgMembership.create({
-    data: { userId: user.id, orgId: opts.orgId, role: opts.role },
+    data: { userId: user.id, orgId: opts.orgId, roleId, role: legacy },
   });
   return user;
 }
@@ -575,12 +602,14 @@ export async function createTestEventMember(opts: {
   const prisma = db();
   const user = await createTestUser({ scope: `evm-${opts.scope}`, verified: true });
   if (opts.attachOrgAuditor) {
+    const auditor = await roleColumns<OrgRole>("AUDITOR");
     await prisma.orgMembership.create({
-      data: { userId: user.id, orgId: opts.orgId, role: "AUDITOR" },
+      data: { userId: user.id, orgId: opts.orgId, roleId: auditor.roleId, role: auditor.legacy },
     });
   }
+  const { roleId, legacy } = await roleColumns<EventRole>(opts.role);
   await prisma.eventMembership.create({
-    data: { userId: user.id, eventId: opts.eventId, role: opts.role },
+    data: { userId: user.id, eventId: opts.eventId, roleId, role: legacy },
   });
   return user;
 }
