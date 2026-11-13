@@ -55,15 +55,16 @@ describe("déclencheurs évènement", () => {
     return PATCH(json(body, "PATCH"), { params: Promise.resolve({ orgId: t.org.id, eventId: t.event.id }) });
   }
 
-  it("ouvrir les inscriptions notifie tous les membres de l'évènement, AUDITOR d'org compris, sauf l'auteur", async () => {
+  it("ouvrir les inscriptions notifie les titulaires de event.read.aggregated (AUDITOR d'org compris, pas le PRINTER d'évènement), sauf l'auteur", async () => {
     const t = await seedTeam();
     await prisma.event.update({ where: { id: t.event.id }, data: { registrationOpen: false } });
     login(t.admin, false);
     expect((await patchRegistration(t, { registrationOpen: true })).status).toBe(200);
     expect(await idsOf("EVENT_REGISTRATION_OPENED")).toEqual(
-      [t.owner.id, t.operator.id, t.printer.id, t.viewer.id, t.auditor.id].sort(),
+      [t.owner.id, t.operator.id, t.viewer.id, t.auditor.id].sort(),
     );
-    expect(vi.mocked(enqueueEmail)).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(enqueueEmail)).toHaveBeenCalledTimes(4);
+    expect(await idsOf("EVENT_REGISTRATION_OPENED")).not.toContain(t.printer.id);
     const row = await prisma.notification.findFirstOrThrow({ where: { userId: t.viewer.id } });
     expect(row).toMatchObject({ scope: "EVENT", eventId: t.event.id, orgId: t.org.id, title: "Inscriptions ouvertes" });
   });
@@ -114,6 +115,7 @@ describe("déclencheurs organisation et abonnement", () => {
     const owner = await makeUser();
     await addOrgMember(owner.id, org.id, "OWNER");
     const plan = await prisma.plan.create({ data: { name: "Pro-x" } });
+    const sa = await makeUser({ staffRole: "SUPER_ADMIN" });
     login(author, true);
     expect((await putSubscription(org.id, plan.id)).status).toBe(200);
     const ownerRow = await prisma.notification.findFirstOrThrow({ where: { userId: owner.id } });
@@ -124,6 +126,9 @@ describe("déclencheurs organisation et abonnement", () => {
     const staffRow = await prisma.notification.findFirstOrThrow({ where: { userId: staff2.id } });
     expect(staffRow).toMatchObject({ scope: "PLATFORM", href: `/platform/organizations/${org.id}/subscription` });
     expect(await prisma.notification.count({ where: { userId: author.id } })).toBe(0);
+    // billing.subscription.pay n'est jamais porté par le staff non membre : le SUPER_ADMIN ne reçoit que la portée PLATFORM.
+    const saRows = await prisma.notification.findMany({ where: { userId: sa.id } });
+    expect(saRows.map((r) => r.scope)).toEqual(["PLATFORM"]);
   });
 
   it("un staff à la fois OWNER n'est notifié qu'une fois, en portée ORG", async () => {

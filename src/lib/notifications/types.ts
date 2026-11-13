@@ -1,10 +1,6 @@
-import type {
-  EventRole,
-  NotificationScope,
-  NotificationType,
-  OrgRole,
-  StaffRole,
-} from "@prisma/client";
+import type { NotificationScope, NotificationType } from "@prisma/client";
+import type { Permission } from "@/lib/permissions/catalog";
+import type { PermissionTarget } from "@/lib/permissions/resolve";
 
 // anchor : sous-chaîne exacte du body à transformer en lien (absente : repli sur le titre).
 export type NotificationLink = { label: string; href: string; anchor?: string };
@@ -23,9 +19,9 @@ export type NotificationContent = {
 
 export type RecipientSpec =
   | { users: string[] }
-  | { eventRoles: { eventId: string; roles: EventRole[] } }
-  | { orgRoles: { orgId: string; roles: OrgRole[] } }
-  | { staffMinRole: StaffRole };
+  // Titulaires de `permission` sur la cible. Cibles org/event : parmi les membres ;
+  // `includeStaff` élargit au staff porteur de la permission.
+  | { permission: Permission; target: Exclude<PermissionTarget, { kind: "participant" }>; includeStaff?: boolean };
 
 export type NotifyInput = {
   type: NotificationType;

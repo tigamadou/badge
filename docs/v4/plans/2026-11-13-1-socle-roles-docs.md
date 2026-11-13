@@ -49,7 +49,7 @@ dérive les champs hérités de la clé du rôle système, avec repli sur la col
 | 8 | Rôles système en base, migration, `make migrate-roles` | [x] | 2026-11-13 | `make migrate-roles ARGS=--dry-run` sur la base de dev : 0 staff, 0 membre d'org, 0 membre d'évènement, 0 déjà migré (dev vide d'enums à migrer). `dryRun` n'écrit rien, pas même les rôles système. |
 | 9 | Fabriques, reset global et helpers e2e | [x] | 2026-11-13 | Reset global (`src/test-setup.ts`) supprimait déjà rôles et ajustements. `createTestStaff`/`OrgMember`/`OrgWithOwner`/`EventMember` écrivent `roleId` (rôles système permanents via `ensureSystemRoles`) + enum hérité ; cleanup supprime ajustements et rôles personnalisés des orgs e2e. `user-context.test.ts` : rôles provisoires remplacés. Fabriques écrites avant le test (RED non rejoué). |
 | 10 | Seed : rôles système, SUPER_ADMIN, comptes démo | [x] | 2026-11-13 | `ensureSystemRoles` au début du seed minimal ; SUPER_ADMIN (dev et `seedSuperAdmin`) avec `platformRoleId` + enum, détection `exists` par rôle ou enum. Démo : `staff-printer` (`printer@demo.local`), `agent.grosse-org`; registre `PlatformRoleKey`/`OrgRoleKey`/`EventRoleKey` (+ `STAFF_PRINTER`, `AGENT`). `roleId` + enum hérité (null pour AGENT) pour les membres. Tests écrits après le code (RED non rejoué). `make db-seed` dev : 14 rôles, admin@badge.local avec `platformRoleId`. |
-| 11 | Notifications ciblées par permission | [ ] | | |
+| 11 | Notifications ciblées par permission | [x] | 2026-11-13 | `RecipientSpec` = `users` ou `permission`+`target`(+`includeStaff`) ; résolution par `USER_CONTEXT_SELECT`/`buildUserContext`/`hasPermission` (repli enum conservé, memberships à rôle nul écartées par `buildUserContext`). Arbitrages voulus : le PRINTER d'évènement n'est plus notifié sur `notifyEventRegistrationToggled` ; le SUPPORT ne reçoit plus les messages d'impression (Admin et Imprimeur oui). `billing.subscription.pay` : SUPER_ADMIN non membre non notifié (testé). `seed/demo/organizations.ts` inchangé (variables locales homonymes). |
 | 12 | Logique d'impression partagée | [ ] | | |
 | 13 | Découplage de `OnsiteStation` | [ ] | | |
 | 14 | Consommateurs transverses | [ ] | | |
@@ -715,7 +715,7 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
 > vont à `print.requests.messages.send` ; seul `notifyPrintRequestMessage` est dans ce cas. Les autres sont
 > destinées à ≥ ADMIN : équivalent conservé (SA, AD) avec la permission d'écriture la plus proche ci-dessus.
 
-- [ ] **Step 1 : tests rouges** (`recipients.test.ts`, base réelle) :
+- [x] **Step 1 : tests rouges** (`recipients.test.ts`, base réelle) :
   - cible `platform` : `profiles.review` → SA, AD, SU (pas OB, pas PR) ; `print.requests.messages.send` → SA, AD, PR (pas SU) ;
     un `GRANT` plateforme donne la permission à un non-staff avec ajustement ; utilisateur `archived` ou `blocked` exclu ;
     `actorId` et `excludeUserIds` exclus ; ordre par `id`, sans doublon ;
@@ -725,17 +725,17 @@ Les cibles `event` portent `{ kind: "event", eventId, orgId }` (l'`orgId` est d�
   - utilisateurs repliés sur l'enum (`OrgMembership.role` seul, sans `roleId`) correctement résolus ;
   - `{ users }` inchangé.
   Tests des déclencheurs (fichiers existants de `src/lib/notifications/__tests__/`) : un test par ligne de la table ci-dessus vérifiant les destinataires (et le `scope`).
-- [ ] **Step 2 : lancer** `make test FILE=src/lib/notifications` → échec.
-- [ ] **Step 3 : implémenter** — `types.ts` (nouvelle union ; retirer les imports `EventRole`, `OrgRole`, `StaffRole`) ;
+- [x] **Step 2 : lancer** `make test FILE=src/lib/notifications` → échec.
+- [x] **Step 3 : implémenter** — `types.ts` (nouvelle union ; retirer les imports `EventRole`, `OrgRole`, `StaffRole`) ;
   `recipients.ts` : requête de candidats (cible platform : `isStaff`, `platformRoleId`/`staffRole` non nuls ou ajustement
   `orgId` nul ; org : membres de l'org ou ajustements de l'org ; event : membres de l'org, membres de l'évènement ou
   ajustements de l'org ; `includeStaff` ajoute les candidats « staff »), `select: USER_CONTEXT_SELECT`, filtrage par
   `hasPermission(buildUserContext(row), permission, target)`, mêmes exclusions `blocked/archived/actor/excluded` qu'aujourd'hui ;
   `triggers.ts` : appliquer la table.
-- [ ] **Step 4 : lancer** `make test FILE=src/lib/notifications` → vert ; lancer ensuite les tests des routes qui déclenchent des
+- [x] **Step 4 : lancer** `make test FILE=src/lib/notifications` → vert ; lancer ensuite les tests des routes qui déclenchent des
   notifications (`make test FILE=src/app/api` est long : lancer au minimum les dossiers `print-requests`, `registrations`,
   `profiles`, `subscription`) ; tout échec lié aux destinataires : s'arrêter et signaler.
-- [ ] **Step 5 : commit** : `feat(roles): notifications ciblees par permission`.
+- [x] **Step 5 : commit** : `feat(roles): notifications ciblees par permission`.
 
 ### Task 12: Logique d'impression partagée
 

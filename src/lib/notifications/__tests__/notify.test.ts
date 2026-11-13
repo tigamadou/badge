@@ -167,8 +167,8 @@ describe("notify", () => {
     const staff = await makeUser({ staffRole: "STAFF_ADMIN" });
     await addOrgMember(staff.id, org.id, "OWNER");
     await notifyAll([
-      input({ type: "SUBSCRIPTION_CHANGED", scope: "ORG", recipients: { orgRoles: { orgId: org.id, roles: ["OWNER"] } }, orgId: org.id }),
-      input({ type: "SUBSCRIPTION_CHANGED", scope: "PLATFORM", recipients: { staffMinRole: "STAFF_ADMIN" } }),
+      input({ type: "SUBSCRIPTION_CHANGED", scope: "ORG", recipients: { permission: "billing.subscription.pay", target: { kind: "org", orgId: org.id } }, orgId: org.id }),
+      input({ type: "SUBSCRIPTION_CHANGED", scope: "PLATFORM", recipients: { permission: "subscriptions.update", target: { kind: "platform" } } }),
     ]);
     void a;
     const rows = await prisma.notification.findMany({ where: { userId: staff.id } });

@@ -1,12 +1,10 @@
-import type { EventRole, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { effectiveEventRole, staffRoleAtLeast } from "@/lib/auth-helpers";
-import type { UserContext } from "@/types/auth";
+import { hasPermission } from "@/lib/permissions/resolve";
+import { USER_CONTEXT_SELECT, buildUserContext } from "@/lib/user-context";
 import type { RecipientSpec } from "./types";
 
 export type Recipient = { id: string; email: string; name: string };
-
-const STAFF_ROLES_ORDER = ["STAFF_OBSERVER", "STAFF_SUPPORT", "STAFF_ADMIN", "SUPER_ADMIN"] as const;
 
 // Résout les destinataires : comptes actifs uniquement, hors auteur et hors exclusions,
 // dédoublonnés par id et triés (déterminisme).
@@ -33,56 +31,30 @@ export async function resolveRecipients(
     });
   }
 
-  if ("staffMinRole" in spec) {
-    const min = spec.staffMinRole;
-    const roles = STAFF_ROLES_ORDER.filter((r) => staffRoleAtLeast(r, min));
-    return db.user.findMany({
-      where: { ...base, isStaff: true, staffRole: { in: [...roles] } },
-      select,
-      orderBy,
-    });
-  }
+  const { permission, target } = spec;
+  // Staff porteur d'un rôle plateforme (colonne d'enum comprise) ou d'un ajustement plateforme.
+  const staffCandidates: Prisma.UserWhereInput[] = [
+    { isStaff: true, OR: [{ platformRoleId: { not: null } }, { staffRole: { not: null } }] },
+    { permissionOverrides: { some: { orgId: null } } },
+  ];
+  const memberCandidates: Prisma.UserWhereInput[] =
+    target.kind === "org"
+      ? [{ orgMemberships: { some: { orgId: target.orgId } } }, { permissionOverrides: { some: { orgId: target.orgId } } }]
+      : target.kind === "event"
+        ? [
+            { orgMemberships: { some: { orgId: target.orgId } } },
+            { eventMemberships: { some: { eventId: target.eventId } } },
+            { permissionOverrides: { some: { orgId: target.orgId } } },
+          ]
+        : [];
+  const candidates = target.kind === "platform" || spec.includeStaff ? [...memberCandidates, ...staffCandidates] : memberCandidates;
 
-  if ("orgRoles" in spec) {
-    const { orgId, roles } = spec.orgRoles;
-    return db.user.findMany({
-      where: { ...base, orgMemberships: { some: { orgId, role: { in: roles } } } },
-      select,
-      orderBy,
-    });
-  }
-
-  const { eventId, roles } = spec.eventRoles;
-  const event = await db.event.findUnique({ where: { id: eventId }, select: { orgId: true } });
-  if (!event) return [];
-  const candidates = await db.user.findMany({
-    where: {
-      ...base,
-      OR: [
-        { eventMemberships: { some: { eventId } } },
-        { orgMemberships: { some: { orgId: event.orgId } } },
-      ],
-    },
-    select: {
-      ...select,
-      orgMemberships: { where: { orgId: event.orgId }, select: { orgId: true, role: true } },
-      eventMemberships: { where: { eventId }, select: { eventId: true, role: true } },
-    },
+  const rows = await db.user.findMany({
+    where: { ...base, OR: candidates },
+    select: USER_CONTEXT_SELECT,
     orderBy,
   });
-  return candidates
-    .filter((u) => {
-      // isStaff: false volontaire : le rôle STAFF n'est pas un rôle de membre d'évènement.
-      const ctx: UserContext = {
-        user: { id: u.id, email: u.email, name: u.name },
-        isStaff: false,
-        staffRole: null,
-        platformRole: null,
-        overrides: [],
-        orgMemberships: u.orgMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role, roleId: null, roleRef: null }] : [])),
-        eventMemberships: u.eventMemberships.flatMap((m) => (m.role ? [{ ...m, role: m.role, roleId: null, roleRef: null }] : [])),
-      };
-      return roles.includes(effectiveEventRole(ctx, eventId, event.orgId) as EventRole);
-    })
+  return rows
+    .filter((row) => hasPermission(buildUserContext(row), permission, target))
     .map(({ id, email, name }) => ({ id, email, name }));
 }
