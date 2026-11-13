@@ -24,7 +24,7 @@ function selectByLabel(page: Page, label: string) {
 
 // « Planches » ouvre la file « À traiter » ; la génération libre est son troisième onglet.
 async function openFreeGeneration(page: Page) {
-  await page.getByRole("link", { name: "Planches" }).click();
+  await page.getByRole("link", { name: "Planches", exact: true }).click();
   await expect(page).toHaveURL(/\/platform\/print\/sheets\/pending$/);
   await page.getByRole("link", { name: "Génération libre" }).click();
   await expect(page).toHaveURL(/\/platform\/print\/sheets\/free$/);
@@ -43,7 +43,7 @@ test.describe("Platform — Planches d'impression", () => {
   test("L'observateur n'a pas l'entrée Planches et est redirigé en URL directe", async ({ page }) => {
     const observer = await createTestStaff({ scope: "sheets-observer", role: "STAFF_OBSERVER" });
     await loginAndEnter(page, observer, { kind: "platform" });
-    await expect(page.getByRole("link", { name: "Planches" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Planches", exact: true })).toHaveCount(0);
     await page.goto("/platform/print/sheets/pending");
     await expect(page).toHaveURL(/\/platform$/);
   });
@@ -124,7 +124,7 @@ test.describe("Platform — Planches d'impression", () => {
     const support = await createTestStaff({ scope: "sheets-order-support", role: "STAFF_PRINTER" });
 
     await loginAndEnter(page, support, { kind: "platform" });
-    await page.getByRole("link", { name: "Planches" }).click();
+    await page.getByRole("link", { name: "Planches", exact: true }).click();
     await expect(page).toHaveURL(/\/platform\/print\/sheets\/pending$/);
     const pendingRow = page.locator("tr", { hasText: request.reference });
     await expect(pendingRow).toContainText("Salon E2E");
@@ -180,7 +180,7 @@ test.describe("Platform — Planches d'impression", () => {
     });
     const staff = await createTestStaff({ scope: "sheets-live-staff", role: "STAFF_PRINTER" });
     await loginAndEnter(page, staff, { kind: "platform" });
-    await page.getByRole("link", { name: "Planches" }).click();
+    await page.getByRole("link", { name: "Planches", exact: true }).click();
 
     const row = page.locator("tr", { hasText: request.reference });
     await expect(row).toContainText("Génération en cours…");
@@ -208,7 +208,7 @@ test.describe("Platform — Planches d'impression", () => {
     });
     const staff = await createTestStaff({ scope: "sheets-failed-staff", role: "STAFF_PRINTER" });
     await loginAndEnter(page, staff, { kind: "platform" });
-    await page.getByRole("link", { name: "Planches" }).click();
+    await page.getByRole("link", { name: "Planches", exact: true }).click();
 
     const row = page.locator("tr", { hasText: request.reference });
     await expect(row).toContainText("Échec");

@@ -40,11 +40,11 @@ coordination : [`2026-11-13-36-v4-chantier-roles-docs-coordination.md`](../specs
 | 4 | Profils et listes de blocage | [x] | 2026-11-13 | |
 | 5 | Paramètres, motifs de rejet, templates de badge | [x] | 2026-11-13 | |
 | 6 | Jobs e-mail, journal, upload, paiements | [x] | 2026-11-13 | |
-| 7 | Impression : commandes et poste sur place | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
-| 8 | Impression : catalogue, gabarits, planches (gardes) | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
+| 7 | Impression : commandes et poste sur place | [x] | 2026-11-13 | e2e verts |
+| 8 | Impression : catalogue, gabarits, planches (gardes) | [x] | 2026-11-13 | e2e verts |
 | 9 | `/api/files` par permission | [x] | 2026-11-13 |  |
-| 10 | Spec 38 : loader des planches en génération | [x] | 2026-11-13 | e2e à rejouer en fin de lot |
-| 11 | e2e, doc, vérification | [ ] | | |
+| 10 | Spec 38 : loader des planches en génération | [x] | 2026-11-13 | e2e verts |
+| 11 | e2e, doc, vérification | [x] | 2026-11-13 | e2e du lot verts (workers=1) ; gates en fin de lot |
 
 ## Fichiers du lot (exclusifs)
 
