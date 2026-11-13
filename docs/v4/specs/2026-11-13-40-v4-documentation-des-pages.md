@@ -1,6 +1,6 @@
 # Spec v4 — Documentation contextuelle des pages, tenue à jour par les agents (spec 40)
 
-> **Statut** : validée — 2026-11-13
+> **Statut** : implémentée — 2026-11-13 (outil, interface, consignes, pilote `/org` ; docs des autres espaces en vague 5)
 > **Type** : nouvelle fonctionnalité + outillage de développement
 > **Périmètre** : v4 — espaces connectés (`/platform`, `/org`, `/event`, `/account`), outillage
 > `scripts/`, `Makefile`, consignes des agents IA
@@ -157,3 +157,24 @@ pages `…/docs/**` des quatre espaces, cibles `Makefile` `docs-check` / `docs-s
   doc est tenue à jour par les agents IA sur consigne (`CLAUDE.md`, `AGENTS.md`). Arbitrage
   de l'agent : garder une vérification hors ligne (`docs-check`, `docs-stamp`) comme filet
   de sécurité, sans hook.
+- 2026-11-13 — Lot 4a, arbitrages d'implémentation :
+  - **Nom des docs** : `index` réservé à la racine d'un espace (`org/index`) ; `<parent>/detail` quand le
+    dernier segment est dynamique ; collision résiduelle (`/event/[eventId]/print/onsite` face à
+    `/event/[eventId]/print/[requestId]/onsite`) : la route sans segment dynamique garde le nom court, l'autre
+    garde le nom de ses segments dynamiques (`event/print/requestId/onsite`) ; `docs-check` signale toute
+    collision restante. `/platform/users` reste `platform/users` (pas `…/index`, écart au plan).
+  - **Champ `access`** (facultatif) dans le frontmatter : permission exigée par la garde de la page ; filtre la
+    liste de la section Documentation et l'API.
+  - **Portée des blocs `:::permission`** = portée de l'espace (`/platform/**` y compris
+    `/platform/organizations/[orgId]/…` → PLATFORM ; écart au plan qui prévoyait ORG pour ces pages : les gardes
+    de l'espace plateforme testent des permissions PLATFORM).
+  - **Deux modules générés** : `manifest.generated.ts` (corps, serveur) et `index.generated.ts` (sans corps, client),
+    plus `types.ts`. Pas de `eslint-disable` dans les modules générés (avertissement « directive inutilisée »).
+  - `updatedAt` n'est modifié par `docs-stamp` que si les sources ou le contenu publié changent.
+  - **Ajouts au périmètre** (nouveaux fichiers) : `src/lib/page-docs/**`, `src/app/api/page-docs/route.ts`,
+    `e2e/transverse/page-docs.spec.ts`, `src/components/page-docs/docs-session.ts` ; `markdown-it` (`html: false`).
+  - `AGENTS.md` est un lien symbolique vers `CLAUDE.md` : la section « Documentation des pages » vaut pour les deux.
+  - `docsHref` de l'API = liste de l'espace (`…/docs`). Panneau propre (la `Dialog` du projet est centrée).
+  - **Effectifs de pages** (hors pages `docs`) : 89 — plateforme 41, organisation 18, évènement 25, compte 5.
+  - **Pilote `/org`** (18 docs) : un bloc `:::permission` n'est justifié que si l'écran masque réellement la
+    section ; une page sans garde n'a pas de `access` — reporté dans la consigne de `CLAUDE.md`.

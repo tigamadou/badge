@@ -33,18 +33,18 @@ coordination : [`spec 36`](../specs/2026-11-13-36-v4-chantier-roles-docs-coordin
 
 | Task | Intitulé | Statut | Date | Notes |
 |---|---|---|---|---|
-| 1 | Pré-contrôles et inventaire des pages | [ ] | | |
-| 2 | Outil : découverte, chemins de doc, sources, empreinte | [ ] | | |
-| 3 | Outil : format (frontmatter, blocs), vérification, manifestes | [ ] | | |
-| 4 | Cibles `docs-check` / `docs-stamp` et intégration à `lint` | [ ] | | |
-| 5 | Logique serveur : appariement, cibles, blocs, rendu | [ ] | | |
-| 6 | Route `GET /api/page-docs` | [ ] | | |
-| 7 | `PageDocButton` réel et panneau latéral | [ ] | | |
-| 8 | Pages Documentation des quatre espaces | [ ] | | |
-| 9 | Consignes IA : `CLAUDE.md`, `AGENTS.md`, template, skill chantier | [ ] | | |
-| 10 | Doc de feature `documentation-pages.md` | [ ] | | |
-| 11 | Pilote : docs des pages `/org` | [ ] | | |
-| 12 | e2e, doc, vérification | [ ] | | |
+| 1 | Pré-contrôles et inventaire des pages | [x] | 2026-11-13 | pages hors docs : plateforme 41, organisation 18, évènement 25, compte 5 (89) |
+| 2 | Outil : découverte, chemins de doc, sources, empreinte | [x] | 2026-11-13 | `index` réservé à la racine d'un espace ; `assignDocIds` désambiguïse les collisions réelles (`event/print/requestId/onsite`) |
+| 3 | Outil : format (frontmatter, blocs), vérification, manifestes | [x] | 2026-11-13 | portée des clés = portée de l'espace (platform → PLATFORM même sous `/platform/organizations/[orgId]`) ; pas de `eslint-disable` dans les modules générés (avertissement « unused ») ; `updatedAt` conservé si rien n'a changé |
+| 4 | Cibles `docs-check` / `docs-stamp` et intégration à `lint` | [x] | 2026-11-13 | `docs-check` : 89 manquantes (état attendu avant Task 11) ; `make lint` rouge jusque-là |
+| 5 | Logique serveur : appariement, cibles, blocs, rendu | [x] | 2026-11-13 | `src/lib/page-docs` 100 % ; `match.ts` (client-safe) séparé de `index.ts` ; `loadDocById` et `summaryOf` ajoutés ; tests sur modules générés mockés (fixtures) |
+| 6 | Route `GET /api/page-docs` | [x] | 2026-11-13 | `docsHref` = liste de l'espace (`…/docs`) ; 100 % sur la route |
+| 7 | `PageDocButton` réel et panneau latéral | [x] | 2026-11-13 | panneau propre (portail, focus piégé, Échap) car `Dialog` est une modale centrée ; interactions couvertes en e2e (pas de jsdom) ; contrôle navigateur reporté à la Task 12 (aucune doc avant la Task 11) |
+| 8 | Pages Documentation des quatre espaces | [x] | 2026-11-13 | `docs-session.ts` (garde de session) ajouté ; contrôle navigateur 375/1024/1280 reporté à la Task 12 (les docs n'existent qu'après la Task 11) |
+| 9 | Consignes IA : `CLAUDE.md`, `AGENTS.md`, template, skill chantier | [x] | 2026-11-13 | portée des blocs = portée de l'espace (écart au plan, voir spec 40) ; `AGENTS.md` reste un lien vers `CLAUDE.md` |
+| 10 | Doc de feature `documentation-pages.md` | [x] | 2026-11-13 | lien ajouté dans `docs/v4/README.md` |
+| 11 | Pilote : docs des pages `/org` | [x] | 2026-11-13 | 18 docs (720 lignes), rédigées par un sous-agent Sonnet ; relecture navigateur OWNER/MANAGER/AUDITOR faite en Task 12 |
+| 12 | e2e, doc, vérification | [x] | 2026-11-13 | coverage 100 %, e2e 7/7 ; `docs-check` rouge uniquement pour les 71 docs plateforme/évènement/compte (vague 5) ; contrôle 375/1024/1280 par e2e Playwright ; `docs-pages.test.tsx` d'attente remplacé par `docs-views.test.tsx` |
 
 ## Fichiers du lot (exclusifs)
 

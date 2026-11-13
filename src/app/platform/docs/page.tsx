@@ -1,15 +1,11 @@
-import { EmptyState } from "@/components/ui/Feedback";
+import { DocsIndex } from "@/components/page-docs/DocsIndex";
+import { requireDocsUserId } from "@/components/page-docs/docs-session";
+import { listDocsForUser } from "@/lib/page-docs";
 
-// Page d'attente : le contenu de la documentation arrive avec le lot 4a.
-export default function PlatformDocsPage() {
-  return (
-    <div>
-      <h1 className="mb-6 text-xl font-semibold text-navy">Documentation</h1>
-      <EmptyState
-        icon="file"
-        title="Bientôt disponible"
-        description="La documentation de cet espace arrive prochainement."
-      />
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function PlatformDocsPage() {
+  const userId = await requireDocsUserId("/platform/docs");
+  const items = await listDocsForUser(userId, "platform", {});
+  return <DocsIndex space="platform" baseHref="/platform/docs" items={items} />;
 }

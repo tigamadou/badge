@@ -30,7 +30,7 @@ de conflit, ces deux fichiers font foi.
   plafonne à ~14 Go) : chacun avec une **liste de fichiers exclusifs** (globs) et une liste **en
   lecture seule** (contrats du socle). Aucun fichier modifiable dans deux lots. Un document partagé
   (doc de feature) est découpé en **sections** attribuées à un seul lot.
-- **Vague 3 — fusion et PR** : ordre de fusion fixé, règles de conflit, vérification complète.
+- **Vague 3 — fusion et PR** : ordre de fusion fixé, règles de conflit, vérification complète (dont `make docs-check` : docs des pages à jour).
 - Plus de 3 lots indépendants : faire deux vagues de lots plutôt que plus de stacks.
 - Écrire dans le journal de la spec une table de contrôle : une ligne par paire de lots qui
   partagent un fichier ou une interface (qui produit / qui consomme / verdict). Un fichier
@@ -57,7 +57,9 @@ Chaque plan contient obligatoirement :
 - `## Review Focus` ; pour toute UI : e2e Playwright **et** contrôle à 375, 1024 et 1280 px (le
   menu latéral occupe ~224 px dès `lg` : prévoir les points de rupture en conséquence) ;
 - une dernière tâche « e2e, doc, vérification » (`make lint && make typecheck && make
-  test-coverage` + e2e du lot).
+  test-coverage` + e2e du lot) qui inclut **la mise à jour des docs des pages du lot**
+  (`make docs-stamp PAGES="…"`, consigne de la section « Documentation des pages » du `CLAUDE.md`)
+  et `make docs-check` vert.
 
 Puis **relecture croisée par l'agent principal** : contrats socle ↔ lots (noms, signatures,
 formats d'évènement), cohérence des listes exclusives, tâches qui se contredisent. Amender les

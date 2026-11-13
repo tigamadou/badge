@@ -65,6 +65,7 @@ Les plans 01 a 05 (juillet 2026) ont ete retires lors de reorganisations anterie
 - [Paiements FedaPay](features/paiements-fedapay.md) — checkout, webhook, statuts, configuration, procedure sandbox, paiement des devis d'impression (`purpose`, un seul paiement en cours, paiement hors contexte, marquage manuel, URL de retour).
 - [Abonnements](features/abonnements.md) — plans, prix, essai free de 30 jours, echeance (`EXPIRED`), droits selon l'abonnement, rappels.
 - [Politique de tests](features/politique-tests.md) — 3 couches (unitaire / integration / E2E), seuils, matrice RBAC.
+- [Documentation des pages](features/documentation-pages.md) — bouton « ? », section Documentation, outil `make docs-check` / `make docs-stamp`, consigne aux agents.
 - [Lot notifications — socle commun](features/lot-notifications-socle.md) — contrats C1 a C4 (`enqueueEmail`, `NotificationBell`, `UserAvatar`, toasts) tels que livres.
 - [Notifications internes et email](features/notifications.md) — cloche, panneau, pages par espace, matrice des evenements, destinataires, API, retention.
 - [Loader et toast sur les actions](features/feedback-actions.md) — primitives, `apiErrorMessage`, motifs A a G, regles d'usage, helpers e2e.
